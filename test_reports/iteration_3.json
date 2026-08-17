@@ -1,0 +1,86 @@
+{
+  "summary": "Full backend/frontend health check completed against the public REACT_APP_BACKEND_URL. All requested FastAPI endpoint/auth/content behaviors passed; the regression suite was 24/25 with only the previously documented ingress CORS override failing (excluded as a known infrastructure issue). Frontend landing, welcome/cookie persistence, theme, News/Wissen/Unternehmen navigation, login/register forms, news content, and local assets load. End-to-end is not healthy: requested bank dropdown entries and stock/BBVA routes are absent, the exact Supabase signup is rejected, and public pages produce extensive Supabase/React console errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Header Angebote dropdown",
+        "issue": "Dropdown contains product/category links only; requested BBVA, ING, Postbank, bunq, and Knab options are all absent.",
+        "selector": "button[name='Angebote']",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Stock overview direct routes",
+        "issue": "Both /aktien and /stocks are undefined and wildcard-redirect to /. No stock overview is reachable through either requested route.",
+        "affected_selectors": ["route:/aktien", "route:/stocks"]
+      },
+      {
+        "flow": "BBVA product landing direct routes",
+        "issue": "Both /banken/bbva and /bbva are undefined and wildcard-redirect to /. Existing /banks/bbva/* routes are access-code protected and do not satisfy either requested alias.",
+        "affected_selectors": ["route:/banken/bbva", "route:/bbva"]
+      },
+      {
+        "flow": "Account-opening route",
+        "issue": "/formular renders only the secure access-code gate, not an account-opening wizard; /kontoeroeffnung is undefined and redirects home. Wizard flow could not be entered without a formular access code.",
+        "affected_selectors": ["route:/formular", "route:/kontoeroeffnung"]
+      },
+      {
+        "flow": "Supabase registration and subsequent login/dashboard",
+        "issue": "UI signup using required testuser+e2e@example.com / TestPass123! fails. Supabase POST /auth/v1/signup returns 400 code=email_address_invalid; UI shows the raw English provider message. No user is created, so authenticated /dashboard or /me context cannot be verified; login correctly reports invalid credentials.",
+        "affected_selectors": ["[data-testid='register-email']", "[data-testid='register-submit-btn']", "[data-testid='login-submit-btn']"]
+      },
+      {
+        "flow": "Console-clean public navigation",
+        "issue": "Five-route Home/News/Comparison/Login/About/Impressum sequence produced 115 console errors (zero uncaught pageerror events). Home/Login showcase issues live Supabase queries as fake user showcase-user, causing repeated 400s; stock-history and public News stock-prices edge calls return 401; React also logs fetchPriority and invalid SVG path errors.",
+        "affected_selectors": ["[data-testid='home-platform-showcase']", "route:/login", "route:/news"]
+      },
+      {
+        "flow": "Partner bank logos",
+        "issue": "No local /assets/marketing, /assets/bank-logos, or hero asset failed, but external hot-linked BBVA, BNP, ING, DKB, Spuerkeess, Millennium BCP, and CaixaBank logo requests are blocked/failed (ORB, NotSameOrigin, HTTP2), adding console noise and forcing fallbacks.",
+        "affected_selectors": ["img"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_auth_supplemental.py",
+    "/app/test_reports/pytest/pytest_results_iteration_3.xml"
+  ],
+  "action_items": [
+    "Add the required bank entries to the Angebote menu or align the accepted navigation contract.",
+    "Add explicit /aktien or /stocks and /banken/bbva or /bbva routes instead of silently redirecting unknown routes to home.",
+    "Expose the intended account-opening wizard route or provide test access for the /formular gate.",
+    "Use/configure a Supabase-accepted QA mailbox domain and localize email_address_invalid; retest signup, approval/confirmation, login, and user context.",
+    "Prevent showcase components from mounting live NotificationCenter/stock-history calls, and make public News market calls use a public endpoint or valid authorization.",
+    "Self-host partner bank logos under /assets to avoid hot-link blocking.",
+    "Retest frontend routes, console, and Supabase auth after fixes."
+  ],
+  "critical_code_review_comments": [
+    "DashboardTopbar receives showcase=true but still renders NotificationCenter; the fake showcase AuthContext user therefore triggers eight live Supabase table queries on public Home/Login. Suppress live widgets in showcase mode.",
+    "MarktuebersichtSidebar mounts on public /news and calls the stock-prices Edge Function six times without an authenticated session, producing 401s even though the news feed itself renders.",
+    "App.js is 792 lines and exceeds the 700-line maintainability limit; split public, dashboard, admin, and bank route declarations into focused modules.",
+    "AuthContext remains entirely Supabase-based while apiClient/FastAPI auth is unused, so backend auth passing does not constitute frontend-backend auth integration.",
+    "Unknown requested routes are masked by the catch-all Navigate to=/; add explicit aliases or a real not-found page so missing features are observable.",
+    "Many interactive controls still lack data-testid, including desktop nav group buttons, theme/search buttons, news controls, and /formular fields.",
+    "BankingHero passes fetchPriority to a motion.img and logs a React DOM warning; the rendered chart stack also supplies undefined SVG path data on initial public render."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_3.json"
+  ],
+  "success_rate": {
+    "backend": "100% of requested endpoints/behaviors; 96% regression suite (24/25, sole failure is known ingress CORS infrastructure)",
+    "frontend": "50% (7/14 requested frontend groups fully passed)"
+  },
+  "seed_data_creation": "Backend pytest created unique TEST_ Mongo users/login-attempt/reset-token data and cleaned it in teardown. Supabase rejected the requested signup before user creation, so no Supabase seed user was created.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "Backend admin credentials were read from /app/memory/test_credentials.md and passed login/hash/cookie tests. /app/auth_testing.md is missing. Frontend Supabase test user could not be created because Supabase rejected the required example.com address.",
+  "context_for_next_testing_agent": "Reuse the existing pytest suite. Frontend visitor state keys are kapitalmitte_visitor_profile and kapitalmitte_cookie_consent. Verified passes: welcome Accept stores both, theme persists dark, no Supabase-not-configured toast, News/Wissen/Unternehmen click navigation, login/register controls, populated News feed, and zero broken local /assets images. Retest missing aliases, Angebote bank options, exact/updated signup mailbox, dashboard context, and console cleanliness.",
+  "rca_of_the_issue": "Route failures are deterministic: App.js declares none of /kontoeroeffnung, /aktien, /stocks, /banken/bbva, or /bbva, then catch-all redirects to /. Angebote is sourced from siteCopy.nav.groups and contains product links rather than bank links. Signup reaches the configured original Supabase project but Auth rejects the reserved example.com address with email_address_invalid. Public console failures come from mock showcase composition leaking live behavior (DashboardTopbar always mounts NotificationCenter for showcase-user), unauthenticated Edge Function calls from stock-history/stock-prices, and externally hot-linked logo providers blocking cross-origin image delivery."
+}
