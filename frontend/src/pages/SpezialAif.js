@@ -94,7 +94,7 @@ const FundPhoto = memo(function FundPhoto({ alt, className, pictureClassName, si
         className={className}
         loading={isLcp ? 'eager' : 'lazy'}
         decoding="async"
-        fetchPriority={isLcp ? 'high' : 'low'}
+        fetchpriority={isLcp ? 'high' : 'low'}
         sizes={sizes}
         onError={() => setFailed(true)}
       />

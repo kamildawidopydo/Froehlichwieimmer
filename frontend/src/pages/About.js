@@ -218,7 +218,7 @@ const About = () => {
             width={1356}
             height={768}
             decoding="async"
-            fetchPriority="high"
+            fetchpriority="high"
             className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover opacity-90 object-[62%_center] sm:object-[58%_center] lg:object-[55%_center]"
           />
           <div

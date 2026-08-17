@@ -122,7 +122,7 @@ const BankingHero = () => {
               width={1200}
               height={1600}
               decoding="async"
-              fetchPriority="high"
+              fetchpriority="high"
               loading="eager"
               style={prefersReduced || !parallaxOk ? undefined : { y: yVisual }}
               className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[52%_28%] lg:h-[112%] lg:max-w-none"

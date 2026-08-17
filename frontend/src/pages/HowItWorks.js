@@ -102,7 +102,7 @@ const HowItWorks = () => {
                 width={2000}
                 height={1333}
                 decoding="async"
-                fetchPriority="high"
+                fetchpriority="high"
                 className="aspect-[4/3] w-full object-cover object-[50%_45%] sm:aspect-[5/4]"
               />
             </div>

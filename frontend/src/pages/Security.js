@@ -79,7 +79,7 @@ const Security = () => {
             width={2400}
             height={1600}
             decoding="async"
-            fetchPriority="high"
+            fetchpriority="high"
             className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_40%] opacity-[0.42] sm:object-center"
           />
           <div

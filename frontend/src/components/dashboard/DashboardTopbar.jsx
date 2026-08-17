@@ -98,7 +98,7 @@ const DashboardTopbar = ({ profilePath = '/dashboard/profil', onOpenMobileNav, s
           </Link>
         </Button>
         {!showcase && <ThemeToggle compact tone="light" />}
-        <NotificationCenter />
+        {!showcase && <NotificationCenter />}
 
         <Popover>
           <PopoverTrigger asChild>

@@ -61,12 +61,22 @@ const mapQuotesToConfig = (quotes, config) => {
 };
 
 async function fetchQuotes(symbols) {
-  const { data, error } = await supabase.functions.invoke('stock-prices', {
-    body: { symbols },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(String(data.error));
-  return data?.quotes ?? [];
+  try {
+    const { data, error } = await supabase.functions.invoke('stock-prices', {
+      body: { symbols },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(String(data.error));
+    return data?.quotes ?? [];
+  } catch (err) {
+    // Public/unauthenticated callers (e.g. MarktuebersichtSidebar on /news) will get 401 here.
+    // Suppress console noise; components fall back to their default empty state.
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug('[marketService] fetchQuotes skipped:', err?.message || err);
+    }
+    return [];
+  }
 }
 
 /** Fetch live quotes for indices, commodities, FX symbols. */

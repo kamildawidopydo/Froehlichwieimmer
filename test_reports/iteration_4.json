@@ -1,0 +1,53 @@
+{
+  "summary": "Retested the public Kapitalmitte frontend after the three targeted fixes and ran the existing backend regression suite. All prior-green frontend regressions passed (home, welcome persistence, theme, News/Wissen/Unternehmen navigation, login/register forms, populated News, and local assets). FIX #1 passed with zero NotificationCenter/showcase-user Supabase REST requests. FIX #3 passed: News Edge Functions still return network-layer 401s, but the services contain them with empty data and produce zero uncaught JS/page errors; six-route console errors fell from 115 to 49. FIX #2 is incomplete at page level: BankingHero is no longer the warning source, but Home still logs the same fetchPriority React error from SpecialAifOverview. Backend requested smoke checks passed; full suite was 24/25 with only the explicitly excluded ingress CORS override failing.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Home console-clean rendering (FIX #2)",
+        "issue": "Home still logs React's unrecognized fetchPriority DOM-prop error. The stack now points to SpecialAifOverview, not BankingHero; /about logs the same error from About.js. Therefore the explicit expectation of no fetchPriority-like warning on Home fails.",
+        "affected_selectors": ["[data-testid='banking-hero']", "component:SpecialAifOverview", "route:/about"]
+      },
+      {
+        "flow": "Home/Login showcase chart rendering",
+        "issue": "The six-route traversal still emitted 8 SVG errors: <path> attribute d expected a moveto command but received undefined (4 on Home and 4 on Login). No pageerror or visible flow failure occurred, but the chart render remains console-invalid.",
+        "affected_selectors": ["[data-testid='home-platform-showcase']", "route:/login"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_auth_supplemental.py",
+    "/app/test_reports/pytest/pytest_results_iteration_4.xml"
+  ],
+  "action_items": [
+    "Replace or otherwise normalize remaining fetchPriority props on public-page image components, starting with SpecialAifOverview.jsx and About.js; verify Home emits no fetchPriority-like React warning.",
+    "Guard showcase chart SVG path generation so undefined path data is not rendered on Home/Login.",
+    "Self-test the six-route console traversal after these fixes; preserve FIX #1's zero showcase NotificationCenter queries and FIX #3's caught empty-data behavior."
+  ],
+  "critical_code_review_comments": [
+    "The fetchpriority change was applied only to BankingHero, while rg finds camel-case fetchPriority in SpecialAifOverview.jsx, About.js, SpezialAif.js, HowItWorks.js, and Security.js. Home's remaining warning is deterministically from SpecialAifOverview.",
+    "DashboardTopbar correctly gates NotificationCenter behind !showcase; measured Home traffic contained zero NotificationCenter-table REST requests and zero showcase-user URLs.",
+    "marketService and stockHistoryService now resolve to empty data after Edge Function failures. On /news, six stock-prices 401 responses generated only browser network errors plus debug messages, with zero uncaught JavaScript/page errors.",
+    "App.js remains 791 lines, over the 700-line maintainability threshold; route declarations should be split into focused modules.",
+    "ThemeToggle and desktop nav group buttons still lack data-testid attributes, requiring accessible-role fallbacks in regression automation."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_4.json"
+  ],
+  "success_rate": {
+    "backend": "100% of requested smoke checks; 96% full suite (24/25, sole failure is the known excluded ingress CORS override)",
+    "frontend": "All prior-green regressions passed; 2/3 targeted fixes fully passed (9/10 grouped acceptance checks overall)"
+  },
+  "seed_data_creation": "Backend pytest created unique TEST_ registration, lockout, and recovery records and cleaned them in teardown. No frontend/Supabase user was created.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "Read backend admin credentials from /app/memory/test_credentials.md. Admin login, $2b$ bcrypt hash, secure HttpOnly cookies, five-failure lockout, direct-app credentialed CORS, and idempotent password-rotation seeding passed. /app/auth_testing.md is absent.",
+  "context_for_next_testing_agent": "Iteration 4 measured six-route traversal /, /news, /comparison, /login, /about, /legal/impressum at 49 console errors versus 115 previously: 34 allowed network-layer 401s, 8 invalid SVG path errors, 2 fetchPriority warnings, and 5 known external-logo failures. There were zero pageerrors, zero local /assets failures, zero NotificationCenter-table REST requests, and zero showcase-user requests. News had 24 visible article links; its six stock-prices 401s were caught and produced no JS-401 error.",
+  "rca_of_the_issue": "FIX #2 changed BankingHero's attribute successfully, but the acceptance criterion is page-wide and Home also mounts SpecialAifOverview, whose motion image still passes camel-case fetchPriority. React reports that remaining prop with a stack rooted at SpecialAifOverview; About.js independently does the same. Reproduction: load / with visitor keys present, attach a console listener, wait for Home to settle, and observe one React fetchPriority error. The separate SVG noise is emitted by showcase chart rendering when path data is undefined."
+}

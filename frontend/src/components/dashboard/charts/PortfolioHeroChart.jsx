@@ -52,10 +52,12 @@ const PortfolioHeroChart = ({
 
   const points = useMemo(
     () =>
-      normalizeTimeSeries(data).map((row) => ({
-        ...row,
-        value: mode === 'value' ? Number(row.total || 0) : Number(row.pct || 0),
-      })),
+      normalizeTimeSeries(data)
+        .filter((row) => row.at instanceof Date && !Number.isNaN(row.at.getTime()))
+        .map((row) => ({
+          ...row,
+          value: mode === 'value' ? Number(row.total || 0) : Number(row.pct || 0),
+        })),
     [data, mode],
   );
 

@@ -59,7 +59,7 @@ export default function SpecialAifOverview() {
                 height={1200}
                 loading="eager"
                 decoding="async"
-                fetchPriority="high"
+                fetchpriority="high"
                 sizes="(max-width: 1024px) 100vw, 42vw"
                 className="h-full w-full object-cover object-[50%_42%]"
               />
