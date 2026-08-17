@@ -1,0 +1,89 @@
+{
+  "theme": "Light mode primary (Editorial Finance), dark mode toggle available. Sharp, crisp, high-contrast.",
+  "typography": {
+    "headings": "Cabinet Grotesk (sans-serif) or Playfair Display (for editorial blocks)",
+    "body": "Manrope or Inter",
+    "data_numbers": "IBM Plex Mono or Space Mono for financial tickers and tables",
+    "rules": [
+      "No generic Sans for headings. Rely on striking typography to carry the brand.",
+      "Use tabular nums (font-variant-numeric: tabular-nums) for all financial data to ensure decimals align perfectly.",
+      "Use tracking-tight for H1/H2."
+    ]
+  },
+  "colors": {
+    "palette_archetype": "SWISS & HIGH-CONTRAST mixed with LUXURY (Editorial Finance)",
+    "background": "#F9FAFB (Light) or #0A0A0A (Dark)",
+    "surfaces": "#FFFFFF (Light) or #121212 (Dark)",
+    "primary": "#022C22 (Deep Forest Green for mature wealth representation)",
+    "accents": {
+      "success": "#059669",
+      "danger": "#DC2626",
+      "neutral_border": "#E2E8F0",
+      "highlight": "#D97706"
+    },
+    "rules": [
+      "No full-screen gradients for backgrounds. Use solid colors with subtle noise texture if needed.",
+      "Never rely on color alone for gains/losses (always use +/- signs or directional arrows).",
+      "CRITICAL: DO NOT use complete transparent background in header, overlays, dropdowns, or any surface that has content under it. Use solid fill or high-opacity backdrop-blur."
+    ]
+  },
+  "visual_enhancers": {
+    "surfaces": "GRID BORDERS for data-heavy dashboards, FLAT SOLID surfaces for cards.",
+    "shadows": "Minimal. 1px solid borders preferred over soft shadows.",
+    "borders": "border-slate-200 (light) or border-slate-800 (dark)",
+    "radius": "rounded-none or rounded-sm (max 4px). Sharp/Brutalist."
+  },
+  "components": {
+    "instructions_to_main_agent": "Use Shadcn UI (.jsx / .js versions, NOT .tsx). Modify default radii to be sharper. Override Shadcn card defaults to remove drop shadows.",
+    "buttons": "Sharp rectangular or slightly rounded-sm. No shadow.",
+    "tables": "Dense structure. Tabular numbers for all numerical columns. Clear hover states on rows.",
+    "charts": "Recharts. Monochromatic lines (Slate) for general trends, strictly Red/Green only when indicating financial loss/gain relative to a baseline.",
+    "cards": "Flat, 1px border. No drop shadow. Utilize grid structural borders."
+  },
+  "grids_and_layouts": {
+    "spacing": "Generous padding for macro containers (p-8 or p-12). For data tables, use tight dense spacing.",
+    "bento_grid": "For Marketing Landing page (BBVA/Bunq sections). Mode B: High Density Grid for Dashboards (Macro/Stocks).",
+    "alignment": "Strict left-alignment for data and typography. Right-align numeric values in tables."
+  },
+  "motion": {
+    "rules": [
+      "Minimalist and snappy.",
+      "Hover states on all interactive elements (e.g., slight background darken, text color shift).",
+      "No slow fades or bouncy springs."
+    ]
+  },
+  "accessibility": {
+    "contrast": "APCA standard. Dark text on light background. No low-contrast gray-on-gray for essential data.",
+    "testing": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case."
+  },
+  "media": {
+    "image_urls": [
+      {
+        "url": "https://images.pexels.com/photos/9170378/pexels-photo-9170378.jpeg",
+        "category": "Hero/Marketing Background",
+        "description": "Modern Frankfurt skyscraper for trust signal."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1651341050677-24dba59ce0fd",
+        "category": "Dashboard/Stock Overview Context",
+        "description": "Clean stock market numbers for decorative elements in the trading view."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1654343164937-cfd5ef5eb665",
+        "category": "News Feed Thumbnail",
+        "description": "Editorial feel for news feed items."
+      }
+    ],
+    "rules": "Overlay hero images with max bg-black/40 so the imagery remains highly visible while keeping text readable."
+  },
+  "universal_guidelines_for_main_agent": [
+    "Implement logic in .js/.jsx files as this project does not use TypeScript.",
+    "You MUST NOT apply universal transition (e.g., transition: all). Add transitions specifically to properties like color, transform.",
+    "You MUST NOT center align the app container in App.css.",
+    "DO NOT use generic centered layouts. Use grid and flex.",
+    "All interactive elements MUST include data-testid.",
+    "Never use AI assistant emojis. Use lucide-react or @phosphor-icons/react."
+  ],
+  "3d_libraries": "Not recommended for this specific platform; rely on crisp SVG/Recharts to maintain a serious, data-focused editorial aesthetic.",
+  "general_ui_ux_design_guidelines": "Adopt an 'Editorial Finance' aesthetic. Emphasize clarity, typography, and functional grids over decorative elements. Ensure users can quickly scan numeric data. No 'crypto-neon' aesthetics."
+}

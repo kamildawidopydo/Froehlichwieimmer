@@ -1,0 +1,807 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+
+    /* Kapitalmitte — Kapital Cobalt light (open, airy) */
+    --bank-bg:             255 255 255;  /* #FFFFFF */
+    --bank-surface:        255 255 255;  /* #FFFFFF */
+    --bank-surface-elev:   245 248 252;  /* #F5F8FC */
+    --bank-border:         226 232 240;  /* #E2E8F0 */
+
+    --bank-text:           30 41 59;     /* #1E293B */
+    --bank-text-muted:     100 116 139;  /* #64748B */
+
+    --bank-primary:        33 134 212;   /* #2186D4 bright cobalt */
+    --bank-primary-hover:  20 110 180;   /* #146EB4 */
+    --bank-secondary:      56 110 168;   /* #386EA8 */
+    --bank-accent:         56 163 232;   /* #38A3E8 CTA */
+    --bank-accent-strong:  33 134 212;   /* #2186D4 */
+    /* Accent highlight — brand blue (replaces brass/gold in UI copy) */
+    --bank-gold:           33 134 212;   /* #2186D4 = primary */
+    --bank-gold-soft:      236 245 252;  /* #ECF5FC */
+    --bank-success:        16 185 129;   /* #10B981 */
+    /* Signature CTA green — Formular + primary actions (not chrome/nav chrome) */
+    --bank-signature:        5 150 105;  /* #059669 */
+    --bank-signature-hover:  4 120 87;   /* #047857 */
+    --bank-error:          220 38 38;
+
+    /* Footer / contrast bands — mid cobalt (not deep navy) */
+    --bank-ink:            36 118 188;   /* #2476BC */
+    --bank-ink-hover:      56 163 232;   /* #38A3E8 */
+    --bank-ink-soft:       48 132 200;   /* #3084C8 */
+    --bank-ink-elev:       64 148 212;   /* #4094D4 */
+    --bank-on-ink:         255 255 255;
+
+    /* shadcn — Kapital Cobalt light */
+    --background: 210 40% 100%;
+    --foreground: 215 25% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 17%;
+    --primary: 205 73% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 98%;
+    --secondary-foreground: 215 25% 17%;
+    --muted: 210 40% 98%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 205 70% 96%;
+    --accent-foreground: 205 73% 38%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 205 73% 48%;
+    --radius: 0.5rem;
+    --chart-1: 205 73% 48%;
+    --chart-2: 42 39% 47%;
+    --chart-3: 213 40% 34%;
+    --chart-4: 199 72% 52%;
+    --chart-5: 215 16% 55%;
+  }
+
+  .dark {
+    color-scheme: dark;
+
+    /* Kapital Cobalt — dark (blue lifted) */
+    --bank-bg:             10 18 30;     /* #0A121E */
+    --bank-surface:        16 28 44;     /* #101C2C */
+    --bank-surface-elev:   24 40 60;     /* #18283C */
+    --bank-border:         40 58 82;     /* #283A52 */
+
+    --bank-text:           241 245 250;  /* #F1F5FA */
+    --bank-text-muted:     148 166 188;  /* #94A6BC */
+
+    --bank-primary:        91 163 224;   /* #5BA3E0 */
+    --bank-primary-hover:  123 184 232;  /* #7BB8E8 */
+    --bank-secondary:      100 130 168;
+    --bank-accent:         91 163 224;   /* #5BA3E0 */
+    --bank-accent-strong:  61 143 204;   /* #3D8FCC */
+    --bank-gold:           91 163 224;   /* #5BA3E0 */
+    --bank-gold-soft:      20 40 64;     /* #142840 */
+    --bank-success:        52 211 153;
+    --bank-signature:        16 185 129; /* #10B981 */
+    --bank-signature-hover:  5 150 105;  /* #059669 */
+    --bank-error:          239 68 68;
+
+    --bank-ink:            10 18 30;
+    --bank-ink-hover:      16 28 44;
+    --bank-ink-soft:       24 40 60;
+    --bank-ink-elev:       40 58 82;
+    --bank-on-ink:         255 255 255;
+
+    --background: 214 50% 8%;
+    --foreground: 214 30% 96%;
+    --card: 214 46% 12%;
+    --card-foreground: 214 30% 96%;
+    --popover: 214 46% 12%;
+    --popover-foreground: 214 30% 96%;
+    --primary: 206 68% 62%;
+    --primary-foreground: 214 50% 8%;
+    --secondary: 214 30% 16%;
+    --secondary-foreground: 214 30% 96%;
+    --muted: 214 30% 14%;
+    --muted-foreground: 214 16% 66%;
+    --accent: 206 32% 16%;
+    --accent-foreground: 206 70% 72%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 28% 24%;
+    --input: 214 28% 24%;
+    --ring: 206 68% 62%;
+    --chart-1: 206 68% 62%;
+    --chart-2: 42 45% 58%;
+    --chart-3: 214 28% 50%;
+    --chart-4: 199 55% 48%;
+    --chart-5: 214 16% 42%;
+  }
+
+  /* ----------------------------------------------------------------------
+     Dashboard — Kapital Cobalt
+     ---------------------------------------------------------------------- */
+  .dashboard-theme {
+    --bank-bg:             255 255 255;
+    --bank-surface:        255 255 255;
+    --bank-surface-elev:   245 248 252;  /* #F5F8FC */
+    --bank-border:         226 232 240;  /* #E2E8F0 */
+
+    --bank-text:           30 41 59;     /* #1E293B */
+    --bank-text-muted:     100 116 139;  /* #64748B */
+
+    --bank-primary:        33 134 212;   /* #2186D4 */
+    --bank-primary-hover:  20 110 180;   /* #146EB4 */
+    --bank-secondary:      56 110 168;   /* #386EA8 */
+    --bank-accent:         56 163 232;   /* #38A3E8 */
+    --bank-accent-strong:  33 134 212;
+
+    --bank-gold:           33 134 212;   /* #2186D4 */
+    --bank-gold-soft:      236 245 252;  /* #ECF5FC */
+
+    --bank-success:        16 185 129;
+    --bank-signature:        5 150 105;
+    --bank-signature-hover:  4 120 87;
+    --bank-error:          220 38 38;
+  }
+
+  .dark .dashboard-theme {
+    --bank-bg:             10 18 30;
+    --bank-surface:        16 28 44;
+    --bank-surface-elev:   24 40 60;
+    --bank-border:         40 58 82;
+
+    --bank-text:           241 245 250;
+    --bank-text-muted:     148 166 188;
+
+    --bank-primary:        91 163 224;   /* #5BA3E0 */
+    --bank-primary-hover:  123 184 232;
+    --bank-accent:         91 163 224;
+    --bank-accent-strong:  61 143 204;
+
+    --bank-gold:           91 163 224;
+    --bank-gold-soft:      20 40 64;
+
+    --bank-signature:        16 185 129;
+    --bank-signature-hover:  5 150 105;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    overflow-x: clip;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    overflow-x: clip;
+    max-width: 100%;
+    font-family: theme('fontFamily.sans');
+    font-feature-settings: "kern" 1, "liga" 1;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  img {
+    -webkit-user-drag: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Global keyboard-focus safety net for route-level custom controls */
+  :where(
+      a[href],
+      button,
+      [role="button"],
+      input:not([type="hidden"]),
+      select,
+      textarea,
+      [tabindex]:not([tabindex="-1"])
+    ):focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px rgb(var(--bank-surface)),
+      0 0 0 4px rgb(var(--bank-accent) / 0.38);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: theme('fontFamily.display');
+    font-weight: 500;
+    letter-spacing: -0.018em;
+  }
+
+  /* Dashboard charts & data widgets — sans-serif, not editorial display */
+  .dashboard-theme .chart-title,
+  .dashboard-theme h3.chart-title,
+  .dashboard-theme .dashboard-page-title,
+  .dashboard-theme h1.dashboard-page-title,
+  .dashboard-theme h2.dashboard-page-title {
+    font-family: theme('fontFamily.sans');
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variation-settings: normal;
+  }
+
+  .dashboard-theme .recharts-text,
+  .dashboard-theme .recharts-cartesian-axis-tick-value,
+  .dashboard-theme .recharts-legend-item-text {
+    font-family: theme('fontFamily.sans') !important;
+  }
+
+  /* Dashboard: sans-serif numerics (no editorial Newsreader) */
+  .dashboard-theme .rate-figure {
+    font-family: theme('fontFamily.sans');
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variation-settings: normal;
+  }
+
+  .dashboard-theme .font-display {
+    font-family: theme('fontFamily.sans');
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variation-settings: normal;
+  }
+
+  /*
+   * Dashboard overflow guard — flex/grid children shrink on laptops/tablets
+   * instead of forcing horizontal page scroll.
+   */
+  .dashboard-theme .dashboard-main {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
+  .dashboard-theme .dashboard-page {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .dashboard-theme :is(.grid, .flex) > :not([class*='shrink-0']) {
+    min-width: 0;
+  }
+
+  .dashboard-theme .dashboard-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  /* Tabular figures everywhere we render rates/amounts */
+  .tabular-nums,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ==========================================================================
+   Dark-mode compatibility layer (preserved + tuned to new palette)
+   ========================================================================== */
+@layer components {
+  /* Light mode: soften hardcoded bg-white to warm surface token */
+  :root:not(.dark) :where(.bg-white:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface));
+  }
+
+  .dark :where(.bg-white:not(.keep-light)) { background-color: rgb(12 26 46); }
+  .dark :where(.bg-slate-50:not(.keep-light), .bg-gray-50:not(.keep-light), .bg-zinc-50:not(.keep-light), .bg-neutral-50:not(.keep-light), .bg-stone-50:not(.keep-light)) { background-color: rgb(6 16 31); }
+  .dark :where(.bg-slate-100:not(.keep-light), .bg-gray-100:not(.keep-light), .bg-zinc-100:not(.keep-light), .bg-neutral-100:not(.keep-light)) { background-color: rgb(18 36 60); }
+  .dark :where(.bg-slate-200:not(.keep-light), .bg-gray-200:not(.keep-light)) { background-color: rgb(28 46 72); }
+
+  .dark :where(.text-black:not(.keep-light), .text-slate-900:not(.keep-light), .text-gray-900:not(.keep-light), .text-zinc-900:not(.keep-light)) { color: rgb(229 231 235); }
+  .dark :where(.text-slate-800:not(.keep-light), .text-gray-800:not(.keep-light)) { color: rgb(209 213 219); }
+  .dark :where(.text-slate-700:not(.keep-light), .text-gray-700:not(.keep-light)) { color: rgb(203 213 225); }
+  .dark :where(.text-slate-600:not(.keep-light), .text-gray-600:not(.keep-light), .text-slate-500:not(.keep-light), .text-gray-500:not(.keep-light)) { color: rgb(156 175 200); }
+  .dark :where(.text-slate-400:not(.keep-light), .text-gray-400:not(.keep-light)) { color: rgb(var(--bank-text-muted)); }
+
+  .dark :where(.border-gray-100:not(.keep-light), .border-slate-100:not(.keep-light), .border-zinc-100:not(.keep-light), .border-neutral-100:not(.keep-light)) { border-color: rgb(28 46 72); }
+  .dark :where(.border-gray-200:not(.keep-light), .border-slate-200:not(.keep-light), .border-zinc-200:not(.keep-light), .border-neutral-200:not(.keep-light)) { border-color: rgb(28 46 72); }
+  .dark :where(.border-gray-300:not(.keep-light), .border-slate-300:not(.keep-light)) { border-color: rgb(56 78 110); }
+
+  .dark :where(.bg-emerald-50:not(.keep-light)) { background-color: rgb(5 46 22 / 0.35); }
+  .dark :where(.bg-rose-50:not(.keep-light)) { background-color: rgb(76 5 25 / 0.35); }
+  .dark :where(.bg-amber-50:not(.keep-light)) { background-color: rgb(69 26 3 / 0.35); }
+  .dark :where(.bg-blue-50:not(.keep-light)) { background-color: rgb(23 37 84 / 0.35); }
+  .dark :where(.bg-sky-50:not(.keep-light)) { background-color: rgb(12 74 110 / 0.35); }
+  .dark :where(.bg-sky-50\/60:not(.keep-light), .bg-sky-50\/50:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface));
+  }
+  .dark :where(.bg-emerald-50\/50:not(.keep-light), .bg-emerald-50\/40:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev));
+  }
+  .dark :where(.bg-bank-gold-soft\/30:not(.keep-light), .bg-bank-gold-soft\/80:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev));
+  }
+  .dark :where(.bg-yellow-50:not(.keep-light)) { background-color: rgb(66 32 6 / 0.35); }
+  .dark :where(.bg-orange-50:not(.keep-light)) { background-color: rgb(67 20 7 / 0.35); }
+  .dark :where(.bg-red-50:not(.keep-light)) { background-color: rgb(69 10 10 / 0.35); }
+  .dark :where(.bg-indigo-50:not(.keep-light)) { background-color: rgb(30 27 75 / 0.35); }
+  .dark :where(.bg-violet-50:not(.keep-light)) { background-color: rgb(46 16 101 / 0.35); }
+
+  .dark :where(.border-emerald-100:not(.keep-light), .border-emerald-200:not(.keep-light)) { border-color: rgb(6 95 70 / 0.5); }
+  .dark :where(.border-rose-100:not(.keep-light), .border-rose-200:not(.keep-light)) { border-color: rgb(159 18 57 / 0.5); }
+  .dark :where(.border-amber-100:not(.keep-light), .border-amber-200:not(.keep-light)) { border-color: rgb(146 64 14 / 0.5); }
+  .dark :where(.border-blue-100:not(.keep-light), .border-blue-200:not(.keep-light)) { border-color: rgb(11 58 92 / 0.5); }
+  .dark :where(.border-sky-100:not(.keep-light), .border-sky-200:not(.keep-light)) { border-color: rgb(7 89 133 / 0.5); }
+  .dark :where(.border-yellow-100:not(.keep-light), .border-yellow-200:not(.keep-light)) { border-color: rgb(133 77 14 / 0.5); }
+
+  .dark :where(.text-emerald-700:not(.keep-light)) { color: rgb(52 211 153); }
+  .dark :where(.text-emerald-600:not(.keep-light)) { color: rgb(52 211 153); }
+  .dark :where(.text-rose-700:not(.keep-light)) { color: rgb(251 113 133); }
+  .dark :where(.text-rose-600:not(.keep-light)) { color: rgb(251 113 133); }
+  .dark :where(.text-amber-700:not(.keep-light)) { color: rgb(252 211 77); }
+  .dark :where(.text-amber-600:not(.keep-light)) { color: rgb(252 211 77); }
+  .dark :where(.text-blue-700:not(.keep-light)) { color: rgb(108 167 224); }
+  .dark :where(.text-blue-600:not(.keep-light)) { color: rgb(108 167 224); }
+  .dark :where(.text-violet-600:not(.keep-light), .text-violet-700:not(.keep-light)) { color: rgb(167 139 250); }
+  .dark :where(.text-emerald-800:not(.keep-light), .text-emerald-900:not(.keep-light)) { color: rgb(110 231 183); }
+  .dark :where(.text-amber-800:not(.keep-light), .text-amber-900:not(.keep-light)) { color: rgb(252 211 77); }
+
+  /* Hardcoded hex text on comparison cards — remap to bank tokens in dark mode. */
+  .dark :where(.text-\[\#1a4295\]:not(.keep-light)) { color: rgb(var(--bank-primary)); }
+  .dark :where(.text-\[\#111827\]:not(.keep-light)) { color: rgb(var(--bank-text)); }
+  .dark :where(.text-\[\#374151\]:not(.keep-light)) { color: rgb(var(--bank-text-muted)); }
+  .dark :where(.text-\[\#6b7280\]:not(.keep-light), .text-\[\#9ca3af\]:not(.keep-light)) { color: rgb(var(--bank-text-muted)); }
+  .dark :where(.text-\[\#003459\]:not(.keep-light)) { color: rgb(var(--bank-primary)); }
+
+
+  .dark .recharts-cartesian-grid-horizontal line,
+  .dark .recharts-cartesian-grid-vertical line {
+    stroke: rgba(148, 163, 184, 0.14) !important;
+  }
+  .dark .recharts-cartesian-axis-tick-value,
+  .dark .recharts-text,
+  .dark .recharts-legend-item-text {
+    fill: rgb(156 175 200) !important;
+    color: rgb(156 175 200) !important;
+  }
+  .dark .recharts-default-tooltip {
+    background-color: rgb(12 26 46) !important;
+    border-color: rgb(28 46 72) !important;
+    color: rgb(229 231 235) !important;
+  }
+  .dark .recharts-tooltip-label { color: rgb(209 213 219) !important; }
+  .dark .recharts-tooltip-item { color: rgb(229 231 235) !important; }
+  .dark .recharts-reference-line-line {
+    stroke: rgba(148, 163, 184, 0.25) !important;
+  }
+
+  .dark .news-market-chart {
+    background-color: rgb(12 26 46 / 0.35);
+    border-color: rgb(28 46 72 / 0.8);
+  }
+  .dark .news-market-chart text {
+    fill: rgb(var(--bank-text-muted)) !important;
+  }
+
+  .dark :where(.shadow-sm:not(.keep-light), .shadow:not(.keep-light), .shadow-md:not(.keep-light), .shadow-lg:not(.keep-light), .shadow-xl:not(.keep-light)) {
+    --tw-shadow-color: rgba(0, 0, 0, 0.5);
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty  { text-wrap: pretty; }
+
+  /* Strong dark overrides after utilities so they win reliably. */
+  .dark :where(.bg-white:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface)) !important;
+  }
+  .dark :where(.bg-white\/70:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev) / 0.92) !important;
+  }
+  .dark :where(.bg-white\/80:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev) / 0.94) !important;
+  }
+  .dark :where(.bg-white\/90:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev) / 0.96) !important;
+  }
+  .dark :where(.bg-white\/95:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev) / 0.98) !important;
+  }
+  .dark :where(.bg-bank-surface:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface)) !important;
+  }
+  .dark :where(.bg-bank-bg:not(.keep-light)) {
+    background-color: rgb(var(--bank-bg)) !important;
+  }
+  .dark :where(.text-bank-text:not(.keep-light)) {
+    color: rgb(var(--bank-text)) !important;
+  }
+  .dark :where(.text-bank-text-muted:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted)) !important;
+  }
+  .dark :where(.border-bank-border:not(.keep-light)) {
+    border-color: rgb(var(--bank-border)) !important;
+  }
+  /* Safety net: prevent low-contrast text inside dark ink surfaces. */
+  .dark :where(.bg-bank-ink) :where(.text-bank-text:not(.keep-light)) {
+    color: rgb(var(--bank-on-ink)) !important;
+  }
+  .dark :where(.bg-bank-ink) :where(.text-bank-text-muted:not(.keep-light)) {
+    color: rgb(255 255 255 / 0.78) !important;
+  }
+
+  /*
+   * text-bank-ink is intentionally stable (always navy) for ink surfaces.
+   * On themed surfaces that flip dark, remap to readable light text.
+   */
+  .dark :where(.text-bank-ink:not(.keep-light)) {
+    color: rgb(var(--bank-text)) !important;
+  }
+  .dark :where(.text-bank-ink\/35:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.65) !important;
+  }
+  .dark :where(.text-bank-ink\/45:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.75) !important;
+  }
+  .dark :where(.text-bank-ink\/70:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.92) !important;
+  }
+  .dark :where(.bg-bank-ink) :where(.text-bank-ink:not(.keep-light)) {
+    color: rgb(var(--bank-on-ink)) !important;
+  }
+  .dark :where(.bg-bank-ink) :where(.text-bank-ink\/35:not(.keep-light), .text-bank-ink\/45:not(.keep-light), .text-bank-ink\/70:not(.keep-light)) {
+    color: rgb(255 255 255 / 0.72) !important;
+  }
+
+  .dark :where(.text-bank-secondary:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted)) !important;
+  }
+
+  /* Opacity-muted captions — lift floor so they stay legible in dark rooms. */
+  .dark :where(.text-bank-text-muted\/50:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.78) !important;
+  }
+  .dark :where(.text-bank-text-muted\/60:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.85) !important;
+  }
+  .dark :where(.text-bank-text-muted\/70:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.92) !important;
+  }
+  .dark :where(.text-bank-text-muted\/80:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.96) !important;
+  }
+  .dark :where(.placeholder\:text-bank-text-muted\/50)::placeholder,
+  .dark :where(.placeholder\:text-bank-text-muted\/70)::placeholder {
+    color: rgb(var(--bank-text-muted) / 0.88) !important;
+  }
+
+  /*
+   * Social platform previews mimic Facebook/LinkedIn/Instagram light UIs.
+   * Restore native light surfaces + text inside this shell only.
+   */
+  .dark .social-preview-light {
+    color-scheme: light;
+    --bank-bg: 255 255 255;
+    --bank-surface: 255 255 255;
+    --bank-surface-elev: 245 248 252;
+    --bank-border: 226 232 240;
+    --bank-text: 30 41 59;
+    --bank-text-muted: 100 116 139;
+    --bank-primary: 33 134 212;
+    --bank-secondary: 56 110 168;
+    --bank-ink: 36 118 188;
+    --foreground: 215 25% 17%;
+    --muted-foreground: 215 16% 47%;
+    --background: 210 40% 100%;
+  }
+
+  .dark .social-preview-light :where(.bg-white:not(.keep-light)),
+  .dark .social-preview-light :where(.hover\:bg-white:hover:not(.keep-light)),
+  .dark .social-preview-light :where(.focus\:bg-white:focus) {
+    background-color: rgb(255 255 255) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/60:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.6) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/70:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.7) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/75:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.75) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/80:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.8) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/90:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.9) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/95:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.95) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/10:not(.keep-light)),
+  .dark .social-preview-light :where(.hover\:bg-white\/10:hover:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.1) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/15:not(.keep-light)),
+  .dark .social-preview-light :where(.hover\:bg-white\/15:hover:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.15) !important;
+  }
+
+  .dark .social-preview-light :where(.text-bank-text:not(.keep-light)) {
+    color: rgb(11 18 32) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-text-muted:not(.keep-light)) {
+    color: rgb(74 93 115) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-ink:not(.keep-light)) {
+    color: rgb(11 18 32) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-ink\/35:not(.keep-light)) {
+    color: rgb(11 18 32 / 0.35) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-ink\/45:not(.keep-light)) {
+    color: rgb(11 18 32 / 0.45) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-ink\/55:not(.keep-light)) {
+    color: rgb(11 18 32 / 0.55) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-ink\/70:not(.keep-light)) {
+    color: rgb(11 18 32 / 0.7) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-secondary:not(.keep-light)) {
+    color: rgb(30 45 64) !important;
+  }
+
+  .dark .social-preview-light :where(.text-black:not(.keep-light)),
+  .dark .social-preview-light :where(.text-slate-900:not(.keep-light)),
+  .dark .social-preview-light :where(.text-gray-900:not(.keep-light)) {
+    color: rgb(17 24 39) !important;
+  }
+  .dark .social-preview-light :where(.text-slate-800:not(.keep-light)),
+  .dark .social-preview-light :where(.text-gray-800:not(.keep-light)) {
+    color: rgb(31 41 55) !important;
+  }
+  .dark .social-preview-light :where(.text-slate-700:not(.keep-light)),
+  .dark .social-preview-light :where(.text-gray-700:not(.keep-light)) {
+    color: rgb(55 65 81) !important;
+  }
+  .dark .social-preview-light :where(.text-slate-600:not(.keep-light)),
+  .dark .social-preview-light :where(.text-gray-600:not(.keep-light)),
+  .dark .social-preview-light :where(.text-slate-500:not(.keep-light)),
+  .dark .social-preview-light :where(.text-gray-500:not(.keep-light)) {
+    color: rgb(107 114 128) !important;
+  }
+  .dark .social-preview-light :where(.text-gray-400:not(.keep-light)),
+  .dark .social-preview-light :where(.text-slate-400:not(.keep-light)) {
+    color: rgb(156 163 175) !important;
+  }
+
+  .dark .social-preview-light :where(.text-\[\#1a4295\]:not(.keep-light)) {
+    color: #1a4295 !important;
+  }
+  .dark .social-preview-light :where(.text-\[\#111827\]:not(.keep-light)) {
+    color: #111827 !important;
+  }
+  .dark .social-preview-light :where(.text-\[\#374151\]:not(.keep-light)) {
+    color: #374151 !important;
+  }
+  .dark .social-preview-light :where(.text-\[\#6b7280\]:not(.keep-light)) {
+    color: #6b7280 !important;
+  }
+  .dark .social-preview-light :where(.text-\[\#9ca3af\]:not(.keep-light)) {
+    color: #9ca3af !important;
+  }
+
+  /* Editorial mono kicker — standardised three-step scale.
+     Use these instead of ad-hoc `font-mono text-[10.5px] uppercase tracking-[0.22em]`. */
+  .kicker {
+    font-family: theme('fontFamily.mono');
+    font-size: 10.5px;
+    line-height: 1;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+  }
+  .kicker-loose {
+    font-family: theme('fontFamily.mono');
+    font-size: 10.5px;
+    line-height: 1;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+  }
+  .kicker-tight {
+    font-family: theme('fontFamily.mono');
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  /* Editorial section shell — DRY container with max-w + responsive gutters. */
+  .editorial-shell {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 1440px;
+    padding-left: 1.25rem;   /* 5 */
+    padding-right: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .editorial-shell { padding-left: 2rem; padding-right: 2rem; }   /* sm:8 */
+  }
+  @media (min-width: 1024px) {
+    .editorial-shell { padding-left: 3rem; padding-right: 3rem; }   /* lg:12 */
+  }
+
+  /* Editorial drop-cap for magazine-style intros */
+  .drop-cap {
+    overflow-wrap: break-word;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .drop-cap::first-letter {
+    font-family: theme('fontFamily.display');
+    font-weight: 380;
+    font-size: 4.25em;
+    line-height: 0.86;
+    float: left;
+    padding: 0.04em 0.12em 0 0;
+    color: rgb(var(--bank-primary));
+  }
+  @media (max-width: 639px) {
+    .drop-cap::first-letter {
+      float: none;
+      display: inline-block;
+      font-size: 2.35em;
+      line-height: 0.9;
+      padding: 0;
+      margin-right: 0.04em;
+      vertical-align: baseline;
+    }
+  }
+
+  /* Long-form copy — prevent grid/float min-content overflow on narrow viewports */
+  .prose-copy {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .prose-copy > p,
+  .prose-copy > ul,
+  .prose-copy > ol {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  /* Subtle typographic numeric for rate display */
+  .rate-figure {
+    font-family: theme('fontFamily.display');
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Accent rule scale — 4-tier ladder (forest trust accent).
+     Tier 0: 4rem / 0.55 — eyebrow / section subtle.
+     Tier 1 (sm): 2.5rem / 0.45 — card accents.
+     Tier 3 (lg): 6rem / 0.70 — hero emphasis. */
+  .rule-accent,
+  .rule-accent-md {
+    background: linear-gradient(to right, rgb(var(--bank-accent-strong) / 0.55), transparent);
+    height: 1px;
+    width: 4rem;
+  }
+  .rule-brass,
+  .rule-brass-md {
+    background: linear-gradient(to right, rgb(var(--bank-accent) / 0.55), transparent);
+    height: 1px;
+    width: 4rem;
+  }
+  .rule-accent-sm {
+    background: linear-gradient(to right, rgb(var(--bank-accent-strong) / 0.45), transparent);
+    height: 1px;
+    width: 2.5rem;
+  }
+  .rule-brass-sm {
+    background: linear-gradient(to right, rgb(var(--bank-accent) / 0.42), transparent);
+    height: 1px;
+    width: 2.5rem;
+  }
+  .rule-accent-lg {
+    background: linear-gradient(to right, rgb(var(--bank-accent-strong) / 0.70), transparent);
+    height: 1px;
+    width: 6rem;
+  }
+  .rule-brass-lg {
+    background: linear-gradient(to right, rgb(var(--bank-accent) / 0.68), transparent);
+    height: 1px;
+    width: 6rem;
+  }
+
+  /* Fine dot matrix — subtle texture (replaces organic grain) */
+  .grain {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='1' cy='1' r='0.65' fill='%232186D4' fill-opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 24px 24px;
+  }
+
+  /* Geometric grid pattern — for dark bands and hero overlays */
+  .topo-pattern {
+    background-image:
+      linear-gradient(rgb(var(--bank-accent) / 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--bank-accent) / 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* Soft layered mesh — ink→accent→bg, diffused. Stable across themes. */
+  .mesh-navy {
+    background-image:
+      radial-gradient(120% 80% at 18% 12%, rgb(var(--bank-accent) / 0.28), transparent 55%),
+      radial-gradient(90%  70% at 82% 88%, rgb(var(--bank-accent-strong) / 0.14), transparent 60%),
+      radial-gradient(140% 100% at 50% 50%, rgb(var(--bank-ink)) 0%, rgb(var(--bank-ink)) 60%, rgb(var(--bank-ink-hover)) 100%);
+  }
+
+  /* Premium CTA shine sweep — CSS only */
+  @keyframes shine-sweep {
+    0%   { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+    20%  { opacity: 0.35; }
+    100% { transform: translateX(220%) skewX(-20deg); opacity: 0; }
+  }
+  .shine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .shine::after {
+    content: '';
+    position: absolute;
+    inset: 0 -40% 0 -40%;
+    background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
+    transform: translateX(-120%) skewX(-20deg);
+    pointer-events: none;
+  }
+  .shine:hover::after {
+    animation: shine-sweep 1100ms ease-out;
+  }
+
+  /* Marquee — silent ticker for live-rate strip */
+  @keyframes marquee-x {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .marquee-track {
+    animation: marquee-x 38s linear infinite;
+    will-change: transform;
+  }
+  .marquee-pause:hover .marquee-track { animation-play-state: paused; }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @media print {
+    aside[aria-label="Kundenservice"] {
+      display: none !important;
+      visibility: hidden !important;
+    }
+    .min-h-screen.flex.flex-col {
+      min-height: auto !important;
+      padding-bottom: 0 !important;
+    }
+  }
+
+  /* Honor reduced-motion users globally */
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track { animation: none !important; }
+    .shine:hover::after { animation: none !important; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

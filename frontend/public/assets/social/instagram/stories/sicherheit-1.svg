@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#0A2540"/>
+      <stop offset="55%" stop-color="#123d66"/>
+      <stop offset="100%" stop-color="#0d3358"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8C547"/>
+      <stop offset="100%" stop-color="#C9A227"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a4a7a"/>
+      <stop offset="100%" stop-color="#0f3558"/>
+    </linearGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.5" fill="rgba(255,255,255,0.06)"/>
+    </pattern>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  <rect width="1080" height="1920" fill="url(#dots)"/>
+  
+    
+  <text x="80" y="420" fill="#fff" font-family="system-ui,sans-serif" font-size="56" font-weight="800">Einlage</text>
+  <text x="80" y="490" fill="rgba(255,255,255,0.82)" font-family="system-ui,sans-serif" font-size="28">Gesetzlicher Schutz in der EU erklärt</text>
+  <rect x="80" y="520" width="220" height="4" rx="2" fill="url(#gold)"/>
+    
+  <g transform="translate(80,620)">
+    <rect width="280" height="340" rx="24" fill="url(#card)" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+    <rect x="24" y="24" width="232" height="8" rx="4" fill="#057642"/>
+    <circle cx="140" cy="140" r="52" fill="rgba(255,255,255,0.06)" stroke="#057642" stroke-width="3"/>
+    <text x="140" y="152" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="36">🛡</text>
+    <text x="140" y="250" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="28" font-weight="700">100.000 €</text>
+    <text x="140" y="290" text-anchor="middle" fill="rgba(255,255,255,0.65)" font-family="system-ui,sans-serif" font-size="20">pro Person &amp; Bank</text>
+  </g>
+    
+  <g transform="translate(400,620)">
+    <rect width="280" height="340" rx="24" fill="url(#card)" stroke="url(#gold)" stroke-width="3"/>
+    <rect x="24" y="24" width="232" height="8" rx="4" fill="url(#gold)"/>
+    <circle cx="140" cy="140" r="52" fill="rgba(255,255,255,0.06)" stroke="url(#gold)" stroke-width="3"/>
+    <text x="140" y="152" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="36">🇪🇺</text>
+    <text x="140" y="250" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="28" font-weight="700">EU-Richtlinie</text>
+    <text x="140" y="290" text-anchor="middle" fill="rgba(255,255,255,0.65)" font-family="system-ui,sans-serif" font-size="20">Einlagensicherung</text>
+  </g>
+    
+  <g transform="translate(720,620)">
+    <rect width="280" height="340" rx="24" fill="url(#card)" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+    <rect x="24" y="24" width="232" height="8" rx="4" fill="#1877F2"/>
+    <circle cx="140" cy="140" r="52" fill="rgba(255,255,255,0.06)" stroke="#1877F2" stroke-width="3"/>
+    <text x="140" y="152" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="36">✓</text>
+    <text x="140" y="250" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="28" font-weight="700">Reguliert</text>
+    <text x="140" y="290" text-anchor="middle" fill="rgba(255,255,255,0.65)" font-family="system-ui,sans-serif" font-size="20">Partnerbanken</text>
+  </g>
+    <text x="540" y="1080" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-family="system-ui,sans-serif" font-size="26">Einlagen liegen bei der Partnerbank —</text>
+    <text x="540" y="1125" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-family="system-ui,sans-serif" font-size="26">nicht bei Kapitalmitte.</text>
+    
+  <g transform="translate(540,1280)">
+    <rect x="-200" y="0" width="400" height="120" rx="60" fill="rgba(255,255,255,0.06)" stroke="rgba(201,162,39,0.45)" stroke-width="2"/>
+    <text x="0" y="52" text-anchor="middle" fill="url(#gold)" font-family="system-ui,sans-serif" font-size="44" font-weight="800">EU</text>
+    <text x="0" y="92" text-anchor="middle" fill="rgba(255,255,255,0.75)" font-family="system-ui,sans-serif" font-size="24">Gesetzlicher Schutz</text>
+  </g>
+  
+  <text x="540" y="1780" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-family="system-ui,sans-serif" font-size="20">@kapitalmitte · Alexander Wahl Vermögensverwaltung GmbH</text>
+</svg>

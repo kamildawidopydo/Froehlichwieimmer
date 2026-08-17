@@ -1,0 +1,5 @@
+public/mediapipe/**
+public/models/**
+public/assets/**
+build/**
+node_modules/**

@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-05-22T13:00:50.381Z",
+  "noticeBanks": [
+    {
+      "raisinSlug": "lea-bank-ab",
+      "name": "Lea Bank AB",
+      "legalName": "Lea Bank AB",
+      "country": "Schweden",
+      "rate": 1.9,
+      "productName": "Lea Bank AB: Tagesgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/blt30e1558f423983af/66951764f5ef5ff6e9a734fd/Logos_CS_new-template_DE_Lea_Bank.png",
+      "minDeposit": 1,
+      "currency": "EUR"
+    },
+    {
+      "raisinSlug": "imprebanca",
+      "name": "imprebanca",
+      "legalName": "imprebanca S.p.A.",
+      "country": "Italien",
+      "rate": 1.9,
+      "productName": "imprebanca: Tagesgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/bltc2ed326bcca79f1c/66950ff42a822f4ede5e4d28/Logos_CS_new-template_DE_Imprebanca.png",
+      "minDeposit": 1,
+      "currency": "EUR"
+    },
+    {
+      "raisinSlug": "civi-bank",
+      "name": "CiviBank",
+      "legalName": "Banca di Cividale S.p.A.",
+      "country": "Italien",
+      "rate": 1.5,
+      "productName": "CiviBank: 31 Tage Kündigungsgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/blt0eb3f2cf51c03bb7/6691065c11c1c39250ec0a17/Logos_CS_new-template_NED_CiviBank.png",
+      "minDeposit": 1,
+      "currency": "EUR"
+    },
+    {
+      "raisinSlug": "banca-progetto",
+      "name": "Banca Progetto",
+      "legalName": "Banca Progetto S.p.A.",
+      "country": "Italien",
+      "rate": 2,
+      "productName": "Banca Progetto: Tagesgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/bltf9851be90067c6f5/66910824042b308503c14c8e/Logos_CS_new-template_NED_Banca_Progetto.png",
+      "minDeposit": 1,
+      "currency": "EUR"
+    },
+    {
+      "raisinSlug": "blu-or-bank-as",
+      "name": "BluOr Bank AS",
+      "legalName": "AS BlueOrange Bank ",
+      "country": "Lettland",
+      "rate": 1.8,
+      "productName": "BluOr Bank AS: 31 Tage Kündigungsgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/blt71ec1b1a8be4b0d0/697c8d21a708e406dd1bcea3/BluOr_Bank_logo-blue_320h.png",
+      "minDeposit": 1,
+      "currency": "EUR"
+    },
+    {
+      "raisinSlug": "first-investment-bank-ad-fibank",
+      "name": "First Investment Bank AD (Fibank)",
+      "legalName": "First Investment Bank AD (Fibank)",
+      "country": "Bulgarien",
+      "rate": 0,
+      "productName": "First Investment Bank AD (Fibank): Tagesgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/bltbf8f8cec1f5ade09/66910a4e83beca6225512737/Logos_CS_new-template_DE_Fibank.png",
+      "minDeposit": 1,
+      "currency": "EUR"
+    }
+  ],
+  "slugSuggestions": {
+    "lea-bank-ab": "lea-bank-ab",
+    "imprebanca": "imprebanca",
+    "civi-bank": "civibank",
+    "banca-progetto": "banca-progetto",
+    "blu-or-bank-as": "bluor-bank-as",
+    "first-investment-bank-ad-fibank": "first-investment-bank-ad-fibank"
+  }
+}

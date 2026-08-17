@@ -1,0 +1,482 @@
+{
+  "settings": {
+    "eyebrow": "Account",
+    "title": "Profile & Settings",
+    "description": "Manage your profile, notifications, security and language preferences.",
+    "sections": {
+      "account": "Account",
+      "notifications": "Notifications",
+      "security": "Security",
+      "privacy": "Privacy",
+      "language": "Language"
+    },
+    "language": {
+      "label": "Interface language",
+      "helper": "This updates dashboard and admin navigation labels immediately.",
+      "german": "German",
+      "english": "English",
+      "saved": "Language updated."
+    },
+    "security": {
+      "passwordTitle": "Change password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "savePassword": "Update password",
+      "savingPassword": "Updating...",
+      "sessionTitle": "Active session",
+      "sessionHint": "Current browser session and account activity",
+      "lastSeen": "Last account activity",
+      "sessionCreated": "Session started",
+      "logoutOthers": "Log out other sessions",
+      "logoutAll": "Log out from all devices",
+      "logoutOthersDone": "Other sessions were signed out.",
+      "logoutAllDone": "Signed out on all devices."
+    },
+    "privacy": {
+      "title": "Privacy controls",
+      "desc": "Request data export or account deletion through support.",
+      "export": "Request data export",
+      "delete": "Request account deletion"
+    }
+  },
+  "shell": {
+    "user": {
+      "overview": "Overview",
+      "wealth": "Wealth",
+      "activity": "Activity",
+      "account": "Account",
+      "portfolio": "Portfolio",
+      "wealthHub": "My wealth",
+      "fixedDeposit": "Fixed deposit",
+      "dailyDeposit": "Daily deposit",
+      "flexDeposit": "Flex deposit+",
+      "funds": "Funds",
+      "bonds": "Bonds",
+      "bondPurchase": "Buy bonds",
+      "stocks": "Stocks",
+      "ipo": "IPO",
+      "market": "Trade",
+      "orders": "Orders",
+      "alerts": "Price alerts",
+      "favorites": "Favorites",
+      "news": "News",
+      "statement": "Account statement",
+      "history": "History",
+      "profile": "Profile",
+      "support": "Support",
+      "documents": "Documents",
+      "brandSubtitle": "My wealth"
+    },
+    "admin": {
+      "overview": "Overview",
+      "operations": "Operations & Customers",
+      "assets": "Assets & Custody",
+      "products": "Products & Content",
+      "dashboard": "Dashboard",
+      "users": "Users",
+      "stockOrders": "Stock orders",
+      "applications": "Applications",
+      "interests": "Leads",
+      "activity": "Activity",
+      "cashBalances": "Cash balances",
+      "depotContracts": "Custody contracts",
+      "bondPositions": "Client bonds",
+      "bondCatalog": "Bond catalog",
+      "bondRequests": "Bond requests",
+      "ipoCatalog": "IPO catalog",
+      "ipoInterests": "IPO interests",
+      "ipoRequests": "IPO requests",
+      "supportInbox": "Support inbox",
+      "userPositions": "Client positions",
+      "stocks": "Stocks & prices",
+      "marketData": "Market data",
+      "analytics": "Analytics",
+      "liveVisitors": "Live visitors",
+      "banks": "Banks",
+      "offers": "Offers",
+      "brandSubtitle": "Admin console"
+    }
+  },
+  "dashboardShell": {
+    "fetchError": "Some dashboard data could not be loaded. Please check your connection and try again.",
+    "retry": "Retry",
+    "support": {
+      "pageTitle": "Help & contact",
+      "pageDescription": "Message our customer service — replies appear here in real time.",
+      "contactTitle": "Customer service",
+      "contactSubtitle": "Personal advice on custody, contracts and orders.",
+      "phone": "Phone",
+      "email": "Email",
+      "hours": "Available",
+      "writeMessage": "Write a message",
+      "firstMessage": "Report your first issue",
+      "noTickets": "No conversations yet",
+      "emptyTitle": "How can we help?",
+      "emptyBody": "Select a conversation on the left or write to us directly — phone and email are at the top.",
+      "modalEyebrow": "Customer service",
+      "modalTitle": "Write a message",
+      "modalHint": "Describe your request — we usually reply within one business day.",
+      "send": "Send",
+      "created": "Message sent — we will get back to you shortly.",
+      "closedHint": "This ticket is closed. Please start a new message.",
+      "closedPlaceholder": "Ticket closed — please start a new message.",
+      "messagePlaceholder": "Write a message… (Enter = send)"
+    },
+    "documents": {
+      "eyebrow": "Account",
+      "title": "Documents",
+      "description": "Official Kapitalmitte documents — download, print or archive PDFs.",
+      "hint": "Tax forms and product information in one place. For questions, contact",
+      "open": "Open",
+      "downloadOk": "Download started.",
+      "downloadFail": "Download failed. Please try again."
+    },
+    "tax": {
+      "title": "Tax overview",
+      "empty": "Set your tax allowance in Profile for net return calculations.",
+      "configure": "Configure tax settings",
+      "allowanceRemaining": "Allowance remaining",
+      "used": "Used",
+      "church": "Church tax",
+      "downloadForm": "Tax allowance form (PDF)"
+    },
+    "performance": {
+      "teaserTitle": "Performance & benchmark",
+      "teaserBody": "Compare your portfolio with DAX, S&P 500 and Euro Stoxx 50.",
+      "open": "Open performance view"
+    },
+    "widgets": {
+      "title": "Show widgets",
+      "configure": "Customize widgets",
+      "hint": "Show or hide sections — your choices are saved on this device.",
+      "compact": "Compact view",
+      "markets": "Markets",
+      "news": "News",
+      "watchlist": "Watchlist",
+      "maturity": "Maturities",
+      "dividends": "Dividends",
+      "earnings": "Events",
+      "pendingOrders": "Open orders",
+      "tax": "Tax",
+      "performance": "Performance",
+      "export": "Export",
+      "exportSection": "Export & statements",
+      "statementPdf": "Custody statement (PDF)"
+    },
+    "tabs": {
+      "aria": "Portfolio views",
+      "dashboard": "Dashboard",
+      "positions": "Positions",
+      "performance": "Performance",
+      "balances": "Balances",
+      "news": "Portfolio news"
+    },
+    "onboarding": {
+      "eyebrow": "Welcome",
+      "step1Title": "Your overview",
+      "step1Body": "See total wealth, daily performance, and top positions at a glance.",
+      "step2Title": "My wealth",
+      "step2Body": "Fixed deposit, daily deposit, bonds, and stocks live under My wealth — expand the arrow in the sidebar.",
+      "step3Title": "Customize your view",
+      "step3Body": "Choose which sections appear on your overview.",
+      "next": "Next",
+      "back": "Back",
+      "done": "Done",
+      "skip": "Close",
+      "skipAll": "Skip",
+      "replay": "Restart dashboard tour"
+    },
+    "vermoegenSub": {
+      "overview": "Overview"
+    },
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "search": "Search / command palette",
+      "help": "This overview",
+      "close": "Close dialog"
+    }
+  },
+  "commandPalette": {
+    "placeholder": "Search stocks, contracts, pages...",
+    "empty": "No results found",
+    "stocksHeading": "Stocks",
+    "contractsHeading": "My contracts",
+    "navigationHeading": "Navigation",
+    "recentHeading": "Recently visited",
+    "productsHeading": "Products",
+    "infoHeading": "Information",
+    "companyHeading": "Company",
+    "legalHeading": "Legal",
+    "accountHeading": "Account",
+    "dashboardHeading": "Dashboard",
+    "adminHeading": "Admin"
+  },
+  "nav": {
+    "home": "Home",
+    "comparison": "Comparison",
+    "calculator": "Calculator",
+    "howItWorks": "How It Works",
+    "security": "Security",
+    "partnerBanks": "Partner Banks",
+    "faq": "FAQ",
+    "about": "About",
+    "contact": "Contact",
+    "login": "Login",
+    "openAccount": "Open Account",
+    "dashboard": "Dashboard",
+    "logout": "Logout"
+  },
+  "trustReviews": {
+    "rating": "4.9",
+    "ratingMax": "5",
+    "ratingText": "out of 5 stars",
+    "reviewCount": "280,000+",
+    "reviewLabel": "customer reviews",
+    "satisfaction": "96%",
+    "satisfactionLabel": "satisfied customers",
+    "verifiedPlatform": "Verified Financial Platform",
+    "secureEncryption": "Secure Data Encryption",
+    "euProtection": "EU Deposit Protection",
+    "trustedBy": "Trusted by over 50,000 European savers"
+  },
+  "hero": {
+    "title": "Compare European Savings Offers in One Place",
+    "subtitle": "Access competitive savings accounts from trusted European banks. Find the best interest rates, compare deposit terms, and grow your savings with confidence.",
+    "openAccountBtn": "Open Account",
+    "compareOffersBtn": "Compare Offers"
+  },
+  "benefits": {
+    "title": "Why Choose Kapitalmitte?",
+    "subtitle": "We make it simple to find and compare the best savings opportunities across Europe.",
+    "multipleBanks": {
+      "title": "Multiple Bank Access",
+      "description": "Compare offers from leading European banks all in one platform."
+    },
+    "competitiveRates": {
+      "title": "Competitive Rates",
+      "description": "Access attractive interest rates from banks across Europe."
+    },
+    "securePlatform": {
+      "title": "Secure Platform",
+      "description": "Your data is protected with bank-grade security measures."
+    },
+    "simpleProcess": {
+      "title": "Simple Process",
+      "description": "Easy comparison and direct connection to partner banks."
+    }
+  },
+  "featuredOffers": {
+    "title": "Featured Savings Offers",
+    "subtitle": "Explore our top-rated savings opportunities",
+    "interestRate": "Interest Rate",
+    "term": "Term",
+    "minDeposit": "Min. Deposit",
+    "months": "months",
+    "viewDetails": "View Details",
+    "viewAllOffers": "View All Offers",
+    "topRated": "Top Rated"
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "subtitle": "Four simple steps to better savings",
+    "step1": {
+      "title": "Create Account",
+      "description": "Sign up for free in just a few minutes"
+    },
+    "step2": {
+      "title": "Compare Offers",
+      "description": "Browse and filter savings options from multiple banks"
+    },
+    "step3": {
+      "title": "Choose Best Option",
+      "description": "Select the offer that matches your savings goals"
+    },
+    "step4": {
+      "title": "Open Account",
+      "description": "Visit the bank website to complete your application"
+    }
+  },
+  "cta": {
+    "title": "Ready to Grow Your Savings?",
+    "subtitle": "Join thousands of European savers who trust Kapitalmitte to find the best rates.",
+    "getStarted": "Get Started Today"
+  },
+  "trustSection": {
+    "title": "Why Trust Kapitalmitte?",
+    "subtitle": "Your security and peace of mind are our top priorities",
+    "depositProtection": {
+      "title": "EU Deposit Protection",
+      "description": "All partner banks are covered by national deposit guarantee schemes. Your savings are protected up to €100,000 per bank under EU regulations.",
+      "badge": "Protected up to €100,000"
+    },
+    "partnerBanks": {
+      "title": "Trusted European Banks",
+      "description": "We only work with licensed, regulated banks across Europe. Every partner undergoes thorough due diligence and compliance verification.",
+      "badge": "34+ Partner Banks"
+    },
+    "securePlatform": {
+      "title": "Secure Platform",
+      "description": "Bank-grade encryption protects your data. We never store sensitive banking credentials and use secure, encrypted connections.",
+      "badge": "256-bit SSL Encryption"
+    },
+    "transparency": {
+      "title": "Transparent Comparison",
+      "description": "No hidden fees, no sponsored rankings. Our comparison shows real rates from real banks, sorted objectively to help you find the best offer.",
+      "badge": "100% Independent"
+    },
+    "stats": {
+      "users": "50,000+",
+      "usersLabel": "Active Users",
+      "banks": "34",
+      "banksLabel": "Partner Banks",
+      "countries": "8",
+      "countriesLabel": "EU Countries",
+      "protected": "€100K",
+      "protectedLabel": "Deposit Protection"
+    }
+  },
+  "comparison": {
+    "title": "Compare Savings Offers",
+    "subtitle": "Find the best savings rates from trusted European banks",
+    "filterSort": "Filter & Sort",
+    "country": "Country",
+    "allCountries": "All countries",
+    "minInterestRate": "Min. Interest Rate (%)",
+    "maxTerm": "Max. Term (months)",
+    "maxMinDeposit": "Max. Min. Deposit (€)",
+    "sortBy": "Sort By",
+    "order": "Order",
+    "interestRate": "Interest Rate",
+    "depositTerm": "Term Length",
+    "minDeposit": "Min. Deposit",
+    "highestFirst": "Highest First",
+    "lowestFirst": "Lowest First",
+    "clearFilters": "Clear Filters",
+    "offersSelected": "offers selected for comparison",
+    "viewComparison": "View Comparison",
+    "clear": "Clear",
+    "perAnnum": "per annum",
+    "months": "months",
+    "goToBank": "Go to Bank",
+    "compare": "Compare",
+    "selected": "Selected",
+    "noOffers": "No offers match your filters. Try adjusting your criteria.",
+    "sideBySide": "Side-by-Side Comparison",
+    "feature": "Feature",
+    "depositProtection": "Deposit Protection",
+    "action": "Action",
+    "bestRate": "Best Rate"
+  },
+  "calculator": {
+    "title": "Savings Calculator",
+    "subtitle": "Calculate your potential savings growth with compound interest",
+    "yourDetails": "Your Details",
+    "initialDeposit": "Initial Deposit (€)",
+    "initialDepositHelp": "Amount you want to invest initially",
+    "annualInterestRate": "Annual Interest Rate (%)",
+    "interestRateHelp": "Expected annual interest rate",
+    "investmentDuration": "Investment Duration (months)",
+    "durationHelp": "How long you plan to invest (1-120 months)",
+    "monthlyContribution": "Monthly Contribution (€)",
+    "contributionHelp": "Optional: Additional amount you'll add each month",
+    "recalculate": "Recalculate",
+    "finalBalance": "Final Balance",
+    "interestEarned": "Interest Earned",
+    "totalInvested": "Total Invested",
+    "growthOverTime": "Growth Over Time",
+    "totalBalance": "Total Balance",
+    "summary": "Summary",
+    "summaryText": "With an initial deposit of <strong>€{{initial}}</strong> and a <strong>{{rate}}%</strong> annual interest rate:",
+    "summaryMonthly": "Adding <strong>€{{monthly}}</strong> monthly for <strong>{{duration}}</strong> months:",
+    "summaryResult": "Your savings will grow to <strong>€{{final}}</strong>, earning you <strong class=\"text-bank-success\">€{{interest}}</strong> in interest."
+  },
+  "dashboard": {
+    "title": "My Dashboard",
+    "welcome": "Welcome back, {{email}}",
+    "overview": "Overview",
+    "favorites": "Favorites",
+    "history": "History",
+    "profile": "Profile",
+    "savedOffers": "Saved Offers",
+    "yourFavorites": "Your favorites",
+    "bestRate": "Best Rate",
+    "inYourFavorites": "In your favorites",
+    "comparisons": "Comparisons",
+    "performedComparisons": "Performed comparisons",
+    "quickActions": "Quick Actions",
+    "compareOffers": "Compare Offers",
+    "useCalculator": "Use Calculator",
+    "viewPartnerBanks": "View Partner Banks",
+    "recentFavorites": "Recent Favorites",
+    "viewAll": "View All",
+    "noFavorites": "No favorites yet",
+    "noFavoritesText": "Start saving offers to quickly compare them later",
+    "browseOffers": "Browse Offers",
+    "noComparisons": "No comparisons found",
+    "noComparisonsText": "Your comparison history will be automatically saved when you compare offers",
+    "compareNow": "Compare Offers Now",
+    "accountInfo": "Account Information",
+    "emailAddress": "Email Address",
+    "accountType": "Account Type",
+    "memberSince": "Member Since",
+    "security": "Security",
+    "securityText": "Your account is secured with bank-grade encryption.",
+    "signOut": "Sign Out",
+    "user": "User",
+    "admin": "Administrator"
+  },
+  "auth": {
+    "welcomeBack": "Welcome Back",
+    "loginSubtitle": "Login to access your Kapitalmitte account",
+    "createAccount": "Create Account",
+    "registerSubtitle": "Join Kapitalmitte to start comparing savings offers",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "passwordMinLength": "Minimum 6 characters",
+    "login": "Login",
+    "register": "Register",
+    "loggingIn": "Logging in...",
+    "creatingAccount": "Creating Account...",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "backToHome": "Back to Home",
+    "agreeToTerms": "By creating an account, you agree to our <1>Terms & Conditions</1> and <3>Privacy Policy</3>"
+  },
+  "footer": {
+    "description": "Your trusted European savings comparison platform.",
+    "bankGradeSecurity": "Bank-Grade Security",
+    "products": "Products",
+    "savingsComparison": "Savings Comparison",
+    "interestCalculator": "Interest Calculator",
+    "company": "Company",
+    "legal": "Legal",
+    "impressum": "Impressum",
+    "privacyPolicy": "Privacy Policy",
+    "termsConditions": "Terms & Conditions",
+    "cookiePolicy": "Cookie Policy",
+    "legalDisclaimer": "Legal Disclaimer",
+    "rightsReserved": "All rights reserved."
+  },
+  "trust": {
+    "euDepositProtection": "EU Deposit Protection",
+    "upTo": "up to €100,000"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "back": "Back",
+    "next": "Next",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort"
+  }
+}

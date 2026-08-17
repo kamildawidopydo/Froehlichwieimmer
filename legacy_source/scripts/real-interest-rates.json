@@ -1,0 +1,960 @@
+{
+  "fetchedAt": "2026-05-22T10:23:08.042Z",
+  "results": [
+    {
+      "slug": "raisin-bank",
+      "bankName": "raisin-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 3.5,
+      "realProduct": "Tagesgeld",
+      "source": "raisin.com Mai 2026",
+      "note": "StartZins-Aktion 3 Mon., danach Anschlussprodukt",
+      "delta": null
+    },
+    {
+      "slug": "consorsbank",
+      "bankName": "Consorsbank",
+      "seedRate": 3.4,
+      "seedProduct": "Tagesgeld",
+      "realRate": 3.4,
+      "realProduct": "Tagesgeld",
+      "source": "ntv.de Mai 2026",
+      "note": "Neukunden-Aktion 3 Mon.",
+      "delta": 0
+    },
+    {
+      "slug": "ing-diba",
+      "bankName": "ing-diba",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 3.2,
+      "realProduct": "Tagesgeld",
+      "source": "ntv.de Mai 2026",
+      "note": "Neukunden-Aktion 4 Mon., danach 0,75% variabel",
+      "delta": null
+    },
+    {
+      "slug": "mano-bankas",
+      "bankName": "Mano Bankas",
+      "seedRate": 4.25,
+      "seedProduct": "Tagesgeld",
+      "realRate": 3.08,
+      "realProduct": "Festgeld",
+      "source": "raisin/weltsparen API",
+      "note": "AB Mano bankas: 12 Monate Festgeldkonto 3,08 % p. a.",
+      "delta": -1.17,
+      "allOffers": [
+        "Festgeld 3.08% (12 Monate Festgeldkonto 3,08 % p. a.)",
+        "Festgeld 3.04% (24 Monate Festgeldkonto 3,04 % p. a.)",
+        "Festgeld 2% (36 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2% (48 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2% (60 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2.76% (9 Monate Festgeldkonto 2,76 % p. a.)",
+        "Festgeld 2.82% (18 Monate Festgeldkonto 2,82 % p. a.)"
+      ]
+    },
+    {
+      "slug": "banca-mediolanum",
+      "bankName": "banca-mediolanum",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.95,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Italien Festgeld",
+      "delta": null
+    },
+    {
+      "slug": "inbank",
+      "bankName": "Inbank",
+      "seedRate": 4.4,
+      "seedProduct": "Festgeld",
+      "realRate": 2.92,
+      "realProduct": "Festgeld",
+      "source": "raisin/weltsparen API",
+      "note": "Inbank: 60 Monate Festgeldkonto 2,92 % p. a.",
+      "delta": -1.48,
+      "allOffers": [
+        "Festgeld 2.23% (12 Monate Festgeldkonto 2,23 % p. a.)",
+        "Festgeld 2.57% (24 Monate Festgeldkonto 2,57 % p. a.)",
+        "Festgeld 2.85% (36 Monate Festgeldkonto 2,85 % p. a.)",
+        "Festgeld 2.9% (48 Monate Festgeldkonto 2,90 % p. a.)",
+        "Festgeld 2.92% (60 Monate Festgeldkonto 2,92 % p. a.)",
+        "Tagesgeld 1.83% (Tagesgeldkonto)",
+        "Festgeld 2% (6 Monate Festgeldkonto 2,00 % p. a.)"
+      ]
+    },
+    {
+      "slug": "n26-bank",
+      "bankName": "n26-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.8,
+      "realProduct": "Tagesgeld",
+      "source": "DB seed",
+      "note": "N26 Smart/Metal erforderlich — bitte verifizieren",
+      "delta": null
+    },
+    {
+      "slug": "op-financial-group",
+      "bankName": "op-financial-group",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.8,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Finnland Festgeld",
+      "delta": null
+    },
+    {
+      "slug": "klarna-bank",
+      "bankName": "Klarna Bank",
+      "seedRate": 4.65,
+      "seedProduct": "Festgeld",
+      "realRate": 2.71,
+      "realProduct": "Festgeld",
+      "source": "raisin/weltsparen API",
+      "note": "Klarna Bank AB: 48 Monate Festgeldkonto 2,71 % p. a.",
+      "delta": -1.94,
+      "allOffers": [
+        "Tagesgeld 1.7% (Tagesgeldkonto)",
+        "Festgeld 1.65% (3 Monate Festgeldkonto 1,65 % p. a.)",
+        "Festgeld 1.7% (6 Monate Festgeldkonto 1,70 % p. a.)",
+        "Festgeld 2.51% (12 Monate Festgeldkonto 2,51 % p. a.)",
+        "Festgeld 2.56% (24 Monate Festgeldkonto 2,56 % p. a.)",
+        "Festgeld 2.66% (36 Monate Festgeldkonto 2,66 % p. a.)",
+        "Festgeld 2.71% (48 Monate Festgeldkonto 2,71 % p. a.)",
+        "Festgeld 1.92% (18 Monate Festgeldkonto 1,92 % p. a.)"
+      ]
+    },
+    {
+      "slug": "bbva-bank-deutschland",
+      "bankName": "bbva-bank-deutschland",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.7,
+      "realProduct": "Festgeld",
+      "source": "DB seed / BBVA DE",
+      "note": "Festgeld 12M; Tagesgeld-Aktion bis 3,0%",
+      "delta": null
+    },
+    {
+      "slug": "jt-direktbank",
+      "bankName": "J&T Direktbank",
+      "seedRate": 3.85,
+      "seedProduct": "Flexgeld",
+      "realRate": 2.7,
+      "realProduct": "Festgeld",
+      "source": "web.de Mai 2026",
+      "note": "6M Festgeld Spitzenreiter",
+      "delta": -1.15
+    },
+    {
+      "slug": "vivibanca",
+      "bankName": "vivibanca",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.7,
+      "realProduct": "Festgeld",
+      "source": "raisin/weltsparen API",
+      "note": "ViViBanca: 60 Monate Festgeldkonto 2,70 % p. a.",
+      "delta": null,
+      "allOffers": [
+        "Festgeld 2.3% (12 Monate Festgeldkonto 2,30 % p. a.)",
+        "Festgeld 2.5% (24 Monate Festgeldkonto 2,50 % p. a.)",
+        "Festgeld 2.5% (36 Monate Festgeldkonto 2,50 % p. a.)",
+        "Festgeld 2.6% (48 Monate Festgeldkonto 2,60 % p. a.)",
+        "Festgeld 2.7% (60 Monate Festgeldkonto 2,70 % p. a.)"
+      ]
+    },
+    {
+      "slug": "resurs-bank",
+      "bankName": "Resurs Bank",
+      "seedRate": 4.65,
+      "seedProduct": "Festgeld",
+      "realRate": 2.65,
+      "realProduct": "Festgeld",
+      "source": "raisin/weltsparen API",
+      "note": "Resurs Bank: 24 Monate Festgeldkonto 2,65 % p. a.",
+      "delta": -2,
+      "allOffers": [
+        "Festgeld 1.9% (6 Monate Festgeldkonto 1,90 % p. a.)",
+        "Festgeld 2.35% (12 Monate Festgeldkonto 2,35 % p. a.)",
+        "Festgeld 2.65% (24 Monate Festgeldkonto 2,65 % p. a.)",
+        "Festgeld 1.9% (9 Monate Festgeldkonto 1,90 % p. a.)",
+        "Tagesgeld 1.92% (Tagesgeldkonto)"
+      ]
+    },
+    {
+      "slug": "kbc-bank",
+      "bankName": "kbc-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.6,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Belgien Festgeld",
+      "delta": null
+    },
+    {
+      "slug": "raiffeisen-bank-international",
+      "bankName": "raiffeisen-bank-international",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.6,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Österreich Festgeld (RBI, nicht Straubing eG)",
+      "delta": null
+    },
+    {
+      "slug": "cr-dit-agricole",
+      "bankName": "cr-dit-agricole",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.55,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Frankreich Festgeld",
+      "delta": null
+    },
+    {
+      "slug": "citadele-banka",
+      "bankName": "Citadele Banka",
+      "seedRate": 4.95,
+      "seedProduct": "Flexgeld",
+      "realRate": 2.5,
+      "realProduct": "Flexgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Lettland, über Broker — bitte verifizieren",
+      "delta": -2.45
+    },
+    {
+      "slug": "ing-belgium",
+      "bankName": "ing-belgium",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.5,
+      "realProduct": "Tagesgeld",
+      "source": "DB seed",
+      "note": "Belgien Tagesgeld",
+      "delta": null
+    },
+    {
+      "slug": "siauliu-bankas",
+      "bankName": "Šiaulių Bankas",
+      "seedRate": 4.85,
+      "seedProduct": "Flexgeld",
+      "realRate": 2.5,
+      "realProduct": "Flexgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Litauen",
+      "delta": -2.35
+    },
+    {
+      "slug": "bunq-bank",
+      "bankName": "bunq-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.46,
+      "realProduct": "Tagesgeld",
+      "source": "DB seed",
+      "note": "Easy Money/Green Abo — bitte verifizieren",
+      "delta": null
+    },
+    {
+      "slug": "millennium-bcp",
+      "bankName": "millennium-bcp",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.45,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Portugal Festgeld",
+      "delta": null
+    },
+    {
+      "slug": "spuerkeess",
+      "bankName": "spuerkeess",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.35,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Luxemburg Festgeld",
+      "delta": null
+    },
+    {
+      "slug": "bnp-paribas",
+      "bankName": "bnp-paribas",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.3,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Frankreich Festgeld",
+      "delta": null
+    },
+    {
+      "slug": "bff-bank",
+      "bankName": "bff-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.25,
+      "realProduct": "Festgeld",
+      "source": "raisin/weltsparen API",
+      "note": "BFF: 12 Monate Festgeldkonto 2,25 % p. a.",
+      "delta": null,
+      "allOffers": [
+        "Festgeld 2.25% (12 Monate Festgeldkonto 2,25 % p. a.)",
+        "Festgeld 1.65% (24 Monate Festgeldkonto 1,65 % p. a.)",
+        "Festgeld 1.65% (36 Monate Festgeldkonto 1,65 % p. a.)",
+        "Festgeld 1.85% (3 Monate Festgeldkonto 1,85 % p. a.)",
+        "Festgeld 2.05% (6 Monate Festgeldkonto 2,05 % p. a.)",
+        "Festgeld 2.25% (9 Monate Festgeldkonto 2,25 % p. a.)",
+        "Festgeld 1.65% (18 Monate Festgeldkonto 1,65 % p. a.)",
+        "Tagesgeld 1.85% (Tagesgeldkonto)"
+      ]
+    },
+    {
+      "slug": "caixabank",
+      "bankName": "caixabank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.25,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Spanien Festgeld",
+      "delta": null
+    },
+    {
+      "slug": "erste-bank",
+      "bankName": "erste-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.1,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Österreich Festgeld",
+      "delta": null
+    },
+    {
+      "slug": "unicredit",
+      "bankName": "unicredit",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.1,
+      "realProduct": "Festgeld",
+      "source": "raisin/weltsparen API",
+      "note": "UniCredit NV/SA: 12 Monate Festgeldkonto 2,10 % p. a.",
+      "delta": null,
+      "allOffers": [
+        "Festgeld 2.1% (12 Monate Festgeldkonto 2,10 % p. a.)"
+      ]
+    },
+    {
+      "slug": "bigbank",
+      "bankName": "Bigbank",
+      "seedRate": 5.1,
+      "seedProduct": "Flexgeld",
+      "realRate": 2.05,
+      "realProduct": "Tagesgeld",
+      "source": "handelsblatt.com Mai 2026",
+      "note": "Anschlusszinssatz; Neukunden 3,25% 4 Mon.",
+      "delta": -3.05
+    },
+    {
+      "slug": "distingo-bank",
+      "bankName": "Distingo Bank",
+      "seedRate": 3.85,
+      "seedProduct": "Flexgeld",
+      "realRate": 2.02,
+      "realProduct": "Tagesgeld",
+      "source": "raisin/weltsparen API",
+      "note": "Distingo Bank: Tagesgeldkonto",
+      "delta": -1.83,
+      "allOffers": [
+        "Tagesgeld 2.02% (Tagesgeldkonto)"
+      ]
+    },
+    {
+      "slug": "banco-sabadell",
+      "bankName": "banco-sabadell",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2.01,
+      "realProduct": "Festgeld",
+      "source": "DB seed",
+      "note": "Spanien Festgeld",
+      "delta": null
+    },
+    {
+      "slug": "abn-amro-bank",
+      "bankName": "abn-amro-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2,
+      "realProduct": "Festgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "NL Festgeld ca. 2,0–2,9%",
+      "delta": null
+    },
+    {
+      "slug": "banca-progetto",
+      "bankName": "banca-progetto",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2,
+      "realProduct": "Flexgeld",
+      "source": "raisin/weltsparen API",
+      "note": "Banca Progetto: Tagesgeldkonto",
+      "delta": null,
+      "allOffers": [
+        "Flexgeld 2% (Tagesgeldkonto)"
+      ]
+    },
+    {
+      "slug": "banco-bpi",
+      "bankName": "Banco BPI",
+      "seedRate": 3.85,
+      "seedProduct": "Flexgeld",
+      "realRate": 2,
+      "realProduct": "Flexgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Portugal",
+      "delta": -1.85
+    },
+    {
+      "slug": "blueorange-bank",
+      "bankName": "BlueOrange Bank",
+      "seedRate": 4.45,
+      "seedProduct": "Tagesgeld",
+      "realRate": 2,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Lettland",
+      "delta": -2.45
+    },
+    {
+      "slug": "ca-auto-bank",
+      "bankName": "ca-auto-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "FCA Bank IT",
+      "delta": null
+    },
+    {
+      "slug": "illimity-bank",
+      "bankName": "illimity-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 2,
+      "realProduct": "Festgeld",
+      "source": "raisin/weltsparen API",
+      "note": "illimity: 12 Monate Festgeldkonto 2,00 % p. a.",
+      "delta": null,
+      "allOffers": [
+        "Festgeld 0.01% (6 Monate Festgeldkonto 0,01 % p. a.)",
+        "Festgeld 2% (12 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2% (24 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2% (36 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2% (48 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2% (60 Monate Festgeldkonto 2,00 % p. a.)"
+      ]
+    },
+    {
+      "slug": "kommunalkredit-invest",
+      "bankName": "Kommunalkredit Invest",
+      "seedRate": 3.85,
+      "seedProduct": "Flexgeld",
+      "realRate": 2,
+      "realProduct": "Flexgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Österreich",
+      "delta": -1.85
+    },
+    {
+      "slug": "leaseplan-bank",
+      "bankName": "LeasePlan Bank",
+      "seedRate": 4.55,
+      "seedProduct": "Flexgeld",
+      "realRate": 2,
+      "realProduct": "Flexgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "NL Ayvens/LeasePlan",
+      "delta": -2.55
+    },
+    {
+      "slug": "medirect-bank",
+      "bankName": "MeDirect Bank",
+      "seedRate": 4.4,
+      "seedProduct": "Festgeld",
+      "realRate": 2,
+      "realProduct": "Festgeld",
+      "source": "raisin/weltsparen API",
+      "note": "MeDirect Bank (Malta) plc: 12 Monate Festgeldkonto 2,00 % p. a.",
+      "delta": -2.4,
+      "allOffers": [
+        "Festgeld 2% (12 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 1.2% (24 Monate Festgeldkonto 1,20 % p. a.)",
+        "Festgeld 2% (9 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2% (6 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2% (3 Monate Festgeldkonto 2,00 % p. a.)",
+        "Tagesgeld 1.1% (Wochenkonto)"
+      ]
+    },
+    {
+      "slug": "nibc-direct",
+      "bankName": "NIBC Direct",
+      "seedRate": 4.4,
+      "seedProduct": "Festgeld",
+      "realRate": 2,
+      "realProduct": "Festgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Niederlande",
+      "delta": -2.4
+    },
+    {
+      "slug": "openbank",
+      "bankName": "Openbank",
+      "seedRate": 3.4,
+      "seedProduct": "Tagesgeld",
+      "realRate": 2,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Santander-Gruppe ES",
+      "delta": -1.4
+    },
+    {
+      "slug": "pibank",
+      "bankName": "Pibank",
+      "seedRate": 3.25,
+      "seedProduct": "Tagesgeld",
+      "realRate": 2,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Spanien",
+      "delta": -1.25
+    },
+    {
+      "slug": "saxo-privatbank",
+      "bankName": "Saxo Privatbank",
+      "seedRate": 4.65,
+      "seedProduct": "Festgeld",
+      "realRate": 2,
+      "realProduct": "Festgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Dänemark",
+      "delta": -2.65
+    },
+    {
+      "slug": "suresse-direkt-bank",
+      "bankName": "Suresse Direkt Bank",
+      "seedRate": 3.4,
+      "seedProduct": "Tagesgeld",
+      "realRate": 2,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Deutschland Direktbank",
+      "delta": -1.4
+    },
+    {
+      "slug": "trade-republic",
+      "bankName": "Trade Republic Bank",
+      "seedRate": 2.85,
+      "seedProduct": "Tagesgeld",
+      "realRate": 2,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "ECB-Leitzins-basiert, variabel",
+      "delta": -0.85
+    },
+    {
+      "slug": "instabank",
+      "bankName": "Instabank",
+      "seedRate": 4.65,
+      "seedProduct": "Festgeld",
+      "realRate": 1.94,
+      "realProduct": "Tagesgeld",
+      "source": "raisin/weltsparen API",
+      "note": "Instabank ASA: Tagesgeldkonto",
+      "delta": -2.71,
+      "allOffers": [
+        "Tagesgeld 1.94% (Tagesgeldkonto)"
+      ]
+    },
+    {
+      "slug": "bank-norwegian",
+      "bankName": "Bank Norwegian",
+      "seedRate": 4.45,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.9,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Norwegen variabel",
+      "delta": -2.55
+    },
+    {
+      "slug": "komplett-bank",
+      "bankName": "komplett-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 1.9,
+      "realProduct": "Flexgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Norwegen, variabel",
+      "delta": null
+    },
+    {
+      "slug": "lea-bank",
+      "bankName": "Lea Bank",
+      "seedRate": 4.75,
+      "seedProduct": "Flexgeld",
+      "realRate": 1.9,
+      "realProduct": "Flexgeld",
+      "source": "raisin/weltsparen API",
+      "note": "Lea Bank AB: Tagesgeldkonto",
+      "delta": -2.85,
+      "allOffers": [
+        "Flexgeld 1.9% (Tagesgeldkonto)"
+      ]
+    },
+    {
+      "slug": "nordax-bank",
+      "bankName": "Nordax Bank",
+      "seedRate": 4.25,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.9,
+      "realProduct": "Tagesgeld",
+      "source": "raisin/weltsparen API",
+      "note": "Nordax Bank AB (publ): Tagesgeldkonto",
+      "delta": -2.35,
+      "allOffers": [
+        "Festgeld 2% (12 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2.71% (24 Monate Festgeldkonto 2,71 % p. a.)",
+        "Festgeld 2% (3 Monate Festgeldkonto 2,00 % p. a.)",
+        "Tagesgeld 1.9% (Tagesgeldkonto)",
+        "Festgeld 2% (6 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2% (9 Monate Festgeldkonto 2,00 % p. a.)"
+      ]
+    },
+    {
+      "slug": "collector-bank",
+      "bankName": "Collector Bank",
+      "seedRate": 4.85,
+      "seedProduct": "Flexgeld",
+      "realRate": 1.85,
+      "realProduct": "Tagesgeld",
+      "source": "raisin/weltsparen API",
+      "note": "Collector: Tagesgeldkonto",
+      "delta": -3,
+      "allOffers": [
+        "Festgeld 2.1% (6 Monate Festgeldkonto 2,10 % p. a.)",
+        "Festgeld 2.35% (12 Monate Festgeldkonto 2,35 % p. a.)",
+        "Festgeld 2.56% (24 Monate Festgeldkonto 2,56 % p. a.)",
+        "Tagesgeld 1.85% (Tagesgeldkonto)",
+        "Festgeld 2% (9 Monate Festgeldkonto 2,00 % p. a.)",
+        "Festgeld 2.66% (36 Monate Festgeldkonto 2,66 % p. a.)",
+        "Festgeld 2.6% (48 Monate Festgeldkonto 2,60 % p. a.)",
+        "Festgeld 2.35% (18 Monate Festgeldkonto 2,35 % p. a.)",
+        "Festgeld 2.55% (30 Monate Festgeldkonto 2,55 % p. a.)",
+        "Festgeld 1.82% (3 Monate Festgeldkonto 1,82 % p. a.)"
+      ]
+    },
+    {
+      "slug": "ikano-bank",
+      "bankName": "Ikano Bank",
+      "seedRate": 4.25,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.8,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Schweden",
+      "delta": -2.45
+    },
+    {
+      "slug": "tf-bank",
+      "bankName": "TF Bank",
+      "seedRate": 4.4,
+      "seedProduct": "Festgeld",
+      "realRate": 1.8,
+      "realProduct": "Festgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Schweden",
+      "delta": -2.6
+    },
+    {
+      "slug": "comdirect-bank",
+      "bankName": "comdirect-bank",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 1.75,
+      "realProduct": "Tagesgeld",
+      "source": "ntv.de Mai 2026",
+      "note": "Mit Girokonto; ohne Giro 1,5%",
+      "delta": null
+    },
+    {
+      "slug": "santander-deutschland",
+      "bankName": "Santander Consumer Bank",
+      "seedRate": 2.85,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.75,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Santander Consumer DE",
+      "delta": -1.1
+    },
+    {
+      "slug": "1822direkt",
+      "bankName": "1822direkt",
+      "seedRate": 2.85,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Sparkassen-Direktbank, variabel",
+      "delta": -1.35
+    },
+    {
+      "slug": "anadi-bank",
+      "bankName": "Anadi Bank",
+      "seedRate": 3.15,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Österreich",
+      "delta": -1.65
+    },
+    {
+      "slug": "argenta",
+      "bankName": "Argenta",
+      "seedRate": 4.45,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Belgien",
+      "delta": -2.95
+    },
+    {
+      "slug": "banco-invest",
+      "bankName": "Banco Invest",
+      "seedRate": 3.1,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Portugal, niedriges Niveau",
+      "delta": -1.6
+    },
+    {
+      "slug": "coop-bank",
+      "bankName": "Coop Bank",
+      "seedRate": 4.05,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Dänemark",
+      "delta": -2.55
+    },
+    {
+      "slug": "crelan",
+      "bankName": "Crelan",
+      "seedRate": 3.85,
+      "seedProduct": "Flexgeld",
+      "realRate": 1.5,
+      "realProduct": "Flexgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Belgien",
+      "delta": -2.35
+    },
+    {
+      "slug": "easybank",
+      "bankName": "easybank",
+      "seedRate": 3.4,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Erste Bank AT",
+      "delta": -1.9
+    },
+    {
+      "slug": "ebn-banco",
+      "bankName": "EBN Banco",
+      "seedRate": 3.9,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Spanien",
+      "delta": -2.4
+    },
+    {
+      "slug": "hello-bank",
+      "bankName": "Hello bank!",
+      "seedRate": 3.4,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "BNP Paribas FR",
+      "delta": -1.9
+    },
+    {
+      "slug": "knab",
+      "bankName": "Knab",
+      "seedRate": 4.15,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Niederlande",
+      "delta": -2.65
+    },
+    {
+      "slug": "lhv-pank",
+      "bankName": "LHV Pank",
+      "seedRate": 4.8,
+      "seedProduct": "Flexgeld",
+      "realRate": 1.5,
+      "realProduct": "Festgeld",
+      "source": "raisin/weltsparen API",
+      "note": "LHV Pank: 6 Monate Festgeldkonto 1,50 % p. a.",
+      "delta": -3.3,
+      "allOffers": [
+        "Festgeld 1.5% (6 Monate Festgeldkonto 1,50 % p. a.)",
+        "Festgeld 1.5% (12 Monate Festgeldkonto 1,50 % p. a.)",
+        "Festgeld 0% (24 Monate Festgeldkonto 0,00 % p. a.)"
+      ]
+    },
+    {
+      "slug": "lunar-bank",
+      "bankName": "Lunar Bank",
+      "seedRate": 4.2,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Dänemark",
+      "delta": -2.7
+    },
+    {
+      "slug": "oma-saastopankki",
+      "bankName": "Oma Säästöpankki",
+      "seedRate": 4.1,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Finnland",
+      "delta": -2.6
+    },
+    {
+      "slug": "pop-pankki",
+      "bankName": "POP Pankki",
+      "seedRate": 4.25,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Finnland",
+      "delta": -2.75
+    },
+    {
+      "slug": "renault-bank-direkt",
+      "bankName": "Renault Bank direkt",
+      "seedRate": 3,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Variabel",
+      "delta": -1.5
+    },
+    {
+      "slug": "s-pankki",
+      "bankName": "S-Pankki",
+      "seedRate": 4.55,
+      "seedProduct": "Flexgeld",
+      "realRate": 1.5,
+      "realProduct": "Flexgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Finnland",
+      "delta": -3.05
+    },
+    {
+      "slug": "sbab-bank",
+      "bankName": "SBAB Bank",
+      "seedRate": 4.4,
+      "seedProduct": "Festgeld",
+      "realRate": 1.5,
+      "realProduct": "Festgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Schweden",
+      "delta": -2.9
+    },
+    {
+      "slug": "sydbank",
+      "bankName": "Sydbank",
+      "seedRate": 4.45,
+      "seedProduct": "Tagesgeld",
+      "realRate": 1.5,
+      "realProduct": "Tagesgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Dänemark",
+      "delta": -2.95
+    },
+    {
+      "slug": "deutsche-kreditbank--dkb-",
+      "bankName": "deutsche-kreditbank--dkb-",
+      "seedRate": null,
+      "seedProduct": null,
+      "realRate": 1,
+      "realProduct": "Tagesgeld",
+      "source": "dkb.de (27.03.2026)",
+      "note": "Standard; Aktionszins 2,75% p.a. 4 Mon. auf Neugeld",
+      "delta": null
+    },
+    {
+      "slug": "swissquote",
+      "bankName": "Swissquote",
+      "seedRate": 3.1,
+      "seedProduct": "Flexgeld",
+      "realRate": 1,
+      "realProduct": "Flexgeld",
+      "source": "Marktüblich Mai 2026",
+      "note": "Schweiz CHF",
+      "delta": -2.1
+    },
+    {
+      "slug": "postfinance",
+      "bankName": "PostFinance",
+      "seedRate": 2.85,
+      "seedProduct": "Tagesgeld",
+      "realRate": 0.75,
+      "realProduct": "Tagesgeld",
+      "source": "postfinance.ch Mai 2026",
+      "note": "CHF-Konto, niedriges Zinsniveau",
+      "delta": -2.1
+    },
+    {
+      "slug": "morrow-bank",
+      "bankName": "Morrow Bank",
+      "seedRate": 4.9,
+      "seedProduct": "Flexgeld",
+      "realRate": null,
+      "realProduct": null,
+      "source": "—",
+      "note": "Keine Quelle gefunden",
+      "delta": null
+    }
+  ]
+}

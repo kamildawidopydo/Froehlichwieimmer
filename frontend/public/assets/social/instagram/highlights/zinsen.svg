@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A2540"/>
+      <stop offset="100%" stop-color="#123d66"/>
+    </linearGradient>
+    <linearGradient id="gr" x1="0" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F58529"/>
+      <stop offset="35%" stop-color="#DD2A7B"/>
+      <stop offset="70%" stop-color="#8134AF"/>
+      <stop offset="100%" stop-color="#515BD4"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#gr)" stroke="none"/>
+  <circle cx="100" cy="100" r="88" fill="url(#hg)"/>
+  <circle cx="100" cy="88" r="36" fill="#C9A227" opacity="0.2" stroke="#C9A227" stroke-width="2"/>
+  <text x="100" y="98" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="28">%</text>
+  <text x="100" y="148" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-family="system-ui,sans-serif" font-size="16" font-weight="700">Zinsen</text>
+</svg>

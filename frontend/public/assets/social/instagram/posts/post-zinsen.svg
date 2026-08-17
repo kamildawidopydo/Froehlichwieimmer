@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080"><defs><linearGradient id="ig" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#F58529"/><stop offset="35%" stop-color="#DD2A7B"/><stop offset="70%" stop-color="#8134AF"/><stop offset="100%" stop-color="#515BD4"/></linearGradient></defs>
+<rect width="1080" height="1080" fill="#0f1419"/>
+<rect x="48" y="48" width="984" height="984" rx="24" fill="#4c1d95" opacity="0.92"/>
+<path d="M0 80h1080M0 200h1080M0 320h1080M0 440h1080M0 560h1080M0 680h1080M0 800h1080M0 920h1080" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+<rect x="48" y="48" width="984" height="12" rx="6" fill="url(#ig)"/>
+<text x="540" y="480" text-anchor="middle" fill="#fff" font-family="system-ui,sans-serif" font-size="52" font-weight="800" letter-spacing="0.04em">ZINSEN</text>
+<text x="540" y="560" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-family="system-ui,sans-serif" font-size="28">aktuell vergleichen</text>
+<text x="72" y="120" fill="rgba(255,255,255,0.5)" font-family="system-ui,sans-serif" font-size="22">@kapitalmitte</text>
+</svg>

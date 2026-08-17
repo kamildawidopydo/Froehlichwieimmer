@@ -1,0 +1,109 @@
+{
+  "env": {
+    "CI": "false",
+    "DISABLE_ESLINT_PLUGIN": "true"
+  },
+  "functions": {
+    "api/send-contract-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-festgeld-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-knab-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-knab-festgeld-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-postbank-contract-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-postbank-festgeld-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-ing-contract-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-ing-festgeld-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-bunq-contract-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-bunq-festgeld-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-bunq-de-contract-email.js": {
+      "maxDuration": 60
+    },
+    "api/send-bunq-de-festgeld-email.js": {
+      "maxDuration": 60
+    },
+    "api/submit-document-upload.js": {
+      "maxDuration": 60
+    }
+  },
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "kapitalmitte.com"
+        }
+      ],
+      "destination": "https://www.kapitalmitte.com/:path*",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/documents/(.*\\.pdf)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/pdf"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "inline"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    },
+    {
+      "source": "/static/:path*",
+      "destination": "/static/:path*"
+    },
+    {
+      "source": "/assets/:path*",
+      "destination": "/assets/:path*"
+    },
+    {
+      "source": "/favicon.ico",
+      "destination": "/favicon.ico"
+    },
+    {
+      "source": "/manifest.json",
+      "destination": "/manifest.json"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/robots.txt"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/sitemap.xml"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}

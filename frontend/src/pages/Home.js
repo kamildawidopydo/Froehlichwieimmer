@@ -1,0 +1,262 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
+import BankingHero from '@/components/BankingHero';
+import HomePostHero from '@/components/home/HomePostHero';
+import HomeSavingsInquirySection from '@/components/home/HomeSavingsInquirySection';
+import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
+import HomePlatformShowcase from '@/components/home/HomePlatformShowcase';
+import HomeCreditOffersSection from '@/components/home/HomeCreditOffersSection';
+import { mapCreditOffersForCarousel } from '@/lib/creditOfferDisplay';
+import HomeInvestmentSpectrum from '@/components/home/HomeInvestmentSpectrum';
+import ProductInquiryWizard from '@/components/home/ProductInquiryWizard';
+import ProductInquiryStickyCta from '@/components/home/ProductInquiryStickyCta';
+import SpecialAifOverview from '@/components/home/SpecialAifOverview';
+import PlatformFlowDiagram from '@/components/PlatformFlowDiagram';
+import PageMeta from '@/components/PageMeta';
+import { Button } from '@/components/ui/button';
+import Eyebrow from '@/components/editorial/Eyebrow';
+import { LUCIDE_STROKE } from '@/lib/lucideStroke';
+import { supabase } from '@/lib/supabase';
+import { getOfferRatingValue } from '@/lib/offerRating';
+import { ArrowRight } from 'lucide-react';
+import siteCopy from '@/data/siteCopy';
+import siteImages from '@/data/siteImages';
+
+const EASE = [0.22, 1, 0.36, 1];
+const { homeCta: ctaCopy, brandSlogan } = siteCopy;
+
+const Home = () => {
+  const [creditOffers, setCreditOffers] = useState([]);
+  const [inquiryOpen, setInquiryOpen] = useState(false);
+  const [inquiryProduct, setInquiryProduct] = useState(
+    /** @type {'aktien' | 'anleihen' | 'spargeld' | null} */ (null),
+  );
+  const prefersReduced = useReducedMotion();
+  const location = useLocation();
+
+  const openProductInquiry = (key) => {
+    setInquiryProduct(key);
+    setInquiryOpen(true);
+  };
+
+  useEffect(() => {
+    const run = () => {
+      fetchCreditOffers();
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(run, { timeout: 2200 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(run, 1);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname !== '/' || location.hash !== '#produkt-uberblick') return;
+    const el = document.getElementById('produkt-uberblick');
+    if (!el) return;
+    const id = requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'start' });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [location.pathname, location.hash, prefersReduced]);
+
+  const fetchCreditOffers = async () => {
+    try {
+      const [creditRes, savingsRes] = await Promise.all([
+        supabase
+          .from('credit_offers')
+          .select('*, banks(id, name, country, logo_url, founded_year, regulator_name)')
+          .eq('is_active', true),
+        supabase
+          .from('savings_offers')
+          .select('bank_id, interest_rate, banks(name)')
+          .eq('is_active', true),
+      ]);
+
+      if (creditRes.error) throw creditRes.error;
+      if (savingsRes.error) throw savingsRes.error;
+
+      const savingsByBank = new Map();
+      (savingsRes.data || []).forEach((item) => {
+        if (!item.bank_id) return;
+        const current = savingsByBank.get(item.bank_id);
+        const nextRate = Number(item.interest_rate || 0);
+        if (!current || nextRate > Number(current.interest_rate || 0)) {
+          savingsByBank.set(item.bank_id, item);
+        }
+      });
+
+      const enriched = (creditRes.data || []).map((offer) => {
+        const savings = savingsByBank.get(offer.bank_id);
+        const ratingFromSavings = savings
+          ? getOfferRatingValue({
+              bank_name: savings.banks?.name || offer.banks?.name || '',
+              interest_rate: Number(savings.interest_rate || 0),
+            })
+          : null;
+        return {
+          ...offer,
+          rating_value: ratingFromSavings ?? offer.rating_value ?? null,
+        };
+      });
+
+      setCreditOffers(mapCreditOffersForCarousel(enriched));
+    } catch (error) {
+      console.error('Failed to fetch credit offers:', error);
+    }
+  };
+
+  const reveal = (i = 0) => ({
+    initial: { opacity: 0, y: 20 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, margin: '-80px' },
+    transition: { duration: prefersReduced ? 0 : 0.7, ease: EASE, delay: prefersReduced ? 0 : 0.05 * i },
+  });
+
+  return (
+    <div className="min-h-screen min-w-0 overflow-x-clip bg-bank-bg">
+      <PageMeta
+        title={brandSlogan.title}
+        description={brandSlogan.description}
+        path="/"
+      />
+      <ProductInquiryWizard
+        open={inquiryOpen}
+        onOpenChange={(o) => {
+          setInquiryOpen(o);
+          if (!o) setInquiryProduct(null);
+        }}
+        product={inquiryProduct}
+      />
+      <ProductInquiryStickyCta onOpenWizard={openProductInquiry} />
+      <BankingHero />
+
+      <HomePlatformShowcase />
+
+      {/* ── Spar-Anfrage ──────────────────────────────────────────────── */}
+      <HomeSavingsInquirySection />
+
+      {/* ── Kreditangebote (nach Anfrage, Daten wie /kredit) ─────────── */}
+      <HomeCreditOffersSection offers={creditOffers} />
+
+      {/* ── FAQ / Wissenscenter (vor Produktüberblick) ─────────────────── */}
+      <HomeSavingsFaqSection />
+
+      {/* ── Produktüberblick (Anleihen, Aktien, Kredit) ───────────────── */}
+      <HomePostHero />
+
+      <SpecialAifOverview />
+
+      <HomeInvestmentSpectrum onOpenWizard={openProductInquiry} />
+
+      <PlatformFlowDiagram />
+
+      {/* ── Closing CTA ───────────────────────────────────────────────── */}
+      <section className="border-t border-bank-border bg-bank-bg py-24 sm:py-32">
+        <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
+          <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
+            <div className="lg:col-span-7">
+              <Eyebrow>Beginnen Sie</Eyebrow>
+              <h2 className="mt-5 max-w-full break-words font-display text-[clamp(1.85rem,5.5vw+0.4rem,3.5rem)] font-semibold leading-[1.08] tracking-[-0.02em] text-bank-text [overflow-wrap:anywhere] sm:text-display-lg">
+                {ctaCopy.growth.heading}{' '}
+                <span className="text-bank-primary">{ctaCopy.growth.headingAccent}</span>
+              </h2>
+              <p className="mt-7 max-w-xl text-lg leading-relaxed text-bank-text-muted">
+                {ctaCopy.growth.lede}
+              </p>
+              <div className="mt-10">
+                <Link to="/register" data-testid="cta-open-account-btn">
+                  <Button variant="primary" size="xl">
+                    {ctaCopy.growth.button}
+                    <ArrowRight className="ml-1 h-4 w-4" strokeWidth={LUCIDE_STROKE} />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            <motion.div
+              {...reveal(1)}
+              className="relative overflow-hidden rounded-3xl border border-bank-border shadow-editorial-md lg:col-span-5"
+            >
+              <img
+                src={siteImages.home.ctaGrowth}
+                alt={siteImages.home.ctaGrowthAlt}
+                loading="lazy"
+                decoding="async"
+                width={1200}
+                height={900}
+                className="pointer-events-none h-[280px] w-full object-cover object-[48%_42%] sm:h-[340px] sm:object-[50%_40%] lg:h-[420px] lg:object-[52%_38%]"
+              />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Bonus CTA — refined accent on ink ──────────────────────────── */}
+      <section
+        className="relative overflow-hidden border-t border-bank-border bg-bank-ink py-20 sm:py-24"
+        data-testid="bonus-cta-section"
+      >
+        <div aria-hidden className="absolute inset-0 -z-10 topo-pattern opacity-20 mix-blend-screen" />
+        <img
+          src={siteImages.home.ctaBonusStrip}
+          alt={siteImages.home.ctaBonusAlt}
+          loading="lazy"
+          decoding="async"
+          width={1000}
+          height={667}
+          className="pointer-events-none absolute inset-y-0 right-0 -z-10 hidden w-[min(52%,640px)] object-cover object-left opacity-[0.22] lg:block"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 -z-10 hidden w-[min(52%,640px)] bg-gradient-to-r from-bank-ink via-bank-ink/92 to-transparent lg:block"
+        />
+        <div className="mx-auto flex max-w-[1440px] flex-col items-start gap-10 px-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-12">
+          <div className="flex max-w-2xl items-center gap-5 sm:gap-7">
+            <div className="hidden h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center border border-white/40 bg-white/[0.07] p-1.5 sm:flex lg:h-[6.25rem] lg:w-[6.25rem]">
+              <img
+                src={siteImages.icons.bonusGift}
+                alt=""
+                width={96}
+                height={96}
+                className="h-full w-full object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
+                decoding="async"
+              />
+            </div>
+            <div>
+              <Eyebrow tone="light" className="text-white/90">
+                {ctaCopy.bonus.eyebrow}
+              </Eyebrow>
+              <h2 className="mt-3 text-display-sm font-semibold text-white">
+                {ctaCopy.bonus.title}
+              </h2>
+              <p className="mt-3 text-base leading-relaxed text-white/90">
+                {ctaCopy.bonus.lede}{' '}
+                Bis zu{' '}
+                <span className="rate-figure text-white font-semibold" data-numeric>
+                  300&nbsp;€
+                </span>
+                &nbsp;Neukundenbonus.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            size="xl"
+            className="shrink-0 focus-visible:ring-offset-bank-ink"
+            data-testid="bonus-cta-compare-btn"
+            onClick={() => openProductInquiry('spargeld')}
+          >
+            {ctaCopy.bonus.button}
+            <ArrowRight className="ml-1 h-4 w-4" strokeWidth={LUCIDE_STROKE} />
+          </Button>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default Home;

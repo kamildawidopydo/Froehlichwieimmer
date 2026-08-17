@@ -1,0 +1,415 @@
+-- 1 of 26 --
+K M - K D - 2 0 2 6 - V 3 J U L I 2 0 2 6 kundenservice@kapitalmitte.com R E G I ST E R
+Inhaltsverzeichnis
+01 Vorvertragliche Informationen
+02 Fernabsatzinformationen
+03 Kundenklassifizierung
+04 Elektronische Kommunikation und Mailbox
+05 Aktien- und Wertpapiergeschäfte
+06 Anleihen und festverzinsliche Wertpapiere
+07 Tagesgeld, Festgeld & Flexgeld
+08 Wealth- und Portfolioverwaltung
+09 Geeignetheits- und Angemessenheitsprüfung
+10 Ausführung von Handelsaufträgen
+11 Verwahrung und Zusammenarbeit mit Drittinstituten
+12 Reporting und Portfolioinformationen
+13 Preis- und Leistungsverzeichnis
+14 Interessenkonflikte
+15 Risikohinweise
+16 Datenschutz und Vertraulichkeit
+17 Geldwäscheprävention und Identifizierung
+18 Beschwerden und Kommunikation
+19 Informationsbogen für Einleger
+20 Allgemeine Vertragsbedingungen
+21 Besondere Vertragsbedingungen – Brokerage & Aktiengeschäfte
+22 Besondere Vertragsbedingungen – Einlagenlösungen
+23 Besondere Vertragsbedingungen – Wealth & Portfolioverwaltung
+24 Ausführungsgrundsätze
+25 Preis- und Leistungsverzeichnis
+26 Plattformzugang und Sicherheit
+27 Referenzkonto und Zahlungsverkehr
+
+-- 2 of 26 --
+28 Marktstörungen und höhere Gewalt
+29 Steuerliche Hinweise
+30 Nachhaltigkeit und ESG-Hinweise
+31 Kommunikations- und Aufzeichnungspflichten
+32 Institutionelle Investmentlösungen
+33 Schlussbestimmungen
+
+-- 3 of 26 --
+1. Vorvertragliche Informationen
+1.1 Allgemeine Informationen
+Alexander Wahl Vermögensverwaltung GmbH („Kapitalmitte“) ist eine registrierte AIF-Kapitalverwaltungsgesellschaft gemäß § 44 KAGB mit Sitz in Frankfurt am Main. Die
+Gesellschaft bietet ausgewählte Investment-, Wealth-, Brokerage-, Anleihen- und Einlagenlösungen für Privatkunden, vermögende Kundinnen und Kunden sowie
+institutionell orientierte Anleger an. Kapitalmitte verfolgt einen langfristig orientierten Investmentansatz mit Fokus auf: Kapitalerhalt Diversifikation kontrollierte
+Risikosteuerung digitale Investment- und Reportinglösungen sowie transparente Kundenkommunikation. Die Dienstleistungen können sowohl digital über die Plattform als
+auch im Rahmen persönlicher Betreuung erfolgen.
+1.2 Unternehmensdaten
+Hallgartenstraße 57 · 60389 Frankfurt am Main Deutschland www.kapitalmitte.com Handelsregister: Amtsgericht Frankfurt am Main – HRB 122289 Legal Entity Identifier
+1.3 Dienstleistungen
+Die Gesellschaft kann insbesondere folgende Dienstleistungen anbieten: digitale Investmentlösungen Brokerage- und Depotfunktionen Wealth- und Portfolioverwaltung
+Vermittlung von Tagesgeld-, Festgeld- und Flexgeldlösungen Zugang zu Anleihen und Kapitalmarktprodukten Reporting- und Analysefunktionen sowie digitale Kunden-
+und Kommunikationslösungen. Kapitalmitte ist berechtigt, sich zur Erfüllung ihrer Dienstleistungen geeigneter Dritter zu bedienen.
+2. Fernabsatzinformationen
+2.1 Digitale Vertragsbeziehung
+Die Vertragsbeziehung zwischen der Kundin oder dem Kunden und Kapitalmitte kann vollständig digital abgeschlossen werden. Die Kundin oder der Kunde erhält Zugriff
+auf eine digitale Plattform mit: Portfolioübersichten Reportingfunktionen elektronischer Mailbox Dokumentenarchiv Investment- und Kontoinformationen sowie
+Kommunikations- und Analysefunktionen.
+2.2 Elektronische Bereitstellung von Dokumenten
+Dokumente, Informationen und Mitteilungen können ausschließlich elektronisch bereitgestellt werden. Hierzu zählen insbesondere: Vertragsunterlagen
+Produktinformationen Kosteninformationen
+
+-- 4 of 26 --
+sowie Mitteilungen von Partnerbanken oder Verwahrstellen. Dokumente gelten mit Bereitstellung in der elektronischen Mailbox als zugegangen, sofern gesetzlich zulässig.
+2.3 Zusammenarbeit mit Drittinstituten
+zusammenarbeiten.
+3. Kundenklassifizierung
+3.1 Allgemeine Informationen
+Kundinnen und Kunden können im Rahmen regulatorischer Vorgaben unterschiedlichen Kundengruppen zugeordnet werden. Die Einstufung kann insbesondere erfolgen
+als: Privatkunde professioneller Kunde oder geeignete Gegenpartei.
+3.2 Auswirkungen der Einstufung
+Die jeweilige Kundenklassifizierung kann Auswirkungen haben auf: Informationspflichten Geeignetheitsprüfungen Risikohinweise Produktauswahl sowie regulatorische
+Schutzmechanismen. Kapitalmitte behält sich vor , die Kundenklassifizierung im Rahmen regulatorischer Anforderungen anzupassen.
+4. Elektronische Kommunikation und Mailbox
+4.1 Elektronische Kommunikation
+Die Kommunikation zwischen Kapitalmitte und der Kundin oder dem Kunden kann elektronisch erfolgen. Hierzu können insbesondere genutzt werden: elektronische
+Mailbox E-Mail Plattformbenachrichtigungen digitale Dokumentenbereitstellung sowie elektronische Signaturverfahren.
+4.2 Mailbox
+Die elektronische Mailbox dient insbesondere der Bereitstellung von: Vertragsunterlagen Wertpapierabrechnungen regulatorischen Informationen Reports
+Steuerdokumenten sowie produktbezogenen Mitteilungen.
+
+-- 5 of 26 --
+Kapitalmitte kann zur Leistungserbringung mit: europäischen Banken Verwahrstellen Brokern Handelspartnern Zahlungsdienstleistern sowie spezialisierten
+Finanzdienstleistern
+
+-- 6 of 26 --
+regulatorische Hinweise Steuerdokumente Portfolio- und Transaktionsübersichten
+Die Kundin oder der Kunde ist verpflichtet, die elektronische Mailbox regelmäßig zu überprüfen.
+5. Aktien- und Wertpapiergeschäfte
+5.1 Allgemeine Informationen
+Kapitalmitte ermöglicht Kundinnen und Kunden den Erwerb, die Veräußerung, die Verwahrung sowie die langfristige Verwaltung von Finanzinstrumenten.
+5.2 Arten von Finanzinstrumenten
+sowie weitere kapitalmarktfähige Finanzinstrumente.
+5.3 Handelsausführung
+Die Ausführung von Handelsaufträgen erfolgt abhängig von: Marktphase Liquidität Produktart Handelsvolumen sowie regulatorischen Anforderungen. Kapitalmitte kann
+hierzu mit: institutionellen Handelspartnern Banken Brokern Ausführungsplätzen sowie Verwahrstellen zusammenarbeiten. Die Ausführung kann insbesondere erfolgen:
+im Kommissionsgeschäft im Festpreisgeschäft oder über externe Handelspartner .
+5.4 Plattform- und Reportingfunktionen
+Die digitale Plattform kann insbesondere folgende Funktionen umfassen: Depotübersichten Performance-Darstellungen Cashflow-Übersichten Transaktionshistorien
+elektronische Dokumentenbereitstellung Reporting- und Analysefunktionen sowie Nachrichten- und Kommunikationsfunktionen.
+5.5 Sonderkonditionen
+Je nach Investmentlösung, Marktphase oder Anlagevolumen können Sonderkonditionen oder Abschläge von bis zu 3 % gewährt werden.
+5.6 Risikohinweise
+Wertpapiergeschäfte unterliegen Markt- und Kapitalmarktrisiken. Vergangene Wertentwicklungen stellen keinen verlässlichen Indikator für zukünftige Entwicklungen dar .
+
+-- 7 of 26 --
+Hierzu zählen insbesondere: Aktien ETPs ETCs strukturierte Produkte ausgewählte Anleihen
+6. Anleihen und festverzinsliche Wertpapiere
+6.1 Allgemeine Informationen
+Kapitalmitte bietet Zugang zu ausgewählten Staats-, Unternehmens- und Spezialanleihen.
+6.2 Eigenschaften der Produkte
+Die angebotenen Lösungen können insbesondere folgende Merkmale aufweisen: feste Laufzeiten planbare Zinszahlungen unterschiedliche Bonitätsprofile institutionelle
+Emissionen sowie verschiedene Risiko- und Renditestrukturen.
+6.3 Produktauswahl
+sowie regulatorische Rahmenbedingungen.
+6.4 Sonderkonditionen
+angeboten werden.
+7. Tagesgeld, Festgeld & Flexgeld
+7.1 Allgemeine Informationen
+Kapitalmitte vermittelt ausgewählte Einlagenprodukte europäischer Banken.
+7.2 Produktarten
+sowie Multi-Bank-Einlagenlösungen.
+7.3 Plattformfunktionen
+Die Plattform ermöglicht Kundinnen und Kunden den Zugang zu: unterschiedlichen Laufzeiten verschiedenen europäischen Bankenpartnern individuellen Zinsmodellen
+sowie digitalen Verwaltungs- und Reportingfunktionen.
+7.4 Bonusaktionen
+Je nach Bank, Laufzeit und Anlagevolumen können Neukunden Bonusaktionen von bis zu 300 EUR erhalten.
+7.5 Einlagensicherung
+Einlagen können – abhängig von der jeweiligen Partnerbank – gesetzlichen Einlagensicherungssystemen innerhalb des Europäischen Wirtschaftsraums unterliegen.
+
+-- 8 of 26 --
+Je nach Emission und Anlagevolumen können: reduzierte Erwerbskosten institutionelle Zugänge oder ausgewählte Sonderkonditionen Hierzu zählen insbesondere:
+Tagesgeld Festgeld Flexgeld
+
+-- 9 of 26 --
+Kapitalmitte analysiert: Emittenten Laufzeiten Liquidität Marktumfeld Risiko- und Renditeprofile
+8. Wealth- und Portfolioverwaltung
+8.1 Allgemeine Informationen
+Kapitalmitte bietet ausgewählten Kundinnen und Kunden digitale sowie persönlich betreute Investment- und Vermögenslösungen an.
+8.2 Portfolioverwaltung
+Die Portfolioverwaltung orientiert sich insbesondere an: individuellen Anlagezielen Risikotoleranz Anlagehorizont Liquiditätsanforderungen sowie finanziellen
+Verhältnissen.
+8.3 Anlageklassen
+Im Rahmen der angebotenen Strategien können insbesondere berücksichtigt werden: Aktien Anleihen Geldmarktinstrumente Einlagenlösungen strukturierte Produkte
+sowie alternative Investmentlösungen.
+8.4 Investmentansatz
+Kapitalmitte verfolgt einen diversifizierten und langfristig orientierten Investmentansatz mit Fokus auf: nachhaltigen Vermögensaufbau Kapitalerhalt kontrollierte
+Risikosteuerung sowie transparente Portfolio- und Kostenstrukturen.
+8.5 Rebalancing und Strategieanpassungen
+Portfolioanpassungen können insbesondere erfolgen aufgrund von: Marktbewegungen Risikoveränderungen Liquiditätsanforderungen regulatorischen Vorgaben oder
+strategischen Anpassungen.
+9. Geeignetheits- und Angemessenheitsprüfung
+9.1 Allgemeine Informationen
+Vor Erbringung bestimmter Wertpapierdienstleistungen führt Kapitalmitte Geeignetheits- oder Angemessenheitsprüfungen durch.
+9.2 Berücksichtigte Kriterien
+sowie Anlagehorizont.
+9.3 Aktualisierungspflichten
+Die Kundin oder der Kunde ist verpflichtet, relevante Angaben aktuell zu halten.
+
+-- 10 of 26 --
+Hierbei werden insbesondere berücksichtigt: Kenntnisse und Erfahrungen finanzielle Verhältnisse Risikotoleranz Anlageziele Verlusttragfähigkeit
+
+-- 11 of 26 --
+10. Ausführung von Handelsaufträgen
+10.1 Ausführungsgrundsätze
+Kapitalmitte bemüht sich um die bestmögliche Ausführung von Handelsaufträgen unter Berücksichtigung von: Preis Kosten Geschwindigkeit Wahrscheinlichkeit der
+Ausführung sowie Marktbedingungen.
+10.2 Ausführungsplätze
+ausgeführt werden.
+10.3 Technische Einschränkungen
+Die Verfügbarkeit einzelner Funktionen kann aufgrund technischer Wartungsarbeiten, Marktstörungen oder regulatorischer Anforderungen eingeschränkt sein.
+11. Verwahrung und Zusammenarbeit mit Drittinstituten
+11.1 Verwahrung
+Kapitalmitte kann zur Verwahrung von Vermögenswerten mit externen Verwahrstellen oder Depotbanken zusammenarbeiten.
+11.2 Drittinstitute
+Die Gesellschaft ist berechtigt, sich geeigneter Dritter zu bedienen. Hierzu zählen insbesondere: Banken Verwahrstellen Broker Zahlungsdienstleister IT-Dienstleister
+sowie externe Handelspartner .
+12. Reporting und Portfolioinformationen
+12.1 Reporting
+Regelmäßige Reports können insbesondere folgende Informationen enthalten: Portfolioentwicklung Renditeübersichten Depotbestände Kosteninformationen Cashflow-
+Daten sowie Transaktionshistorien.
+12.2 Elektronische Bereitstellung
+Dokumente und regulatorische Informationen können elektronisch bereitgestellt und archiviert werden.
+
+-- 12 of 26 --
+multilaterale Handelssysteme systematische Internalisierer oder institutionelle Handelspartner
+
+-- 13 of 26 --
+Handelsaufträge können über: regulierte Märkte
+13. Preis- und Leistungsverzeichnis
+13.1 Allgemeine Kosten
+sowie externe Dienstleistungen.
+13.2 Kosteninformationen
+Aktuelle Preis- und Leistungsinformationen werden über die Plattform oder auf Anfrage bereitgestellt.
+14. Interessenkonflikte
+14.1 Allgemeine Grundsätze
+Kapitalmitte verfügt über organisatorische Maßnahmen zur Vermeidung, Steuerung und Offenlegung potenzieller Interessenkonflikte.
+14.2 Compliance
+Zur Vermeidung potenzieller Interessenkonflikte setzt Kapitalmitte insbesondere auf: interne Kontrollsysteme Compliance- und Überwachungsprozesse organisatorische
+Trennung relevanter Funktionen sowie regulatorische Richtlinien.
+15. Risikohinweise
+15.1 Allgemeine Risiken
+Kapitalanlagen unterliegen Risiken. Hierzu zählen insbesondere: Marktpreisrisiken Emittentenrisiken Bonitätsrisiken Liquiditätsrisiken Wechselkursrisiken
+Zinsänderungsrisiken sowie allgemeine Kapitalmarktrisiken.
+15.2 Marktvolatilität
+Finanzmärkte können erheblichen Schwankungen unterliegen.
+15.3 Hinweis zur Wertentwicklung
+Vergangene Wertentwicklungen stellen keinen verlässlichen Indikator für zukünftige Entwicklungen dar .
+16. Datenschutz und Vertraulichkeit
+16.1 Datenschutzgrundsätze
+Kapitalmitte verarbeitet personenbezogene Daten ausschließlich unter Beachtung der geltenden datenschutzrechtlichen Bestimmungen.
+16.2 Verarbeitungszwecke
+
+-- 14 of 26 --
+Kosten und Gebühren können insbesondere anfallen für: Wertpapiertransaktionen Depotleistungen Vermögensverwaltung Fremdspesen Premium- Modelle
+Sonderdienstleistungen Daten können insbesondere verarbeitet werden: zur Vertragserfüllung
+
+-- 15 of 26 --
+sowie zur Kundenkommunikation.
+17. Geldwäscheprävention und Identifizierung
+17.1 Identifizierung
+Kapitalmitte ist verpflichtet, gesetzliche Anforderungen zur Geldwäscheprävention einzuhalten.
+17.2 Mitwirkungspflichten
+Die Kundin oder der Kunde ist verpflichtet, erforderliche Informationen und Unterlagen vollständig und aktuell bereitzustellen.
+18. Beschwerden und Kommunikation
+18.1 Beschwerden
+Kundinnen und Kunden können Beschwerden schriftlich, telefonisch oder elektronisch an Kapitalmitte richten.
+18.2 Bearbeitung
+Kapitalmitte bemüht sich um eine faire, transparente und zeitnahe Bearbeitung sämtlicher Kundenanliegen.
+19. Informationsbogen für Einleger
+19.1 Allgemeine Informationen
+Einlagen, die im Rahmen von Tagesgeld-, Festgeld- oder Flexgeldlösungen vermittelt oder verwaltet werden, können – abhängig von der jeweiligen Partnerbank –
+gesetzlichen Einlagensicherungssystemen innerhalb des Europäischen Wirtschaftsraums unterliegen.
+19.2 Gesetzliche Einlagensicherung
+Die gesetzliche Einlagensicherung schützt Einlagen grundsätzlich bis zu einem Betrag von 100.000 EUR pro Einleger und pro Kreditinstitut. Die konkrete Einlagensicherung
+richtet sich nach: der jeweiligen Partnerbank dem Sitzstaat des Kreditinstituts sowie den jeweils geltenden regulatorischen Vorschriften.
+19.3 Zusätzliche Sicherungssysteme
+Einzelne Partnerbanken können zusätzlich freiwilligen oder institutsspezifischen Sicherungssystemen angeschlossen sein.
+19.4 Hinweise
+Die Kundin oder der Kunde erhält produktspezifische Informationen zur jeweiligen Partnerbank und den anwendbaren Sicherungssystemen im Rahmen der jeweiligen
+Produktunterlagen.
+20. Allgemeine Vertragsbedingungen
+20.1 Vertragsbeziehung
+Die Geschäftsbeziehung zwischen Kapitalmitte und der Kundin oder dem Kunden richtet sich nach: den vorliegenden Kundendokumenten den jeweiligen Produkt- und
+Vertragsbedingungen regulatorischen Vorgaben sowie den anwendbaren gesetzlichen Bestimmungen.
+20.2 Elektronische Zustimmung
+Die Kundin oder der Kunde erklärt sich damit einverstanden, dass Verträge, Dokumente, Mitteilungen und Erklärungen elektronisch bereitgestellt oder abgegeben werden
+können.
+20.3 Zugang zu Dokumenten
+Dokumente gelten – soweit gesetzlich zulässig – mit Bereitstellung in der elektronischen Mailbox als zugegangen.
+
+-- 16 of 26 --
+zur Geeignetheitsprüfung zur Risikobewertung zur gesetzlichen Identifizierung
+20.4 Änderungen der Vertragsbedingungen
+Kapitalmitte behält sich vor , Vertragsbedingungen, Preis- und Leistungsverzeichnisse sowie produktbezogene Regelungen im Rahmen gesetzlicher und regulatorischer
+Vorgaben anzupassen.
+20.5 Kündigung
+Soweit keine abweichenden Vereinbarungen bestehen, können Vertragsverhältnisse von beiden Parteien unter Berücksichtigung gesetzlicher Regelungen gekündigt
+werden. Das Recht zur außerordentlichen Kündigung aus wichtigem Grund bleibt unberührt.
+21. Besondere Vertragsbedingungen – Brokerage & Aktiengeschäfte
+21.1 Allgemeine Informationen
+Kapitalmitte ermöglicht den Erwerb, die Veräußerung sowie die Verwahrung von Aktien und weiteren Kapitalmarktinstrumenten.
+21.2 Auftragsarten
+Kundinnen und Kunden können insbesondere folgende Aufträge erteilen: Kaufaufträge Verkaufsaufträge Limitaufträge sowie sonstige handelsbezogene Weisungen.
+21.3 Ausführung von Aufträgen
+sowie technischen und organisatorischen Faktoren.
+21.4 Institutionelle Handelspartner
+Kapitalmitte kann zur Ausführung von Handelsaufträgen mit: Banken Brokern Market Makern institutionellen Handelspartnern sowie Ausführungsplätzen
+zusammenarbeiten.
+21.5 Orderannahme
+Kapitalmitte behält sich vor , Aufträge insbesondere bei: Marktstörungen regulatorischen Einschränkungen technischen Problemen unklaren Weisungen oder
+Verdachtsfällen im Zusammenhang mit Geldwäsche oder Marktmanipulation abzulehnen oder auszusetzen.
+22. Besondere Vertragsbedingungen – Einlagenlösungen
+22.1 Allgemeine Informationen
+Kapitalmitte vermittelt ausgewählte Einlagenlösungen europäischer Banken.
+22.2 Produktarten
+
+-- 17 of 26 --
+Die Ausführung erfolgt abhängig von: Marktbedingungen Liquidität Produktart regulatorischen Vorgaben Hierzu zählen insbesondere: Tagesgeld
+sowie Multi-Bank-Einlagenlösungen.
+22.3 Partnerbanken
+Kapitalmitte kann mit europäischen Kreditinstituten zusammenarbeiten. Die konkreten Konditionen richten sich insbesondere nach: Laufzeit Zinsmodell Produktstruktur
+sowie den Bedingungen der jeweiligen Partnerbank.
+22.4 Bonusaktionen
+Je nach Produkt, Laufzeit und Anlagevolumen können zeitlich begrenzte Sonderkonditionen oder Neukundenboni angeboten werden.
+22.5 Referenzkonto
+Ein- und Auszahlungen erfolgen grundsätzlich über ein von der Kundin oder dem Kunden benanntes Referenzkonto.
+23. Besondere Vertragsbedingungen – Wealth & Portfolioverwaltung
+23.1 Allgemeine Informationen
+Kapitalmitte bietet ausgewählten Kundinnen und Kunden digitale sowie persönlich betreute Vermögens- und Investmentlösungen an.
+23.2 Anlagestrategien
+Die angebotenen Strategien orientieren sich insbesondere an: Risikotoleranz Anlagezielen Liquiditätsanforderungen Anlagehorizont sowie individuellen
+Kundenpräferenzen.
+23.3 Portfoliozusammensetzung
+Portfolios können insbesondere folgende Anlageklassen enthalten: Aktien Anleihen Geldmarktinstrumente strukturierte Produkte alternative Investmentlösungen sowie
+Einlagenprodukte.
+23.4 Portfolioanpassungen
+Kapitalmitte kann Portfolios insbesondere aufgrund von: Marktveränderungen Risikoentwicklungen Liquiditätsanforderungen regulatorischen Vorgaben oder strategischen
+Anpassungen anpassen.
+23.5 Reporting
+Kundinnen und Kunden erhalten regelmäßige Portfolio- und Performanceinformationen über die Plattform oder die elektronische Mailbox.
+
+-- 18 of 26 --
+Festgeld Flexgeld
+24. Ausführungsgrundsätze
+24.1 Allgemeine Grundsätze
+Kapitalmitte bemüht sich um die bestmögliche Ausführung von Handelsaufträgen.
+24.2 Relevante Faktoren
+Bei der Ausführung können insbesondere berücksichtigt werden: Preis Kosten Geschwindigkeit Ausführungswahrscheinlichkeit Handelsvolumen Marktbedingungen sowie
+Liquidität.
+24.3 Ausführungsplätze
+ausgeführt werden.
+25. Preis- und Leistungsverzeichnis
+25.1 Allgemeine Kosten
+sowie externe Dienstleistungen.
+25.2 Fremdkosten
+Zusätzlich können Kosten externer Partner , Banken, Börsen oder Verwahrstellen entstehen.
+25.3 Kosteninformationen
+Aktuelle Preis- und Leistungsinformationen werden über die Plattform oder auf Anfrage bereitgestellt.
+19. Schlussbestimmungen
+19.1 Anwendbares Recht
+Für die Geschäftsbeziehung gilt deutsches Recht.
+19.2 Gerichtsstand
+Gerichtsstand ist – soweit gesetzlich zulässig – Frankfurt am Main.
+19.3 Hinweis
+Dieses Dokument stellt ein institutionelles Kunden- und Vertragsdokument im Stil moderner europäischer Wealth-, Brokerage- und Investmentplattformen dar .
+
+-- 19 of 26 --
+multilaterale Handelssysteme systematische Internalisierer oder institutionelle Handelspartner Kosten und Gebühren können insbesondere anfallen für:
+Wertpapiertransaktionen Sonderdienstleistungen Vermögensverwaltung Fremdspesen Premium-Modelle Reporting- und Zusatzleistungen
+
+-- 20 of 26 --
+Aufträge können über: regulierte Märkte
+26. Plattformzugang und Sicherheit
+26.1 Zugang zur Plattform
+Der Zugang zur digitalen Plattform erfolgt über personalisierte Zugangsdaten. Kapitalmitte kann zusätzliche Sicherheitsverfahren einsetzen, insbesondere: Zwei-Faktor-
+Authentifizierung elektronische Freigabeverfahren Geräteautorisierungen sowie zusätzliche Identifizierungsmaßnahmen.
+26.2 Sorgfaltspflichten
+sowie technische Veränderungen mit Sicherheitsrelevanz unverzüglich anzuzeigen.
+26.3 Vorübergehende Einschränkungen
+Die Verfügbarkeit einzelner Funktionen kann insbesondere eingeschränkt sein aufgrund von: Wartungsarbeiten technischen Störungen Marktunterbrechungen
+regulatorischen Anforderungen oder Sicherheitsmaßnahmen.
+27. Referenzkonto und Zahlungsverkehr
+27.1 Referenzkonto
+Ein- und Auszahlungen erfolgen grundsätzlich über ein von der Kundin oder dem Kunden benanntes Referenzkonto.
+27.2 Änderungen des Referenzkontos
+Änderungen des Referenzkontos können zusätzliche Identifizierungs- oder Sicherheitsmaßnahmen erfordern.
+27.3 Zahlungsabwicklung
+zusammenarbeiten.
+28. Marktstörungen und höhere Gewalt
+28.1 Marktstörungen
+Kapitalmitte ist berechtigt, Leistungen oder Handelsaktivitäten vorübergehend einzuschränken oder auszusetzen, sofern außergewöhnliche Marktbedingungen oder
+Marktstörungen dies erforderlich machen.
+28.2 Höhere Gewalt
+Kapitalmitte haftet nicht für Einschränkungen oder Verzögerungen aufgrund von Ereignissen außerhalb des Einflussbereichs der Gesellschaft. Hierzu zählen insbesondere:
+Stromausfälle Naturereignisse Cyberangriffe
+
+-- 21 of 26 --
+Die Kundin oder der Kunde ist verpflichtet: Zugangsdaten geheim zu halten unbefugte Zugriffe unverzüglich mitzuteilen Sicherheitsmaßnahmen einzuhalten Kapitalmitte
+kann zur Zahlungsabwicklung mit: Banken Zahlungsdienstleistern Partnerinstituten oder spezialisierten Zahlungsverkehrsdienstleistern
+
+-- 22 of 26 --
+oder sonstige Fälle höherer Gewalt.
+29. Steuerliche Hinweise
+29.1 Allgemeine Informationen
+Kapitalmitte erbringt grundsätzlich keine steuerliche Beratung, sofern keine ausdrückliche Vereinbarung getroffen wurde.
+29.2 Steuerliche Behandlung
+Die steuerliche Behandlung von Kapitalanlagen hängt insbesondere ab von: der individuellen steuerlichen Situation dem Wohnsitzstaat der Produktstruktur sowie den
+jeweils geltenden gesetzlichen Bestimmungen.
+29.3 Steuerdokumente
+Steuerrelevante Dokumente können elektronisch über die Plattform oder die Mailbox bereitgestellt werden.
+30. Nachhaltigkeit und ESG-Hinweise
+30.1 Allgemeine Informationen
+Kapitalmitte kann bei ausgewählten Investmentlösungen Nachhaltigkeits- oder ESG-bezogene Kriterien berücksichtigen.
+30.2 ESG-Risiken
+Nachhaltigkeitsbezogene Risiken können Auswirkungen auf: Wertentwicklungen Liquidität Emittenten sowie allgemeine Marktbedingungen haben.
+30.3 Produktbezogene Informationen
+Weiterführende Informationen zu Nachhaltigkeitsmerkmalen einzelner Produkte können den jeweiligen Produktunterlagen entnommen werden.
+31. Kommunikations- und Aufzeichnungspflichten
+31.1 Aufzeichnungen
+Kapitalmitte kann Kommunikations- und Transaktionsdaten im Rahmen gesetzlicher und regulatorischer Anforderungen aufzeichnen und speichern.
+31.2 Kommunikationswege
+oder schriftliche Mitteilungen.
+31.3 Speicherung
+
+-- 23 of 26 --
+Die Kommunikation kann insbesondere erfolgen über: elektronische Mailbox E-Mail Telefon Plattformnachrichten Die Speicherung kann insbesondere erfolgen zu:
+Nachweiszwecken regulatorischen Anforderungen
+
+-- 24 of 26 --
+Marktunterbrechungen behördliche Maßnahmen Krieg
+sowie zur Bearbeitung von Beschwerden.
+32. Institutionelle Investmentlösungen
+32.1 Allgemeine Informationen
+Kapitalmitte kann ausgewählten Kundinnen und Kunden Zugang zu institutionell strukturierten Investmentlösungen ermöglichen.
+32.2 Strukturierte Lösungen
+sowie individuelle Vermögenslösungen.
+32.3 Zugangsvoraussetzungen
+Der Zugang zu einzelnen Lösungen kann insbesondere abhängig sein von: Anlagevolumen regulatorischer Einstufung Risikoprofil sowie produktspezifischen
+Anforderungen.
+33. Schlussbestimmungen
+33.1 Salvatorische Klausel
+Sollten einzelne Bestimmungen dieser Kundendokumente ganz oder teilweise unwirksam sein oder werden, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.
+33.2 Änderungen
+Kapitalmitte behält sich vor , diese Kundendokumente im Rahmen regulatorischer oder organisatorischer Anforderungen anzupassen.
+33.3 Anwendbares Recht
+Für die Geschäftsbeziehung gilt deutsches Recht.
+33.4 Gerichtsstand
+Gerichtsstand ist – soweit gesetzlich zulässig – Frankfurt am Main.
+
+-- 25 of 26 --
+Hierzu können insbesondere zählen: strukturierte Kapitalmarktprodukte institutionelle Anleihelösungen alternative Investmentstrukturen
+
+-- 26 of 26 --
+Qualitäts- und Sicherheitszwecken

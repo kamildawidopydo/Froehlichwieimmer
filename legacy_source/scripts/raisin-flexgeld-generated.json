@@ -1,0 +1,76 @@
+{
+  "banks": [
+    {
+      "raisinSlug": "lea-bank-ab",
+      "name": "Lea Bank AB",
+      "country": "Schweden",
+      "rate": 1.9,
+      "productName": "Lea Bank AB: Tagesgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/blt30e1558f423983af/66951764f5ef5ff6e9a734fd/Logos_CS_new-template_DE_Lea_Bank.png",
+      "minDeposit": 500,
+      "depositProtection": "Riksgälden Insättningsgarantin",
+      "websiteUrl": "https://www.raisin.com/de-de/bank/lea-bank-ab/",
+      "slug": "lea-bank",
+      "logoPath": "/assets/bank-logos/lea-bank.png"
+    },
+    {
+      "raisinSlug": "imprebanca",
+      "name": "imprebanca",
+      "country": "Italien",
+      "rate": 1.9,
+      "productName": "imprebanca: Tagesgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/bltc2ed326bcca79f1c/66950ff42a822f4ede5e4d28/Logos_CS_new-template_DE_Imprebanca.png",
+      "minDeposit": 500,
+      "depositProtection": "Das gesetzliche Einlagensicherungssystem FITD - Fondo Interbancario di Tutela dei Deposit",
+      "websiteUrl": "https://www.raisin.com/de-de/bank/imprebanca/",
+      "slug": "imprebanca",
+      "logoPath": "/assets/bank-logos/imprebanca.png"
+    },
+    {
+      "raisinSlug": "civi-bank",
+      "name": "CiviBank",
+      "country": "Italien",
+      "rate": 1.5,
+      "productName": "CiviBank: 31 Tage Kündigungsgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/blt0eb3f2cf51c03bb7/6691065c11c1c39250ec0a17/Logos_CS_new-template_NED_CiviBank.png",
+      "minDeposit": 500,
+      "depositProtection": "Das gesetzliche Einlagensicherungssystem FITD - Fondo Interbancario di Tutela dei Deposit",
+      "websiteUrl": "https://www.raisin.com/de-de/bank/civi-bank/",
+      "slug": "civi-bank",
+      "logoPath": "/assets/bank-logos/civi-bank.png"
+    },
+    {
+      "raisinSlug": "banca-progetto",
+      "name": "Banca Progetto",
+      "country": "Italien",
+      "rate": 2,
+      "productName": "Banca Progetto: Tagesgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/bltf9851be90067c6f5/66910824042b308503c14c8e/Logos_CS_new-template_NED_Banca_Progetto.png",
+      "minDeposit": 500,
+      "depositProtection": "Das gesetzliche Einlagensicherungssystem FITD - Fondo Interbancario di Tutela dei Deposit",
+      "websiteUrl": "https://www.raisin.com/de-de/bank/banca-progetto/",
+      "slug": "banca-progetto",
+      "logoPath": "/assets/bank-logos/banca-progetto.png"
+    },
+    {
+      "raisinSlug": "blu-or-bank-as",
+      "name": "BluOr Bank AS",
+      "country": "Lettland",
+      "rate": 1.8,
+      "productName": "BluOr Bank AS: 31 Tage Kündigungsgeldkonto",
+      "logoUrl": "https://eu-images.contentstack.com/v3/assets/blt9e536e7f163b7c56/blt71ec1b1a8be4b0d0/697c8d21a708e406dd1bcea3/BluOr_Bank_logo-blue_320h.png",
+      "minDeposit": 500,
+      "depositProtection": "Der lettische Einlagensicherungsfonds",
+      "websiteUrl": "https://www.raisin.com/de-de/bank/blu-or-bank-as/",
+      "slug": "bluor-bank-as",
+      "logoPath": "/assets/bank-logos/bluor-bank-as.png"
+    }
+  ],
+  "slugMap": {
+    "lea-bank": "lea-bank-ab",
+    "imprebanca": "imprebanca",
+    "civi-bank": "civi-bank",
+    "banca-progetto": "banca-progetto",
+    "bluor-bank-as": "blu-or-bank-as"
+  }
+}

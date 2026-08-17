@@ -1,0 +1,84 @@
+-- 1 of 3 --
+RISIKOHINWEISE Stand Juli 2026
+Dieses Dokument enthält ausführliche allgemeine Informationen zu Risiken von Kapitalanlagen, Kapitalmarktprodukten, Einlagenlösungen,
+Vermögensverwaltungsmodellen sowie institutionellen Investmentstrukturen.
+I. Allgemeine Informationen
+Kapitalanlagen sind mit Chancen und Risiken verbunden. Kapitalanlagen können insbesondere Wertschwankungen unterliegen, Ertragsrisiken
+aufweisen, zu Verlusten führen oder im Extremfall einen vollständigen Verlust des eingesetzten Kapitals verursachen. Vergangene
+Wertentwicklungen stellen keinen verlässlichen Indikator für zukünftige Entwicklungen dar.
+II. Allgemeine Risiken der Kapitalanlage
+Kapitalanlagen unterliegen wirtschaftlichen, politischen und marktbezogenen Risiken. Hierzu zählen insbesondere: Konjunkturrisiken
+Inflationsrisiken Marktpreisrisiken Liquiditätsrisiken Währungsrisiken regulatorische Risiken steuerliche Risiken
+III. Risiken wirtschaftlicher und politischer Entwicklungen
+Wirtschaftliche und politische Entwicklungen können erhebliche Auswirkungen auf Kapitalmärkte, Zinssätze, Währungen, Liquidität und
+Bewertungen haben.
+IV. Risiken von Aktienanlagen
+Aktien unterliegen insbesondere: Kursrisiken
+Volatilitätsrisiken Emittentenrisiken
+Dividendenrisiken Liquiditätsrisiken
+Insolvenzrisiken
+Im Falle einer Insolvenz des Emittenten kann ein vollständiger Verlust des eingesetzten Kapitals eintreten.
+V. Risiken von Anleihen
+Anleihen unterliegen insbesondere: Bonitätsrisiken
+Emittentenrisiken Zinsänderungsrisiken
+Liquiditätsrisiken Inflationsrisiken
+Marktpreisrisiken
+VI. Risiken von Tagesgeld-, Festgeld- und Flexgeldlösungen
+Einlagenlösungen unterliegen insbesondere: Bonitätsrisiken der Partnerbank
+Inflationsrisiken Zinsänderungsrisiken
+
+-- 2 of 3 --
+Liquiditätsrisiken regulatorische Risiken
+länderspezifische Risiken
+VII. Risiken strukturierter Kapitalmarktprodukte
+Strukturierte Produkte können komplexe Risiko- und Ertragsprofile aufweisen. Hierzu zählen insbesondere: Hebelrisiken Emittentenrisiken
+Marktpreisrisiken Liquiditätsrisiken Bewertungsrisiken
+VIII. Liquiditäts- und Marktpreisrisiken
+Nicht alle Finanzinstrumente können jederzeit kurzfristig oder ohne Preisabschläge veräußert werden. In außergewöhnlichen Marktphasen kann
+die Liquidität erheblich eingeschränkt sein.
+IX. Emittenten- und Bonitätsrisiken
+Die Rückzahlung von Kapitalanlagen hängt teilweise von der Zahlungsfähigkeit des jeweiligen Emittenten ab. Eine Verschlechterung der Bonität
+kann insbesondere folgende Folgen haben: Kursverluste Zahlungsausfälle Liquiditätsprobleme Kapitalverluste
+X. Zinsänderungsrisiken
+Veränderungen des allgemeinen Zinsniveaus können erhebliche Auswirkungen auf Anleihen, Einlagenprodukte, Kapitalmarktbewertungen und
+Finanzierungsstrukturen haben.
+XI. Währungs- und Fremdwährungsrisiken
+Anlagen in Fremdwährungen unterliegen Wechselkursrisiken. Wechselkursschwankungen können Gewinne reduzieren oder Verluste erhöhen.
+XII. Risiken internationaler Kapitalmärkte
+Internationale Kapitalmärkte können zusätzlichen Risiken unterliegen. Hierzu zählen insbesondere: politische Risiken regulatorische Änderungen
+Währungsrisiken Sanktionen Kapitalverkehrsbeschränkungen
+XIII. Risiken institutioneller Handelspartner
+Kapitalmitte kann mit Banken, Brokern, Verwahrstellen, institutionellen Handelspartnern und Zahlungsdienstleistern zusammenarbeiten. Es
+bestehen Risiken technischer Ausfälle, Verzögerungen oder Marktstörungen.
+XIV. Verwahrungs- und Drittparteirisiken
+Bei grenzüberschreitenden Strukturen können zusätzliche regulatorische, steuerliche, rechtliche und operationelle Risiken bestehen.
+XV. Risiken elektronischer Plattformen und IT-Systeme
+Die Nutzung digitaler Plattformen kann technischen Risiken unterliegen. Hierzu zählen insbesondere: Systemausfälle
+
+-- 3 of 3 --
+Cyberangriffe Wartungsarbeiten
+Softwarefehler Verbindungsprobleme
+XVI. Risiken außergewöhnlicher Marktphasen
+In außergewöhnlichen Marktphasen kann es insbesondere zu extremer Volatilität, Liquiditätsengpässen, Marktverwerfungen und
+Handelsunterbrechungen kommen.
+XVII. Risiken der Portfolioverwaltung
+Portfolioverwaltungsstrategien basieren auf Marktannahmen und Risikomodellen, die sich als unzutreffend erweisen können.
+XVIII. Diversifikation und Risikostreuung
+Diversifikation dient der Risikoreduzierung, kann Verluste jedoch nicht vollständig ausschließen.
+XIX. Steuerliche Risiken
+Änderungen steuerlicher Rahmenbedingungen können sich negativ auf Renditen oder Nettoerträge auswirken. Kapitalmitte erbringt grundsätzlich
+keine steuerliche Beratung.
+XX. Geeignetheitsprüfung und Kundenangaben
+Unvollständige oder unzutreffende Angaben können dazu führen, dass Investmentlösungen nicht den tatsächlichen Verhältnissen entsprechen.
+XXI. Nachhaltigkeits- und ESG-Risiken
+Nachhaltigkeits- oder ESG-bezogene Risiken können Auswirkungen auf Emittenten, Branchen, Marktliquidität und langfristige Wertentwicklungen
+haben.
+XXII. Rechtliche und regulatorische Risiken
+Regulatorische Veränderungen können Auswirkungen haben auf Produktverfügbarkeiten, Marktliquidität, Kostenstrukturen und
+Investmentstrategien.
+XXIII. Interessenkonflikte
+Im Rahmen von Handelsaktivitäten, Kooperationen oder institutionellen Partnerschaften können Interessenkonflikte entstehen. Kapitalmitte setzt
+organisatorische Maßnahmen zur Vermeidung und Steuerung potenzieller Interessenkonflikte ein.
+XXIV. Schlussbestimmungen
+Diese Risikohinweise dienen ausschließlich allgemeinen Informationszwecken. Sie stellen keine Anlageberatung, Steuerberatung oder individuelle
+Empfehlung dar.
