@@ -1,0 +1,59 @@
+{
+  "summary": "Backend-only Phase 1 verification completed against the public REACT_APP_BACKEND_URL: 19/22 pytest cases passed. Health, registration/login cookies, validation/status codes, session update/refresh/logout, recovery anti-enumeration, seeded admin hash, and all content endpoints passed. Brute-force lockout, credentialed CORS, and malformed signed-token handling failed.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/auth/login",
+        "issue": "Brute-force protection does not return 429 on the 6th failed login. Public requests alternate between internal proxy addresses 10.49.136.20 and 10.49.135.194, so attempts are split because identifier uses request.client.host. Diagnostic retries also showed the first request reaching a locked record returns 500 instead of 429 because MongoDB returns locked_until as offset-naive while check_lockout compares it with an offset-aware UTC datetime.",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "/api/auth/me",
+        "issue": "A correctly signed access JWT whose sub is not a valid MongoDB ObjectId returns 500. bson.errors.InvalidId is not caught by get_current_user; invalid auth claims should produce 401.",
+        "priority": "HIGH"
+      },
+      {
+        "endpoint": "/api/* (CORS preflight)",
+        "issue": "Public preflight response exposes Access-Control-Allow-Origin: * and omits Access-Control-Allow-Credentials instead of returning the explicit FRONTEND_URL with credentials. This fails credentialed cross-origin cookie requirements even though application middleware is configured correctly, indicating ingress/header override.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Derive the lockout client identity from a trusted forwarded-client-IP configuration or lock by normalized email independently of rotating internal proxies; make attempt increments atomic.",
+    "Configure MongoDB datetime decoding consistently (for example tz_aware=True) or normalize stored datetimes before comparisons so lockout returns 429 rather than 500.",
+    "Catch bson.errors.InvalidId, missing/invalid sub claims, and equivalent refresh-token subject errors and return 401.",
+    "Fix ingress CORS handling so credentialed responses use the explicit allowed origin and Access-Control-Allow-Credentials: true; do not emit wildcard ACAO.",
+    "Remove password reset links/tokens from INFO logs and verify valid reset-token expiry comparison, which uses the same naive-versus-aware datetime pattern.",
+    "Retest all auth flows after fixes."
+  ],
+  "critical_code_review_comments": [
+    "forgot_password logs the full live reset URL/token at INFO, exposing account-reset credentials to log readers.",
+    "record_failed_login performs a non-atomic find/read/update sequence, so concurrent failures can lose increments; use one atomic update and derive lockout state safely.",
+    "reset_password compares MongoDB-decoded expires_at against datetime.now(timezone.utc), the same timezone mismatch that produced the lockout 500; valid reset tokens are at risk of failing.",
+    "seed_content exits when any bank exists, so a partially seeded database can permanently miss offers/news; seed each collection idempotently.",
+    "FRONTEND_URL and admin credentials have source-code defaults despite the deployment requirement that URLs and credentials fail fast from environment variables."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py"
+  ],
+  "success_rate": {
+    "backend": "86% (19/22)",
+    "frontend": "N/A - explicitly skipped"
+  },
+  "seed_data_creation": "Created unique TEST_ users, login attempts, and one recovery token during testing; all test-created MongoDB data was cleaned up (verified zero matching test users/attempts).",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use the existing pytest suite. Expected remaining failures are CORS explicit origin, 6th-attempt 429, and invalid signed subject 401. Cookie flags HttpOnly/Secure/SameSite=None passed on registration and login. Admin bcrypt hash starts with $2b$ and validates the credential. Frontend was intentionally not tested.",
+  "rca_of_the_issue": "Lockout identity is based on request.client.host, which is an internal ingress address and alternated across two proxies, splitting six failures into separate counters. Once one counter reached five, MongoDB returned locked_until without tzinfo and comparison to aware UTC raised TypeError, producing 500. CORS middleware source is explicit, but the public ingress response overrides it with wildcard headers. Invalid JWT subjects reach ObjectId(payload['sub']) without ObjectId validation or an InvalidId handler."
+}

@@ -1,0 +1,53 @@
+{
+  "summary": "Backend-only Phase 1 retest completed against the public REACT_APP_BACKEND_URL. Requested iteration_1 suite: 21/22 passed (95%); brute-force lockout now returns 429 on attempt 6 and malformed signed access-token subjects return 401. The sole requested-suite failure remains public CORS at ingress. Supplemental checks: 2/3 passed; direct ASGI CORS and admin password-rotation seeding passed, while malformed signed refresh-token subjects return 500.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "/api/auth/refresh",
+        "issue": "A correctly signed refresh JWT with non-ObjectId sub returns 500 instead of 401. Backend logs confirm uncaught bson.errors.InvalidId at ObjectId(payload['sub']) in refresh_token.",
+        "priority": "HIGH"
+      },
+      {
+        "endpoint": "/api/* (CORS preflight)",
+        "issue": "Public preflight still returns Access-Control-Allow-Origin: * and omits Access-Control-Allow-Credentials. A direct ASGI test of the same FastAPI app returns the explicit FRONTEND_URL plus credentials=true, confirming this is an ingress/header-override infrastructure issue, not an application middleware defect.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_auth_supplemental.py",
+    "/app/test_reports/pytest/pytest_results_iteration_2.xml",
+    "/app/test_reports/pytest/pytest_supplemental_iteration_2.xml"
+  ],
+  "action_items": [
+    "Validate refresh-token sub with ObjectId.is_valid before constructing ObjectId and return 401 for missing or malformed subjects.",
+    "Fix Kubernetes ingress CORS/header handling so credentialed public preflights preserve the explicit allowed origin and Access-Control-Allow-Credentials: true.",
+    "Update /app/memory/test_credentials.md lockout note from IP+email to normalized email-only; /app/auth_testing.md referenced by the test request is missing."
+  ],
+  "critical_code_review_comments": [
+    "get_current_user now defensively validates access-token subjects, but refresh_token duplicates JWT subject handling without the same ObjectId guard, causing a reproducible 500.",
+    "ADMIN_EMAIL, ADMIN_PASSWORD, and FRONTEND_URL still have source-code defaults; deployment requirements state credentials/URLs must come from environment and missing configuration should fail fast.",
+    "record_failed_login uses atomic $inc and the sequential five-fail/then-429 behavior passed; admin seed password synchronization also passed an isolated method-level regression test."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_auth_supplemental.py"
+  ],
+  "success_rate": {
+    "backend": "92% (23/25 overall); requested suite 95% (21/22)",
+    "frontend": "N/A - explicitly skipped"
+  },
+  "seed_data_creation": "The requested suite created unique TEST_ registration, brute-force, and recovery users/tokens and cleaned them through its session teardown. Supplemental seed_admin verification used an isolated fake collection and did not mutate the real admin.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "Used admin credentials from /app/memory/test_credentials.md; seeded bcrypt hash starts with $2b$, password verifies, login cookies are HttpOnly/Secure/SameSite=None.",
+  "context_for_next_testing_agent": "Re-run both test files. The access-token invalid-sub assertion was updated to the new meaningful detail 'Invalid token subject'; status remains the key contract and now passes. Expected current failures are public ingress CORS and supplemental malformed refresh-sub handling. Frontend remains out of scope.",
+  "rca_of_the_issue": "The two originally app-level failures are fixed: email-only lockout plus timezone-aware datetimes produce [401,401,401,401,401,429], and get_current_user rejects malformed access subjects with 401. Public CORS differs from direct ASGI behavior, isolating the remaining CORS failure to ingress. refresh_token still directly constructs ObjectId(payload['sub']) and only catches jwt.InvalidTokenError, so bson.errors.InvalidId escapes as 500."
+}
