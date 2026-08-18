@@ -19,7 +19,7 @@ export function formatGermanPhoneDisplay(tel, nationalGroups) {
   return `+49${NBSP}${formatNationalGroups(national, nationalGroups)}`;
 }
 
-const HAITERBACH_PHONE_TEL = '+4940334657981';
+const HAITERBACH_PHONE_TEL = '+4940334657988';
 const FRANKFURT_PHONE_TEL = '+4969205690994';
 
 const siteContact = {
