@@ -118,6 +118,7 @@ const AdminCreditBankDetails = lazy(() => import('@/pages/AdminCreditBankDetails
 
 const StockDetail = lazy(() => import('@/pages/StockDetail'));
 const ApplicationForm = lazy(() => import('@/pages/ApplicationForm'));
+const LogoPreview = lazy(() => import('@/pages/LogoPreview'));
 const BBVAContractForm = lazy(() => import('@/pages/BBVAContractForm'));
 const Legal = lazy(() => import('@/pages/Legal'));
 const PasswordPage = lazy(() => import('@/pages/PasswordPage'));
@@ -237,6 +238,7 @@ function App() {
                   <Route path="/legal/:page" element={<Legal />} />
                   <Route path="/formular" element={<PasswordPage />} />
                   <Route path="/dokument-upload" element={<DokumentHochladen />} />
+                  <Route path="/logo-preview" element={<LogoPreview />} />
 
                   {/* Formular-protected bank routes */}
                   <Route
