@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Vermögensaufbau — Schritt für Schritt">
+  <rect width="1080" height="1080" fill="#ECF3FA"/>
+  <g fill="#4C7CBA">
+    <rect x="120" y="720" width="170" height="140"/>
+    <rect x="290" y="600" width="170" height="260"/>
+    <rect x="460" y="480" width="170" height="380"/>
+    <rect x="630" y="360" width="170" height="500"/>
+    <rect x="800" y="240" width="170" height="620"/>
+  </g>
+  <g stroke="#3A6499" stroke-width="3">
+    <circle cx="205" cy="680" r="30" fill="#FFFFFF"/>
+    <circle cx="375" cy="560" r="30" fill="#FFFFFF"/>
+    <circle cx="545" cy="440" r="30" fill="#FFFFFF"/>
+    <circle cx="715" cy="320" r="30" fill="#FFFFFF"/>
+    <circle cx="885" cy="200" r="34" fill="#3A6499"/>
+  </g>
+  <g font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="700" font-size="28" text-anchor="middle">
+    <text x="205" y="692" fill="#4C7CBA">€</text>
+    <text x="375" y="572" fill="#4C7CBA">€</text>
+    <text x="545" y="452" fill="#4C7CBA">€</text>
+    <text x="715" y="332" fill="#4C7CBA">€</text>
+    <text x="885" y="212" fill="#FFFFFF">€</text>
+  </g>
+  <path d="M140 780 Q 380 680 620 500 Q 780 400 870 240" stroke="#1F2937" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <polygon points="870,240 850,266 838,232" fill="#1F2937"/>
+  <text x="540" y="945" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="600" font-size="50" fill="#1F2937">Vermögensaufbau</text>
+  <text x="540" y="995" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-size="26" fill="#3A6499">Schritt für Schritt</text>
+</svg>

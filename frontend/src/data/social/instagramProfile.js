@@ -6,6 +6,16 @@ const PLACEHOLDER = '/assets/social/placeholder.svg';
 const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=1';
 const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=1';
 
+/** Individual, visually distinct post artworks for the Instagram grid. */
+const POST_IMG = {
+  tagesgeld:         '/assets/social/posts/1-tagesgeld.svg',
+  festgeld:          '/assets/social/posts/2-festgeld.svg',
+  zinsen:            '/assets/social/posts/3-zinsen.svg',
+  einlagensicherung: '/assets/social/posts/4-einlagensicherung.svg',
+  vermoegensaufbau:  '/assets/social/posts/5-vermoegensaufbau.svg',
+  europa:            '/assets/social/posts/6-europa.svg',
+};
+
 /** Statische Instagram-Vorschau — Fröhlich Vermögensberatung GmbH (kein echtes IG-Profil). */
 export const instagramProfile = {
   platform: 'instagram',
@@ -73,24 +83,24 @@ export const instagramProfile = {
     },
   ],
   posts: [
-    { id: 'ig-1', image: PLACEHOLDER, imageAlt: 'Fröhlich Vermögensberatung — Vermögensaufbau',
-      caption: 'Vermögensaufbau mit Struktur — langfristig, transparent und ruhig geplant.',
+    { id: 'ig-1', image: POST_IMG.tagesgeld,         imageAlt: 'Tagesgeld — flexibel sparen',
+      caption: 'Tagesgeld – flexibel sparen mit tagesaktuellen Zinsen. Ihr Geld bleibt jederzeit verfügbar, ohne feste Laufzeit. #Tagesgeld #Sparen',
       likes: 148, publishedAt: 'vor 3 Wochen', comments: instagramPostCommentsById['ig-1'] },
-    { id: 'ig-2', image: PLACEHOLDER, imageAlt: 'Fröhlich Vermögensberatung — Sparen',
-      caption: 'Sparen mit Weitblick: Rücklagen aufbauen, Ziele erreichen, entspannt bleiben.',
+    { id: 'ig-2', image: POST_IMG.festgeld,          imageAlt: 'Festgeld — planbar anlegen',
+      caption: 'Festgeld – planbar anlegen. Feste Laufzeit, feste Konditionen, ruhig kalkulierbar. #Festgeld #Vermögensplanung',
       likes: 132, publishedAt: 'vor 5 Wochen', comments: instagramPostCommentsById['ig-2'] },
-    { id: 'ig-3', image: PLACEHOLDER, imageAlt: 'Fröhlich Vermögensberatung — Vorsorge',
-      caption: 'Vorsorge sollte nicht kompliziert sein. Wir bringen Ordnung ins Thema.',
+    { id: 'ig-3', image: POST_IMG.zinsen,            imageAlt: 'Zinsen im Blick behalten',
+      caption: 'Zinsen im Blick behalten. Wir vergleichen Konditionen quartalsweise – verständlich aufbereitet. #Zinsen #Konditionen',
       likes: 176, publishedAt: 'vor 8 Wochen', comments: instagramPostCommentsById['ig-3'] },
-    { id: 'ig-4', image: PLACEHOLDER, imageAlt: 'Fröhlich Vermögensberatung — Konditionen',
-      caption: 'Konditionen im Überblick — nur was zu Ihrem Vermögen passt.',
-      likes: 98, publishedAt: 'vor 11 Wochen', comments: instagramPostCommentsById['ig-4'] },
-    { id: 'ig-5', image: PLACEHOLDER, imageAlt: 'Fröhlich Vermögensberatung — Team',
-      caption: 'Menschen hinter der Beratung — persönlich, greifbar, verlässlich.',
-      likes: 84, publishedAt: 'vor 14 Wochen', comments: instagramPostCommentsById['ig-5'] },
-    { id: 'ig-6', image: PLACEHOLDER, imageAlt: 'Fröhlich Vermögensberatung — Wissen',
-      caption: 'Wissen, das trägt — kompakt und ohne Fachchinesisch.',
-      likes: 71, publishedAt: 'vor 16 Wochen', comments: instagramPostCommentsById['ig-6'] },
+    { id: 'ig-4', image: POST_IMG.einlagensicherung, imageAlt: 'Einlagensicherung — Sicherheit für Ihr Erspartes',
+      caption: 'Einlagensicherung – Sicherheit für Ihr Erspartes im europäischen Sicherungssystem. #Einlagensicherung #Sicherheit',
+      likes: 98,  publishedAt: 'vor 11 Wochen', comments: instagramPostCommentsById['ig-4'] },
+    { id: 'ig-5', image: POST_IMG.vermoegensaufbau,  imageAlt: 'Vermögensaufbau — Schritt für Schritt',
+      caption: 'Vermögen Schritt für Schritt aufbauen. Kleine Etappen, langfristiges Ziel, ruhiger Weg. #Vermögensaufbau #Sparplan',
+      likes: 84,  publishedAt: 'vor 14 Wochen', comments: instagramPostCommentsById['ig-5'] },
+    { id: 'ig-6', image: POST_IMG.europa,            imageAlt: 'Sparmöglichkeiten in Europa',
+      caption: 'Sparmöglichkeiten in Europa – grenzüberschreitende Konditionen im Überblick. #Europa #Sparen',
+      likes: 71,  publishedAt: 'vor 16 Wochen', comments: instagramPostCommentsById['ig-6'] },
   ],
 };
 
