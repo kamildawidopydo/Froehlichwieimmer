@@ -42,19 +42,42 @@ export default function Leistungen() {
         </div>
       </section>
 
-      {/* 6 KARTEN */}
+      {/* 6 LEISTUNGEN — editorial, keine Karten-Kästen */}
       <section className="border-b border-bank-border py-16 sm:py-20">
         <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {LEISTUNGEN.map(({ icon: Icon, title, body, href, cta }) => (
-              <article key={title} data-testid={`leistung-${title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')}`} className="group flex flex-col rounded-2xl border border-bank-border bg-bank-surface/40 p-7 shadow-editorial-sm transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-bank-gold/40 hover:shadow-editorial-md">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-bank-border bg-white/60 text-bank-primary dark:bg-bank-surface">
-                  <Icon className="h-5 w-5" strokeWidth={LUCIDE_STROKE} aria-hidden />
-                </span>
-                <h3 className="mt-5 font-display text-[1.25rem] font-light leading-tight tracking-[-0.01em] text-bank-text" style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}>{title}</h3>
-                <p className="mt-3 flex-1 text-[14.5px] leading-relaxed text-bank-text-muted">{body}</p>
-                <Link to={href} className="mt-6 inline-flex items-center gap-2 text-[13.5px] font-semibold text-bank-primary hover:underline">
-                  {cta} <ArrowUpRight className="h-4 w-4" strokeWidth={1.6} aria-hidden />
+          <div className="grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-14 lg:gap-y-16">
+            {LEISTUNGEN.map(({ icon: Icon, title, body, href, cta }, i) => (
+              <article
+                key={title}
+                data-testid={`leistung-${title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')}`}
+                className="group flex flex-col"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">
+                    {String(i + 1).padStart(2, '0')} — Leistung
+                  </span>
+                  <span className="h-px flex-1 bg-bank-border" aria-hidden />
+                  <Icon
+                    className="h-5 w-5 shrink-0 text-bank-primary"
+                    strokeWidth={LUCIDE_STROKE}
+                    aria-hidden
+                  />
+                </div>
+                <h3
+                  className="mt-5 font-display text-[1.5rem] font-light leading-tight tracking-[-0.015em] text-bank-text sm:text-[1.65rem]"
+                  style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
+                >
+                  {title}
+                </h3>
+                <p className="mt-4 flex-1 text-[15px] leading-[1.75] text-bank-text-muted">{body}</p>
+                <Link
+                  to={href}
+                  className="mt-6 inline-flex items-center gap-2 self-start text-[13.5px] font-semibold text-bank-primary transition-colors hover:text-bank-primary/80"
+                >
+                  <span className="border-b border-transparent transition-colors group-hover:border-bank-primary/50">
+                    {cta}
+                  </span>
+                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={1.6} aria-hidden />
                 </Link>
               </article>
             ))}
