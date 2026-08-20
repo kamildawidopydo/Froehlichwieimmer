@@ -32,38 +32,42 @@ export default function Wissen() {
         </div>
       </section>
 
-      {/* ARTIKEL-LISTE */}
+      {/* ARTIKEL-LISTE — editorial, keine Karten */}
       <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
-          <div className="grid gap-6 sm:grid-cols-2">
-            {WISSEN_ARTICLES.map((a) => {
+        <div className="mx-auto max-w-[1100px] px-5 sm:px-8 lg:px-12">
+          <div className="divide-y divide-bank-border border-y border-bank-border">
+            {WISSEN_ARTICLES.map((a, i) => {
               const cat = WISSEN_CATEGORIES[a.category];
               return (
                 <Link
                   key={a.slug}
                   to={`/wissen/${a.slug}`}
                   data-testid={`wissen-card-${a.slug}`}
-                  className="group flex flex-col rounded-2xl border border-bank-border bg-bank-surface/40 p-7 shadow-editorial-sm transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-bank-gold/40 hover:shadow-editorial-md sm:p-8"
+                  className="group grid gap-6 py-10 sm:grid-cols-[auto_1fr_auto] sm:items-baseline sm:gap-x-10 sm:py-12"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="rounded-full border border-bank-primary/30 bg-bank-primary/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.22em] text-bank-primary">
-                      {cat.label}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 text-[11.5px] text-bank-text-muted">
-                      <Clock className="h-3.5 w-3.5" strokeWidth={1.4} aria-hidden />
-                      {a.readingTime}
-                    </span>
+                  <span className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold sm:pt-2">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-bank-text-muted">
+                      <span className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">{cat.label}</span>
+                      <span aria-hidden className="text-bank-text-muted/50">·</span>
+                      <span className="inline-flex items-center gap-1.5 text-[11.5px]">
+                        <Clock className="h-3.5 w-3.5" strokeWidth={1.4} aria-hidden />
+                        {a.readingTime}
+                      </span>
+                    </div>
+                    <h2
+                      className="mt-4 font-display text-[1.55rem] font-light leading-[1.15] tracking-[-0.015em] text-bank-text transition-colors group-hover:text-bank-primary sm:text-[1.85rem]"
+                      style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
+                    >
+                      {a.title}
+                    </h2>
+                    <p className="mt-4 max-w-2xl text-[15px] leading-[1.75] text-bank-text-muted">{a.lede}</p>
                   </div>
-                  <h2
-                    className="mt-5 font-display text-[1.4rem] font-light leading-tight tracking-[-0.015em] text-bank-text sm:text-[1.55rem]"
-                    style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
-                  >
-                    {a.title}
-                  </h2>
-                  <p className="mt-3 flex-1 text-[14.5px] leading-relaxed text-bank-text-muted">{a.lede}</p>
-                  <span className="mt-6 inline-flex items-center gap-2 text-[13.5px] font-semibold text-bank-primary group-hover:underline">
+                  <span className="inline-flex shrink-0 items-center gap-2 self-center text-[13.5px] font-semibold text-bank-primary sm:self-end sm:pb-2">
                     Weiterlesen
-                    <ArrowUpRight className="h-4 w-4" strokeWidth={1.6} aria-hidden />
+                    <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={1.6} aria-hidden />
                   </span>
                 </Link>
               );
@@ -74,7 +78,7 @@ export default function Wissen() {
 
       {/* HINWEIS + CTA */}
       <section className="border-t border-bank-border bg-bank-surface/30 py-14 sm:py-16">
-        <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-[1100px] px-5 sm:px-8 lg:px-12">
           <p className="max-w-3xl text-[13.5px] leading-relaxed text-bank-text-muted">
             Hinweis: Die Beiträge in diesem Bereich dienen der allgemeinen Information und stellen keine individuelle Anlageberatung dar. Eine persönliche Empfehlung setzt immer die Betrachtung Ihrer individuellen Situation, Ziele und Erfahrungen im Gespräch voraus.
           </p>

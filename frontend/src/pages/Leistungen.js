@@ -144,11 +144,14 @@ export default function Leistungen() {
             Ihre Ziele bestimmen den Weg.
           </h2>
           <p className="mt-6 max-w-2xl text-[15.5px] leading-[1.85] text-bank-text-muted">Vor finanziellen Entscheidungen sollten zunächst einige grundlegende Fragen beantwortet werden:</p>
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2">
-            {['Was möchten Sie mit Ihrem Vermögen erreichen?', 'Welche Mittel möchten Sie verfügbar halten?', 'Welchen Anlagehorizont haben Sie?', 'Welche Wertschwankungen können und möchten Sie tragen?', 'Welche Erfahrungen haben Sie mit Kapitalanlagen?', 'Welche zukünftigen finanziellen Verpflichtungen bestehen?'].map((q) => (
-              <li key={q} className="rounded-xl border border-bank-border bg-bank-surface/40 px-5 py-4 text-[14.5px] leading-relaxed text-bank-text">{q}</li>
+          <ol className="mt-8 divide-y divide-bank-border border-y border-bank-border sm:grid sm:grid-cols-2 sm:gap-x-10 sm:divide-y-0 sm:border-0">
+            {['Was möchten Sie mit Ihrem Vermögen erreichen?', 'Welche Mittel möchten Sie verfügbar halten?', 'Welchen Anlagehorizont haben Sie?', 'Welche Wertschwankungen können und möchten Sie tragen?', 'Welche Erfahrungen haben Sie mit Kapitalanlagen?', 'Welche zukünftigen finanziellen Verpflichtungen bestehen?'].map((q, i) => (
+              <li key={q} className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 py-5 text-[15px] leading-relaxed text-bank-text sm:border-b sm:border-bank-border sm:py-6">
+                <span className="font-mono text-[11px] uppercase tracking-[0.24em] text-bank-gold">{String(i + 1).padStart(2, '0')}</span>
+                <span>{q}</span>
+              </li>
             ))}
-          </ul>
+          </ol>
           <div className="mt-10 flex flex-wrap gap-3">
             <Link to="/contact" data-testid="leistungen-cta-contact" className={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'inline-flex cursor-pointer')}>
               Persönliches Gespräch vereinbaren <ArrowUpRight className="ml-2 h-4 w-4" strokeWidth={1.6} aria-hidden />

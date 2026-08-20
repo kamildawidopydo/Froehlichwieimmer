@@ -119,11 +119,14 @@ export default function WissenArtikel() {
         <section className="border-t border-bank-border py-14">
           <div className="mx-auto max-w-[1000px] px-5 sm:px-8">
             <p className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-text-muted">Verwandte Beiträge</p>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="mt-8 divide-y divide-bank-border border-y border-bank-border">
               {related.map((r) => (
-                <Link key={r.slug} to={`/wissen/${r.slug}`} className="group rounded-xl border border-bank-border bg-bank-surface/40 p-5 transition-colors hover:border-bank-gold/40">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-primary">{WISSEN_CATEGORIES[r.category].label}</p>
-                  <p className="mt-3 font-display text-[1.1rem] font-light leading-snug text-bank-text" style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}>{r.title}</p>
+                <Link key={r.slug} to={`/wissen/${r.slug}`} className="group grid gap-2 py-6 sm:grid-cols-[1fr_auto] sm:items-baseline sm:gap-x-8">
+                  <div className="min-w-0">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-primary">{WISSEN_CATEGORIES[r.category].label}</p>
+                    <p className="mt-2 font-display text-[1.2rem] font-light leading-snug text-bank-text transition-colors group-hover:text-bank-primary sm:text-[1.3rem]" style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}>{r.title}</p>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 shrink-0 text-bank-primary transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" strokeWidth={1.6} aria-hidden />
                 </Link>
               ))}
             </div>

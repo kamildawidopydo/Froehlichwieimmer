@@ -62,10 +62,10 @@ export default function Philosophie() {
               <p>Unterschiedliche Anlageklassen reagieren unterschiedlich auf wirtschaftliche Entwicklungen. Eine diversifizierte Vermögensstruktur kann dazu beitragen, Abhängigkeiten von einzelnen Anlagen zu reduzieren.</p>
               <p>Die konkrete Zusammensetzung muss sich jedoch nach finanziellen Zielen, Risikobereitschaft, Anlagehorizont, Liquiditätsbedarf und persönlichen Umständen richten. Eine pauschale Musterlösung gibt es nicht.</p>
             </div>
-            <ul className="space-y-3">
-              {['Finanzielle Ziele', 'Risikobereitschaft', 'Anlagehorizont', 'Liquiditätsbedarf', 'Persönliche Umstände'].map((k) => (
-                <li key={k} className="flex items-start gap-3 rounded-xl border border-bank-border bg-white px-5 py-4 text-[14.5px] text-bank-text dark:bg-bank-surface">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-bank-gold" aria-hidden />
+            <ul className="space-y-4">
+              {['Finanzielle Ziele', 'Risikobereitschaft', 'Anlagehorizont', 'Liquiditätsbedarf', 'Persönliche Umstände'].map((k, i) => (
+                <li key={k} className="grid grid-cols-[auto_1fr] items-baseline gap-x-5 border-b border-bank-border pb-3 text-[15.5px] leading-relaxed text-bank-text">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.24em] text-bank-gold">{String(i + 1).padStart(2, '0')}</span>
                   <span>{k}</span>
                 </li>
               ))}
@@ -106,12 +106,12 @@ export default function Philosophie() {
             <p>Denn finanzielle Ziele verändern sich. Familien entstehen. Unternehmen entwickeln sich. Vermögen wächst. Lebenssituationen ändern sich. Und auch Kapitalmärkte verändern sich. Deshalb verstehen wir Vermögensberatung als langfristigen Prozess.</p>
           </div>
 
-          {/* Prozess-Timeline */}
-          <ol className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          {/* Prozess — editorial Timeline ohne Karten */}
+          <ol className="mt-12 grid gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-6">
             {PROZESS.map((step, i) => (
-              <li key={step} className="relative rounded-xl border border-white/12 bg-white/[0.04] p-5">
-                <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-gold/85">Schritt {String(i + 1).padStart(2, '0')}</p>
-                <p className="mt-2 font-display text-[1rem] font-light leading-snug text-white" style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}>{step}</p>
+              <li key={step} className="border-t border-white/20 pt-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-gold/85">{String(i + 1).padStart(2, '0')}</p>
+                <p className="mt-3 font-display text-[1.05rem] font-light leading-snug text-white" style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}>{step}</p>
               </li>
             ))}
           </ol>
