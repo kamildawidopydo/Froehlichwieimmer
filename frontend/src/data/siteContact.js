@@ -19,27 +19,27 @@ export function formatGermanPhoneDisplay(tel, nationalGroups) {
   return `+49${NBSP}${formatNationalGroups(national, nationalGroups)}`;
 }
 
-const HAITERBACH_PHONE_TEL = '+4940334657988';
-const FRANKFURT_PHONE_TEL = '+4969205690994';
+// TODO(Fröhlich Vermögensberatung): echte Telefonnummer(n) bestätigen — technischer Platzhalter.
+const PRIMARY_PHONE_TEL = '+4940334657988';
 
 const siteContact = {
   // TODO(Fröhlich Vermögensberatung): finale Kundenservice-Adresse bestätigen — technischer Platzhalter.
   email: 'kontakt@froehlich-vermoegensberatung.de',
-  /** Primary Kundenservice — Haiterbach (site-wide, emails, PDFs, support). */
-  phoneTel: HAITERBACH_PHONE_TEL,
-  phoneDisplay: formatGermanPhoneDisplay(HAITERBACH_PHONE_TEL, [2, 3, 3, 3]),
-  phoneLabel: 'Haiterbach Kundenservice',
-  /** Secondary line — Impressum only (Frankfurt / Hauptsitz). */
-  phoneSecondaryTel: FRANKFURT_PHONE_TEL,
-  phoneSecondaryDisplay: formatGermanPhoneDisplay(FRANKFURT_PHONE_TEL, [2, 4, 5]),
+  /** Primary Kundenservice line — site-wide, emails, PDFs, support. */
+  phoneTel: PRIMARY_PHONE_TEL,
+  phoneDisplay: formatGermanPhoneDisplay(PRIMARY_PHONE_TEL, [2, 3, 3, 3]),
+  phoneLabel: 'Kundenservice',
+  // TODO(Fröhlich Vermögensberatung): Sekundärnummer (falls vorhanden) ergänzen.
+  phoneSecondaryTel: PRIMARY_PHONE_TEL,
+  phoneSecondaryDisplay: formatGermanPhoneDisplay(PRIMARY_PHONE_TEL, [2, 3, 3, 3]),
   companyName: 'Fröhlich Vermögensberatung GmbH',
-  street: 'Hallgartenstraße 57',
-  postalCity: '60389 Frankfurt am Main',
+  street: 'Bösgrunder Weg 62',
+  postalCity: '55543 Bad Kreuznach',
   /** Kundenbetreuung (Impressum) — same as Hauptsitz. */
-  customerServiceStreet: 'Hallgartenstraße 57',
-  customerServicePostalCity: '60389 Frankfurt am Main',
+  customerServiceStreet: 'Bösgrunder Weg 62',
+  customerServicePostalCity: '55543 Bad Kreuznach',
   /** Same postal line as legacy Contact copy (includes · DE). */
-  postalCityDe: '60389 Frankfurt am Main · DE',
+  postalCityDe: '55543 Bad Kreuznach · DE',
   businessHoursLine: 'Mo–Fr · 09:00 – 18:00',
 };
 

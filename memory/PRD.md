@@ -37,6 +37,15 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 
 ## What's Been Implemented (Feb 2026)
 
+### Legal / Impressum Overhaul ✅ (Feb 20, 2026)
+- `siteContact.js`: HQ-Adresse global auf **Bösgrunder Weg 62, 55543 Bad Kreuznach** umgestellt
+- `legalPages.jsx` Impressum: neue Firmendaten (HRB 23436, Amtsgericht Bad Kreuznach, GF Manfred Franz Fröhlich)
+- Kooperationspartner-Block (Vermogens Advies Administratie B.V., AFM) **komplett aus Impressum entfernt**
+- USt-IdNr., BaFin- und IHK-Angaben als TODO markiert (nicht erfunden — auf Zulassungsbescheide warten)
+- Neue Impressum-Sektionen "Zuständige Aufsichtsbehörde" & "Berufsrechtliche Angaben" mit klaren Platzhaltern
+- AGB § 8 Gerichtsstand: Frankfurt am Main → Bad Kreuznach
+- Konsistenz-Fixes in `SicherheitRegulierung.js`, `About.js`, `PasswordPage.js`, `spezialAifContent.js`, `siteCopyPhase5.js` (Fröhlich-Standort)
+
 ### Phase 0: Import & Baseline ✅
 - Repo geklont via PAT, 2508 Dateien, ~600 MB Assets nach `/app/frontend/`
 - Legacy Backend nach `/app/legacy_source/` archiviert

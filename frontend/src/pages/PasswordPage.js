@@ -97,7 +97,7 @@ const PasswordPage = () => {
 
       {/* ── Bottom mono colophon ── */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-center justify-between px-6 py-5 font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-text-muted/80 sm:px-10">
-        <span>Frankfurt am Main</span>
+        <span>Bad Kreuznach</span>
         <span>256-bit · Verschlüsselt</span>
       </div>
 

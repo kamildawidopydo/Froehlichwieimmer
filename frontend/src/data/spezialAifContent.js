@@ -25,7 +25,7 @@ export const spezialAifKeyFacts = [
   { label: 'ISIN', value: 'Wird nach Auflage mitgeteilt' },
   { label: 'Fondsstruktur', value: 'Geschlossener Spezial-AIF gemäß KAGB' },
   { label: 'Rechtsform', value: 'InvAG § 17 Abs. 2 Nr. 2 KAGB' },
-  { label: 'Initiator / KVG', value: 'Fröhlich Vermögensberatung GmbH, Frankfurt am Main' },
+  { label: 'Initiator / KVG', value: 'Fröhlich Vermögensberatung GmbH, Bad Kreuznach' },
   { label: 'Verwahrstelle', value: 'BNP Paribas SA (oder gemäß Fondsvertrag benannte Depotbank)' },
   { label: 'Mindestbeteiligung', value: 'Ab 100.000 EUR' },
   { label: 'Anlagehorizont', value: 'Empfohlen 5–7 Jahre (Mindesthaltedauer gemäß Vertrag, z. B. 5 Jahre)' },
@@ -35,7 +35,7 @@ export const spezialAifKeyFacts = [
   },
   { label: 'Ausschüttungen', value: 'Jährlich geplant (abhängig von Ertrag und Beschluss)' },
   { label: 'Platzierung', value: 'Exklusiv über autorisierte Partner' },
-  { label: 'Standort', value: 'Frankfurt am Main' },
+  { label: 'Standort', value: 'Bad Kreuznach' },
 ];
 
 /** Illustrative target allocation — not a binding prospectus. `pct` drives chart; `range` shown in legend like a factsheet. */
@@ -175,7 +175,7 @@ export const spezialAifEditorialStand = 'Mai 2026';
 
 /** Kurze Herkunftszeile (menschliche Einordnung, kein Ersatz für Pflichtpublikationen). */
 export const spezialAifEditorialIssuerLine =
-  'Inhaltlich aufbereitet und intern freigegeben durch Fröhlich Vermögensberatung GmbH, Frankfurt am Main.';
+  'Inhaltlich aufbereitet und intern freigegeben durch Fröhlich Vermögensberatung GmbH, Bad Kreuznach.';
 
 /** Ein Satz zur Einordnung der Online-Darstellung. */
 export const spezialAifEditorialClosingLine =

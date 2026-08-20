@@ -240,7 +240,7 @@ const About = () => {
               <span className="text-bank-gold">finanziellen Ziele.</span>
             </h1>
             <p className="prose-copy mt-8 w-full min-w-0 max-w-2xl font-sans text-base leading-[1.75] text-white sm:text-[1.05rem]">
-              Die {COMPANY} mit Sitz in Frankfurt am Main und die niederländische {PARTNER} in Amsterdam haben sich
+              Die {COMPANY} mit Sitz in Bad Kreuznach und die niederländische {PARTNER} in Amsterdam haben sich
               zusammengeschlossen, um Anlegern in Deutschland und im gesamten europäischen Wirtschaftsraum Zugang zu
               maßgeschneiderten Finanzlösungen zu bieten.
             </p>
@@ -439,7 +439,8 @@ const About = () => {
                     </p>
                   </div>
                   <div className={articleSideCol}>
-                    <AboutImage src={IMG_STANDORT} alt="Frankfurt am Main bei Blauen Stunde — Skyline mit Alltag am Fluss" />
+                    {/* TODO(Fröhlich Vermögensberatung): Standort-Foto durch Bad-Kreuznach-Motiv ersetzen. */}
+                    <AboutImage src={IMG_STANDORT} alt="Standort-Impression — Fröhlich Vermögensberatung" />
                   </div>
                 </div>
               </motion.section>

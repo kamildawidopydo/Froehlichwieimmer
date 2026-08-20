@@ -27,25 +27,17 @@ import siteContact from '@/data/siteContact';
 
 const COMPANY = {
   name: 'Fröhlich Vermögensberatung GmbH',
-  street: 'Hallgartenstraße 57',
-  city: '60389 Frankfurt am Main',
+  street: 'Bösgrunder Weg 62',
+  city: '55543 Bad Kreuznach',
   country: 'Deutschland',
-  hrb: 'HRB 122289',
-  registerCourt: 'Amtsgericht Frankfurt am Main',
-  vatId: 'DE328999123',
-  managingDirector: 'Alexander Wahl',
+  hrb: 'HRB 23436',
+  registerCourt: 'Amtsgericht Bad Kreuznach',
+  // TODO(Fröhlich Vermögensberatung): USt-IdNr. ergänzen, sobald erteilt.
+  vatId: null,
+  managingDirector: 'Manfred Franz Fröhlich',
+  // TODO(Fröhlich Vermögensberatung): finale Produktiv-Domain bestätigen.
   website: 'froehlich-vermoegensberatung.de',
   websiteHref: '#',
-};
-
-const PARTNER = {
-  name: 'Vermogens Advies Administratie B.V.',
-  street: 'Amstelplein 1',
-  building: 'Rembrandt Tower, 11e ét.',
-  city: '1090 GJ Amsterdam',
-  country: 'Niederlande',
-  kvk: '34171920',
-  registeredSince: '20.06.2006',
 };
 
 const impressumBody = (
@@ -55,86 +47,61 @@ const impressumBody = (
     </p>
 
     <div className="grid gap-12 lg:grid-cols-2 lg:gap-10">
-      <div className="space-y-12">
-        <LegalSection id="verantwortlich" icon={Building2} title="Verantwortlich für den Inhalt">
-          <LegalInfoCard icon={MapPin} title={COMPANY.name}>
-            {COMPANY.street}
-            <br />
-            {COMPANY.city}
-            <br />
-            {COMPANY.country}
-            <br />
-            <br />
-            Telefon:{' '}
-            <a href={`tel:${siteContact.phoneSecondaryTel}`}>{siteContact.phoneSecondaryDisplay}</a>
-            <br />
-            {siteContact.phoneLabel}:{' '}
-            <a href={`tel:${siteContact.phoneTel}`}>{siteContact.phoneDisplay}</a>
-            <br />
-            E-Mail: <a href={`mailto:${siteContact.email}`}>{siteContact.email}</a>
-            <br />
-            Website:{' '}
-            <a href={COMPANY.websiteHref} target="_blank" rel="noopener noreferrer">
-              {COMPANY.website}
-            </a>
-            <br />
-            <br />
-            Handelsregister: {COMPANY.registerCourt}, {COMPANY.hrb}
-            <br />
-            USt-IdNr.: {COMPANY.vatId}
-          </LegalInfoCard>
-        </LegalSection>
+      <LegalSection id="verantwortlich" icon={Building2} title="Verantwortlich für den Inhalt">
+        <LegalInfoCard icon={MapPin} title={COMPANY.name}>
+          {COMPANY.street}
+          <br />
+          {COMPANY.city}
+          <br />
+          {COMPANY.country}
+          <br />
+          <br />
+          Telefon:{' '}
+          <a href={`tel:${siteContact.phoneTel}`}>{siteContact.phoneDisplay}</a>
+          <br />
+          E-Mail: <a href={`mailto:${siteContact.email}`}>{siteContact.email}</a>
+          <br />
+          Website:{' '}
+          <a href={COMPANY.websiteHref} target="_blank" rel="noopener noreferrer">
+            {COMPANY.website}
+          </a>
+          <br />
+          <br />
+          Handelsregister: {COMPANY.registerCourt}, {COMPANY.hrb}
+          <br />
+          {/* TODO(Fröhlich Vermögensberatung): USt-IdNr. gemäß § 27a UStG hier ergänzen, sobald erteilt. */}
+          USt-IdNr.: <span className="italic text-bank-text-muted/80">wird ergänzt</span>
+        </LegalInfoCard>
+      </LegalSection>
 
-        <LegalSection id="geschaeftsfuehrer" icon={Users} title="Geschäftsführer">
-          <p>{COMPANY.managingDirector}</p>
-        </LegalSection>
-      </div>
-
-      <div className="space-y-12">
-        <LegalSection id="kooperationspartner" icon={Globe} title="Europäischer Kooperationspartner">
-          <LegalInfoCard icon={Landmark} title={PARTNER.name}>
-            {PARTNER.street}
-            <br />
-            {PARTNER.building}
-            <br />
-            {PARTNER.city}
-            <br />
-            {PARTNER.country}
-          </LegalInfoCard>
-          <p>
-            {PARTNER.name} ist ein gemäß niederländischem Recht zugelassenes Wertpapierunternehmen und im Rahmen der
-            Dienstleistungsfreiheit innerhalb des Europäischen Wirtschaftsraums tätig. Die Gesellschaft ist bei der
-            niederländischen Börsenaufsicht (Autoriteit Financiële Markten, AFM) registriert.
-          </p>
-          <p>
-            Handelsregister (KvK): {PARTNER.kvk}
-            <br />
-            Registrierung seit: {PARTNER.registeredSince}
-          </p>
-        </LegalSection>
-
-        <LegalSection id="taetigkeitsbereiche" icon={FileText} title="Tätigkeitsbereiche gemäß Registrierung">
-          <ul className="list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-bank-text-muted">
-            <li>Annahme und Weiterleitung von Kundenaufträgen</li>
-            <li>Vermögensverwaltung</li>
-            <li>Anlageberatung</li>
-            <li>Verwahrung und Verwaltung von Finanzinstrumenten für Kunden</li>
-          </ul>
-        </LegalSection>
-      </div>
+      <LegalSection id="geschaeftsfuehrer" icon={Users} title="Geschäftsführer">
+        <p>{COMPANY.managingDirector}</p>
+      </LegalSection>
     </div>
 
-    <LegalSection id="zusammenarbeit" icon={Users} title="Zusammenarbeit">
+    <LegalSection id="aufsicht" icon={Landmark} title="Zuständige Aufsichtsbehörde">
       <LegalNotice variant="neutral">
+        {/*
+          TODO(Fröhlich Vermögensberatung): Konkrete Aufsichtsbehörde (z. B. BaFin nach § 32 KWG,
+          IHK nach § 34f/§ 34c GewO) sowie Registrierungs-/Vermittlernummer einsetzen.
+          Ohne bestätigten Zulassungsstatus bewusst offen gelassen — nicht raten.
+        */}
         <p>
-          Die {COMPANY.name} und die {PARTNER.name} arbeiten im Rahmen einer strategischen Kooperation zusammen, um
-          Kunden in Deutschland und im europäischen Wirtschaftsraum über {COMPANY.website} umfassend in den Bereichen
-          Vermögensanlage, Kapitalmarktprodukte und Finanzierungslösungen zu betreuen.
+          Angaben zur zuständigen Aufsichtsbehörde sowie zur Registrierung nach § 34c bzw. § 34f GewO oder nach dem KWG
+          werden nach Vorliegen der finalen Zulassungsbescheide an dieser Stelle ergänzt.
         </p>
-        <p className="mt-3">
-          Dabei erfolgt die Betreuung und Koordination der Kunden in Deutschland durch die {COMPANY.name}, während die{' '}
-          {PARTNER.name} als externer Kooperationspartner für die Erbringung regulierter Wertpapierdienstleistungen im
-          Rahmen der gesetzlichen Vorgaben verantwortlich ist.
+      </LegalNotice>
+    </LegalSection>
+
+    <LegalSection id="berufsrecht" icon={FileText} title="Berufsrechtliche Angaben">
+      <LegalNotice variant="neutral">
+        {/*
+          TODO(Fröhlich Vermögensberatung): Berufsbezeichnung, Kammer, Verleihungsstaat und
+          maßgebliche berufsrechtliche Regelungen (z. B. FinVermV) nach Zulassung eintragen.
+        */}
+        <p>
+          Berufsbezeichnung, verleihender Staat und die maßgeblichen berufsrechtlichen Regelungen werden ergänzt,
+          sobald die entsprechenden Bescheide vorliegen.
         </p>
       </LegalNotice>
     </LegalSection>
@@ -414,7 +381,7 @@ const termsBody = (
         (1) Es gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts.
       </p>
       <p>
-        (2) Gerichtsstand ist Frankfurt am Main, soweit der Vertragspartner Kaufmann, juristische Person des öffentlichen
+        (2) Gerichtsstand ist Bad Kreuznach, soweit der Vertragspartner Kaufmann, juristische Person des öffentlichen
         Rechts oder öffentlich-rechtliches Sondervermögen ist oder keinen allgemeinen Gerichtsstand in Deutschland hat.
       </p>
     </LegalClause>
@@ -451,9 +418,8 @@ const disclaimerBody = (
 
     <LegalSection id="rolle" icon={Building2} title={`Unsere Rolle bei der ${COMPANY.name}`}>
       <p>
-        Die {COMPANY.name} betreibt die Plattform {COMPANY.website} und arbeitet mit dem europäischen
-        Kooperationspartner {PARTNER.name} zusammen. Alle Angaben dienen der gesetzlich vorgeschriebenen Information
-        über das Unternehmen und die angebotenen Dienstleistungen.
+        Die {COMPANY.name} betreibt die Plattform {COMPANY.website}. Alle Angaben dienen der gesetzlich
+        vorgeschriebenen Information über das Unternehmen und die angebotenen Dienstleistungen.
       </p>
     </LegalSection>
 
@@ -598,9 +564,8 @@ export const legalPages = {
     toc: [
       { id: 'verantwortlich', label: 'Verantwortlich' },
       { id: 'geschaeftsfuehrer', label: 'Geschäftsführer' },
-      { id: 'kooperationspartner', label: 'Kooperationspartner' },
-      { id: 'taetigkeitsbereiche', label: 'Tätigkeitsbereiche' },
-      { id: 'zusammenarbeit', label: 'Zusammenarbeit' },
+      { id: 'aufsicht', label: 'Aufsichtsbehörde' },
+      { id: 'berufsrecht', label: 'Berufsrechtliche Angaben' },
       { id: 'streitbeilegung', label: 'Streitbeilegung' },
       { id: 'geltungsbereich', label: 'Geltungsbereich' },
       { id: 'aenderungen', label: 'Änderungen' },

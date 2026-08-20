@@ -383,5 +383,5 @@ export const faqCopy = {
 export const socialCopy = {
   tagline: 'EU-regulierte Sparvermittlung — klar, sicher, unabhängig.',
   linkedinAbout:
-    'Wir vermitteln ausgewählte Tagesgeld-, Flexgeld- und Festgeldangebote europäischer Partnerbanken — mit persönlicher Betreuung aus Frankfurt am Main.',
+    'Wir vermitteln ausgewählte Tagesgeld-, Flexgeld- und Festgeldangebote europäischer Partnerbanken — mit persönlicher Betreuung aus Bad Kreuznach.',
 };

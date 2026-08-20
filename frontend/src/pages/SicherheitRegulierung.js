@@ -21,8 +21,8 @@ const COMPANY = {
   street: siteContact.street,
   city: siteContact.postalCity,
   country: 'Deutschland',
-  registerCourt: 'Amtsgericht Frankfurt am Main',
-  hrb: 'HRB 122289',
+  registerCourt: 'Amtsgericht Bad Kreuznach',
+  hrb: 'HRB 23436',
 };
 
 const REG_ASSETS = {
