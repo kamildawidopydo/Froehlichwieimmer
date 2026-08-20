@@ -5,12 +5,8 @@ import {
   ArrowRight,
   ArrowUpRight,
   BookOpen,
-  Compass,
-  Handshake,
-  Layers,
   MessageCircle,
   Scale,
-  ShieldAlert,
 } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import Pullquote from '@/components/editorial/Pullquote';
@@ -57,22 +53,18 @@ const KOMPETENZ_CARDS = [
 
 const PHILOSOPHIE_CARDS = [
   {
-    icon: Handshake,
     title: 'Vertrauen',
     body: 'Finanzielle Entscheidungen setzen Vertrauen und nachvollziehbare Kommunikation voraus.',
   },
   {
-    icon: Compass,
     title: 'Langfristigkeit',
     body: 'Wir möchten unsere Kunden über unterschiedliche Lebens- und Marktphasen hinweg begleiten.',
   },
   {
-    icon: ShieldAlert,
     title: 'Risikobewusstsein',
     body: 'Chancen sollen immer gemeinsam mit den damit verbundenen Risiken betrachtet werden.',
   },
   {
-    icon: Layers,
     title: 'Diversifikation',
     body: 'Eine durchdachte Vermögensplanung sollte nicht von einer einzigen Anlage oder Anlageklasse abhängig sein.',
   },
@@ -504,36 +496,25 @@ const About = () => {
                 </figure>
               </motion.section>
 
-              {/* Unsere Philosophie */}
+              {/* Unsere Philosophie — schlichte Typografie */}
               <motion.section {...fade(6)} className="border-t border-bank-border py-16 sm:py-20">
                 <AboutSectionHead id="philosophie" eyebrow="Werte" title="Unsere Philosophie" />
-                <div className="mt-10 grid gap-4 sm:grid-cols-2">
-                  {PHILOSOPHIE_CARDS.map(({ icon: Icon, title, body }, i) => (
-                    <div
-                      key={title}
-                      data-testid={`philosophie-card-${title.toLowerCase()}`}
-                      className="group relative overflow-hidden rounded-2xl border border-bank-border bg-bank-surface/50 p-6 shadow-editorial-sm transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-bank-gold/40 hover:shadow-editorial-md sm:p-8"
-                    >
-                      <div className="flex items-start gap-5">
-                        <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-bank-border bg-white/60 text-bank-primary dark:bg-bank-surface">
-                          <Icon className="h-5 w-5" strokeWidth={LUCIDE_STROKE} aria-hidden />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">
-                            {String(i + 1).padStart(2, '0')} — Prinzip
-                          </p>
-                          <h3
-                            className="mt-2 font-display text-[1.2rem] font-light leading-tight tracking-[-0.01em] text-bank-text"
-                            style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}
-                          >
-                            {title}
-                          </h3>
-                          <p className="mt-2.5 text-[14.5px] leading-relaxed text-bank-text-muted">{body}</p>
-                        </div>
-                      </div>
+                <dl className="mt-10 grid gap-y-8 sm:grid-cols-2 sm:gap-x-16 sm:gap-y-10">
+                  {PHILOSOPHIE_CARDS.map(({ title, body }, i) => (
+                    <div key={title} data-testid={`philosophie-item-${title.toLowerCase()}`}>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">
+                        {String(i + 1).padStart(2, '0')} — Prinzip
+                      </p>
+                      <dt
+                        className="mt-2 font-display text-[1.3rem] font-light leading-tight tracking-[-0.01em] text-bank-text sm:text-[1.4rem]"
+                        style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}
+                      >
+                        {title}
+                      </dt>
+                      <dd className="mt-3 max-w-md text-[15px] leading-[1.75] text-bank-text-muted">{body}</dd>
                     </div>
                   ))}
-                </div>
+                </dl>
               </motion.section>
 
               {/* CTA */}
