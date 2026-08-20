@@ -349,7 +349,7 @@ export default function GesamtuebersichtSection({ loading, showcase = false }) {
       rows.push({
         key: 'cash',
         bankName: 'Fröhlich',
-        logo: '/assets/logo/frohlich-logo.png?v=2',
+        logo: '/assets/logo/frohlich-logo.png?v=3',
         title: 'Fröhlich',
         subtitle: 'Kontoguthaben',
         value: formatEUR(cashBalance),

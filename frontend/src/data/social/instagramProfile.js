@@ -4,8 +4,8 @@ import { instagramPostCommentsById } from '@/data/social/instagramPostComments';
 import { POST_IMG } from '@/data/social/postArtwork';
 
 const PLACEHOLDER = '/assets/social/placeholder.svg';
-const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=2';
-const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=2';
+const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=3';
+const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=3';
 
 /** Statische Instagram-Vorschau — Fröhlich Vermögensberatung GmbH (kein echtes IG-Profil). */
 export const instagramProfile = {
