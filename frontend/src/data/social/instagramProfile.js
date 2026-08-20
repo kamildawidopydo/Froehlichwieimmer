@@ -4,9 +4,9 @@ import { instagramPostCommentsById } from '@/data/social/instagramPostComments';
 
 const IG = '/assets/social/instagram';
 const IG_V = '?v=25';
-const SITE_LOGO = '/assets/logo/kapitalmitte-logo.png?v=19';
+const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=1';
 /** Circular avatar — mark crop, not wide lockup. */
-const PROFILE_AVATAR = '/assets/logo/kapitalmitte-mark.png?v=19';
+const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=1';
 
 /** Statische Instagram-Vorschau — Kapitalmitte (kein echtes IG-Profil). */
 export const instagramProfile = {

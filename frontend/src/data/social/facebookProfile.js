@@ -2,7 +2,7 @@ import siteContact from '@/data/siteContact';
 
 const FB = '/assets/social/facebook';
 const FB_V = '?v=2';
-const SITE_LOGO = '/assets/logo/kapitalmitte-logo.png?v=19';
+const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=1';
 const fbAvatar = (slug) => `${FB}/avatars/comments/${slug}.png${FB_V}`;
 
 /** Statische Facebook-Vorschau — Kapitalmitte (kein echtes FB-Profil). */

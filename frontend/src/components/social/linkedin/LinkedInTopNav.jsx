@@ -47,7 +47,7 @@ const LinkedInTopNav = ({ onFakeAction, onSearchClick, onMessageClick }) => (
         ))}
         <span className="ml-1 hidden h-6 w-px bg-[#E0E0E0] sm:block" aria-hidden />
         <span className="ml-1 flex h-7 w-7 items-center justify-center overflow-hidden rounded-sm border border-[#E0E0E0] bg-white px-0.5 sm:h-8 sm:w-8">
-          <SocialBrandLogo src="/assets/logo/kapitalmitte-logo.png?v=19" fit="wide" />
+          <SocialBrandLogo src="/assets/logo/frohlich-logo.png?v=1" fit="wide" />
         </span>
       </nav>
     </div>

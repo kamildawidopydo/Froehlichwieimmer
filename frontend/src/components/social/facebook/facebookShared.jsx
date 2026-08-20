@@ -32,7 +32,7 @@ export const PageAvatar = ({ className, size = 40 }) => (
     )}
     style={{ width: size, height: size }}
   >
-    <SocialBrandLogo src={facebookProfile.assets.avatar} alt="Kapitalmitte" fit="wide" />
+    <SocialBrandLogo src={facebookProfile.assets.avatar} alt="Fröhlich Vermögensberatung" fit="wide" />
   </span>
 );
 

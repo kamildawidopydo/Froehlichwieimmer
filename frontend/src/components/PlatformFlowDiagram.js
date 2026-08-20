@@ -151,7 +151,7 @@ const PlatformFlowDiagram = () => {
                 <div className={heroIconWrap}>
                   <img
                     src={FLOW_ICONS.kapitalmitte}
-                    alt="Kapitalmitte Plattform"
+                    alt="Fröhlich Vermögensberatung Plattform"
                     width={76}
                     height={76}
                     decoding="async"

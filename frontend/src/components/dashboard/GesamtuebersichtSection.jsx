@@ -349,7 +349,7 @@ export default function GesamtuebersichtSection({ loading, showcase = false }) {
       rows.push({
         key: 'cash',
         bankName: 'Kapitalmitte',
-        logo: '/assets/logo/kapitalmitte-logo.png?v=19',
+        logo: '/assets/logo/frohlich-logo.png?v=1',
         title: 'Kapitalmitte',
         subtitle: 'Kontoguthaben',
         value: formatEUR(cashBalance),

@@ -11,7 +11,7 @@ import {
  * Letter counters are punched transparent (no solid white fills).
  */
 export default function BrandLogo({
-  alt = 'Kapitalmitte',
+  alt = 'Fröhlich Vermögensberatung',
   className,
   imgClassName,
   variant = 'auto',

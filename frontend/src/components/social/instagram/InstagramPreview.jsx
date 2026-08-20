@@ -289,7 +289,7 @@ const InstagramPreview = () => {
         onClose={closeAvatarPreview}
         platform="instagram"
         src={assets.avatar}
-        alt="Kapitalmitte"
+        alt="Fröhlich Vermögensberatung"
         title={displayName}
         verified={verified}
       />

@@ -31,7 +31,7 @@ export const CompanyLogo = ({ className, size = 48 }) => (
     )}
     style={{ width: size, height: size }}
   >
-    <SocialBrandLogo src={linkedinProfile.assets.logo} alt="Kapitalmitte" fit="wide" />
+    <SocialBrandLogo src={linkedinProfile.assets.logo} alt="Fröhlich Vermögensberatung" fit="wide" />
   </span>
 );
 

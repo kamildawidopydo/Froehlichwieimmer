@@ -2,7 +2,7 @@ import siteContact from '@/data/siteContact';
 import { socialCopy } from '@/data/siteCopyPhase5';
 
 const LI = '/assets/social/linkedin';
-const SITE_LOGO = '/assets/logo/kapitalmitte-logo.png?v=19';
+const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=1';
 
 /** Statische LinkedIn-Unternehmensseiten-Vorschau — Kapitalmitte. */
 export const linkedinProfile = {

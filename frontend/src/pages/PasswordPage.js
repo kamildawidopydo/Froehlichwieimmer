@@ -106,8 +106,8 @@ const PasswordPage = () => {
         {/* Logo */}
         <div className="mb-12 flex justify-center">
           <img
-            src="/assets/logo/kapitalmitte-logo.png?v=19"
-            alt="Kapitalmitte"
+            src="/assets/logo/frohlich-logo.png?v=1"
+            alt="Fröhlich Vermögensberatung"
             className="mx-auto h-[5.25rem] w-full max-w-[min(100%,min(480px,90vw))] object-contain sm:h-[6rem] sm:max-w-[min(100%,540px)]"
           />
         </div>

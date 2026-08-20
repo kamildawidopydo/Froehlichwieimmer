@@ -32,7 +32,7 @@ const ProfilePageAvatar = ({ onPreview }) => (
     className="absolute bottom-0 left-3 z-10 flex h-[88px] w-[88px] translate-y-1/2 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white px-2 py-3 shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1877F2] focus-visible:ring-offset-2 sm:left-4 sm:h-[112px] sm:w-[112px] sm:px-2.5 sm:py-3.5 md:left-6 md:h-[168px] md:w-[168px] md:px-3 md:py-5"
     aria-label="Profilbild vergrößern"
   >
-    <SocialBrandLogo src={facebookProfile.assets.avatar} fit="wide" alt="Kapitalmitte" />
+    <SocialBrandLogo src={facebookProfile.assets.avatar} fit="wide" alt="Fröhlich Vermögensberatung" />
   </button>
 );
 
@@ -463,7 +463,7 @@ const FacebookPreview = () => {
         onClose={closeAvatarPreview}
         platform="facebook"
         src={facebookProfile.assets.avatar}
-        alt="Kapitalmitte"
+        alt="Fröhlich Vermögensberatung"
         title={pageName}
         verified={verified}
       />
