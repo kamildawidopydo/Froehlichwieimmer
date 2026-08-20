@@ -1,20 +1,11 @@
 import siteContact from '@/data/siteContact';
 import { instagramReelThreads, reelCommentCount } from '@/data/social/instagramReelCommentData';
 import { instagramPostCommentsById } from '@/data/social/instagramPostComments';
+import { POST_IMG } from '@/data/social/postArtwork';
 
 const PLACEHOLDER = '/assets/social/placeholder.svg';
 const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=1';
 const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=1';
-
-/** Individual, visually distinct post artworks for the Instagram grid. */
-const POST_IMG = {
-  tagesgeld:         '/assets/social/posts/1-tagesgeld.svg',
-  festgeld:          '/assets/social/posts/2-festgeld.svg',
-  zinsen:            '/assets/social/posts/3-zinsen.svg',
-  einlagensicherung: '/assets/social/posts/4-einlagensicherung.svg',
-  vermoegensaufbau:  '/assets/social/posts/5-vermoegensaufbau.svg',
-  europa:            '/assets/social/posts/6-europa.svg',
-};
 
 /** Statische Instagram-Vorschau — Fröhlich Vermögensberatung GmbH (kein echtes IG-Profil). */
 export const instagramProfile = {
