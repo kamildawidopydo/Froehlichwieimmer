@@ -1,12 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import {
-  ArrowUpRight,
-  BookOpen,
-  MessageCircle,
-  Scale,
-} from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import Pullquote from '@/components/editorial/Pullquote';
 import TocSticky from '@/components/editorial/TocSticky';
@@ -30,24 +25,6 @@ const TOC_SECTIONS = [
   { id: 'empfehlung', label: 'Weiterempfehlung' },
   { id: 'philosophie', label: 'Unsere Philosophie' },
   { id: 'kontakt', label: 'Kontakt' },
-];
-
-const KOMPETENZ_CARDS = [
-  {
-    icon: BookOpen,
-    title: 'Verstehen',
-    body: 'Produkte und Märkte nachvollziehen.',
-  },
-  {
-    icon: Scale,
-    title: 'Einordnen',
-    body: 'Chancen und Risiken angemessen bewerten.',
-  },
-  {
-    icon: MessageCircle,
-    title: 'Vermitteln',
-    body: 'Komplexe finanzielle Themen verständlich erklären.',
-  },
 ];
 
 const PHILOSOPHIE_CARDS = [
@@ -365,30 +342,6 @@ const About = () => {
                     klassische Spar- und Einlagenlösungen als auch für Wertpapiere und unterschiedliche Formen der
                     langfristigen Vermögensanlage.
                   </p>
-                </div>
-                <div className="mt-10 grid gap-4 sm:grid-cols-3">
-                  {KOMPETENZ_CARDS.map(({ icon: Icon, title, body }) => (
-                    <div
-                      key={title}
-                      data-testid={`kompetenz-card-${title.toLowerCase()}`}
-                      className="group relative overflow-hidden rounded-2xl border border-bank-border bg-bank-surface/50 p-6 shadow-editorial-sm transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-bank-gold/40 hover:shadow-editorial-md sm:p-7"
-                    >
-                      <span
-                        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bank-gold/50 to-transparent"
-                        aria-hidden
-                      />
-                      <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-bank-border bg-white/60 text-bank-primary dark:bg-bank-surface">
-                        <Icon className="h-5 w-5" strokeWidth={LUCIDE_STROKE} aria-hidden />
-                      </span>
-                      <h3
-                        className="mt-5 font-display text-[1.15rem] font-light leading-tight tracking-[-0.01em] text-bank-text"
-                        style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}
-                      >
-                        {title}
-                      </h3>
-                      <p className="mt-2 text-[14.5px] leading-relaxed text-bank-text-muted">{body}</p>
-                    </div>
-                  ))}
                 </div>
               </motion.section>
 
