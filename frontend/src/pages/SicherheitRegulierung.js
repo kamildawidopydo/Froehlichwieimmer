@@ -340,7 +340,7 @@ const SicherheitRegulierung = () => {
 
       <PageMeta
         title={PAGE_TITLE}
-        description="Regulierung, Transparenz und Aufsicht: Registerangaben, rechtliche Einordnung und Verweise auf Sicherheit und Partnerbanken bei Kapitalmitte."
+        description="Regulierung, Transparenz und Aufsicht: Registerangaben, rechtliche Einordnung und Verweise auf Sicherheit und Partnerbanken bei Fröhlich Vermögensberatung."
         path="/sicherheit-regulierung"
       />
 

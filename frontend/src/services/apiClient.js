@@ -1,5 +1,5 @@
 /**
- * Central HTTP client for the Kapitalmitte FastAPI backend.
+ * Central HTTP client for the Fröhlich Vermögensberatung FastAPI backend.
  * - Uses REACT_APP_BACKEND_URL (never localhost)
  * - Sends & receives httpOnly auth cookies via withCredentials
  * - Exposes typed helpers for auth + public content

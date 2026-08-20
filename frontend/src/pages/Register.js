@@ -117,7 +117,7 @@ const Register = () => {
               className="mt-5 font-display text-[2rem] font-light leading-tight text-bank-text sm:text-[2.4rem]"
               style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
             >
-              Vielen Dank — <em className="italic text-bank-text-muted">Kapitalmitte.</em>
+              Vielen Dank — <em className="italic text-bank-text-muted">Fröhlich Vermögensberatung.</em>
             </h1>
             <div className="mx-auto mt-6 h-px w-16 bg-bank-gold/55" aria-hidden />
 

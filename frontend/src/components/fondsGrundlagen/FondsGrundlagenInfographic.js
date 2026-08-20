@@ -1029,7 +1029,7 @@ export default function FondsGrundlagenInfographic() {
                     {fgHero.brandLine}
                   </span>
                 </motion.div>
-                <span className="sr-only">Kapitalmitte</span>
+                <span className="sr-only">Fröhlich Vermögensberatung</span>
 
                 <motion.h1
                   variants={heroChildVariants}
@@ -1322,7 +1322,7 @@ export default function FondsGrundlagenInfographic() {
             <div className="flex flex-wrap items-center gap-6">
               <img src={LOGO_SRC} alt="" width={168} height={52} className="h-8 w-auto opacity-95" loading="lazy" decoding="async" />
             </div>
-            <p className="max-w-md text-[11px] leading-relaxed text-white/55 lg:text-right">Kapitalmitte Spezial-AIF — strukturierte Kapitalanlage im institutionellen Rahmen.</p>
+            <p className="max-w-md text-[11px] leading-relaxed text-white/55 lg:text-right">Fröhlich Vermögensberatung Spezial-AIF — strukturierte Kapitalanlage im institutionellen Rahmen.</p>
           </div>
           <div className="mt-10 grid gap-9 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {fgFooterValues.map((fv) => (

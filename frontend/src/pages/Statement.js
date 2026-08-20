@@ -180,7 +180,7 @@ const Statement = ({ embedded = false }) => {
             </div>
             <p className="mt-3 inline-flex items-center gap-2 font-mono text-[10.5px] font-medium uppercase tracking-[0.22em] text-bank-text-muted">
               <span aria-hidden className="h-[5px] w-[5px] rounded-full bg-bank-gold print:bg-bank-text" />
-              Depotauszug · Kapitalmitte
+              Depotauszug · Fröhlich Vermögensberatung
             </p>
           </div>
           <div className="text-right">
@@ -459,7 +459,7 @@ const Statement = ({ embedded = false }) => {
             <span className="tabular-nums">{today.toLocaleDateString('de-DE')}</span>.
             Kurse und Marktwerte können sich fortlaufend ändern.
           </p>
-          <p className="font-mono uppercase tracking-[0.16em]">Kapitalmitte · Alle Angaben ohne Gewähr</p>
+          <p className="font-mono uppercase tracking-[0.16em]">Fröhlich Vermögensberatung · Alle Angaben ohne Gewähr</p>
         </div>
       </div>
     </div>

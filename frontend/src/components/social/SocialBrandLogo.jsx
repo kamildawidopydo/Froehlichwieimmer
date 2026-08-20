@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { preventImageContextMenu, protectedImageStyle } from '@/components/social/socialImageProtect';
 
 /**
- * Kapitalmitte wordmark is very wide — in circular avatars use width-first sizing
+ * Fröhlich Vermögensberatung wordmark is very wide — in circular avatars use width-first sizing
  * so the logo stays legible (not a tiny strip in the center).
  */
 export const SocialBrandLogo = ({ src, alt = '', className, fit = 'wide' }) => (

@@ -32,13 +32,13 @@ export const fgEditorialPhotos = {
 };
 
 export const fgHero = {
-  brandLine: 'Kapitalmitte Spezial-AIF',
+  brandLine: 'Fröhlich Vermögensberatung Spezial-AIF',
   title: 'Ihr Kapital. Unsere Expertise.',
   /** Zweite Zeile im Hero — Gold, wie Print-Referenz */
   tagline: 'Gemeinsam Werte schaffen.',
   subtitle: 'Strukturiert investieren — mit institutioneller Disziplin.',
   intro:
-    'Der Kapitalmitte Spezial-AIF bündelt qualifiziertes Kapital in einem geschlossenen Alternativinvestmentfonds. Klare Prozesse, breite Diversifikation und professionelles Management bilden das Fundament für Ihre langfristige Kapitalanlage.',
+    'Der Fröhlich Vermögensberatung Spezial-AIF bündelt qualifiziertes Kapital in einem geschlossenen Alternativinvestmentfonds. Klare Prozesse, breite Diversifikation und professionelles Management bilden das Fundament für Ihre langfristige Kapitalanlage.',
 };
 
 export const fgProcess7Eyebrow = 'So funktioniert der Fonds — in 7 Schritten';
@@ -47,7 +47,7 @@ export const fgProcess7Steps = [
   {
     key: 's1',
     title: 'Sie investieren',
-    body: 'Sie zeichnen Anteile des Kapitalmitte Spezial-AIF und werden Miteigentümer des Fonds.',
+    body: 'Sie zeichnen Anteile des Fröhlich Vermögensberatung Spezial-AIF und werden Miteigentümer des Fonds.',
     tag: 'Einstieg',
   },
   {
@@ -241,7 +241,7 @@ export const fgGeeignet = {
 export const fgVergleich = {
   eyebrow: 'Vergleich',
   colClassic: 'Klassischer geschlossener Fonds',
-  colBr: 'Kapitalmitte Spezial-AIF',
+  colBr: 'Fröhlich Vermögensberatung Spezial-AIF',
   rows: [
     {
       k: 'r1',
@@ -324,7 +324,7 @@ export const fgSparkonto = {
   /** CTA unter den Säulen — Markenname hervorgehoben (Gold). */
   ctaSegments: [
     { text: 'Der ' },
-    { text: 'Kapitalmitte', accent: true },
+    { text: 'Fröhlich Vermögensberatung', accent: true },
     { text: ' Spezial-AIF bietet eine professionelle Lösung, um Ihr Vermögen zu diversifizieren und langfristig zu vermehren.' },
   ],
 };

@@ -28,14 +28,14 @@ const COUNTRY_DE = {
 const BANK_BONUS_COPY = {
   'bbva-bank-deutschland': {
     summary:
-      'BBVA Bank Deutschland belohnt Neukunden mit einer Willkommensprämie auf das Festgeld — zusätzlich zum garantierten Zinssatz über die gesamte Laufzeit. Der Abschluss erfolgt vollständig digital über Kapitalmitte.',
+      'BBVA Bank Deutschland belohnt Neukunden mit einer Willkommensprämie auf das Festgeld — zusätzlich zum garantierten Zinssatz über die gesamte Laufzeit. Der Abschluss erfolgt vollständig digital über Fröhlich Vermögensberatung.',
     conditions:
       'Bonus nur für Neukunden ohne bestehendes BBVA-Konto in Deutschland. Mindestanlage und Identifikation erforderlich. Keine vorzeitige Kündigung während der Laufzeit.',
     benefits: [
       'Willkommensbonus bis zur angegebenen Höchstgrenze',
       'Festgeld mit fixem Zinssatz über die Laufzeit',
       'Deutsche Einlagensicherung bis 100.000 €',
-      'Vollständig digitaler Antrag über Kapitalmitte',
+      'Vollständig digitaler Antrag über Fröhlich Vermögensberatung',
     ],
   },
   'ing-diba': {
@@ -47,12 +47,12 @@ const BANK_BONUS_COPY = {
       'Neukundenbonus nach erfolgreicher Kontoeröffnung',
       'Bewährtes Direktbank-Produkt mit deutscher Einlagensicherung',
       'Einfache Online-Abwicklung ohne Filialbesuch',
-      'Vermittlungsbonus 45 € über Kapitalmitte nach Abschluss',
+      'Vermittlungsbonus 45 € über Fröhlich Vermögensberatung nach Abschluss',
     ],
   },
   'deutsche-kreditbank--dkb-': {
     summary:
-      'Die DKB kombiniert attraktive Festgeldzinsen mit einem modernen Online-Banking-Erlebnis. Neukunden erhalten zusätzlich eine Willkommensprämie bei Eröffnung über Kapitalmitte.',
+      'Die DKB kombiniert attraktive Festgeldzinsen mit einem modernen Online-Banking-Erlebnis. Neukunden erhalten zusätzlich eine Willkommensprämie bei Eröffnung über Fröhlich Vermögensberatung.',
     conditions:
       'Neukundenaktion für Erstanleger. Bestehende DKB-Konten können ausgeschlossen sein. Mindestanlage und Identifikation erforderlich.',
     benefits: [
@@ -66,7 +66,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Bigbank aus Estland bietet eines der höchsten Flexgeld-Zinsniveaus im Vergleich. Der Neukundenbonus macht den Einstieg besonders attraktiv — Abschluss und Verwaltung laufen vollständig online.',
     conditions:
-      'Bonus für Neukunden bei Erstabschluss über Kapitalmitte. Mindestanlage 10.000 €. Kündigungsfristen gemäß Produktbedingungen beachten.',
+      'Bonus für Neukunden bei Erstabschluss über Fröhlich Vermögensberatung. Mindestanlage 10.000 €. Kündigungsfristen gemäß Produktbedingungen beachten.',
     benefits: [
       'Neukundenbonus bis 300 €',
       'Flexgeld mit überdurchschnittlichem Zinsniveau',
@@ -83,7 +83,7 @@ const BANK_BONUS_COPY = {
       'Festgeld 2,55% p.a. bei 12 Monaten',
       'Lettische EU-Einlagensicherung (FKTK)',
       'Jährliche Zinsgutschrift',
-      'Vermittlung über Raisin/Kapitalmitte',
+      'Vermittlung über Raisin/Fröhlich Vermögensberatung',
     ],
   },
   'lhv-pank': {
@@ -107,7 +107,7 @@ const BANK_BONUS_COPY = {
       'Neukundenbonus bis 250 €',
       'Flexgeld mit monatlicher Zinsgutschrift',
       'Norwegische Bankenaufsicht (Finanstilsynet)',
-      'EU-konforme Vermittlung über Kapitalmitte',
+      'EU-konforme Vermittlung über Fröhlich Vermögensberatung',
     ],
   },
   'collector-bank': {
@@ -131,7 +131,7 @@ const BANK_BONUS_COPY = {
       'Festgeld 2,01% p.a. bei 12 Monaten',
       'Litauische EU-Einlagensicherung',
       'Jährliche Zinsgutschrift',
-      'Vermittlung über Raisin/Kapitalmitte',
+      'Vermittlung über Raisin/Fröhlich Vermögensberatung',
     ],
   },
   'ayvens-bank': {
@@ -143,7 +143,7 @@ const BANK_BONUS_COPY = {
       'Festgeld bis 2,90% p.a. je nach Laufzeit',
       'Niederländische Einlagensicherung (DGS)',
       'Kostenlose Kontoeröffnung',
-      'Abschluss über Kapitalmitte',
+      'Abschluss über Fröhlich Vermögensberatung',
     ],
   },
   's-pankki': {
@@ -162,7 +162,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Illimity Bank ist eine italienische Direktbank mit Fokus auf digitale Sparprodukte. Neukunden erhalten neben dem Flexgeld-Zins eine einmalige Willkommensprämie.',
     conditions:
-      'Neukundenbonus bei Erstabschluss über Kapitalmitte. Mindestanlage 5.000 €. Italienische FITD-Einlagensicherung greift bis 100.000 €.',
+      'Neukundenbonus bei Erstabschluss über Fröhlich Vermögensberatung. Mindestanlage 5.000 €. Italienische FITD-Einlagensicherung greift bis 100.000 €.',
     benefits: [
       'Neukundenbonus bis 200 €',
       'Flexgeld mit monatlicher Zinsgutschrift',
@@ -179,7 +179,7 @@ const BANK_BONUS_COPY = {
       'Neukundenbonus bis 200 €',
       'Festgeld mit fixem Zinssatz',
       'Italienische Einlagensicherung (FITD)',
-      'Abschluss über Kapitalmitte',
+      'Abschluss über Fröhlich Vermögensberatung',
     ],
   },
   'klarna-bank': {
@@ -203,7 +203,7 @@ const BANK_BONUS_COPY = {
       'Neukundenbonus bis 200 €',
       'Festgeld mit dänischer Einlagensicherung',
       'Reguliert durch Finanstilsynet',
-      'Vermittlung über Kapitalmitte',
+      'Vermittlung über Fröhlich Vermögensberatung',
     ],
   },
   instabank: {
@@ -234,12 +234,12 @@ const BANK_BONUS_COPY = {
     summary:
       'Lea Bank aus Norwegen bietet Flexgeld mit attraktivem Zinsniveau und Neukundenbonus. Das Produkt verbindet Rendite mit Kündigungsflexibilität.',
     conditions:
-      'Neukundenbonus bei Erstabschluss über Kapitalmitte. Mindestanlage 5.000 €. Kündigungsfristen beachten.',
+      'Neukundenbonus bei Erstabschluss über Fröhlich Vermögensberatung. Mindestanlage 5.000 €. Kündigungsfristen beachten.',
     benefits: [
       'Neukundenbonus bis 200 €',
       'Flexgeld mit monatlicher Verzinsung',
       'Norwegische Bankenaufsicht',
-      'Digitaler Antrag über Kapitalmitte',
+      'Digitaler Antrag über Fröhlich Vermögensberatung',
     ],
   },
   'medirect-bank': {
@@ -251,7 +251,7 @@ const BANK_BONUS_COPY = {
       'Neukundenbonus bis 150 €',
       'Festgeld mit belgischer Einlagensicherung',
       'Tägliche Verfügbarkeit je nach Produkt',
-      'Abschluss über Kapitalmitte',
+      'Abschluss über Fröhlich Vermögensberatung',
     ],
   },
   inbank: {
@@ -275,7 +275,7 @@ const BANK_BONUS_COPY = {
       'Neukundenbonus bis 150 €',
       'Tagesgeld mit täglicher Verfügbarkeit',
       'Portugiesische EU-Einlagensicherung',
-      'Online-Abschluss über Kapitalmitte',
+      'Online-Abschluss über Fröhlich Vermögensberatung',
     ],
   },
   'bff-bank': {
@@ -287,7 +287,7 @@ const BANK_BONUS_COPY = {
       'Neukundenbonus 45 €',
       'Tagesgeld — jederzeit verfügbar',
       'Italienische FITD-Einlagensicherung',
-      'Vermittlungsbonus über Kapitalmitte',
+      'Vermittlungsbonus über Fröhlich Vermögensberatung',
     ],
   },
 };

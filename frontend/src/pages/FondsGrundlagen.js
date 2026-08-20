@@ -5,8 +5,8 @@ import FondsGrundlagenInfographic from '@/components/fondsGrundlagen/FondsGrundl
 const FondsGrundlagen = () => (
   <>
     <PageMeta
-      title="Fonds-Grundlagen — Kapitalmitte Spezial-AIF"
-      description="Infografik: Ablauf, Allokation, Risikosteuerung, Renditebausteine, Eignung, Vergleich und rechtliche Hinweise zum Kapitalmitte Spezial-AIF."
+      title="Fonds-Grundlagen — Fröhlich Vermögensberatung Spezial-AIF"
+      description="Infografik: Ablauf, Allokation, Risikosteuerung, Renditebausteine, Eignung, Vergleich und rechtliche Hinweise zum Fröhlich Vermögensberatung Spezial-AIF."
       path="/fonds-grundlagen"
     />
     <FondsGrundlagenInfographic />

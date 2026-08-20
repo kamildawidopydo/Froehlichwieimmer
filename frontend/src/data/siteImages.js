@@ -1,5 +1,5 @@
 /**
- * Central marketing image paths — Kapitalmitte rebrand (local assets, no Unsplash).
+ * Central marketing image paths — Fröhlich Vermögensberatung rebrand (local assets, no Unsplash).
  * Generated via scripts/generate-rebrand-marketing-images.mjs
  */
 

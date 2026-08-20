@@ -26,7 +26,7 @@ module.exports = function setupProxy(app) {
       const upstreamRes = await fetch(upstream, {
         headers: {
           Accept: 'image/avif,image/webp,image/*,*/*;q=0.8',
-          'User-Agent': 'Kapitalmitte-ImageProxy/1.0',
+          'User-Agent': 'Fröhlich Vermögensberatung-ImageProxy/1.0',
         },
         redirect: 'follow',
       });

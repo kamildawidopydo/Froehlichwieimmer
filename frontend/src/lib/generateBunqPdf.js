@@ -338,7 +338,7 @@ export async function generateBunqPdf(formData) {
 
   secBar(s, 'Vereinbarung \u00FCber eine Fest- und Flexgeldanlage');
 
-  infoBox(s, 'Dieses Dokument best\u00E4tigt die Vereinbarung zwischen dem Anleger (nachfolgend Anleger genannt) und der Bunq B.V. (nachfolgend Bank genannt), vermittelt durch Kapitalmitte, kapitalmitte.com.');
+  infoBox(s, 'Dieses Dokument best\u00E4tigt die Vereinbarung zwischen dem Anleger (nachfolgend Anleger genannt) und der Bunq B.V. (nachfolgend Bank genannt), vermittelt durch Fröhlich Vermögensberatung, kapitalmitte.com.');
 
   subTitle(s, 'Die Anlage umfasst folgende M\u00F6glichkeiten:');
 
@@ -356,7 +356,7 @@ export async function generateBunqPdf(formData) {
   s.pg.drawText('Die ersten 3 Monate fest, die folgenden 9 Monate flexibel.', { x: cx2 + 8, y: s.y - 16, size: 5.5, font: r, color: MID_TEXT });
   s.y -= 28;
 
-  warnBox(s, 'Die Vermittlung dieser Anlage erfolgt durch Kapitalmitte, kapitalmitte.com. Mit der Unterzeichnung dieses Vertrages erkennen alle Parteien die in diesem Dokument festgelegten Konditionen und Bestimmungen als verbindlich an. Der Vertrag tritt mit dem Datum der Unterzeichnung in Kraft.');
+  warnBox(s, 'Die Vermittlung dieser Anlage erfolgt durch Fröhlich Vermögensberatung, kapitalmitte.com. Mit der Unterzeichnung dieses Vertrages erkennen alle Parteien die in diesem Dokument festgelegten Konditionen und Bestimmungen als verbindlich an. Der Vertrag tritt mit dem Datum der Unterzeichnung in Kraft.');
 
   // ---------------------------------------------------------------------------
   // PAGE 2 - Applicant Data
@@ -532,8 +532,8 @@ export async function generateBunqPdf(formData) {
     state.y -= 14;
   }
 
-  parTitle(s, 'W', 'Widerruf \u00FCber Kapitalmitte');
-  drawWrapped(s, ML, 'Der Widerruf Ihres Vertrags l\u00E4uft \u00FCber unseren Vermittler Kapitalmitte, damit der gesamte Vorgang f\u00FCr Sie besonders einfach, \u00FCbersichtlich und unkompliziert ist. Zur Wahrung der 14-t\u00E4gigen Frist gen\u00FCgt es, wenn Sie Ihren Widerruf rechtzeitig an kundenservice@kapitalmitte.com senden.', r, 5, CW, MID_TEXT, 6.5);
+  parTitle(s, 'W', 'Widerruf \u00FCber Fröhlich Vermögensberatung');
+  drawWrapped(s, ML, 'Der Widerruf Ihres Vertrags l\u00E4uft \u00FCber unseren Vermittler Fröhlich Vermögensberatung, damit der gesamte Vorgang f\u00FCr Sie besonders einfach, \u00FCbersichtlich und unkompliziert ist. Zur Wahrung der 14-t\u00E4gigen Frist gen\u00FCgt es, wenn Sie Ihren Widerruf rechtzeitig an kundenservice@kapitalmitte.com senden.', r, 5, CW, MID_TEXT, 6.5);
   s.y -= 2;
 
   parTitle(s, 'F', 'Widerrufsfolgen');
@@ -541,10 +541,10 @@ export async function generateBunqPdf(formData) {
   s.y -= 2;
 
   parTitle(s, 'H', 'Besondere Hinweise');
-  drawWrapped(s, ML, 'Bitte beachten Sie, dass Ihr Widerrufsrecht erlischt, wenn der Vertrag vollst\u00E4ndig erf\u00FCllt wurde und Sie vor der Ausf\u00FChrung des Auftrags Ihre ausdr\u00FCckliche Zustimmung gegeben haben. Kapitalmitte tritt ausschlie\u00DFlich als Vermittler auf. Sie nimmt keine Gelder entgegen und f\u00FChrt auch keine Konten. Das Konto wird direkt auf Ihren Namen bei der Bunq B.V. gef\u00FChrt.', r, 5, CW, MID_TEXT, 6.5);
+  drawWrapped(s, ML, 'Bitte beachten Sie, dass Ihr Widerrufsrecht erlischt, wenn der Vertrag vollst\u00E4ndig erf\u00FCllt wurde und Sie vor der Ausf\u00FChrung des Auftrags Ihre ausdr\u00FCckliche Zustimmung gegeben haben. Fröhlich Vermögensberatung tritt ausschlie\u00DFlich als Vermittler auf. Sie nimmt keine Gelder entgegen und f\u00FChrt auch keine Konten. Das Konto wird direkt auf Ihren Namen bei der Bunq B.V. gef\u00FChrt.', r, 5, CW, MID_TEXT, 6.5);
   s.y -= 2;
 
-  warnBox(s, 'Es ist wichtig, sich der Bedeutung der Fristen und Anforderungen bewusst zu sein, um sicherzustellen, dass Ihr Widerruf wirksam ist. Bei Fragen zu Ihrem Widerrufsrecht stehen Ihnen Kapitalmitte und die Bunq B.V. gerne zur Verf\u00FCgung.');
+  warnBox(s, 'Es ist wichtig, sich der Bedeutung der Fristen und Anforderungen bewusst zu sein, um sicherzustellen, dass Ihr Widerruf wirksam ist. Bei Fragen zu Ihrem Widerrufsrecht stehen Ihnen Fröhlich Vermögensberatung und die Bunq B.V. gerne zur Verf\u00FCgung.');
   s.y -= 2;
 
   s.pg.drawLine({ start: { x: ML, y: s.y }, end: { x: PW - MR, y: s.y }, thickness: 1.5, color: ACCENT });
@@ -564,14 +564,14 @@ export async function generateBunqPdf(formData) {
 
   const cc2X = ML + ccW + 10;
   s.pg.drawRectangle({ x: cc2X, y: s.y - ccH, width: ccW, height: ccH, borderColor: BOX_BORDER, borderWidth: 0.5, color: LIGHT_BG });
-  s.pg.drawText('KAPITALMITTE', { x: cc2X + 6, y: s.y - 5, size: 4.5, font: b, color: NAVY });
+  s.pg.drawText('FRÖHLICH', { x: cc2X + 6, y: s.y - 5, size: 4.5, font: b, color: NAVY });
   s.pg.drawText(siteContact.customerServiceStreet, { x: cc2X + 6, y: s.y - 14, size: 5, font: r, color: MID_TEXT });
   s.pg.drawText(`${siteContact.customerServicePostalCity}, Deutschland`, { x: cc2X + 6, y: s.y - 22, size: 5, font: r, color: MID_TEXT });
   s.pg.drawText(`Tel.: ${siteContact.phoneDisplay}`, { x: cc2X + 6, y: s.y - 30, size: 5, font: r, color: MID_TEXT });
   s.pg.drawText(`E-Mail: ${siteContact.email}`, { x: cc2X + 6, y: s.y - 38, size: 5, font: b, color: NAVY });
   s.y -= ccH + 6;
 
-  infoBox(s, 'Kapitalmitte ist die Vermittlungsstelle zwischen dem Verbraucher und der Bunq B.V. Sie bietet umfassende Unterst\u00FCtzung bei der Antragstellung, beantwortet Kundenanfragen und k\u00FCmmert sich um alle zugeh\u00F6rigen Gesch\u00E4ftsprozesse.');
+  infoBox(s, 'Fröhlich Vermögensberatung ist die Vermittlungsstelle zwischen dem Verbraucher und der Bunq B.V. Sie bietet umfassende Unterst\u00FCtzung bei der Antragstellung, beantwortet Kundenanfragen und k\u00FCmmert sich um alle zugeh\u00F6rigen Gesch\u00E4ftsprozesse.');
 
   // ---------------------------------------------------------------------------
   // PAGE 5+6 - Vertragsbedingungen §1-§18
@@ -616,7 +616,7 @@ export async function generateBunqPdf(formData) {
     ['\u00A714', 'Beschwerde- und Rechtsbehelfsverfahren',
       'Der Kunde hat die M\u00F6glichkeit, Beschwerden zun\u00E4chst direkt an die Bank zu richten. Sofern keine zufriedenstellende L\u00F6sung erzielt wird, kann ein au\u00DFergerichtliches Beschwerde- oder Schlichtungsverfahren bei einer zust\u00E4ndigen Ombudsstelle in Anspruch genommen werden.'],
     ['\u00A715', 'Kundenbetreuung und Service',
-      'Zur Unterst\u00FCtzung der Kunden stellt die Bank umfassende Informations- und Serviceangebote zur Verf\u00FCgung, einschlie\u00DFlich eines FAQ-Bereichs sowie der M\u00F6glichkeit individueller Beratung. Kapitalmitte unterst\u00FCtzt als Vermittler bei der Kundenbetreuung.'],
+      'Zur Unterst\u00FCtzung der Kunden stellt die Bank umfassende Informations- und Serviceangebote zur Verf\u00FCgung, einschlie\u00DFlich eines FAQ-Bereichs sowie der M\u00F6glichkeit individueller Beratung. Fröhlich Vermögensberatung unterst\u00FCtzt als Vermittler bei der Kundenbetreuung.'],
     ['\u00A716', 'Einlagensicherung',
       'Die Bank ist dem gesetzlichen Einlagensicherungssystem der Niederlande (Depositogarantiestelsel) angeschlossen. Einlagen des Kunden sind bis zu einem Betrag von 100.000 EUR pro Einleger und pro Bank abgesichert. F\u00FCr Anleger mit Wohnsitz in Deutschland, \u00D6sterreich oder der Schweiz gilt, dass die Einlagensicherung im Sitzstaat der Bank erfolgt (Herkunftslandprinzip innerhalb der EU).'],
     ['\u00A717', 'Mitwirkungspflichten des Kunden',

@@ -32,14 +32,14 @@ const FAQ = () => {
       icon: HelpCircle,
       questions: [
         {
-          question: 'Was ist Kapitalmitte?',
+          question: 'Was ist Fröhlich Vermögensberatung?',
           answer:
             'Als Vermittlungsplattform und Kapitalverwaltungsgesellschaft stehen wir seit vielen Jahren erfolgreich für nachhaltigen Vermögensaufbau, professionelle Risikosteuerung sowie transparente und sichere Abläufe.',
         },
         {
-          question: 'Ist die Nutzung von Kapitalmitte kostenlos?',
+          question: 'Ist die Nutzung von Fröhlich Vermögensberatung kostenlos?',
           answer:
-            'Ja, Kapitalmitte ist für alle Nutzer komplett kostenlos. Es gibt keine versteckten Gebühren oder Kosten. Wir finanzieren uns durch Partnerschaften mit Banken, was jedoch keinen Einfluss auf unsere Vergleiche oder Empfehlungen hat.',
+            'Ja, Fröhlich Vermögensberatung ist für alle Nutzer komplett kostenlos. Es gibt keine versteckten Gebühren oder Kosten. Wir finanzieren uns durch Partnerschaften mit Banken, was jedoch keinen Einfluss auf unsere Vergleiche oder Empfehlungen hat.',
         },
         {
           question: 'Wie funktioniert die Plattform?',
@@ -47,14 +47,14 @@ const FAQ = () => {
             'Die Nutzung ist einfach: 1) Erstellen Sie ein kostenloses Konto, 2) Vergleichen Sie Sparangebote von über 50 europäischen Banken, 3) Filtern Sie nach Zinssatz, Laufzeit und Mindestanlage, 4) Wenn Sie ein passendes Angebot gefunden haben, senden Sie Ihre Anfrage direkt an die Bank. Die Kontoeröffnung erfolgt dann bei der jeweiligen Partnerbank.',
         },
         {
-          question: 'Verwaltet Kapitalmitte mein Geld?',
+          question: 'Verwaltet Fröhlich Vermögensberatung mein Geld?',
           answer:
-            'Nein, absolut nicht. Kapitalmitte ist ausschließlich eine Vergleichs- und Vermittlungsplattform. Wir halten, verwalten oder haben keinen direkten Zugang zu Kundengeldern im Zusammenhang mit Flexgeld-, Tagesgeld- oder Festgeldkonten. Diese Konten werden ausschließlich direkt bei unseren regulierten Partnerbanken eröffnet und geführt. Das Geld unserer Kunden verbleibt jederzeit bei dem jeweils gewählten Finanzinstitut.\n\nEine Ausnahme besteht lediglich dann, wenn Kunden aktiv in Aktien, Anleihen oder unseren Fonds investieren. In diesen Fällen erfolgen die Investments über die entsprechenden Anlage- und Depotstrukturen.',
+            'Nein, absolut nicht. Fröhlich Vermögensberatung ist ausschließlich eine Vergleichs- und Vermittlungsplattform. Wir halten, verwalten oder haben keinen direkten Zugang zu Kundengeldern im Zusammenhang mit Flexgeld-, Tagesgeld- oder Festgeldkonten. Diese Konten werden ausschließlich direkt bei unseren regulierten Partnerbanken eröffnet und geführt. Das Geld unserer Kunden verbleibt jederzeit bei dem jeweils gewählten Finanzinstitut.\n\nEine Ausnahme besteht lediglich dann, wenn Kunden aktiv in Aktien, Anleihen oder unseren Fonds investieren. In diesen Fällen erfolgen die Investments über die entsprechenden Anlage- und Depotstrukturen.',
         },
         {
-          question: 'In welchen Ländern ist Kapitalmitte verfügbar?',
+          question: 'In welchen Ländern ist Fröhlich Vermögensberatung verfügbar?',
           answer:
-            'Kapitalmitte richtet sich primär an Nutzer in Deutschland. Die auf unserer Plattform gelisteten Banken stammen aus verschiedenen EU-Ländern wie Deutschland, Frankreich, Italien, Spanien, Portugal, den Niederlanden und weiteren. Die Wohnsitzanforderungen variieren je nach Bank.',
+            'Fröhlich Vermögensberatung richtet sich primär an Nutzer in Deutschland. Die auf unserer Plattform gelisteten Banken stammen aus verschiedenen EU-Ländern wie Deutschland, Frankreich, Italien, Spanien, Portugal, den Niederlanden und weiteren. Die Wohnsitzanforderungen variieren je nach Bank.',
         },
       ],
     },
@@ -64,7 +64,7 @@ const FAQ = () => {
       icon: UserPlus,
       questions: [
         {
-          question: 'Wie eröffne ich ein Sparkonto über Kapitalmitte?',
+          question: 'Wie eröffne ich ein Sparkonto über Fröhlich Vermögensberatung?',
           answer:
             'Nachdem Sie ein passendes Angebot gefunden haben, klicken Sie auf "Interesse senden" oder "Details ansehen". Sie können dann Ihre Kontaktdaten hinterlassen, und die Bank wird sich mit Ihnen in Verbindung setzen. Die eigentliche Kontoeröffnung erfolgt direkt bei der Partnerbank mit deren eigenen Verifizierungsverfahren.',
         },
@@ -86,7 +86,7 @@ const FAQ = () => {
         {
           question: 'Muss ich in Deutschland wohnen?',
           answer:
-            'Für die Nutzung von Kapitalmitte müssen Sie nicht zwingend in Deutschland wohnen. Allerdings haben viele Partnerbanken spezifische Wohnsitzanforderungen. Manche akzeptieren Kunden aus dem gesamten EU-Raum, andere sind auf bestimmte Länder beschränkt. Prüfen Sie die jeweiligen Anforderungen im Angebotsdetail.',
+            'Für die Nutzung von Fröhlich Vermögensberatung müssen Sie nicht zwingend in Deutschland wohnen. Allerdings haben viele Partnerbanken spezifische Wohnsitzanforderungen. Manche akzeptieren Kunden aus dem gesamten EU-Raum, andere sind auf bestimmte Länder beschränkt. Prüfen Sie die jeweiligen Anforderungen im Angebotsdetail.',
         },
       ],
     },
@@ -143,7 +143,7 @@ const FAQ = () => {
             'Alle unsere Partnerbanken sind etablierte, lizenzierte und regulierte Finanzinstitute in der EU. Sie werden von ihren nationalen Aufsichtsbehörden (z.B. BaFin in Deutschland) überwacht und müssen strenge EU-Bankenvorschriften erfüllen. Wir prüfen alle Partnerbanken vor der Aufnahme auf unsere Plattform.',
         },
         {
-          question: 'Wie schützt Kapitalmitte meine persönlichen Daten?',
+          question: 'Wie schützt Fröhlich Vermögensberatung meine persönlichen Daten?',
           answer:
             'Wir nehmen Datenschutz sehr ernst und erfüllen die DSGVO sowie alle europäischen Datenschutzvorschriften. Wir verwenden 256-Bit-SSL-Verschlüsselung für alle Datenübertragungen. Ihre Daten werden niemals ohne Ihre ausdrückliche Zustimmung an Dritte weitergegeben oder verkauft.',
         },
@@ -189,7 +189,7 @@ const FAQ = () => {
         {
           question: 'Wie erhalte ich den Bonus?',
           answer:
-            'Um den Bonus zu erhalten, müssen Sie in der Regel: 1) Ein neues Konto über Kapitalmitte bei einer teilnehmenden Bank eröffnen, 2) Einen Mindestbetrag einzahlen (variiert je nach Bank), 3) Das Geld für eine bestimmte Mindestzeit anlegen. Der Bonus wird dann automatisch auf Ihr Konto gutgeschrieben.',
+            'Um den Bonus zu erhalten, müssen Sie in der Regel: 1) Ein neues Konto über Fröhlich Vermögensberatung bei einer teilnehmenden Bank eröffnen, 2) Einen Mindestbetrag einzahlen (variiert je nach Bank), 3) Das Geld für eine bestimmte Mindestzeit anlegen. Der Bonus wird dann automatisch auf Ihr Konto gutgeschrieben.',
         },
         {
           question: 'Wovon hängt die Bonushöhe ab?',
@@ -209,19 +209,19 @@ const FAQ = () => {
       icon: Headphones,
       questions: [
         {
-          question: 'Wie erreiche ich den Kapitalmitte-Support?',
+          question: 'Wie erreiche ich den Fröhlich Vermögensberatung-Support?',
           answer:
             'Sie können uns auf verschiedenen Wegen erreichen: Per E-Mail an kundenservice@kapitalmitte.com (Antwort innerhalb von 24 Stunden), über unser Kontaktformular auf der Website, oder telefonisch während unserer Geschäftszeiten (Mo-Fr 9-18 Uhr). Wir helfen Ihnen gerne bei allen Fragen zur Plattform.',
         },
         {
           question: 'Was mache ich bei Problemen mit meinem Bankkonto?',
           answer:
-            'Bei Fragen oder Problemen mit Ihrem Sparkonto wenden Sie sich bitte direkt an die jeweilige Bank. Da Kapitalmitte nur eine Vergleichsplattform ist, haben wir keinen Zugriff auf Ihre Bankkonten. Jede Partnerbank hat einen eigenen Kundenservice, der Ihnen weiterhelfen kann.',
+            'Bei Fragen oder Problemen mit Ihrem Sparkonto wenden Sie sich bitte direkt an die jeweilige Bank. Da Fröhlich Vermögensberatung nur eine Vergleichsplattform ist, haben wir keinen Zugriff auf Ihre Bankkonten. Jede Partnerbank hat einen eigenen Kundenservice, der Ihnen weiterhelfen kann.',
         },
         {
-          question: 'Bietet Kapitalmitte eine persönliche Beratung an?',
+          question: 'Bietet Fröhlich Vermögensberatung eine persönliche Beratung an?',
           answer:
-            'Kapitalmitte bietet keine persönliche Finanz- oder Anlageberatung an. Wir stellen Informationen und Vergleichstools zur Verfügung, um Ihnen bei der eigenen Entscheidungsfindung zu helfen. Für eine individuelle Beratung empfehlen wir, einen unabhängigen Finanzberater zu konsultieren.',
+            'Fröhlich Vermögensberatung bietet keine persönliche Finanz- oder Anlageberatung an. Wir stellen Informationen und Vergleichstools zur Verfügung, um Ihnen bei der eigenen Entscheidungsfindung zu helfen. Für eine individuelle Beratung empfehlen wir, einen unabhängigen Finanzberater zu konsultieren.',
         },
       ],
     },
@@ -271,7 +271,7 @@ const FAQ = () => {
     <div className="min-h-screen bg-bank-bg">
       <PageMeta
         title="FAQ"
-        description="Antworten zu Festgeld, Tagesgeld, Flexgeld, Einlagensicherung, Registrierung und Nutzung Ihres Kapitalmitte-Dashboards."
+        description="Antworten zu Festgeld, Tagesgeld, Flexgeld, Einlagensicherung, Registrierung und Nutzung Ihres Fröhlich Vermögensberatung-Dashboards."
         path="/faq"
       />
 

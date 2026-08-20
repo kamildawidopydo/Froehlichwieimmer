@@ -146,7 +146,7 @@ const Login = () => {
             Verwalten Sie sämtliche Kapitalanlagen über eine einzige Oberfläche.
           </p>
           <p className="mt-1 text-[11.5px] leading-[1.45] text-white/72">
-            Ob Tagesgeld, Festgeld, Flexgeld, Aktien, Anleihen oder Fonds – Kapitalmitte ermöglicht Ihnen eine
+            Ob Tagesgeld, Festgeld, Flexgeld, Aktien, Anleihen oder Fonds – Fröhlich Vermögensberatung ermöglicht Ihnen eine
             strukturierte Übersicht über Ihre Investments und Bankverbindungen. Behalten Sie Ihr Vermögen, Ihre
             Liquidität und Ihre Anlageentscheidungen jederzeit im Blick.
           </p>

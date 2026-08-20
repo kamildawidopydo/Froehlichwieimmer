@@ -37,7 +37,7 @@ const Dokumente = () => {
     <div className="min-h-screen w-full min-w-0 bg-bank-bg">
       <PageMeta
         title="Dokumente"
-        description="Offizielle Kapitalmitte Kundendokumente zum Download: Kundendokumente, Risikohinweise, Freistellungsauftrag und Informationsbogen zu Einlagenlösungen."
+        description="Offizielle Fröhlich Vermögensberatung Kundendokumente zum Download: Kundendokumente, Risikohinweise, Freistellungsauftrag und Informationsbogen zu Einlagenlösungen."
         path="/dokumente"
       />
 
@@ -58,7 +58,7 @@ const Dokumente = () => {
           </h1>
           <div className="mt-8 h-px w-24 bg-bank-gold/70" aria-hidden />
           <p className="mt-7 max-w-2xl font-sans text-[1.02rem] leading-[1.8] text-white/75">
-            Hier finden Sie offizielle Unterlagen von Kapitalmitte — als PDF herunterladbar, zum
+            Hier finden Sie offizielle Unterlagen von Fröhlich Vermögensberatung — als PDF herunterladbar, zum
             Lesen, Ausdrucken oder für Ihre Unterlagen.
           </p>
         </div>

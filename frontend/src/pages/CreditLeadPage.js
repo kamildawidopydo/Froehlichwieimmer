@@ -678,7 +678,7 @@ const CreditLeadPage = () => {
                   <>
                     <div className="relative mb-6 flex items-start justify-between gap-4">
                       <div>
-                        <p className="kicker text-bank-text-muted">Kapitalmitte</p>
+                        <p className="kicker text-bank-text-muted">Fröhlich Vermögensberatung</p>
                         <h2
                           id="credit-lead-dialog-title"
                           className="mt-2 font-display text-2xl font-normal tracking-tight text-bank-text sm:text-[1.65rem]"

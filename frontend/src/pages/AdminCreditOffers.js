@@ -224,7 +224,7 @@ const AdminCreditOffers = () => {
           eyebrow="Admin · Kredit"
           title="Kredit-Angebote"
           titleIcon={FileSpreadsheet}
-          description={`${offers.length} Angebote fuer den Kapitalmitte Kreditvergleich.`}
+          description={`${offers.length} Angebote fuer den Fröhlich Vermögensberatung Kreditvergleich.`}
           actions={
             <Button
               onClick={() => navigate('/admin/credit-bank-details')}

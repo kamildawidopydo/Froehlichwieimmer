@@ -440,7 +440,7 @@ export const SpezialAifPibFooterBand = memo(function SpezialAifPibFooterBand() {
               loading="lazy"
               decoding="async"
             />
-            <span className="sr-only">Kapitalmitte</span>
+            <span className="sr-only">Fröhlich Vermögensberatung</span>
           </div>
         </footer>
       </div>

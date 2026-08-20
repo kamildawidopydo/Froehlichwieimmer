@@ -104,7 +104,7 @@ const PartnerBanks = () => {
               <span className="ml-2 italic text-bank-text-muted">Partnerbanken.</span>
             </>
           }
-          lede="Alle Banken, deren Sparangebote Sie auf Kapitalmitte vergleichen können — reguliert und mit gesetzlicher Einlagensicherung."
+          lede="Alle Banken, deren Sparangebote Sie auf Fröhlich Vermögensberatung vergleichen können — reguliert und mit gesetzlicher Einlagensicherung."
           align="left"
           className="mb-10"
         />

@@ -65,7 +65,7 @@ export async function generateProductReportPdf({
   columns = [],
   rows = [],
   generatedAt,
-  brand = 'Kapitalmitte \u00B7 Vermögensreport',
+  brand = 'Fröhlich Vermögensberatung \u00B7 Vermögensreport',
 } = {}) {
   const doc = await PDFDocument.create();
   const r = await doc.embedFont(StandardFonts.Helvetica);

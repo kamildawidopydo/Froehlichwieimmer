@@ -9,7 +9,7 @@ export const instagramCommentAvatarFallback = (slug) => `${IG}/avatars/generated
 
 const companyReply = (id, text, when = 'vor 2 Wochen') => ({
   id,
-  author: 'Kapitalmitte',
+  author: 'Fröhlich Vermögensberatung',
   avatar: PROFILE_AVATAR,
   publishedAt: when,
   text,

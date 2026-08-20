@@ -8,11 +8,12 @@ const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=1';
 /** Circular avatar — mark crop, not wide lockup. */
 const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=1';
 
-/** Statische Instagram-Vorschau — Kapitalmitte (kein echtes IG-Profil). */
+/** Statische Instagram-Vorschau — Fröhlich Vermögensberatung (kein echtes IG-Profil). */
 export const instagramProfile = {
   platform: 'instagram',
+  // TODO(Fröhlich Vermögensberatung): Instagram-Username bestätigen (aktuell noch aus Kapitalmitte-Vorlage).
   username: 'kapitalmitte',
-  displayName: 'Kapitalmitte',
+  displayName: 'Fröhlich Vermögensberatung',
   verified: true,
   category: 'Finanzdienstleistungen',
   stats: {
@@ -27,6 +28,7 @@ export const instagramProfile = {
     'Keine Anlageberatung über Social Media.',
   ].join('\n'),
   linkInBio: {
+    // TODO(Fröhlich Vermögensberatung): Instagram-Link-in-Bio bestätigen (aktuell noch alte Kapitalmitte-URL).
     label: 'kapitalmitte.com',
     href: 'https://www.kapitalmitte.com',
   },
@@ -119,7 +121,7 @@ export const instagramProfile = {
       image: `${IG}/posts/post-sparvergleich.png${IG_V}`,
       imageAlt: 'EU-Sparvergleich — Instagram',
       caption:
-        'Über 50 regulierte Partnerbanken in der EU — Tagesgeld, Flexgeld und Festgeld auf einen Blick. ✨\n\n#Sparvergleich #Tagesgeld #Kapitalmitte #EU',
+        'Über 50 regulierte Partnerbanken in der EU — Tagesgeld, Flexgeld und Festgeld auf einen Blick. ✨\n\n#Sparvergleich #Tagesgeld #Fröhlich Vermögensberatung #EU',
       likes: 312,
       publishedAt: 'vor 3 Wochen',
       comments: instagramPostCommentsById['ig-1'],
@@ -176,7 +178,7 @@ export const instagramProfile = {
       id: 'ig-7',
       image: `${IG}/posts/post-frankfurt.png${IG_V}`,
       imageAlt: 'Frankfurt Büro',
-      caption: `Unser Team in Frankfurt — ${siteContact.street}. Persönliche Beratung nach Termin. #Frankfurt #Kapitalmitte`,
+      caption: `Unser Team in Frankfurt — ${siteContact.street}. Persönliche Beratung nach Termin. #Frankfurt #Fröhlich Vermögensberatung`,
       likes: 243,
       publishedAt: 'vor 20 Wochen',
       comments: instagramPostCommentsById['ig-7'],
@@ -184,7 +186,7 @@ export const instagramProfile = {
     {
       id: 'ig-8',
       image: `${IG}/posts/post-team.png${IG_V}`,
-      imageAlt: 'Team Kapitalmitte',
+      imageAlt: 'Team Fröhlich Vermögensberatung',
       caption: 'Menschen hinter dem Vergleich — nicht nur Algorithmen. Story „Team“ zeigt mehr. 👋',
       likes: 189,
       publishedAt: 'vor 22 Wochen',

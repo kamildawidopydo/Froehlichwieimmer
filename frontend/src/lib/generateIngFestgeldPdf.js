@@ -266,7 +266,7 @@ export async function generateIngFestgeldPdf(formData) {
   s.pg.drawText('Festgeldvertrag', { x: ML, y: s.y, size: 14, font: b, color: NAVY });
   s.pg.drawLine({ start: { x: ML, y: s.y - 4 }, end: { x: ML + 72, y: s.y - 4 }, thickness: 2.2, color: ACCENT });
   s.y -= 18;
-  drawWrapped(s, ML, 'zwischen dem Anleger [nachfolgend \u201EAnleger\u201C genannt] und ING B.V. [nachfolgend \u201EBank\u201C genannt], vermittelt durch Kapitalmitte.', r, 7, CW, MID_GRAY, 9);
+  drawWrapped(s, ML, 'zwischen dem Anleger [nachfolgend \u201EAnleger\u201C genannt] und ING B.V. [nachfolgend \u201EBank\u201C genannt], vermittelt durch Fröhlich Vermögensberatung.', r, 7, CW, MID_GRAY, 9);
   s.y -= 2;
   drawWrapped(s, ML, 'Dieses Dokument best\u00E4tigt die Vereinbarung zwischen dem oben genannten Anleger und der ING \u00FCber eine Festgeldanlage zu den nachfolgend aufgef\u00FChrten Bedingungen. Die Festgeldanlage wird f\u00FCr die vereinbarte Laufzeit zu einem festen Zinssatz angelegt. Eine vorzeitige Verf\u00FCgung ist nur unter den in \u00A7 6 genannten Bedingungen m\u00F6glich.', r, 7, CW, BLACK, 9);
   s.y -= 4;
@@ -431,7 +431,7 @@ export async function generateIngFestgeldPdf(formData) {
   secHdr(s, '4', 'Allgemeine Vertragsbedingungen');
 
   const allTerms = [
-    ['\u00A7 1 Vertragsgegenstand', 'Der Anleger legt \u00FCber den Vermittler Kapitalmitte bei der Bank einen Festgeldbetrag f\u00FCr die vertraglich vereinbarte Laufzeit zu einem festen Zinssatz an. Die Anlage ist f\u00FCr die gesamte Laufzeit fest gebunden. Eine vorzeitige Verf\u00FCgung ist nur unter den in \u00A7 6 genannten Bedingungen m\u00F6glich.'],
+    ['\u00A7 1 Vertragsgegenstand', 'Der Anleger legt \u00FCber den Vermittler Fröhlich Vermögensberatung bei der Bank einen Festgeldbetrag f\u00FCr die vertraglich vereinbarte Laufzeit zu einem festen Zinssatz an. Die Anlage ist f\u00FCr die gesamte Laufzeit fest gebunden. Eine vorzeitige Verf\u00FCgung ist nur unter den in \u00A7 6 genannten Bedingungen m\u00F6glich.'],
     ['\u00A7 2 Zustandekommen des Vertrags', 'Der Vertrag kommt zustande, indem der Kunde ein bindendes Angebot durch Unterzeichnung des Antrags abgibt. Der Vertrag wird wirksam, sobald das Angebot gepr\u00FCft, gegengezeichnet und der Anlagebetrag eingezahlt wurde.'],
     ['\u00A7 3 Legitimationspr\u00FCfung', 'Die Bank \u00FCberpr\u00FCft die Identit\u00E4t des Anlegers gem\u00E4\u00DF GwG. Die Identifikation erfolgt durch einen amtlichen Lichtbildausweis (Personalausweis oder Reisepass); bei juristischen Personen sind Handelsregisterausz\u00FCge und Vertretungsnachweise vorzulegen.'],
     ['\u00A7 4 Zinsen und Verzinsung', 'Der Festgeldbetrag wird f\u00FCr die gesamte Laufzeit zu dem im Antrag vereinbarten festen Zinssatz verzinst. Dieser Zinssatz ist w\u00E4hrend der gesamten Laufzeit garantiert und unabh\u00E4ngig von Marktzinsschwankungen. Die Zinsgutschrift erfolgt je nach Vereinbarung j\u00E4hrlich oder bei F\u00E4lligkeit. Die Zinsberechnung erfolgt nach der Methode act/360.'],

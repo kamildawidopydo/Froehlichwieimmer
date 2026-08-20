@@ -28,7 +28,7 @@ const sparvergleichThread = [
     replies: [
       {
         id: 'rs3r1',
-        author: 'Kapitalmitte',
+        author: 'Fröhlich Vermögensberatung',
         avatar: '/assets/logo/frohlich-mark.png?v=1',
         publishedAt: 'vor 3 Tagen',
         text: 'Freut uns — bei Fragen steht das FAQ in den Highlights bereit. 🙌',
@@ -69,7 +69,7 @@ const zinsenThread = [
     replies: [
       {
         id: 'rz2r1',
-        author: 'Kapitalmitte',
+        author: 'Fröhlich Vermögensberatung',
         avatar: '/assets/logo/frohlich-mark.png?v=1',
         publishedAt: 'vor 6 Tagen',
         text: 'So ist der Vergleich gedacht — viel Erfolg beim Sparen. 📊',
@@ -110,7 +110,7 @@ const sicherheitThread = [
     replies: [
       {
         id: 'rf2r1',
-        author: 'Kapitalmitte',
+        author: 'Fröhlich Vermögensberatung',
         avatar: '/assets/logo/frohlich-mark.png?v=1',
         publishedAt: 'vor 12 Tagen',
         text: 'Danke fürs Teilen — Story-Highlight „Sicherheit“ hat noch mehr Details. 🛡️',

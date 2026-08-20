@@ -57,7 +57,7 @@ const Compliance = () => {
     <div className="min-h-screen w-full min-w-0 bg-bank-bg">
       <PageMeta
         title="Rechtliche Compliance"
-        description="Rechtliche und regulatorische Grundlagen bei Kapitalmitte: Compliance-Standards, Verantwortlichkeiten und Aufsicht."
+        description="Rechtliche und regulatorische Grundlagen bei Fröhlich Vermögensberatung: Compliance-Standards, Verantwortlichkeiten und Aufsicht."
         path="/compliance"
       />
 
@@ -107,7 +107,7 @@ const Compliance = () => {
                 />
                 <div className={proseClass}>
                   <p className="drop-cap text-bank-text">
-                    Kapitalmitte legt größten Wert auf die konsequente Einhaltung sämtlicher anwendbarer gesetzlicher,
+                    Fröhlich Vermögensberatung legt größten Wert auf die konsequente Einhaltung sämtlicher anwendbarer gesetzlicher,
                     regulatorischer und aufsichtsrechtlicher Vorgaben. Compliance ist für uns kein isolierter
                     Geschäftsbereich, sondern ein zentraler Bestandteil unserer Unternehmensführung, unserer
                     Risikokultur sowie unseres täglichen Handelns.
@@ -119,7 +119,7 @@ const Compliance = () => {
                     und langfristiges Vertrauen im Umgang mit unseren Kunden, Geschäftspartnern und Dienstleistern.
                   </p>
                   <p>
-                    Kapitalmitte verpflichtet sich zu einem hohen ethischen Standard in allen Geschäftsbereichen. Wir
+                    Fröhlich Vermögensberatung verpflichtet sich zu einem hohen ethischen Standard in allen Geschäftsbereichen. Wir
                     fördern eine Unternehmenskultur, die auf Transparenz, Verantwortungsbewusstsein und regelkonformem
                     Verhalten basiert. Verstöße gegen interne oder externe Vorgaben werden nicht toleriert und
                     konsequent verfolgt.
@@ -152,7 +152,7 @@ const Compliance = () => {
               />
               <div className={proseClass}>
                 <p>
-                  Als in Europa tätiges Finanzdienstleistungsunternehmen orientiert sich Kapitalmitte an den geltenden
+                  Als in Europa tätiges Finanzdienstleistungsunternehmen orientiert sich Fröhlich Vermögensberatung an den geltenden
                   nationalen und europäischen Rechtsvorschriften. Dazu zählen insbesondere Regelwerke zur
                   Finanzmarktregulierung, zur Verhinderung von Geldwäsche sowie zur Bekämpfung von
                   Terrorismusfinanzierung und Finanzkriminalität.
@@ -234,7 +234,7 @@ const Compliance = () => {
                 />
                 <div className={proseClass}>
                   <p>
-                    Kapitalmitte verfolgt eine strikte Null-Toleranz-Politik gegenüber Geldwäsche,
+                    Fröhlich Vermögensberatung verfolgt eine strikte Null-Toleranz-Politik gegenüber Geldwäsche,
                     Terrorismusfinanzierung sowie jeglichen Verstößen gegen nationale oder internationale Sanktions-
                     und Embargovorschriften.
                   </p>

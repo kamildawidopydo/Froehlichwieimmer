@@ -5,10 +5,11 @@ const FB_V = '?v=2';
 const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=1';
 const fbAvatar = (slug) => `${FB}/avatars/comments/${slug}.png${FB_V}`;
 
-/** Statische Facebook-Vorschau — Kapitalmitte (kein echtes FB-Profil). */
+/** Statische Facebook-Vorschau — Fröhlich Vermögensberatung (kein echtes FB-Profil). */
 export const facebookProfile = {
   platform: 'facebook',
-  pageName: 'Kapitalmitte',
+  pageName: 'Fröhlich Vermögensberatung',
+  // TODO(Fröhlich Vermögensberatung): Facebook-Handle bestätigen (aktuell noch aus Kapitalmitte-Vorlage).
   handle: 'kapitalmitte',
   verified: true,
   category: 'Finanzdienstleistungen · Sparvergleich',
@@ -27,10 +28,10 @@ export const facebookProfile = {
     'Zinsvergleich',
   ],
   intro:
-    'Kapitalmitte vermittelt ausgewählte Tagesgeld-, Flexgeld- und Festgeldangebote europäischer Partnerbanken — strukturiert, transparent und mit persönlicher Betreuung aus Frankfurt am Main.',
+    'Fröhlich Vermögensberatung vermittelt ausgewählte Tagesgeld-, Flexgeld- und Festgeldangebote europäischer Partnerbanken — strukturiert, transparent und mit persönlicher Betreuung aus Frankfurt am Main.',
   about: {
     mission:
-      'Wir sind eine unabhängige Vergleichs- und Vermittlungsplattform für europäische Sparangebote. Kapitalmitte hält kein Kundengeld — die Einlagen liegen ausschließlich bei den jeweiligen Partnerbanken unter gesetzlicher Einlagensicherung.',
+      'Wir sind eine unabhängige Vergleichs- und Vermittlungsplattform für europäische Sparangebote. Fröhlich Vermögensberatung hält kein Kundengeld — die Einlagen liegen ausschließlich bei den jeweiligen Partnerbanken unter gesetzlicher Einlagensicherung.',
     products: [
       { label: 'Sparvergleich', href: '/comparison' },
       { label: 'Partnerbanken', href: '/partner-banks' },
@@ -44,6 +45,7 @@ export const facebookProfile = {
     email: siteContact.email,
     phone: siteContact.phoneDisplay,
     phoneTel: siteContact.phoneTel,
+    // TODO(Fröhlich Vermögensberatung): Website-URL bestätigen (aktuell noch alte Kapitalmitte-URL).
     website: 'www.kapitalmitte.com',
     websiteHref: 'https://www.kapitalmitte.com',
     street: siteContact.street,
@@ -92,7 +94,7 @@ export const facebookProfile = {
       text:
         'Über 50 regulierte Partnerbanken in der EU — vergleichen Sie Tagesgeld, Flexgeld und Festgeld auf einen Blick. Kostenlos, unabhängig und ohne versteckte Gebühren.\n\n#Sparvergleich #Tagesgeld #EU',
       image: `${FB}/posts/sparvergleich.png`,
-      imageAlt: 'EU-Sparvergleich Kapitalmitte',
+      imageAlt: 'EU-Sparvergleich Fröhlich Vermögensberatung',
       reactions: 94,
       commentsCount: 14,
       shares: 7,
@@ -113,7 +115,7 @@ export const facebookProfile = {
           replies: [
             {
               id: 'c2r1',
-              author: 'Kapitalmitte',
+              author: 'Fröhlich Vermögensberatung',
               avatar: SITE_LOGO,
               publishedAt: 'vor 9 Wochen',
               text: 'Danke für Ihr Feedback — genau dafür ist der Vergleich gedacht.',
@@ -205,7 +207,7 @@ export const facebookProfile = {
         'Mit unserem Zinsrechner sehen Sie auf einen Blick, wie sich Laufzeit und Anlagebetrag auf Ihre erwartete Verzinsung auswirken — direkt auf kapitalmitte.com.',
       linkPreview: {
         url: 'https://www.kapitalmitte.com/calculator',
-        title: 'Zinsrechner — Kapitalmitte',
+        title: 'Zinsrechner — Fröhlich Vermögensberatung',
         description: 'Szenarien für Tagesgeld, Flexgeld und Festgeld berechnen.',
         image: `${FB}/posts/zinsrechner.png`,
       },
@@ -237,7 +239,7 @@ export const facebookProfile = {
     { id: 'p4', src: `${FB}/photos/photo-4.png`, alt: 'Anlageallokation Diagramm' },
     { id: 'p5', src: `${FB}/photos/photo-5.png`, alt: 'Zinsen Marketing' },
     { id: 'p6', src: `${FB}/photos/photo-6.png`, alt: 'EU Partnernetzwerk' },
-    { id: 'p7', src: `${FB}/photos/photo-7.png`, alt: 'Kapitalmitte Markenvisual' },
+    { id: 'p7', src: `${FB}/photos/photo-7.png`, alt: 'Fröhlich Vermögensberatung Markenvisual' },
     { id: 'p8', src: `${FB}/photos/photo-8.png`, alt: 'Finanzvergleich Visual' },
     { id: 'p9', src: `${FB}/photos/photo-9.png`, alt: 'Konditionen Übersicht' },
   ],

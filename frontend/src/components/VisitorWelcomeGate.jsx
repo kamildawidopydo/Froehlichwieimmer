@@ -90,7 +90,7 @@ export default function VisitorWelcomeGate() {
             id="visitor-welcome-title"
             className="font-display text-[28px] font-semibold tracking-tight text-[rgb(var(--bank-text))] sm:text-[32px]"
           >
-            Willkommen bei Kapitalmitte
+            Willkommen bei Fröhlich Vermögensberatung
           </h1>
           <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[rgb(var(--bank-text-muted))]">
             Um Ihnen passende Informationen bereitzustellen, machen Sie bitte folgende Angaben:

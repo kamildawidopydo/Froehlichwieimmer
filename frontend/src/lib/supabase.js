@@ -9,7 +9,7 @@ export const isSupabaseConfigured = Boolean(supabaseUrl?.trim() && supabaseAnonK
 if (!isSupabaseConfigured) {
   // eslint-disable-next-line no-console
   console.error(
-    '[Kapitalmitte] Supabase environment variables missing. ' +
+    '[Fröhlich Vermögensberatung] Supabase environment variables missing. ' +
     'Set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY in your hosting provider (e.g. Vercel) and redeploy.'
   );
 }

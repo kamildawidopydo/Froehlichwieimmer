@@ -9,7 +9,7 @@ export const spezialAifPibMeta = {
   documentTitle: 'Produktinformationsblatt',
   /** Hero H1: kontrollierter Umbruch (zusammen = documentTitle), kein mitten-im-Wort-Split. */
   documentTitleLines: ['Produktinformations', 'blatt'],
-  productName: 'Kapitalmitte Spezial-AIF',
+  productName: 'Fröhlich Vermögensberatung Spezial-AIF',
   /** Kurzzeile unter dem Dokumenttitel (Referenz: Goldakzent). */
   productSubtitle: 'Geschlossener Spezial-AIF',
   standLabel: 'Stand',

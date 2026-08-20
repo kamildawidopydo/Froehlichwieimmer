@@ -257,7 +257,7 @@ const AdminDashboard = () => {
             <div className="min-w-0">
               <p className="inline-flex items-center gap-2 font-mono text-[10.5px] font-medium uppercase tracking-[0.22em] text-bank-gold">
                 <span aria-hidden className="h-[5px] w-[5px] rounded-full bg-bank-gold" />
-                Kapitalmitte · Admin Console
+                Fröhlich Vermögensberatung · Admin Console
               </p>
               <h1
                 className="mt-3 font-display text-[2rem] font-light leading-[1.05] text-white sm:text-[2.6rem]"

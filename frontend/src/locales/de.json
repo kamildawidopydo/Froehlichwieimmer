@@ -80,7 +80,7 @@
     "documents": {
       "eyebrow": "Konto",
       "title": "Dokumente",
-      "description": "Offizielle Unterlagen von Kapitalmitte — PDF herunterladen, ausdrucken oder ablegen.",
+      "description": "Offizielle Unterlagen von Fröhlich Vermögensberatung — PDF herunterladen, ausdrucken oder ablegen.",
       "hint": "Steuerformulare und Produktinformationen finden Sie hier zentral. Bei Fragen hilft Ihnen der",
       "open": "Öffnen",
       "downloadOk": "Download gestartet.",
@@ -174,7 +174,7 @@
     "compareOffersBtn": "Angebote vergleichen"
   },
   "benefits": {
-    "title": "Warum Kapitalmitte wählen?",
+    "title": "Warum Fröhlich Vermögensberatung wählen?",
     "subtitle": "Wir machen es einfach, die besten Sparmöglichkeiten in Europa zu finden und zu vergleichen.",
     "multipleBanks": {
       "title": "Zugang zu mehreren Banken",
@@ -226,11 +226,11 @@
   },
   "cta": {
     "title": "Bereit, Ihre Ersparnisse wachsen zu lassen?",
-    "subtitle": "Schließen Sie sich Tausenden europäischer Sparer an, die Kapitalmitte vertrauen, um die besten Zinssätze zu finden.",
+    "subtitle": "Schließen Sie sich Tausenden europäischer Sparer an, die Fröhlich Vermögensberatung vertrauen, um die besten Zinssätze zu finden.",
     "getStarted": "Jetzt loslegen"
   },
   "trustSection": {
-    "title": "Warum Kapitalmitte vertrauen?",
+    "title": "Warum Fröhlich Vermögensberatung vertrauen?",
     "subtitle": "Ihre Sicherheit und Ihr Seelenfrieden haben für uns höchste Priorität",
     "depositProtection": {
       "title": "EU-Einlagensicherung",
@@ -355,9 +355,9 @@
   },
   "auth": {
     "welcomeBack": "Willkommen zurück",
-    "loginSubtitle": "Melden Sie sich bei Ihrem Kapitalmitte-Konto an",
+    "loginSubtitle": "Melden Sie sich bei Ihrem Fröhlich Vermögensberatung-Konto an",
     "createAccount": "Konto erstellen",
-    "registerSubtitle": "Treten Sie Kapitalmitte bei, um Sparangebote zu vergleichen",
+    "registerSubtitle": "Treten Sie Fröhlich Vermögensberatung bei, um Sparangebote zu vergleichen",
     "email": "E-Mail",
     "password": "Passwort",
     "confirmPassword": "Passwort bestätigen",

@@ -21,7 +21,7 @@ export const spezialAifStrategyPhoto = {
 export const spezialAifFocusBackdrop = siteImages.spezialAif.focusBackdrop;
 
 export const spezialAifKeyFacts = [
-  { label: 'Produktname', value: 'Kapitalmitte Spezial-AIF' },
+  { label: 'Produktname', value: 'Fröhlich Vermögensberatung Spezial-AIF' },
   { label: 'ISIN', value: 'Wird nach Auflage mitgeteilt' },
   { label: 'Fondsstruktur', value: 'Geschlossener Spezial-AIF gemäß KAGB' },
   { label: 'Rechtsform', value: 'InvAG § 17 Abs. 2 Nr. 2 KAGB' },

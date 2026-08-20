@@ -63,7 +63,7 @@ const OFFERINGS = [
 const FAQ_ITEMS = [
   {
     id: 'faq-trust',
-    question: 'Was tut Kapitalmitte für das Vertrauen seiner Kunden?',
+    question: 'Was tut Fröhlich Vermögensberatung für das Vertrauen seiner Kunden?',
     answer:
       'Wir verbinden lokale Betreuung in Deutschland mit einem regulierten europäischen Kooperationspartner, informieren transparent über Produkte und Abläufe und stellen Ihre Interessen in den Mittelpunkt.',
     links: [
@@ -73,14 +73,14 @@ const FAQ_ITEMS = [
   },
   {
     id: 'faq-how',
-    question: 'Wie funktioniert Kapitalmitte?',
+    question: 'Wie funktioniert Fröhlich Vermögensberatung?',
     answer:
       'Sie vergleichen Angebote auf unserer Plattform, wählen ein passendes Produkt und werden von uns persönlich begleitet. Die regulierten Wertpapierdienstleistungen erbringt unser niederländischer Kooperationspartner im Rahmen der gesetzlichen Vorgaben.',
     links: [{ label: 'So funktioniert es', href: '/how-it-works' }],
   },
   {
     id: 'faq-bank',
-    question: 'Ist Kapitalmitte eine Bank?',
+    question: 'Ist Fröhlich Vermögensberatung eine Bank?',
     answer: `Nein. Die ${COMPANY} ist Ihr Ansprechpartner in Deutschland für Betreuung und Koordination. Kundengelder und regulierte Wertpapierdienstleistungen liegen bei den jeweiligen Partnerinstituten bzw. unserem Kooperationspartner — nicht bei uns als Einlagenkonto.`,
   },
   {
@@ -256,7 +256,7 @@ const About = () => {
                 />
                 <span className="flex min-w-0 flex-1 flex-col justify-center px-5 py-4 text-left sm:px-7 sm:py-5">
                   <span className="font-mono text-[10px] uppercase tracking-[0.32em] text-bank-gold/95">
-                    Kapitalmitte
+                    Fröhlich Vermögensberatung
                   </span>
                   <span
                     className="mt-1.5 font-display text-[1.15rem] font-light leading-tight tracking-[-0.02em] text-white sm:text-[1.35rem]"
@@ -415,7 +415,7 @@ const About = () => {
                     Produktauswahl und persönlicher Beratung – alles aus einer Hand.
                   </p>
                 </div>
-                <Pullquote cite="Kapitalmitte" className="mt-10 w-full min-w-0 max-w-full">
+                <Pullquote cite="Fröhlich Vermögensberatung" className="mt-10 w-full min-w-0 max-w-full">
                   {SLOGAN}
                 </Pullquote>
                 <div className={cn('mt-10', proseClass)}>

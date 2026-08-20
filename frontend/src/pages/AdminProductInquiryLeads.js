@@ -153,7 +153,7 @@ const AdminProductInquiryLeads = () => {
   return (
     <>
       <div className="hidden print:block print:p-8 print:text-black">
-        <h1 className="font-display text-2xl font-light">Kapitalmitte — Produktanfragen (Auswahl)</h1>
+        <h1 className="font-display text-2xl font-light">Fröhlich Vermögensberatung — Produktanfragen (Auswahl)</h1>
         <p className="mt-2 text-sm text-neutral-600">
           Gedruckt am {new Date().toLocaleString('de-DE')} — {selectedRows.length} Einträge
         </p>

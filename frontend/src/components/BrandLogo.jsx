@@ -6,7 +6,7 @@ import {
 } from '@/lib/brand';
 
 /**
- * Kapitalmitte lockup — transparent PNG only.
+ * Fröhlich Vermögensberatung lockup — transparent PNG only.
  * Light: blue lockup. Dark / onDark: white lockup.
  * Letter counters are punched transparent (no solid white fills).
  */

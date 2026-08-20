@@ -257,7 +257,7 @@ const BunqFestgeldVertrag = () => {
           </div>
           <h2 className="text-2xl font-semibold text-bank-primary mb-4">Antrag erfolgreich eingereicht</h2>
           <p className="text-gray-600 leading-relaxed mb-3">
-            Vielen Dank für Ihr Vertrauen in Kapitalmitte. Wir haben Ihren Antrag erhalten und prüfen Ihre
+            Vielen Dank für Ihr Vertrauen in Fröhlich Vermögensberatung. Wir haben Ihren Antrag erhalten und prüfen Ihre
             Angaben sorgfältig.
           </p>
           <p className="text-sm text-gray-500 mb-8">
@@ -436,7 +436,7 @@ const BunqFestgeldVertrag = () => {
         <BunqContractIntro title="Festgeldvertrag">
             <p>
               zwischen dem Anleger [nachfolgend „Anleger" genannt] und <strong className="text-[#0B4F6C]">bunq B.V.</strong> [nachfolgend „Bank" genannt],
-              vermittelt durch <strong className="text-[#0B4F6C]">Kapitalmitte</strong>.
+              vermittelt durch <strong className="text-[#0B4F6C]">Fröhlich Vermögensberatung</strong>.
             </p>
             <p>
               Dieses Dokument bestätigt die Vereinbarung zwischen dem oben genannten Anleger und der bunq über eine
@@ -829,7 +829,7 @@ const BunqFestgeldVertrag = () => {
 
           <div className="space-y-2 text-[12px] text-gray-600">
             {[
-              { title: '§ 1 Vertragsgegenstand', content: 'Der Anleger legt über den Vermittler Kapitalmitte bei der Bank einen Festgeldbetrag für die vertraglich vereinbarte Laufzeit zu einem festen Zinssatz an. Während der gesamten Laufzeit ist der Anlagebetrag fest gebunden und kann grundsätzlich nicht vorzeitig verfügt werden.' },
+              { title: '§ 1 Vertragsgegenstand', content: 'Der Anleger legt über den Vermittler Fröhlich Vermögensberatung bei der Bank einen Festgeldbetrag für die vertraglich vereinbarte Laufzeit zu einem festen Zinssatz an. Während der gesamten Laufzeit ist der Anlagebetrag fest gebunden und kann grundsätzlich nicht vorzeitig verfügt werden.' },
               { title: '§ 2 Zustandekommen des Vertrags', content: 'Der Vertrag kommt zustande, indem der Kunde ein bindendes Angebot durch Unterzeichnung des Antrags abgibt. Der Vertrag wird wirksam, sobald das Angebot geprüft, gegengezeichnet und der Anlagebetrag eingezahlt wurde.' },
               { title: '§ 3 Legitimationsprüfung', content: 'Die Bank überprüft die Identität des Anlegers gemäß GwG. Die Identifikation erfolgt durch einen amtlichen Lichtbildausweis (Personalausweis oder Reisepass); bei juristischen Personen sind Handelsregisterauszüge und Vertretungsnachweise vorzulegen.' },
               { title: '§ 4 Zinsen und Verzinsung', content: 'Der Festgeldbetrag wird für die gesamte vertragliche Laufzeit zu dem im Antrag vereinbarten festen Zinssatz verzinst. Dieser Zinssatz ist während der gesamten Laufzeit garantiert und unabhängig von Marktzinsschwankungen. Die Zinsberechnung erfolgt auf Basis von 365 Tagen pro Jahr (act/365).' },

@@ -126,7 +126,7 @@
     "documents": {
       "eyebrow": "Account",
       "title": "Documents",
-      "description": "Official Kapitalmitte documents — download, print or archive PDFs.",
+      "description": "Official Fröhlich Vermögensberatung documents — download, print or archive PDFs.",
       "hint": "Tax forms and product information in one place. For questions, contact",
       "open": "Open",
       "downloadOk": "Download started.",
@@ -247,7 +247,7 @@
     "compareOffersBtn": "Compare Offers"
   },
   "benefits": {
-    "title": "Why Choose Kapitalmitte?",
+    "title": "Why Choose Fröhlich Vermögensberatung?",
     "subtitle": "We make it simple to find and compare the best savings opportunities across Europe.",
     "multipleBanks": {
       "title": "Multiple Bank Access",
@@ -299,11 +299,11 @@
   },
   "cta": {
     "title": "Ready to Grow Your Savings?",
-    "subtitle": "Join thousands of European savers who trust Kapitalmitte to find the best rates.",
+    "subtitle": "Join thousands of European savers who trust Fröhlich Vermögensberatung to find the best rates.",
     "getStarted": "Get Started Today"
   },
   "trustSection": {
-    "title": "Why Trust Kapitalmitte?",
+    "title": "Why Trust Fröhlich Vermögensberatung?",
     "subtitle": "Your security and peace of mind are our top priorities",
     "depositProtection": {
       "title": "EU Deposit Protection",
@@ -428,9 +428,9 @@
   },
   "auth": {
     "welcomeBack": "Welcome Back",
-    "loginSubtitle": "Login to access your Kapitalmitte account",
+    "loginSubtitle": "Login to access your Fröhlich Vermögensberatung account",
     "createAccount": "Create Account",
-    "registerSubtitle": "Join Kapitalmitte to start comparing savings offers",
+    "registerSubtitle": "Join Fröhlich Vermögensberatung to start comparing savings offers",
     "email": "Email",
     "password": "Password",
     "confirmPassword": "Confirm Password",

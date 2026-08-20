@@ -205,7 +205,7 @@ const OnboardingWizard = () => {
     <div className="min-h-screen bg-bank-bg">
       <PageMeta
         title="Onboarding"
-        description="Geführter Einstieg in Kapitalmitte für neue Nutzer."
+        description="Geführter Einstieg in Fröhlich Vermögensberatung für neue Nutzer."
         path="/onboarding"
         noIndex
       />
@@ -221,7 +221,7 @@ const OnboardingWizard = () => {
             style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
           >
             Willkommen bei
-            <span className="block italic text-bank-gold-soft">Kapitalmitte.</span>
+            <span className="block italic text-bank-gold-soft">Fröhlich Vermögensberatung.</span>
           </h1>
           <div className="mt-6 h-px w-24 bg-bank-gold/70" aria-hidden />
           <p className="mt-6 max-w-xl text-[14.5px] leading-[1.75] text-white/75">
@@ -530,7 +530,7 @@ const OnboardingWizard = () => {
 
             {/* Bottom mono colophon */}
             <p className="mt-6 text-center font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-text-muted lg:text-left">
-              Kapitalmitte · Geführter Einstieg
+              Fröhlich Vermögensberatung · Geführter Einstieg
             </p>
           </main>
         </div>

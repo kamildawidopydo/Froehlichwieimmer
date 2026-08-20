@@ -275,7 +275,7 @@ const KnabFlexgeldVertrag = () => {
           </div>
           <h2 className="text-2xl font-semibold text-bank-primary mb-4">Antrag erfolgreich eingereicht</h2>
           <p className="text-gray-600 leading-relaxed mb-3">
-            Vielen Dank für Ihr Vertrauen in Kapitalmitte. Wir haben Ihren Antrag erhalten und prüfen Ihre
+            Vielen Dank für Ihr Vertrauen in Fröhlich Vermögensberatung. Wir haben Ihren Antrag erhalten und prüfen Ihre
             Angaben sorgfältig.
           </p>
           <p className="text-sm text-gray-500 mb-8">
@@ -557,7 +557,7 @@ const KnabFlexgeldVertrag = () => {
           <div className="text-[13px] text-[#3a4f6a] leading-relaxed space-y-3">
             <p>
               zwischen dem Anleger [nachfolgend „Anleger" genannt] und <strong className="text-[#3E4A59]">Knab B.V.</strong> [nachfolgend „Bank" genannt], 
-              vermittelt durch <strong className="text-[#3E4A59]">Kapitalmitte</strong>.
+              vermittelt durch <strong className="text-[#3E4A59]">Fröhlich Vermögensberatung</strong>.
             </p>
             <p>
               Dieses Dokument bestätigt die Vereinbarung zwischen dem oben genannten Anleger und der Knab B.V. über eine 
@@ -952,7 +952,7 @@ const KnabFlexgeldVertrag = () => {
 
           <div className="space-y-2 text-[12px] text-gray-600">
             {[
-              { title: '§ 1 Vertragsgegenstand', content: 'Der Anleger legt über den Vermittler Kapitalmitte bei der Bank einen Flexgeldbetrag für eine Gesamtlaufzeit von 12 Monaten zu einem festen Zinssatz an. Die ersten 3 Monate sind fest angelegt und können während dieser Zeit weder gekündigt noch verfügt werden. Ab dem Beginn des 4. Monats wird das Guthaben flexibel, sodass der Anleger jederzeit berechtigt ist, das gesamte Guthaben oder Teile davon abzurufen.' },
+              { title: '§ 1 Vertragsgegenstand', content: 'Der Anleger legt über den Vermittler Fröhlich Vermögensberatung bei der Bank einen Flexgeldbetrag für eine Gesamtlaufzeit von 12 Monaten zu einem festen Zinssatz an. Die ersten 3 Monate sind fest angelegt und können während dieser Zeit weder gekündigt noch verfügt werden. Ab dem Beginn des 4. Monats wird das Guthaben flexibel, sodass der Anleger jederzeit berechtigt ist, das gesamte Guthaben oder Teile davon abzurufen.' },
               { title: '§ 2 Zustandekommen des Vertrags', content: 'Der Vertrag kommt zustande, indem der Kunde ein bindendes Angebot durch Unterzeichnung des Antrags abgibt. Der Vertrag wird wirksam, sobald das Angebot geprüft, gegengezeichnet und der Anlagebetrag eingezahlt wurde.' },
               { title: '§ 3 Legitimationsprüfung', content: 'Die Bank überprüft die Identität des Anlegers gemäß GwG. Die Identifikation erfolgt durch einen amtlichen Lichtbildausweis (Personalausweis oder Reisepass); bei juristischen Personen sind Handelsregisterauszüge und Vertretungsnachweise vorzulegen.' },
               { title: '§ 4 Zinsen und Verzinsung', content: 'Der Flexgeldbetrag wird für die ersten 3 Monate zu dem im Antrag vereinbarten festen Zinssatz verzinst. Dieser Zinssatz ist während dieser Zeit garantiert und unabhängig von Marktzinsschwankungen. Ab dem 4. Monat bleibt der Zinssatz weiterhin unverändert fest und garantiert, auch wenn das Guthaben jederzeit verfügbar ist. Die Zinsberechnung erfolgt nach der Methode act/360.' },

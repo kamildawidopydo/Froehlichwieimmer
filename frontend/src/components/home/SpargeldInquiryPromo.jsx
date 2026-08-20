@@ -41,7 +41,7 @@ const BENEFITS_FULL = [
   {
     Icon: Calendar,
     title: 'Einfache Abwicklung',
-    description: 'Kontoeröffnung über Kapitalmitte — Bonus nach Erfüllung der Bedingungen.',
+    description: 'Kontoeröffnung über Fröhlich Vermögensberatung — Bonus nach Erfüllung der Bedingungen.',
     pill: 'Schnell',
   },
 ];

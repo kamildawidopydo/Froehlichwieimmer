@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * Three fresh brand-mark proposals for "Kapital Direkt24" — Kapitalmitte-style
+ * Three fresh brand-mark proposals for "Kapital Direkt24" — Fröhlich Vermögensberatung-style
  * lockup (round emblem + wordmark, small date/tagline above). Each variant uses
  * an original geometric mark and its own colourway. Route: /logo-preview.
  */
@@ -99,7 +99,7 @@ function MarkSkyModern({ size = 140 }) {
 }
 
 // ---------------------------------------------------------------------------
-// Lockup (mark + wordmark side by side, Kapitalmitte-style)
+// Lockup (mark + wordmark side by side, Fröhlich Vermögensberatung-style)
 // ---------------------------------------------------------------------------
 function Lockup({ Mark, brand, tone = 'light' }) {
   const bg = tone === 'dark' ? '#0F1420' : '#FFFFFF';
@@ -160,7 +160,7 @@ const variants = [
     accent: '#7EB6FF',
     Mark: MarkKlassikMarine,
     story:
-      'Kreis in tiefem Marineblau, stilisiertes "K" mit aufsteigender Diagonale. Nächster Verwandter zum Kapitalmitte-Look — seriös, klassisch, Bank.',
+      'Kreis in tiefem Marineblau, stilisiertes "K" mit aufsteigender Diagonale. Nächster Verwandter zum Fröhlich Vermögensberatung-Look — seriös, klassisch, Bank.',
   },
   {
     id: 'navy-gold',
@@ -189,10 +189,10 @@ export default function LogoPreview() {
         <header className="mb-10">
           <p className="mb-2 text-xs uppercase tracking-[0.24em] text-[#5B6172]">Internal · Brand Preview</p>
           <h1 className="text-3xl font-semibold text-[#0F1420] sm:text-4xl">
-            Kapital Direkt24 — 3 Entwürfe im Kapitalmitte-Stil
+            Kapital Direkt24 — 3 Entwürfe im Fröhlich Vermögensberatung-Stil
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-[#5B6172]">
-            Kreis-Emblem + Wordmark, kleine "— 24 —" Überzeile analog zu Kapitalmitte&apos;s
+            Kreis-Emblem + Wordmark, kleine "— 24 —" Überzeile analog zu Fröhlich Vermögensberatung&apos;s
             "— 2006 —" Marker. Jede Variante mit hellem und dunklem Rendering.
           </p>
         </header>

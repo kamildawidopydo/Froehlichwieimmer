@@ -212,8 +212,8 @@ const SpezialAif = () => {
         <link rel="preload" as="image" href={spezialAifFundPhoto.png} />
       </Helmet>
       <PageMeta
-        title="Produktinformationsblatt | Kapitalmitte Spezial-AIF"
-        description="Strukturierte Produktübersicht: Kennzahlen, Strategie, Risiken, Kosten und Zielkorridor des Kapitalmitte Spezial-AIF — ergänzend Fokus, Allokation und Prozess."
+        title="Produktinformationsblatt | Fröhlich Vermögensberatung Spezial-AIF"
+        description="Strukturierte Produktübersicht: Kennzahlen, Strategie, Risiken, Kosten und Zielkorridor des Fröhlich Vermögensberatung Spezial-AIF — ergänzend Fokus, Allokation und Prozess."
         path="/spezial-aif"
       />
 

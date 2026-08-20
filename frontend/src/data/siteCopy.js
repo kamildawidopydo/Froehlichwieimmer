@@ -13,7 +13,7 @@ import {
 
 export const siteCopy = {
   brand: {
-    name: 'Kapitalmitte',
+    name: 'Fröhlich Vermögensberatung',
     legalName: 'Fröhlich Vermögensberatung GmbH',
   },
 
@@ -26,7 +26,7 @@ export const siteCopy = {
     lede2:
       'Über unsere Plattform steuern Sie alle Investments – einfach, sicher und an einem Ort.',
     ctaEyebrow: 'Unternehmen',
-    ctaLabel: 'Über Kapitalmitte',
+    ctaLabel: 'Über Fröhlich Vermögensberatung',
     imageAlt:
       'Deutsche Familie auf dem Sofa — sanftes Lächeln, realistisches Tablet, natürlich',
     imageAltNight:
@@ -44,9 +44,9 @@ export const siteCopy = {
   },
 
   brandSlogan: {
-    title: 'Kapitalmitte | Ihre Investments. Alle Banken. Eine Plattform.',
+    title: 'Fröhlich Vermögensberatung | Ihre Investments. Alle Banken. Eine Plattform.',
     description:
-      'Tagesgeld, Festgeld & mehr bei über 100 europäischen Banken – auf einer Plattform vergleichen und verwalten. Sicher, übersichtlich und unverbindlich mit Kapitalmitte.',
+      'Tagesgeld, Festgeld & mehr bei über 100 europäischen Banken – auf einer Plattform vergleichen und verwalten. Sicher, übersichtlich und unverbindlich mit Fröhlich Vermögensberatung.',
   },
 
   homePlatform: {
@@ -54,7 +54,7 @@ export const siteCopy = {
     titleLine2: 'Alle Investments.',
     ledeStrong: 'Verwalten Sie sämtliche Kapitalanlagen über eine einzige Oberfläche.',
     lede:
-      'Ob Tagesgeld, Festgeld, Flexgeld, Aktien, Anleihen oder Fonds – Kapitalmitte ermöglicht Ihnen eine strukturierte Übersicht über Ihre Investments und Bankverbindungen. Behalten Sie Ihr Vermögen, Ihre Liquidität und Ihre Anlageentscheidungen jederzeit im Blick.',
+      'Ob Tagesgeld, Festgeld, Flexgeld, Aktien, Anleihen oder Fonds – Fröhlich Vermögensberatung ermöglicht Ihnen eine strukturierte Übersicht über Ihre Investments und Bankverbindungen. Behalten Sie Ihr Vermögen, Ihre Liquidität und Ihre Anlageentscheidungen jederzeit im Blick.',
     tagline: 'Alle Banken. Alle Investments. Eine Plattform.',
   },
 
@@ -66,7 +66,7 @@ export const siteCopy = {
     securityBadge: 'Bankentaugliche Sicherheit · TLS 1.3',
     regulatedHeading: 'REGULIERT & GESCHÜTZT',
     copyright: (year) => `© ${year} Fröhlich Vermögensberatung GmbH · Alle Rechte vorbehalten.`,
-    benefitsAriaLabel: 'Ihre Vorteile bei Kapitalmitte',
+    benefitsAriaLabel: 'Ihre Vorteile bei Fröhlich Vermögensberatung',
   },
 
   benefits: [

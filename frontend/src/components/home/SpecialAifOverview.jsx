@@ -83,7 +83,7 @@ export default function SpecialAifOverview() {
                 Unser Spezial-AIF im Überblick
               </h2>
               <p className="mt-6 text-[15px] leading-[1.75] text-bank-text-muted">
-                Der Kapitalmitte Spezial-AIF ist ein geschlossener Fonds für qualifizierte Anleger mit Fokus auf
+                Der Fröhlich Vermögensberatung Spezial-AIF ist ein geschlossener Fonds für qualifizierte Anleger mit Fokus auf
                 langfristige Werthaltigkeit, stabile Cashflows und ausgewogene Renditen.
               </p>
               <ul className="mt-8 space-y-4">

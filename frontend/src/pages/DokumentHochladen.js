@@ -179,7 +179,7 @@ const DokumentHochladen = () => {
   if (done) {
     return (
       <>
-        <PageMeta title="Dokument hochladen" description="Sicherer Dokument-Upload bei Kapitalmitte" />
+        <PageMeta title="Dokument hochladen" description="Sicherer Dokument-Upload bei Fröhlich Vermögensberatung" />
         <div className="flex min-h-[70vh] items-center justify-center bg-bank-bg px-6 py-16">
           <div className="w-full max-w-lg border border-bank-border bg-bank-surface p-10 text-center shadow-editorial-lg">
             <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-emerald-600" strokeWidth={1.5} />
@@ -196,7 +196,7 @@ const DokumentHochladen = () => {
 
   return (
     <>
-      <PageMeta title="Dokument hochladen" description="Sicherer Dokument-Upload bei Kapitalmitte" />
+      <PageMeta title="Dokument hochladen" description="Sicherer Dokument-Upload bei Fröhlich Vermögensberatung" />
       <div
         className={`relative overflow-hidden ${step === 1 ? 'bg-bank-ink' : 'bg-bank-bg'} ${shaking ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}
       >

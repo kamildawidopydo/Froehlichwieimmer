@@ -92,7 +92,7 @@ const PasswordPage = () => {
 
       {/* ── Top mono crown ── */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center px-6 py-5 font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-text-muted sm:px-10">
-        <span>Kapitalmitte · Sicherer Zugang</span>
+        <span>Fröhlich Vermögensberatung · Sicherer Zugang</span>
       </div>
 
       {/* ── Bottom mono colophon ── */}

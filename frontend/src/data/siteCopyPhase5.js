@@ -149,9 +149,9 @@ export const faqCopy = {
     {
       id: 'what-is-br',
       category: 'general',
-      question: 'Was ist Kapitalmitte?',
+      question: 'Was ist Fröhlich Vermögensberatung?',
       answer:
-        'Kapitalmitte ist eine Vergleichs- und Vermittlungsplattform für Spar- und Anlageprodukte bei regulierten Partnerbanken. Kundeneinlagen bei Tages-, Fest- oder Flexgeld werden nicht bei uns gehalten — Konten werden direkt bei der gewählten Bank geführt.',
+        'Fröhlich Vermögensberatung ist eine Vergleichs- und Vermittlungsplattform für Spar- und Anlageprodukte bei regulierten Partnerbanken. Kundeneinlagen bei Tages-, Fest- oder Flexgeld werden nicht bei uns gehalten — Konten werden direkt bei der gewählten Bank geführt.',
     },
     {
       id: 'free',
@@ -198,7 +198,7 @@ export const faqCopy = {
     {
       id: 'data-protection',
       category: 'security',
-      question: 'Wie schützt Kapitalmitte meine Daten?',
+      question: 'Wie schützt Fröhlich Vermögensberatung meine Daten?',
       answer:
         'Wir arbeiten DSGVO-konform, nutzen verschlüsselte Verbindungen (TLS) und geben Daten nur mit Ihrer Einwilligung oder zur Vertragserfüllung an Partner weiter — nicht zum Verkauf an Dritte.',
     },
@@ -247,7 +247,7 @@ export const faqCopy = {
     {
       id: 'how-open',
       category: 'process',
-      question: 'Wie eröffne ich ein Konto über Kapitalmitte?',
+      question: 'Wie eröffne ich ein Konto über Fröhlich Vermögensberatung?',
       answer:
         'Angebot wählen, unverbindliche Anfrage stellen. Die Bank kontaktiert Sie und führt die Eröffnung direkt beim Institut durch — wir vermitteln, verwalten kein Geld.',
     },

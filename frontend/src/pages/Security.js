@@ -15,7 +15,7 @@ const pillars = [
     id: 'bank',
     title: 'Bankentaugliche Sicherheit',
     lead:
-      'Kapitalmitte setzt auf etablierte Sicherheitsmechanismen nach dem Vorbild von Finanzinstituten, damit Ihre Daten während der Nutzung der Plattform bestmöglich geschützt sind.',
+      'Fröhlich Vermögensberatung setzt auf etablierte Sicherheitsmechanismen nach dem Vorbild von Finanzinstituten, damit Ihre Daten während der Nutzung der Plattform bestmöglich geschützt sind.',
     bullets: [
       '256-Bit-SSL für Datenübertragungen',
       'Sichere Passwort-Hashes (branchenüblich)',

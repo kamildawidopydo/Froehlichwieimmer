@@ -4,11 +4,12 @@ import { socialCopy } from '@/data/siteCopyPhase5';
 const LI = '/assets/social/linkedin';
 const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=1';
 
-/** Statische LinkedIn-Unternehmensseiten-Vorschau — Kapitalmitte. */
+/** Statische LinkedIn-Unternehmensseiten-Vorschau — Fröhlich Vermögensberatung. */
 export const linkedinProfile = {
   platform: 'linkedin',
-  companyName: 'Kapitalmitte',
+  companyName: 'Fröhlich Vermögensberatung',
   tagline: socialCopy.tagline,
+  // TODO(Fröhlich Vermögensberatung): LinkedIn-Vanity-URL bestätigen (aktuell noch aus Kapitalmitte-Vorlage).
   vanityUrl: 'kapitalmitte',
   verified: true,
   industry: 'Finanzdienstleistungen',
@@ -31,11 +32,11 @@ export const linkedinProfile = {
     'Zinsvergleich',
   ],
   intro:
-    'Kapitalmitte vermittelt ausgewählte Tagesgeld-, Flexgeld- und Festgeldangebote europäischer Partnerbanken — mit persönlicher Betreuung aus Frankfurt am Main.',
+    'Fröhlich Vermögensberatung vermittelt ausgewählte Tagesgeld-, Flexgeld- und Festgeldangebote europäischer Partnerbanken — mit persönlicher Betreuung aus Frankfurt am Main.',
   about: {
     overview: {
       intro: [
-        'Kapitalmitte verbindet institutionelle Investmentstrukturen mit modernen digitalen Finanz- und Sparlösungen.',
+        'Fröhlich Vermögensberatung verbindet institutionelle Investmentstrukturen mit modernen digitalen Finanz- und Sparlösungen.',
         'Mit Sitz im Zentrum Frankfurts verfolgen wir einen langfristigen, nachhaltigen und verantwortungsvollen Ansatz für anspruchsvolle Anleger, Investoren und Kapitalinteressenten.',
       ],
       focus: {
@@ -68,7 +69,7 @@ export const linkedinProfile = {
       ],
       tags: [
         '📍 Frankfurt am Main',
-        '🌍 Kapitalmitte',
+        '🌍 Fröhlich Vermögensberatung',
         '🔗 Institutionelle Expertise • Transparenz • Digitale Investmentlösungen',
       ],
     },
@@ -85,6 +86,7 @@ export const linkedinProfile = {
     email: siteContact.email,
     phone: siteContact.phoneDisplay,
     phoneTel: siteContact.phoneTel,
+    // TODO(Fröhlich Vermögensberatung): Website-URL bestätigen (aktuell noch alte Kapitalmitte-URL).
     website: 'www.kapitalmitte.com',
     websiteHref: 'https://www.kapitalmitte.com',
     street: siteContact.street,
@@ -144,7 +146,7 @@ export const linkedinProfile = {
     },
   ],
   media: [
-    { id: 'm1', src: `${LI}/media/media-1.png`, alt: 'Kapitalmitte Markenvisual', type: 'image' },
+    { id: 'm1', src: `${LI}/media/media-1.png`, alt: 'Fröhlich Vermögensberatung Markenvisual', type: 'image' },
     { id: 'm2', src: `${LI}/media/media-2.png`, alt: 'EU Partnernetzwerk', type: 'video' },
     { id: 'm3', src: `${LI}/media/media-3.png`, alt: 'Sicherheit und Vertrauen', type: 'image' },
     { id: 'm4', src: `${LI}/media/media-4.png`, alt: 'Zinsen und Konditionen', type: 'image' },
@@ -181,7 +183,7 @@ export const linkedinProfile = {
       text:
         'Über 50 regulierte Partnerbanken in der EU — Tagesgeld, Flexgeld und Festgeld auf einen Blick vergleichen. Kostenlos, unabhängig, ohne versteckte Gebühren.\n\n#Sparvergleich #Tagesgeld #EU',
       image: `${LI}/posts/sparvergleich.png`,
-      imageAlt: 'EU-Sparvergleich Kapitalmitte',
+      imageAlt: 'EU-Sparvergleich Fröhlich Vermögensberatung',
       reactions: 87,
       commentsCount: 11,
       reposts: 5,
@@ -202,7 +204,7 @@ export const linkedinProfile = {
           replies: [
             {
               id: 'lc2r1',
-              author: 'Kapitalmitte',
+              author: 'Fröhlich Vermögensberatung',
               avatar: SITE_LOGO,
               publishedAt: 'vor 9 Wochen',
               text: 'Vielen Dank für Ihr Feedback — so wünschen wir uns den Vergleich für alle Anleger.',
@@ -280,7 +282,7 @@ export const linkedinProfile = {
         'Unser Zinsrechner zeigt, wie Laufzeit und Anlagebetrag Ihre erwartete Verzinsung beeinflussen — direkt auf kapitalmitte.com.',
       linkPreview: {
         url: 'https://www.kapitalmitte.com/calculator',
-        title: 'Zinsrechner — Kapitalmitte',
+        title: 'Zinsrechner — Fröhlich Vermögensberatung',
         description: 'Szenarien für Tagesgeld, Flexgeld und Festgeld berechnen.',
         image: `${LI}/posts/zinsrechner.png`,
       },

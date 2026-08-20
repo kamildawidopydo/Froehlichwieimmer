@@ -65,7 +65,7 @@ const Contact = () => {
     <div className="min-h-screen bg-bank-bg">
       <PageMeta
         title="Kontakt"
-        description="Kontaktieren Sie Kapitalmitte bei Fragen zu Sparangeboten, Konto, Onboarding oder Support rund um die Plattform."
+        description="Kontaktieren Sie Fröhlich Vermögensberatung bei Fragen zu Sparangeboten, Konto, Onboarding oder Support rund um die Plattform."
         path="/contact"
       />
 
@@ -82,7 +82,7 @@ const Contact = () => {
           <div className="pointer-events-none absolute -bottom-32 right-[-15%] h-[420px] w-[420px] rounded-full bg-bank-gold/10 blur-3xl" aria-hidden />
 
           <div className="relative">
-            <Eyebrow tone="gold">Kontakt · Kapitalmitte</Eyebrow>
+            <Eyebrow tone="gold">Kontakt · Fröhlich Vermögensberatung</Eyebrow>
             <h1
               className="mt-6 font-display text-display-md font-light leading-[0.98] tracking-[-0.02em] sm:text-display-lg"
               style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}

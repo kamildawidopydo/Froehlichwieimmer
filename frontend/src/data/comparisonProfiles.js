@@ -12,7 +12,7 @@ import {
   pickKapitalmitteReply,
 } from '@/lib/humanizeReviewText';
 
-export const MEDIATOR_BRAND = 'Kapitalmitte';
+export const MEDIATOR_BRAND = 'Fröhlich Vermögensberatung';
 
 const COUNTRY_DE = {
   Germany: 'Deutschland',
@@ -885,7 +885,7 @@ function buildReviewsForProduct(offer, productType, count, authors, dates, seed,
     const withNeutralReply = !isProblem && (seed + i * 29) % 19 === 7;
     if (withProblemReply || withNeutralReply) {
       entry.reply = {
-        author: 'Kapitalmitte Kundenservice',
+        author: 'Fröhlich Vermögensberatung Kundenservice',
         date: null,
         text: pickKapitalmitteReply(withProblemReply, ctx, seed + i * 53),
         _replyDays: 1 + ((seed + i) % 4),

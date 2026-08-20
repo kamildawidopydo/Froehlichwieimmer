@@ -43,7 +43,7 @@ const DokumentePage = () => {
           icon={FileText}
           description={t('dashboardShell.documents.description', {
             defaultValue:
-              'Offizielle Unterlagen von Kapitalmitte — PDF herunterladen, ausdrucken oder ablegen.',
+              'Offizielle Unterlagen von Fröhlich Vermögensberatung — PDF herunterladen, ausdrucken oder ablegen.',
           })}
         />
 

@@ -25,7 +25,7 @@ const FLOW_STEPS = [
   },
   {
     title: 'Zinsen erhalten',
-    detail: 'Kapital und Zinsen zurück auf Ihr Kapitalmitte-Konto.',
+    detail: 'Kapital und Zinsen zurück auf Ihr Fröhlich Vermögensberatung-Konto.',
   },
 ];
 
@@ -101,7 +101,7 @@ const PlatformFlowDiagram = () => {
                   <div className={heroIconWrap}>
                     <img
                       src={FLOW_ICONS.youAccount}
-                      alt="Konto bei Kapitalmitte"
+                      alt="Konto bei Fröhlich Vermögensberatung"
                       width={76}
                       height={76}
                       decoding="async"
@@ -119,7 +119,7 @@ const PlatformFlowDiagram = () => {
               <h3 className="font-display text-xl font-normal text-bank-text">Sie</h3>
               <span aria-hidden className="mt-3 block h-px w-10 bg-bank-gold/45 lg:mx-0" />
               <p className="mt-4 max-w-[260px] text-[14.5px] leading-relaxed text-bank-text-muted">
-                Einmaliges Konto bei Kapitalmitte
+                Einmaliges Konto bei Fröhlich Vermögensberatung
               </p>
             </div>
 
@@ -145,7 +145,7 @@ const PlatformFlowDiagram = () => {
               </div>
             </div>
 
-            {/* Kapitalmitte */}
+            {/* Fröhlich Vermögensberatung */}
             <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
               <div className="mb-6">
                 <div className={heroIconWrap}>
@@ -159,7 +159,7 @@ const PlatformFlowDiagram = () => {
                   />
                 </div>
               </div>
-              <h3 className="font-display text-xl font-normal text-bank-text">Kapitalmitte</h3>
+              <h3 className="font-display text-xl font-normal text-bank-text">Fröhlich Vermögensberatung</h3>
               <span aria-hidden className="mt-3 block h-px w-10 bg-bank-gold/45" />
               <p className="mt-4 max-w-[280px] text-[14.5px] leading-relaxed text-bank-text-muted">
                 Zentrale Plattform &amp; Vergleich
