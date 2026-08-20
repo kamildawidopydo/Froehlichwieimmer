@@ -338,7 +338,7 @@ export async function generateBunqPdf(formData) {
 
   secBar(s, 'Vereinbarung \u00FCber eine Fest- und Flexgeldanlage');
 
-  infoBox(s, 'Dieses Dokument best\u00E4tigt die Vereinbarung zwischen dem Anleger (nachfolgend Anleger genannt) und der Bunq B.V. (nachfolgend Bank genannt), vermittelt durch Fröhlich Vermögensberatung, froehlich-vermoegensberatung.de.');
+  infoBox(s, 'Dieses Dokument best\u00E4tigt die Vereinbarung zwischen dem Anleger (nachfolgend Anleger genannt) und der Bunq B.V. (nachfolgend Bank genannt), vermittelt durch Fröhlich Vermögensberatung, kapital-direkt24.de.');
 
   subTitle(s, 'Die Anlage umfasst folgende M\u00F6glichkeiten:');
 
@@ -356,7 +356,7 @@ export async function generateBunqPdf(formData) {
   s.pg.drawText('Die ersten 3 Monate fest, die folgenden 9 Monate flexibel.', { x: cx2 + 8, y: s.y - 16, size: 5.5, font: r, color: MID_TEXT });
   s.y -= 28;
 
-  warnBox(s, 'Die Vermittlung dieser Anlage erfolgt durch Fröhlich Vermögensberatung, froehlich-vermoegensberatung.de. Mit der Unterzeichnung dieses Vertrages erkennen alle Parteien die in diesem Dokument festgelegten Konditionen und Bestimmungen als verbindlich an. Der Vertrag tritt mit dem Datum der Unterzeichnung in Kraft.');
+  warnBox(s, 'Die Vermittlung dieser Anlage erfolgt durch Fröhlich Vermögensberatung, kapital-direkt24.de. Mit der Unterzeichnung dieses Vertrages erkennen alle Parteien die in diesem Dokument festgelegten Konditionen und Bestimmungen als verbindlich an. Der Vertrag tritt mit dem Datum der Unterzeichnung in Kraft.');
 
   // ---------------------------------------------------------------------------
   // PAGE 2 - Applicant Data
@@ -533,7 +533,7 @@ export async function generateBunqPdf(formData) {
   }
 
   parTitle(s, 'W', 'Widerruf \u00FCber Fröhlich Vermögensberatung');
-  drawWrapped(s, ML, 'Der Widerruf Ihres Vertrags l\u00E4uft \u00FCber unseren Vermittler Fröhlich Vermögensberatung, damit der gesamte Vorgang f\u00FCr Sie besonders einfach, \u00FCbersichtlich und unkompliziert ist. Zur Wahrung der 14-t\u00E4gigen Frist gen\u00FCgt es, wenn Sie Ihren Widerruf rechtzeitig an kontakt@froehlich-vermoegensberatung.de senden.', r, 5, CW, MID_TEXT, 6.5);
+  drawWrapped(s, ML, 'Der Widerruf Ihres Vertrags l\u00E4uft \u00FCber unseren Vermittler Fröhlich Vermögensberatung, damit der gesamte Vorgang f\u00FCr Sie besonders einfach, \u00FCbersichtlich und unkompliziert ist. Zur Wahrung der 14-t\u00E4gigen Frist gen\u00FCgt es, wenn Sie Ihren Widerruf rechtzeitig an kundenservice@kapital-direkt24.de senden.', r, 5, CW, MID_TEXT, 6.5);
   s.y -= 2;
 
   parTitle(s, 'F', 'Widerrufsfolgen');

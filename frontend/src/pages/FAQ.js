@@ -211,7 +211,7 @@ const FAQ = () => {
         {
           question: 'Wie erreiche ich den Fröhlich Vermögensberatung-Support?',
           answer:
-            'Sie können uns auf verschiedenen Wegen erreichen: Per E-Mail an kontakt@froehlich-vermoegensberatung.de (Antwort innerhalb von 24 Stunden), über unser Kontaktformular auf der Website, oder telefonisch während unserer Geschäftszeiten (Mo-Fr 9-18 Uhr). Wir helfen Ihnen gerne bei allen Fragen zur Plattform.',
+            'Sie können uns auf verschiedenen Wegen erreichen: Per E-Mail an kundenservice@kapital-direkt24.de (Antwort innerhalb von 24 Stunden), über unser Kontaktformular auf der Website, oder telefonisch während unserer Geschäftszeiten (Mo-Fr 9-18 Uhr). Wir helfen Ihnen gerne bei allen Fragen zur Plattform.',
         },
         {
           question: 'Was mache ich bei Problemen mit meinem Bankkonto?',
@@ -491,11 +491,11 @@ const FAQ = () => {
               <Mail className="mx-auto mb-5 h-7 w-7 text-bank-gold" strokeWidth={1.25} />
               <p className="font-mono text-[10.5px] uppercase tracking-[0.28em] text-white/55">E-Mail</p>
               <a
-                href="mailto:kontakt@froehlich-vermoegensberatung.de"
+                href="mailto:kundenservice@kapital-direkt24.de"
                 className="mt-3 block font-display text-[1.05rem] italic text-white underline-offset-4 hover:underline"
                 style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
               >
-                kontakt@froehlich-vermoegensberatung.de
+                kundenservice@kapital-direkt24.de
               </a>
             </div>
             <div className="relative border border-white/12 bg-white/[0.04] p-8 text-center">

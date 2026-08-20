@@ -33,9 +33,9 @@ export const facebookProfile = {
     email: siteContact.email,
     phone: siteContact.phoneDisplay,
     phoneTel: siteContact.phoneTel,
-    // TODO(Fröhlich Vermögensberatung): finale Website-URL bestätigen.
-    website: 'Website folgt',
-    websiteHref: '#',
+    // Marketing-Domain
+    website: 'kapital-direkt24.de',
+    websiteHref: 'https://kapital-direkt24.de/',
     street: siteContact.street,
     city: siteContact.postalCity,
     hours: siteContact.businessHoursLine,

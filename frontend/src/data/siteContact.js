@@ -1,5 +1,10 @@
 /** Single source for Fröhlich Vermögensberatung contact blocks (Kontaktseite, Spezial-AIF CTA, etc.). */
 
+/** Zentrale Domain- und Kontakt-Konfiguration — Änderungen hier greifen projektweit. */
+export const SITE_URL = 'https://kapital-direkt24.de/';
+export const SITE_DOMAIN = 'kapital-direkt24.de';
+export const CUSTOMER_SERVICE_EMAIL = 'kundenservice@kapital-direkt24.de';
+
 const NBSP = '\u00A0';
 
 /** Group national digits (without +49) for readable display, e.g. 74568549983 → 74 568 549 983 */
@@ -23,8 +28,7 @@ export function formatGermanPhoneDisplay(tel, nationalGroups) {
 const PRIMARY_PHONE_TEL = '+4940334657988';
 
 const siteContact = {
-  // TODO(Fröhlich Vermögensberatung): finale Kundenservice-Adresse bestätigen — technischer Platzhalter.
-  email: 'kontakt@froehlich-vermoegensberatung.de',
+  email: CUSTOMER_SERVICE_EMAIL,
   /** Primary Kundenservice line — site-wide, emails, PDFs, support. */
   phoneTel: PRIMARY_PHONE_TEL,
   phoneDisplay: formatGermanPhoneDisplay(PRIMARY_PHONE_TEL, [2, 3, 3, 3]),
@@ -41,6 +45,9 @@ const siteContact = {
   /** Same postal line as legacy Contact copy (includes · DE). */
   postalCityDe: '55543 Bad Kreuznach · DE',
   businessHoursLine: 'Mo–Fr · 09:00 – 18:00',
+  /** Öffentliche Marketing-Domain / Website. */
+  websiteUrl: SITE_URL,
+  websiteDomain: SITE_DOMAIN,
 };
 
 export default siteContact;

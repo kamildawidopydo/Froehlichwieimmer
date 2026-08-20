@@ -35,9 +35,8 @@ const COMPANY = {
   // TODO(Fröhlich Vermögensberatung): USt-IdNr. ergänzen, sobald erteilt.
   vatId: null,
   managingDirector: 'Manfred Franz Fröhlich',
-  // TODO(Fröhlich Vermögensberatung): finale Produktiv-Domain bestätigen.
-  website: 'froehlich-vermoegensberatung.de',
-  websiteHref: '#',
+  website: 'kapital-direkt24.de',
+  websiteHref: 'https://kapital-direkt24.de/',
 };
 
 const impressumBody = (
@@ -559,7 +558,7 @@ export const legalPages = {
     title: 'Impressum',
     icon: Building2,
     description:
-      'Impressum der Fröhlich Vermögensberatung GmbH — Anbieterkennung, Register, Kooperationspartner und Kontakt für froehlich-vermoegensberatung.de.',
+      'Impressum der Fröhlich Vermögensberatung GmbH — Anbieterkennung, Register, Kooperationspartner und Kontakt für kapital-direkt24.de.',
     body: impressumBody,
     toc: [
       { id: 'verantwortlich', label: 'Verantwortlich' },
@@ -574,7 +573,7 @@ export const legalPages = {
   privacy: {
     title: 'Datenschutzerklärung',
     icon: Shield,
-    description: 'Datenschutzerklärung — Verarbeitung personenbezogener Daten bei froehlich-vermoegensberatung.de.',
+    description: 'Datenschutzerklärung — Verarbeitung personenbezogener Daten bei kapital-direkt24.de.',
     body: privacyBody,
     toc: [
       { id: 'verantwortlicher', label: 'Verantwortlicher' },

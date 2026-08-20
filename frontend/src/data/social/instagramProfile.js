@@ -27,9 +27,8 @@ export const instagramProfile = {
     'Keine Anlageberatung über Social Media.',
   ].join('\n'),
   linkInBio: {
-    // TODO(Fröhlich Vermögensberatung): finale Website-URL eintragen.
-    label: 'Website folgt',
-    href: '#',
+    label: 'kapital-direkt24.de',
+    href: 'https://kapital-direkt24.de/',
   },
   assets: {
     avatar: PROFILE_AVATAR,

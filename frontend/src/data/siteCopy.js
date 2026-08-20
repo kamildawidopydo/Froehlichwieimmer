@@ -1,5 +1,5 @@
 /**
- * Central marketing copy — froehlich-vermoegensberatung.de.
+ * Central marketing copy — kapital-direkt24.de.
  * Formal-warm German tone; Nähe + Internationalität.
  */
 
