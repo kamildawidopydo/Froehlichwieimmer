@@ -69,12 +69,12 @@ const BalancesTab = () => {
         </div>
         <ul className="divide-y divide-bank-border/70">
           <li className="flex items-center justify-between px-5 py-3">
-            <span className="text-[13px] text-bank-text">Kapitalmitte — verfügbar</span>
+            <span className="text-[13px] text-bank-text">Fröhlich — verfügbar</span>
             <span className="font-semibold tabular-nums">{formatEUR(cashAvailable)}</span>
           </li>
           {Number(cashUnsettled) > 0 && (
             <li className="flex items-center justify-between px-5 py-3">
-              <span className="text-[13px] text-bank-text">Kapitalmitte — Valuta T+2</span>
+              <span className="text-[13px] text-bank-text">Fröhlich — Valuta T+2</span>
               <span className="font-semibold tabular-nums text-amber-700">{formatEUR(cashUnsettled)}</span>
             </li>
           )}

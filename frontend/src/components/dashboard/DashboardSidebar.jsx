@@ -214,7 +214,7 @@ const DashboardSidebar = ({
       </div>
       <div className="min-w-0">
         <p className="truncate text-[14px] font-semibold leading-tight text-bank-text">
-          {brand?.title || 'Kapitalmitte'}
+          {brand?.title || 'Fröhlich'}
         </p>
         {brand?.subtitle && (
           <p className="truncate text-[11px] text-bank-text-muted">{brand?.subtitle}</p>

@@ -81,7 +81,7 @@ const HeroBanner = ({ title, subtitle, actions }) => {
 
       {/* Top mono ribbon */}
       <div aria-hidden className="relative flex items-center justify-between px-5 pt-4 font-mono text-[10px] uppercase tracking-[0.28em] text-white/55 sm:px-8">
-        <span>Kapitalmitte · Mein Vermögen</span>
+        <span>Fröhlich · Mein Vermögen</span>
         <span className="hidden sm:inline">{new Date().getFullYear()}</span>
       </div>
 

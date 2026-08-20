@@ -82,7 +82,7 @@ const InnerShell = () => {
       banner={fetchErrorBanner}
       showMarketTicker={showMarketTicker}
       brand={{
-        title: 'Kapitalmitte',
+        title: 'Fröhlich',
         subtitle: t('shell.user.brandSubtitle', { defaultValue: 'Mein Vermögen' }),
         shortLabel: 'BR',
       }}

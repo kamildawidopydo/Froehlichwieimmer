@@ -47,7 +47,7 @@ function useFitScale(width, height) {
 }
 
 const ShowcaseBrand = {
-  title: 'Kapitalmitte',
+  title: 'Fröhlich',
   subtitle: 'Mein Vermögen',
   shortLabel: 'BR',
 };

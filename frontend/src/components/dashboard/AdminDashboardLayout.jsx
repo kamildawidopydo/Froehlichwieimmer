@@ -440,7 +440,7 @@ const AdminDashboardLayout = () => {
         profilePath="/admin"
         showMobileNav={false}
         showMarketTicker={false}
-        brand={{ title: 'Kapitalmitte', subtitle: t('shell.admin.brandSubtitle', { defaultValue: 'Admin Konsole' }), shortLabel: 'BR' }}
+        brand={{ title: 'Fröhlich', subtitle: t('shell.admin.brandSubtitle', { defaultValue: 'Admin Konsole' }), shortLabel: 'BR' }}
       />
     </>
   );

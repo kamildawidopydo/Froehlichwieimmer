@@ -23,14 +23,14 @@ import BrandLogo from '@/components/BrandLogo';
  *   colophon?: string      bottom-right of brand panel mono kicker
  */
 const AuthShell = ({
-  eyebrow = 'Kapitalmitte · Konto',
+  eyebrow = 'Fröhlich · Konto',
   title,
   subtitle,
   formTitle,
   formLede,
   backHref = '/',
   backLabel = 'Zurück',
-  colophon = 'Kapitalmitte · Frankfurt',
+  colophon = 'Fröhlich · Frankfurt',
   children,
   className,
   wide = false,
@@ -68,7 +68,7 @@ const AuthShell = ({
             )}
           >
             <ArrowLeft className={cn(showcase ? 'h-3 w-3' : 'h-3.5 w-3.5')} strokeWidth={1.5} />
-            Kapitalmitte
+            Fröhlich
           </Link>
 
           <div className={cn(showcase ? 'mt-2.5' : 'mt-20')}>

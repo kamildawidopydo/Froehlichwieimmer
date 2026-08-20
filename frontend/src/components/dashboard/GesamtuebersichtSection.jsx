@@ -348,9 +348,9 @@ export default function GesamtuebersichtSection({ loading, showcase = false }) {
     if (Number(cashBalance) > 0) {
       rows.push({
         key: 'cash',
-        bankName: 'Kapitalmitte',
+        bankName: 'Fröhlich',
         logo: '/assets/logo/frohlich-logo.png?v=1',
-        title: 'Kapitalmitte',
+        title: 'Fröhlich',
         subtitle: 'Kontoguthaben',
         value: formatEUR(cashBalance),
         pct: null,
