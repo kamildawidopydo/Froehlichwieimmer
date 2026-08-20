@@ -35,7 +35,7 @@ const FeedColumn = ({ onOpenComposer, children }) => (
   </div>
 );
 
-const PostFeed = ({ posts, onProfileClick, onProfileGate, engagement, pinnedId }) => (
+const PostFeed = ({ posts, onProfileClick, onProfileGate, onOpenPostMedia, engagement, pinnedId }) => (
   <div className="space-y-4">
     {posts.map((post) => (
       <LinkedInPostCard
@@ -44,6 +44,7 @@ const PostFeed = ({ posts, onProfileClick, onProfileGate, engagement, pinnedId }
         pinned={post.id === pinnedId}
         onProfileClick={onProfileClick}
         onProfileGate={onProfileGate}
+        onOpenPostMedia={onOpenPostMedia}
         engagement={engagement}
       />
     ))}
@@ -195,7 +196,7 @@ const LinkedInSidebar = ({ onNavigate, onProfileClick, onOpenMedia }) => {
   );
 };
 
-const LinkedInTabStartseite = ({ onNavigate, onProfileClick, onProfileGate, onOpenComposer, onOpenMedia, engagement }) => {
+const LinkedInTabStartseite = ({ onNavigate, onProfileClick, onProfileGate, onOpenComposer, onOpenMedia, onOpenPostMedia, engagement }) => {
   const pinned = linkedinProfile.posts.find((p) => p.id === linkedinProfile.pinnedPostId);
   const rest = linkedinProfile.posts.filter((p) => p.id !== linkedinProfile.pinnedPostId).slice(0, 2);
 
@@ -207,6 +208,7 @@ const LinkedInTabStartseite = ({ onNavigate, onProfileClick, onProfileGate, onOp
           posts={pinned ? [pinned, ...rest] : rest}
           onProfileClick={onProfileClick}
           onProfileGate={onProfileGate}
+          onOpenPostMedia={onOpenPostMedia}
           engagement={engagement}
           pinnedId={linkedinProfile.pinnedPostId}
         />
@@ -215,7 +217,7 @@ const LinkedInTabStartseite = ({ onNavigate, onProfileClick, onProfileGate, onOp
   );
 };
 
-const LinkedInTabBeitraege = ({ onProfileClick, onProfileGate, onOpenComposer, engagement }) => (
+const LinkedInTabBeitraege = ({ onProfileClick, onProfileGate, onOpenComposer, onOpenPostMedia, engagement }) => (
   <div className="mx-auto max-w-[720px] space-y-4 px-3 py-4 sm:px-4">
     <div className={cn(cardClass, 'px-4 py-3')}>
       <p className="text-[14px] text-[#666]">
@@ -227,6 +229,7 @@ const LinkedInTabBeitraege = ({ onProfileClick, onProfileGate, onOpenComposer, e
         posts={linkedinProfile.posts}
         onProfileClick={onProfileClick}
         onProfileGate={onProfileGate}
+        onOpenPostMedia={onOpenPostMedia}
         engagement={engagement}
         pinnedId={linkedinProfile.pinnedPostId}
       />
@@ -462,6 +465,13 @@ const LinkedInPreview = () => {
   const closeMessageModal = useCallback(() => setMessageModalOpen(false), []);
   const openMedia = useCallback((i) => setMediaIndex(i), []);
   const closeMedia = useCallback(() => setMediaIndex(null), []);
+  const openPostMedia = useCallback(
+    (postId) => {
+      const idx = linkedinProfile.media.findIndex((m) => m.postId === postId);
+      setMediaIndex(idx >= 0 ? idx : 0);
+    },
+    [],
+  );
 
   const {
     stats,
@@ -482,6 +492,7 @@ const LinkedInPreview = () => {
             onProfileClick={openProfileGate}
             onProfileGate={openProfileGate}
             onOpenComposer={openProfileGate}
+            onOpenPostMedia={openPostMedia}
             engagement={engagement}
           />
         );
@@ -499,6 +510,7 @@ const LinkedInPreview = () => {
             onProfileGate={openProfileGate}
             onOpenComposer={openProfileGate}
             onOpenMedia={openMedia}
+            onOpenPostMedia={openPostMedia}
             engagement={engagement}
           />
         );

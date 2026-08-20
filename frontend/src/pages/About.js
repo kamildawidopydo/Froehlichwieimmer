@@ -5,17 +5,12 @@ import {
   ArrowRight,
   ArrowUpRight,
   BookOpen,
-  Calendar,
   Compass,
-  Eye,
   Handshake,
   Layers,
   MessageCircle,
-  MessagesSquare,
-  Phone,
   Scale,
   ShieldAlert,
-  UsersRound,
 } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import Pullquote from '@/components/editorial/Pullquote';
@@ -58,15 +53,6 @@ const KOMPETENZ_CARDS = [
     title: 'Vermitteln',
     body: 'Komplexe finanzielle Themen verständlich erklären.',
   },
-];
-
-const LANGFRISTIG_VALUES = [
-  { icon: Handshake, label: 'Vertrauen' },
-  { icon: Phone, label: 'Erreichbarkeit' },
-  { icon: Eye, label: 'Transparenz' },
-  { icon: MessagesSquare, label: 'Nachvollziehbare Kommunikation' },
-  { icon: Calendar, label: 'Regelmäßige Betreuung' },
-  { icon: UsersRound, label: 'Gegenseitiger Respekt' },
 ];
 
 const PHILOSOPHIE_CARDS = [
@@ -484,25 +470,6 @@ const About = () => {
                         eines Kunden passen.
                       </p>
                     </div>
-
-                    <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {LANGFRISTIG_VALUES.map(({ icon: Icon, label }) => (
-                        <li
-                          key={label}
-                          className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5 backdrop-blur-[2px]"
-                        >
-                          <span
-                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-white/[0.04] text-bank-gold"
-                            aria-hidden
-                          >
-                            <Icon className="h-4 w-4" strokeWidth={LUCIDE_STROKE} />
-                          </span>
-                          <span className="min-w-0 text-[14px] leading-snug text-white/95 [overflow-wrap:anywhere]">
-                            {label}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
                   </div>
                 </div>
               </motion.section>

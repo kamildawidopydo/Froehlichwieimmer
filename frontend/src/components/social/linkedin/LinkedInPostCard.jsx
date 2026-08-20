@@ -29,13 +29,16 @@ const ReactionPile = ({ post, getPostReaction }) => {
   );
 };
 
-const PostText = ({ text }) => {
+const PostText = ({ text, headline }) => {
   const [expanded, setExpanded] = useState(false);
   const needsClamp = text.length > TEXT_CLAMP;
   const display = needsClamp && !expanded ? `${text.slice(0, TEXT_CLAMP).trim()}…` : text;
 
   return (
     <div className="px-4 pt-3">
+      {headline && (
+        <h3 className="mb-2 text-[15px] font-semibold leading-snug text-[rgba(0,0,0,0.9)]">{headline}</h3>
+      )}
       <p className="whitespace-pre-line text-[14px] font-normal leading-relaxed text-[rgba(0,0,0,0.9)]">{display}</p>
       {needsClamp && (
         <button
@@ -126,7 +129,7 @@ const CommentRow = ({ comment, postId, onProfileClick, isCommentLiked, onToggleC
   );
 };
 
-const LinkedInPostCard = ({ post, pinned, onProfileClick, onProfileGate, engagement }) => {
+const LinkedInPostCard = ({ post, pinned, onProfileClick, onProfileGate, onOpenPostMedia, engagement }) => {
   const [composerOpen, setComposerOpen] = useState(false);
   const [draft, setDraft] = useState('');
 
@@ -169,10 +172,27 @@ const LinkedInPostCard = ({ post, pinned, onProfileClick, onProfileGate, engagem
           </p>
         </div>
       </header>
-      <PostText text={post.text} />
+      <PostText text={post.text} headline={post.headline} />
       {post.image && (
         <div className="mt-3">
-          <img src={post.image} alt={post.imageAlt ?? ''} className="aspect-[1.91/1] w-full bg-[#F3F2EF] object-cover" loading="lazy" />
+          {onOpenPostMedia ? (
+            <button
+              type="button"
+              onClick={() => onOpenPostMedia(post.id)}
+              className="block w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A66C2]"
+              aria-label={`Bild vergrößern: ${post.imageAlt ?? post.headline ?? 'Beitrag'}`}
+              data-testid={`li-post-image-${post.id}`}
+            >
+              <img
+                src={post.image}
+                alt={post.imageAlt ?? ''}
+                className="aspect-[1.91/1] w-full bg-[#F3F2EF] object-cover transition-opacity hover:opacity-95"
+                loading="lazy"
+              />
+            </button>
+          ) : (
+            <img src={post.image} alt={post.imageAlt ?? ''} className="aspect-[1.91/1] w-full bg-[#F3F2EF] object-cover" loading="lazy" />
+          )}
         </div>
       )}
       {post.linkPreview && (
