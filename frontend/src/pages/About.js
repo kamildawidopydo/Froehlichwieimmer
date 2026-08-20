@@ -4,114 +4,116 @@ import { motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowRight,
   ArrowUpRight,
+  BookOpen,
+  Calendar,
+  Compass,
+  Eye,
+  Handshake,
+  Layers,
+  MessageCircle,
+  MessagesSquare,
+  Phone,
+  Scale,
+  ShieldAlert,
+  UsersRound,
 } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import Pullquote from '@/components/editorial/Pullquote';
 import TocSticky from '@/components/editorial/TocSticky';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
-import siteContact from '@/data/siteContact';
 import siteImages from '@/data/siteImages';
 
 /** About editorial photos — local rebrand assets. */
-const IMG_PARTNER = siteImages.about.partner;
-const IMG_LEISTUNG = siteImages.about.leistung;
-const IMG_STANDORT = siteImages.about.standort;
 const HERO_IMAGE_LOCAL = siteImages.about.hero;
 
 const EASE = [0.22, 1, 0.36, 1];
 const COMPANY = 'Fröhlich Vermögensberatung GmbH';
-const PARTNER = 'Vermogens Advies Administratie B.V.';
-const SLOGAN =
-  'Gemeinsam verbinden wir Nähe und Internationalität – für Ihre finanzielle Freiheit und eine sichere Zukunft.';
 
 const TOC_SECTIONS = [
-  { id: 'einfuehrung', label: 'Einführung' },
   { id: 'wer-wir-sind', label: 'Wer wir sind' },
-  { id: 'was-wir-tun', label: 'Was wir tun' },
-  { id: 'partnerschaft', label: 'Unsere Partnerschaft' },
-  { id: 'warum', label: 'Warum mit uns?' },
-  { id: 'vorteil', label: 'Ihr Vorteil' },
-  { id: 'faq', label: 'Häufige Fragen' },
+  { id: 'anlageberatung', label: 'Mehr als Anlageberatung' },
+  { id: 'konservativ', label: 'Konservativ denken' },
+  { id: 'kompetenz', label: 'Kompetenz' },
+  { id: 'langfristig', label: 'Langfristige Zusammenarbeit' },
+  { id: 'empfehlung', label: 'Weiterempfehlung' },
+  { id: 'philosophie', label: 'Unsere Philosophie' },
+  { id: 'kontakt', label: 'Kontakt' },
 ];
 
-const OFFERINGS = [
+const KOMPETENZ_CARDS = [
   {
-    title: 'Sparprodukte',
-    body: 'Tagesgeld, Flexgeld und Festgeldangebote mit attraktiven Konditionen',
+    icon: BookOpen,
+    title: 'Verstehen',
+    body: 'Produkte und Märkte nachvollziehen.',
   },
   {
-    title: 'Wertpapierlösungen',
-    body: 'Anleihen, Aktien und weitere Anlageinstrumente für jedes Anlageziel',
+    icon: Scale,
+    title: 'Einordnen',
+    body: 'Chancen und Risiken angemessen bewerten.',
   },
   {
-    title: 'Vermögensverwaltung und Anlageberatung',
-    body: 'Strategien, die zu Ihrer persönlichen Situation passen',
-  },
-  {
-    title: 'Kreditvermittlung',
-    body: 'Maßgeschneiderte Finanzierungslösungen für private und geschäftliche Vorhaben',
-  },
-  {
-    title: 'Individuelle Lösungen',
-    body: 'Wir vergleichen für Sie Produkte und Konditionen, um die beste Lösung zu finden',
+    icon: MessageCircle,
+    title: 'Vermitteln',
+    body: 'Komplexe finanzielle Themen verständlich erklären.',
   },
 ];
 
-const FAQ_ITEMS = [
+const LANGFRISTIG_VALUES = [
+  { icon: Handshake, label: 'Vertrauen' },
+  { icon: Phone, label: 'Erreichbarkeit' },
+  { icon: Eye, label: 'Transparenz' },
+  { icon: MessagesSquare, label: 'Nachvollziehbare Kommunikation' },
+  { icon: Calendar, label: 'Regelmäßige Betreuung' },
+  { icon: UsersRound, label: 'Gegenseitiger Respekt' },
+];
+
+const PHILOSOPHIE_CARDS = [
   {
-    id: 'faq-trust',
-    question: 'Was tut Fröhlich Vermögensberatung für das Vertrauen seiner Kunden?',
-    answer:
-      'Wir verbinden lokale Betreuung in Deutschland mit einem regulierten europäischen Kooperationspartner, informieren transparent über Produkte und Abläufe und stellen Ihre Interessen in den Mittelpunkt.',
-    links: [
-      { label: 'Sicherheit', href: '/security' },
-      { label: 'Impressum', href: '/legal/impressum' },
-    ],
+    icon: Handshake,
+    title: 'Vertrauen',
+    body: 'Finanzielle Entscheidungen setzen Vertrauen und nachvollziehbare Kommunikation voraus.',
   },
   {
-    id: 'faq-how',
-    question: 'Wie funktioniert Fröhlich Vermögensberatung?',
-    answer:
-      'Sie vergleichen Angebote auf unserer Plattform, wählen ein passendes Produkt und werden von uns persönlich begleitet. Die regulierten Wertpapierdienstleistungen erbringt unser niederländischer Kooperationspartner im Rahmen der gesetzlichen Vorgaben.',
-    links: [{ label: 'So funktioniert es', href: '/how-it-works' }],
+    icon: Compass,
+    title: 'Langfristigkeit',
+    body: 'Wir möchten unsere Kunden über unterschiedliche Lebens- und Marktphasen hinweg begleiten.',
   },
   {
-    id: 'faq-bank',
-    question: 'Ist Fröhlich Vermögensberatung eine Bank?',
-    answer: `Nein. Die ${COMPANY} ist Ihr Ansprechpartner in Deutschland für Betreuung und Koordination. Kundengelder und regulierte Wertpapierdienstleistungen liegen bei den jeweiligen Partnerinstituten bzw. unserem Kooperationspartner — nicht bei uns als Einlagenkonto.`,
+    icon: ShieldAlert,
+    title: 'Risikobewusstsein',
+    body: 'Chancen sollen immer gemeinsam mit den damit verbundenen Risiken betrachtet werden.',
   },
   {
-    id: 'faq-service',
-    question: 'Wie erreiche ich den Kundenservice?',
-    answer: `Per Telefon (${siteContact.phoneDisplay}), E-Mail (${siteContact.email}) oder über unsere Kontaktseite — ${siteContact.businessHoursLine}.`,
-    links: [{ label: 'Kontakt', href: '/contact' }],
+    icon: Layers,
+    title: 'Diversifikation',
+    body: 'Eine durchdachte Vermögensplanung sollte nicht von einer einzigen Anlage oder Anlageklasse abhängig sein.',
   },
 ];
 
-const AboutImage = ({ src, alt, className = '' }) => (
-  <figure className={cn('group w-full min-w-0', className)}>
-    <div className="relative overflow-hidden border border-bank-border bg-muted/30 shadow-editorial-md">
-      <span
-        className="absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-bank-gold/60 to-transparent"
-        aria-hidden
-      />
-      <img src={src} alt={alt} className="aspect-[16/10] w-full object-cover object-center" loading="lazy" />
-    </div>
-  </figure>
-);
+const ANLAGEKLASSEN = [
+  'Aktien',
+  'Anleihen',
+  'weitere Wertpapierlösungen',
+  'gegebenenfalls Beteiligungsmöglichkeiten im Zusammenhang mit Börsengängen (IPOs)',
+];
 
 const articleSplit =
   'flex w-full min-w-0 max-w-full flex-col gap-y-10 lg:grid lg:grid-cols-12 lg:gap-x-8 lg:gap-y-0';
-const articleMainCol = 'w-full min-w-0 max-w-full lg:col-span-7';
-const articleSideCol = 'w-full min-w-0 max-w-full lg:col-span-5';
+const articleMainCol = 'w-full min-w-0 max-w-full lg:col-span-8';
+const articleSideCol = 'w-full min-w-0 max-w-full lg:col-span-4';
 
-const AboutSectionHead = ({ id, title }) => (
+const AboutSectionHead = ({ id, eyebrow, title }) => (
   <header id={id} className="w-full min-w-0 max-w-full scroll-mt-32">
+    {eyebrow ? (
+      <p className="font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-gold">{eyebrow}</p>
+    ) : null}
     <h2
-      className="w-full max-w-full break-words font-display text-[clamp(1.35rem,4vw+0.65rem,1.85rem)] font-light leading-[1.12] tracking-[-0.02em] text-bank-text [overflow-wrap:anywhere]"
+      className={cn(
+        'break-words font-display text-[clamp(1.45rem,4vw+0.65rem,2.05rem)] font-light leading-[1.12] tracking-[-0.02em] text-bank-text [overflow-wrap:anywhere]',
+        eyebrow ? 'mt-4' : ''
+      )}
       style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
     >
       {title}
@@ -126,7 +128,6 @@ const AboutMobileToc = ({ items }) => {
 
   useEffect(() => {
     if (!items?.length || typeof window === 'undefined') return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
@@ -136,7 +137,6 @@ const AboutMobileToc = ({ items }) => {
       },
       { rootMargin: '-20% 0px -60% 0px', threshold: 0 }
     );
-
     items.forEach((it) => {
       const el = document.getElementById(it.id);
       if (el) observer.observe(el);
@@ -199,19 +199,19 @@ const About = () => {
 
   const proseClass =
     'prose-copy w-full min-w-0 max-w-full space-y-5 font-sans text-[15px] leading-[1.8] text-bank-text-muted sm:max-w-prose sm:text-[15.5px] sm:leading-[1.85]';
-  const inlineLink =
-    'font-medium text-bank-primary underline-offset-4 transition-colors hover:text-bank-ink hover:underline';
 
   return (
     <div className="min-h-screen w-full min-w-0 bg-bank-bg text-bank-text">
       <PageMeta
         title="Über uns"
-        description={`${COMPANY} und ${PARTNER} — lokale Betreuung in Deutschland, europäische Expertise. froehlich-vermoegensberatung.de.`}
+        description={`${COMPANY} — seit 2020 begleiten wir unsere Kunden mit einer langfristig ausgerichteten, risikobewussten Vermögensberatung.`}
         path="/about"
       />
 
+      {/* ─────────────────────────── HERO ─────────────────────────── */}
       <section className="relative isolate overflow-hidden bg-bank-ink">
         <div className="absolute inset-0">
+          {/* TODO(Fröhlich Vermögensberatung): Hero-Motiv bei Bedarf durch seriöses Vermögensplanungs-Bild ersetzen (kein hektischer Trading-Chart). */}
           <img
             src={HERO_IMAGE_LOCAL}
             alt=""
@@ -232,22 +232,21 @@ const About = () => {
           <motion.div {...fade(0)} className="w-full min-w-0 max-w-3xl">
             <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-bank-gold">Über uns</p>
             <h1
-              className="mt-6 break-words font-display text-display-md font-light leading-[0.98] tracking-[-0.02em] text-white sm:text-display-lg lg:text-display-xl"
+              className="mt-6 break-words font-display text-display-md font-light leading-[1.02] tracking-[-0.02em] text-white sm:text-display-lg lg:text-display-xl"
               style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
             >
-              Gemeinsam für Ihre
+              Vermögen braucht Vertrauen.
               <br />
-              <span className="text-bank-gold">finanziellen Ziele.</span>
+              <span className="text-bank-gold">Und eine langfristige Perspektive.</span>
             </h1>
-            <p className="prose-copy mt-8 w-full min-w-0 max-w-2xl font-sans text-base leading-[1.75] text-white sm:text-[1.05rem]">
-              Die {COMPANY} mit Sitz in Bad Kreuznach und die niederländische {PARTNER} in Amsterdam haben sich
-              zusammengeschlossen, um Anlegern in Deutschland und im gesamten europäischen Wirtschaftsraum Zugang zu
-              maßgeschneiderten Finanzlösungen zu bieten.
+            <p className="prose-copy mt-8 w-full min-w-0 max-w-2xl font-sans text-base leading-[1.75] text-white/90 sm:text-[1.05rem]">
+              Seit 2020 begleiten wir unsere Kunden bei finanziellen Entscheidungen mit dem Anspruch, langfristige
+              Beziehungen statt kurzfristiger Abschlüsse aufzubauen.
             </p>
             <div className="mt-10">
-              <Link
-                to="/contact"
-                data-testid="about-hero-contact-cta"
+              <a
+                href="#philosophie"
+                data-testid="about-hero-philosophy-cta"
                 className="group relative inline-flex max-w-full cursor-pointer items-stretch overflow-hidden border border-white/18 bg-white/[0.04] shadow-[0_1px_0_rgba(255,255,255,0.06)_inset] backdrop-blur-[6px] transition-[border-color,box-shadow,background-color] duration-300 ease-out hover:border-bank-gold/45 hover:bg-white/[0.07] hover:shadow-[0_0_0_1px_rgba(212,175,55,0.12),0_20px_48px_-24px_rgba(0,0,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-gold/55 focus-visible:ring-offset-2 focus-visible:ring-offset-bank-primary sm:max-w-none"
               >
                 <span
@@ -262,7 +261,7 @@ const About = () => {
                     className="mt-1.5 font-display text-[1.15rem] font-light leading-tight tracking-[-0.02em] text-white sm:text-[1.35rem]"
                     style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}
                   >
-                    Persönlich kennenlernen
+                    Mehr über unsere Philosophie
                   </span>
                 </span>
                 <span
@@ -274,12 +273,13 @@ const About = () => {
                     strokeWidth={LUCIDE_STROKE}
                   />
                 </span>
-              </Link>
+              </a>
             </div>
           </motion.div>
         </div>
       </section>
 
+      {/* ─────────────────────────── ARTICLE ─────────────────────────── */}
       <article className="w-full min-w-0 border-t border-bank-border">
         <AboutMobileToc items={TOC_SECTIONS} />
 
@@ -290,214 +290,337 @@ const About = () => {
             </aside>
 
             <div className="w-full min-w-0 max-w-full lg:col-span-9">
+              {/* Wer wir sind */}
               <motion.section {...fade(0)} className="pb-16 sm:pb-20">
                 <div className={articleSplit}>
                   <div className={articleMainCol}>
-                    <AboutSectionHead id="einfuehrung" title="Gemeinsam für Ihre finanziellen Ziele" />
+                    <AboutSectionHead eyebrow="Seit 2020" id="wer-wir-sind" title="Wer wir sind" />
                     <div className={cn('mt-8', proseClass)}>
                       <p className="drop-cap text-bank-text">
-                        Unser Anspruch ist es, professionelle Expertise, persönliche Betreuung und ein starkes Netzwerk
-                        zu verbinden – für nachhaltigen Erfolg und finanzielle Sicherheit.
+                        Die {COMPANY} wurde im Jahr 2020 gegründet. Unser Anspruch ist es, unsere Kunden nicht nur bei
+                        einzelnen finanziellen Entscheidungen zu begleiten, sondern langfristige und verlässliche
+                        Beziehungen aufzubauen.
                       </p>
                       <p>
-                        Über froehlich-vermoegensberatung.de bündeln wir lokale Nähe in Deutschland mit der internationalen Expertise
-                        unseres Partners in Amsterdam — transparent, strukturiert und auf Ihre Ziele ausgerichtet.
+                        Unser Tätigkeitsfeld umfasst die Anlagevermittlung und Anlageberatung im Rahmen unserer
+                        entsprechenden Registrierung als vertraglich gebundener Vermittler.
+                      </p>
+                      <p>
+                        Eine nachvollziehbare Beratung, eine langfristige Perspektive und ein verantwortungsvoller
+                        Umgang mit den finanziellen Zielen unserer Kunden stehen im Mittelpunkt unserer Arbeit.
                       </p>
                     </div>
                   </div>
                   <div className={cn(articleSideCol, 'lg:pt-14')}>
                     <aside className="rounded-2xl border border-bank-border bg-bank-surface-elev/80 p-6 shadow-editorial-sm dark:bg-bank-surface/80 sm:p-7">
-                      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-gold">Unser Anspruch</p>
-                      <p className="mt-4 text-[14.5px] leading-relaxed text-bank-text-muted">
-                        Wir glauben an eine Finanzberatung und Vermittlung, die auf Vertrauen, Transparenz und
-                        langfristigen Partnerschaften basiert. Jeder Kunde hat individuelle Ziele – und wir arbeiten
-                        täglich daran, die besten Lösungen zu finden, um diese Ziele zu erreichen. Dabei stehen Ihre
-                        Interessen für uns immer im Mittelpunkt.
-                      </p>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-gold">Unternehmen</p>
+                      <dl className="mt-4 space-y-3 text-[14px] leading-relaxed text-bank-text-muted">
+                        <div>
+                          <dt className="text-[11px] uppercase tracking-[0.18em] text-bank-text-muted/70">Firma</dt>
+                          <dd className="mt-1 text-bank-text">{COMPANY}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] uppercase tracking-[0.18em] text-bank-text-muted/70">
+                            Eintragungsdatum
+                          </dt>
+                          <dd className="mt-1 text-bank-text">11. September 2020</dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] uppercase tracking-[0.18em] text-bank-text-muted/70">
+                            Unternehmenszweck
+                          </dt>
+                          <dd className="mt-1">
+                            Anlagevermittlung und Anlageberatung als vertraglich gebundener Vermittler nach den Vorgaben
+                            der BaFin — ausschließlich für Rechnung und unter der Haftung eines CRR-Kreditinstituts oder
+                            eines Wertpapierhandelsunternehmens mit Sitz im Inland bzw. eines im Sinne dieser Regelung
+                            tätigen Unternehmens aus dem Europäischen Wirtschaftsraum.
+                          </dd>
+                        </div>
+                      </dl>
                     </aside>
                   </div>
                 </div>
               </motion.section>
 
+              {/* Mehr als klassische Anlageberatung */}
               <motion.section {...fade(1)} className="border-t border-bank-border py-16 sm:py-20">
-                <div className={articleSplit}>
-                  <div className={articleMainCol}>
-                    <AboutSectionHead id="wer-wir-sind" title="Wer wir sind" />
-                    <div className={cn('mt-8', proseClass)}>
-                      <p className="text-bank-text">
-                        Die {COMPANY} ist Ihr Ansprechpartner in Deutschland für die Betreuung und Koordination unserer
-                        Kunden. Wir verfügen über langjährige Erfahrung im Finanzsektor und kennen die Bedürfnisse
-                        privater und institutioneller Anleger genau.
-                      </p>
-                      <p>
-                        Gemeinsam mit unserem starken Partner {PARTNER}, einem niederländischen Wertpapierunternehmen seit
-                        2006, bieten wir Ihnen Zugang zu einem breiten Spektrum an
-                        Finanzdienstleistungen und Anlageprodukten. Durch die Kombination lokaler Nähe in Deutschland und
-                        internationaler Expertise schaffen wir Lösungen, die flexibel, effizient und auf Ihre Situation
-                        abgestimmt sind.
-                      </p>
-                    </div>
-                  </div>
-                  <div className={cn(articleSideCol, 'lg:pt-14')}>
-                    <AboutImage src={IMG_PARTNER} alt="Partnerschaftliches Gespräch auf Augenhöhe — geteiltes Notizbuch" />
-                  </div>
+                <AboutSectionHead id="anlageberatung" title="Mehr als klassische Anlageberatung" />
+                <div className={cn('mt-8', proseClass)}>
+                  <p>
+                    Im Laufe unserer Tätigkeit haben wir festgestellt, dass Vermögensberatung nicht ausschließlich aus
+                    Wertpapieren und Kapitalmarktanlagen besteht.
+                  </p>
+                  <p>
+                    Gerade bei Kunden mit größeren liquiden Vermögen spielen auch Sparkonten, verzinsliche Einlagen und
+                    die strukturierte Verwaltung vorhandener Liquidität eine wichtige Rolle. Dieser Bereich hat sich im
+                    Laufe der Zeit aus den Anforderungen und Gesprächen mit unseren Kunden heraus zu einem weiteren
+                    wichtigen Bestandteil unserer Betreuung entwickelt.
+                  </p>
+                  <p>
+                    Insbesondere bei größeren Anlagevolumina kann es sinnvoll sein, liquide Mittel strukturiert zu
+                    betrachten und Spar- und Einlagenlösungen in eine übergeordnete Vermögensplanung einzubeziehen.
+                    Sparkonten betrachten wir deshalb nicht isoliert, sondern als möglichen Bestandteil einer
+                    umfassenderen Vermögensstrategie.
+                  </p>
                 </div>
               </motion.section>
 
+              {/* Konservativ denken. Chancen dennoch nutzen. */}
               <motion.section {...fade(2)} className="border-t border-bank-border py-16 sm:py-20">
-                <div className={articleSplit}>
-                  <div className={articleMainCol}>
-                    <AboutSectionHead id="was-wir-tun" title="Was wir tun" />
-                    <div className={cn('mt-8', proseClass)}>
+                <AboutSectionHead id="konservativ" title="Konservativ denken. Chancen dennoch nutzen." />
+                <div className={cn('mt-8', proseClass)}>
+                  <p>
+                    Auch bei Kapitalmarktanlagen verfolgen wir grundsätzlich einen risikobewussten und diversifizierten
+                    Ansatz. Abhängig von der individuellen Situation und Eignung des Kunden können unterschiedliche
+                    Anlageklassen betrachtet werden, beispielsweise:
+                  </p>
+                </div>
+                <ul className="mt-8 grid gap-3 sm:grid-cols-2">
+                  {ANLAGEKLASSEN.map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-3 rounded-xl border border-bank-border bg-bank-surface/40 px-5 py-4 text-[14.5px] leading-relaxed text-bank-text"
+                    >
+                      <span
+                        className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-bank-gold"
+                        aria-hidden
+                      />
+                      <span className="min-w-0">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className={cn('mt-8', proseClass)}>
+                  <p>
+                    Dabei soll nicht kurzfristige Spekulation im Vordergrund stehen. Unser Ansatz besteht vielmehr
+                    darin, unterschiedliche Anlageklassen und Risiken bewusst zu betrachten und – soweit dies zur
+                    jeweiligen Kundensituation passt – sinnvoll miteinander zu kombinieren.
+                  </p>
+                  <p>
+                    Diversifikation, Qualität, Risikobewusstsein und eine langfristige Betrachtungsweise gehören zu den
+                    Grundgedanken unserer Arbeit.
+                  </p>
+                </div>
+                <Pullquote cite="Fröhlich Vermögensberatung" className="mt-12 w-full min-w-0 max-w-full">
+                  Konservativ bedeutet für uns nicht, Chancen grundsätzlich auszuschließen. Es bedeutet, Chancen und
+                  Risiken bewusst gegeneinander abzuwägen.
+                </Pullquote>
+              </motion.section>
+
+              {/* Beratung beginnt mit Kompetenz */}
+              <motion.section {...fade(3)} className="border-t border-bank-border py-16 sm:py-20">
+                <AboutSectionHead id="kompetenz" title="Beratung beginnt mit Kompetenz" />
+                <div className={cn('mt-8', proseClass)}>
+                  <p>
+                    Eine gute Beratung setzt qualifizierte Mitarbeiter voraus. Deshalb legen wir Wert auf die
+                    kontinuierliche fachliche Aus- und Weiterbildung unseres Teams.
+                  </p>
+                  <p>
+                    Unsere Mitarbeiter sollen Finanzprodukte nicht lediglich kennen, sondern deren Funktionsweise sowie
+                    wesentliche Chancen und Risiken verstehen und verständlich vermitteln können. Das gilt sowohl für
+                    klassische Spar- und Einlagenlösungen als auch für Wertpapiere und unterschiedliche Formen der
+                    langfristigen Vermögensanlage.
+                  </p>
+                </div>
+                <div className="mt-10 grid gap-4 sm:grid-cols-3">
+                  {KOMPETENZ_CARDS.map(({ icon: Icon, title, body }) => (
+                    <div
+                      key={title}
+                      data-testid={`kompetenz-card-${title.toLowerCase()}`}
+                      className="group relative overflow-hidden rounded-2xl border border-bank-border bg-bank-surface/50 p-6 shadow-editorial-sm transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-bank-gold/40 hover:shadow-editorial-md sm:p-7"
+                    >
+                      <span
+                        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bank-gold/50 to-transparent"
+                        aria-hidden
+                      />
+                      <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-bank-border bg-white/60 text-bank-primary dark:bg-bank-surface">
+                        <Icon className="h-5 w-5" strokeWidth={LUCIDE_STROKE} aria-hidden />
+                      </span>
+                      <h3
+                        className="mt-5 font-display text-[1.15rem] font-light leading-tight tracking-[-0.01em] text-bank-text"
+                        style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}
+                      >
+                        {title}
+                      </h3>
+                      <p className="mt-2 text-[14.5px] leading-relaxed text-bank-text-muted">{body}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.section>
+
+              {/* Langfristige Zusammenarbeit — highlighted */}
+              <motion.section {...fade(4)} className="border-t border-bank-border py-16 sm:py-20">
+                <div className="relative overflow-hidden rounded-3xl border border-bank-ink/15 bg-bank-ink px-6 py-12 text-white shadow-editorial-md sm:px-10 sm:py-14 lg:px-14 lg:py-16">
+                  <span
+                    className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bank-gold/60 to-transparent"
+                    aria-hidden
+                  />
+                  <span
+                    className="topo-pattern pointer-events-none absolute inset-0 opacity-[0.05]"
+                    aria-hidden
+                  />
+                  <div className="relative">
+                    <p
+                      id="langfristig"
+                      className="scroll-mt-32 font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-gold"
+                    >
+                      Unser Anspruch
+                    </p>
+                    <h2
+                      className="mt-4 max-w-3xl break-words font-display text-[clamp(1.55rem,3.4vw+0.6rem,2.35rem)] font-light leading-[1.1] tracking-[-0.02em] text-white"
+                      style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
+                    >
+                      Langfristige Zusammenarbeit statt kurzfristiger Abschluss
+                    </h2>
+                    <div className="mt-6 h-px w-14 bg-bank-gold/60" aria-hidden />
+                    <div className="mt-8 max-w-2xl space-y-5 text-[15px] leading-[1.8] text-white/85 sm:text-[15.5px] sm:leading-[1.85]">
                       <p>
-                        Wir vermitteln Finanzprodukte und Finanzdienstleistungen von ausgewählten Banken, Emittenten und
-                        Finanzinstituten in Deutschland und Europa. Unser Angebot umfasst:
+                        Unser Ziel ist nicht der einzelne Abschluss. Wir möchten unsere Kunden über viele Jahre begleiten
+                        und Ansprechpartner sein, wenn sich Lebenssituationen, finanzielle Ziele oder wirtschaftliche
+                        Rahmenbedingungen verändern.
+                      </p>
+                      <p>
+                        Dazu gehört für uns auch, bestehende Entscheidungen regelmäßig neu zu betrachten. Was heute
+                        sinnvoll erscheint, muss nicht automatisch in einigen Jahren noch zur persönlichen Situation
+                        eines Kunden passen.
                       </p>
                     </div>
-                    <ul className="mt-8 divide-y divide-bank-border border-y border-bank-border">
-                      {OFFERINGS.map((item) => (
-                        <li key={item.title} className="py-5">
-                          <h3 className="font-display text-[1.05rem] font-light text-bank-ink">{item.title}</h3>
-                          <p className="mt-1.5 text-[14.5px] leading-relaxed text-bank-text-muted">{item.body}</p>
+
+                    <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {LANGFRISTIG_VALUES.map(({ icon: Icon, label }) => (
+                        <li
+                          key={label}
+                          className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5 backdrop-blur-[2px]"
+                        >
+                          <span
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-white/[0.04] text-bank-gold"
+                            aria-hidden
+                          >
+                            <Icon className="h-4 w-4" strokeWidth={LUCIDE_STROKE} />
+                          </span>
+                          <span className="min-w-0 text-[14px] leading-snug text-white/95 [overflow-wrap:anywhere]">
+                            {label}
+                          </span>
                         </li>
                       ))}
                     </ul>
-                    <p className={cn('mt-8', proseClass)}>
-                      Unser Ziel ist es, Ihnen den Zugang zu erstklassigen Finanzprodukten zu erleichtern und Sie bei
-                      allen finanziellen Entscheidungen kompetent zu begleiten.
-                    </p>
-                  </div>
-                  <div className={cn(articleSideCol, 'lg:pt-14')}>
-                    <AboutImage src={IMG_LEISTUNG} alt="Zwei Fachleute prüfen Produktmappen — ruhige Zusammenarbeit" />
                   </div>
                 </div>
               </motion.section>
 
-              <motion.section {...fade(3)} className="border-t border-bank-border py-16 sm:py-20">
-                <AboutSectionHead id="partnerschaft" title="Unsere Partnerschaft" />
-                <div className={cn('mt-8', proseClass)}>
-                  <p className="text-bank-text">
-                    Die {PARTNER} ist ein nach niederländischem Recht zugelassenes Wertpapierunternehmen und erbringt im
-                    Rahmen der Dienstleistungsfreiheit innerhalb der Europäischen Union regulierte
-                    Wertpapierdienstleistungen, darunter Anlageberatung, Vermögensverwaltung sowie die Annahme und
-                    Weiterleitung von Kundenaufträgen.
-                  </p>
-                  <p>
-                    Durch diese Partnerschaft können wir unseren Kunden in Deutschland Zugang zu einem internationalen
-                    Netzwerk von Banken, Emittenten und Finanzdienstleistern bieten – verbunden mit einem hohen Maß an
-                    Sicherheit und Regulierung.
-                  </p>
-                  <p className="pt-2">
-                    <Link to="/legal/impressum" className={inlineLink}>
-                      Impressum & Partnerangaben
-                    </Link>
-                  </p>
-                </div>
-              </motion.section>
-
-              <motion.section {...fade(4)} className="border-t border-bank-border py-16 sm:py-20">
-                <AboutSectionHead id="warum" title="Warum mit uns?" />
-                <div className={cn('mt-8', proseClass)}>
-                  <p>
-                    Weil wir mehr bieten als nur Produkte. Wir nehmen uns Zeit, hören zu und entwickeln Lösungen, die
-                    wirklich zu Ihnen passen. Unser Anspruch ist es, Ihnen nicht nur heute, sondern langfristig zur Seite
-                    zu stehen – als verlässlicher Partner in allen finanziellen Fragen.
-                  </p>
-                </div>
-              </motion.section>
-
+              {/* Ihre Empfehlung */}
               <motion.section {...fade(5)} className="border-t border-bank-border py-16 sm:py-20">
-                <AboutSectionHead id="vorteil" title="Ihr Vorteil" />
-                <div className="mt-8 rounded-2xl border border-bank-border bg-bank-ink px-6 py-8 text-white shadow-editorial-md sm:px-8 sm:py-10">
-                  <p className="text-[15px] leading-relaxed text-white/80 sm:text-[16px] sm:leading-[1.75]">
-                    Sie profitieren von lokaler Betreuung in Deutschland, kombiniert mit der Stärke und Erfahrung eines
-                    internationalen Partners. So erhalten Sie Zugang zu attraktiven Konditionen, einer breiten
-                    Produktauswahl und persönlicher Beratung – alles aus einer Hand.
-                  </p>
-                </div>
-                <Pullquote cite="Fröhlich Vermögensberatung" className="mt-10 w-full min-w-0 max-w-full">
-                  {SLOGAN}
-                </Pullquote>
-                <div className={cn('mt-10', proseClass)}>
+                <AboutSectionHead
+                  id="empfehlung"
+                  title="Die Weiterempfehlung unserer Kunden ist für uns besonders wertvoll."
+                />
+                <div className={cn('mt-8', proseClass)}>
                   <p>
-                    Wir freuen uns darauf, Sie persönlich kennenzulernen und Sie auf Ihrem Weg zu Ihren finanziellen
-                    Zielen zu begleiten.
+                    Wir betrachten die persönliche Weiterempfehlung eines zufriedenen Kunden als eine besondere Form
+                    des Vertrauens.
+                  </p>
+                  <p>
+                    Unser Ziel ist es deshalb, eine Betreuung zu bieten, die Kunden aufgrund ihrer eigenen Erfahrungen
+                    gerne weiterempfehlen. Nicht ein einzelner Vertragsabschluss soll die Qualität einer
+                    Kundenbeziehung bestimmen, sondern die Erfahrung aus einer langfristigen Zusammenarbeit.
                   </p>
                 </div>
-                <div className={cn('mt-10', articleSplit)}>
-                  <div className={articleMainCol}>
-                    <p className="text-[14px] leading-relaxed text-bank-text-muted">
-                      Unser Hauptsitz: {siteContact.street}, {siteContact.postalCity}. Kundenservice:{' '}
-                      <a href={`mailto:${siteContact.email}`} className={inlineLink}>
-                        {siteContact.email}
-                      </a>
-                      ,{' '}
-                      <a href={`tel:${siteContact.phoneTel}`} className={inlineLink}>
-                        {siteContact.phoneDisplay}
-                      </a>
-                      .
-                    </p>
-                  </div>
-                  <div className={articleSideCol}>
-                    {/* TODO(Fröhlich Vermögensberatung): Standort-Foto durch Bad-Kreuznach-Motiv ersetzen. */}
-                    <AboutImage src={IMG_STANDORT} alt="Standort-Impression — Fröhlich Vermögensberatung" />
-                  </div>
+                <figure className="mt-12 border-l-2 border-bank-gold/60 pl-6 sm:pl-8">
+                  <blockquote
+                    className="font-display text-[clamp(1.35rem,2.6vw+0.75rem,2rem)] font-light leading-[1.2] tracking-[-0.015em] text-bank-text [overflow-wrap:anywhere]"
+                    style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
+                  >
+                    „Wir möchten Beziehungen aufbauen, die länger bestehen als eine einzelne Anlageentscheidung."
+                  </blockquote>
+                  <figcaption className="mt-5 font-mono text-[11px] uppercase tracking-[0.24em] text-bank-text-muted">
+                    Fröhlich Vermögensberatung
+                  </figcaption>
+                </figure>
+              </motion.section>
+
+              {/* Unsere Philosophie */}
+              <motion.section {...fade(6)} className="border-t border-bank-border py-16 sm:py-20">
+                <AboutSectionHead id="philosophie" eyebrow="Werte" title="Unsere Philosophie" />
+                <div className="mt-10 grid gap-4 sm:grid-cols-2">
+                  {PHILOSOPHIE_CARDS.map(({ icon: Icon, title, body }, i) => (
+                    <div
+                      key={title}
+                      data-testid={`philosophie-card-${title.toLowerCase()}`}
+                      className="group relative overflow-hidden rounded-2xl border border-bank-border bg-bank-surface/50 p-6 shadow-editorial-sm transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-bank-gold/40 hover:shadow-editorial-md sm:p-8"
+                    >
+                      <div className="flex items-start gap-5">
+                        <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-bank-border bg-white/60 text-bank-primary dark:bg-bank-surface">
+                          <Icon className="h-5 w-5" strokeWidth={LUCIDE_STROKE} aria-hidden />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">
+                            {String(i + 1).padStart(2, '0')} — Prinzip
+                          </p>
+                          <h3
+                            className="mt-2 font-display text-[1.2rem] font-light leading-tight tracking-[-0.01em] text-bank-text"
+                            style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}
+                          >
+                            {title}
+                          </h3>
+                          <p className="mt-2.5 text-[14.5px] leading-relaxed text-bank-text-muted">{body}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </motion.section>
 
-              <motion.section {...fade(6)} className="border-t border-bank-border py-16 sm:py-20">
-                <AboutSectionHead id="faq" title="Häufige Fragen" />
-                <Accordion type="single" collapsible className="mt-10 space-y-3">
-                  {FAQ_ITEMS.map((item, i) => (
-                    <AccordionItem
-                      key={item.id}
-                      value={item.id}
-                      className="overflow-hidden border border-bank-border bg-bank-surface/40 px-0"
-                    >
-                      <AccordionTrigger className="min-w-0 px-5 py-5 text-left font-display text-[1rem] font-light leading-snug text-bank-text hover:no-underline hover:text-bank-primary sm:text-[1.08rem]">
-                        <span className="flex min-w-0 items-baseline gap-4">
-                          <span className="shrink-0 font-mono text-[10px] tabular-nums tracking-[0.2em] text-bank-text-muted">
-                            {String(i + 1).padStart(2, '0')}
-                          </span>
-                          <span className="min-w-0 [overflow-wrap:anywhere]">{item.question}</span>
-                        </span>
-                      </AccordionTrigger>
-                      <AccordionContent className="border-t border-bank-border px-5 pb-6 pt-5 font-sans text-[14.5px] leading-[1.8] text-bank-text-muted">
-                        <p className="prose-copy min-w-0">{item.answer}</p>
-                        {item.links?.length > 0 && (
-                          <p className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-                            {item.links.map((link) => (
-                              <Link key={link.href} to={link.href} className={inlineLink}>
-                                {link.label}
-                              </Link>
-                            ))}
-                          </p>
-                        )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-
-                <footer className="mt-16 border-t border-bank-ink/15 pt-12">
-                  <p className="flex flex-wrap items-center gap-4">
+              {/* CTA */}
+              <motion.section {...fade(7)} className="border-t border-bank-border py-16 sm:py-20">
+                <div
+                  id="kontakt"
+                  className="relative scroll-mt-32 overflow-hidden rounded-3xl border border-bank-border bg-bank-surface-elev/80 p-8 shadow-editorial-md dark:bg-bank-surface/80 sm:p-12 lg:p-14"
+                >
+                  <span
+                    className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bank-gold/60 to-transparent"
+                    aria-hidden
+                  />
+                  <p className="font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-gold">
+                    Lernen Sie uns kennen
+                  </p>
+                  <h2
+                    className="mt-4 break-words font-display text-[clamp(1.75rem,3.6vw+0.75rem,2.6rem)] font-light leading-[1.05] tracking-[-0.02em] text-bank-text"
+                    style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
+                  >
+                    Vermögen. Vertrauen.{' '}
+                    <span className="text-bank-primary">Zukunft.</span>
+                  </h2>
+                  <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-bank-text-muted sm:text-[16px]">
+                    Lernen Sie uns kennen und erfahren Sie mehr über unseren Ansatz einer langfristig ausgerichteten
+                    Vermögensberatung.
+                  </p>
+                  <div className="mt-10 flex flex-wrap items-center gap-3 sm:gap-4">
                     <Link
                       to="/contact"
-                      className={cn(buttonVariants({ variant: 'outline-ink', size: 'lg' }), 'inline-flex cursor-pointer')}
+                      data-testid="about-cta-contact"
+                      className={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'inline-flex cursor-pointer')}
                     >
-                      Kontakt
-                      <ArrowUpRight className="ml-2 h-4 w-4" strokeWidth={1.5} aria-hidden />
+                      Kontakt aufnehmen
+                      <ArrowUpRight className="ml-2 h-4 w-4" strokeWidth={1.6} aria-hidden />
                     </Link>
                     <Link
-                      to="/legal/impressum"
-                      className={cn(buttonVariants({ variant: 'ghost', size: 'lg' }), 'cursor-pointer')}
+                      to="/comparison"
+                      data-testid="about-cta-services"
+                      className={cn(buttonVariants({ variant: 'outline-ink', size: 'lg' }), 'inline-flex cursor-pointer')}
                     >
-                      Impressum
+                      Unsere Leistungen entdecken
                     </Link>
-                    <Link to="/comparison" className={cn(buttonVariants({ variant: 'ghost', size: 'lg' }), 'cursor-pointer')}>
-                      Sparvergleich
-                    </Link>
-                  </p>
-                </footer>
+                  </div>
+                </div>
+
+                {/* Rechtlicher Hinweis / Klarstellung Branchenangaben */}
+                <p className="mt-10 text-[12.5px] leading-relaxed text-bank-text-muted/85">
+                  Hinweis: Angaben zu Branchen und Tätigkeitsbereichen aus dem Unternehmensregister
+                  (Versicherungsvermittlung, Managementtätigkeiten von Holdinggesellschaften mit überwiegend
+                  finanziellem Anteilsbesitz, Effekten- und Warenterminhandel) sind nicht als aufsichtsrechtliche
+                  Erlaubnisse oder als vollständige Beschreibung unserer aktuell angebotenen Leistungen zu verstehen.
+                  Maßgeblich ist ausschließlich unsere Registrierung als vertraglich gebundener Vermittler bei der
+                  BaFin.
+                </p>
               </motion.section>
             </div>
           </div>
