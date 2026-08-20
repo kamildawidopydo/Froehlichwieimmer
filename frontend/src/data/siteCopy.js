@@ -126,6 +126,8 @@ export const siteCopy = {
         links: [
           { name: 'Dokumente', path: '/dokumente', desc: 'PDFs und Unterlagen zum Download', accent: true },
           { name: 'Über uns', path: '/about', desc: 'Wer wir sind und wofür wir stehen' },
+          { name: 'Philosophie', path: '/philosophie', desc: 'Unsere Grundsätze und unser Anlageansatz' },
+          { name: 'Leistungen', path: '/leistungen', desc: 'Sparen, Vermögensaufbau und Beratung' },
           { name: 'Kontakt', path: '/contact', desc: 'Beratung, Support und Erreichbarkeit' },
         ],
       },
@@ -208,6 +210,8 @@ export const siteCopy = {
       { to: '/dokumente', label: 'Dokumente', accent: true, desc: 'PDFs zum Download' },
       { to: '/news', label: 'News' },
       { to: '/about', label: 'Über uns' },
+      { to: '/philosophie', label: 'Philosophie' },
+      { to: '/leistungen', label: 'Leistungen' },
       { to: '/how-it-works', label: "So funktioniert's" },
       { to: '/calculator', label: 'Zinsrechner' },
       { to: '/security', label: 'Sicherheit' },

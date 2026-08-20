@@ -34,6 +34,8 @@ const FAQ = lazy(() => import('@/pages/FAQ'));
 const Dokumente = lazy(() => import('@/pages/Dokumente'));
 const DokumentePreview = lazy(() => import('@/pages/DokumentePreview'));
 const About = lazy(() => import('@/pages/About'));
+const Philosophie = lazy(() => import('@/pages/Philosophie'));
+const Leistungen = lazy(() => import('@/pages/Leistungen'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const CreditLeadPage = lazy(() => import('@/pages/CreditLeadPage'));
 const PublicNewsPage = lazy(() => import('@/pages/news/PublicNewsPage'));
@@ -218,6 +220,9 @@ function App() {
                   <Route path="/faq" element={<FAQ />} />
                   <Route path="/dokumente" element={<Dokumente />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/philosophie" element={<Philosophie />} />
+                  <Route path="/leistungen" element={<Leistungen />} />
+                  <Route path="/bausteine" element={<Navigate to="/leistungen#bausteine" replace />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/kredit" element={<CreditLeadPage />} />
                   <Route path="/news" element={<PublicNewsPage />} />
