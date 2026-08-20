@@ -197,8 +197,8 @@ const Login = () => {
               </p>
               <p className="mt-2 text-[13.5px] leading-[1.75] text-bank-text">
                 Bei Fragen:{' '}
-                <a href="mailto:kundenservice@kapitalmitte.com" className="text-bank-primary underline-offset-4 hover:underline">
-                  kundenservice@kapitalmitte.com
+                <a href="mailto:kontakt@froehlich-vermoegensberatung.de" className="text-bank-primary underline-offset-4 hover:underline">
+                  kontakt@froehlich-vermoegensberatung.de
                 </a>
               </p>
             </div>

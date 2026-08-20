@@ -206,7 +206,7 @@ const About = () => {
     <div className="min-h-screen w-full min-w-0 bg-bank-bg text-bank-text">
       <PageMeta
         title="Über uns"
-        description={`${COMPANY} und ${PARTNER} — lokale Betreuung in Deutschland, europäische Expertise. kapitalmitte.com.`}
+        description={`${COMPANY} und ${PARTNER} — lokale Betreuung in Deutschland, europäische Expertise. froehlich-vermoegensberatung.de.`}
         path="/about"
       />
 
@@ -300,7 +300,7 @@ const About = () => {
                         zu verbinden – für nachhaltigen Erfolg und finanzielle Sicherheit.
                       </p>
                       <p>
-                        Über kapitalmitte.com bündeln wir lokale Nähe in Deutschland mit der internationalen Expertise
+                        Über froehlich-vermoegensberatung.de bündeln wir lokale Nähe in Deutschland mit der internationalen Expertise
                         unseres Partners in Amsterdam — transparent, strukturiert und auf Ihre Ziele ausgerichtet.
                       </p>
                     </div>

@@ -23,6 +23,7 @@ const SocialFooterIcons = ({ className }) => {
           type="button"
           className={iconBtn}
           aria-label={label}
+          data-testid={`social-footer-icon-${id}`}
           onClick={() => openPreview(id)}
         >
           <SocialPlatformIcon platform={id} className="h-full w-full" />

@@ -13,7 +13,7 @@ const PageMeta = ({ title, description, path = '/', image = DEFAULT_IMAGE, noInd
       : `Fröhlich Vermögensberatung | ${title}`
     : DEFAULT_TITLE;
   const resolvedDescription = description || DEFAULT_DESCRIPTION;
-  const canonicalUrl = `https://www.kapitalmitte.com${path}`;
+  const canonicalUrl = `#${path}`;
 
   return (
     <Helmet>

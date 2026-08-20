@@ -47,7 +47,7 @@ export function mapProductInquiryInsertError(error) {
     return 'Das Anfrage-Formular ist derzeit nicht verfügbar. Bitte kontaktieren Sie uns direkt.';
   }
   if (message.includes('Database not configured') || message.includes('not configured')) {
-    return 'Der Server ist vorübergehend nicht erreichbar. Bitte kontaktieren Sie uns unter kundenservice@kapitalmitte.com.';
+    return 'Der Server ist vorübergehend nicht erreichbar. Bitte kontaktieren Sie uns unter kontakt@froehlich-vermoegensberatung.de.';
   }
   if (/API 404|API 502|API 503/i.test(message)) {
     return 'Formular-Server nicht erreichbar. Bitte „npm run dev“ verwenden (Web + API).';

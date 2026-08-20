@@ -176,7 +176,7 @@ const PostbankFlexgeldProduktinfo = () => {
             <p className="mb-2">Einmalige Kosten für Kontoeröffnung: keine</p>
             <p className="mb-2">Laufende Kosten für Kontoführung: keine</p>
             <p>
-              Vertriebsvergütung: Fröhlich Vermögensberatung kapitalmitte.com
+              Vertriebsvergütung: Fröhlich Vermögensberatung froehlich-vermoegensberatung.de
               erhält für die Vermittlung eine Provision von der Bank. Ihnen entstehen dadurch
               keine Kosten.
             </p>

@@ -1,5 +1,5 @@
 /**
- * Central marketing copy — kapitalmitte.com.
+ * Central marketing copy — froehlich-vermoegensberatung.de.
  * Formal-warm German tone; Nähe + Internationalität.
  */
 

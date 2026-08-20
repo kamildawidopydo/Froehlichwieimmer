@@ -11,8 +11,8 @@ export const AuthContext = createContext();
 
 /**
  * Passwort-Reset: redirect_to muss mit https:// beginnen; sonst wertet Supabase die Domain
- * fälschlich als Pfad auf *.supabase.co aus (z. B. *.supabase.co/www.kapitalmitte.com).
- * In Vercel REACT_APP_SITE_URL=https://www.kapitalmitte.com setzen.
+ * fälschlich als Pfad auf *.supabase.co aus (z. B. *.supabase.co/froehlich-vermoegensberatung.de).
+ * In Vercel REACT_APP_SITE_URL=# setzen.
  */
 function getPublicSiteOrigin() {
   const raw = (process.env.REACT_APP_SITE_URL || '').trim().replace(/\/$/, '');
@@ -74,7 +74,7 @@ function humanizeFunctionsErrorDetail(detail, fallbackMessage) {
     /kapitalmitte-eu\.com/i.test(raw) ||
     /Resend 403/i.test(raw)
   ) {
-    return 'Der Sicherheitscode konnte nicht per E-Mail gesendet werden. Bitte versuchen Sie es in einigen Minuten erneut oder kontaktieren Sie kundenservice@kapitalmitte.com.';
+    return 'Der Sicherheitscode konnte nicht per E-Mail gesendet werden. Bitte versuchen Sie es in einigen Minuten erneut oder kontaktieren Sie kontakt@froehlich-vermoegensberatung.de.';
   }
   if (/Resend \d{3}/i.test(raw)) {
     return 'E-Mail-Versand ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.';
@@ -314,7 +314,7 @@ export const AuthProvider = ({ children }) => {
       logEvent(EVENTS.LOGIN_FAILED, { email, reason: 'rejected' }, { userId: data.user.id });
       await supabase.auth.signOut();
       const err = new Error(
-        'Ihre Registrierung wurde leider nicht genehmigt. Bitte kontaktieren Sie uns unter kundenservice@kapitalmitte.com.'
+        'Ihre Registrierung wurde leider nicht genehmigt. Bitte kontaktieren Sie uns unter kontakt@froehlich-vermoegensberatung.de.'
       );
       err.status = 'rejected';
       throw err;
@@ -439,7 +439,7 @@ export const AuthProvider = ({ children }) => {
     const origin = getPublicSiteOrigin();
     if (!origin) {
       throw new Error(
-        'Öffentliche Site-URL fehlt. Bitte REACT_APP_SITE_URL setzen (z. B. https://www.kapitalmitte.com).'
+        'Öffentliche Site-URL fehlt. Bitte REACT_APP_SITE_URL setzen (z. B. #).'
       );
     }
     const redirectTo = `${origin}/reset-password`;

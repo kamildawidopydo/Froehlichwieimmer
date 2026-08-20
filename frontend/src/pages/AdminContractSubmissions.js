@@ -370,7 +370,7 @@ const AdminContractSubmissions = () => {
                 </p>
                 <p className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-bank-text-muted" />
-                  Admin (kundenservice@kapitalmitte.com):{' '}
+                  Admin (kontakt@froehlich-vermoegensberatung.de):{' '}
                   {selected.admin_email_sent ? 'versendet' : 'fehlgeschlagen'}
                   {selected.admin_resend_id && (
                     <span className="text-xs text-bank-text-muted">(ID: {selected.admin_resend_id})</span>
@@ -382,7 +382,7 @@ const AdminContractSubmissions = () => {
                   </p>
                 )}
                 <p className="text-xs text-bank-text-muted">
-                  Es wird nur eine Admin-Benachrichtigung an kundenservice@kapitalmitte.com gesendet (Betreff: „Neuer …antrag“).
+                  Es wird nur eine Admin-Benachrichtigung an kontakt@froehlich-vermoegensberatung.de gesendet (Betreff: „Neuer …antrag“).
                 </p>
               </div>
 

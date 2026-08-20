@@ -1,0 +1,40 @@
+{
+  "summary": "Frontend-only retest (iteration 7) of the 4 fixes from iteration_6 on the social-media rewrite. All 4 targeted fixes VERIFIED GREEN via Playwright on the public preview URL: (1) frohlich-mark.png is now byte-identical to frohlich-logo.png (md5 7c8ed3f2..., 1398201 bytes) and renders as real logo (naturalWidth 1838x856) in IG header/story-ring/post-header/company-reply; clicking the avatar opens SocialProfilePhotoPreview showing the real logo — no 'Supabase ist im Build nicht konfiguriert' text anywhere. (2) IG post modal + 'Alle N Kommentare anzeigen' expand renders 10 comment rows, 21 placeholder.svg avatars, 0 broken images (naturalWidth===0), 0 refs to the deleted /assets/social/instagram/avatars path. (3) Facebook Info tab and LinkedIn Info tab now show only kontakt@froehlich-vermoegensberatung.de; 0 'kapitalmitte' occurrences in the runtime text of all 3 social modals. (4) IG Reels tab: 3 reels, reel viewer opens with video src=null + poster=/assets/social/placeholder.svg, video.error===null, no media console errors. Regression: /, /news, /login load with 0 local broken images and 0 uncaught JS errors. NEW FINDING: the email sweep was incomplete — 63 hardcoded occurrences of kundenservice@kapitalmitte.com remain in 33 src files (FAQ page shows it user-visibly, plus all contract forms, PDF generators, AuthContext error strings, AdminContractSubmissions).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "FAQ page / contract forms / PDF generators / AuthContext", "issue": "Email sweep incomplete: 63 hardcoded 'kundenservice@kapitalmitte.com' strings in 33 files. /faq renders it visibly (2x) next to the new kontakt@froehlich-vermoegensberatung.de -> two conflicting support addresses. Affected: pages/FAQ.js, all *ContractForm/*Vertrag pages, lib/generate*Pdf.js, context/AuthContext.js (2 user-facing error strings), pages/AdminContractSubmissions.js, components/liveness/IdentityInterviewFlow.jsx, pages/Login.js, pages/Register.js. Should import siteContact.email instead of hardcoding.", "selector": "/faq body text", "priority": "HIGH"},
+      {"component": "InstagramPreview bio", "issue": "Still present from iteration_6: the truncated-bio 'mehr' toggle sits flush against/overlaps the 'Website folgt' link on the same line (see ig_open screenshot) — no gap, looks like one broken token 'mehr<> Website folgt'.", "selector": "text=mehr / text=Website folgt", "priority": "MEDIUM"},
+      {"component": "SocialFooterIcons", "issue": "Still no data-testid on the 3 platform trigger buttons (only aria-label). Tests must rely on aria-label text.", "selector": "button[aria-label*='auf Facebook']", "priority": "LOW"},
+      {"component": "InstagramPostModal media", "issue": "Cosmetic: post media is the 4:5 placeholder.svg letterboxed on a black background, producing large black bars above/below the image inside the modal.", "selector": "[aria-label='Doppeltippen zum Liken'] img", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home (pre-existing, non-social)", "issues": ["Console SVG error x4 on every home load: '<path> attribute d: Expected moveto path command (M or m), \"undefined\"' — an icon component is rendering an undefined path string (bundle.js:165522).", "Supabase edge function /functions/v1/stock-history returns 401 repeatedly (~12x per load); handled gracefully by stockHistoryService (debug 'skipped') but floods console with errors.", "Third-party bank logos hotlinked from images.seeklogo.com / cdn-group.bnpparibas.com / bbva.de are blocked (ERR_BLOCKED_BY_RESPONSE.NotSameOrigin / ERR_BLOCKED_BY_ORB); local fallbacks render so no visible broken images, but the remote requests should be dropped."]},
+      {"screen": "Facebook / LinkedIn preview", "issues": ["Cover photo uses the same generic FV placeholder as the avatar, so cover and profile picture look duplicated (cosmetic, expected until real assets exist)."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_7.json"],
+  "action_items": [
+    "Replace the remaining 63 hardcoded 'kundenservice@kapitalmitte.com' strings (33 files) with siteContact.email — /faq is user-visible; contract PDFs and auth error messages also affected.",
+    "Fix the Instagram bio 'mehr' / 'Website folgt' spacing overlap (carry-over MEDIUM from iteration_6).",
+    "Add data-testid to SocialFooterIcons platform buttons and to IG grid/reel tiles + 'Alle N Kommentare anzeigen' toggle for stable automation.",
+    "Investigate the '<path> d=undefined' SVG console error on home (undefined icon path prop)."
+  ],
+  "critical_code_review_comments": [
+    "frohlich-mark.png is now a 1.37 MB full-logo duplicate used as a 40px avatar in many places — heavy payload for an avatar; a small cropped mark (or width/height-constrained WebP) should be generated.",
+    "instagramPostComments.js still exports instagramCommentAvatarFallback() pointing at the deleted /assets/social/instagram/avatars/generated/*.svg path — dead code that would 404 if an onError handler ever fires; remove it.",
+    "av() and REEL_AVATAR() ignore their slug argument and return a constant; parameters should be dropped to avoid the impression of per-user avatars.",
+    "Email/contact data is duplicated as literals across 33 files instead of importing siteContact — the same class of bug will recur on the next rebrand."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100% of the 4 targeted fixes + regressions passed; 1 new HIGH data-consistency issue found outside the social modals"},
+  "seed_data_creation": "None. Cookie/visitor gate bypassed via localStorage keys kapitalmitte_cookie_consent + kapitalmitte_visitor_profile.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All 4 iteration_6 findings are fixed and verified. Working Playwright recipe: set localStorage kapitalmitte_cookie_consent + kapitalmitte_visitor_profile then reload; open modal via page.get_by_role('button', name='Instagram'|'Facebook'|'LinkedIn').first. Inside the IG modal, 'button:has(img[src*=\"placeholder\"])' yields 10 tiles: nth(0..3) are story highlights, nth(4)+ are grid posts — clicking nth(0) opens the story viewer, not a post. Reels tab: 'button[aria-label*=\"Reel\"]', then tiles nth(4) opens the reel viewer. Post comments: page.get_by_text('Kommentare anzeigen') then count page.get_by_label('Profil von'). Remaining open items: hardcoded old email in 33 files (FAQ visible), IG bio 'mehr'/'Website folgt' overlap, missing data-testids, home-page '<path> d=undefined' console error.",
+  "rca_of_the_issue": "The iteration_6 email sweep only replaced the value inside data/siteContact.js and files that import it; 33 files hardcode the literal 'kundenservice@kapitalmitte.com' (contract templates, PDF generators, auth error strings, FAQ copy) and were not touched, so /faq now displays both the old and new support address simultaneously. Fix by importing siteContact.email in those files rather than another blind sed."
+}

@@ -117,7 +117,7 @@ const InstagramPreview = () => {
           <button
             type="button"
             onClick={() => setBioExpanded((e) => !e)}
-            className="text-[14px] text-[#8e8e8e]"
+            className="mt-1 self-start text-[14px] text-[#8e8e8e]"
           >
             {bioExpanded ? 'weniger' : 'mehr'}
           </button>
@@ -126,7 +126,7 @@ const InstagramPreview = () => {
           href={linkInBio.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1 inline-flex items-center gap-1 text-[14px] font-semibold text-[#00376b]"
+          className="mt-2 flex w-fit items-center gap-1 text-[14px] font-semibold text-[#00376b]"
         >
           <Link2 className="h-3.5 w-3.5" strokeWidth={2} />
           {linkInBio.label}

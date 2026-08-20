@@ -2,7 +2,7 @@ import { countPostComments } from '@/data/social/formatCount';
 
 const IG = '/assets/social/instagram';
 const IG_V = '?v=25';
-const REEL_AVATAR = (slug) => `${IG}/avatars/comments/reels/${slug}.png${IG_V}`;
+const REEL_AVATAR = (_slug) => '/assets/social/placeholder.svg';
 
 const sparvergleichThread = [
   {

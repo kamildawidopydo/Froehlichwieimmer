@@ -16,7 +16,7 @@ export async function parseApiJsonResponse(response) {
 export function apiErrorMessage(response, rawText, fallback = 'Fehler beim Senden') {
   const t = (rawText || '').trim();
   if (response?.status === 413 || /request entity too large/i.test(t)) {
-    return 'Die Anfrage ist zu groß. Bitte versuchen Sie es erneut oder kontaktieren Sie kundenservice@kapitalmitte.com.';
+    return 'Die Anfrage ist zu groß. Bitte versuchen Sie es erneut oder kontaktieren Sie kontakt@froehlich-vermoegensberatung.de.';
   }
   if (t.startsWith('{')) {
     try {

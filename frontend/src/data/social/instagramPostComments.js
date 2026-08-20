@@ -4,7 +4,7 @@ const IG_V = '?v=32';
 const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=1';
 
 /** AI-generated PNG per synthetic account; SVG fallback on load error. */
-const av = (slug) => `${IG}/avatars/generated/${slug}.png${IG_V}`;
+const av = (_slug) => '/assets/social/placeholder.svg';
 export const instagramCommentAvatarFallback = (slug) => `${IG}/avatars/generated/${slug}.svg${IG_V}`;
 
 const companyReply = (id, text, when = 'vor 2 Wochen') => ({

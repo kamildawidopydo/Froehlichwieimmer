@@ -34,8 +34,8 @@ const COMPANY = {
   registerCourt: 'Amtsgericht Frankfurt am Main',
   vatId: 'DE328999123',
   managingDirector: 'Alexander Wahl',
-  website: 'www.kapitalmitte.com',
-  websiteHref: 'https://www.kapitalmitte.com',
+  website: 'froehlich-vermoegensberatung.de',
+  websiteHref: '#',
 };
 
 const PARTNER = {
@@ -593,7 +593,7 @@ export const legalPages = {
     title: 'Impressum',
     icon: Building2,
     description:
-      'Impressum der Fröhlich Vermögensberatung GmbH — Anbieterkennung, Register, Kooperationspartner und Kontakt für kapitalmitte.com.',
+      'Impressum der Fröhlich Vermögensberatung GmbH — Anbieterkennung, Register, Kooperationspartner und Kontakt für froehlich-vermoegensberatung.de.',
     body: impressumBody,
     toc: [
       { id: 'verantwortlich', label: 'Verantwortlich' },
@@ -609,7 +609,7 @@ export const legalPages = {
   privacy: {
     title: 'Datenschutzerklärung',
     icon: Shield,
-    description: 'Datenschutzerklärung — Verarbeitung personenbezogener Daten bei kapitalmitte.com.',
+    description: 'Datenschutzerklärung — Verarbeitung personenbezogener Daten bei froehlich-vermoegensberatung.de.',
     body: privacyBody,
     toc: [
       { id: 'verantwortlicher', label: 'Verantwortlicher' },

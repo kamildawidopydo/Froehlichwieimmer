@@ -1,4 +1,4 @@
-/** Single source for kapitalmitte.com contact blocks (Kontaktseite, Spezial-AIF CTA, etc.). */
+/** Single source for Fröhlich Vermögensberatung contact blocks (Kontaktseite, Spezial-AIF CTA, etc.). */
 
 const NBSP = '\u00A0';
 
@@ -23,7 +23,8 @@ const HAITERBACH_PHONE_TEL = '+4940334657988';
 const FRANKFURT_PHONE_TEL = '+4969205690994';
 
 const siteContact = {
-  email: 'kundenservice@kapitalmitte.com',
+  // TODO(Fröhlich Vermögensberatung): finale Kundenservice-Adresse bestätigen — technischer Platzhalter.
+  email: 'kontakt@froehlich-vermoegensberatung.de',
   /** Primary Kundenservice — Haiterbach (site-wide, emails, PDFs, support). */
   phoneTel: HAITERBACH_PHONE_TEL,
   phoneDisplay: formatGermanPhoneDisplay(HAITERBACH_PHONE_TEL, [2, 3, 3, 3]),
