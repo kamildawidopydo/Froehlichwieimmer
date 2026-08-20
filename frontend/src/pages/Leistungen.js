@@ -10,8 +10,8 @@ const LUCIDE_STROKE = 1.4;
 const LEISTUNGEN = [
   { icon: Wallet, title: 'Sparkonten & Liquidität', body: 'Für Kunden, die einen Teil ihres Vermögens verfügbar oder planbar verzinst halten möchten — Tagesgeld, Festgeld und liquide Reserven als Bestandteil einer übergeordneten Struktur.', href: '/comparison', cta: 'Zum Sparvergleich' },
   { icon: TrendingUp, title: 'Vermögensaufbau', body: 'Langfristige Betrachtung unterschiedlicher Möglichkeiten des Vermögensaufbaus — mit Fokus auf Diversifikation, Risikobewusstsein und regelmäßiger Überprüfung.', href: '/philosophie', cta: 'Unsere Philosophie' },
-  { icon: LineChart, title: 'Aktien', body: 'Unternehmensbeteiligungen als möglicher Bestandteil langfristiger Vermögensstrukturen — Chancen und Risiken werden gemeinsam betrachtet.', href: '/bausteine', cta: 'Anlageklassen verstehen' },
-  { icon: FileText, title: 'Anleihen', body: 'Festverzinsliche Wertpapiere von Unternehmen oder Staaten als möglicher Bestandteil diversifizierter Strategien — mit unterschiedlichen Laufzeiten und Bonitäten.', href: '/bausteine', cta: 'Anlageklassen verstehen' },
+  { icon: LineChart, title: 'Aktien', body: 'Unternehmensbeteiligungen als möglicher Bestandteil langfristiger Vermögensstrukturen — Chancen und Risiken werden gemeinsam betrachtet.', href: '/wissen', cta: 'Anlageklassen verstehen' },
+  { icon: FileText, title: 'Anleihen', body: 'Festverzinsliche Wertpapiere von Unternehmen oder Staaten als möglicher Bestandteil diversifizierter Strategien — mit unterschiedlichen Laufzeiten und Bonitäten.', href: '/wissen/anleihe-erklaert', cta: 'Was ist eine Anleihe?' },
   { icon: Layers, title: 'Diversifizierte Anlagekonzepte', body: 'Unterschiedliche Anlageklassen können abhängig von Zielen, Anlagehorizont und Risikobereitschaft miteinander kombiniert werden — individuell, nicht pauschal.', href: '/philosophie#konservativ', cta: 'Unser Ansatz' },
   { icon: Users, title: 'Persönliche Beratung', body: 'Individuelle Situation verstehen, Möglichkeiten erklären und langfristig begleiten — ohne Zeitdruck, ohne Produktdruck.', href: '/contact', cta: 'Gespräch vereinbaren' },
 ];

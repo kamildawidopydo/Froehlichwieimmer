@@ -112,6 +112,7 @@ export const siteCopy = {
         id: 'wissen',
         label: 'Wissen',
         links: [
+          { name: 'Wissen & Perspektiven', path: '/wissen', desc: 'Ratgeber zu Sparen, Anlageklassen und Planung' },
           { name: 'So funktioniert es', path: '/how-it-works', desc: 'Der Ablauf in vier übersichtlichen Schritten' },
           { name: 'Rechner', path: '/calculator', desc: 'Zinserträge und Laufzeiten berechnen' },
           { name: 'Sicherheit', path: '/security', desc: 'EU-Einlagensicherung und Schutzmechanismen' },
@@ -212,6 +213,7 @@ export const siteCopy = {
       { to: '/about', label: 'Über uns' },
       { to: '/philosophie', label: 'Philosophie' },
       { to: '/leistungen', label: 'Leistungen' },
+      { to: '/wissen', label: 'Wissen' },
       { to: '/how-it-works', label: "So funktioniert's" },
       { to: '/calculator', label: 'Zinsrechner' },
       { to: '/security', label: 'Sicherheit' },
