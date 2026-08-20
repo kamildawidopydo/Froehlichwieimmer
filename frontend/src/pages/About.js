@@ -297,20 +297,21 @@ const About = () => {
                     Anlageklassen betrachtet werden, beispielsweise:
                   </p>
                 </div>
-                <ul className="mt-8 grid gap-3 sm:grid-cols-2">
-                  {ANLAGEKLASSEN.map((item) => (
-                    <li
-                      key={item}
-                      className="flex items-start gap-3 rounded-xl border border-bank-border bg-bank-surface/40 px-5 py-4 text-[14.5px] leading-relaxed text-bank-text"
-                    >
+                <ol className="mt-8 divide-y divide-bank-border border-y border-bank-border">
+                  {ANLAGEKLASSEN.map((item, i) => (
+                    <li key={item} className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 py-5 sm:gap-x-10 sm:py-6">
+                      <span className="font-mono text-[11px] uppercase tracking-[0.24em] text-bank-gold">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
                       <span
-                        className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-bank-gold"
-                        aria-hidden
-                      />
-                      <span className="min-w-0">{item}</span>
+                        className="font-display text-[1.05rem] font-light leading-snug tracking-[-0.005em] text-bank-text sm:text-[1.2rem]"
+                        style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}
+                      >
+                        {item}
+                      </span>
                     </li>
                   ))}
-                </ul>
+                </ol>
                 <div className={cn('mt-8', proseClass)}>
                   <p>
                     Dabei soll nicht kurzfristige Spekulation im Vordergrund stehen. Unser Ansatz besteht vielmehr

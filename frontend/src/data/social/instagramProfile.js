@@ -7,6 +7,47 @@ const PLACEHOLDER = '/assets/social/placeholder.svg';
 const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=3';
 const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=3';
 
+/** Highlight-Assets — jedes Highlight hat eigene Cover und 4 unterschiedliche Story-Slides. */
+const HL = {
+  covers: {
+    vermoegen: '/assets/social/highlights/covers/vermoegen.svg',
+    sparen:    '/assets/social/highlights/covers/sparen.svg',
+    vorsorge:  '/assets/social/highlights/covers/vorsorge.svg',
+    team:      '/assets/social/highlights/covers/team.svg',
+    faq:       '/assets/social/highlights/covers/faq.svg',
+  },
+  vermoegen: {
+    aufbau:         POST_IMG.vermoegensaufbau,
+    diversifikation: POST_IMG.diversifikation,
+    aktienAnleihen: '/assets/social/highlights/vermoegen/03-aktien-anleihen.svg',
+    beratung:       POST_IMG.beratung,
+  },
+  sparen: {
+    tagesgeld:  POST_IMG.tagesgeld,
+    festgeld:   POST_IMG.festgeld,
+    liquiditaet:'/assets/social/highlights/sparen/03-liquiditaet.svg',
+    zinsen:     POST_IMG.zinsen,
+  },
+  vorsorge: {
+    langfristig: '/assets/social/highlights/vorsorge/01-langfristig.svg',
+    reserven:    '/assets/social/highlights/vorsorge/02-reserven.svg',
+    ziele:       '/assets/social/highlights/vorsorge/03-ziele.svg',
+    ueberpruefen:'/assets/social/highlights/vorsorge/04-ueberpruefen.svg',
+  },
+  team: {
+    unternehmen:   '/assets/social/highlights/team/01-unternehmen.svg',
+    gespraech:     '/assets/social/highlights/team/02-gespraech.svg',
+    weiterbildung: '/assets/social/highlights/team/03-weiterbildung.svg',
+    service:       '/assets/social/highlights/team/04-service.svg',
+  },
+  faq: {
+    tagesgeld:      '/assets/social/highlights/faq/01-tagesgeld.svg',
+    festgeld:       '/assets/social/highlights/faq/02-festgeld.svg',
+    diversifikation:'/assets/social/highlights/faq/03-diversifikation.svg',
+    gespraech:      '/assets/social/highlights/faq/04-gespraech.svg',
+  },
+};
+
 /** Statische Instagram-Vorschau — Fröhlich Vermögensberatung GmbH (kein echtes IG-Profil). */
 export const instagramProfile = {
   platform: 'instagram',
@@ -35,10 +76,51 @@ export const instagramProfile = {
     logo: SITE_LOGO,
   },
   highlights: [
-    { id: 'vermoegen', title: 'Vermögen', cover: PLACEHOLDER, slides: [{ image: PLACEHOLDER, headline: 'Aufbau' }] },
-    { id: 'sparen', title: 'Sparen', cover: PLACEHOLDER, slides: [{ image: PLACEHOLDER, headline: 'Sparen' }] },
-    { id: 'vorsorge', title: 'Vorsorge', cover: PLACEHOLDER, slides: [{ image: PLACEHOLDER, headline: 'Vorsorge' }] },
-    { id: 'team', title: 'Team', cover: PLACEHOLDER, slides: [{ image: PLACEHOLDER, headline: 'Team' }] },
+    {
+      id: 'vermoegen', title: 'Vermögen', cover: HL.covers.vermoegen,
+      slides: [
+        { image: HL.vermoegen.aufbau,          headline: 'Langfristiger Vermögensaufbau' },
+        { image: HL.vermoegen.diversifikation, headline: 'Diversifikation' },
+        { image: HL.vermoegen.aktienAnleihen,  headline: 'Aktien & Anleihen' },
+        { image: HL.vermoegen.beratung,        headline: 'Persönliche Planung' },
+      ],
+    },
+    {
+      id: 'sparen', title: 'Sparen', cover: HL.covers.sparen,
+      slides: [
+        { image: HL.sparen.tagesgeld,   headline: 'Tagesgeld' },
+        { image: HL.sparen.festgeld,    headline: 'Festgeld' },
+        { image: HL.sparen.liquiditaet, headline: 'Liquidität' },
+        { image: HL.sparen.zinsen,      headline: 'Zinsen verstehen' },
+      ],
+    },
+    {
+      id: 'vorsorge', title: 'Vorsorge', cover: HL.covers.vorsorge,
+      slides: [
+        { image: HL.vorsorge.langfristig,  headline: 'Langfristig planen' },
+        { image: HL.vorsorge.reserven,     headline: 'Finanzielle Reserven' },
+        { image: HL.vorsorge.ziele,        headline: 'Ziele definieren' },
+        { image: HL.vorsorge.ueberpruefen, headline: 'Regelmäßig überprüfen' },
+      ],
+    },
+    {
+      id: 'team', title: 'Team', cover: HL.covers.team,
+      slides: [
+        { image: HL.team.unternehmen,   headline: 'Fröhlich Vermögensberatung' },
+        { image: HL.team.gespraech,     headline: 'Persönliche Betreuung' },
+        { image: HL.team.weiterbildung, headline: 'Weiterbildung' },
+        { image: HL.team.service,       headline: 'Kundenservice' },
+      ],
+    },
+    {
+      id: 'faq', title: 'FAQ', cover: HL.covers.faq,
+      slides: [
+        { image: HL.faq.tagesgeld,       headline: 'Was ist Tagesgeld?' },
+        { image: HL.faq.festgeld,        headline: 'Was ist Festgeld?' },
+        { image: HL.faq.diversifikation, headline: 'Warum Diversifikation?' },
+        { image: HL.faq.gespraech,       headline: 'Wie vereinbare ich ein Gespräch?' },
+      ],
+    },
   ],
   reels: [
     {
