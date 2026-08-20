@@ -43,8 +43,8 @@ export const siteImages = {
   },
 
   about: {
-    hero: m('about-hero.jpg?v=6'),
-    heroAlt: 'Ruhiger Nordischer Küchenmorgen — Paar im Gespräch am Fenster, Vertrauen und Nähe',
+    hero: '/assets/media/about-hero-family.jpg?v=1',
+    heroAlt: 'Familie zu Hause auf dem Sofa — gemeinsam am Tablet, entspannte Atmosphäre',
     partner: m('about-partner.png?v=2'),
     partnerAlt: 'Partnerschaftliches Gespräch auf Augenhöhe — geteiltes Notizbuch, echte Aufmerksamkeit',
     leistung: m('about-leistung.png?v=2'),
