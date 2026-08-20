@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowRight,
   ArrowUpRight,
   BookOpen,
   MessageCircle,
@@ -221,38 +220,6 @@ const About = () => {
               Seit 2020 begleiten wir unsere Kunden bei finanziellen Entscheidungen mit dem Anspruch, langfristige
               Beziehungen statt kurzfristiger Abschlüsse aufzubauen.
             </p>
-            <div className="mt-10">
-              <a
-                href="#philosophie"
-                data-testid="about-hero-philosophy-cta"
-                className="group relative inline-flex max-w-full cursor-pointer items-stretch overflow-hidden border border-white/18 bg-white/[0.04] shadow-[0_1px_0_rgba(255,255,255,0.06)_inset] backdrop-blur-[6px] transition-[border-color,box-shadow,background-color] duration-300 ease-out hover:border-bank-gold/45 hover:bg-white/[0.07] hover:shadow-[0_0_0_1px_rgba(212,175,55,0.12),0_20px_48px_-24px_rgba(0,0,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-gold/55 focus-visible:ring-offset-2 focus-visible:ring-offset-bank-primary sm:max-w-none"
-              >
-                <span
-                  className="w-[3px] shrink-0 bg-gradient-to-b from-bank-gold via-bank-gold to-bank-gold/55"
-                  aria-hidden
-                />
-                <span className="flex min-w-0 flex-1 flex-col justify-center px-5 py-4 text-left sm:px-7 sm:py-5">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.32em] text-bank-gold/95">
-                    Fröhlich Vermögensberatung
-                  </span>
-                  <span
-                    className="mt-1.5 font-display text-[1.15rem] font-light leading-tight tracking-[-0.02em] text-white sm:text-[1.35rem]"
-                    style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}
-                  >
-                    Mehr über unsere Philosophie
-                  </span>
-                </span>
-                <span
-                  className="relative flex w-[3.25rem] shrink-0 items-center justify-center border-l border-white/12 bg-white/[0.03] transition-[background-color,border-color] duration-300 group-hover:border-bank-gold/25 group-hover:bg-bank-gold/[0.12] sm:w-16"
-                  aria-hidden
-                >
-                  <ArrowRight
-                    className="relative h-5 w-5 text-bank-gold transition-transform duration-300 ease-out group-hover:translate-x-1"
-                    strokeWidth={LUCIDE_STROKE}
-                  />
-                </span>
-              </a>
-            </div>
           </motion.div>
         </div>
       </section>
