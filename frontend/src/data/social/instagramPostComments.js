@@ -1,7 +1,7 @@
 /** Synthetic Instagram post comments — unique German accounts per post, own avatar each. */
 const IG = '/assets/social/instagram';
 const IG_V = '?v=32';
-const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=1';
+const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=2';
 
 /** AI-generated PNG per synthetic account; SVG fallback on load error. */
 const av = (_slug) => '/assets/social/placeholder.svg';

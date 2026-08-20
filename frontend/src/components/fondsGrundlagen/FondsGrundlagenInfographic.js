@@ -79,7 +79,7 @@ import {
 } from '@/data/fondsGrundlagenContent';
 import { spezialAifFundPhoto, spezialAifHeroKpiLabels, spezialAifKeyFacts } from '@/data/spezialAifContent';
 
-const LOGO_SRC = '/assets/logo/frohlich-logo.png?v=1';
+const LOGO_SRC = '/assets/logo/frohlich-logo.png?v=2';
 const EASE = [0.22, 1, 0.36, 1];
 const STROKE = 1.25;
 const RULE = 'border-bank-border';

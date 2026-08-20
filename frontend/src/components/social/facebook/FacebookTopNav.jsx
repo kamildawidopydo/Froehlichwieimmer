@@ -27,7 +27,7 @@ const FacebookTopNav = ({ onFakeAction, onSearchClick, onMessageClick }) => (
           <Bell className="h-5 w-5 text-[#050505]" strokeWidth={1.75} />
         </button>
         <span className="hidden h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-[#dddfe2] bg-white px-1 sm:flex">
-          <SocialBrandLogo src="/assets/logo/frohlich-logo.png?v=1" fit="wide" />
+          <SocialBrandLogo src="/assets/logo/frohlich-logo.png?v=2" fit="wide" />
         </span>
       </div>
     </div>
