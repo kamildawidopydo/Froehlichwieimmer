@@ -154,7 +154,7 @@ const Navigation = () => {
             className="relative z-40 flex shrink-0 items-center overflow-visible py-1.5 transition-opacity duration-200 hover:opacity-90"
           >
             <BrandLogo
-              imgClassName="h-8 w-auto max-w-[13rem] object-contain object-left sm:h-9 sm:max-w-[15rem] lg:h-10 lg:max-w-[17rem] xl:h-11 xl:max-w-[19rem]"
+              imgClassName="h-10 w-auto max-w-[15rem] object-contain object-left sm:h-11 sm:max-w-[17rem] lg:h-12 lg:max-w-[19rem] xl:h-14 xl:max-w-[22rem]"
             />
           </Link>
 
