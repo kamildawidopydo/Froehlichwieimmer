@@ -111,9 +111,9 @@ module.exports = {
   			'editorial-sm':    '0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.06)',
   			'editorial-md':    '0 4px 16px rgba(15, 23, 42, 0.08), 0 12px 32px rgba(15, 23, 42, 0.06)',
   			'editorial-lg':    '0 8px 24px rgba(15, 23, 42, 0.10), 0 20px 48px rgba(15, 23, 42, 0.08)',
-  			'accent-glow':     '0 0 0 1px rgba(33, 134, 212, 0.24), 0 4px 16px rgba(33, 134, 212, 0.12)',
-  			'brass-glow':      '0 0 0 1px rgba(56, 163, 232, 0.28), 0 4px 16px rgba(56, 163, 232, 0.10)',
-  			'inset-hairline':  'inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(36, 118, 188, 0.04)',
+  			'accent-glow':     '0 0 0 1px rgba(76, 124, 186, 0.24), 0 4px 16px rgba(76, 124, 186, 0.12)',
+  			'brass-glow':      '0 0 0 1px rgba(76, 124, 186, 0.28), 0 4px 16px rgba(76, 124, 186, 0.10)',
+  			'inset-hairline':  'inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(76, 124, 186, 0.04)',
   		},
   		backgroundImage: {
   			'mesh-navy': 'radial-gradient(120% 80% at 18% 12%, rgb(var(--bank-accent) / 0.28), transparent 55%), radial-gradient(90% 70% at 82% 88%, rgb(var(--bank-accent-strong) / 0.14), transparent 60%), radial-gradient(140% 100% at 50% 50%, rgb(var(--bank-ink)) 0%, rgb(var(--bank-ink)) 60%, rgb(var(--bank-ink-hover)) 100%)',

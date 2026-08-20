@@ -4,9 +4,9 @@ export const CHART_FONT = '"IBM Plex Sans", system-ui, sans-serif';
 
 /** Bank-aligned chart colors (light mode defaults; axis ticks overridden in dark via CSS). */
 export const CHART_COLORS = {
-  primary: '#2186D4',
-  primaryDeep: '#146EB4',
-  accent: '#38A3E8',
+  primary: '#4C7CBA',
+  primaryDeep: '#3A6499',
+  accent: '#4C7CBA',
   gold: '#B49450',
   secondary: '#386EA8',
   success: '#10B981',
@@ -20,8 +20,8 @@ export const CHART_COLORS = {
   cursorLine: 'rgba(33, 134, 212, 0.35)',
   reference: 'rgba(226, 232, 240, 0.95)',
   neutral: '#64748b',
-  gross: '#2186D4',
-  net: '#146EB4',
+  gross: '#4C7CBA',
+  net: '#3A6499',
 };
 
 export const CHART_TICK = {
@@ -45,8 +45,8 @@ export const CHART_PALETTE = [
   CHART_COLORS.accent,
   CHART_COLORS.secondary,
   CHART_COLORS.success,
-  '#146EB4',
-  '#5BA3E0',
+  '#3A6499',
+  '#7DA5CE',
   CHART_COLORS.error,
 ];
 
