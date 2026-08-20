@@ -145,7 +145,7 @@ const AdminGlobalNotifications = () => {
                   ? row.message_body.slice(0, 57) + '…'
                   : row.message_body;
 
-              toast.info('Neue Social-Nachricht (Alexander Wahl Vermögensverwaltung GmbH)', {
+              toast.info('Neue Social-Nachricht (Fröhlich Vermögensberatung GmbH)', {
                 description: `${row.name} · ${preview}`,
                 action: {
                   label: 'Öffnen',

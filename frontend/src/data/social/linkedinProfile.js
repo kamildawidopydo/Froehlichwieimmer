@@ -79,7 +79,7 @@ export const linkedinProfile = {
       { label: 'Spezial-AIF', href: '/spezial-aif' },
     ],
     regulation:
-      'Alexander Wahl Vermögensverwaltung GmbH · Registrierte AIF-KVG gemäß § 44 KAGB. Keine Anlageberatung über Social Media.',
+      'Fröhlich Vermögensberatung GmbH · Registrierte AIF-KVG gemäß § 44 KAGB. Keine Anlageberatung über Social Media.',
   },
   contact: {
     email: siteContact.email,

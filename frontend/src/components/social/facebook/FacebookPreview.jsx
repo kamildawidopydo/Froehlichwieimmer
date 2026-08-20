@@ -257,7 +257,7 @@ const FacebookTabFotos = ({ onOpenPhoto }) => (
       ))}
     </div>
     <p className="mt-4 text-center text-[13px] italic text-[#65676b]">
-      Ausgewählte Beitragsmedien der Alexander Wahl Vermögensverwaltung GmbH Seite.
+      Ausgewählte Beitragsmedien der Fröhlich Vermögensberatung GmbH Seite.
     </p>
   </div>
 );

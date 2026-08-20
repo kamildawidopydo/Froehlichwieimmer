@@ -31,7 +31,7 @@ const siteContact = {
   /** Secondary line — Impressum only (Frankfurt / Hauptsitz). */
   phoneSecondaryTel: FRANKFURT_PHONE_TEL,
   phoneSecondaryDisplay: formatGermanPhoneDisplay(FRANKFURT_PHONE_TEL, [2, 4, 5]),
-  companyName: 'Alexander Wahl Vermögensverwaltung GmbH',
+  companyName: 'Fröhlich Vermögensberatung GmbH',
   street: 'Hallgartenstraße 57',
   postalCity: '60389 Frankfurt am Main',
   /** Kundenbetreuung (Impressum) — same as Hauptsitz. */

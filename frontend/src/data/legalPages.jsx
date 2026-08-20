@@ -26,7 +26,7 @@ import {
 import siteContact from '@/data/siteContact';
 
 const COMPANY = {
-  name: 'Alexander Wahl Vermögensverwaltung GmbH',
+  name: 'Fröhlich Vermögensberatung GmbH',
   street: 'Hallgartenstraße 57',
   city: '60389 Frankfurt am Main',
   country: 'Deutschland',
@@ -278,7 +278,7 @@ const termsBody = (
   <div className="space-y-6">
     <LegalNotice variant="info" icon={FileText} title="Präambel">
       <p>
-        Die Alexander Wahl Vermögensverwaltung GmbH verwaltet ausschließlich eigenes Vermögen. Darüber hinaus werden Dienstleistungen für
+        Die Fröhlich Vermögensberatung GmbH verwaltet ausschließlich eigenes Vermögen. Darüber hinaus werden Dienstleistungen für
         Dritte erbracht, Plattformen betrieben und Verträge mit Kunden abgeschlossen.
       </p>
       <p className="mt-2">
@@ -289,7 +289,7 @@ const termsBody = (
 
     <LegalClause id="geltungsbereich" number="§ 1" title="Geltungsbereich">
       <p>
-        (1) Diese AGB regeln alle Rechtsbeziehungen zwischen der Alexander Wahl Vermögensverwaltung GmbH und Dritten, soweit nicht abweichende
+        (1) Diese AGB regeln alle Rechtsbeziehungen zwischen der Fröhlich Vermögensberatung GmbH und Dritten, soweit nicht abweichende
         individuelle Vereinbarungen getroffen werden.
       </p>
       <p>
@@ -303,7 +303,7 @@ const termsBody = (
     </LegalClause>
 
     <LegalClause id="leistungen" number="§ 2" title="Leistungen">
-      <p>(1) Die Alexander Wahl Vermögensverwaltung GmbH erbringt Dienstleistungen für Dritte und betreibt Plattformen.</p>
+      <p>(1) Die Fröhlich Vermögensberatung GmbH erbringt Dienstleistungen für Dritte und betreibt Plattformen.</p>
       <p>
         (2) Es werden Verträge mit Kunden abgeschlossen. Die genaue Leistungsbeschreibung ergibt sich aus dem
         jeweiligen Vertrag oder der jeweiligen Leistungsvereinbarung.
@@ -325,7 +325,7 @@ const termsBody = (
       </p>
       <p>
         (6) Sämtliche Kundengelder und Vermögenswerte werden ausschließlich auf den jeweiligen Kundenkonten oder
-        Kundendepots bei den entsprechenden Partnerbanken oder Produktanbietern geführt. Die Alexander Wahl Vermögensverwaltung GmbH nimmt
+        Kundendepots bei den entsprechenden Partnerbanken oder Produktanbietern geführt. Die Fröhlich Vermögensberatung GmbH nimmt
         keine Kundengelder entgegen, verwahrt keine Kundengelder und führt keine eigenen Kundenkonten oder
         Kundendepots, soweit dies nicht ausdrücklich gesetzlich zulässig und vertraglich vereinbart ist.
       </p>
@@ -360,7 +360,7 @@ const termsBody = (
         (5) Für Leistungen, Produkte, Zinssätze, Einlagensicherungssysteme, Kontoführung, Depotführung, Verwahrung von
         Vermögenswerten, Zahlungsverkehr, Transaktionen oder sonstige Leistungen der jeweiligen Partnerbanken oder
         Produktanbieter haftet ausschließlich der jeweilige Anbieter im Rahmen seiner gesetzlichen und vertraglichen
-        Verpflichtungen. Die Alexander Wahl Vermögensverwaltung GmbH übernimmt hierfür keine Gewähr oder Haftung, soweit gesetzlich
+        Verpflichtungen. Die Fröhlich Vermögensberatung GmbH übernimmt hierfür keine Gewähr oder Haftung, soweit gesetzlich
         zulässig.
       </p>
       <p>
@@ -473,7 +473,7 @@ const disclaimerBody = (
 
     <LegalSection id="haftung" icon={Scale} title="Haftungsbeschränkung">
       <p>
-        Die Alexander Wahl Vermögensverwaltung GmbH haftet — soweit gesetzlich zulässig — nur für Vorsatz und grobe Fahrlässigkeit. Die
+        Die Fröhlich Vermögensberatung GmbH haftet — soweit gesetzlich zulässig — nur für Vorsatz und grobe Fahrlässigkeit. Die
         Haftung für leichte Fahrlässigkeit ist ausgeschlossen, soweit keine vertragswesentlichen Pflichten verletzt
         werden. Die Haftung nach dem Produkthaftungsgesetz sowie für Schäden aus der Verletzung des Lebens, des
         Körpers oder der Gesundheit bleibt unberührt.
@@ -593,7 +593,7 @@ export const legalPages = {
     title: 'Impressum',
     icon: Building2,
     description:
-      'Impressum der Alexander Wahl Vermögensverwaltung GmbH — Anbieterkennung, Register, Kooperationspartner und Kontakt für kapitalmitte.com.',
+      'Impressum der Fröhlich Vermögensberatung GmbH — Anbieterkennung, Register, Kooperationspartner und Kontakt für kapitalmitte.com.',
     body: impressumBody,
     toc: [
       { id: 'verantwortlich', label: 'Verantwortlich' },
@@ -625,7 +625,7 @@ export const legalPages = {
   terms: {
     title: 'Allgemeine Geschäftsbedingungen (AGB)',
     icon: FileText,
-    description: 'Allgemeine Geschäftsbedingungen (AGB) der Alexander Wahl Vermögensverwaltung GmbH.',
+    description: 'Allgemeine Geschäftsbedingungen (AGB) der Fröhlich Vermögensberatung GmbH.',
     body: termsBody,
     toc: [
       { id: 'geltungsbereich', label: 'Geltungsbereich' },

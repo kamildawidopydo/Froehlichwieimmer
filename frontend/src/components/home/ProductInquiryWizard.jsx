@@ -245,7 +245,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
         </ul>
       </div>
       <div className="mt-3 rounded-xl border border-bank-border bg-white p-3.5 shadow-sm sm:p-4">
-        <p className="font-display text-[15px] font-light tracking-tight text-bank-ink">Warum Alexander Wahl Vermögensverwaltung GmbH?</p>
+        <p className="font-display text-[15px] font-light tracking-tight text-bank-ink">Warum Fröhlich Vermögensberatung GmbH?</p>
         <ul className="mt-3 space-y-2 text-[12px] text-bank-text-muted">
           {['Sicher & reguliert', 'Persönliche Beratung', 'Exklusive Konditionen', 'Schnell & unkompliziert'].map(
             (line) => (

@@ -11,7 +11,7 @@ const IG_GRADIENT =
 
 const PLATFORM_META = {
   instagram: {
-    title: 'Nachricht an Alexander Wahl Vermögensverwaltung GmbH',
+    title: 'Nachricht an Fröhlich Vermögensberatung GmbH',
     subtitle: 'Schreiben Sie uns direkt — ohne echtes Instagram-Konto.',
     Logo: () => (
       <span
@@ -38,7 +38,7 @@ const PLATFORM_META = {
   },
   facebook: {
     title: 'Nachricht senden',
-    subtitle: 'Kontaktieren Sie Alexander Wahl Vermögensverwaltung GmbH über diese Seiten-Vorschau.',
+    subtitle: 'Kontaktieren Sie Fröhlich Vermögensberatung GmbH über diese Seiten-Vorschau.',
     Logo: () => (
       <span
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1877F2] text-[22px] font-bold text-white"
@@ -61,7 +61,7 @@ const PLATFORM_META = {
     closeClass: 'text-[#65676b] hover:bg-[#e4e6eb]',
   },
   linkedin: {
-    title: 'Nachricht an Alexander Wahl Vermögensverwaltung GmbH',
+    title: 'Nachricht an Fröhlich Vermögensberatung GmbH',
     subtitle: 'Ihre Anfrage wird an unser Team weitergeleitet.',
     Logo: () => (
       <span
@@ -135,7 +135,7 @@ const SocialAnlagenprofisMessageModal = ({ open, platform = 'instagram', onClose
         status: 'new',
       });
       if (error) throw error;
-      toast.success('Nachricht gesendet. Das Team von Alexander Wahl Vermögensverwaltung GmbH meldet sich bei Ihnen.');
+      toast.success('Nachricht gesendet. Das Team von Fröhlich Vermögensberatung GmbH meldet sich bei Ihnen.');
       onClose();
     } catch {
       toast.error('Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.');
@@ -247,7 +247,7 @@ const SocialAnlagenprofisMessageModal = ({ open, platform = 'instagram', onClose
           </button>
 
           <p className={cn('mt-4 text-center leading-relaxed', meta.footerClass)}>
-            Ihre Nachricht wird nach dem Absenden direkt an die Alexander Wahl Vermögensverwaltung GmbH zur Bearbeitung weitergeleitet.
+            Ihre Nachricht wird nach dem Absenden direkt an die Fröhlich Vermögensberatung GmbH zur Bearbeitung weitergeleitet.
           </p>
         </form>
       </div>

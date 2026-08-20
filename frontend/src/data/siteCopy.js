@@ -14,7 +14,7 @@ import {
 export const siteCopy = {
   brand: {
     name: 'Kapitalmitte',
-    legalName: 'Alexander Wahl Vermögensverwaltung GmbH',
+    legalName: 'Fröhlich Vermögensberatung GmbH',
   },
 
   hero: {
@@ -65,7 +65,7 @@ export const siteCopy = {
       'Gemeinsam verbinden wir Nähe und Internationalität – für Ihre finanzielle Freiheit und eine sichere Zukunft. Lokale Betreuung in Deutschland, europäische Partnerstärke.',
     securityBadge: 'Bankentaugliche Sicherheit · TLS 1.3',
     regulatedHeading: 'REGULIERT & GESCHÜTZT',
-    copyright: (year) => `© ${year} Alexander Wahl Vermögensverwaltung GmbH · Alle Rechte vorbehalten.`,
+    copyright: (year) => `© ${year} Fröhlich Vermögensberatung GmbH · Alle Rechte vorbehalten.`,
     benefitsAriaLabel: 'Ihre Vorteile bei Kapitalmitte',
   },
 

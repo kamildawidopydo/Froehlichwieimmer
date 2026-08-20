@@ -245,7 +245,7 @@ function TabPanel({ activeId }) {
             Transparenz &amp; Registerangaben
           </h2>
           <p className="mt-4 text-[15px] leading-relaxed text-bank-text-muted">
-            Zentrale regulatorische und rechtliche Eckpunkte der Alexander Wahl Vermögensverwaltung GmbH — konsistent mit Impressum und
+            Zentrale regulatorische und rechtliche Eckpunkte der Fröhlich Vermögensberatung GmbH — konsistent mit Impressum und
             Compliance-Hinweisen.
           </p>
         </div>

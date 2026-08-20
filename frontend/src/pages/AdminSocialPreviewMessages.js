@@ -106,7 +106,7 @@ const AdminSocialPreviewMessages = () => {
     <AdminSubpageLayout>
       <AdminSubpageHeader
         eyebrow="Admin · Social-Vorschau"
-        title="Nachrichten an Alexander Wahl Vermögensverwaltung GmbH"
+        title="Nachrichten an Fröhlich Vermögensberatung GmbH"
         titleIcon={MessageSquare}
         description="Kontaktanfragen aus dem Instagram-Vorschau-Modal (Nachricht-Button)."
         actions={

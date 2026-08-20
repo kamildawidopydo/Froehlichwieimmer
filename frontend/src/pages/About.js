@@ -22,7 +22,7 @@ const IMG_STANDORT = siteImages.about.standort;
 const HERO_IMAGE_LOCAL = siteImages.about.hero;
 
 const EASE = [0.22, 1, 0.36, 1];
-const COMPANY = 'Alexander Wahl Vermögensverwaltung GmbH';
+const COMPANY = 'Fröhlich Vermögensberatung GmbH';
 const PARTNER = 'Vermogens Advies Administratie B.V.';
 const SLOGAN =
   'Gemeinsam verbinden wir Nähe und Internationalität – für Ihre finanzielle Freiheit und eine sichere Zukunft.';

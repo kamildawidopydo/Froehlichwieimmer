@@ -209,7 +209,7 @@ const Footer = () => {
             {footerCopy.copyright(year)}
           </p>
           <p className="mx-auto mt-4 max-w-5xl text-center text-[11px] leading-relaxed text-white/65 sm:mt-5 sm:text-[12px]">
-            Gewisse Dienstleistungen und Produkte der Alexander Wahl Vermögensverwaltung GmbH sind Personen mit
+            Gewisse Dienstleistungen und Produkte der Fröhlich Vermögensberatung GmbH sind Personen mit
             Wohnsitz in oder Staatsangehörigen von bestimmten Ländern nicht zugänglich. Der Website-Benutzer wird
             deshalb ersucht, die für diese Website geltenden{' '}
             <Link to="/legal/terms" className="text-white/85 underline-offset-2 hover:text-white hover:underline">
