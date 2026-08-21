@@ -15,12 +15,36 @@ const CAT_LABEL = {
 
 const renderBody = (body) => {
   if (!body) return null;
-  return body.split(/\n{2,}/).map((block, idx) => {
+  const blocks = body.split(/\n{2,}/);
+  const out = [];
+  blocks.forEach((block, idx) => {
     const t = block.trim();
-    if (t.startsWith('## ')) return <h2 key={idx} className="mt-10 font-serif text-2xl leading-tight text-bank-text">{t.replace(/^##\s+/, '')}</h2>;
-    if (t.startsWith('### ')) return <h3 key={idx} className="mt-8 font-serif text-xl text-bank-text">{t.replace(/^###\s+/, '')}</h3>;
-    return <p key={idx} className="mt-4 text-[15.5px] leading-relaxed text-bank-text">{t}</p>;
+    if (!t) return;
+    if (t.startsWith('## ')) {
+      out.push(<h2 key={idx} className="mt-10 font-serif text-[26px] leading-tight text-bank-text">{t.replace(/^##\s+/, '')}</h2>);
+      return;
+    }
+    if (t.startsWith('### ')) {
+      out.push(<h3 key={idx} className="mt-8 font-serif text-xl text-bank-text">{t.replace(/^###\s+/, '')}</h3>);
+      return;
+    }
+    // Bullet-Block: aufeinanderfolgende Zeilen, die mit `- ` beginnen
+    const lines = t.split('\n').map((l) => l.trim());
+    if (lines.every((l) => l.startsWith('- '))) {
+      out.push(
+        <ul key={idx} className="mt-4 space-y-2 pl-5">
+          {lines.map((l, i) => (
+            <li key={i} className="list-disc text-[15.5px] leading-relaxed text-bank-text marker:text-bank-gold">
+              {l.replace(/^-\s+/, '')}
+            </li>
+          ))}
+        </ul>,
+      );
+      return;
+    }
+    out.push(<p key={idx} className="mt-4 text-[15.5px] leading-relaxed text-bank-text">{t}</p>);
   });
+  return out;
 };
 
 /**
@@ -83,11 +107,6 @@ const NachrichtenDetailPage = () => {
             <>
               <div className="mt-6 flex items-center gap-2">
                 <Eyebrow>{CAT_LABEL[item.category] || item.category}</Eyebrow>
-                {item.is_demo && (
-                  <span className="inline-flex items-center gap-1 border border-amber-300 bg-amber-50 px-1.5 py-px font-mono text-[9.5px] uppercase tracking-[0.16em] text-amber-900" data-testid="news-detail-demo-badge">
-                    Demo / Testdaten
-                  </span>
-                )}
               </div>
               <h1 className="mt-3 font-serif text-3xl leading-tight text-bank-text sm:text-[42px]">{item.title}</h1>
               {item.subtitle && (
@@ -96,7 +115,7 @@ const NachrichtenDetailPage = () => {
               <p className="mt-5 text-[15.5px] leading-relaxed text-bank-text-muted">{item.summary}</p>
               <p className="mt-6 text-[11px] uppercase tracking-[0.18em] text-bank-text-muted">
                 {publishedFmt}
-                {item.source_name && (<> · Quelle: <span className="text-bank-text">{item.source_name}</span></>)}
+                <span> · Redaktion: <span className="text-bank-text">Fröhlich Vermögensberatung</span></span>
               </p>
             </>
           )}
@@ -106,17 +125,33 @@ const NachrichtenDetailPage = () => {
       {item && (
         <article className="mx-auto max-w-4xl px-6 pb-20 pt-10 sm:px-10">
           {heroImage && (
-            <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
-              <img src={heroImage} alt="" className="h-full w-full object-cover" />
-              {item.content_type === 'video' && !item.video_embed_url && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/25 text-center text-white">
-                  <div>
-                    <PlayCircle className="mx-auto h-16 w-16" strokeWidth={1.2} />
-                    <p className="mt-2 font-mono text-[10.5px] uppercase tracking-[0.22em]">Video-Embed nach Lizenzfreigabe</p>
+            <>
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
+                <img src={heroImage} alt="" className="h-full w-full object-cover" />
+                {item.content_type === 'video' && !item.video_embed_url && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/25 text-center text-white">
+                    <div>
+                      <PlayCircle className="mx-auto h-16 w-16" strokeWidth={1.2} />
+                      <p className="mt-2 font-mono text-[10.5px] uppercase tracking-[0.22em]">Video-Embed nach Lizenzfreigabe</p>
+                    </div>
                   </div>
-                </div>
+                )}
+              </div>
+              {(item.image_attribution || item.image_author) && (
+                <p className="mt-2 text-[10.5px] uppercase tracking-[0.16em] text-bank-text-muted" data-testid="news-detail-image-attribution">
+                  {item.image_author_url ? (
+                    <>Foto: <a href={item.image_author_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-bank-primary">{item.image_author || 'Unsplash Fotograf'}</a></>
+                  ) : (
+                    <>{item.image_attribution || `Foto: ${item.image_author || 'Unsplash'}`}</>
+                  )}
+                  {item.image_source_url ? (
+                    <> · auf <a href={item.image_source_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-bank-primary">{item.image_source || 'Unsplash'}</a></>
+                  ) : (
+                    <> · {item.image_source || 'Unsplash'}</>
+                  )}
+                </p>
               )}
-            </div>
+            </>
           )}
 
           {item.video_embed_url && (
@@ -143,24 +178,32 @@ const NachrichtenDetailPage = () => {
             </div>
           )}
 
-          {/* Externe Quelle nur dezent am Ende — niemals primäres Klickziel */}
-          {(item.source_name || item.source_url) && (
-            <div className="mt-12 border-t border-bank-border pt-6" data-testid="news-detail-source">
-              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted">Externe Quelle</p>
-              <p className="mt-2 text-[13.5px] text-bank-text">
-                Diese Meldung stammt von <span className="font-medium">{item.source_name || 'einem externen Anbieter'}</span>.
+          {/* Verwendete Faktenquellen — dezent am Ende, klickbar */}
+          {(item.sources && item.sources.length > 0) && (
+            <div className="mt-12 border-t border-bank-border pt-6" data-testid="news-detail-sources">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-accent-strong">Quellen</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-bank-text-muted">
+                Dieser Artikel wurde von der Redaktion der Fröhlich Vermögensberatung eigenständig
+                verfasst. Grundlage sind die folgenden offiziellen Faktenquellen:
               </p>
-              {item.source_url && (
-                <a
-                  href={item.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
-                  data-testid="news-detail-external-link"
-                  className="mt-3 inline-flex items-center gap-1.5 border border-bank-border px-3.5 py-1.5 text-[11.5px] font-medium uppercase tracking-[0.18em] text-bank-text-muted transition-colors hover:border-bank-primary/60 hover:text-bank-primary"
-                >
-                  Originalquelle ansehen <ArrowUpRight size={11} strokeWidth={1.8} />
-                </a>
-              )}
+              <ul className="mt-3 space-y-1.5">
+                {item.sources.map((s, idx) => (
+                  <li key={idx} className="text-[13px] text-bank-text">
+                    <span className="font-medium">{s.name || 'Quelle'}</span>
+                    {s.url && (
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        data-testid={`news-detail-source-link-${idx}`}
+                        className="ml-2 inline-flex items-center gap-1 text-[12px] uppercase tracking-[0.14em] text-bank-primary hover:underline"
+                      >
+                        Original ansehen <ArrowUpRight size={11} strokeWidth={1.8} />
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

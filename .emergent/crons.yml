@@ -1,0 +1,14 @@
+crons:
+  - name: news-fetch-feeds
+    schedule: "*/15 * * * *"
+    endpoint: "/api/news/admin/fetch-feeds"
+    method: POST
+    auth: admin
+    description: "Alle 15 Min RSS-Feeds abrufen (Tagesschau, DW, EZB, Bundesbank, BaFin, EU-Kommission)."
+
+  - name: news-synthesize
+    schedule: "0 * * * *"
+    endpoint: "/api/news/admin/synthesize"
+    method: POST
+    auth: admin
+    description: "Stündlich bis zu 3 neue Artikel via Claude Sonnet 5 aus vorliegenden Feeds synthetisieren."

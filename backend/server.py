@@ -3218,8 +3218,36 @@ async def on_shutdown():
 
 # Import the news provider abstraction at the very end so both files can
 # coexist without circular imports.
-from news_provider import active_provider as _news_provider, CATEGORIES as _NEWS_CATEGORIES  # noqa: E402
+from news_provider import active_provider as _news_provider, CATEGORIES as _NEWS_CATEGORIES, MongoNewsProvider as _MongoNewsProvider  # noqa: E402
 from einordnung import register as _register_einordnung, seed_einordnung as _seed_einordnung  # noqa: E402
+from news_synthesizer import (
+    fetch_feeds as _news_fetch_feeds,
+    synthesize_pending as _news_synthesize,
+    purge_demo_articles as _news_purge_demo,
+)  # noqa: E402
+
+# Inject the Mongo handle into the news provider so it can serve articles.
+_MongoNewsProvider.set_db(db)
+
+
+@api.post("/news/admin/fetch-feeds", summary="Admin: RSS-Feeds sofort abrufen")
+async def _admin_fetch_feeds(_user: dict = Depends(require_admin)):
+    return await _news_fetch_feeds(db)
+
+
+@api.post("/news/admin/synthesize", summary="Admin: neue Artikel synthetisieren")
+async def _admin_synthesize(_user: dict = Depends(require_admin), max_articles: int = 3):
+    return await _news_synthesize(db, max_articles=max(1, min(10, max_articles)))
+
+
+@api.get("/news/admin/list", summary="Admin: alle Artikel inkl. needs_review")
+async def _admin_news_list(_user: dict = Depends(require_admin), status: Optional[str] = None, limit: int = 50):
+    query = {}
+    if status:
+        query["status"] = status
+    docs = await db.news_articles.find(query).sort([("generated_at", -1)]).limit(min(200, max(1, limit))).to_list(200)
+    return {"total": await db.news_articles.count_documents(query),
+            "items": [{**{k: v for k, v in d.items() if k != "_id"}, "id": str(d.get("_id"))} for d in docs]}
 
 _register_einordnung(api, db)
 
@@ -3232,6 +3260,23 @@ async def _einordnung_startup() -> None:
             logger.info("einordnung: seeded %d demo posts", inserted)
     except Exception:  # noqa: BLE001
         logger.exception("einordnung startup seed failed")
+
+
+@app.on_event("startup")
+async def _news_purge_startup() -> None:
+    """Sicherstellen, dass keine DEMO-Nachrichten im Live-Bestand verbleiben."""
+    try:
+        removed = await _news_purge_demo(db)
+        if removed:
+            logger.info("news_synthesizer: purged %d demo articles on startup", removed)
+    except Exception:  # noqa: BLE001
+        logger.exception("news demo purge failed")
+
+
+@api.post("/news/admin/purge-demo", summary="Admin: DEMO-Nachrichten aus DB entfernen")
+async def _admin_purge_demo(_user: dict = Depends(require_admin)):
+    removed = await _news_purge_demo(db)
+    return {"removed": removed}
 
 
 @api.get("/news/nachrichten")

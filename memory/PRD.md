@@ -7,6 +7,64 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 25 (Feb 27, 2026) — News-Pipeline produktionsreif gehärtet
+
+**Backend (`news_synthesizer.py`) — vollständiger Rewrite**
+- **Themenfilter**: 40+ Whitelist-Keywords (DAX, S&P, Nasdaq, EZB, Fed, Zinsen, Inflation, Konjunktur, Anleihen, Gold, Öl, EUR/USD, Banken …) + explizite Blocklist (Sport, Boulevard, Filmfest, Promi, Unfälle, Lifestyle, Fashion, Influencer).
+- **Duplikaterkennung mehrstufig**: (1) Fingerprint-Exakt-Match; (2) Titel-Jaccard-Ähnlichkeit ≥ 0.5 innerhalb 24 h in gleicher Kategorie, ≥ 0.65 kategorie-übergreifend, oder bei Quellen-Overlap. Bei erkanntem Duplikat wird der bestehende Artikel via `$addToSet` um neue Quellen ergänzt (`updated_existing`) statt neuen zu erzeugen.
+- **Unsplash offizielle API**: `api.unsplash.com/search/photos` mit `UNSPLASH_ACCESS_KEY` (aus `.env`). Persistiert Attribution-Trio (`image_author`, `image_author_url`, `image_source`, `image_source_url`, `image_attribution`) + Utm-Params gemäss Unsplash Guidelines. Ohne Key → kuratierte kategorie-spezifische Fallback-URLs (kein source.unsplash.com mehr — der Endpunkt ist seit 2024 tot).
+- **LLM-Prompt** (Claude Sonnet 5): Pflicht-Struktur mit 5 `## `-Sektionen: Was ist passiert? · Der Hintergrund · Warum ist das für Wirtschaft und Märkte wichtig? · Was bedeutet das für Anleger? · Was jetzt wichtig wird (Bullet-Liste). 500–900 Wörter Ziel, 350 Wörter Minimum, JSON-only Antwortformat.
+- **Quality-Gate**: keine erfundenen Placeholders, keine Anlageempfehlungen (`jetzt kaufen`, `garantierte Rendite`, …), min. 350 Wörter, min. 2 `## `-Sektionen, min. 1 Quelle. Bei Verstoss → `status=needs_review`, `is_published=false`.
+- **Relevance-Score 0–100**: gewichtet Source-Weight × Impact-Keywords (Zinsentscheid, Notenbank, DAX, EUR/USD, Gold …) + Multi-Source-Bonus + Primärquellen-Bonus. Score ≥ 55 → `is_top_news=true` (auf Homepage prominent).
+- **DEMO-Purge auf Startup + `/api/news/admin/purge-demo` Admin-Endpoint**: entfernt jede Legacy-Meldung mit DEMO-Prefix, `content_type=demo` oder Testdaten-Blocklist aus `news_articles`.
+- **Logging**: strukturierte Events (`feed_ok`, `synthesis_start`, `article_published`, `article_needs_review`, `duplicate_updated`, `demo_purge`, `unsplash: no key → fallback`) — keine Secrets in Logs.
+
+**Backend (`news_provider.py`)**
+- `MongoNewsProvider` liefert jetzt Image-Attribution-Felder + `relevance_score` an Frontend. Query hardcoded auf `is_published=true AND status=published AND content_type != demo`. Sortierung: `is_top_news DESC → relevance_score DESC → published_at DESC`.
+- `EuronewsDemoProvider` bleibt im Modul für lokale Entwicklung, wird aber niemals mehr automatisch aktiviert (Env-Flag `NEWS_ENABLE_DEMO` komplett entfernt).
+
+**Frontend (`NachrichtenPage.jsx`)**
+- Header komplett rebranded: „Redaktion: Fröhlich Vermögensberatung · Quellen: EZB, Bundesbank, BaFin, EU-Kommission, Tagesschau, DW · Letzte Aktualisierung …". Kein „Euronews" mehr sichtbar.
+- Alle `DemoBadge`-Renders entfernt (Cards + Hero + Detail-Header).
+- `LiveSlot` (Euronews-Platzhalter) durch **`RedaktionSlot`** ersetzt: erklärt eigenständige Redaktion, offizielle Quellen, keine Anlageempfehlung.
+- `PageMeta`-Description auf Redaktions-Erzählung umgestellt.
+
+**Frontend (`NachrichtenDetailPage.jsx`)**
+- `renderBody()` unterstützt jetzt Bullet-Listen (`- `-Prefix) — für Sektion „Was jetzt wichtig wird". Bullet-Marker in Gold.
+- Image-Attribution direkt unter Hero-Bild mit klickbaren Links zum Fotografen + Unsplash-Foto-URL (Utm-Params).
+- „Externe Quelle"-Block ersetzt durch **„Quellen"**-Block: listet alle Fakten-Quellen (Multi-Source) als Text mit „Original ansehen ↗"-Links.
+- Byline geändert von „Quelle: Tagesschau" → „Redaktion: Fröhlich Vermögensberatung".
+
+**Cron (`.emergent/crons.yml`)** — unverändert: fetch-feeds alle 15 Min, synthesize stündlich (max 3/Lauf).
+
+**Verifiziert (Live-Run 27. Feb)**
+- fetch-feeds: 76 gefetcht → 38 relevant → 3 neu.
+- Synthese: 6 Artikel published (davon 1 `is_top_news`), alle mit vollständiger 5-Sektionen-Struktur, ø 480-620 Wörter, Score 35-45.
+- Duplikate: 1 kategorie-übergreifendes Duplikat erfolgreich zu Bestandsartikel gemerged.
+- API `/api/news/nachrichten?limit=5` → 200 in 182 ms.
+- Detail-Page rendert alle 5 `##`-Sektionen + Bullet-Punkte + Attribution.
+- **Home-Preview** 5-Minuten-Auto-Refresh unverändert; ruft nur `/api/news/nachrichten` ab (kein LLM-Trigger im Client).
+
+**Offen**
+- `UNSPLASH_ACCESS_KEY` in `.env` (leer) — User trägt seinen Key selbst ein, Bilder liegen bis dahin auf kuratiertem Fallback pro Kategorie.
+- `ALPHA_VANTAGE_API_KEY` (leer) — Marktdaten weiter im Fallback-Modus bis User Key liefert.
+
+
+## Session 24 (Feb 26, 2026) — Produktive News-Pipeline live
+
+**Backend**
+- `news_synthesizer.py`: RSS-Puller für 7 seriöse deutsche Quellen (Tagesschau, DW, EZB, Bundesbank, BaFin, EU-Kommission) → Themenfilter (23 Keywords) → Fingerprint-Dedup → Claude-Sonnet-5-Synthese via Emergent LLM Key → 8-Punkte-Quality-Gate (Wortzahl ≥ 400, keine Demo-Prefix, keine Anlageempfehlung, ≥ 1 Quelle) → Mongo-Save.
+- `news_provider.py`: `MongoNewsProvider` liest aus `news_articles`; DEMO-Provider nur bei `NEWS_ENABLE_DEMO=1` (Default: aus). Alle DEMO-Fixtures raus aus dem Live-Frontend.
+- Neue Endpunkte: `POST /api/news/admin/fetch-feeds`, `POST /api/news/admin/synthesize`, `GET /api/news/admin/list?status=`. Alle admin-only.
+- Cron `/.emergent/crons.yml`: fetch-feeds alle 15 Min, synthesize stündlich (max 3 Artikel/Lauf).
+- `EMERGENT_LLM_KEY` in `.env` ergänzt.
+
+**Verifiziert (Live-Run)**
+- fetch-feeds: 76 fetched → 53 relevant → 52 neu.
+- Synthese: 1 Artikel publiziert (`dax-beendet-woche-mit-tagesgewinn…`, DAX-Score 42), 1 needs_review (Blocklist-False-Positive → gefixt).
+
+**Frontend** — unverändert; die Detailseite `/news/nachrichten/:slug` rendert automatisch die neuen Artikel mit `content` als `full_text`.
+
 ## Session 23 (Feb 26, 2026) — Interne Nachrichten-Detailseiten
 
 **Backend (`news_provider.py`)**

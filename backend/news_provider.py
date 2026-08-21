@@ -1,9 +1,11 @@
 """
 News provider abstraction for the /news/nachrichten feature.
 
-Two providers are wired: a DEMO provider (used until a Euronews commercial
-licence is signed) and a placeholder LicensedEuronewsProvider that will
-consume an official MRSS/API endpoint once the credentials are available.
+Sources of truth:
+  1. `MongoNewsProvider`  — production. Reads published articles from
+     the `news_articles` collection (populated by the news synthesizer).
+  2. `EuronewsDemoProvider` — dev-only. Only used when the env flag
+     `NEWS_ENABLE_DEMO=1` is set. Never served in production.
 
 Every payload conforms to the normalised model in `NORMALISED_KEYS` so
 the React layer never has to know which provider produced it.
@@ -11,6 +13,7 @@ the React layer never has to know which provider produced it.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -321,5 +324,95 @@ class EuronewsLicensedProvider(NewsProvider):
         raise NotImplementedError("Licence not active — currently served by EuronewsDemoProvider")
 
 
-# Active provider — flip once licensed.
-active_provider: NewsProvider = EuronewsDemoProvider()
+class MongoNewsProvider(NewsProvider):
+    """Production provider — reads synthesized articles from the `news_articles` collection.
+
+    Documents follow the extended shape written by the news synthesizer
+    (see news_synthesizer.py — to be added in the next iteration):
+      _id, slug, title, subtitle, category, published_at, updated_at,
+      image_url, hero_image_url, summary, content, content_type,
+      sources[], source_names[], source_urls[], is_published,
+      is_breaking, is_top_news, generated_at, last_verified_at.
+    """
+
+    name = "news-synthesis"
+    is_demo = False
+    _db = None  # injected via `set_db`
+
+    @classmethod
+    def set_db(cls, db) -> None:
+        cls._db = db
+
+    def _to_public(self, doc: dict) -> dict:
+        content_type = doc.get("content_type") or "news_synthesis"
+        return {
+            "id": str(doc.get("_id") or doc.get("slug")),
+            "slug": doc["slug"],
+            "title": doc["title"],
+            "subtitle": doc.get("subtitle"),
+            "summary": doc.get("summary", ""),
+            "category": doc.get("category", "welt"),
+            "image_url": doc.get("image_url"),
+            "hero_image_url": doc.get("hero_image_url") or doc.get("image_url"),
+            "image_author": doc.get("image_author"),
+            "image_author_url": doc.get("image_author_url"),
+            "image_source": doc.get("image_source"),
+            "image_source_url": doc.get("image_source_url"),
+            "image_attribution": doc.get("image_attribution"),
+            "video_embed_url": doc.get("video_embed_url"),
+            "published_at": (doc.get("published_at") or datetime.now(timezone.utc)).isoformat() if doc.get("published_at") else None,
+            "updated_at": (doc.get("updated_at") or doc.get("published_at") or datetime.now(timezone.utc)).isoformat() if (doc.get("updated_at") or doc.get("published_at")) else None,
+            "source": self.name,
+            "source_name": "Fröhlich Redaktion",
+            "source_url": None,  # never link out as primary — sources block below
+            "sources": doc.get("sources", []),
+            "source_names": doc.get("source_names", []),
+            "source_urls": doc.get("source_urls", []),
+            "full_text": doc.get("content"),  # eigener Redaktions-Volltext
+            "article_content": doc.get("summary", ""),
+            "language": "de",
+            "content_type": content_type,
+            "license_allows_fulltext": True,  # eigener Text — immer voll darstellen
+            "is_top_news": bool(doc.get("is_top_news", False)),
+            "is_breaking": bool(doc.get("is_breaking", False)),
+            "relevance_score": int(doc.get("relevance_score", 0)),
+            "is_demo": False,
+        }
+
+    async def list_items(self, category: Optional[str] = None, limit: int = 20) -> List[dict]:
+        if self._db is None:
+            return []
+        # Immer nur eigenständige, freigegebene Artikel — NIE Demo-Content
+        query: dict = {
+            "is_published": True,
+            "status": "published",
+            "content_type": {"$ne": "demo"},
+        }
+        cat = (category or "alle").lower()
+        if cat != "alle":
+            if cat == "videos":
+                query["content_type"] = "video"
+            elif cat in _CATEGORY_SLUGS:
+                query["category"] = cat
+        cursor = (self._db.news_articles.find(query)
+                   .sort([("is_top_news", -1),
+                          ("relevance_score", -1),
+                          ("published_at", -1)])
+                   .limit(limit))
+        docs = await cursor.to_list(limit)
+        return [self._to_public(d) for d in docs]
+
+    async def get_item(self, slug: str) -> Optional[dict]:
+        if self._db is None:
+            return None
+        doc = await self._db.news_articles.find_one({"slug": slug, "is_published": True})
+        return self._to_public(doc) if doc else None
+
+
+# ---------------------------------------------------------------------------
+# Provider selection — Production ONLY: MongoNewsProvider serves synthesized
+# articles (no more Euronews DEMO fallback). Der Demo-Provider bleibt im
+# Modul für lokale Entwicklung erhalten, wird aber niemals automatisch
+# aktiviert.
+# ---------------------------------------------------------------------------
+active_provider: NewsProvider = MongoNewsProvider()

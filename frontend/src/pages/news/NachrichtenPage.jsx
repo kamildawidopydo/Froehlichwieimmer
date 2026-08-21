@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PlayCircle, ArrowUpRight, RadioTower, ArrowLeft } from 'lucide-react';
+import { PlayCircle, ArrowUpRight, ArrowLeft, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
@@ -23,12 +23,6 @@ const timeAgo = (iso) => {
   if (diff < 86400) return `vor ${Math.floor(diff / 3600)} Std.`;
   return `vor ${Math.floor(diff / 86400)} Tagen`;
 };
-
-const DemoBadge = () => (
-  <span className="inline-flex items-center gap-1 border border-amber-300 bg-amber-50 px-1.5 py-px font-mono text-[9.5px] uppercase tracking-[0.16em] text-amber-900" data-testid="news-demo-badge">
-    Demo / Testdaten
-  </span>
-);
 
 const CategoryTag = ({ category }) => (
   <span className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-accent-strong">
@@ -63,7 +57,6 @@ const HeroCard = ({ item }) => (
       <div>
         <div className="flex items-center gap-2">
           <CategoryTag category={item.category} />
-          {item.is_demo && <DemoBadge />}
         </div>
         <h2 className="mt-3 font-serif text-2xl leading-[1.15] text-bank-text sm:text-3xl">
           {item.title}
@@ -91,7 +84,6 @@ const NewsCard = ({ item }) => (
     <div className="flex flex-1 flex-col gap-2 px-4 py-4">
       <div className="flex items-center gap-2">
         <CategoryTag category={item.category} />
-        {item.is_demo && <DemoBadge />}
       </div>
       <h3 className="font-serif text-[16px] leading-snug text-bank-text group-hover:text-bank-primary">{item.title}</h3>
       <p className="line-clamp-3 text-[13px] leading-relaxed text-bank-text-muted">{item.summary}</p>
@@ -100,18 +92,21 @@ const NewsCard = ({ item }) => (
   </Link>
 );
 
-const LiveSlot = () => (
-  <aside className="border border-bank-border bg-bank-primary/95 p-5 text-white" data-testid="euronews-live-slot">
+const RedaktionSlot = () => (
+  <aside className="border border-bank-border bg-bank-primary/95 p-5 text-white" data-testid="froehlich-redaktion-slot">
     <div className="flex items-center gap-2">
-      <RadioTower className="h-4 w-4 text-bank-gold" strokeWidth={1.6} />
-      <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-bank-gold">Euronews Live</p>
+      <ShieldCheck className="h-4 w-4 text-bank-gold" strokeWidth={1.6} />
+      <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-bank-gold">Fröhlich Redaktion</p>
     </div>
-    <p className="mt-2 font-serif text-lg leading-snug">Aktuelle Nachrichten rund um die Uhr</p>
-    <div className="mt-4 flex aspect-video w-full items-center justify-center border border-white/20 bg-white/5 px-4 text-center text-[12.5px] leading-relaxed text-white/80">
-      Live-Integration wird nach Freigabe des offiziellen Euronews-Players aktiviert.
-    </div>
-    <p className="mt-3 text-[10.5px] uppercase tracking-[0.16em] text-white/60">
-      Quelle: Euronews · Platzhalter bis zur Lizenzfreigabe
+    <p className="mt-2 font-serif text-lg leading-snug">Eigenständig recherchiert. Neutral eingeordnet.</p>
+    <p className="mt-3 text-[12.5px] leading-relaxed text-white/80">
+      Alle Nachrichten werden von unserer Redaktion auf Basis offizieller Quellen wie EZB,
+      Bundesbank, BaFin, EU-Kommission und öffentlich-rechtlicher Berichterstattung
+      eigenständig verfasst. Keine Fremdtexte, keine Anlageempfehlungen — nur eine
+      neutrale Einordnung dessen, was für Anleger wichtig ist.
+    </p>
+    <p className="mt-4 text-[10.5px] uppercase tracking-[0.16em] text-white/60">
+      Aktualisierung: alle 15 Minuten Quellencheck, stündliche Redaktion.
     </p>
   </aside>
 );
@@ -135,7 +130,6 @@ const NachrichtenPage = () => {
   const hero = items[0];
   const headlines = items.slice(1, 6);
   const grid = items.slice(1);
-  const isDemo = meta.is_demo;
 
   const categories = useMemo(() => Object.entries(CAT_LABEL), []);
 
@@ -143,7 +137,7 @@ const NachrichtenPage = () => {
     <div className="bg-white" data-testid="nachrichten-page">
       <PageMeta
         title="Nachrichten — Fröhlich Vermögensberatung"
-        description="Aktuelle Nachrichten aus Deutschland, Europa und der Welt. Nachrichtenquelle: Euronews."
+        description="Aktuelle Wirtschafts- und Finanznachrichten. Eigenständig recherchiert auf Basis offizieller Quellen (EZB, Bundesbank, BaFin, EU-Kommission, Tagesschau, DW)."
         path="/news/nachrichten"
       />
 
@@ -158,8 +152,9 @@ const NachrichtenPage = () => {
               Aktuelle Nachrichten aus Deutschland, Europa und der Welt.
             </h1>
             <div className="flex flex-wrap items-center gap-3 text-[11.5px] uppercase tracking-[0.18em] text-bank-text-muted">
-              <span>Nachrichtenquelle: Euronews</span>
-              {isDemo && <><span aria-hidden className="text-bank-gold">·</span><DemoBadge /></>}
+              <span>Redaktion: Fröhlich Vermögensberatung</span>
+              <span aria-hidden className="text-bank-gold">·</span>
+              <span>Quellen: EZB, Bundesbank, BaFin, EU-Kommission, Tagesschau, DW</span>
               {meta.last_updated && <><span aria-hidden className="text-bank-gold">·</span><span>Letzte Aktualisierung {timeAgo(meta.last_updated)}</span></>}
             </div>
           </div>
@@ -185,7 +180,7 @@ const NachrichtenPage = () => {
                 Alle Nachrichten anzeigen
               </button>
             </div>
-            <LiveSlot />
+            <RedaktionSlot />
           </div>
         </div>
 
@@ -212,8 +207,18 @@ const NachrichtenPage = () => {
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="news-card-grid">
           {loading ? Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-[320px] animate-pulse border border-bank-border bg-neutral-50" />) :
             grid.map((it) => <NewsCard key={it.slug} item={it} />)}
-          {!loading && grid.length === 0 && (
-            <p className="col-span-full text-[13px] text-bank-text-muted" data-testid="news-empty">Keine Meldungen in dieser Kategorie.</p>
+          {!loading && grid.length === 0 && !hero && (
+            <div className="col-span-full border border-bank-border bg-white p-10 text-center" data-testid="news-empty">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted">Aktuell keine Beiträge</p>
+              <p className="mt-3 font-serif text-[19px] leading-snug text-bank-text">Wir bereiten die nächsten Beiträge vor.</p>
+              <p className="mx-auto mt-2 max-w-md text-[13.5px] leading-relaxed text-bank-text-muted">
+                Sobald neue geprüfte Nachrichten aus unseren Redaktionsquellen vorliegen, erscheinen sie hier.
+                Marktdaten, Watchlist und unsere Einordnungen finden Sie weiterhin unter „News &amp; Märkte".
+              </p>
+            </div>
+          )}
+          {!loading && grid.length === 0 && hero && (
+            <p className="col-span-full text-[13px] text-bank-text-muted" data-testid="news-empty-cat">Keine Meldungen in dieser Kategorie.</p>
           )}
         </div>
 
