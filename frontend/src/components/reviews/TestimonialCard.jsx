@@ -37,6 +37,14 @@ const TestimonialCard = ({ review, tone = 'light', size = 'md' }) => {
         strokeWidth={1.1}
         aria-hidden
       />
+
+      {review.is_verified && (
+        <span className={`inline-flex items-center gap-1 text-[10.5px] font-medium uppercase tracking-[0.18em] ${dark ? 'text-emerald-300' : 'text-emerald-700'}`}>
+          <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.6} />
+          Verifiziert
+        </span>
+      )}
+
       <p className={`font-serif leading-[1.55] ${bodySize} ${textCol}`}>„{review.text}"</p>
 
       {review.topics && review.topics.length > 0 && (
@@ -74,13 +82,6 @@ const TestimonialCard = ({ review, tone = 'light', size = 'md' }) => {
           <StarsDisplay value={review.rating} size={14} className="opacity-80" />
         )}
       </div>
-
-      {review.is_verified && (
-        <span className={`absolute left-8 top-6 inline-flex items-center gap-1 text-[10.5px] font-medium uppercase tracking-[0.18em] ${dark ? 'text-emerald-300' : 'text-emerald-700'}`}>
-          <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.6} />
-          Verifiziert
-        </span>
-      )}
     </article>
   );
 };
