@@ -12,9 +12,13 @@ export const reviewsApi = {
   submit: (payload) => api.post('/reviews/submit', payload).then(unwrap),
   list: (params = {}) => api.get('/reviews/public', { params }).then(unwrap),
   stats: () => api.get('/reviews/stats').then(unwrap),
+  topics: () => api.get('/reviews/topics').then(unwrap),
   adminList: (status) => api.get('/reviews/admin', { params: status ? { status } : {} }).then(unwrap),
   moderate: (id, payload) => api.put(`/reviews/${id}`, payload).then(unwrap),
   remove: (id) => api.delete(`/reviews/${id}`).then(unwrap),
+  createInvite: (payload) => api.post('/reviews/invite', payload).then(unwrap),
+  getInvite: (token) => api.get(`/reviews/invite/${token}`).then(unwrap),
+  listInvites: () => api.get('/reviews/invites').then(unwrap),
 };
 
 export const useReviewStats = () => {

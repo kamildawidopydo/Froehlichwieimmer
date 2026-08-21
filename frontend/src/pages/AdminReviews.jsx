@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Check, X, PenSquare, Trash2, ShieldCheck, AlertCircle, Star } from 'lucide-react';
+import { Check, X, PenSquare, Trash2, ShieldCheck, AlertCircle, Star, Mail, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PageMeta from '@/components/PageMeta';
 import { StarsDisplay } from '@/components/reviews/RatingStars';
@@ -124,12 +124,97 @@ const EditModal = ({ review, onClose, onSaved }) => {
   );
 };
 
+const InviteModal = ({ onClose }) => {
+  const [form, setForm] = useState({ email: '', first_name: '', last_name: '', note: '' });
+  const [result, setResult] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const submit = async () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { toast.error('Bitte gültige E-Mail eingeben.'); return; }
+    setSaving(true);
+    try {
+      const data = await reviewsApi.createInvite(form);
+      setResult(data);
+    } catch { toast.error('Einladung konnte nicht erstellt werden.'); }
+    finally { setSaving(false); }
+  };
+  const copy = () => {
+    navigator.clipboard.writeText(result.share_url).then(() => toast.success('Link kopiert.'));
+  };
+  return (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[10.5px] font-medium uppercase tracking-[0.28em] text-bank-text-muted">Erfahrungs-Einladung</p>
+            <h2 className="mt-1 font-serif text-xl text-bank-text">Persönlichen Link erstellen</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-full p-1 text-bank-text-muted hover:bg-neutral-100" aria-label="Schließen">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {result ? (
+          <div className="mt-5 space-y-4" data-testid="invite-result">
+            <p className="text-[13.5px] text-bank-text-muted">
+              Der persönliche Link ist 30 Tage gültig. Senden Sie ihn dem Kunden per E-Mail — beim Öffnen wird die
+              Erfahrungs-Seite mit den Kundendaten vorausgefüllt und die Einreichung als „Einladung" markiert.
+            </p>
+            <div className="flex items-center gap-2 rounded-xl border border-bank-border bg-neutral-50 p-3">
+              <input readOnly value={result.share_url} className="flex-1 bg-transparent font-mono text-[12.5px] outline-none" />
+              <Button size="sm" variant="outline" className="rounded-full" onClick={copy}>
+                <Copy className="mr-1.5 h-3.5 w-3.5" /> Kopieren
+              </Button>
+            </div>
+            <div className="flex justify-end">
+              <Button className="rounded-full" onClick={onClose}>Fertig</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-5 space-y-4">
+            <label className="block">
+              <span className="text-[11.5px] font-medium uppercase tracking-[0.16em] text-bank-text-muted">E-Mail des Kunden</span>
+              <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)}
+                     className="mt-1 w-full rounded-xl border border-bank-border px-3 py-2 text-[14px] focus:border-bank-primary focus:outline-none"
+                     data-testid="invite-email" />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-[11.5px] font-medium uppercase tracking-[0.16em] text-bank-text-muted">Vorname (optional)</span>
+                <input type="text" value={form.first_name} onChange={(e) => set('first_name', e.target.value)}
+                       className="mt-1 w-full rounded-xl border border-bank-border px-3 py-2 text-[14px] focus:border-bank-primary focus:outline-none" />
+              </label>
+              <label className="block">
+                <span className="text-[11.5px] font-medium uppercase tracking-[0.16em] text-bank-text-muted">Nachname (optional)</span>
+                <input type="text" value={form.last_name} onChange={(e) => set('last_name', e.target.value)}
+                       className="mt-1 w-full rounded-xl border border-bank-border px-3 py-2 text-[14px] focus:border-bank-primary focus:outline-none" />
+              </label>
+            </div>
+            <label className="block">
+              <span className="text-[11.5px] font-medium uppercase tracking-[0.16em] text-bank-text-muted">Persönliche Notiz (optional)</span>
+              <textarea rows={2} value={form.note} onChange={(e) => set('note', e.target.value)} maxLength={200}
+                        className="mt-1 w-full rounded-xl border border-bank-border px-3 py-2 text-[13.5px] focus:border-bank-primary focus:outline-none"
+                        placeholder="Vielen Dank für Ihr Vertrauen — wir freuen uns über Ihre kurze Rückmeldung." />
+            </label>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={onClose} className="rounded-full">Abbrechen</Button>
+              <Button onClick={submit} disabled={saving} className="rounded-full" data-testid="invite-create">
+                {saving ? 'Erstellt …' : 'Link erstellen'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const AdminReviews = () => {
   const [status, setStatus] = useState('pending');
   const [items, setItems] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
+  const [inviting, setInviting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -190,6 +275,10 @@ const AdminReviews = () => {
             {counts.pending} neue Bewertung{counts.pending === 1 ? '' : 'en'} — Freigabe erforderlich
           </span>
         )}
+        <Button onClick={() => setInviting(true)} className="rounded-full" data-testid="admin-invite-btn">
+          <Mail className="mr-2 h-4 w-4" strokeWidth={1.5} />
+          Erfahrung einladen
+        </Button>
       </header>
 
       <div className="mb-6 flex flex-wrap gap-2" role="tablist">
@@ -289,6 +378,9 @@ const AdminReviews = () => {
 
       {editing && (
         <EditModal review={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
+      )}
+      {inviting && (
+        <InviteModal onClose={() => setInviting(false)} />
       )}
     </div>
   );

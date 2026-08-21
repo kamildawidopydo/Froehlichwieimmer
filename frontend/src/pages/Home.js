@@ -6,6 +6,7 @@ import HomePostHero from '@/components/home/HomePostHero';
 import HomeSavingsInquirySection from '@/components/home/HomeSavingsInquirySection';
 import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
 import HomeTestimonials from '@/components/home/HomeTestimonials';
+import HomeTrustLine from '@/components/home/HomeTrustLine';
 import HomePlatformShowcase from '@/components/home/HomePlatformShowcase';
 import HomeCreditOffersSection from '@/components/home/HomeCreditOffersSection';
 import HomeSavingsOffersSection from '@/components/home/HomeSavingsOffersSection';
@@ -153,6 +154,8 @@ const Home = () => {
       />
       <ProductInquiryStickyCta onOpenWizard={openProductInquiry} />
       <BankingHero />
+
+      <HomeTrustLine />
 
       <HomePlatformShowcase />
 

@@ -800,6 +800,18 @@ async def news_for_you(user: dict = Depends(get_current_user), limit: int = 12):
 REVIEW_STATUS_VALUES = {"pending", "approved", "rejected"}
 _review_rate_limit: dict = {}  # ip -> [timestamps]
 
+REVIEW_TOPICS = [
+    ("persoenliche-betreuung", "Persönliche Betreuung"),
+    ("vertrauen", "Vertrauen"),
+    ("beratung", "Beratung"),
+    ("erreichbarkeit", "Erreichbarkeit"),
+    ("langfristigkeit", "Langfristige Zusammenarbeit"),
+    ("transparenz", "Transparenz"),
+    ("service", "Service"),
+    ("investmentuebersicht", "Investment-Übersicht"),
+]
+REVIEW_TOPIC_SLUGS = {slug for slug, _ in REVIEW_TOPICS}
+
 
 def _sanitize_text(raw: str, max_len: int = 2000) -> str:
     if not raw:
@@ -830,6 +842,7 @@ def _review_to_public(d: dict) -> dict:
         "text": d.get("text", ""),
         "customer_since": d.get("customer_since") or None,
         "is_featured": bool(d.get("is_featured", False)),
+        "topics": [t for t in (d.get("topics") or []) if t in REVIEW_TOPIC_SLUGS],
         "created_at": published.isoformat() if isinstance(published, datetime) else str(published or ""),
         "is_verified": bool(d.get("is_verified", False)),
     }
@@ -847,9 +860,11 @@ def _review_to_admin(d: dict) -> dict:
         "text": d.get("text", ""),
         "display_name": d.get("display_name") or _display_name(d.get("first_name"), d.get("last_name")),
         "customer_since": d.get("customer_since") or None,
+        "topics": [t for t in (d.get("topics") or []) if t in REVIEW_TOPIC_SLUGS],
         "is_featured": bool(d.get("is_featured", False)),
         "status": d.get("status", "pending"),
         "is_verified": bool(d.get("is_verified", False)),
+        "invited": bool(d.get("invited", False)),
         "created_at": published.isoformat() if isinstance(published, datetime) else str(published or ""),
         "moderated_at": moderated.isoformat() if isinstance(moderated, datetime) else (str(moderated) if moderated else None),
         "moderated_by": d.get("moderated_by"),
@@ -864,6 +879,8 @@ class ReviewSubmit(BaseModel):
     rating: Optional[int] = Field(default=None, ge=1, le=5)
     text: str = Field(min_length=10, max_length=2000)
     customer_since: Optional[str] = Field(default=None, max_length=20)
+    topics: Optional[List[str]] = Field(default_factory=list)
+    invite_token: Optional[str] = None
     consent: bool
     # Honeypot: must be empty. Bots typically fill all fields.
     website: Optional[str] = ""
@@ -875,7 +892,15 @@ class ReviewModerationInput(BaseModel):
     is_verified: Optional[bool] = None
     is_featured: Optional[bool] = None
     customer_since: Optional[str] = Field(default=None, max_length=20)
+    topics: Optional[List[str]] = None
     admin_note: Optional[str] = Field(default=None, max_length=500)
+
+
+class ReviewInviteInput(BaseModel):
+    email: EmailStr
+    first_name: Optional[str] = Field(default="", max_length=60)
+    last_name: Optional[str] = Field(default="", max_length=60)
+    note: Optional[str] = Field(default="", max_length=200)
 
 
 @api.post("/reviews/submit")
@@ -908,6 +933,19 @@ async def submit_review(payload: ReviewSubmit, request: Request):
     first_name = _sanitize_text(payload.first_name, 60)
     last_name = _sanitize_text(payload.last_name, 60)
 
+    # If the submission comes from a valid invite link, mark it accordingly.
+    invited = False
+    if payload.invite_token:
+        inv = await db.review_invites.find_one({"token": payload.invite_token, "expires_at": {"$gt": now}})
+        if inv:
+            invited = True
+            await db.review_invites.update_one(
+                {"_id": inv["_id"]},
+                {"$set": {"used_at": now, "used_email": payload.email.lower()}},
+            )
+
+    topics = [t for t in (payload.topics or []) if t in REVIEW_TOPIC_SLUGS][:3]
+
     doc = {
         "first_name": first_name,
         "last_name": last_name,
@@ -915,6 +953,8 @@ async def submit_review(payload: ReviewSubmit, request: Request):
         "rating": int(payload.rating) if payload.rating else None,
         "text": text,
         "customer_since": payload.customer_since if payload.customer_since in {"unter_1", "1_bis_3", "3_bis_5", "ueber_5"} else None,
+        "topics": topics,
+        "invited": invited,
         "status": "pending",
         "display_name": _display_name(first_name, last_name),
         "is_verified": False,
@@ -936,12 +976,15 @@ async def list_public_reviews(
     limit: int = 12,
     offset: int = 0,
     featured: bool = False,
+    topic: Optional[str] = None,
 ):
     q: dict = {"status": "approved"}
     if rating and 1 <= rating <= 5:
         q["rating"] = rating
     if featured:
         q["is_featured"] = True
+    if topic and topic in REVIEW_TOPIC_SLUGS:
+        q["topics"] = topic
     sort_field = [("rating", -1), ("created_at", -1)] if sort == "best" else [("created_at", -1)]
     total = await db.reviews.count_documents(q)
     docs = await db.reviews.find(q).sort(sort_field).skip(max(offset, 0)).limit(min(max(limit, 1), 50)).to_list(limit)
@@ -949,6 +992,13 @@ async def list_public_reviews(
         "total": total,
         "items": [_review_to_public(d) for d in docs],
         "has_more": (offset + len(docs)) < total,
+    }
+
+
+@api.get("/reviews/topics")
+async def list_review_topics():
+    return {
+        "topics": [{"slug": slug, "label": label} for slug, label in REVIEW_TOPICS],
     }
 
 
@@ -1018,6 +1068,8 @@ async def moderate_review(review_id: str, payload: ReviewModerationInput, user: 
     if payload.customer_since is not None:
         cs = payload.customer_since.strip() if payload.customer_since else ""
         update["customer_since"] = cs if cs in {"unter_1", "1_bis_3", "3_bis_5", "ueber_5"} else None
+    if payload.topics is not None:
+        update["topics"] = [t for t in payload.topics if t in REVIEW_TOPIC_SLUGS][:3]
     if payload.admin_note is not None:
         update["admin_note"] = _sanitize_text(payload.admin_note, 500)
     if not update:
@@ -1037,6 +1089,68 @@ async def delete_review(review_id: str, _user: dict = Depends(require_admin)):
     if r.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Bewertung nicht gefunden.")
     return {"deleted": r.deleted_count}
+
+
+# --- Review invites — tokenized share links for happy customers -------------
+
+@api.post("/reviews/invite")
+async def create_review_invite(payload: ReviewInviteInput, user: dict = Depends(require_admin)):
+    token = secrets.token_urlsafe(24)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=30)
+    doc = {
+        "token": token,
+        "email": payload.email.lower(),
+        "first_name": _sanitize_text(payload.first_name or "", 60),
+        "last_name": _sanitize_text(payload.last_name or "", 60),
+        "note": _sanitize_text(payload.note or "", 200),
+        "created_at": now,
+        "created_by": user.get("email"),
+        "expires_at": expires_at,
+        "used_at": None,
+        "used_email": None,
+    }
+    await db.review_invites.insert_one(doc)
+    frontend = os.environ.get("FRONTEND_URL", "").rstrip("/") or "https://kapital-direkt24.de"
+    return {
+        "token": token,
+        "share_url": f"{frontend}/kundenstimmen?einladung={token}",
+        "expires_at": expires_at.isoformat(),
+        "email": payload.email.lower(),
+    }
+
+
+@api.get("/reviews/invite/{token}")
+async def get_review_invite(token: str):
+    now = datetime.now(timezone.utc)
+    inv = await db.review_invites.find_one({"token": token, "expires_at": {"$gt": now}})
+    if not inv:
+        raise HTTPException(status_code=404, detail="Einladung ungültig oder abgelaufen.")
+    return {
+        "email": inv.get("email", ""),
+        "first_name": inv.get("first_name", ""),
+        "last_name": inv.get("last_name", ""),
+        "note": inv.get("note", ""),
+        "used": bool(inv.get("used_at")),
+        "expires_at": inv["expires_at"].isoformat() if isinstance(inv.get("expires_at"), datetime) else "",
+    }
+
+
+@api.get("/reviews/invites")
+async def list_review_invites(_user: dict = Depends(require_admin), limit: int = 50):
+    docs = await db.review_invites.find({}).sort("created_at", -1).limit(limit).to_list(limit)
+    return [{
+        "id": str(d["_id"]),
+        "email": d.get("email"),
+        "first_name": d.get("first_name", ""),
+        "last_name": d.get("last_name", ""),
+        "note": d.get("note", ""),
+        "created_at": d["created_at"].isoformat() if isinstance(d.get("created_at"), datetime) else str(d.get("created_at", "")),
+        "expires_at": d["expires_at"].isoformat() if isinstance(d.get("expires_at"), datetime) else str(d.get("expires_at", "")),
+        "used_at": d["used_at"].isoformat() if isinstance(d.get("used_at"), datetime) else None,
+        "used_email": d.get("used_email"),
+        "created_by": d.get("created_by"),
+    } for d in docs]
 
 
 # ---------------------------------------------------------------------------
@@ -1478,6 +1592,8 @@ async def on_startup():
     await db.user_preferences.create_index("user_id", unique=True)
     await db.reviews.create_index([("status", 1), ("created_at", -1)])
     await db.reviews.create_index([("rating", -1), ("created_at", -1)])
+    await db.review_invites.create_index("token", unique=True)
+    await db.review_invites.create_index([("email", 1), ("created_at", -1)])
     await seed_admin()
     await seed_content()
     logger.info("Startup complete")

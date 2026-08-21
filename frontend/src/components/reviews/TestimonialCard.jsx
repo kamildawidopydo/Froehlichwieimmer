@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle2, Quote } from 'lucide-react';
 import { StarsDisplay } from '@/components/reviews/RatingStars';
 import { formatReviewDate } from '@/services/reviewsApi';
+import { TOPIC_LABEL } from '@/data/reviewTopics';
 
 export const CUSTOMER_SINCE_LABEL = {
   unter_1: 'Neu bei uns',
@@ -37,6 +38,22 @@ const TestimonialCard = ({ review, tone = 'light', size = 'md' }) => {
         aria-hidden
       />
       <p className={`font-serif leading-[1.55] ${bodySize} ${textCol}`}>„{review.text}"</p>
+
+      {review.topics && review.topics.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {review.topics.map((t) => (
+            <span
+              key={t}
+              className={`inline-block rounded-full border px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-[0.14em] ${
+                dark ? 'border-white/15 bg-white/[0.05] text-white/70' : 'border-bank-border bg-neutral-50 text-bank-text-muted'
+              }`}
+              data-testid="testimonial-topic"
+            >
+              {TOPIC_LABEL[t] || t}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className={`mt-auto flex items-center gap-4 border-t pt-5 ${dark ? 'border-white/10' : 'border-bank-border'}`}>
         <span

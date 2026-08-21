@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import TestimonialCard from '@/components/reviews/TestimonialCard';
 import ReviewSubmitForm from '@/components/reviews/ReviewSubmitForm';
 import { reviewsApi } from '@/services/reviewsApi';
+import { REVIEW_TOPICS } from '@/data/reviewTopics';
 
 const PAGE_SIZE = 9;
 
@@ -15,13 +16,14 @@ const Kundenstimmen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [topic, setTopic] = useState('');
 
   const load = () => {
     setLoading(true);
     setError(false);
     Promise.all([
       reviewsApi.list({ featured: true, limit: 3, sort: 'newest' }),
-      reviewsApi.list({ limit: PAGE_SIZE, offset: 0, sort: 'newest' }),
+      reviewsApi.list({ limit: PAGE_SIZE, offset: 0, sort: 'newest', topic: topic || undefined }),
     ])
       .then(([feat, all]) => {
         setFeatured(feat.items);
@@ -33,13 +35,13 @@ const Kundenstimmen = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [topic]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMore = async () => {
     const next = offset + PAGE_SIZE;
     setLoadingMore(true);
     try {
-      const data = await reviewsApi.list({ limit: PAGE_SIZE, offset: next, sort: 'newest' });
+      const data = await reviewsApi.list({ limit: PAGE_SIZE, offset: next, sort: 'newest', topic: topic || undefined });
       setItems((prev) => [...prev, ...data.items]);
       setOffset(next);
       setTotal(data.total);
@@ -99,6 +101,35 @@ const Kundenstimmen = () => {
             <h2 className="mt-2 font-serif text-3xl text-bank-text sm:text-4xl">Alle freigegebenen Kundenstimmen</h2>
           </>
         )}
+
+        <div className="mt-6 flex flex-wrap gap-2" role="tablist" data-testid="topic-filter">
+          <button
+            type="button"
+            onClick={() => setTopic('')}
+            data-testid="topic-filter-all"
+            className={`rounded-full border px-4 py-1.5 text-[12.5px] transition-colors ${
+              !topic ? 'border-bank-primary bg-bank-primary text-white' : 'border-bank-border bg-white text-bank-text-muted hover:border-bank-primary/40'
+            }`}
+          >
+            Alle Themen
+          </button>
+          {REVIEW_TOPICS.map((t) => {
+            const active = topic === t.slug;
+            return (
+              <button
+                type="button"
+                key={t.slug}
+                onClick={() => setTopic(t.slug)}
+                data-testid={`topic-filter-${t.slug}`}
+                className={`rounded-full border px-4 py-1.5 text-[12.5px] transition-colors ${
+                  active ? 'border-bank-primary bg-bank-primary text-white' : 'border-bank-border bg-white text-bank-text-muted hover:border-bank-primary/40'
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
 
         {loading ? (
           <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

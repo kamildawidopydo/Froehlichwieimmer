@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { CheckCircle2, Send, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { CheckCircle2, Send, ShieldCheck, X as XIcon } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { StarsPicker } from '@/components/reviews/RatingStars';
 import { reviewsApi } from '@/services/reviewsApi';
+import { REVIEW_TOPICS } from '@/data/reviewTopics';
 
 const initialState = {
   first_name: '', last_name: '', email: '',
-  rating: 0, text: '', customer_since: '', consent: false, website: '',
+  rating: 0, text: '', customer_since: '', topics: [], invite_token: '',
+  consent: false, website: '',
 };
 
 const CUSTOMER_SINCE_OPTIONS = [
@@ -24,8 +26,38 @@ const ReviewSubmitForm = ({ onSubmitted, dark = false, variant = 'review' }) => 
   const [form, setForm] = useState(initialState);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [inviteInfo, setInviteInfo] = useState(null);
+  const [params] = useSearchParams();
+
+  useEffect(() => {
+    const token = params.get('einladung');
+    if (!token) return;
+    reviewsApi.getInvite(token)
+      .then((info) => {
+        setInviteInfo(info);
+        setForm((f) => ({
+          ...f,
+          first_name: info.first_name || f.first_name,
+          last_name: info.last_name || f.last_name,
+          email: info.email || f.email,
+          invite_token: token,
+        }));
+      })
+      .catch(() => setInviteInfo({ error: true }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.get('einladung')]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const toggleTopic = (slug) => {
+    setForm((f) => {
+      if (f.topics.includes(slug)) return { ...f, topics: f.topics.filter((s) => s !== slug) };
+      if (f.topics.length >= 3) {
+        toast.info('Bitte höchstens 3 Themen wählen.');
+        return f;
+      }
+      return { ...f, topics: [...f.topics, slug] };
+    });
+  };
 
   const validate = () => {
     if (!form.first_name.trim()) return 'Bitte geben Sie Ihren Vornamen an.';
@@ -106,6 +138,22 @@ const ReviewSubmitForm = ({ onSubmitted, dark = false, variant = 'review' }) => 
             ? 'Sie sind Kunde von Fröhlich Vermögensberatung und möchten Ihre Erfahrung teilen? Wir freuen uns über Ihre persönliche Rückmeldung.'
             : 'Sie sind Kunde bei uns und möchten Ihre Erfahrung teilen? Wir freuen uns über Ihr Feedback.'}
         </p>
+        {inviteInfo && !inviteInfo.error && (
+          <div
+            className={`mt-4 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-[13px] ${
+              dark ? 'border-bank-gold/40 bg-bank-gold/10 text-white' : 'border-bank-gold/40 bg-bank-gold/10 text-bank-text'
+            }`}
+            data-testid="invite-banner"
+          >
+            <ShieldCheck className="mt-0.5 h-4 w-4 text-bank-gold" strokeWidth={1.6} />
+            <div>
+              <p className="font-medium">Ihre persönliche Einladung ist gültig.</p>
+              <p className={`mt-0.5 ${dark ? 'text-white/70' : 'text-bank-text-muted'}`}>
+                {inviteInfo.note || 'Vielen Dank, dass Sie sich die Zeit nehmen, Ihre Erfahrung mit uns zu teilen.'}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -158,6 +206,35 @@ const ReviewSubmitForm = ({ onSubmitted, dark = false, variant = 'review' }) => 
             ))}
           </select>
         </label>
+      )}
+
+      {isTestimonial && (
+        <div className="flex flex-col gap-2">
+          <span className={`text-[12.5px] font-medium uppercase tracking-[0.14em] ${label}`}>
+            Themen (optional, max. 3)
+          </span>
+          <div className="flex flex-wrap gap-2" data-testid="review-topics-picker">
+            {REVIEW_TOPICS.map((t) => {
+              const active = form.topics.includes(t.slug);
+              return (
+                <button
+                  type="button"
+                  key={t.slug}
+                  onClick={() => toggleTopic(t.slug)}
+                  data-testid={`topic-chip-${t.slug}`}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] transition-colors ${
+                    active
+                      ? (dark ? 'border-bank-gold bg-bank-gold/20 text-bank-gold' : 'border-bank-primary bg-bank-primary text-white')
+                      : (dark ? 'border-white/20 bg-transparent text-white/70 hover:border-white/40' : 'border-bank-border bg-white text-bank-text-muted hover:border-bank-primary/40')
+                  }`}
+                >
+                  {t.label}
+                  {active && <XIcon className="h-3 w-3" strokeWidth={1.8} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       <label className="flex flex-col gap-1.5 text-[12.5px]">
