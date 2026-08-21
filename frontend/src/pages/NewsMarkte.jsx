@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import PageMeta from '@/components/PageMeta';
 import DisplayCurrencyToggle from '@/components/DisplayCurrencyToggle';
 import HeroTopNews from '@/components/news-markte/HeroTopNews';
@@ -70,6 +71,28 @@ const NewsMarkte = () => {
             </p>
           </div>
           <HeroTopNews articles={top} loading={feed.loading} />
+
+          {/* Sub-Nav: Marktüberblick · Aktien · Watchlist · Nachrichten */}
+          <nav className="mt-10 flex flex-wrap gap-2 border-t border-bank-border pt-6" data-testid="news-subnav" aria-label="News-Bereichsnavigation">
+            {[
+              { to: '#markt-insights', label: 'Marktüberblick' },
+              { to: '#aktien-im-fokus', label: 'Aktien' },
+              { to: '#watchlist-section', label: 'Watchlist' },
+              { to: '/news/nachrichten', label: 'Nachrichten', external: true },
+            ].map((n) => (
+              n.external ? (
+                <Link key={n.label} to={n.to} data-testid={`subnav-${n.label.toLowerCase()}`}
+                      className="border border-bank-primary bg-bank-primary px-4 py-1.5 text-[11.5px] font-medium uppercase tracking-[0.18em] text-white transition-colors hover:bg-bank-primary/90">
+                  {n.label}
+                </Link>
+              ) : (
+                <a key={n.label} href={n.to} data-testid={`subnav-${n.label.toLowerCase()}`}
+                   className="border border-bank-border px-4 py-1.5 text-[11.5px] font-medium uppercase tracking-[0.18em] text-bank-text-muted transition-colors hover:border-bank-primary/50 hover:text-bank-primary">
+                  {n.label}
+                </a>
+              )
+            ))}
+          </nav>
         </div>
       </section>
 

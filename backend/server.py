@@ -3214,6 +3214,34 @@ async def on_shutdown():
 # CORS + mount
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+
+# Import the news provider abstraction at the very end so both files can
+# coexist without circular imports.
+from news_provider import active_provider as _news_provider, CATEGORIES as _NEWS_CATEGORIES  # noqa: E402
+
+
+@api.get("/news/nachrichten")
+async def news_nachrichten_list(category: Optional[str] = None, limit: int = 20):
+    """Public news feed (Euronews demo connector until licence is active)."""
+    items = await _news_provider.list_items(category=category, limit=max(1, min(int(limit or 20), 50)))
+    return {
+        "items": items,
+        "provider": _news_provider.name,
+        "is_demo": _news_provider.is_demo,
+        "categories": _NEWS_CATEGORIES,
+        "last_updated": items[0]["published_at"] if items else datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@api.get("/news/nachrichten/{slug}")
+async def news_nachrichten_detail(slug: str):
+    item = await _news_provider.get_item(slug)
+    if not item:
+        raise HTTPException(404, detail="Nachricht nicht gefunden.")
+    return item
+
+
 app.include_router(api)
 
 allowed = [o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()]

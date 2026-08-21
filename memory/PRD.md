@@ -7,6 +7,25 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 18 (Feb 26, 2026) — Nachrichten-Bereich (Euronews DEMO)
+
+**Rechtlicher Kurzbefund**
+- Euronews-Widgets/MRSS/RSS: kommerziell **nicht** ohne Lizenz nutzbar (ToS + UrhG-Rechtsprechung).
+- Commercial-Kontakt: `salesoperations@euronews.com` / https://www.euronews.com/commercial/licensing-services
+- Anfragepaket (DE + EN) + Checkliste unter **`/app/memory/EURONEWS_LICENCE_INQUIRY.md`**.
+
+**Backend**
+- Neue Provider-Abstraktion `news_provider.py`: abstrakte `NewsProvider`-Klasse, aktive Instanz `EuronewsDemoProvider` (DEMO), Platzhalter `EuronewsLicensedProvider` fürs spätere Aktivieren nach Lizenzabschluss.
+- Normalisiertes Datenmodell: `id, slug, title, summary, category, image_url, video_embed_url, published_at, source, source_url, article_content, language, content_type, is_demo`.
+- 12 DEMO-Meldungen (Politik/Wirtschaft/Europa/Welt/Wissen/Umwelt/Kultur/Sport/Videos) — jede Überschrift beginnt mit „DEMO —".
+- Neue Endpunkte: `GET /api/news/nachrichten?category=&limit=` und `GET /api/news/nachrichten/{slug}`.
+
+**Frontend**
+- Neue Seite `/news/nachrichten` (`NachrichtenPage.jsx`): Hero-Card links + Schlagzeilen-Spalte rechts, Live-Slot als Placeholder („Live-Integration nach Freigabe des offiziellen Euronews-Players"), Kategorien-Navigation, 3-Spalten-Card-Grid, „Fröhlich — Unsere Einordnung" als optische Klammer.
+- Neue Detail-Seite `/news/euronews/:slug` (`EuronewsArticlePage.jsx`): Bild, Video-Embed-Slot, Artikeltext, „Originalbeitrag bei Euronews öffnen"-Button (nur wenn `source_url`), Disclaimer + noindex.
+- Subnav auf `/news` (unter Hero): Marktüberblick · Aktien · Watchlist · **Nachrichten** (letztere führt zur neuen Seite).
+- DEMO-Badge (`DEMO / TESTDATEN`, amber) auf allen DEMO-Meldungen sichtbar.
+
 ## Session 17 (Feb 25, 2026) — EUR | USD Anzeige-Umschalter
 
 **Backend**

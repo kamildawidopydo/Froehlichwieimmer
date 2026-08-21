@@ -52,6 +52,8 @@ const WaehrungsrechnerPage = lazy(() => import('@/pages/news/WaehrungsrechnerPag
 const RohstoffchartsPage = lazy(() => import('@/pages/news/RohstoffchartsPage'));
 const MarketInstrumentSnapshotPage = lazy(() => import('@/pages/news/MarketInstrumentSnapshotPage'));
 const WatchlistPage = lazy(() => import('@/pages/news/WatchlistPage'));
+const NachrichtenPage = lazy(() => import('@/pages/news/NachrichtenPage'));
+const EuronewsArticlePage = lazy(() => import('@/pages/news/EuronewsArticlePage'));
 const Login = lazy(() => import('@/pages/Login'));
 const Register = lazy(() => import('@/pages/Register'));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
@@ -240,6 +242,8 @@ function App() {
                   <Route path="/kredit" element={<CreditLeadPage />} />
                   <Route path="/news" element={<PublicNewsPage />} />
                   <Route path="/news/watchlist" element={<WatchlistPage />} />
+                  <Route path="/news/nachrichten" element={<NachrichtenPage />} />
+                  <Route path="/news/euronews/:slug" element={<EuronewsArticlePage />} />
                   <Route path="/bewertungen" element={<Bewertungen />} />
                   <Route path="/kundenstimmen" element={<Kundenstimmen />} />
                   <Route path="/news/archiv" element={<PublicNewsPageLegacy />} />
