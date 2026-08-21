@@ -1,0 +1,80 @@
+{
+  "summary": "Iteration 10 testing of the News & Märkte extension (sections 16-21). Backend: created /app/backend/tests/test_news_markte_sections.py — 16/16 pass (anlagetrends=9 items, investment-radar=6, market-voices=6, feed for all 9 categories + alle, markets, editorial; no _id leakage). Frontend /news: all 5 new sections render with correct counts on desktop (fonds-etf-card=3, radar-row=6 + radar-table, anlagetrend-card=9, voice-card=6, unsere-einordnung populated, 9 watch links) and on mobile 390px (radar-card-mobile=6, table hidden, no horizontal overflow). All 7 existing filter tabs switch the ticker correctly (maerkte 2, aktien 1, wirtschaft 2, unternehmen 2, zinsen 3, international 2, alle 12). Existing sections (Hero, Markt-Insights, News im Überblick, Weitere Beiträge, Anleger, Unsere Einschätzung, PhilosophieCTA) all still render. CRITICAL DEFECT: every /news/{category} detail route is dead — the 9 static routes render NewsCategoryDetail without a :category param so the component immediately Navigate-redirects to /news. Detail pages only work under /news/kategorie/{slug}, which nothing in the UI links to.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "App.js routes + NewsCategoryDetail",
+        "issue": "CRITICAL: /news/aktien, /news/fonds-etfs, /news/rohstoffe, /news/seltene-erden, /news/anleihen, /news/zinsen, /news/waehrungen, /news/investmenttrends, /news/unternehmen ALL redirect back to /news. Root cause: these are declared as static paths (<Route path=\"/news/aktien\" element={<NewsCategoryDetail/>} />) so useParams() returns {} -> category === undefined -> CATEGORY_META[undefined] undefined -> <Navigate to=\"/news\" replace/>. Verified: /news/kategorie/rohstoffe|fonds-etfs|aktien render perfectly (h1 'Rohstoffe', filtered tile XAU/USD; 'Fonds & ETFs' with DAX/SPX/NDX/SX5E; 'Aktien' with DAX/DJI/SPX/NDX/SX5E; back-to-news present), so only the route wiring is wrong.",
+        "selector": "[data-testid='news-category-rohstoffe'] (0 found on /news/rohstoffe)",
+        "priority": "CRITICAL"
+      },
+      {
+        "component": "Beobachtungslisten / FondsEtfTopNews / NewsCategoryDetail 'Weitere Themen'",
+        "issue": "Consequence of the above: all 9 watch-link-* hrefs, fonds-etf-all-link (/news/fonds-etfs) and the 8 'Weitere Themen' links on the detail page point at the broken /news/{slug} paths. Clicking watch-link-rohstoffe leaves the user on /news with no feedback.",
+        "selector": "[data-testid='watch-link-rohstoffe'], [data-testid='fonds-etf-all-link']",
+        "priority": "CRITICAL"
+      },
+      {
+        "component": "InvestmentRadar",
+        "issue": "'Meldung' links are hardcoded to the external absolute domain https://kapital-direkt24.de/news/{related_slug} instead of an internal route — leaves the app and is not env-driven. Also the mobile radar cards drop the Meldung link entirely (feature parity gap).",
+        "selector": "[data-testid='radar-row'] a",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "News category detail navigation",
+        "issue": "Full flow /news -> click category -> detail page is non-functional in the shipped route configuration (see CRITICAL above). Data layer is fine: /api/news-markte/feed?category={slug} returns correct filtered items for all 9 slugs.",
+        "affected_selectors": ["[data-testid='watch-link-aktien']", "[data-testid='fonds-etf-all-link']", "[data-testid='back-to-news']"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "/news Investment-Radar (desktop table)",
+        "issues": [
+          "Kennzeichnung badges wrap onto two lines ('LANGFRISTIGER TREND', 'ERHÖHTE MARKTAKTIVITÄT') and have inconsistent widths, making the column look ragged — consider whitespace-nowrap or a wider column"
+        ]
+      },
+      {
+        "screen": "/news Beobachtungslisten (desktop 4-col grid)",
+        "issues": [
+          "Last row has only one filled cell (09 Unternehmen) and it still renders a right border, leaving a dangling 1px divider next to empty space"
+        ]
+      },
+      {
+        "screen": "/news/kategorie/rohstoffe hero",
+        "issues": [
+          "Seed images are semantically irrelevant: 'Kupferpreis zieht an' shows a misty castle gate (photo-1518709268805) and 'Silber profitiert von industriellem Bedarf' shows a fashion portrait (photo-1621786030484)"
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_news_markte_sections.py",
+    "/app/test_reports/pytest/news_sections.xml"
+  ],
+  "action_items": [
+    "FIX ROUTING (blocker): replace the 9 static /news/{slug} routes with a param route, e.g. keep a single <Route path=\"/news/kategorie/:category\" .../> plus <Route path=\"/news/:category\" element={<NewsCategoryDetail/>} /> ordered before /news/:slug, OR pass the slug explicitly as a prop (element={<NewsCategoryDetail category=\"aktien\"/>}) and read it as `const { category: p } = useParams(); const category = props.category ?? p;`. Beware the existing catch-all /news/:slug (PublicNewsDetailPage) which currently swallows unknown slugs.",
+    "After the routing fix, re-verify all 9 detail pages render news-category-{slug} and that /news/unknown-slug still resolves sensibly (currently it falls through to PublicNewsDetailPage, not a redirect to /news).",
+    "Make InvestmentRadar 'Meldung' links internal (or env-driven) and expose them on the mobile card layout too.",
+    "Fix ragged Kennzeichnung badge column and the dangling border on the last Beobachtungslisten cell.",
+    "Replace the irrelevant Unsplash seed images for the Kupfer and Silber rohstoffe articles."
+  ],
+  "critical_code_review_comments": [
+    "NewsCategoryDetail depends on a route param that 9 of its 10 registered routes never supply — a param/props contract mismatch that silently degrades to a redirect with no console error, making it easy to miss.",
+    "Hardcoded external domain kapital-direkt24.de in InvestmentRadar.jsx violates the no-hardcoded-URL rule; should derive from env or use an internal route.",
+    "StimmenZumMarkt splits the editorial body on /\\n{2,}/ while seeded bodies use single newlines (carried over from iteration_9) — the 'Unsere Einordnung' excerpt therefore renders only the first physical line."
+  ],
+  "updated_files": ["/app/backend/tests/test_news_markte_sections.py"],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "70% (/news page 100%; category detail routing 0/9)"},
+  "seed_data_creation": "None — read-only public endpoints only",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "Not required — /news and /news/{category} are public. Visitor gate bypassed via add_init_script setting kapitalmitte_visitor_profile + kapitalmitte_cookie_consent.",
+  "context_for_next_testing_agent": "Backend suite for this area: pytest /app/backend/tests/test_news_markte_sections.py (16 cases, all pass). Note the markets endpoint is /api/news-markte/markets (NOT /market-insights). Frontend testing requires context.add_init_script presetting localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent before goto, else VisitorWelcomeGate blocks. Verified working testids on /news: hero-top-news, markt-insights, news-ueberblick (filters use data-testid news-filter-{alle|maerkte|aktien|wirtschaft|unternehmen|zinsen|international}, NOT news-tab-*), fonds-etf-top-news/fonds-etf-card(3)/fonds-etf-all-link, investment-radar/radar-table/radar-row(6)/radar-card-mobile(6, md:hidden), anlagetrends/anlagetrend-card(9), stimmen-zum-markt/voice-card(6)/unsere-einordnung, beobachtungslisten/watch-link-{9 slugs}, cta-contact. Detail pages currently ONLY reachable at /news/kategorie/{slug}. No console errors, no horizontal overflow at 1920 or 390px, no broken images on /news. Admin editorial UI remains out of scope/blocked (iteration_9).",
+  "rca_of_the_issue": "App.js registers NewsCategoryDetail on nine literal paths (/news/aktien … /news/unternehmen). react-router only populates useParams() from dynamic segments, so on those paths `const { category } = useParams()` is undefined; CATEGORY_META[undefined] is undefined and the component's guard `if (!meta) return <Navigate to=\"/news\" replace/>` fires on every one of them. Reproduction: goto https://finance-platform-v2.preview.emergentagent.com/news/rohstoffe -> URL becomes /news and [data-testid='news-category-rohstoffe'] count is 0, while /news/kategorie/rohstoffe renders correctly (h1 'Rohstoffe', market-tile-XAU/USD, back-to-news). Mitigation: use a dynamic segment (/news/:category) placed before the /news/:slug catch-all, or pass the slug as a prop with a props-over-params fallback."
+}

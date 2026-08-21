@@ -794,6 +794,235 @@ async def news_for_you(user: dict = Depends(get_current_user), limit: int = 12):
 
 
 # ---------------------------------------------------------------------------
+# Customer Reviews — moderated public reviews
+# ---------------------------------------------------------------------------
+
+REVIEW_STATUS_VALUES = {"pending", "approved", "rejected"}
+_review_rate_limit: dict = {}  # ip -> [timestamps]
+
+
+def _sanitize_text(raw: str, max_len: int = 2000) -> str:
+    if not raw:
+        return ""
+    # Strip any HTML/script tags — plain text only
+    cleaned = re.sub(r"<[^>]*>", "", str(raw))
+    # Collapse runaway whitespace
+    cleaned = re.sub(r"[ \t]+", " ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()[:max_len]
+
+
+def _display_name(first: str, last: str) -> str:
+    first = (first or "").strip()
+    last = (last or "").strip()
+    if not first:
+        return "Anonym"
+    initial = f" {last[0].upper()}." if last else ""
+    return f"{first}{initial}"
+
+
+def _review_to_public(d: dict) -> dict:
+    published = d.get("created_at")
+    return {
+        "id": str(d["_id"]),
+        "display_name": d.get("display_name") or _display_name(d.get("first_name"), d.get("last_name")),
+        "rating": int(d.get("rating", 0)),
+        "text": d.get("text", ""),
+        "created_at": published.isoformat() if isinstance(published, datetime) else str(published or ""),
+        "is_verified": bool(d.get("is_verified", False)),
+    }
+
+
+def _review_to_admin(d: dict) -> dict:
+    published = d.get("created_at")
+    moderated = d.get("moderated_at")
+    return {
+        "id": str(d["_id"]),
+        "first_name": d.get("first_name", ""),
+        "last_name": d.get("last_name", ""),
+        "email": d.get("email", ""),
+        "rating": int(d.get("rating", 0)),
+        "text": d.get("text", ""),
+        "display_name": d.get("display_name") or _display_name(d.get("first_name"), d.get("last_name")),
+        "status": d.get("status", "pending"),
+        "is_verified": bool(d.get("is_verified", False)),
+        "created_at": published.isoformat() if isinstance(published, datetime) else str(published or ""),
+        "moderated_at": moderated.isoformat() if isinstance(moderated, datetime) else (str(moderated) if moderated else None),
+        "moderated_by": d.get("moderated_by"),
+        "admin_note": d.get("admin_note", ""),
+    }
+
+
+class ReviewSubmit(BaseModel):
+    first_name: str = Field(min_length=1, max_length=60)
+    last_name: str = Field(min_length=1, max_length=60)
+    email: EmailStr
+    rating: int = Field(ge=1, le=5)
+    text: str = Field(min_length=10, max_length=2000)
+    consent: bool
+    # Honeypot: must be empty. Bots typically fill all fields.
+    website: Optional[str] = ""
+
+
+class ReviewModerationInput(BaseModel):
+    status: Optional[str] = None
+    display_name: Optional[str] = Field(default=None, max_length=80)
+    is_verified: Optional[bool] = None
+    admin_note: Optional[str] = Field(default=None, max_length=500)
+
+
+@api.post("/reviews/submit")
+async def submit_review(payload: ReviewSubmit, request: Request):
+    if payload.website:
+        # Honeypot triggered — silently accept (return 202 but do not persist)
+        return {"ok": True, "status": "pending"}
+    if not payload.consent:
+        raise HTTPException(status_code=400, detail="Bitte bestätigen Sie die Datenschutzhinweise.")
+
+    # Rate limit: proxy-aware — honor X-Forwarded-For (left-most) so the k8s
+    # ingress IP doesn't throttle the whole site. Max 5 submissions per IP/h.
+    xff = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    ip = xff or (request.client.host if request.client else "unknown") or "unknown"
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(hours=1)
+    # Prune stale entries so the in-process map doesn't grow unbounded
+    for stale_ip in [k for k, v in _review_rate_limit.items() if not any(t > window_start for t in v)]:
+        _review_rate_limit.pop(stale_ip, None)
+    prev = [t for t in _review_rate_limit.get(ip, []) if t > window_start]
+    if len(prev) >= 5:
+        raise HTTPException(status_code=429, detail="Zu viele Anfragen. Bitte versuchen Sie es später erneut.")
+    prev.append(now)
+    _review_rate_limit[ip] = prev
+
+    text = _sanitize_text(payload.text)
+    if len(text) < 10:
+        raise HTTPException(status_code=400, detail="Bitte geben Sie einen aussagekräftigen Bewertungstext ein.")
+
+    first_name = _sanitize_text(payload.first_name, 60)
+    last_name = _sanitize_text(payload.last_name, 60)
+
+    doc = {
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": payload.email.lower(),
+        "rating": int(payload.rating),
+        "text": text,
+        "status": "pending",
+        "display_name": _display_name(first_name, last_name),
+        "is_verified": False,
+        "created_at": now,
+        "moderated_at": None,
+        "moderated_by": None,
+        "admin_note": "",
+        "ip_hash": secrets.token_hex(6),  # opaque marker, no PII
+    }
+    res = await db.reviews.insert_one(doc)
+    return {"ok": True, "id": str(res.inserted_id), "status": "pending"}
+
+
+@api.get("/reviews/public")
+async def list_public_reviews(
+    rating: Optional[int] = None,
+    sort: str = "newest",
+    limit: int = 12,
+    offset: int = 0,
+):
+    q: dict = {"status": "approved"}
+    if rating and 1 <= rating <= 5:
+        q["rating"] = rating
+    sort_field = [("rating", -1), ("created_at", -1)] if sort == "best" else [("created_at", -1)]
+    total = await db.reviews.count_documents(q)
+    docs = await db.reviews.find(q).sort(sort_field).skip(max(offset, 0)).limit(min(max(limit, 1), 50)).to_list(limit)
+    return {
+        "total": total,
+        "items": [_review_to_public(d) for d in docs],
+        "has_more": (offset + len(docs)) < total,
+    }
+
+
+@api.get("/reviews/stats")
+async def review_stats():
+    pipeline = [
+        {"$match": {"status": "approved"}},
+        {"$group": {"_id": "$rating", "count": {"$sum": 1}}},
+    ]
+    rows = await db.reviews.aggregate(pipeline).to_list(10)
+    dist = {i: 0 for i in range(1, 6)}
+    total = 0
+    weighted = 0
+    for r in rows:
+        rating = int(r.get("_id") or 0)
+        count = int(r.get("count") or 0)
+        if 1 <= rating <= 5:
+            dist[rating] = count
+            total += count
+            weighted += rating * count
+    average = round(weighted / total, 2) if total > 0 else 0.0
+    return {
+        "total": total,
+        "average": average,
+        "distribution": [{"rating": r, "count": dist[r], "pct": round((dist[r] / total * 100), 1) if total else 0.0} for r in range(5, 0, -1)],
+    }
+
+
+@api.get("/reviews/admin")
+async def list_admin_reviews(
+    status: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    _user: dict = Depends(require_admin),
+):
+    q: dict = {}
+    if status and status in REVIEW_STATUS_VALUES:
+        q["status"] = status
+    total = await db.reviews.count_documents(q)
+    pending_count = await db.reviews.count_documents({"status": "pending"})
+    docs = await db.reviews.find(q).sort("created_at", -1).skip(offset).limit(limit).to_list(limit)
+    return {
+        "total": total,
+        "pending_count": pending_count,
+        "items": [_review_to_admin(d) for d in docs],
+    }
+
+
+@api.put("/reviews/{review_id}", response_model=None)
+async def moderate_review(review_id: str, payload: ReviewModerationInput, user: dict = Depends(require_admin)):
+    if not ObjectId.is_valid(review_id):
+        raise HTTPException(status_code=400, detail="Invalid id")
+    update: dict = {}
+    if payload.status is not None:
+        if payload.status not in REVIEW_STATUS_VALUES:
+            raise HTTPException(status_code=400, detail="Ungültiger Status")
+        update["status"] = payload.status
+        update["moderated_at"] = datetime.now(timezone.utc)
+        update["moderated_by"] = user.get("email")
+    if payload.display_name is not None:
+        # Admin darf ausschließlich den öffentlichen Anzeigenamen anpassen — der Bewertungstext bleibt unverändert.
+        update["display_name"] = _sanitize_text(payload.display_name, 80) or None
+    if payload.is_verified is not None:
+        update["is_verified"] = bool(payload.is_verified)
+    if payload.admin_note is not None:
+        update["admin_note"] = _sanitize_text(payload.admin_note, 500)
+    if not update:
+        raise HTTPException(status_code=400, detail="Keine Änderungen übermittelt.")
+    r = await db.reviews.update_one({"_id": ObjectId(review_id)}, {"$set": update})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Bewertung nicht gefunden.")
+    doc = await db.reviews.find_one({"_id": ObjectId(review_id)})
+    return _review_to_admin(doc)
+
+
+@api.delete("/reviews/{review_id}")
+async def delete_review(review_id: str, _user: dict = Depends(require_admin)):
+    if not ObjectId.is_valid(review_id):
+        raise HTTPException(status_code=400, detail="Invalid id")
+    r = await db.reviews.delete_one({"_id": ObjectId(review_id)})
+    if r.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Bewertung nicht gefunden.")
+    return {"deleted": r.deleted_count}
+
+
+# ---------------------------------------------------------------------------
 # Startup: indexes + seed
 # ---------------------------------------------------------------------------
 
@@ -1049,7 +1278,7 @@ async def seed_content():
             {"slug": "kupferpreis-nachfrage-china", "title": "Kupferpreis zieht an: Chinas Nachfrage steigt",
              "excerpt": "Elektrifizierung und Netzausbau treiben die weltweite Kupfernachfrage; Analysten sehen strukturellen Rückenwind.",
              "category": "rohstoffe", "source": "Reuters", "source_url": "https://www.reuters.com",
-             "image_url": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1600&q=70",
+             "image_url": "https://images.unsplash.com/photo-1518544801976-3e159e50e5bb?auto=format&fit=crop&w=1600&q=70",
              "published_at": now - timedelta(hours=14), "featured": False, "highlight_investor": False},
             {"slug": "silber-industrieller-bedarf", "title": "Silber profitiert von industriellem Bedarf",
              "excerpt": "Photovoltaik und Elektronik erhöhen den globalen Silberverbrauch. Der Spotpreis notiert nahe Jahreshoch.",
@@ -1098,6 +1327,16 @@ async def seed_content():
         to_insert = [d for d in extra_seed if d["slug"] not in existing_slugs]
         if to_insert:
             await db.news_markte_articles.insert_many(to_insert)
+
+    # Migrate/refresh irrelevant seed images on existing docs (idempotent)
+    await db.news_markte_articles.update_one(
+        {"slug": "kupferpreis-nachfrage-china"},
+        {"$set": {"image_url": "https://images.unsplash.com/photo-1518544801976-3e159e50e5bb?auto=format&fit=crop&w=1600&q=70"}},
+    )
+    await db.news_markte_articles.update_one(
+        {"slug": "silber-industrieller-bedarf"},
+        {"$set": {"image_url": "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1600&q=70"}},
+    )
 
     # Seed anlagetrends topic cards
     if await db.anlagetrends.count_documents({}) == 0:
@@ -1220,6 +1459,8 @@ async def on_startup():
     await db.investment_radar.create_index("order")
     await db.market_voices.create_index([("published_at", -1)])
     await db.user_preferences.create_index("user_id", unique=True)
+    await db.reviews.create_index([("status", 1), ("created_at", -1)])
+    await db.reviews.create_index([("rating", -1), ("created_at", -1)])
     await seed_admin()
     await seed_content()
     logger.info("Startup complete")

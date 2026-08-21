@@ -40,8 +40,10 @@ const Wissen = lazy(() => import('@/pages/Wissen'));
 const WissenArtikel = lazy(() => import('@/pages/WissenArtikel'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const CreditLeadPage = lazy(() => import('@/pages/CreditLeadPage'));
+const Bewertungen = lazy(() => import('@/pages/Bewertungen'));
 const PublicNewsPage = lazy(() => import('@/pages/NewsMarkte'));
 const PublicNewsPageLegacy = lazy(() => import('@/pages/news/PublicNewsPage'));
+const NewsCategoryDetail = lazy(() => import('@/pages/NewsCategoryDetail'));
 const PublicNewsDetailPage = lazy(() => import('@/pages/news/PublicNewsDetailPage'));
 const PublicNewsVideoPage = lazy(() => import('@/pages/news/PublicNewsVideoPage'));
 const WaehrungsrechnerPage = lazy(() => import('@/pages/news/WaehrungsrechnerPage'));
@@ -88,6 +90,7 @@ const DashboardLegacyRedirect = lazy(
 
 const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
 const AdminEditorial = lazy(() => import('@/pages/AdminEditorial'));
+const AdminReviews = lazy(() => import('@/pages/AdminReviews'));
 const AdminBanks = lazy(() => import('@/pages/AdminBanks'));
 const AdminOffers = lazy(() => import('@/pages/AdminOffers'));
 const AdminUsers = lazy(() => import('@/pages/AdminUsers'));
@@ -232,7 +235,18 @@ function App() {
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/kredit" element={<CreditLeadPage />} />
                   <Route path="/news" element={<PublicNewsPage />} />
+                  <Route path="/bewertungen" element={<Bewertungen />} />
                   <Route path="/news/archiv" element={<PublicNewsPageLegacy />} />
+                  <Route path="/news/kategorie/:category" element={<NewsCategoryDetail />} />
+                  <Route path="/news/aktien" element={<NewsCategoryDetail categorySlug="aktien" />} />
+                  <Route path="/news/fonds-etfs" element={<NewsCategoryDetail categorySlug="fonds-etfs" />} />
+                  <Route path="/news/rohstoffe" element={<NewsCategoryDetail categorySlug="rohstoffe" />} />
+                  <Route path="/news/seltene-erden" element={<NewsCategoryDetail categorySlug="seltene-erden" />} />
+                  <Route path="/news/anleihen" element={<NewsCategoryDetail categorySlug="anleihen" />} />
+                  <Route path="/news/zinsen" element={<NewsCategoryDetail categorySlug="zinsen" />} />
+                  <Route path="/news/waehrungen" element={<NewsCategoryDetail categorySlug="waehrungen" />} />
+                  <Route path="/news/investmenttrends" element={<NewsCategoryDetail categorySlug="investmenttrends" />} />
+                  <Route path="/news/unternehmen" element={<NewsCategoryDetail categorySlug="unternehmen" />} />
                   <Route path="/news/waehrungsrechner" element={<WaehrungsrechnerPage />} />
                   <Route path="/news/rohstoffcharts" element={<RohstoffchartsPage />} />
                   <Route path="/news/markt/:type/:slug" element={<MarketInstrumentSnapshotPage />} />
@@ -784,6 +798,7 @@ function App() {
                   <Route path="analytics" element={<AdminAnalytics />} />
                   <Route path="live-visitors" element={<AdminLiveVisitors />} />
                   <Route path="editorial" element={<AdminEditorial />} />
+                  <Route path="reviews" element={<AdminReviews /> } />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />

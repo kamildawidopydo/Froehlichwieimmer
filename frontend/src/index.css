@@ -28,8 +28,8 @@
     --bank-accent:         76 124 186;   /* #4C7CBA CTA */
     --bank-accent-strong:  76 124 186;   /* #4C7CBA */
     /* Accent highlight — brand blue (replaces brass/gold in UI copy) */
-    --bank-gold:           76 124 186;   /* #4C7CBA = primary */
-    --bank-gold-soft:      236 243 250;  /* #ECF3FA */
+    --bank-gold:           201 169 97;   /* #C9A961 warm private-banking gold */
+    --bank-gold-soft:      250 244 226;  /* #FAF4E2 */
     --bank-success:        16 185 129;   /* #10B981 */
     /* Signature CTA — brand blue (primary action) */
     --bank-signature:        76 124 186;  /* #4C7CBA */
@@ -88,8 +88,8 @@
     --bank-secondary:      125 165 206;
     --bank-accent:         125 165 206;   /* #7DA5CE */
     --bank-accent-strong:  95 133 179;   /* #4C7CBA */
-    --bank-gold:           125 165 206;   /* #7DA5CE */
-    --bank-gold-soft:      20 40 64;     /* #142840 */
+    --bank-gold:           212 184 128;   /* #D4B880 gold — dark variant */
+    --bank-gold-soft:      41 33 18;      /* #292112 */
     --bank-success:        52 211 153;
     --bank-signature:        76 124 186; /* #4C7CBA */
     --bank-signature-hover:  58 100 153; /* #3A6499 */
@@ -145,8 +145,8 @@
     --bank-accent:         76 124 186;   /* #4C7CBA */
     --bank-accent-strong:  76 124 186;
 
-    --bank-gold:           76 124 186;   /* #4C7CBA */
-    --bank-gold-soft:      236 243 250;  /* #ECF3FA */
+    --bank-gold:           201 169 97;   /* #C9A961 warm gold */
+    --bank-gold-soft:      250 244 226;  /* #FAF4E2 */
 
     --bank-success:        16 185 129;
     --bank-signature:        76 124 186;
@@ -168,8 +168,8 @@
     --bank-accent:         125 165 206;
     --bank-accent-strong:  95 133 179;
 
-    --bank-gold:           125 165 206;
-    --bank-gold-soft:      20 40 64;
+    --bank-gold:           212 184 128;   /* #D4B880 */
+    --bank-gold-soft:      41 33 18;
 
     --bank-signature:        125 165 206;
     --bank-signature-hover:  156 185 218;
