@@ -153,47 +153,6 @@ const Home = () => {
 
       <PlatformFlowDiagram />
 
-      {/* ── Closing CTA ───────────────────────────────────────────────── */}
-      <section className="border-t border-bank-border bg-bank-bg py-24 sm:py-32">
-        <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-          <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
-            <div className="lg:col-span-7">
-              <Eyebrow>Beginnen Sie</Eyebrow>
-              <h2 className="mt-5 max-w-full break-words font-display text-[clamp(1.85rem,5.5vw+0.4rem,3.5rem)] font-semibold leading-[1.08] tracking-[-0.02em] text-bank-text [overflow-wrap:anywhere] sm:text-display-lg">
-                {ctaCopy.growth.heading}{' '}
-                <span className="text-bank-primary">{ctaCopy.growth.headingAccent}</span>
-              </h2>
-              <p className="mt-7 max-w-xl text-lg leading-relaxed text-bank-text-muted">
-                {ctaCopy.growth.lede}
-              </p>
-              <div className="mt-10">
-                <Link to="/register" data-testid="cta-open-account-btn">
-                  <Button variant="primary" size="xl">
-                    {ctaCopy.growth.button}
-                    <ArrowRight className="ml-1 h-4 w-4" strokeWidth={LUCIDE_STROKE} />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            <motion.div
-              {...reveal(1)}
-              className="relative overflow-hidden rounded-3xl border border-bank-border shadow-editorial-md lg:col-span-5"
-            >
-              <img
-                src={siteImages.home.ctaGrowth}
-                alt={siteImages.home.ctaGrowthAlt}
-                loading="lazy"
-                decoding="async"
-                width={1200}
-                height={900}
-                className="pointer-events-none h-[280px] w-full object-cover object-[48%_42%] sm:h-[340px] sm:object-[50%_40%] lg:h-[420px] lg:object-[52%_38%]"
-              />
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
       {/* ── Bonus CTA — refined accent on ink ──────────────────────────── */}
       <section
         className="relative overflow-hidden border-t border-bank-border bg-bank-ink py-20 sm:py-24"
