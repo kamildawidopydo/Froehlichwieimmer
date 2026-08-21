@@ -156,9 +156,15 @@ const InviteModal = ({ onClose }) => {
         {result ? (
           <div className="mt-5 space-y-4" data-testid="invite-result">
             <p className="text-[13.5px] text-bank-text-muted">
-              Der persönliche Link ist 30 Tage gültig. Senden Sie ihn dem Kunden per E-Mail — beim Öffnen wird die
-              Erfahrungs-Seite mit den Kundendaten vorausgefüllt und die Einreichung als „Einladung" markiert.
+              {result.email_sent
+                ? 'Die persönliche Einladung wurde per E-Mail versendet. Der Link ist 30 Tage gültig.'
+                : 'Der Link wurde erstellt. Der automatische E-Mail-Versand ist nicht verfügbar — bitte kopieren Sie den Link und senden Sie ihn dem Kunden manuell.'}
             </p>
+            {result.email_error && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12.5px] text-amber-800">
+                E-Mail-Hinweis: {result.email_error}
+              </p>
+            )}
             <div className="flex items-center gap-2 rounded-xl border border-bank-border bg-neutral-50 p-3">
               <input readOnly value={result.share_url} className="flex-1 bg-transparent font-mono text-[12.5px] outline-none" />
               <Button size="sm" variant="outline" className="rounded-full" onClick={copy}>

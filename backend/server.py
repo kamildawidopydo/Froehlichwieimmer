@@ -498,6 +498,103 @@ async def list_news(limit: int = 20):
 
 
 # ---------------------------------------------------------------------------
+# Emergent-managed email (Resend) — used to send the review invitation link
+# ---------------------------------------------------------------------------
+
+EMAIL_BASE_URL = "https://integrations.emergentagent.com"
+EMERGENT_EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY", "").strip()
+EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Fröhlich Vermögensberatung").strip()
+EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO", "").strip() or None
+
+_EMAIL_SHORTENERS = ("bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "goo.gl", "rebrand.ly")
+_EMAIL_CRED_ASK = ("reply with your password", "reply with the code", "send your password",
+                   "your full card number", "seed phrase", "recovery phrase")
+
+
+def _email_link_ok(url: str) -> bool:
+    low = url.strip().lower()
+    if low.startswith(("mailto:", "tel:", "cid:", "#")):
+        return True
+    if not low.startswith("https://"):
+        return False
+    from urllib.parse import urlparse
+    p = urlparse(low)
+    host = p.hostname or ""
+    if not host or "xn--" in host or p.username:
+        return False
+    import ipaddress
+    try:
+        ipaddress.ip_address(host)
+        return False
+    except ValueError:
+        pass
+    return not any(host == s or host.endswith("." + s) for s in _EMAIL_SHORTENERS)
+
+
+def _assert_safe_email(subject: str, html: str) -> None:
+    lowered = f"{subject}\n{html}".lower()
+    if any(p in lowered for p in _EMAIL_CRED_ASK):
+        raise ValueError("Email must not ask recipients for credentials.")
+    if re.search(r"<\s*(form|input|textarea|select)\b", html, re.I):
+        raise ValueError("Email must not contain forms or input fields.")
+    for url in re.findall(r'href\s*=\s*"([^"]+)"', html) + re.findall(r'src\s*=\s*"([^"]+)"', html):
+        if not _email_link_ok(url):
+            raise ValueError(f"Unsafe email link: {url}")
+
+
+async def _send_email_via_emergent(to: str, subject: str, html: str) -> Optional[str]:
+    if not EMERGENT_EMAIL_KEY:
+        logger.warning("EMERGENT_EMAIL_KEY missing — email not sent (dry-run).")
+        return None
+    _assert_safe_email(subject, html)
+    payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}
+    if EMAIL_REPLY_TO:
+        payload["contact_email"] = EMAIL_REPLY_TO
+    try:
+        async with httpx.AsyncClient(timeout=15) as client_http:
+            r = await client_http.post(
+                f"{EMAIL_BASE_URL}/api/v1/email/send",
+                headers={"X-Email-Key": EMERGENT_EMAIL_KEY},
+                json=payload,
+            )
+        r.raise_for_status()
+        return r.json().get("id")
+    except Exception as e:
+        logger.error("Email send failed: %s", e)
+        raise HTTPException(status_code=502, detail="E-Mail konnte nicht versendet werden.")
+
+
+def _invite_email_html(first_name: str, share_url: str, note: str) -> str:
+    from html import escape
+    greet = f"Hallo {escape(first_name)}," if first_name else "Guten Tag,"
+    note_line = f"<p style=\"margin:0 0 16px;color:#333\">{escape(note)}</p>" if note else ""
+    return (
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        f'style="background:#f5f7fa;padding:32px 0;font-family:Georgia,serif">'
+        f'<tr><td align="center"><table role="presentation" width="560" cellpadding="0" '
+        f'cellspacing="0" style="background:#ffffff;padding:36px;border:1px solid #e5e7eb">'
+        f'<tr><td>'
+        f'<p style="margin:0 0 8px;color:#c9a961;font-size:12px;letter-spacing:0.16em;'
+        f'text-transform:uppercase">Fröhlich Vermögensberatung</p>'
+        f'<h1 style="margin:0 0 20px;color:#0f1d34;font-size:22px;line-height:1.3">'
+        f'Ihre persönliche Einladung</h1>'
+        f'<p style="margin:0 0 16px;color:#333">{greet}</p>'
+        f'{note_line}'
+        f'<p style="margin:0 0 24px;color:#333;line-height:1.6">Wir würden uns freuen, wenn Sie '
+        f'sich einen kurzen Moment nehmen, um Ihre Erfahrung aus der Zusammenarbeit mit uns zu '
+        f'teilen. Ihre Rückmeldung erscheint erst nach interner Prüfung öffentlich.</p>'
+        f'<p style="margin:24px 0"><a href="{escape(share_url)}" '
+        f'style="display:inline-block;padding:14px 28px;background:#0f1d34;color:#ffffff;'
+        f'font-family:Arial,sans-serif;font-size:14px;text-decoration:none;letter-spacing:0.02em">'
+        f'Erfahrung teilen</a></p>'
+        f'<p style="margin:0;color:#888;font-size:12px">Der Link ist 30 Tage gültig. '
+        f'Sie erhalten diese E-Mail als Kunde der Fröhlich Vermögensberatung. Wir bitten '
+        f'niemals per E-Mail um Passwörter, Zugangsdaten oder Zahlungsinformationen.</p>'
+        f'</td></tr></table></td></tr></table>'
+    )
+
+
+# ---------------------------------------------------------------------------
 # News & Märkte — feed, market insights, editorial CRUD
 # ---------------------------------------------------------------------------
 
@@ -997,8 +1094,20 @@ async def list_public_reviews(
 
 @api.get("/reviews/topics")
 async def list_review_topics():
+    pipeline = [
+        {"$match": {"status": "approved"}},
+        {"$unwind": "$topics"},
+        {"$group": {"_id": "$topics", "count": {"$sum": 1}}},
+    ]
+    rows = await db.reviews.aggregate(pipeline).to_list(50)
+    counts = {r["_id"]: int(r["count"]) for r in rows if r.get("_id")}
+    total = await db.reviews.count_documents({"status": "approved"})
     return {
-        "topics": [{"slug": slug, "label": label} for slug, label in REVIEW_TOPICS],
+        "topics": [
+            {"slug": slug, "label": label, "count": counts.get(slug, 0)}
+            for slug, label in REVIEW_TOPICS
+        ],
+        "total_approved": total,
     }
 
 
@@ -1112,11 +1221,31 @@ async def create_review_invite(payload: ReviewInviteInput, user: dict = Depends(
     }
     await db.review_invites.insert_one(doc)
     frontend = os.environ.get("FRONTEND_URL", "").rstrip("/") or "https://kapital-direkt24.de"
+    share_url = f"{frontend}/kundenstimmen?einladung={token}"
+
+    # Send the invitation email via the Emergent-managed provider.
+    email_id = None
+    email_error = None
+    try:
+        email_id = await _send_email_via_emergent(
+            to=payload.email.lower(),
+            subject="Ihre persönliche Einladung — Fröhlich Vermögensberatung",
+            html=_invite_email_html(doc["first_name"], share_url, doc["note"]),
+        )
+        await db.review_invites.update_one(
+            {"_id": doc["_id"]},
+            {"$set": {"email_sent_at": datetime.now(timezone.utc), "email_id": email_id}},
+        )
+    except HTTPException as e:
+        # Do not fail the whole request — the admin still gets the share_url to copy.
+        email_error = e.detail if isinstance(e.detail, str) else "E-Mail-Versand nicht möglich."
     return {
         "token": token,
-        "share_url": f"{frontend}/kundenstimmen?einladung={token}",
+        "share_url": share_url,
         "expires_at": expires_at.isoformat(),
         "email": payload.email.lower(),
+        "email_sent": bool(email_id),
+        "email_error": email_error,
     }
 
 

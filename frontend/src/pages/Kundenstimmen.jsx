@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import TestimonialCard from '@/components/reviews/TestimonialCard';
 import ReviewSubmitForm from '@/components/reviews/ReviewSubmitForm';
 import { reviewsApi } from '@/services/reviewsApi';
-import { REVIEW_TOPICS } from '@/data/reviewTopics';
 
 const PAGE_SIZE = 9;
 
@@ -17,6 +16,11 @@ const Kundenstimmen = () => {
   const [error, setError] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [topic, setTopic] = useState('');
+  const [topicCounts, setTopicCounts] = useState({ topics: [], total_approved: 0 });
+
+  useEffect(() => {
+    reviewsApi.topics().then(setTopicCounts).catch(() => {});
+  }, []);
 
   const load = () => {
     setLoading(true);
@@ -107,13 +111,16 @@ const Kundenstimmen = () => {
             type="button"
             onClick={() => setTopic('')}
             data-testid="topic-filter-all"
-            className={`rounded-full border px-4 py-1.5 text-[12.5px] transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-[12.5px] transition-colors ${
               !topic ? 'border-bank-primary bg-bank-primary text-white' : 'border-bank-border bg-white text-bank-text-muted hover:border-bank-primary/40'
             }`}
           >
             Alle Themen
+            <span className={`rounded-full px-1.5 py-0.5 text-[10.5px] font-mono ${!topic ? 'bg-white/25 text-white' : 'bg-neutral-100 text-bank-text-muted'}`}>
+              {topicCounts.total_approved}
+            </span>
           </button>
-          {REVIEW_TOPICS.map((t) => {
+          {(topicCounts.topics || []).filter((t) => t.count > 0 || !topic || topic === t.slug).map((t) => {
             const active = topic === t.slug;
             return (
               <button
@@ -121,11 +128,14 @@ const Kundenstimmen = () => {
                 key={t.slug}
                 onClick={() => setTopic(t.slug)}
                 data-testid={`topic-filter-${t.slug}`}
-                className={`rounded-full border px-4 py-1.5 text-[12.5px] transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-[12.5px] transition-colors ${
                   active ? 'border-bank-primary bg-bank-primary text-white' : 'border-bank-border bg-white text-bank-text-muted hover:border-bank-primary/40'
                 }`}
               >
                 {t.label}
+                <span className={`rounded-full px-1.5 py-0.5 text-[10.5px] font-mono ${active ? 'bg-white/25 text-white' : 'bg-neutral-100 text-bank-text-muted'}`}>
+                  {t.count}
+                </span>
               </button>
             );
           })}
