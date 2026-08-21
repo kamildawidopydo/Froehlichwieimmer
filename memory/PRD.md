@@ -37,6 +37,10 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 
 ## What's Been Implemented (Feb 2026)
 
+### Homepage Cleanup ✅ (Feb 22, 2026)
+- `PlatformFlowDiagram` (Sektionen "So funktioniert Ihre Sparplattform", "Von der Anmeldung bis zur Verzinsung", "Ihre Vorteile") komplett aus `Home.js` entfernt und Datei gelöscht
+- Import bereinigt, Webpack kompiliert ohne Fehler
+
 ### About-Page Overhaul ✅ (Feb 20, 2026)
 - `/app/frontend/src/pages/About.js` komplett neu geschrieben nach User-Vorgabe
 - Neue Struktur: Hero → Wer wir sind → Mehr als klassische Anlageberatung → Konservativ denken → Kompetenz (3 Karten) → Langfristige Zusammenarbeit (Highlight-Block mit 6 Werten) → Weiterempfehlung → Philosophie (4 Karten) → CTA

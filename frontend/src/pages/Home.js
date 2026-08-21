@@ -13,7 +13,6 @@ import HomeInvestmentSpectrum from '@/components/home/HomeInvestmentSpectrum';
 import ProductInquiryWizard from '@/components/home/ProductInquiryWizard';
 import ProductInquiryStickyCta from '@/components/home/ProductInquiryStickyCta';
 import SpecialAifOverview from '@/components/home/SpecialAifOverview';
-import PlatformFlowDiagram from '@/components/PlatformFlowDiagram';
 import PageMeta from '@/components/PageMeta';
 import { Button } from '@/components/ui/button';
 import Eyebrow from '@/components/editorial/Eyebrow';
@@ -174,8 +173,6 @@ const Home = () => {
       <SpecialAifOverview />
 
       <HomeInvestmentSpectrum onOpenWizard={openProductInquiry} />
-
-      <PlatformFlowDiagram />
 
       {/* ── Bonus CTA — refined accent on ink ──────────────────────────── */}
       <section
