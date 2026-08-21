@@ -7,6 +7,21 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 15 (Feb 25, 2026) — Demo-Kundenstimmen komplett überarbeitet
+
+- `_generate_demo_reviews` + Pools in `server.py` grundlegend neu geschrieben (ersetzt die vorherige „AI-typische" Text-Manipulation über `variants[i%3]`).
+- Neue Text-Pools mit humanem Sprachmuster-Mix:
+  - 5★ (60 Vorlagen): kurze Kommentare, normale Kommentare, konkrete Situationen (Immobilienverkauf, Wechsel von Bank, Login-Probleme, Auslandsüberweisung, bAV etc.)
+  - 4★ (45 Vorlagen): solide Zufriedenheit + kleine Kritik (App, Rückmeldezeit, Papierkram)
+  - 3★ (25 Vorlagen): spürbare Kritik, aber weiter dabei
+  - 2★ (12 Vorlagen): deutliche Kritik ohne Beleidigungen
+- Antworten von Fröhlich nur ~30 % gesamt (5★=20 %, 4★=30 %, 3★=60 %, 2★=90 %), Templates deutlich kürzer & variabler.
+- Firmennamen „Fröhlich" nur noch in 2 Vorlagen (sehr sparsam); die meisten sagen „die Beratung", „mein Ansprechpartner", „das Team" o. Ä.
+- Marketing-Wörter (ganzheitlich, maßgeschneidert, herausragend etc.) durchgehend eliminiert.
+- 30 zufällige Kommentare manuell geprüft: 0 KI-typische Phrasen, klare Unterschiede in Länge/Stil/Situation.
+- Ratings-Distribution: 5★=120 · 4★=65 · 3★=22 · 2★=11 (Summe 218) · 32,6 % mit Antwort · alle 8 Topics vertreten.
+- Tests aktualisiert (`test_reviews_demo_auth.py`) auf tatsächlich vorhandene 12 echte Reviews (Summe 230). **37/37 PASS**.
+
 ## Session 14 (Feb 25, 2026) — Verifikation
 
 - Visuelle Verifikation der Testimonials-UI durchgeführt (Screenshots `/kundenstimmen` + Home).

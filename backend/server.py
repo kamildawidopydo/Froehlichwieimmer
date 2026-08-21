@@ -1258,135 +1258,416 @@ async def delete_review(review_id: str, _user: dict = Depends(require_admin)):
 # --- Review invites — tokenized share links for happy customers -------------
 
 # Demo review templates — used ONLY to seed synthetic test data.
-_DEMO_FIRST = ["Thomas", "Anna", "Michael", "Sabine", "Daniel", "Petra", "Julia", "Andreas", "Christina",
-               "Frank", "Katrin", "Stefan", "Nicole", "Markus", "Silke", "Peter", "Sandra", "Wolfgang",
-               "Simone", "Torsten", "Claudia", "Robert", "Susanne", "Christian", "Beate", "Martin",
-               "Kerstin", "Uwe", "Angelika", "Jörg"]
+# NB: Texte bewusst uneinheitlich (Kürze, Ton, Zeichensetzung), damit sie sich
+# nicht wie generierte Marketing-Sprache lesen. Keine Vorlagen aus fremden
+# Bewertungen — inspiriert von Sprachmustern echter Online-Reviews.
+_DEMO_FIRST = ["Thomas", "Anna", "Michael", "Sabine", "Daniel", "Petra", "Julia", "Andreas",
+               "Christina", "Frank", "Katrin", "Stefan", "Nicole", "Markus", "Silke", "Peter",
+               "Sandra", "Wolfgang", "Simone", "Torsten", "Claudia", "Robert", "Susanne",
+               "Christian", "Beate", "Martin", "Kerstin", "Uwe", "Angelika", "Jörg", "Birgit",
+               "Rainer", "Heike", "Bernd", "Elke", "Detlef", "Ursula", "Ralf", "Monika", "Hans",
+               "Iris", "Ingo", "Marlene", "Volker", "Karin", "Rebecca", "Steffen", "Doris",
+               "Achim", "Ines", "Norbert", "Helga", "Manuela"]
 _DEMO_LAST_INITIALS = list("BCDFGHJKLMNPRSTVWZ")
-_DEMO_TOPICS_POOL = ["persoenliche-betreuung", "vertrauen", "beratung", "erreichbarkeit",
-                     "langfristigkeit", "transparenz", "service", "investmentuebersicht"]
 _DEMO_SINCE = ["unter_1", "1_bis_3", "3_bis_5", "ueber_5"]
 
+# 5★ Pool — Mix aus sehr kurzen, normalen und situativen Kommentaren.
 _DEMO_5 = [
-    ("Sehr persönliche Betreuung und immer gut erreichbar.", ["persoenliche-betreuung", "erreichbarkeit"]),
-    ("Fragen werden verständlich erklärt — ich fühle mich rundum gut betreut.", ["beratung", "persoenliche-betreuung"]),
-    ("Wir arbeiten seit mehreren Jahren zusammen und haben stets das Gefühl, gut aufgehoben zu sein.", ["langfristigkeit", "vertrauen"]),
-    ("Transparente Kommunikation und eine sehr angenehme Beratung. Gerne wieder.", ["transparenz", "beratung"]),
-    ("Die Investmentübersicht ist übersichtlich und ich habe jederzeit den Überblick.", ["investmentuebersicht"]),
-    ("Was ich schätze: keine Verkaufsgespräche, sondern echte Beratung mit Blick auf meine Situation.", ["beratung", "vertrauen"]),
-    ("Herr Fröhlich nimmt sich immer die Zeit, komplexe Themen sauber zu erklären.", ["beratung", "persoenliche-betreuung"]),
-    ("Beim Onboarding wurde ich Schritt für Schritt begleitet — angenehm unaufgeregt.", ["service", "persoenliche-betreuung"]),
-    ("Die Plattform funktioniert stabil und der Login ist einfach.", ["investmentuebersicht", "service"]),
-    ("Ich fühle mich mit meiner Anlage sehr sicher aufgehoben.", ["vertrauen", "langfristigkeit"]),
-    ("Bei internationalen Transaktionen wurde ich professionell unterstützt.", ["service", "beratung"]),
-    ("Sicherheit steht bei mir an erster Stelle — hier wird das ernst genommen.", ["vertrauen"]),
-    ("Sehr gute Auswahl bei Tages- und Festgeldangeboten.", ["investmentuebersicht"]),
-    ("Meine ETF- und Fondsstrategie wurde in Ruhe mit mir aufgebaut.", ["beratung", "langfristigkeit"]),
-    ("Fühle mich als Mensch gesehen, nicht als Nummer.", ["persoenliche-betreuung", "vertrauen"]),
-    ("Beim Hauskauf im Ausland war die Unterstützung unbezahlbar.", ["beratung", "service"]),
-    ("Klare Empfehlungen, aber immer mit Blick auf mein Risikoprofil.", ["beratung", "vertrauen"]),
-    ("Sehr schnelle Rückmeldungen — das ist selten geworden.", ["erreichbarkeit", "service"]),
-    ("Beim Spezial-AIF Thema wurde ich fundiert beraten.", ["beratung"]),
-    ("Ich habe endlich einen festen Ansprechpartner, der mich und meine Ziele kennt.", ["persoenliche-betreuung", "langfristigkeit"]),
-    ("Die langfristige Planung überzeugt mich seit Jahren.", ["langfristigkeit"]),
-    ("Alle Kosten wurden im Voraus offen dargelegt.", ["transparenz"]),
-    ("Bei Marktturbulenzen ruhige, sachliche Einordnung — genau das brauche ich.", ["beratung", "vertrauen"]),
+    # --- kurze Kommentare ---
+    ("Alles bestens, bin zufrieden.", ["persoenliche-betreuung"]),
+    ("Sehr freundlich und unkompliziert.", ["service"]),
+    ("Bis jetzt alles super.", ["persoenliche-betreuung"]),
+    ("Kann ich empfehlen.", ["beratung"]),
+    ("Hat alles gut geklappt, danke.", ["service"]),
+    ("Sehr nette Beratung.", ["beratung"]),
+    ("Mir wurde alles verständlich erklärt. Danke.", ["beratung"]),
+    ("Bin echt zufrieden bisher.", ["persoenliche-betreuung"]),
+    ("Alles soweit gut 👍", ["service"]),
+    ("Passt, danke!", ["service"]),
+    ("Sehr zufrieden, mehr gibts nicht zu sagen.", ["persoenliche-betreuung"]),
+    ("Klare Absprachen, alles wie besprochen.", ["transparenz"]),
+    ("Super Kommunikation.", ["erreichbarkeit"]),
+    # --- normale Kommentare ---
+    ("Bin jetzt eine Weile dabei und bisher wirklich zufrieden. Wenn ich eine Frage habe bekomme ich meistens schnell eine Antwort und es wird auch so erklärt dass man es versteht.",
+     ["erreichbarkeit", "beratung"]),
+    ("Hatte am Anfang ehrlich gesagt wenig Ahnung von dem ganzen Thema. Im Gespräch wurde sich Zeit genommen und danach war einiges klarer.",
+     ["beratung", "persoenliche-betreuung"]),
+    ("Die Beratung war angenehm und überhaupt nicht aufdringlich. Ich wollte erstmal darüber schlafen und das war auch völlig okay.",
+     ["beratung", "vertrauen"]),
+    ("Ich hatte wegen einer Überweisung noch ein paar Fragen. Kurz angerufen und das Thema war am selben Tag erledigt.",
+     ["erreichbarkeit", "service"]),
+    ("Auf Mails kommt bei mir in der Regel innerhalb weniger Stunden eine Antwort. Für mich ein wichtiger Punkt.",
+     ["erreichbarkeit"]),
+    ("Man merkt dass sich jemand wirklich mit meinem Fall beschäftigt hat. Keine Standardantworten, sondern konkret zu meiner Situation.",
+     ["persoenliche-betreuung", "beratung"]),
+    ("Termin per Videocall lief problemlos. Die Unterlagen die vorher zugeschickt wurden waren gut vorbereitet.",
+     ["service"]),
+    ("Der Ton am Telefon ist immer freundlich und man wird nicht gehetzt. Angenehm gerade wenn man sich mit dem Thema noch nicht so auskennt.",
+     ["persoenliche-betreuung"]),
+    ("Habe verschiedene Anbieter verglichen bevor ich mich entschieden habe. Hier hat vor allem gepasst, dass man sich Zeit für ein Erstgespräch nimmt.",
+     ["beratung"]),
+    ("Ich mag es dass immer der gleiche Ansprechpartner da ist. Man muss die Situation nicht jedes Mal von vorne erklären.",
+     ["persoenliche-betreuung", "langfristigkeit"]),
+    ("Alles ist transparent, auch was Kosten angeht. Ich weiß immer woran ich bin.",
+     ["transparenz"]),
+    ("Sehr sachliche Beratung ohne Verkaufsdruck. Ich hatte nicht das Gefühl dass mir irgendwas aufgeschwatzt wird.",
+     ["vertrauen", "beratung"]),
+    ("Beratung war ausführlich aber nicht überladen. Danach hatte ich einen klaren Plan für die nächsten Schritte.",
+     ["beratung"]),
+    ("Die Erreichbarkeit ist für mich der Hauptpunkt. Es geht immer jemand ans Telefon oder ruft zeitnah zurück.",
+     ["erreichbarkeit"]),
+    ("Ich bin skeptisch bei so was, aber der erste Eindruck war gut. Bin jetzt seit über einem Jahr dabei und weiterhin zufrieden.",
+     ["vertrauen", "langfristigkeit"]),
+    ("Alles läuft ruhig und unaufgeregt. Genau das was ich mir gewünscht habe.",
+     ["persoenliche-betreuung"]),
+    ("Ich brauche keine kurzatmigen Trends. Der Blick auf einen längeren Zeithorizont passt für mich.",
+     ["langfristigkeit"]),
+    ("Auch bei komplizierteren Fragen wird sich die Zeit genommen. Danach hab ich meistens ein besseres Bild.",
+     ["beratung"]),
+    ("Bin über eine Empfehlung gekommen und mittlerweile selbst schon dankbar für den Tipp.",
+     ["vertrauen"]),
+    ("Die Jahresgespräche sind vernünftig vorbereitet, keine reine Formalität.",
+     ["service", "beratung"]),
+    ("Mir gefällt dass auch mal ehrlich gesagt wird wenn etwas gerade nicht sinnvoll ist. Ist mir lieber als jedes Produkt verkauft zu bekommen.",
+     ["vertrauen", "beratung"]),
+    ("Am Anfang war ich unsicher, jetzt läuft es ganz entspannt.",
+     ["persoenliche-betreuung"]),
+    ("Freundlicher Kontakt, klare Absprachen, keine bösen Überraschungen.",
+     ["transparenz"]),
+    ("Bekomme meine Übersicht in Ruhe erklärt, das war mir wichtig.",
+     ["investmentuebersicht"]),
+    ("Wenn es mal Rückfragen von meiner Seite gibt, wird das ernst genommen und nicht abgewimmelt.",
+     ["persoenliche-betreuung"]),
+    ("Kurze klare Antworten wenn man welche will, ausführliche wenn man welche braucht.",
+     ["beratung", "erreichbarkeit"]),
+    # --- konkrete Situationen ---
+    ("Ich wollte einen größeren Betrag kurzfristig verfügbar haben und war mir nicht sicher wie ich das am besten mache. Hab morgens angerufen und am Nachmittag hatten wir das Thema geklärt.",
+     ["erreichbarkeit", "beratung"]),
+    ("Bei mir ging es eigentlich nur um Festgeld. Im Gespräch haben wir dann festgestellt dass ein Teil des Geldes verfügbar bleiben sollte. Im Nachhinein war das die bessere Lösung.",
+     ["beratung"]),
+    ("Ich war vorher bei einer größeren Bank und hatte ständig jemand anderen am Telefon. Hier weiß ich wenigstens wen ich anrufen kann.",
+     ["persoenliche-betreuung"]),
+    ("Nach dem Verkauf einer Immobilie musste plötzlich viel Geld sinnvoll geparkt werden. Wir haben es in Ruhe aufgeteilt, ohne dass ich das Gefühl hatte etwas übers Knie zu brechen.",
+     ["beratung", "vertrauen"]),
+    ("Ich war 30 Jahre bei derselben Bank, und der Wechsel hat mir ehrlich gesagt Bauchschmerzen gemacht. Rückblickend war es die richtige Entscheidung — allein wegen des persönlichen Kontakts.",
+     ["persoenliche-betreuung", "langfristigkeit"]),
+    ("Hatte Probleme beim ersten Login in die Plattform. Kurzer Anruf, danach ging es. Seitdem keine Probleme mehr.",
+     ["service"]),
+    ("Nach dem Tod meines Mannes musste ich mich um Finanzen kümmern mit denen ich vorher nichts zu tun hatte. Da wurde sehr geduldig und Schritt für Schritt geholfen.",
+     ["persoenliche-betreuung", "vertrauen"]),
+    ("Ich wollte einen Teil des Geldes für die Kinder anlegen. Es gab ein paar Optionen und die wurden ohne Fachchinesisch erklärt.",
+     ["beratung"]),
+    ("Beim Thema Auslandsüberweisung war ich mir wegen Gebühren und Dauer unsicher. Das wurde vorher klar durchgerechnet, keine Überraschung hinterher.",
+     ["transparenz", "service"]),
+    ("Ich war überrascht dass man sich sogar für ein einfaches Tagesgeld-Thema wirklich Zeit nimmt und nicht nur schnell auf ein Formular verweist.",
+     ["persoenliche-betreuung"]),
+    ("Wir haben mein bestehendes Depot in Ruhe angeschaut und ein paar Dinge umgestellt die aus Kostensicht wenig Sinn hatten. Musste nichts sofort passieren.",
+     ["investmentuebersicht", "beratung"]),
+    ("Als Selbstständiger habe ich unregelmäßige Einnahmen. Wir haben zusammen überlegt wie viel man ohne schlechtes Gewissen fest anlegen kann und was liquide bleibt.",
+     ["beratung"]),
+    ("Bei einer größeren Auszahlung war ich zuerst nervös ob alles funktioniert. Hat aber ohne Probleme geklappt und ich wurde vorher genau informiert.",
+     ["transparenz", "service"]),
+    ("Hatte eine steuerliche Frage die eigentlich nicht direkt dazu gehört. Trotzdem wurde ich in die richtige Richtung gelenkt und musste nicht ewig recherchieren.",
+     ["beratung"]),
+    ("Ich wollte mich eigentlich nur informieren und noch gar nichts entscheiden. Fand angenehm dass trotzdem kein Druck gemacht wurde.",
+     ["vertrauen", "beratung"]),
+    ("Bei einer plötzlichen Ausgabe brauchte ich schnell Liquidität. Das lief unkompliziert und ohne Rückfragen die mich unter Druck gesetzt hätten.",
+     ["service"]),
+    ("Meine Frau und ich hatten zusammen ein Beratungsgespräch, was mir wichtig war. Es wurde auf beide Blickwinkel eingegangen.",
+     ["persoenliche-betreuung", "beratung"]),
+    ("Nach einem Wechsel des Arbeitgebers hatte ich Themen rund um bAV offen. Wir haben das in einem Termin sortiert.",
+     ["beratung"]),
+    ("Bin über eine Ausschüttung gestolpert die ich nicht ganz einordnen konnte. Nach fünf Minuten am Telefon war klar was los ist.",
+     ["erreichbarkeit", "investmentuebersicht"]),
+    ("Ich hatte Sorge dass ich mich um vieles selbst kümmern muss. Ist zum Glück nicht so.",
+     ["service", "persoenliche-betreuung"]),
+    # --- Fröhlich namentlich (sehr sparsam) ---
+    ("Fröhlich betreut mich seit einigen Jahren und ich habe die Entscheidung keinen Tag bereut.",
+     ["langfristigkeit", "vertrauen"]),
+    ("Wenn ich Fröhlich anrufe, weiß der Berater sofort wovon ich rede. Kein Formular ausfüllen, kein „ich verbinde weiter“.",
+     ["persoenliche-betreuung", "erreichbarkeit"]),
 ]
+
+# 4★ Pool — solide Zufriedenheit mit kleinen Anmerkungen.
 _DEMO_4 = [
-    ("Solide Beratung, die zu meinen Zielen passt.", ["beratung"]),
-    ("Die Zusammenarbeit ist professionell und angenehm.", ["persoenliche-betreuung"]),
-    ("Ich habe einen guten Überblick über meine Anlagen bekommen.", ["investmentuebersicht"]),
-    ("Onboarding war klar strukturiert.", ["service"]),
-    ("Bankauswahl wurde mir mit klaren Argumenten erklärt.", ["beratung", "transparenz"]),
-    ("Insgesamt bin ich zufrieden mit der Betreuung.", ["persoenliche-betreuung"]),
-    ("Die Plattform ist verständlich aufgebaut.", ["investmentuebersicht"]),
-    ("Termine werden zuverlässig eingehalten.", ["service", "erreichbarkeit"]),
-    ("Die Aktien- und ETF-Beratung war ausführlich.", ["beratung"]),
-    ("Guter Mix aus Sicherheit und Wachstumschancen.", ["beratung", "vertrauen"]),
-    ("Zufrieden — hätte mir bei einem Punkt etwas mehr Detail gewünscht.", ["beratung"]),
-    ("Alles in allem eine gute Erfahrung.", ["service"]),
-    ("Die Erklärungen zu Fonds und ETFs waren hilfreich.", ["beratung"]),
-    ("Habe mich zu Liquidität und Anlagehorizont gut beraten gefühlt.", ["beratung"]),
+    # kurze
+    ("Gute Beratung und schnelle Rückmeldung.", ["beratung", "erreichbarkeit"]),
+    ("Kann mich nicht beschweren.", ["service"]),
+    ("Zufrieden soweit.", ["persoenliche-betreuung"]),
+    ("Alles in Ordnung bisher.", ["service"]),
+    ("Läuft.", ["persoenliche-betreuung"]),
+    ("Bin dabei, passt.", ["service"]),
+    ("Solide Beratung.", ["beratung"]),
+    ("Insgesamt zufrieden, kleiner Punkt für die Zukunft.", ["beratung"]),
+    ("Ganz gut, nichts zu meckern.", ["service"]),
+    # normale
+    ("Bin bisher zufrieden. Vor allem die Erreichbarkeit passt. Bei den Unterlagen dürften manche Punkte kompakter sein.",
+     ["erreichbarkeit"]),
+    ("Eigentlich sehr zufrieden. Auf meine letzte Mail kam die Antwort allerdings erst zwei Tage später. Danach wurde alles schnell geklärt.",
+     ["erreichbarkeit"]),
+    ("Die ersten Unterlagen waren für mich ehrlich gesagt etwas viel auf einmal. Beim nächsten Gespräch wurde es dann nochmal einfacher erklärt.",
+     ["beratung"]),
+    ("Telefonisch klappt es bei mir besser als per Mail. Ansonsten bin ich mit der Betreuung zufrieden.",
+     ["erreichbarkeit", "persoenliche-betreuung"]),
+    ("Beratung war gründlich. Bei der Umsetzung hat es an einer Stelle etwas länger gedauert, im Endeffekt aber ok.",
+     ["beratung", "service"]),
+    ("Insgesamt gute Zusammenarbeit. Ich hätte mir bei einem Detail eine schriftliche Zusammenfassung gewünscht.",
+     ["transparenz"]),
+    ("Die Erreichbarkeit ist gut, die Antworten meistens hilfreich. Manchmal wünsche ich mir aber etwas mehr Initiative von der Beratung selbst.",
+     ["erreichbarkeit", "beratung"]),
+    ("Termin war pünktlich, Inhalte gut vorbereitet. Ein kleiner Papierkram-Punkt hätte digitaler laufen können.",
+     ["service"]),
+    ("Alles Wichtige ist geklärt, die Kommunikation läuft. Habe kurz warten müssen, aber das ist ok.",
+     ["service"]),
+    ("Freundlicher Kontakt, faire Aufklärung. Ich hätte gerne eine etwas modernere App, dafür läuft der Rest rund.",
+     ["service", "investmentuebersicht"]),
+    ("Bin zufrieden. Nur bei einer Nachfrage musste ich zweimal nachhaken.",
+     ["erreichbarkeit"]),
+    ("Für mich passt die Zusammenarbeit. Nicht spektakulär, aber verlässlich, und das ist mir wichtig.",
+     ["vertrauen", "langfristigkeit"]),
+    ("Sachliche Beratung ohne viel Marketing. Wenn ich einen Wunsch frei hätte: klarere schriftliche Übersichten.",
+     ["beratung", "transparenz"]),
+    ("Vom Ablauf her sauber. Bei einem Formular gab es eine kurze Unklarheit, das wurde per Telefon gelöst.",
+     ["service"]),
+    ("Ich bekomme meine Antworten, muss aber manchmal freundlich erinnern. Ansonsten passt es.",
+     ["erreichbarkeit"]),
+    ("Kompetenz sehe ich, Chemie passt auch. Ein Stern Abzug weil die Onlineplattform an manchen Stellen umständlich ist.",
+     ["investmentuebersicht", "service"]),
+    ("Bin froh dass ich einen festen Ansprechpartner habe. Das Onboarding war etwas zäh, danach ging es flüssig.",
+     ["persoenliche-betreuung", "service"]),
+    ("Für meinen Anwendungsfall reicht es völlig. Nichts Spektakuläres, aber genau das wollte ich auch nicht.",
+     ["service"]),
+    # Situationen
+    ("Ich wollte einen Bausparvertrag auflösen und die Prozedur war komplizierter als gedacht. Zum Glück hat mir am Telefon jemand genau erklärt was zu tun ist.",
+     ["service", "erreichbarkeit"]),
+    ("Hatte im letzten Quartal ein bisschen viel Papierkram wegen einer Umstellung. Am Ende hat es funktioniert, ich hätte mir aber weniger Rückfragen gewünscht.",
+     ["service"]),
+    ("Wir haben mein Depot durchgeschaut und ein paar Sachen behalten die ich sonst vielleicht vorschnell verkauft hätte. Am Ende war das die richtige Entscheidung.",
+     ["beratung", "investmentuebersicht"]),
+    ("Wollte für ein Auto liquide bleiben. Wurde entsprechend eingerichtet, ohne dass ich meine restliche Anlage anfassen musste.",
+     ["beratung"]),
+    ("Beim Wechsel von einer anderen Bank hat ein Formular gefehlt. War aber schnell nachgereicht und der Rest lief glatt.",
+     ["service"]),
+    ("Ich habe eine Ferienwohnung finanzieren wollen. Die Beratung war ehrlich zu den Risiken und ich habe die Entscheidung am Ende bewusst getroffen.",
+     ["beratung", "transparenz"]),
+    ("Bei mir kam einmal ein Anruf zu einem ungünstigen Zeitpunkt. Wir haben dann per Mail weitergemacht, kein Problem.",
+     ["erreichbarkeit"]),
+    ("Termin für ein Update wurde einmal verschoben, ich hätte lieber den Originaltermin gehabt. Beim Ersatztermin war dafür genug Zeit.",
+     ["service"]),
+    ("Hatte bei einer Sparplan-Änderung eine kleine Panne im System. Wurde manuell nachgezogen und ist am nächsten Tag durchgelaufen.",
+     ["service"]),
+    ("Kleiner Punkt: Der erste PDF-Bericht war für mich schwer zu lesen. Ich habe eine einfachere Version bekommen, seitdem alles fein.",
+     ["transparenz", "investmentuebersicht"]),
+    ("Habe Fragen zum Thema Nachhaltigkeit gehabt. Antworten waren gut, ich hätte mir aber mehr Auswahl an entsprechenden Fonds gewünscht.",
+     ["beratung"]),
+    ("Nach einem Umzug musste die Adresse geändert werden, lief unauffällig ab. Habe es erst gemerkt als die Post an die richtige Adresse kam.",
+     ["service"]),
+    ("Ich habe eine Erbschaft geregelt bekommen, bei der ein Teil sofort verfügbar bleiben musste. Beratung war ok, es hätte an einer Stelle etwas schneller gehen dürfen.",
+     ["beratung"]),
+    ("War mit einer Verzögerung bei einer Zeichnungsfrist nicht ganz glücklich. Wurde am Ende gelöst, aber der Stress hätte nicht sein müssen.",
+     ["service"]),
+    ("Alles in allem eine faire Beratung. Ich habe einen anderen Vorschlag als erwartet bekommen, konnte das aber gut nachvollziehen.",
+     ["beratung", "vertrauen"]),
+    ("Bei mir hat der zweite Termin länger gedauert als geplant. Das lag aber daran dass wirklich alles besprochen wurde was mich interessiert.",
+     ["persoenliche-betreuung"]),
+    ("Ich musste einmal eine dringende Frage stellen und die Rückmeldung kam erst am nächsten Werktag. Für die Uhrzeit an dem ich geschrieben hatte war das aber verständlich.",
+     ["erreichbarkeit"]),
+    ("Ein Punkt Abzug für die App, ansonsten alles gut.", ["investmentuebersicht"]),
 ]
+
+# 3★ Pool — spürbare Kritik, aber grundsätzlich weiter dabei.
 _DEMO_3 = [
-    ("Grundsätzlich zufrieden, gelegentlich hätte ich mir schnellere Rückmeldungen gewünscht.", ["erreichbarkeit"]),
-    ("Die Plattform ist übersichtlich, beim ersten Login musste ich mich kurz zurechtfinden.", ["investmentuebersicht", "service"]),
-    ("Die Beratung war ausführlich, teilweise hätte ich mir eine kürzere Zusammenfassung gewünscht.", ["beratung"]),
-    ("Alles läuft, für meinen Geschmack manchmal etwas formal.", ["service"]),
-    ("Solide, aber ich bin noch am Kennenlernen.", ["persoenliche-betreuung"]),
+    ("Beratung war gut, nur die Einrichtung hat bei mir länger gedauert als gedacht. Jetzt läuft aber alles.",
+     ["service", "beratung"]),
+    ("Ganz zufrieden, aber die Kommunikation läuft mir zu formal. Ist Geschmackssache.",
+     ["persoenliche-betreuung"]),
+    ("Ich hätte am Anfang klarere Antworten zu Kosten erwartet. Wurde später geklärt, hat aber etwas gedauert.",
+     ["transparenz"]),
+    ("Die Beratung selbst ist in Ordnung, die Plattform finde ich für ältere Nutzer eher unübersichtlich.",
+     ["investmentuebersicht"]),
+    ("Bin noch am Kennenlernen, ein paar Sachen laufen gut, andere sind etwas holprig.",
+     ["service"]),
+    ("Grundsätzlich zufrieden. Auf Rückrufe muss man aber manchmal warten.",
+     ["erreichbarkeit"]),
+    ("Termine klappen, Antworten kommen. Manchmal wünsche ich mir mehr Struktur in den Unterlagen.",
+     ["transparenz"]),
+    ("Habe schon Beratungen erlebt die mehr in die Tiefe gegangen sind. Für den Alltag reicht es aber.",
+     ["beratung"]),
+    ("Bin nicht unzufrieden, aber auch nicht begeistert. Solide 3 Sterne für mich.",
+     ["persoenliche-betreuung"]),
+    ("Der Berater ist nett, ich hätte mir zu einem konkreten Punkt aber eine klarere Empfehlung gewünscht statt Varianten.",
+     ["beratung"]),
+    ("Die Unterlagen sind teilweise schwer verständlich. Nachfragen werden aber beantwortet, deshalb noch 3 Sterne.",
+     ["transparenz"]),
+    ("Wollte eigentlich mehr digitale Prozesse. Vieles läuft noch über Papier oder Mail.",
+     ["service"]),
+    ("Anfangs sehr enthusiastisch, mittlerweile etwas nüchterner. Die Betreuung ist ok, mehr aber auch nicht.",
+     ["persoenliche-betreuung"]),
+    ("Bei mir sind zwei kleine Fehler passiert, die korrigiert wurden. Ich hätte mir mehr Sorgfalt beim ersten Anlauf gewünscht.",
+     ["service"]),
+    ("Die Antwortzeit schwankt bei mir stark. Manchmal sehr schnell, manchmal muss ich zweimal nachfragen.",
+     ["erreichbarkeit"]),
+    ("Über die App ärgere ich mich immer wieder. Beratung selbst geht in Ordnung.",
+     ["investmentuebersicht"]),
+    ("Alles läuft, für meinen Geschmack bekomme ich aber wenig eigene Impulse. Muss meistens selbst nachfragen.",
+     ["beratung"]),
+    ("Der letzte Termin war weniger vorbereitet als der erste. Kann Zufall sein, hoffe dass es besser wird.",
+     ["service"]),
+    ("Ich vermisse eine übersichtliche Jahresauswertung. Was ich bekomme ist mir zu textlastig.",
+     ["investmentuebersicht", "transparenz"]),
+    ("Insgesamt in Ordnung. 3 Sterne weil zwischen Anfrage und Termin bei mir aktuell zu viel Zeit lag.",
+     ["service"]),
+    ("Zwei kleine Punkte: einmal Zeitverzug, einmal ein missverständliches Schreiben. Sonst ok.",
+     ["service", "transparenz"]),
+    ("Bei komplizierteren Fragen wird sichtbar, dass es länger dauert. Für einfache Sachen läuft es aber.",
+     ["beratung"]),
+    ("Ich hätte bei einem Thema eine ausführlichere Aufklärung erwartet. Musste selbst nachlesen.",
+     ["beratung", "transparenz"]),
+    ("Habe schon bessere Berater erlebt, aber auch deutlich schlechtere. 3 Sterne passen ehrlich.",
+     ["persoenliche-betreuung"]),
+    ("Nicht optimal, nicht schlecht. Ich bleibe erstmal dabei und schau wie es sich entwickelt.",
+     ["vertrauen"]),
 ]
+
+# 2★ Pool — deutliche Kritik, aber ohne Beleidigungen (Demo).
 _DEMO_2 = [
-    ("Der Ablauf war ok, die Einrichtung meines Zugangs hat aber etwas länger gedauert.", ["service", "investmentuebersicht"]),
-    ("Bei meiner letzten Anfrage musste ich mehrere Tage auf eine Antwort warten.", ["erreichbarkeit"]),
+    ("Der Ablauf war ok, die Einrichtung meines Zugangs hat aber deutlich länger gedauert als angekündigt.",
+     ["service"]),
+    ("Bei meiner letzten Anfrage musste ich mehrere Tage auf eine Antwort warten. Für so ein Thema erwarte ich mehr.",
+     ["erreichbarkeit"]),
+    ("Die Beratung war grundsätzlich freundlich, es gab aber zwei Fehler in meinen Unterlagen die ich selbst gefunden habe.",
+     ["transparenz"]),
+    ("Termin wurde kurzfristig verschoben, was ich ärgerlich fand. Beim neuen Termin waren die Punkte noch nicht ganz sortiert.",
+     ["service"]),
+    ("Hatte den Eindruck dass meine Fragen zwischendurch untergegangen sind. Musste zweimal nachhaken.",
+     ["erreichbarkeit"]),
+    ("Die Plattform hat bei mir Probleme gemacht und der Support war zäh. Erst nach mehreren Anrufen ging es weiter.",
+     ["investmentuebersicht", "service"]),
+    ("Es hat länger gedauert bis ich einen festen Ansprechpartner hatte. Der ist jetzt zwar da, ich hänge aber noch am Aufholen.",
+     ["persoenliche-betreuung"]),
+    ("Ehrlich enttäuscht wegen einer verspäteten Rückmeldung zu einer wichtigen Frist. Danach wurde es besser, ich bleibe skeptisch.",
+     ["erreichbarkeit"]),
+    ("Anfang war gut, dann kam eine Phase in der ich mich zu wenig informiert gefühlt habe.",
+     ["transparenz"]),
+    ("Zwei Sterne weil bei mir eine Umbuchung nicht wie besprochen ausgeführt wurde. Wurde korrigiert, hat mich aber Nerven gekostet.",
+     ["service"]),
+    ("Vom Ton her nett, in der Sache aber langsam. Ich hoffe das legt sich.",
+     ["persoenliche-betreuung"]),
+    ("Bin gerade unschlüssig ob es zu mir passt. Aktuell tendenziell eher unzufrieden.",
+     ["vertrauen"]),
 ]
+
+# Antworten von Fröhlich — kurz, variiert, nicht schablonenhaft.
 _DEMO_RESPONSES_5 = [
-    "Herzlichen Dank für Ihre offenen Worte — genau diese Nähe möchten wir langfristig bewahren.",
-    "Vielen Dank für Ihre Rückmeldung. Es freut uns, dass Sie sich verstanden und gut betreut fühlen.",
-    "Wir danken Ihnen sehr für Ihr Vertrauen und die kontinuierliche Zusammenarbeit.",
-    "Ihre Rückmeldung ist für unser gesamtes Team ein wichtiger Ansporn — vielen Dank.",
-    "Vielen Dank — persönliche Nähe und langfristige Begleitung sind uns besonders wichtig.",
-    "Wir freuen uns sehr über Ihre Worte und die Klarheit, mit der Sie unsere Zusammenarbeit beschreiben.",
+    "Vielen Dank!",
+    "Danke für die nette Rückmeldung.",
+    "Freut uns, danke!",
+    "Danke, das freut uns sehr.",
+    "Schön zu hören. Vielen Dank!",
+    "Danke — schön dass es passt.",
+    "Herzlichen Dank für die Rückmeldung.",
 ]
 _DEMO_RESPONSES_4 = [
-    "Vielen Dank für Ihr positives Feedback und Ihren konkreten Hinweis — wir nehmen ihn gerne auf.",
-    "Danke für Ihre offene Rückmeldung. Wir freuen uns über die gute Zusammenarbeit und bleiben aufmerksam.",
-    "Ihr Feedback bestärkt uns, den eingeschlagenen Weg konsequent fortzuführen.",
+    "Danke für die Rückmeldung.",
+    "Vielen Dank für den Hinweis. Wir schauen es uns an.",
+    "Danke für die offene Rückmeldung.",
+    "Freut uns dass es soweit passt. Ihre Anmerkung nehmen wir mit.",
+    "Danke, das hilft uns weiter.",
+    "Vielen Dank, wir bleiben dran.",
 ]
-_DEMO_RESPONSES_23 = [
-    "Vielen Dank für Ihre offene Rückmeldung. Eine zuverlässige Erreichbarkeit gehört zu unserem eigenen Anspruch — Ihren Hinweis nehmen wir ernst und arbeiten daran, unsere Abläufe kontinuierlich zu verbessern.",
-    "Danke für Ihre ehrlichen Worte. Wir prüfen den beschriebenen Punkt intern und werden gezielt daran arbeiten.",
-    "Herzlichen Dank für Ihr Feedback. Ihr Hinweis hilft uns dabei, unseren Service weiter zu verbessern — melden Sie sich gern direkt bei Ihrem Ansprechpartner.",
+_DEMO_RESPONSES_3 = [
+    "Danke für den Hinweis. Bei der Antwortzeit möchten wir besser sein, das nehmen wir mit.",
+    "Danke für Ihr ehrliches Feedback. Wir arbeiten an den genannten Punkten.",
+    "Vielen Dank. Wir prüfen intern woran es lag und geben Ihrem Ansprechpartner Bescheid.",
+    "Danke für die Offenheit. Melden Sie sich gerne direkt, dann schauen wir gemeinsam drauf.",
+    "Danke für die Rückmeldung, wir nehmen die Punkte ernst.",
+    "Wir hören das ungern und schauen uns die genannten Themen konkret an. Danke für den Hinweis.",
+    "Vielen Dank. An der App arbeiten wir kontinuierlich weiter.",
+]
+_DEMO_RESPONSES_2 = [
+    "Das tut uns leid. Bitte melden Sie sich direkt, wir schauen uns Ihren Fall konkret an.",
+    "Danke für Ihre offenen Worte. Wir prüfen den beschriebenen Ablauf intern.",
+    "Vielen Dank für die Rückmeldung. Bei einer Frist so lange zu warten war nicht in Ordnung, wir gehen dem nach.",
+    "Wir bedauern die Verzögerung. Ihr Hinweis kommt bei uns an und wir melden uns bei Ihnen.",
+    "Danke, dass Sie das ansprechen. Was passiert ist darf so nicht laufen, wir klären das.",
 ]
 
 
 def _generate_demo_reviews(count: int = 218) -> list:
+    """Generate 218 demo reviews with human-sounding language and mixed styles.
+
+    Verteilungen (bei count=218):
+    - 5★: 120  · 4★: 65  · 3★: 22  · 2★: 11
+    - Antwort-Wahrscheinlichkeit: 5★=20%, 4★=30%, 3★=60%, 2★=90% (~30% gesamt)
+    - Texte werden aus Pools zyklisch gezogen (leichte Wiederholung ist realistisch);
+      Namen/Datum/Topics differenzieren die Einträge.
+    """
     rnd = random.Random(42)
     now = datetime.now(timezone.utc)
     combos: list = []
-    # Distribution: 45% 5*, 35% 4*, 15% 3*, 5% 2*
-    buckets = [(5, int(count * 0.45), _DEMO_5, _DEMO_RESPONSES_5),
-               (4, int(count * 0.35), _DEMO_4, _DEMO_RESPONSES_4),
-               (3, int(count * 0.15), _DEMO_3, _DEMO_RESPONSES_23),
-               (2, count - int(count * 0.45) - int(count * 0.35) - int(count * 0.15), _DEMO_2, _DEMO_RESPONSES_23)]
-    for rating, needed, pool, responses in buckets:
+
+    # Feste Bucketgrößen — Summe = count (218 default)
+    n5 = int(round(count * 0.55))          # 120
+    n4 = int(round(count * 0.30))          # 65
+    n3 = int(round(count * 0.10))          # 22
+    n2 = count - n5 - n4 - n3              # 11
+
+    buckets = [
+        (5, n5, _DEMO_5, _DEMO_RESPONSES_5, 0.20),
+        (4, n4, _DEMO_4, _DEMO_RESPONSES_4, 0.30),
+        (3, n3, _DEMO_3, _DEMO_RESPONSES_3, 0.60),
+        (2, n2, _DEMO_2, _DEMO_RESPONSES_2, 0.90),
+    ]
+
+    global_idx = 0
+    for rating, needed, pool, responses, resp_prob in buckets:
+        # Deterministische Permutation pro Bucket → Wiederholungen liegen nicht direkt hintereinander
+        order = list(range(len(pool)))
+        rnd.shuffle(order)
         for i in range(needed):
-            base_text, topics = pool[i % len(pool)]
-            # Add mild variation to avoid exact repeats: pick optional additive clause
-            add_clauses = [
-                "", " Danke!", " Weiter so.", " Empfehlenswert.",
-                " Wir bleiben gerne dabei.", " Auf viele weitere Jahre.",
-                " Sehr angenehmer Ton.", "", "", "",
-            ]
-            addition = add_clauses[(i * 3) % len(add_clauses)] if rating >= 4 else ""
-            variants = [
-                base_text + addition,
-                base_text + " " + ("Besonders bemerkenswert." if rating == 5 else "Aus meiner Sicht sinnvoll." if rating == 4 else "Aus meiner Sicht Luft nach oben." if rating == 3 else "Hier sehe ich Verbesserungspotenzial."),
-                ("Aus meiner Sicht: " if i % 3 == 0 else "Meine Erfahrung: " if i % 3 == 1 else "") + base_text,
-            ]
-            text = variants[i % 3].strip()
-            fn = _DEMO_FIRST[i % len(_DEMO_FIRST)]
-            ln_init = _DEMO_LAST_INITIALS[(i * 7) % len(_DEMO_LAST_INITIALS)]
-            since = _DEMO_SINCE[(i * 5) % len(_DEMO_SINCE)]
-            extra_topic = _DEMO_TOPICS_POOL[(i * 11) % len(_DEMO_TOPICS_POOL)]
-            all_topics = list(dict.fromkeys((topics or []) + ([extra_topic] if rnd.random() < 0.6 else [])))[:3]
-            add_response = rnd.random() < 0.7
-            response = responses[i % len(responses)] if add_response else None
-            created = now - timedelta(days=rnd.randint(1, 900), hours=rnd.randint(0, 23))
+            base_text, base_topics = pool[order[i % len(order)]]
+            text = base_text
+            topics = list(base_topics)
+
+            fn = _DEMO_FIRST[global_idx % len(_DEMO_FIRST)]
+            ln_init = _DEMO_LAST_INITIALS[(global_idx * 7) % len(_DEMO_LAST_INITIALS)]
+            since = _DEMO_SINCE[(global_idx * 5) % len(_DEMO_SINCE)]
+
+            add_response = rnd.random() < resp_prob
+            response = responses[global_idx % len(responses)] if add_response else None
+
+            # Datum quasi-zufällig innerhalb ~2 Jahre — realistischer Timeline-Mix.
+            created = now - timedelta(
+                days=rnd.randint(1, 730),
+                hours=rnd.randint(0, 23),
+                minutes=rnd.randint(0, 59),
+            )
+
             combos.append({
-                "first_name": fn, "last_name": f"Demo{i:03d}",
-                "email": f"demo{i:03d}@fvb-demo.local",
-                "rating": rating, "text": text,
+                "first_name": fn,
+                "last_name": f"Demo{global_idx:03d}",
+                "email": f"demo{global_idx:03d}@fvb-demo.local",
+                "rating": rating,
+                "text": text,
                 "customer_since": since,
-                "topics": all_topics,
+                "topics": topics[:3],
                 "status": "approved",
                 "display_name": f"{fn} {ln_init}.",
-                "is_verified": False, "is_featured": False, "invited": False,
+                "is_verified": False,
+                "is_featured": False,
+                "invited": False,
                 "is_demo": True,
                 "admin_response": response,
-                "created_at": created, "moderated_at": created,
-                "moderated_by": "demo-seed", "admin_note": "DEMO — automatisch generiert",
+                "responded_at": created + timedelta(days=rnd.randint(1, 4)) if response else None,
+                "responded_by": "demo-seed" if response else None,
+                "created_at": created,
+                "moderated_at": created,
+                "moderated_by": "demo-seed",
+                "admin_note": "DEMO — automatisch generiert",
                 "ip_hash": "",
             })
+            global_idx += 1
+
     return combos
 
 
