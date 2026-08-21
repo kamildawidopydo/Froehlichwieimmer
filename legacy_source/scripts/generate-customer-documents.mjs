@@ -1,5 +1,5 @@
 /**
- * Regenerate public customer documents with Kapitalmitte branding.
+ * Regenerate public customer documents with Fröhlich Vermögensberatung branding.
  * Run: node scripts/generate-customer-documents.mjs
  *
  * - Kundendokumente
@@ -16,54 +16,54 @@ import { PDFDocument, PDFName } from 'pdf-lib';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-const OUT_DIR = path.join(ROOT, 'public/assets/documents');
-const LOGO_PNG = path.join(ROOT, 'public/assets/logo/kapitalmitte-logo.png');
+const OUT_DIR = '/app/frontend/public/assets/documents';
+const LOGO_PNG = '/app/frontend/public/assets/logo/frohlich-logo.png';
 const TMP = path.join(__dirname, '_tmp-docs');
 
 const BRAND = {
-  short: 'Kapitalmitte',
-  legal: 'Alexander Wahl Vermögensverwaltung GmbH',
-  street: 'Hallgartenstraße 57',
-  city: '60389 Frankfurt am Main',
+  short: 'Fröhlich Vermögensberatung',
+  legal: 'Fröhlich Vermögensberatung GmbH',
+  street: 'Bösgrunder Weg 62',
+  city: '55543 Bad Kreuznach',
   country: 'Deutschland',
-  email: 'kundenservice@kapitalmitte.com',
-  web: 'www.kapitalmitte.com',
-  webHref: 'https://www.kapitalmitte.com',
-  hrb: 'HRB 122289',
-  registerCourt: 'Amtsgericht Frankfurt am Main',
+  email: 'kundenservice@kapital-direkt24.de',
+  web: 'kapital-direkt24.de',
+  webHref: 'https://kapital-direkt24.de/',
+  hrb: 'HRB 23436',
+  registerCourt: 'Amtsgericht Bad Kreuznach',
   stand: 'Juli 2026',
 };
 
 const DOCS = [
   {
     key: 'kundendokumente',
-    out: 'Kapitalmitte_Kundendokumente.pdf',
+    out: 'Froehlich_Kundendokumente.pdf',
     title: 'Kundendokumente',
     eyebrow: 'Institutionelle Kundendokumente',
     subtitle:
       'Kunden- und Vertragsdokument für Investment-, Wealth-, Brokerage- und Einlagenlösungen',
     code: 'KM-KD-2026-V3',
-    metaTitle: 'Kapitalmitte – Kundendokumente',
+    metaTitle: 'Fröhlich Vermögensberatung – Kundendokumente',
   },
   {
     key: 'risiken',
-    out: 'Kapitalmitte_Risiken_der_Kapitalanlage.pdf',
+    out: 'Froehlich_Risiken_der_Kapitalanlage.pdf',
     title: 'Risiken der Kapitalanlage',
     eyebrow: 'Risikohinweise',
     subtitle:
       'Informationen zu Risiken von Kapitalmarkt-, Einlagen-, Wealth- und Investmentlösungen',
     code: 'KM-RK-2026-V2',
-    metaTitle: 'Kapitalmitte – Risiken der Kapitalanlage',
+    metaTitle: 'Fröhlich Vermögensberatung – Risiken der Kapitalanlage',
   },
   {
     key: 'info',
-    out: 'Kapitalmitte_Informationsbogen_Einlagenloesungen.pdf',
+    out: 'Froehlich_Informationsbogen_Einlagenloesungen.pdf',
     title: 'Informationsbogen Einlagenlösungen',
     eyebrow: 'Informationsbogen',
     subtitle:
-      'Allgemeine Informationen zu Einlagenlösungen, Einlagensicherung und Partnerbanken im Rahmen der über Kapitalmitte vermittelten Produkte.',
+      'Allgemeine Informationen zu Einlagenlösungen, Einlagensicherung und Partnerbanken im Rahmen der über Fröhlich Vermögensberatung vermittelten Produkte.',
     code: 'KM-IB-2026-V2',
-    metaTitle: 'Kapitalmitte – Informationsbogen Einlagenlösungen',
+    metaTitle: 'Fröhlich Vermögensberatung – Informationsbogen Einlagenlösungen',
   },
 ];
 
@@ -74,13 +74,13 @@ function rebrand(text) {
   const legacyHyphenEu = `${['broad', 'reach'].join('-')}-eu.com`;
   return String(text || '')
     .replace(/\r\n/g, '\n')
-    .replace(/Broad[\s\n]+Reach[\s\n]*GmbH\s*\(„Broad[\s\n]*Reach“\)/gi, `${BRAND.legal} („Kapitalmitte“)`)
+    .replace(/Broad[\s\n]+Reach[\s\n]*GmbH\s*\(„Broad[\s\n]*Reach“\)/gi, `${BRAND.legal} („Fröhlich Vermögensberatung“)`)
     .replace(/Broad[\s\n]+Reach[\s\n]*GmbH/gi, BRAND.legal)
     .replace(/Broad[\s\n]+Reach/gi, BRAND.short)
     .replace(new RegExp(`www\\.${legacyEu.replace(/\./g, '\\.')}`, 'gi'), BRAND.web)
     .replace(new RegExp(`www\\.${legacyHyphenEu.replace(/\./g, '\\.')}`, 'gi'), BRAND.web)
-    .replace(new RegExp(legacyEu.replace(/\./g, '\\.'), 'gi'), 'kapitalmitte.com')
-    .replace(new RegExp(legacyHyphenEu.replace(/\./g, '\\.'), 'gi'), 'kapitalmitte.com')
+    .replace(new RegExp(legacyEu.replace(/\./g, '\\.'), 'gi'), 'kapital-direkt24.de')
+    .replace(new RegExp(legacyHyphenEu.replace(/\./g, '\\.'), 'gi'), 'kapital-direkt24.de')
     .replace(new RegExp(`kundenservice@${legacyHyphenEu.replace(/\./g, '\\.')}`, 'gi'), BRAND.email)
     .replace(new RegExp(`kundenservice@${legacyEu.replace(/\./g, '\\.')}`, 'gi'), BRAND.email)
     .replace(/Kaiserhofstraße\s*16\s*[·,]?\s*60313\s*Frankfurt am Main/gi, `${BRAND.street} · ${BRAND.city}`)
@@ -344,7 +344,7 @@ function coverPage(doc, logoDataUri) {
   return `
   <section class="page cover">
     <div class="cover-top">
-      <img class="logo" src="${logoDataUri}" alt="Kapitalmitte" />
+      <img class="logo" src="${logoDataUri}" alt="Fröhlich Vermögensberatung" />
       <div class="doc-code">${escapeHtml(doc.code)}<br/>${escapeHtml(BRAND.stand)}</div>
     </div>
     <div class="cover-mid">
