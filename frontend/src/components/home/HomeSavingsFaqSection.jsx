@@ -56,7 +56,7 @@ export default function HomeSavingsFaqSection() {
               <span className="italic text-bank-primary">kompakt &amp; klar.</span>
             </h2>
             <p className="mt-5 text-base leading-relaxed text-bank-text-muted sm:text-lg">
-              Wichtige Fragen zu Tagesgeld, Flexgeld, Sicherheit, Steuern und dem Ablauf — auf einen Blick.
+              Wichtige Fragen zu Aktien, Anleihen, IPO und Krypto — kompakt beantwortet.
             </p>
           </motion.div>
 

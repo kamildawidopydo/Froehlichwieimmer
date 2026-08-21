@@ -134,9 +134,9 @@ export const siteCopy = {
       },
     ],
     news: {
-      name: 'News',
+      name: 'News & Märkte',
       path: '/news',
-      desc: 'Aktuelle Meldungen aus Europa und der Welt',
+      desc: 'Aktuelle Meldungen, Marktdaten und unsere Einschätzungen',
     },
     actions: {
       formular: 'Formular',

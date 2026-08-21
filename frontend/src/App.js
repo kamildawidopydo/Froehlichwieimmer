@@ -40,7 +40,8 @@ const Wissen = lazy(() => import('@/pages/Wissen'));
 const WissenArtikel = lazy(() => import('@/pages/WissenArtikel'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const CreditLeadPage = lazy(() => import('@/pages/CreditLeadPage'));
-const PublicNewsPage = lazy(() => import('@/pages/news/PublicNewsPage'));
+const PublicNewsPage = lazy(() => import('@/pages/NewsMarkte'));
+const PublicNewsPageLegacy = lazy(() => import('@/pages/news/PublicNewsPage'));
 const PublicNewsDetailPage = lazy(() => import('@/pages/news/PublicNewsDetailPage'));
 const PublicNewsVideoPage = lazy(() => import('@/pages/news/PublicNewsVideoPage'));
 const WaehrungsrechnerPage = lazy(() => import('@/pages/news/WaehrungsrechnerPage'));
@@ -86,6 +87,7 @@ const DashboardLegacyRedirect = lazy(
 );
 
 const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
+const AdminEditorial = lazy(() => import('@/pages/AdminEditorial'));
 const AdminBanks = lazy(() => import('@/pages/AdminBanks'));
 const AdminOffers = lazy(() => import('@/pages/AdminOffers'));
 const AdminUsers = lazy(() => import('@/pages/AdminUsers'));
@@ -230,6 +232,7 @@ function App() {
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/kredit" element={<CreditLeadPage />} />
                   <Route path="/news" element={<PublicNewsPage />} />
+                  <Route path="/news/archiv" element={<PublicNewsPageLegacy />} />
                   <Route path="/news/waehrungsrechner" element={<WaehrungsrechnerPage />} />
                   <Route path="/news/rohstoffcharts" element={<RohstoffchartsPage />} />
                   <Route path="/news/markt/:type/:slug" element={<MarketInstrumentSnapshotPage />} />
@@ -780,6 +783,7 @@ function App() {
                   <Route path="credit-bank-details" element={<AdminCreditBankDetails />} />
                   <Route path="analytics" element={<AdminAnalytics />} />
                   <Route path="live-visitors" element={<AdminLiveVisitors />} />
+                  <Route path="editorial" element={<AdminEditorial />} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />

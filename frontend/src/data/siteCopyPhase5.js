@@ -132,12 +132,23 @@ export const faqCopy = {
     { id: 'security', label: 'Sicherheit' },
     { id: 'taxes', label: 'Steuern' },
     { id: 'process', label: 'Ablauf' },
+    { id: 'aktien', label: 'Aktien' },
+    { id: 'anleihen', label: 'Anleihen' },
+    { id: 'ipo', label: 'IPO' },
+    { id: 'krypto', label: 'Krypto' },
     { id: 'tagesgeld', label: 'Tagesgeld' },
     { id: 'flexgeld', label: 'Flexgeld' },
     { id: 'notices', label: 'Wichtige Hinweise' },
     { id: 'risks', label: 'Risiken' },
   ],
-  previewIds: ['foreign-banks', 'money-safe', 'tax-interest', 'open-speed', 'what-flexgeld', 'legitimation'],
+  previewIds: [
+    'aktien-was-ist',
+    'aktien-risiken',
+    'anleihen-was-ist',
+    'ipo-teilnahme',
+    'krypto-verwahrung',
+    'depot-kosten',
+  ],
   items: [
     {
       id: 'foreign-banks',
@@ -376,6 +387,177 @@ export const faqCopy = {
       question: 'Wie erhalte ich einen Neukundenbonus?',
       answer:
         'Oft bei Erstabschluss über die Plattform, Mindestanlage und Mindesthaltefrist. Die genauen Bedingungen stehen im jeweiligen Angebot und in den Bankunterlagen.',
+    },
+
+    // ── Aktien ────────────────────────────────────────────────────────────
+    {
+      id: 'aktien-was-ist',
+      category: 'aktien',
+      question: 'Was ist eine Aktie und wie funktioniert der Aktienhandel?',
+      answer:
+        'Eine Aktie ist ein Miteigentumsanteil an einem börsennotierten Unternehmen. Sie erwerben Rechte am Unternehmen (z. B. auf Dividende und Stimmrecht) und partizipieren an Kurs­entwicklungen. Der Handel erfolgt über ein Wertpapierdepot bei einer regulierten Bank oder einem Broker — Aufträge werden an eine Börse (z. B. Xetra, NYSE) weitergeleitet.',
+    },
+    {
+      id: 'aktien-risiken',
+      category: 'aktien',
+      question: 'Welche Risiken bestehen beim Investieren in Aktien?',
+      answer:
+        'Aktien unterliegen Kurs­schwankungen. Wesentliche Risiken sind das Unternehmens­risiko (Insolvenz), Marktrisiko (allgemeine Kurs­einbrüche), Währungs­risiko bei Fremdwährungs­titeln sowie Liquiditäts­risiken bei Nebenwerten. Ein Total­verlust ist möglich. Aktien eignen sich in der Regel für langfristige Anlage­horizonte (mind. 5–10 Jahre) und breite Diversifikation.',
+    },
+    {
+      id: 'aktien-etf-unterschied',
+      category: 'aktien',
+      question: 'Was ist der Unterschied zwischen Einzelaktien und ETFs?',
+      answer:
+        'Einzelaktien bilden ein einzelnes Unternehmen ab — Chance und Risiko konzentriert. ETFs bündeln viele Aktien (z. B. den MSCI World mit über 1.500 Titeln) und streuen das Risiko automatisch über Länder und Branchen. Für die meisten Privatanleger sind breit gestreute ETFs die günstigere und ruhigere Basis­anlage.',
+    },
+    {
+      id: 'aktien-dividenden',
+      category: 'aktien',
+      question: 'Was sind Dividenden und wie werden sie besteuert?',
+      answer:
+        'Dividenden sind Gewinn­ausschüttungen von Unternehmen an Aktionäre. In Deutschland unterliegen sie der Abgeltungssteuer (25 % zzgl. Soli, ggf. Kirchensteuer). Bei ausländischen Aktien wird zusätzlich Quellensteuer im Herkunftsland einbehalten — Doppelbesteuerungs­abkommen sind zu beachten.',
+    },
+    {
+      id: 'aktien-order',
+      category: 'aktien',
+      question: 'Was ist der Unterschied zwischen Markt- und Limitorder?',
+      answer:
+        'Eine Marktorder wird sofort zum aktuellen Kurs ausgeführt — Sie erhalten schnelle Ausführung, aber keine Preis­garantie. Eine Limitorder wird nur bis zu einem von Ihnen festgelegten Preis ausgeführt — Sie steuern den Preis, riskieren aber, dass die Order nicht (vollständig) ausgeführt wird.',
+    },
+
+    // ── Anleihen ─────────────────────────────────────────────────────────
+    {
+      id: 'anleihen-was-ist',
+      category: 'anleihen',
+      question: 'Was ist eine Anleihe und wie funktioniert sie?',
+      answer:
+        'Eine Anleihe ist ein verzins­liches Wertpapier — Sie leihen dem Emittenten (Staat oder Unternehmen) Geld und erhalten dafür regelmäßige Zins­zahlungen (Kupon) sowie am Laufzeit­ende den Nennwert zurück. Anleihen gelten grundsätzlich als planbarer als Aktien, sind aber nicht risikofrei (Bonitäts- und Zinsänderungs­risiko).',
+    },
+    {
+      id: 'anleihen-arten',
+      category: 'anleihen',
+      question: 'Welche Arten von Anleihen gibt es?',
+      answer:
+        'Die wichtigsten Kategorien: Staatsanleihen (z. B. Bundesanleihen, US Treasuries), Unternehmens­anleihen (Investment Grade bzw. High Yield), Pfandbriefe (durch Deckungsmasse besichert), Schwellen­länder­anleihen sowie Wandel- und inflations­indexierte Anleihen. Sie unterscheiden sich in Zinshöhe, Bonität und Liquidität.',
+    },
+    {
+      id: 'anleihen-zinsrisiko',
+      category: 'anleihen',
+      question: 'Was bedeutet Zinsänderungsrisiko bei Anleihen?',
+      answer:
+        'Steigen die Marktzinsen, verlieren bereits ausgegebene Anleihen mit niedrigerem Kupon an Kurswert. Umgekehrt legen Kurse zu, wenn Zinsen fallen. Je länger die Rest­laufzeit (Duration), desto stärker der Effekt. Wer bis zur Endfälligkeit hält, erhält den Nennwert — der Kurs­verlust bleibt dann rein rechnerisch.',
+    },
+    {
+      id: 'anleihen-rating',
+      category: 'anleihen',
+      question: 'Was sagt das Rating einer Anleihe aus?',
+      answer:
+        'Ratingagenturen (S&P, Moody\'s, Fitch) bewerten die Rück­zahlungs­wahrscheinlichkeit. Investment Grade (AAA bis BBB-) gilt als solide, High Yield / Junk (BB+ und schlechter) bietet höhere Zinsen bei entsprechend höherem Ausfall­risiko. Ratings sind eine Momentaufnahme und können sich ändern.',
+    },
+    {
+      id: 'anleihen-vs-festgeld',
+      category: 'anleihen',
+      question: 'Anleihen oder Festgeld — was ist der Unterschied?',
+      answer:
+        'Festgeld ist ein Bank­einlagen­produkt mit gesetzlicher EU-Einlagen­sicherung bis 100.000 €. Anleihen sind Wertpapiere ohne Einlagen­sicherung — dafür oft mit höherer Rendite, aber Kurs- und Bonitätsrisiko. Festgeld eignet sich für planbare Sicherheit, Anleihen für gezielte Duration- und Bonitätswetten.',
+    },
+
+    // ── IPO ──────────────────────────────────────────────────────────────
+    {
+      id: 'ipo-was-ist',
+      category: 'ipo',
+      question: 'Was ist ein IPO (Börsengang)?',
+      answer:
+        'Bei einem Initial Public Offering (IPO) bietet ein Unternehmen erstmals Aktien öffentlich an der Börse an. Institutionelle und Privat­anleger können neue Aktien zum Emissions­preis zeichnen, bevor sie im regulären Börsenhandel notieren. Ziel des Unternehmens ist meist Kapital­beschaffung und höhere Sichtbarkeit.',
+    },
+    {
+      id: 'ipo-teilnahme',
+      category: 'ipo',
+      question: 'Wie kann ich an einem IPO teilnehmen?',
+      answer:
+        'Sie benötigen ein Wertpapier­depot bei einer Bank oder einem Broker, der die jeweilige Emission anbietet. Innerhalb der Zeichnungs­frist geben Sie Ihre Order (Stück­zahl und Preis­spanne) auf. Die Zuteilung erfolgt nach Ende der Frist — bei Überzeichnung nicht garantiert. Als Fröhlich-Kunde informieren wir Sie über relevante Emissionen und unterstützen bei der Zeichnung.',
+    },
+    {
+      id: 'ipo-risiken',
+      category: 'ipo',
+      question: 'Welche Risiken bestehen bei einem IPO?',
+      answer:
+        'IPOs sind besonders volatil: Kurs­schwankungen von 20 %+ am ersten Handelstag sind nicht ungewöhnlich. Zusätzliche Risiken: begrenzte historische Finanz­daten, mögliche Über­bewertung durch Emissions­euphorie, Lock-up-Perioden für Alt­aktionäre, sowie ausbleibende operative Ergebnisse in den ersten Quartalen. Nur Kapital investieren, dessen Total­verlust verkraftet werden kann.',
+    },
+    {
+      id: 'ipo-zeichnung-kosten',
+      category: 'ipo',
+      question: 'Fallen bei der IPO-Zeichnung Gebühren an?',
+      answer:
+        'Der Emissions­preis selbst ist provisions­frei. Depot- und Order­gebühren der Bank können anfallen. Bei Nicht-Zuteilung entstehen keine Kosten. Details entnehmen Sie dem jeweiligen Emissions­prospekt und der Preisliste Ihrer Bank.',
+    },
+    {
+      id: 'ipo-lockup',
+      category: 'ipo',
+      question: 'Was ist eine Lock-up-Periode?',
+      answer:
+        'Alt­aktionäre (Gründer, Investoren, Mitarbeiter) verpflichten sich beim IPO, ihre Aktien für einen definierten Zeitraum (meist 90–180 Tage) nicht zu verkaufen. Nach Ablauf der Lock-up-Frist kann zusätzliches Angebot auf den Markt kommen und den Kurs kurzfristig belasten.',
+    },
+
+    // ── Krypto ────────────────────────────────────────────────────────────
+    {
+      id: 'krypto-was-ist',
+      category: 'krypto',
+      question: 'Was sind Kryptowährungen?',
+      answer:
+        'Krypto­währungen sind digitale Vermögenswerte auf Basis von Blockchain-Technologie. Bekannteste Beispiele sind Bitcoin und Ethereum. Sie werden nicht von Zentralbanken emittiert und unterliegen erheblichen Kurs­schwankungen. Regulierungs­rahmen (u. a. EU-MiCA-Verordnung) entwickeln sich derzeit weiter.',
+    },
+    {
+      id: 'krypto-verwahrung',
+      category: 'krypto',
+      question: 'Wie werden Kryptowerte sicher verwahrt?',
+      answer:
+        'Es gibt zwei Wege: (a) regulierte Verwahrer / Krypto­verwahr­stellen mit BaFin-Erlaubnis (bequem, aber Vertrauen in Dritten nötig), (b) Selbstverwahrung mittels Hardware-Wallet (voller Selbstschutz, aber volle Eigen­verantwortung für Recovery-Phrase). Kryptowerte unterliegen keiner EU-Einlagen­sicherung.',
+    },
+    {
+      id: 'krypto-steuern',
+      category: 'krypto',
+      question: 'Wie werden Krypto-Gewinne in Deutschland besteuert?',
+      answer:
+        'Verkäufe innerhalb von 12 Monaten nach Kauf sind private Veräußerungs­geschäfte (Freigrenze 600 € pro Jahr) und unterliegen dem persönlichen Einkommensteuer­satz. Nach 12 Monaten Haltedauer sind Gewinne aktuell steuerfrei. Bei Staking oder Lending gelten Sonder­regeln — Steuerberater konsultieren.',
+    },
+    {
+      id: 'krypto-risiken',
+      category: 'krypto',
+      question: 'Welche besonderen Risiken haben Kryptowerte?',
+      answer:
+        'Extreme Volatilität (>50 % Draw­downs möglich), Regulierungs­änderungen, Verlust­risiko bei Selbstverwahrung (verlorene Keys), Betrugs­risiken bei nicht regulierten Anbietern, sowie technische Risiken der Blockchain selbst. Kryptowerte sollten in der Regel nur einen kleinen Portfolio­anteil ausmachen.',
+    },
+    {
+      id: 'krypto-anlageklasse',
+      category: 'krypto',
+      question: 'Sind Kryptowerte eine sinnvolle Anlageklasse?',
+      answer:
+        'Wir sehen Kryptowerte als spekulative, ergänzende Anlage­klasse — nicht als Kern­investment. Für Anleger, die diese Werte einbeziehen möchten, empfehlen wir eine kleine, disziplinierte Allokation, breite Diversifikation und ausschließlich regulierte Verwahrung oder gesicherte Selbstverwahrung. Keine Anlageempfehlung.',
+    },
+
+    // ── Depot & übergreifend ──────────────────────────────────────────────
+    {
+      id: 'depot-kosten',
+      category: 'process',
+      question: 'Was kostet ein Wertpapierdepot bei Fröhlich?',
+      answer:
+        'Die Depot­eröffnung selbst ist bei unseren Partnerbanken in der Regel kostenfrei. Order­gebühren fallen pro Wertpapier­kauf/-verkauf an und richten sich nach Bank und Handelsplatz. ETF-Sparpläne sind bei vielen Partnern gebührenfrei. Alle Konditionen weisen wir vor Depot­eröffnung transparent aus.',
+    },
+    {
+      id: 'depot-diversifikation',
+      category: 'process',
+      question: 'Wie diversifiziere ich mein Portfolio sinnvoll?',
+      answer:
+        'Wir empfehlen Streuung über mehrere Anlage­klassen (Aktien, Anleihen, Immobilien, Rohstoffe), Regionen (Europa, USA, Schwellenländer) und Branchen. Zusätzlich sollten Anlage­horizont, Liquiditäts­bedarf und persönliche Situation berücksichtigt werden. Ihr Ansprechpartner entwickelt gemeinsam mit Ihnen eine passende Allokation.',
+    },
+    {
+      id: 'anlage-vs-spekulation',
+      category: 'notices',
+      question: 'Was ist der Unterschied zwischen Anlage und Spekulation?',
+      answer:
+        'Anlage basiert auf Analyse, langfristigem Zeithorizont und Diversifikation — Ziel ist realer Vermögens­aufbau bei kalkulier­baren Risiken. Spekulation zielt auf kurzfristige Kurs­gewinne mit hohem Verlust­risiko. Fröhlich Vermögens­beratung positioniert sich klar auf der Anlage-Seite — informieren, einordnen, langfristig begleiten.',
     },
   ],
 };

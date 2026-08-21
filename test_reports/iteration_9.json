@@ -1,0 +1,60 @@
+{
+  "summary": "Iteration 9 — full test of the new 'News & Märkte' feature. Backend: created /app/backend/tests/test_news_markte.py (19 pytest cases) covering feed structure/counts/filters/sorting, market insights, public editorial and full admin editorial CRUD + authz (401/403/404/400/422). 19/19 pass. Full suite 62/63 (only the pre-existing ingress CORS override test fails). Frontend: /news renders all 7 sections correctly (hero 1+2 cards, 12-row ticker with working category filters, 7 market tiles, 9 weitere rows, 6 anleger cards, editorial post from DB, philosophy CTA with both CTAs navigating). Nav label 'News & Märkte' present. CRITICAL: the /admin/editorial admin UI is completely unreachable — the app's route guard (ProtectedRoute) uses the legacy Supabase AuthContext while the new editorial endpoints use FastAPI httpOnly-cookie auth; admin@kapitalmitte.com/admin123 does not exist in Supabase (Supabase /auth/v1/token returns 400) so /admin/editorial redirects to /login?next=/admin/editorial. Proven with a browser-side FastAPI login (200) + GET /api/news-markte/editorial/admin (200) while the UI route still bounced.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/news-markte/feed", "issue": "overview returns up to 15 items while the spec/UI use 12 (UI slices to 12) — harmless but spec mismatch"},
+      {"endpoint": "GET /api/news-markte/feed?category=X", "issue": "'top' is always computed from ALL articles, ignoring the active category filter — hero does not follow the filter (may be intentional)"},
+      {"endpoint": "DELETE /api/news-markte/editorial/{id}", "issue": "Returns 200 {\"deleted\":0} for a non-existent id instead of 404"},
+      {"endpoint": "seed news_markte_articles", "issue": "image_url for slug 'eu-etf-nachfrage-rekord' (unsplash photo-1642790551116-18e150f248e5) returns HTTP 404 → broken thumbnail on /news"},
+      {"endpoint": "GET /api/news-markte/markets", "issue": "Fallback data is static (identical values on every call) but the UI footnote claims 'Datenquelle: Twelve Data · Aktualisiert alle 5 Minuten' — misleading while no API key is configured"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "WeitereBeitraege / AnlegerInteressant", "issue": "Broken thumbnail (alt text shown) for 'Europäische ETF-Nachfrage erreicht Rekordniveau' — seed Unsplash URL 404s", "selector": "[data-testid='weitere-row'] img", "priority": "MEDIUM"},
+      {"component": "NewsUeberblick", "issue": "'Alle aktuellen News anzeigen' link navigates to /news?tab=all but the tab param is never read — dead link, page state unchanged", "selector": "[data-testid='news-all-link']", "priority": "MEDIUM"},
+      {"component": "AdminEditorial", "issue": "No entry for /admin/editorial in the admin sidebar navigation — admins cannot discover the page", "selector": "AdminDashboardLayout nav", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Admin editorial CRUD via UI", "issue": "CRITICAL: /admin/editorial cannot be opened at all. ProtectedRoute/AuthContext authenticate against Supabase, but the editorial API uses FastAPI cookie auth; the FastAPI admin account does not exist in Supabase (Supabase login 400) so the route redirects to /login. Even with a valid FastAPI cookie present in the browser (verified: adminList returns 200 via fetch) the UI guard still bounces. Admin create/edit/publish-toggle/delete flows are therefore untestable and unusable in the product.", "affected_selectors": ["[data-testid='admin-editorial-page']", "[data-testid='editorial-new-btn']", "[data-testid='editorial-save-btn']", "[data-testid='editorial-drawer']"]}
+    ],
+    "design_issues": [
+      {"screen": "/news Markt-Insights", "issues": ["change_pct rendered with English decimal point ('+0.52 %') while values use German formatting ('18.750,42') — inconsistent locale"]},
+      {"screen": "/news Unsere Einschätzung", "issues": ["DB editorial body uses single newlines; component splits on /\\n{2,}/ so paragraphs collapse into consecutive lines without paragraph spacing"]},
+      {"screen": "/news article imagery", "issues": ["Several stock photos are only weakly related to the headline (e.g. 'Asiens Börsen schließen uneinheitlich' shows a HOTEL neon sign, 'Lagarde: Inflation…' shows US dollar bills, 'Bundesanleihen' shows paperwork/phone)"]},
+      {"screen": "/news/archiv (legacy)", "issues": ["Page renders no h1 element (SEO/a11y)"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_news_markte.py",
+    "/app/test_reports/pytest/news_markte.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Resolve the auth mismatch for /admin/editorial — either guard the route with the FastAPI session (apiClient /api/auth/me) instead of Supabase AuthContext, or provide a Supabase admin account plus a bridged FastAPI session; currently the whole admin editorial UI is dead.",
+    "Add an admin sidebar link to /admin/editorial in AdminDashboardLayout.",
+    "Replace the 404 Unsplash image for seed article 'eu-etf-nachfrage-rekord' (and add an onError image fallback in WeitereBeitraege/AnlegerInteressant/HeroTopNews).",
+    "Make 'Alle aktuellen News anzeigen' functional (read ?tab=all / link to /news/archiv) or remove it.",
+    "Format change_pct with de-DE locale (comma) for consistency.",
+    "Soften the 'Datenquelle: Twelve Data / alle 5 Minuten' footnote while fallback (static) market data is served, or wire up the API key.",
+    "Optional: return 404 on DELETE of a non-existent editorial id; align feed overview slice (12 vs 15)."
+  ],
+  "critical_code_review_comments": [
+    "Two parallel auth systems: new FastAPI cookie auth (news-markte editorial) behind a Supabase-based ProtectedRoute — architectural inconsistency that makes the admin feature unusable. Pick one session source of truth.",
+    "news_markte_feed computes 'top' from all articles even when a category filter is applied; also does a second full collection read per filtered request (extra query per call).",
+    "delete_editorial does not raise 404 when deleted_count == 0 — silent no-op success.",
+    "AdminEditorial delete uses window.confirm (blocking native dialog) instead of the app's dialog component.",
+    "Market fallback values are hardcoded constants inside server.py; consider a config/seed file and marking the response with a 'source: fallback' flag so the UI can label it honestly."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_news_markte.py",
+    "/app/frontend/src/pages/AdminEditorial.jsx (added data-testid editorial-edit-{id}, editorial-delete-{id}, editorial-dek-input only)"
+  ],
+  "success_rate": {"backend": "100% (19/19 news-markte; full suite 62/63 with known ingress CORS artifact)", "frontend": "~80% (public /news fully functional; admin editorial UI 0% — unreachable)"},
+  "seed_data_creation": "Test editorial posts prefixed TEST_ were created and deleted within the pytest lifecycle; a throwaway user TEST_nm_*@example.com was registered for the 403 authz check. No seeded data modified.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin@kapitalmitte.com / admin123 works for the FastAPI API (cookie login) but NOT for the frontend UI login (Supabase rejects it with 400). No usable Supabase admin credential exists — this blocks all admin-UI testing.",
+  "context_for_next_testing_agent": "Public /news requires presetting localStorage keys kapitalmitte_visitor_profile + kapitalmitte_cookie_consent via context.add_init_script before goto, otherwise VisitorWelcomeGate blocks the page. Backend suite: pytest /app/backend/tests/test_news_markte.py (19 cases, all pass). Known-failing pre-existing test: TestHealthAndCors::test_credentialed_cors_uses_explicit_frontend_origin — the k8s ingress rewrites preflight ACAO to '*' (localhost:8001 returns the correct explicit origin), infrastructure artifact, not app code. Verified working on /news: hero 1 featured + 2 secondary, 12 ticker rows, all 7 category filters (maerkte 2, aktien 1, wirtschaft 2, unternehmen 2, zinsen 3, international 2, alle 12), 7 market tiles (testids market-tile-DAX/DJI/SPX/NDX/SX5E/XAU-USD/EUR-USD), 9 weitere rows, 6 anleger cards, 1 editorial post, cta-contact -> /contact, cta-platform -> /dashboard, no horizontal overflow desktop or mobile 390px. To retest admin editorial after the auth fix, use [data-testid=editorial-new-btn|editorial-title-input|editorial-dek-input|editorial-body-input|editorial-save-btn|editorial-toggle-{id}|editorial-edit-{id}|editorial-delete-{id}] and register a page.on('dialog') handler because delete uses window.confirm.",
+  "rca_of_the_issue": "Admin editorial UI unreachable: /app/frontend/src/components/ProtectedRoute.js reads user from @/context/AuthContext, which is backed by supabase.auth (supabase.auth.signInWithPassword). The new editorial endpoints in /app/backend/server.py use require_admin against the FastAPI httpOnly access_token cookie, and newsMarkteApi.js sends withCredentials to REACT_APP_BACKEND_URL/api. Logging in through the UI with the documented FastAPI admin credentials fails at Supabase (POST https://<project>.supabase.co/auth/v1/token?grant_type=password -> 400), so ProtectedRoute has no user and redirects to /login?next=%2Fadmin%2Feditorial. Reproduction: (1) open /login, submit admin@kapitalmitte.com/admin123 -> stays on /login, Supabase 400; (2) in-page fetch('/api/auth/login') -> 200 and fetch('/api/news-markte/editorial/admin') -> 200; (3) navigate to /admin/editorial -> still redirected to /login. Mitigation: guard admin routes with the FastAPI session (GET /api/auth/me) or bridge Supabase sessions to FastAPI."
+}

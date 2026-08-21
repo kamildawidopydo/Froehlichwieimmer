@@ -16,6 +16,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
 import os
+import re
 import logging
 import secrets
 from datetime import datetime, timezone, timedelta
@@ -23,6 +24,7 @@ from typing import Optional, List
 
 import bcrypt
 import jwt
+import httpx
 from bson import ObjectId
 from fastapi import FastAPI, APIRouter, Request, Response, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,6 +46,9 @@ JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_MINUTES = 60 * 24  # 1 day (dev-friendly)
 REFRESH_TOKEN_DAYS = 30
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+MARKETAUX_KEY = os.environ.get("MARKETAUX_KEY", "").strip()
+TWELVE_DATA_KEY = os.environ.get("TWELVE_DATA_KEY", "").strip()
+MARKET_CACHE_SECONDS = 300  # 5 min cache to protect free-tier limits
 
 client = AsyncIOMotorClient(MONGO_URL, tz_aware=True)
 db = client[DB_NAME]
@@ -251,6 +256,50 @@ class NewsOut(BaseModel):
     image_url: Optional[str] = None
 
 
+# --- News & Märkte -----------------------------------------------------------
+
+class ArticleOut(BaseModel):
+    id: str
+    slug: str
+    title: str
+    excerpt: str
+    category: str
+    source: str
+    source_url: Optional[str] = None
+    image_url: Optional[str] = None
+    published_at: str
+    featured: bool = False
+    highlight_investor: bool = False
+
+
+class EditorialOut(BaseModel):
+    id: str
+    slug: str
+    title: str
+    dek: str
+    body: str
+    author: str
+    published: bool
+    published_at: str
+    updated_at: Optional[str] = None
+
+
+class EditorialInput(BaseModel):
+    title: str = Field(min_length=3, max_length=200)
+    dek: str = Field(default="", max_length=400)
+    body: str = Field(min_length=10)
+    published: bool = True
+
+
+class MarketInsight(BaseModel):
+    symbol: str
+    name: str
+    value: float
+    change_pct: float
+    unit: str = ""
+    updated_at: str
+
+
 # ---------------------------------------------------------------------------
 # App & Router
 # ---------------------------------------------------------------------------
@@ -449,6 +498,302 @@ async def list_news(limit: int = 20):
 
 
 # ---------------------------------------------------------------------------
+# News & Märkte — feed, market insights, editorial CRUD
+# ---------------------------------------------------------------------------
+
+NEWS_CATEGORIES = {
+    "maerkte", "aktien", "wirtschaft", "unternehmen", "zinsen", "international",
+    "fonds-etfs", "rohstoffe", "seltene-erden", "waehrungen", "anleihen", "investmenttrends",
+}
+CATEGORY_LABELS = {
+    "maerkte": "Märkte",
+    "aktien": "Aktien",
+    "wirtschaft": "Wirtschaft",
+    "unternehmen": "Unternehmen",
+    "zinsen": "Zinsen",
+    "international": "International",
+    "fonds-etfs": "Fonds & ETFs",
+    "rohstoffe": "Rohstoffe",
+    "seltene-erden": "Seltene Erden",
+    "waehrungen": "Währungen",
+    "anleihen": "Anleihen",
+    "investmenttrends": "Investmenttrends",
+}
+
+
+def _slugify(text: str) -> str:
+    s = text.lower()
+    s = re.sub(r"[äöüß]", lambda m: {"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"}[m.group(0)], s)
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s[:80] or secrets.token_hex(4)
+
+
+def _article_to_out(d: dict) -> dict:
+    published = d.get("published_at")
+    return {
+        "id": str(d["_id"]),
+        "slug": d.get("slug", ""),
+        "title": d.get("title", ""),
+        "excerpt": d.get("excerpt", ""),
+        "category": d.get("category", "maerkte"),
+        "source": d.get("source", "Fröhlich Vermögensberatung"),
+        "source_url": d.get("source_url"),
+        "image_url": d.get("image_url"),
+        "published_at": published.isoformat() if isinstance(published, datetime) else str(published or ""),
+        "featured": bool(d.get("featured", False)),
+        "highlight_investor": bool(d.get("highlight_investor", False)),
+    }
+
+
+def _editorial_to_out(d: dict) -> dict:
+    published = d.get("published_at")
+    updated = d.get("updated_at")
+    return {
+        "id": str(d["_id"]),
+        "slug": d.get("slug", ""),
+        "title": d.get("title", ""),
+        "dek": d.get("dek", ""),
+        "body": d.get("body", ""),
+        "author": d.get("author", "Fröhlich Vermögensberatung"),
+        "published": bool(d.get("published", True)),
+        "published_at": published.isoformat() if isinstance(published, datetime) else str(published or ""),
+        "updated_at": updated.isoformat() if isinstance(updated, datetime) else (str(updated) if updated else None),
+    }
+
+
+_market_cache: dict = {"data": None, "at": None}
+
+
+async def _fetch_market_snapshots() -> List[dict]:
+    """Fetch live indices from Twelve Data if key is set; else return fallback."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    fallback = [
+        {"symbol": "DAX", "name": "DAX", "value": 18750.42, "change_pct": 0.52, "unit": "Punkte", "updated_at": now_iso},
+        {"symbol": "DJI", "name": "Dow Jones", "value": 44120.55, "change_pct": -0.18, "unit": "Punkte", "updated_at": now_iso},
+        {"symbol": "SPX", "name": "S&P 500", "value": 6120.83, "change_pct": 0.31, "unit": "Punkte", "updated_at": now_iso},
+        {"symbol": "NDX", "name": "Nasdaq 100", "value": 22140.19, "change_pct": 0.74, "unit": "Punkte", "updated_at": now_iso},
+        {"symbol": "SX5E", "name": "Euro Stoxx 50", "value": 5290.62, "change_pct": 0.23, "unit": "Punkte", "updated_at": now_iso},
+        {"symbol": "XAU/USD", "name": "Gold", "value": 2915.40, "change_pct": 0.42, "unit": "USD/oz", "updated_at": now_iso},
+        {"symbol": "EUR/USD", "name": "EUR/USD", "value": 1.0862, "change_pct": -0.09, "unit": "", "updated_at": now_iso},
+    ]
+    if not TWELVE_DATA_KEY:
+        return fallback
+    symbols_map = [
+        ("DAX", "DAX", "Punkte"),
+        ("DJI", "Dow Jones", "Punkte"),
+        ("SPX", "S&P 500", "Punkte"),
+        ("NDX", "Nasdaq 100", "Punkte"),
+        ("SX5E", "Euro Stoxx 50", "Punkte"),
+        ("XAU/USD", "Gold", "USD/oz"),
+        ("EUR/USD", "EUR/USD", ""),
+    ]
+    result = []
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client_http:
+            for symbol, name, unit in symbols_map:
+                r = await client_http.get(
+                    "https://api.twelvedata.com/quote",
+                    params={"symbol": symbol, "apikey": TWELVE_DATA_KEY},
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    if "close" in data:
+                        result.append({
+                            "symbol": symbol,
+                            "name": name,
+                            "value": float(data.get("close") or 0),
+                            "change_pct": float(data.get("percent_change") or 0),
+                            "unit": unit,
+                            "updated_at": now_iso,
+                        })
+        if len(result) >= 4:
+            return result
+    except Exception as e:
+        logger.warning("Twelve Data fetch failed, using fallback: %s", e)
+    return fallback
+
+
+@api.get("/news-markte/feed")
+async def news_markte_feed(category: Optional[str] = None, limit: int = 30):
+    q: dict = {}
+    if category and category != "alle":
+        q["category"] = category
+    docs = await db.news_markte_articles.find(q).sort("published_at", -1).limit(limit).to_list(limit)
+    articles = [_article_to_out(d) for d in docs]
+    all_docs = docs if q == {} else await db.news_markte_articles.find({}).sort("published_at", -1).to_list(50)
+    all_articles = [_article_to_out(d) for d in all_docs]
+    top = [a for a in all_articles if a["featured"]][:3]
+    if len(top) < 3:
+        seen = {a["id"] for a in top}
+        for a in all_articles:
+            if a["id"] not in seen:
+                top.append(a)
+                if len(top) >= 3:
+                    break
+    top_ids = {a["id"] for a in top}
+    weitere = [a for a in articles if a["id"] not in top_ids][:9]
+    anleger = [a for a in all_articles if a["highlight_investor"]][:6]
+    return {
+        "top": top,
+        "overview": articles[:15],
+        "weitere": weitere,
+        "anleger": anleger,
+        "categories": [{"slug": k, "label": v} for k, v in CATEGORY_LABELS.items()],
+    }
+
+
+@api.get("/news-markte/markets", response_model=List[MarketInsight])
+async def news_markte_markets():
+    now = datetime.now(timezone.utc)
+    cached = _market_cache.get("data")
+    at = _market_cache.get("at")
+    if cached and at and (now - at).total_seconds() < MARKET_CACHE_SECONDS:
+        return cached
+    data = await _fetch_market_snapshots()
+    _market_cache["data"] = data
+    _market_cache["at"] = now
+    return data
+
+
+@api.get("/news-markte/editorial", response_model=List[EditorialOut])
+async def list_editorial():
+    docs = await db.editorial_posts.find({"published": True}).sort("published_at", -1).to_list(50)
+    return [_editorial_to_out(d) for d in docs]
+
+
+@api.get("/news-markte/editorial/admin", response_model=List[EditorialOut])
+async def list_editorial_admin(_user: dict = Depends(require_admin)):
+    docs = await db.editorial_posts.find({}).sort("published_at", -1).to_list(200)
+    return [_editorial_to_out(d) for d in docs]
+
+
+@api.post("/news-markte/editorial", response_model=EditorialOut)
+async def create_editorial(payload: EditorialInput, _user: dict = Depends(require_admin)):
+    now = datetime.now(timezone.utc)
+    doc = {
+        "slug": _slugify(payload.title) + "-" + secrets.token_hex(3),
+        "title": payload.title,
+        "dek": payload.dek,
+        "body": payload.body,
+        "author": "Fröhlich Vermögensberatung",
+        "published": payload.published,
+        "published_at": now,
+        "updated_at": now,
+    }
+    res = await db.editorial_posts.insert_one(doc)
+    doc["_id"] = res.inserted_id
+    return _editorial_to_out(doc)
+
+
+@api.put("/news-markte/editorial/{post_id}", response_model=EditorialOut)
+async def update_editorial(post_id: str, payload: EditorialInput, _user: dict = Depends(require_admin)):
+    if not ObjectId.is_valid(post_id):
+        raise HTTPException(status_code=400, detail="Invalid id")
+    now = datetime.now(timezone.utc)
+    update = payload.model_dump()
+    update["updated_at"] = now
+    r = await db.editorial_posts.update_one({"_id": ObjectId(post_id)}, {"$set": update})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Post not found")
+    doc = await db.editorial_posts.find_one({"_id": ObjectId(post_id)})
+    return _editorial_to_out(doc)
+
+
+@api.delete("/news-markte/editorial/{post_id}")
+async def delete_editorial(post_id: str, _user: dict = Depends(require_admin)):
+    if not ObjectId.is_valid(post_id):
+        raise HTTPException(status_code=400, detail="Invalid id")
+    r = await db.editorial_posts.delete_one({"_id": ObjectId(post_id)})
+    if r.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return {"deleted": r.deleted_count}
+
+
+# --- Anlagetrends / Investment-Radar / Stimmen zum Markt --------------------
+
+@api.get("/news-markte/anlagetrends")
+async def list_anlagetrends():
+    docs = await db.anlagetrends.find({}).sort("order", 1).to_list(50)
+    return [{
+        "id": str(d["_id"]),
+        "slug": d.get("slug"),
+        "title": d.get("title"),
+        "summary": d.get("summary"),
+        "detail": d.get("detail"),
+        "tag": d.get("tag"),
+        "icon": d.get("icon"),
+    } for d in docs]
+
+
+@api.get("/news-markte/investment-radar")
+async def list_investment_radar():
+    docs = await db.investment_radar.find({}).sort("order", 1).to_list(50)
+    return [{
+        "id": str(d["_id"]),
+        "theme": d.get("theme"),
+        "category": d.get("category"),
+        "why": d.get("why"),
+        "horizon": d.get("horizon"),
+        "tag": d.get("tag"),
+        "related_slug": d.get("related_slug"),
+    } for d in docs]
+
+
+@api.get("/news-markte/market-voices")
+async def list_market_voices():
+    docs = await db.market_voices.find({}).sort("published_at", -1).to_list(50)
+    return [{
+        "id": str(d["_id"]),
+        "source": d.get("source"),
+        "source_url": d.get("source_url"),
+        "topic": d.get("topic"),
+        "excerpt": d.get("excerpt"),
+        "published_at": d["published_at"].isoformat() if isinstance(d.get("published_at"), datetime) else str(d.get("published_at", "")),
+    } for d in docs]
+
+
+# --- Personalisierung (Watchlist / Interessen) — scaffold only --------------
+
+class PreferencesInput(BaseModel):
+    interests: List[str] = Field(default_factory=list)
+    watchlist: List[str] = Field(default_factory=list)
+
+
+@api.get("/news-markte/preferences")
+async def get_preferences(user: dict = Depends(get_current_user)):
+    doc = await db.user_preferences.find_one({"user_id": ObjectId(user["id"])})
+    return {
+        "interests": doc.get("interests", []) if doc else [],
+        "watchlist": doc.get("watchlist", []) if doc else [],
+    }
+
+
+@api.put("/news-markte/preferences")
+async def update_preferences(payload: PreferencesInput, user: dict = Depends(get_current_user)):
+    now = datetime.now(timezone.utc)
+    interests = [i.strip().lower() for i in payload.interests if i and i.strip()][:20]
+    watchlist = [w.strip().lower() for w in payload.watchlist if w and w.strip()][:20]
+    await db.user_preferences.update_one(
+        {"user_id": ObjectId(user["id"])},
+        {"$set": {"interests": interests, "watchlist": watchlist, "updated_at": now},
+         "$setOnInsert": {"user_id": ObjectId(user["id"]), "created_at": now}},
+        upsert=True,
+    )
+    return {"interests": interests, "watchlist": watchlist}
+
+
+@api.get("/news-markte/for-you")
+async def news_for_you(user: dict = Depends(get_current_user), limit: int = 12):
+    doc = await db.user_preferences.find_one({"user_id": ObjectId(user["id"])})
+    interests = (doc or {}).get("interests", []) if doc else []
+    if not interests:
+        return {"personalized": False, "items": []}
+    q = {"category": {"$in": interests}}
+    docs = await db.news_markte_articles.find(q).sort("published_at", -1).limit(limit).to_list(limit)
+    return {"personalized": True, "items": [_article_to_out(d) for d in docs]}
+
+
+# ---------------------------------------------------------------------------
 # Startup: indexes + seed
 # ---------------------------------------------------------------------------
 
@@ -519,6 +864,337 @@ async def seed_content():
     ]
     if await db.news.count_documents({}) == 0:
         await db.news.insert_many(news_items)
+
+    # Seed news_markte_articles (extended news items with images / featured flags)
+    if await db.news_markte_articles.count_documents({}) == 0:
+        now = datetime.now(timezone.utc)
+        markte_seed = [
+            {
+                "slug": "ezb-zinsentscheidung-februar-2026",
+                "title": "EZB hält Leitzins konstant — Sparzinsen bleiben attraktiv",
+                "excerpt": "Die Europäische Zentralbank belässt den Hauptrefinanzierungssatz bei 3,50 %. Für Anleger heißt das: Tagesgeld- und Festgeld-Konditionen bleiben vorerst stabil.",
+                "category": "zinsen",
+                "source": "EZB Pressemitteilung",
+                "source_url": "https://www.ecb.europa.eu/press/pr/date/2026/",
+                "image_url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(hours=2),
+                "featured": True,
+                "highlight_investor": True,
+            },
+            {
+                "slug": "dax-startet-freundlich",
+                "title": "DAX startet freundlich in den Handel",
+                "excerpt": "Der deutsche Leitindex eröffnet mit einem Plus von 0,4 % über der 18.700er-Marke. Technologiewerte führen die Kursliste an.",
+                "category": "maerkte",
+                "source": "Deutsche Börse",
+                "source_url": "https://www.deutsche-boerse.com",
+                "image_url": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(minutes=45),
+                "featured": True,
+                "highlight_investor": False,
+            },
+            {
+                "slug": "us-maerkte-vor-handelsstart",
+                "title": "US-Märkte vor Handelsstart im Fokus",
+                "excerpt": "Wall Street erwartet ein wichtiges Fed-Protokoll. Anleger positionieren sich vorsichtig, S&P-Futures notieren nahezu unverändert.",
+                "category": "international",
+                "source": "Bloomberg",
+                "source_url": "https://www.bloomberg.com",
+                "image_url": "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(minutes=90),
+                "featured": True,
+                "highlight_investor": False,
+            },
+            {
+                "slug": "sap-quartalszahlen-uebertreffen",
+                "title": "SAP übertrifft Erwartungen — Cloud-Umsatz treibt Ergebnis",
+                "excerpt": "Der Walldorfer Softwarekonzern meldet 12 % Cloud-Wachstum im vierten Quartal. Die Aktie legt vorbörslich rund 3 % zu.",
+                "category": "unternehmen",
+                "source": "SAP Investor Relations",
+                "source_url": "https://www.sap.com/investors",
+                "image_url": "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(hours=5),
+                "featured": False,
+                "highlight_investor": True,
+            },
+            {
+                "slug": "gold-nahe-allzeithoch",
+                "title": "Gold notiert nahe Allzeithoch — sicherer Hafen gefragt",
+                "excerpt": "Die Feinunze steigt auf über 2.900 USD. Zentralbanken kaufen weiter, geopolitische Unsicherheiten stützen den Preis.",
+                "category": "maerkte",
+                "source": "World Gold Council",
+                "source_url": "https://www.gold.org",
+                "image_url": "https://images.unsplash.com/photo-1610375461369-d613b564f4c4?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(hours=6),
+                "featured": False,
+                "highlight_investor": True,
+            },
+            {
+                "slug": "bundesanleihen-rendite-stabil",
+                "title": "Bundesanleihen: 10-jährige Rendite stabil bei 2,4 %",
+                "excerpt": "Anleiheinvestoren richten den Blick auf die kommenden Inflationsdaten. Bunds werden weiter als Ankerposition genutzt.",
+                "category": "zinsen",
+                "source": "Bundesbank",
+                "source_url": "https://www.bundesbank.de",
+                "image_url": "https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(hours=8),
+                "featured": False,
+                "highlight_investor": True,
+            },
+            {
+                "slug": "ifo-index-februar",
+                "title": "Ifo-Geschäftsklima steigt zum dritten Mal in Folge",
+                "excerpt": "Deutsche Unternehmen bewerten ihre Lage optimistischer. Der Ifo-Index klettert auf 87,3 Punkte — der höchste Stand seit Q2 2025.",
+                "category": "wirtschaft",
+                "source": "Ifo Institut",
+                "source_url": "https://www.ifo.de",
+                "image_url": "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(hours=12),
+                "featured": False,
+                "highlight_investor": False,
+            },
+            {
+                "slug": "ezb-lagarde-inflation",
+                "title": "Lagarde: Inflation nähert sich Zielkorridor",
+                "excerpt": "EZB-Präsidentin Christine Lagarde signalisiert vorsichtigen Optimismus. Zinssenkungsschritte bleiben datenabhängig.",
+                "category": "zinsen",
+                "source": "EZB",
+                "source_url": "https://www.ecb.europa.eu",
+                "image_url": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(hours=16),
+                "featured": False,
+                "highlight_investor": True,
+            },
+            {
+                "slug": "immobilienmarkt-erholung",
+                "title": "Immobilienmarkt: Erste Anzeichen einer Bodenbildung",
+                "excerpt": "Die Bautätigkeit stabilisiert sich, Kaufpreise ziehen in Ballungsräumen leicht an. Marktakteure erwarten eine allmähliche Erholung.",
+                "category": "wirtschaft",
+                "source": "vdp Immobilienpreisindex",
+                "source_url": "https://www.pfandbrief.de",
+                "image_url": "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(hours=20),
+                "featured": False,
+                "highlight_investor": True,
+            },
+            {
+                "slug": "asien-boersen-schliessen-uneinheitlich",
+                "title": "Asiens Börsen schließen uneinheitlich",
+                "excerpt": "Der Nikkei gewinnt 0,6 %, während der Hang Seng leicht nachgibt. Anleger warten auf US-Konjunkturdaten am Nachmittag.",
+                "category": "international",
+                "source": "Reuters",
+                "source_url": "https://www.reuters.com",
+                "image_url": "https://images.unsplash.com/photo-1517840901100-8179e982acb7?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(days=1),
+                "featured": False,
+                "highlight_investor": False,
+            },
+            {
+                "slug": "siemens-hebt-prognose-an",
+                "title": "Siemens hebt Jahresprognose an",
+                "excerpt": "Starkes Digital-Industrie-Geschäft veranlasst Siemens zu einer Aufwärtsrevision der Umsatzerwartungen für das laufende Geschäftsjahr.",
+                "category": "unternehmen",
+                "source": "Siemens AG",
+                "source_url": "https://www.siemens.com",
+                "image_url": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(days=1, hours=4),
+                "featured": False,
+                "highlight_investor": False,
+            },
+            {
+                "slug": "eu-etf-nachfrage-rekord",
+                "title": "Europäische ETF-Nachfrage erreicht Rekordniveau",
+                "excerpt": "Zuflüsse in europäische ETFs übersteigen im Januar 30 Mrd. Euro. Aktien- und Anleihe-ETFs profitieren gleichermaßen.",
+                "category": "fonds-etfs",
+                "source": "Morningstar",
+                "source_url": "https://www.morningstar.de",
+                "image_url": "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?auto=format&fit=crop&w=1600&q=70",
+                "published_at": now - timedelta(days=1, hours=8),
+                "featured": False,
+                "highlight_investor": True,
+            },
+        ]
+        await db.news_markte_articles.insert_many(markte_seed)
+
+    # Additional articles for extended categories (Fonds/ETF, Rohstoffe, Seltene Erden, Anleihen, Währungen, Investmenttrends)
+    extra_slugs = ["msci-world-etf-zufluesse", "geldmarktfonds-attraktiv", "dividenden-etf-ausschuettungen",
+                   "gold-etc-nachfrage", "kupferpreis-nachfrage-china", "silber-industrieller-bedarf",
+                   "seltene-erden-versorgung", "lithium-preis-erholt", "bundesanleihe-neuemission",
+                   "unternehmensanleihen-spreads", "euro-dollar-parity-diskussion", "ki-halbleiter-boom",
+                   "infrastruktur-fonds-europa"]
+    existing_extra = await db.news_markte_articles.count_documents({"slug": {"$in": extra_slugs}})
+    if existing_extra < len(extra_slugs):
+        now = datetime.now(timezone.utc)
+        extra_seed = [
+            {"slug": "msci-world-etf-zufluesse", "title": "MSCI-World-ETFs verzeichnen erneut hohe Zuflüsse",
+             "excerpt": "Globale Aktien-ETFs bleiben das Kern-Investment europäischer Anleger. Der MSCI World steht im Fokus.",
+             "category": "fonds-etfs", "source": "extraETF", "source_url": "https://extraetf.com",
+             "image_url": "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=3), "featured": True, "highlight_investor": True},
+            {"slug": "geldmarktfonds-attraktiv", "title": "Geldmarktfonds bleiben attraktive Parkposition",
+             "excerpt": "Bei Renditen nahe des Leitzinses nutzen Anleger Geldmarktfonds als Liquiditätsspeicher zwischen Anlageentscheidungen.",
+             "category": "fonds-etfs", "source": "Fondsprofessionell", "source_url": "https://www.fondsprofessionell.de",
+             "image_url": "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=7), "featured": True, "highlight_investor": True},
+            {"slug": "dividenden-etf-ausschuettungen", "title": "Dividenden-ETFs mit soliden Ausschüttungen",
+             "excerpt": "Europäische Dividenden-Strategien liefern trotz Zinswende weiter attraktive Netto-Renditen für langfristige Anleger.",
+             "category": "fonds-etfs", "source": "Justetf", "source_url": "https://www.justetf.com",
+             "image_url": "https://images.unsplash.com/photo-1591696205602-2f950c417cb9?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=11), "featured": True, "highlight_investor": False},
+            {"slug": "gold-etc-nachfrage", "title": "Gold-ETCs: Nachfrage von Privatanlegern zieht an",
+             "excerpt": "Physisch besicherte Gold-ETCs verzeichnen deutliche Zuflüsse — Sicherheitsbedürfnis überwiegt.",
+             "category": "rohstoffe", "source": "World Gold Council", "source_url": "https://www.gold.org",
+             "image_url": "https://images.unsplash.com/photo-1610375461369-d613b564f4c4?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=9), "featured": False, "highlight_investor": True},
+            {"slug": "kupferpreis-nachfrage-china", "title": "Kupferpreis zieht an: Chinas Nachfrage steigt",
+             "excerpt": "Elektrifizierung und Netzausbau treiben die weltweite Kupfernachfrage; Analysten sehen strukturellen Rückenwind.",
+             "category": "rohstoffe", "source": "Reuters", "source_url": "https://www.reuters.com",
+             "image_url": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=14), "featured": False, "highlight_investor": False},
+            {"slug": "silber-industrieller-bedarf", "title": "Silber profitiert von industriellem Bedarf",
+             "excerpt": "Photovoltaik und Elektronik erhöhen den globalen Silberverbrauch. Der Spotpreis notiert nahe Jahreshoch.",
+             "category": "rohstoffe", "source": "Silver Institute", "source_url": "https://www.silverinstitute.org",
+             "image_url": "https://images.unsplash.com/photo-1621786030484-4c855eed6974?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=19), "featured": False, "highlight_investor": False},
+            {"slug": "seltene-erden-versorgung", "title": "Seltene Erden: Europa sucht Alternativen zu China",
+             "excerpt": "EU-Kommission fördert Aufbau strategischer Kapazitäten. Für Investoren rücken europäische Zulieferer in den Blick.",
+             "category": "seltene-erden", "source": "Handelsblatt", "source_url": "https://www.handelsblatt.com",
+             "image_url": "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=10), "featured": False, "highlight_investor": True},
+            {"slug": "lithium-preis-erholt", "title": "Lithium-Preis stabilisiert sich",
+             "excerpt": "Nach dem Einbruch des Vorjahres findet der Lithium-Markt eine Basis; strukturelle Nachfrage aus E-Mobilität bleibt bestehen.",
+             "category": "seltene-erden", "source": "S&P Global", "source_url": "https://www.spglobal.com",
+             "image_url": "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=22), "featured": False, "highlight_investor": False},
+            {"slug": "bundesanleihe-neuemission", "title": "Neue 10-jährige Bundesanleihe erfolgreich platziert",
+             "excerpt": "Die Finanzagentur meldet solide Nachfrage. Institutionelle Anleger bleiben klare Käufer im Kernland-Segment.",
+             "category": "anleihen", "source": "Finanzagentur", "source_url": "https://www.deutsche-finanzagentur.de",
+             "image_url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=6), "featured": False, "highlight_investor": True},
+            {"slug": "unternehmensanleihen-spreads", "title": "Unternehmensanleihen: Spreads bleiben eng",
+             "excerpt": "IG-Anleihen mit A/BBB-Rating notieren nahe Vor-Corona-Niveau. Anleger honorieren solide Unternehmensbilanzen.",
+             "category": "anleihen", "source": "Bloomberg", "source_url": "https://www.bloomberg.com",
+             "image_url": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=13), "featured": False, "highlight_investor": True},
+            {"slug": "euro-dollar-parity-diskussion", "title": "Euro/Dollar: Rückkehr zur Parität debattiert",
+             "excerpt": "Zinsdifferenz und Wachstumserwartungen sorgen für Kursdruck auf den Euro. Devisenstrategen diskutieren Szenarien.",
+             "category": "waehrungen", "source": "FX Street", "source_url": "https://www.fxstreet.com",
+             "image_url": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=17), "featured": False, "highlight_investor": False},
+            {"slug": "ki-halbleiter-boom", "title": "KI treibt Investitionen in Halbleiter-Kapazitäten",
+             "excerpt": "Chip-Auftragsfertiger melden Kapazitätsengpässe. Investoren richten den Blick auf gesamte Wertschöpfungskette.",
+             "category": "investmenttrends", "source": "Bloomberg", "source_url": "https://www.bloomberg.com",
+             "image_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=8), "featured": False, "highlight_investor": True},
+            {"slug": "infrastruktur-fonds-europa", "title": "Europa: Infrastruktur-Fonds gewinnen an Bedeutung",
+             "excerpt": "Energie- und Verkehrsnetze benötigen milliardenschwere Investitionen. Institutionelle Fonds nehmen zunehmend Positionen ein.",
+             "category": "investmenttrends", "source": "Handelsblatt", "source_url": "https://www.handelsblatt.com",
+             "image_url": "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=1600&q=70",
+             "published_at": now - timedelta(hours=15), "featured": False, "highlight_investor": True},
+        ]
+        # Only insert missing slugs (idempotent)
+        existing_slugs = {d["slug"] for d in await db.news_markte_articles.find(
+            {"slug": {"$in": extra_slugs}}, {"slug": 1}).to_list(len(extra_slugs))}
+        to_insert = [d for d in extra_seed if d["slug"] not in existing_slugs]
+        if to_insert:
+            await db.news_markte_articles.insert_many(to_insert)
+
+    # Seed anlagetrends topic cards
+    if await db.anlagetrends.count_documents({}) == 0:
+        trends_seed = [
+            {"slug": "ki-halbleiter", "title": "Künstliche Intelligenz & Halbleiter",
+             "summary": "KI, Rechenzentren, Chips und digitale Infrastruktur.",
+             "detail": "Investitionen in Rechenzentren, Trainings-Infrastruktur und Halbleiterfertigung bleiben strukturell hoch.",
+             "tag": "Langfristiger Trend", "icon": "cpu", "order": 1},
+            {"slug": "infrastruktur", "title": "Infrastruktur",
+             "summary": "Energieversorgung, Stromnetze, Verkehr und Digitalisierung.",
+             "detail": "Milliardenschwere Modernisierungsprogramme in Europa und den USA sichern langfristige Auftragsvolumen.",
+             "tag": "Langfristiger Trend", "icon": "network", "order": 2},
+            {"slug": "verteidigung-sicherheit", "title": "Verteidigung & Sicherheit",
+             "summary": "Unternehmen und Entwicklungen rund um Sicherheit und Verteidigung.",
+             "detail": "Erhöhte Verteidigungsbudgets in der NATO sorgen für strukturell steigende Auftragslage.",
+             "tag": "Erhöhte Marktaktivität", "icon": "shield", "order": 3},
+            {"slug": "energie-energiewende", "title": "Energie & Energiewende",
+             "summary": "Erneuerbare Energien, Stromnetze, Speicher und klassische Energieversorgung.",
+             "detail": "Netzausbau, Speicher und Wasserstoff-Infrastruktur bleiben im Fokus institutioneller Investoren.",
+             "tag": "Langfristiger Trend", "icon": "zap", "order": 4},
+            {"slug": "rohstoffe", "title": "Rohstoffe",
+             "summary": "Gold, Silber, Kupfer und andere Industriemetalle.",
+             "detail": "Elektrifizierung und Sicherheitsbedürfnis stützen die Nachfrage nach strategischen Metallen.",
+             "tag": "Unter Beobachtung", "icon": "gem", "order": 5},
+            {"slug": "seltene-erden", "title": "Seltene Erden",
+             "summary": "Strategische Rohstoffe für Hochtechnologie und Industrie.",
+             "detail": "Diversifizierung der Lieferketten außerhalb Chinas eröffnet neue Investitionsfelder.",
+             "tag": "Neue Entwicklung", "icon": "layers", "order": 6},
+            {"slug": "gesundheit-demografie", "title": "Gesundheit & Demografie",
+             "summary": "Pharma, Medizintechnik, Pflege und langfristige demografische Veränderungen.",
+             "detail": "Alternde Gesellschaften und medizinische Innovation prägen das Wachstum der kommenden Dekade.",
+             "tag": "Defensives Thema", "icon": "heart-pulse", "order": 7},
+            {"slug": "wasser", "title": "Wasser",
+             "summary": "Wasserversorgung, Infrastruktur und Aufbereitung.",
+             "detail": "Wasser bleibt eine der zentralen langfristigen Ressourcen — Infrastruktur- und Technologieanbieter im Fokus.",
+             "tag": "Defensives Thema", "icon": "droplets", "order": 8},
+            {"slug": "digitalisierung", "title": "Digitalisierung",
+             "summary": "Cloud, Cybersecurity, Software und digitale Infrastruktur.",
+             "detail": "Digitalisierung öffentlicher Verwaltungen und Unternehmen sorgt für stabile Auftragslage bei Software-Anbietern.",
+             "tag": "Langfristiger Trend", "icon": "cloud", "order": 9},
+        ]
+        await db.anlagetrends.insert_many(trends_seed)
+
+    # Seed investment_radar entries
+    if await db.investment_radar.count_documents({}) == 0:
+        radar_seed = [
+            {"theme": "Halbleiter-Wertschöpfungskette", "category": "Aktien / Technologie",
+             "why": "Strukturelle Nachfrage durch KI-Investitionen und Onshoring-Programme.",
+             "horizon": "Langfristig (5+ Jahre)", "tag": "Langfristiger Trend",
+             "related_slug": "ki-halbleiter-boom", "order": 1},
+            {"theme": "Europäische Verteidigungswerte", "category": "Aktien / Industrie",
+             "why": "Erhöhte NATO-Budgets und langfristige Rüstungsprogramme.",
+             "horizon": "Mittelfristig (2–5 Jahre)", "tag": "Erhöhte Marktaktivität",
+             "related_slug": "sap-quartalszahlen-uebertreffen", "order": 2},
+            {"theme": "Netzinfrastruktur & Grids", "category": "Aktien / Versorger",
+             "why": "Milliardenschwere Netzmodernisierungen in Europa und den USA.",
+             "horizon": "Langfristig (5+ Jahre)", "tag": "Langfristiger Trend",
+             "related_slug": "infrastruktur-fonds-europa", "order": 3},
+            {"theme": "Goldbestände als Absicherung", "category": "Rohstoffe",
+             "why": "Zentralbank-Käufe und geopolitische Unsicherheit stützen den Preis.",
+             "horizon": "Strategisch", "tag": "Defensives Thema",
+             "related_slug": "gold-nahe-allzeithoch", "order": 4},
+            {"theme": "Strategische Metalle", "category": "Rohstoffe / Seltene Erden",
+             "why": "Diversifizierung der Lieferketten außerhalb Chinas gewinnt an Bedeutung.",
+             "horizon": "Langfristig (5+ Jahre)", "tag": "Neue Entwicklung",
+             "related_slug": "seltene-erden-versorgung", "order": 5},
+            {"theme": "Hochwertige Unternehmensanleihen", "category": "Anleihen / IG",
+             "why": "Attraktive Realrenditen bei solider Bilanzqualität.",
+             "horizon": "Mittelfristig (2–5 Jahre)", "tag": "Unter Beobachtung",
+             "related_slug": "unternehmensanleihen-spreads", "order": 6},
+        ]
+        await db.investment_radar.insert_many(radar_seed)
+
+    # Seed market voices (Stimmen zum Markt — external analyst / research voices)
+    if await db.market_voices.count_documents({}) == 0:
+        now = datetime.now(timezone.utc)
+        voices_seed = [
+            {"source": "Deutsche Bank Research", "source_url": "https://www.dbresearch.de",
+             "topic": "Aktienmärkte", "excerpt": "Analysten sehen ein moderates Ertragspotenzial für europäische Aktien im ersten Halbjahr.",
+             "published_at": now - timedelta(days=1), "order": 1},
+            {"source": "Allianz Global Investors", "source_url": "https://de.allianzgi.com",
+             "topic": "Zinsen & Inflation", "excerpt": "Zinsen dürften erst im späteren Jahresverlauf spürbar sinken — Sparer sollten Konditionen jetzt sichern.",
+             "published_at": now - timedelta(days=2), "order": 2},
+            {"source": "BlackRock Investment Institute", "source_url": "https://www.blackrock.com",
+             "topic": "Langfristige Trends", "excerpt": "KI und Energiewende sind die beiden Investitionsthemen mit der höchsten strukturellen Sichtbarkeit.",
+             "published_at": now - timedelta(days=3), "order": 3},
+            {"source": "Union Investment", "source_url": "https://institutional.union-investment.de",
+             "topic": "Anleihen", "excerpt": "Investment-Grade-Anleihen bieten Anlegern derzeit ein attraktives Chance-Risiko-Profil.",
+             "published_at": now - timedelta(days=4), "order": 4},
+            {"source": "DZ Bank Research", "source_url": "https://www.dzbank.de",
+             "topic": "Gold & Rohstoffe", "excerpt": "Gold bleibt strategisch relevant — Zentralbanken bauen ihre Bestände weiter aus.",
+             "published_at": now - timedelta(days=5), "order": 5},
+            {"source": "Commerzbank Research", "source_url": "https://www.commerzbank.de",
+             "topic": "Währungen", "excerpt": "Euro/Dollar bleibt seitwärts orientiert — kein struktureller Aufwertungsdruck sichtbar.",
+             "published_at": now - timedelta(days=6), "order": 6},
+        ]
+        await db.market_voices.insert_many(voices_seed)
     logger.info(
         "Content ready: banks=%d offers=%d news=%d",
         await db.banks.count_documents({}),
@@ -536,6 +1212,14 @@ async def on_startup():
     await db.savings_offers.create_index([("bank_slug", 1), ("product_type", 1)])
     await db.news.create_index("slug", unique=True)
     await db.news.create_index([("published_at", -1)])
+    await db.news_markte_articles.create_index("slug", unique=True)
+    await db.news_markte_articles.create_index([("published_at", -1)])
+    await db.news_markte_articles.create_index([("category", 1), ("published_at", -1)])
+    await db.editorial_posts.create_index([("published", 1), ("published_at", -1)])
+    await db.anlagetrends.create_index("order")
+    await db.investment_radar.create_index("order")
+    await db.market_voices.create_index([("published_at", -1)])
+    await db.user_preferences.create_index("user_id", unique=True)
     await seed_admin()
     await seed_content()
     logger.info("Startup complete")
