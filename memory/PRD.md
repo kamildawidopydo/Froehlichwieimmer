@@ -7,6 +7,44 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 29 (Feb 27, 2026) — News-Bereich als Aggregator-Plattform ausgebaut (67 Artikel, 18 Publisher, 17 Kategorien)
+
+**Zielbild**: Aus einer einzigen bestehenden Pipeline (RSS→Mongo-Cache) soll die Website deutlich lebendiger wirken — mit 50-100+ aktuellen Artikeln, breiterer Kategorienvielfalt, „Mehr laden" und sichtbaren Publisher-Namen.
+
+**Backend (`news_synthesizer.py`)**
+- **FEEDS 7 → 24**: Neu dazu Handelsblatt, Manager Magazin, SPIEGEL Wirtschaft/Politik/Ausland, FAZ Wirtschaft/Politik, ZEIT Wirtschaft/Politik, Süddeutsche Wirtschaft, WirtschaftsWoche, Handelszeitung, heise Wirtschaft, Golem, NDR Wirtschaft, Tagesschau Ausland, DW Welt. Alle mit `default_category` + `weight`.
+- **RELEVANT_KEYWORDS 40 → 100+**: erweitert um Rohstoffe/Währungen/Industrie/Automobil (VW/BMW/Mercedes/Porsche/Audi/Siemens/Bayer/BASF/SAP), Technologie (KI, Halbleiter, Cloud, Cyber), Energie (Wasserstoff, Netzausbau), Mobilität (Bahn/Hafen), Sicherheit/Verteidigung, Gesundheit/Pharma.
+- **CATEGORY_MAP** komplett auf die 17 gewünschten Kategorien erweitert: zinsen, waehrungen, rohstoffe, energie, klima, gesundheit, mobilitaet, industrie, technologie, sicherheit, unternehmen, maerkte, europa, politik, welt, wirtschaft, wissen. Detection-Priorität bewusst gesetzt (spezifisch → allgemein). Legacy-Alias `umwelt→klima`, `aktien→maerkte`.
+- **`_extract_rss_image()`** neu: parst `media_content`, `media_thumbnail`, `enclosures`, `links[rel=enclosure]` und erstes `<img>` im Content. Publisher-Bild wird bevorzugt → wenn nicht vorhanden, fällt Editorial-Fallback pro Kategorie ein (aus bestehendem `FALLBACK_POOL`).
+- **`fetch_feeds()`** erweitert: setzt jetzt zusätzlich `slug`, `category`, `image_url`, `image_attribution`, `image_source`, `published_at`, `is_aggregated=true`, `is_published=true` auf jedes `news_raw`-Item. Damit sind Roh-Items direkt Aggregator-tauglich, ohne LLM-Rewrite.
+
+**Backend (`news_provider.py`)**
+- **UNION-Serving**: `MongoNewsProvider.list_items(category, limit, skip)` liest jetzt aus **beiden** Collections — synthesized (Fröhlich-Redaktion, interne Detail-URL) und aggregated (Publisher, externe URL) — und deduped nach normalisiertem Titel + Publisher-URL. Sortierung: `is_top_news DESC → published_at DESC`.
+- **`_to_raw_public()`**: aggregierte Items bekommen `content_type: 'aggregated'`, `source_name = Publisher-Name`, `source_url = externer Original-Link`, `url = externer Link` (User's Schema-Feld). Kein Fremdtext-Volltext (nur Summary + externer Klick).
+- **`count_items(category)`**: neue Methode für Pagination-Total.
+- **`get_item(slug)`** löst sowohl Synthese-Slugs (news_articles) als auch Aggregator-Slugs (news_raw) auf.
+
+**Backend (`server.py`)**
+- `GET /api/news/nachrichten` bekommt `skip` + `limit` Parameter. Response um `total`, `limit`, `skip`, `has_more` erweitert.
+
+**Frontend (`NachrichtenPage.jsx`)**
+- **17 Kategorie-Chips** statt vorher 10 (Politik/Wirtschaft/Unternehmen/Märkte/Europa/Welt/Zinsen/Währungen/Rohstoffe/Energie/Klima/Technologie/Industrie/Mobilität/Gesundheit/Sicherheit/Wissen).
+- **"Mehr laden"-Button**: initial 24 Artikel → Klick lädt weitere 18 mit `skip=items.length`. Dedup gegen bereits gerenderte Slugs. Zeigt „X von Y Artikeln geladen".
+- **`SmartLink`** neu: Redaktions-Artikel bleiben internes `<Link to="/news/nachrichten/:slug">`, Aggregator-Cards öffnen den Publisher via `<a target="_blank" rel="noopener">`.
+- **`PublisherTag`** neu: sichtbare Herkunftsangabe pro Card (z. B. „HANDELSBLATT", „FAZ POLITIK", „FRÖHLICH REDAKTION").
+
+**Cron** unverändert — der bestehende `fetch-feeds`-Job alle 15 Min zieht jetzt automatisch alle 24 Feeds.
+
+**Verifikation**
+- fetch-feeds Live: `226 fetched → 102 relevant → 61 new → 16 merged → 0 errors`.
+- DB: **67 aktuelle Artikel** (61 aggregated + 6 Fröhlich-Synthesizer). 18 Publisher aktiv, 13 Kategorien besetzt.
+- API `/api/news/nachrichten?limit=24&skip=0` → 200, `has_more=true`, `total=67`.
+- Kategorien-Verteilung (raw): politik=14, wirtschaft=14, welt=6, mobilitaet=5, klima=4, maerkte=4, sicherheit=3, technologie=3, gesundheit=2, unternehmen=2, europa=2, industrie=1, rohstoffe=1.
+
+**Was NICHT verändert wurde** (Vorgabe)
+- Typografie, Farben, Abstände, Navigation, bestehende Cards, „Unsere Einordnung"-Bereich, Watchlist, Marktübersicht, responsive Struktur.
+
+
 ## Session 28 (Feb 27, 2026) — Chart-Bilder komplett aus News + Einordnung entfernt
 
 **User-Meldung**: „schwarze Finanzcharts / Candlestick-Kurse tauchen immer noch auf". Ursache: 4 Trading-Chart Unsplash-IDs waren an mehreren Stellen hardcoded (nicht nur im Synthesizer, sondern in Seed-Daten und Frontend-Fallback).

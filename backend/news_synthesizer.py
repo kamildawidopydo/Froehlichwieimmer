@@ -45,30 +45,76 @@ logger = logging.getLogger("news_synthesizer")
 # Sources
 # ---------------------------------------------------------------------------
 FEEDS = [
-    {"name": "Tagesschau",          "url": "https://www.tagesschau.de/wirtschaft/index~rss2.xml",       "weight": 1.0, "primary": False},
-    {"name": "Tagesschau Inland",   "url": "https://www.tagesschau.de/inland/index~rss2.xml",           "weight": 0.6, "primary": False},
-    {"name": "Deutsche Welle",      "url": "https://rss.dw.com/xml/rss-de-eco",                          "weight": 1.0, "primary": False},
-    {"name": "EZB",                 "url": "https://www.ecb.europa.eu/rss/press.html",                   "weight": 1.6, "primary": True},
-    {"name": "Deutsche Bundesbank", "url": "https://www.bundesbank.de/service/rss/de/633286/feed.rss",   "weight": 1.5, "primary": True},
-    {"name": "BaFin",               "url": "https://www.bafin.de/SharedDocs/RSSFeeds/DE/pressemitteilung.xml", "weight": 1.4, "primary": True},
-    {"name": "EU-Kommission (DE)",  "url": "https://ec.europa.eu/commission/presscorner/api/rss?language=DE", "weight": 1.3, "primary": True},
+    # --- Institutionell / Primärquellen ------------------------------------
+    {"name": "EZB",                 "url": "https://www.ecb.europa.eu/rss/press.html",                                    "weight": 1.6, "primary": True,  "default_category": "zinsen"},
+    {"name": "Deutsche Bundesbank", "url": "https://www.bundesbank.de/service/rss/de/633286/feed.rss",                    "weight": 1.5, "primary": True,  "default_category": "zinsen"},
+    {"name": "BaFin",               "url": "https://www.bafin.de/SharedDocs/RSSFeeds/DE/pressemitteilung.xml",            "weight": 1.4, "primary": True,  "default_category": "wirtschaft"},
+    {"name": "EU-Kommission",       "url": "https://ec.europa.eu/commission/presscorner/api/rss?language=DE",             "weight": 1.3, "primary": True,  "default_category": "europa"},
+    # --- Öffentlich-rechtlich (breite Themenpalette) ----------------------
+    {"name": "Tagesschau Wirtschaft","url": "https://www.tagesschau.de/wirtschaft/index~rss2.xml",                        "weight": 1.0, "primary": False, "default_category": "wirtschaft"},
+    {"name": "Tagesschau Inland",   "url": "https://www.tagesschau.de/inland/index~rss2.xml",                             "weight": 0.9, "primary": False, "default_category": "politik"},
+    {"name": "Tagesschau Ausland",  "url": "https://www.tagesschau.de/ausland/index~rss2.xml",                            "weight": 0.9, "primary": False, "default_category": "welt"},
+    {"name": "Deutsche Welle",      "url": "https://rss.dw.com/xml/rss-de-eco",                                           "weight": 1.0, "primary": False, "default_category": "wirtschaft"},
+    {"name": "Deutsche Welle Welt", "url": "https://rss.dw.com/xml/rss-de-welt",                                          "weight": 0.9, "primary": False, "default_category": "welt"},
+    {"name": "NDR Wirtschaft",      "url": "https://www.ndr.de/nachrichten/wirtschaft/index-rss.xml",                     "weight": 0.9, "primary": False, "default_category": "wirtschaft"},
+    # --- Redaktionelle Publisher (Wirtschaft + Politik + Tech) ------------
+    {"name": "Handelsblatt",        "url": "https://www.handelsblatt.com/contentexport/feed/schlagzeilen",                "weight": 1.2, "primary": False, "default_category": "wirtschaft"},
+    {"name": "Manager Magazin",     "url": "https://www.manager-magazin.de/wirtschaft/index.rss",                         "weight": 1.1, "primary": False, "default_category": "wirtschaft"},
+    {"name": "SPIEGEL Wirtschaft",  "url": "https://www.spiegel.de/wirtschaft/index.rss",                                 "weight": 1.1, "primary": False, "default_category": "wirtschaft"},
+    {"name": "SPIEGEL Politik",     "url": "https://www.spiegel.de/politik/index.rss",                                    "weight": 1.0, "primary": False, "default_category": "politik"},
+    {"name": "SPIEGEL Ausland",     "url": "https://www.spiegel.de/politik/ausland/index.rss",                            "weight": 0.9, "primary": False, "default_category": "welt"},
+    {"name": "FAZ Wirtschaft",      "url": "https://www.faz.net/rss/aktuell/wirtschaft/",                                 "weight": 1.1, "primary": False, "default_category": "wirtschaft"},
+    {"name": "FAZ Politik",         "url": "https://www.faz.net/rss/aktuell/politik/",                                    "weight": 1.0, "primary": False, "default_category": "politik"},
+    {"name": "ZEIT Wirtschaft",     "url": "https://newsfeed.zeit.de/wirtschaft/index",                                   "weight": 1.1, "primary": False, "default_category": "wirtschaft"},
+    {"name": "ZEIT Politik",        "url": "https://newsfeed.zeit.de/politik/index",                                      "weight": 1.0, "primary": False, "default_category": "politik"},
+    {"name": "Süddeutsche Wirtschaft","url": "https://rss.sueddeutsche.de/rss/Wirtschaft",                                "weight": 1.0, "primary": False, "default_category": "wirtschaft"},
+    {"name": "WirtschaftsWoche",    "url": "https://www.wiwo.de/contentexport/feed/rss/schlagzeilen",                     "weight": 1.0, "primary": False, "default_category": "wirtschaft"},
+    {"name": "Handelszeitung",      "url": "https://www.handelszeitung.ch/rss.xml",                                       "weight": 0.9, "primary": False, "default_category": "wirtschaft"},
+    {"name": "heise Wirtschaft",    "url": "https://www.heise.de/wirtschaft/rss/wirtschaft-atom.xml",                     "weight": 0.9, "primary": False, "default_category": "technologie"},
+    {"name": "Golem",               "url": "https://rss.golem.de/rss.php?feed=RSS2.0",                                    "weight": 0.8, "primary": False, "default_category": "technologie"},
 ]
 
 # ---------------------------------------------------------------------------
 # Topic filter — Vermögensberatungs-relevante Themen
 # ---------------------------------------------------------------------------
 RELEVANT_KEYWORDS = [
+    # Märkte & Zinsen
     "dax", "s&p", "sp 500", "sp500", "nasdaq", "aktien", "börse", "boerse",
-    "ezb", "fed", "federal reserve", "zins", "leitzins",
+    "ezb", "fed", "federal reserve", "zins", "leitzins", "notenbank", "geldpolitik",
     "inflation", "konjunktur", "bip", "wachstum", "rezession",
-    "unternehmen", "quartalszahlen", "bilanz", "gewinn", "umsatz",
-    "banken", "bank ", "energie", "gold", "öl", "oel", "erdöl", "brent", "wti",
-    "rohstoff", "eur/usd", "eur usd", "euro", "dollar",
-    "staatsanleihen", "anleihe", "bond",
-    "wirtschaftspolitik", "finanzpolitik", "haushalt", "schuldenbremse",
-    "geopolit", "sanktion", "handel", "zölle", "zoll", "arbeitsmarkt",
+    "unternehmen", "quartalszahlen", "bilanz", "gewinn", "umsatz", "übernahme", "fusion",
+    "banken", "bank ", "sparkasse", "commerzbank", "deutsche bank",
+    # Rohstoffe & Währungen
+    "energie", "gold", "silber", "kupfer", "öl", "oel", "erdöl", "brent", "wti",
+    "rohstoff", "lithium", "seltene erden",
+    "eur/usd", "eur usd", "euro", "dollar", "yen", "yuan", "franken",
+    # Anleihen & Staatsfinanzen
+    "staatsanleihen", "anleihe", "bond", "bundesanleih", "treasury",
+    "wirtschaftspolitik", "finanzpolitik", "haushalt", "schuldenbremse", "steuer",
+    # Handel / Geopolitik
+    "geopolit", "sanktion", "handel", "handelskrieg", "zölle", "zoll",
+    "arbeitsmarkt", "beschäftigung", "arbeitslos",
     "verbraucherpreis", "ifo", "zew", "einkaufsmanager", "pmi",
-    "wirtschaft", "finanzmarkt", "kapitalmarkt", "notenbank", "geldpolitik",
+    "wirtschaft", "finanzmarkt", "kapitalmarkt",
+    # Industrie & Unternehmen
+    "industrie", "produktion", "automobil", "chemie", "maschinenbau",
+    "volkswagen", "bmw", "mercedes", "porsche", "audi", "siemens", "bosch", "bayer", "basf", "sap",
+    # Technologie / Innovation
+    "künstliche intelligenz", " ki ", "ki-", "chip", "halbleiter", "cloud",
+    "cyber", "digital", "software", "innovation", "startup",
+    # Energie / Klima
+    "erneuerbar", "windkraft", "solar", "photovoltaik", "wasserstoff",
+    "co2", "klima", "emission", "energiewende", "netzausbau", "stromnetz",
+    # Mobilität / Infrastruktur
+    "bahn", "deutsche bahn", "schiene", "zug", "ice", "flughafen", "airline",
+    "lufthansa", "hafen", "logistik", "infrastruktur",
+    # Sicherheit / Verteidigung
+    "verteidigung", "bundeswehr", "nato", "rüstung", "sicherheit",
+    # Gesundheit / Pharma
+    "gesundheit", "pharma", "impf", "biontech", "medikament", "krankenkasse",
+    # EU / Politik
+    "eu ", "eu-", "brüssel", "europäisch", "eurozone",
+    "bundestag", "regierung", "kanzler", "koalition", "kabinett", "merz", "scholz",
 ]
 
 # Themen, die klar ausgeschlossen werden — auch wenn RELEVANT_KEYWORDS matchen
@@ -83,15 +129,34 @@ EXCLUDE_KEYWORDS = [
 # ---------------------------------------------------------------------------
 # Categories (aligned with public /news taxonomy)
 # ---------------------------------------------------------------------------
+# 17 kanonische Kategorien für den erweiterten News-Bereich. Reihenfolge = Detection-Priorität.
 CATEGORY_MAP = {
-    "wirtschaft": ["wirtschaft", "börse", "aktien", "dax", "s&p", "nasdaq", "unternehmen", "quartals", "bilanz", "konjunktur"],
-    "europa":     ["ezb", "eu-", "europa", "brüssel", "eurozone", "bundesbank"],
-    "politik":    ["bundestag", "regierung", "kanzler", "koalition", "gesetz", "beschluss", "wahl"],
-    "welt":       ["usa", "china", "fed", "biden", "trump", "russland", "ukraine", "japan", "indien"],
-    "umwelt":     ["klima", "energie", "co2", "erneuerbar", "atom", "solar", "wind"],
-    "wissen":     ["forschung", "studie", "wissenschaft"],
+    "zinsen":       ["ezb", "leitzins", "zinsentscheid", "notenbank", "geldpolitik", "fed ", "federal reserve", "bundesbank", "zinssenk", "zinsanhebung"],
+    "waehrungen":   ["eur/usd", "eur usd", "euro dollar", "wechselkurs", "devisen", "yuan", "yen", "franken"],
+    "rohstoffe":    ["gold", "silber", "kupfer", "öl ", "oel ", "brent", "wti", "erdöl", "rohstoff", "lithium", "seltene erden"],
+    "energie":      ["erneuerbar", "windkraft", "windrad", "solar", "photovoltaik", "wasserstoff", "energiewende", "gaspreis", "netzausbau", "stromnetz"],
+    "klima":        ["klima", "klimawandel", "co2", "co2-", "klimapolitik", "emission"],
+    "gesundheit":   ["gesundheit", "pharma", "impf", "biontech", "medikament", "krankenhaus", "krankenkasse", "klinik", "arznei"],
+    "mobilitaet":   ["bahn", "deutsche bahn", "ice ", "schiene", "flughafen", "airline", "lufthansa", "luftfahrt", "hafen", "logistik", "verkehr"],
+    "industrie":    ["industrie", "produktion", "maschinenbau", "chemie", "stahl", "werk in ", "fabrik"],
+    "technologie":  ["künstliche intelligenz", " ki ", "ki-", "chip", "halbleiter", "cloud", "cyber", "digital", "software", "startup", "algorithm"],
+    "sicherheit":   ["bundeswehr", "nato", "verteidigung", "rüstung", "sicherheitspolitik", "militär"],
+    "unternehmen":  ["quartalszahlen", "bilanz", "übernahme", "fusion", "börsengang", "ipo", "volkswagen", "bmw", "mercedes", "porsche", "siemens", "bayer", "basf", "sap"],
+    "maerkte":      ["dax", "s&p", "sp 500", "sp500", "nasdaq", "wall street", "aktienmarkt", "börse", "leitindex", "anleih", "staatsanleih"],
+    "europa":       ["eu-kommission", "eu-parlament", "europapark", "eu-", "brüssel", "eurozone", "europäisch"],
+    "politik":      ["bundestag", "regierung", "kanzler", "koalition", "kabinett", "gesetz", "beschluss", "wahl", "landtag"],
+    "welt":         ["usa", "china", "russland", "ukraine", "japan", "indien", "türkei", "iran", "israel", "afrika", "südamerika"],
+    "wirtschaft":   ["wirtschaft", "konjunktur", "inflation", "arbeitsmarkt", "handel", "handelskrieg", "zölle", "haushalt", "steuer", "sozialhilfe"],
+    "wissen":       ["forschung", "studie", "wissenschaft", "universität"],
 }
 DEFAULT_CATEGORY = "wirtschaft"
+
+# Legacy-Kategorien werden im Frontend/Provider auf die kanonische Taxonomie gemappt.
+LEGACY_CATEGORY_ALIAS = {
+    "umwelt": "klima",
+    "aktien": "maerkte",
+    "aktienmaerkte": "maerkte",
+}
 
 # Kategorie → passendes Unsplash-Query (Legacy — wird von der editorial-
 # Logik unten in `_build_image_queries` ersetzt; nur noch als Sicherheitsnetz
@@ -122,14 +187,47 @@ def _slugify(v: str) -> str:
     return re.sub(r"[^a-z0-9-]+", "", v)[:80]
 
 
-def _detect_category(text: str) -> str:
+def _detect_category(text: str, fallback: str = DEFAULT_CATEGORY) -> str:
     text_lower = (text or "").lower()
-    best = (DEFAULT_CATEGORY, 0)
+    best = (fallback, 0)
     for cat, keys in CATEGORY_MAP.items():
         hits = sum(1 for k in keys if k in text_lower)
         if hits > best[1]:
             best = (cat, hits)
     return best[0]
+
+
+def _extract_rss_image(entry: dict) -> Optional[str]:
+    """Try to pull a hi-res image URL out of an RSS entry (best-effort)."""
+    # media:content
+    media = entry.get("media_content") or entry.get("media_thumbnail")
+    if isinstance(media, list) and media:
+        for m in media:
+            u = m.get("url") if isinstance(m, dict) else None
+            if u and (u.endswith((".jpg", ".jpeg", ".png", ".webp")) or "img" in u.lower()):
+                return u
+    # enclosures
+    for enc in entry.get("enclosures", []) or []:
+        u = enc.get("href") or enc.get("url")
+        t = (enc.get("type") or "").lower()
+        if u and (t.startswith("image/") or u.endswith((".jpg", ".jpeg", ".png", ".webp"))):
+            return u
+    # links with rel=enclosure
+    for lnk in entry.get("links", []) or []:
+        if isinstance(lnk, dict) and (lnk.get("type") or "").startswith("image/"):
+            return lnk.get("href")
+    # first <img> in summary/content
+    body = entry.get("summary") or ""
+    if entry.get("content"):
+        first = entry["content"][0] if isinstance(entry["content"], list) else None
+        if isinstance(first, dict):
+            body = first.get("value", "") + " " + body
+    m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', body or "", re.IGNORECASE)
+    if m:
+        u = m.group(1)
+        if u.startswith("http"):
+            return u
+    return None
 
 
 def _is_relevant(entry_text: str) -> bool:
@@ -602,8 +700,34 @@ async def fetch_feeds(db) -> dict:
                     )
                     stats["merged"] += 1
                 continue
+            # Bildextraktion aus dem RSS-Entry (Publisher-Foto bevorzugt)
+            rss_image = _extract_rss_image(entry)
+            # Kategorie-Detection (fällt auf Feed-Default zurück)
+            category = _detect_category(f"{title} {summary}",
+                                          fallback=feed_cfg.get("default_category", DEFAULT_CATEGORY))
+            # Editorial-Fallback anwenden, falls RSS kein brauchbares Bild lieferte
+            if not rss_image:
+                fb = _pick_fallback(category, title)
+                rss_image = fb["image_url"]
+                image_attribution = fb["image_attribution"]
+                image_source = fb.get("image_source", "Unsplash")
+            else:
+                image_attribution = f"Foto: {feed_cfg['name']}"
+                image_source = feed_cfg["name"]
+            # published_at parsen
+            pub_dt = None
+            for field in ("published_parsed", "updated_parsed"):
+                if entry.get(field):
+                    try:
+                        import time as _time
+                        pub_dt = datetime.fromtimestamp(_time.mktime(entry[field]), tz=timezone.utc)
+                        break
+                    except Exception:
+                        pass
+            slug = f"{_slugify(title)[:70]}-{fp[:8]}"
             await db.news_raw.insert_one({
                 "fingerprint": fp,
+                "slug": slug,
                 "title": title,
                 "summary": summary[:2000],
                 "source_names": [feed_cfg["name"]],
@@ -611,9 +735,18 @@ async def fetch_feeds(db) -> dict:
                 "source_weight": feed_cfg["weight"],
                 "source_weight_max": feed_cfg["weight"],
                 "primary_source": feed_cfg["primary"],
+                "default_category": feed_cfg.get("default_category", DEFAULT_CATEGORY),
+                "category": category,
+                "image_url": rss_image,
+                "image_attribution": image_attribution,
+                "image_source": image_source,
                 "fetched_at": now,
+                "published_at": pub_dt or now,
                 "published_raw": entry.get("published") or entry.get("updated"),
                 "used_for_synthesis": False,
+                # Aggregator-Ready: darf direkt im Public-Feed erscheinen
+                "is_aggregated": True,
+                "is_published": True,
             })
             stats["new"] += 1
     logger.info("fetch_feeds_summary %s", stats)

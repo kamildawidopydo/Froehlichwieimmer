@@ -3300,14 +3300,26 @@ async def _admin_purge_demo(_user: dict = Depends(require_admin)):
 
 
 @api.get("/news/nachrichten")
-async def news_nachrichten_list(category: Optional[str] = None, limit: int = 20):
-    """Public news feed (Euronews demo connector until licence is active)."""
-    items = await _news_provider.list_items(category=category, limit=max(1, min(int(limit or 20), 50)))
+async def news_nachrichten_list(category: Optional[str] = None, limit: int = 24, skip: int = 0):
+    """Public news feed. Serves synthesized editorial articles + RSS-aggregator items
+    (Publisher-attributed) from a single pipeline. Supports pagination via skip/limit."""
+    limit = max(1, min(int(limit or 24), 60))
+    skip = max(0, int(skip or 0))
+    items = await _news_provider.list_items(category=category, limit=limit, skip=skip)
+    total = None
+    try:
+        total = await _news_provider.count_items(category=category)
+    except Exception:  # noqa: BLE001
+        total = None
     return {
         "items": items,
         "provider": _news_provider.name,
         "is_demo": _news_provider.is_demo,
         "categories": _NEWS_CATEGORIES,
+        "total": total,
+        "limit": limit,
+        "skip": skip,
+        "has_more": (total or 0) > (skip + len(items)),
         "last_updated": items[0]["published_at"] if items else datetime.now(timezone.utc).isoformat(),
     }
 

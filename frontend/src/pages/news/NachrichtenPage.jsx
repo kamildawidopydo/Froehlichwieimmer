@@ -10,9 +10,24 @@ const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
 
 const CAT_LABEL = {
-  alle: 'Alle', politik: 'Politik', wirtschaft: 'Wirtschaft', europa: 'Europa',
-  welt: 'Welt', wissen: 'Wissen', umwelt: 'Umwelt', kultur: 'Kultur',
-  sport: 'Sport', videos: 'Videos',
+  alle: 'Alle',
+  politik: 'Politik',
+  wirtschaft: 'Wirtschaft',
+  unternehmen: 'Unternehmen',
+  maerkte: 'Märkte',
+  europa: 'Europa',
+  welt: 'Welt',
+  zinsen: 'Zinsen',
+  waehrungen: 'Währungen',
+  rohstoffe: 'Rohstoffe',
+  energie: 'Energie',
+  klima: 'Klima',
+  technologie: 'Technologie',
+  industrie: 'Industrie',
+  mobilitaet: 'Mobilität',
+  gesundheit: 'Gesundheit',
+  sicherheit: 'Sicherheit',
+  wissen: 'Wissen',
 };
 
 const timeAgo = (iso) => {
@@ -30,11 +45,40 @@ const CategoryTag = ({ category }) => (
   </span>
 );
 
+// Aggregator-Items externer Publisher öffnen in neuem Tab, eigene Redaktions-
+// Artikel bleiben auf der internen Detail-Seite.
+const linkPropsFor = (item) => {
+  if (item?.content_type === 'aggregated' && item?.source_url) {
+    return { as: 'a', href: item.source_url, target: '_blank', rel: 'noopener noreferrer' };
+  }
+  return { as: 'link', to: `/news/nachrichten/${item.slug}` };
+};
+
+const SmartLink = ({ item, children, className, testId }) => {
+  const p = linkPropsFor(item);
+  if (p.as === 'a') {
+    return <a href={p.href} target={p.target} rel={p.rel} className={className} data-testid={testId}>{children}</a>;
+  }
+  return <Link to={p.to} className={className} data-testid={testId}>{children}</Link>;
+};
+
+const PublisherTag = ({ item }) => {
+  const pub = item?.content_type === 'aggregated' ? (item.source_name || 'Externer Publisher') : 'Fröhlich Redaktion';
+  return (
+    <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.2em] text-bank-text-muted">
+      · {pub}
+    </span>
+  );
+};
+
 const HeadlineRow = ({ item }) => (
-  <Link to={`/news/nachrichten/${item.slug}`} className="group flex gap-3 border-b border-bank-border/70 py-3 last:border-b-0" data-testid={`headline-${item.slug}`}>
+  <SmartLink item={item} className="group flex gap-3 border-b border-bank-border/70 py-3 last:border-b-0" testId={`headline-${item.slug}`}>
     <img src={item.image_url} alt="" loading="lazy" className="h-14 w-20 shrink-0 object-cover" />
     <div className="min-w-0 flex-1">
-      <CategoryTag category={item.category} />
+      <div className="flex items-center gap-1">
+        <CategoryTag category={item.category} />
+        <PublisherTag item={item} />
+      </div>
       <p className="mt-1 truncate-3 font-serif text-[13.5px] leading-snug text-bank-text group-hover:text-bank-primary">
         {item.title}
       </p>
@@ -42,11 +86,11 @@ const HeadlineRow = ({ item }) => (
         {timeAgo(item.published_at)}
       </p>
     </div>
-  </Link>
+  </SmartLink>
 );
 
 const HeroCard = ({ item }) => (
-  <Link to={`/news/nachrichten/${item.slug}`} className="group grid grid-cols-1 gap-6 border border-bank-border bg-white p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr]" data-testid="news-hero">
+  <SmartLink item={item} className="group grid grid-cols-1 gap-6 border border-bank-border bg-white p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr]" testId="news-hero">
     <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
       <img src={item.image_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
       {item.content_type === 'video' && (
@@ -57,6 +101,7 @@ const HeroCard = ({ item }) => (
       <div>
         <div className="flex items-center gap-2">
           <CategoryTag category={item.category} />
+          <PublisherTag item={item} />
         </div>
         <h2 className="mt-3 font-serif text-2xl leading-[1.15] text-bank-text sm:text-3xl">
           {item.title}
@@ -70,11 +115,11 @@ const HeroCard = ({ item }) => (
         </span>
       </div>
     </div>
-  </Link>
+  </SmartLink>
 );
 
 const NewsCard = ({ item }) => (
-  <Link to={`/news/nachrichten/${item.slug}`} className="group flex min-w-0 flex-col border border-bank-border bg-white transition-colors hover:border-bank-accent-strong/50" data-testid={`news-card-${item.slug}`}>
+  <SmartLink item={item} className="group flex min-w-0 flex-col border border-bank-border bg-white transition-colors hover:border-bank-accent-strong/50" testId={`news-card-${item.slug}`}>
     <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
       <img src={item.image_url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
       {item.content_type === 'video' && (
@@ -115,17 +160,46 @@ const NachrichtenPage = () => {
   const [items, setItems] = useState([]);
   const [category, setCategory] = useState('alle');
   const [loading, setLoading] = useState(true);
-  const [meta, setMeta] = useState({ provider: null, is_demo: true, last_updated: null });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [meta, setMeta] = useState({ provider: null, is_demo: false, last_updated: null });
+
+  const PAGE = 24;
+  const MORE = 18;
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    api.get('/news/nachrichten', { params: { category, limit: 20 } })
-      .then(({ data }) => { if (alive) { setItems(data.items || []); setMeta({ provider: data.provider, is_demo: !!data.is_demo, last_updated: data.last_updated }); } })
+    setItems([]);
+    api.get('/news/nachrichten', { params: { category, limit: PAGE, skip: 0 } })
+      .then(({ data }) => {
+        if (!alive) return;
+        setItems(data.items || []);
+        setHasMore(!!data.has_more);
+        setTotal(data.total || (data.items || []).length);
+        setMeta({ provider: data.provider, is_demo: !!data.is_demo, last_updated: data.last_updated });
+      })
       .catch(() => { if (alive) setItems([]); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [category]);
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const { data } = await api.get('/news/nachrichten', { params: { category, limit: MORE, skip: items.length } });
+      const seen = new Set(items.map((x) => x.slug));
+      const fresh = (data.items || []).filter((x) => !seen.has(x.slug));
+      setItems((prev) => [...prev, ...fresh]);
+      setHasMore(!!data.has_more);
+    } catch {
+      // Nächster Versuch beim erneuten Klick — kein UI-Fehler
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const hero = items[0];
   const headlines = items.slice(1, 6);
@@ -222,6 +296,23 @@ const NachrichtenPage = () => {
           )}
         </div>
 
+        {/* „Mehr laden" — echter Aggregator-Feed */}
+        {!loading && hasMore && (
+          <div className="mt-10 flex flex-col items-center gap-2" data-testid="news-load-more-wrap">
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={loadingMore}
+              data-testid="news-load-more-btn"
+              className="inline-flex items-center gap-2 border border-bank-border bg-white px-6 py-2.5 text-[11.5px] font-medium uppercase tracking-[0.2em] text-bank-text transition-colors hover:border-bank-primary hover:text-bank-primary disabled:opacity-60"
+            >
+              {loadingMore ? 'Lade weitere Artikel …' : 'Mehr Nachrichten laden'}
+            </button>
+            <p className="text-[10.5px] uppercase tracking-[0.16em] text-bank-text-muted">
+              {items.length} von {total} Artikeln geladen
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Fröhlich — Unsere Einordnung: klar getrennter, redaktioneller Bereich */}

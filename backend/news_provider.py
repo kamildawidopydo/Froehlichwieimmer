@@ -379,34 +379,131 @@ class MongoNewsProvider(NewsProvider):
             "is_demo": False,
         }
 
-    async def list_items(self, category: Optional[str] = None, limit: int = 20) -> List[dict]:
+    def _to_raw_public(self, doc: dict) -> dict:
+        """Roh-Item aus news_raw als Aggregator-Karte darstellen (externe Publisher-URL)."""
+        published = doc.get("published_at") or doc.get("fetched_at") or datetime.now(timezone.utc)
+        publisher = (doc.get("source_names") or ["Redaktion"])[0]
+        external_url = (doc.get("source_urls") or [None])[0]
+        return {
+            "id": doc.get("slug") or str(doc.get("_id")),
+            "slug": doc.get("slug") or str(doc.get("_id")),
+            "external_id": doc.get("fingerprint"),
+            "title": doc.get("title", ""),
+            "subtitle": None,
+            "summary": (doc.get("summary") or "")[:600],
+            "category": doc.get("category") or "wirtschaft",
+            "image_url": doc.get("image_url"),
+            "hero_image_url": doc.get("image_url"),
+            "image_attribution": doc.get("image_attribution"),
+            "image_source": doc.get("image_source"),
+            "published_at": published.isoformat() if isinstance(published, datetime) else str(published),
+            "updated_at": published.isoformat() if isinstance(published, datetime) else str(published),
+            "source": self.name,
+            "source_name": publisher,      # sichtbarer Publisher (REUTERS / HANDELSBLATT / EZB …)
+            "source_url": external_url,     # externer Publisher-Link
+            "url": external_url,             # user's Schema-Feld
+            "sources": [{"name": publisher, "url": external_url}],
+            "source_names": doc.get("source_names") or [publisher],
+            "source_urls": doc.get("source_urls") or ([external_url] if external_url else []),
+            "full_text": None,               # nie fremden Volltext ausliefern
+            "article_content": (doc.get("summary") or "")[:300],
+            "language": "de",
+            "content_type": "aggregated",   # Frontend erkennt: externer Klick
+            "license_allows_fulltext": False,
+            "is_top_news": False,
+            "is_breaking": False,
+            "relevance_score": 0,
+            "is_demo": False,
+        }
+
+    async def list_items(self, category: Optional[str] = None, limit: int = 20, skip: int = 0) -> List[dict]:
         if self._db is None:
             return []
-        # Immer nur eigenständige, freigegebene Artikel — NIE Demo-Content
-        query: dict = {
-            "is_published": True,
-            "status": "published",
-            "content_type": {"$ne": "demo"},
-        }
         cat = (category or "alle").lower()
+        # Legacy-Aliasse auf kanonische Kategorien mappen
+        alias_map = {"umwelt": "klima", "aktien": "maerkte", "aktienmaerkte": "maerkte"}
+        cat = alias_map.get(cat, cat)
+
+        # 1) Synthesizer-Artikel (eigene Redaktion)
+        syn_query: dict = {"is_published": True, "status": "published", "content_type": {"$ne": "demo"}}
+        raw_query: dict = {"is_aggregated": True, "is_published": True}
         if cat != "alle":
             if cat == "videos":
-                query["content_type"] = "video"
-            elif cat in _CATEGORY_SLUGS:
-                query["category"] = cat
-        cursor = (self._db.news_articles.find(query)
-                   .sort([("is_top_news", -1),
-                          ("relevance_score", -1),
-                          ("published_at", -1)])
-                   .limit(limit))
-        docs = await cursor.to_list(limit)
-        return [self._to_public(d) for d in docs]
+                syn_query["content_type"] = "video"
+            else:
+                syn_query["category"] = cat
+                raw_query["category"] = cat
+
+        # Anzahl gross genug ziehen (Skip + Limit), damit Dedup nichts überspringt
+        pool_size = max(limit + skip + 20, 60)
+        syn_cursor = (self._db.news_articles.find(syn_query)
+                       .sort([("is_top_news", -1), ("relevance_score", -1), ("published_at", -1)])
+                       .limit(pool_size))
+        syn_docs = await syn_cursor.to_list(pool_size)
+        syn_items = [self._to_public(d) for d in syn_docs]
+
+        # 2) Aggregierte RSS-Roh-Items (externer Publisher, kein LLM-Rewrite)
+        raw_cursor = (self._db.news_raw.find(raw_query)
+                       .sort([("published_at", -1), ("fetched_at", -1)])
+                       .limit(pool_size))
+        raw_docs = await raw_cursor.to_list(pool_size)
+        raw_items = [self._to_raw_public(d) for d in raw_docs]
+
+        # 3) Zusammenführen + Dedup (normalisierter Titel + externe URL)
+        seen_titles: set[str] = set()
+        seen_urls: set[str] = set()
+
+        def _title_key(t: str) -> str:
+            import re as _re
+            return _re.sub(r"\W+", " ", (t or "").lower()).strip()[:80]
+
+        merged: list[dict] = []
+        # Redaktions-Artikel zuerst — die kennt der Nutzer als Fröhlich-Content
+        for it in syn_items + raw_items:
+            key = _title_key(it.get("title", ""))
+            url = it.get("source_url") or ""
+            if not key:
+                continue
+            if key in seen_titles or (url and url in seen_urls):
+                continue
+            seen_titles.add(key)
+            if url:
+                seen_urls.add(url)
+            merged.append(it)
+        # Nach Publikations-Zeit sortieren, Top-News nach vorne
+        merged.sort(key=lambda x: (not x.get("is_top_news", False), x.get("published_at") or ""), reverse=False)
+        # is_top_news=True → nach vorne, published_at DESC (reverse=False mit not-Trick oben)
+        merged.sort(key=lambda x: (x.get("is_top_news", False), x.get("published_at") or ""), reverse=True)
+
+        return merged[skip: skip + limit]
+
+    async def count_items(self, category: Optional[str] = None) -> int:
+        if self._db is None:
+            return 0
+        cat = (category or "alle").lower()
+        alias_map = {"umwelt": "klima", "aktien": "maerkte", "aktienmaerkte": "maerkte"}
+        cat = alias_map.get(cat, cat)
+        syn_q: dict = {"is_published": True, "status": "published", "content_type": {"$ne": "demo"}}
+        raw_q: dict = {"is_aggregated": True, "is_published": True}
+        if cat != "alle":
+            syn_q["category"] = cat
+            raw_q["category"] = cat
+        syn_n = await self._db.news_articles.count_documents(syn_q)
+        raw_n = await self._db.news_raw.count_documents(raw_q)
+        return syn_n + raw_n
 
     async def get_item(self, slug: str) -> Optional[dict]:
         if self._db is None:
             return None
+        # 1) Synthetisierte Artikel (eigene Detailseite)
         doc = await self._db.news_articles.find_one({"slug": slug, "is_published": True})
-        return self._to_public(doc) if doc else None
+        if doc:
+            return self._to_public(doc)
+        # 2) Aggregator-Artikel (RSS Roh-Item mit gleichem Slug)
+        raw = await self._db.news_raw.find_one({"slug": slug, "is_aggregated": True})
+        if raw:
+            return self._to_raw_public(raw)
+        return None
 
 
 # ---------------------------------------------------------------------------
