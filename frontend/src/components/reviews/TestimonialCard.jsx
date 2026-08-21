@@ -3,6 +3,7 @@ import { CheckCircle2, Quote, MessageCircle } from 'lucide-react';
 import { StarsDisplay } from '@/components/reviews/RatingStars';
 import { formatReviewDate } from '@/services/reviewsApi';
 import { TOPIC_LABEL } from '@/data/reviewTopics';
+import stripOuterQuotes from '@/lib/stripOuterQuotes';
 
 export const CUSTOMER_SINCE_LABEL = {
   unter_1: 'Neu bei uns',
@@ -56,7 +57,7 @@ const TestimonialCard = ({ review, tone = 'light', size = 'md' }) => {
         )}
       </div>
 
-      <p className={`font-serif leading-[1.55] ${bodySize} ${textCol}`}>„{review.text}"</p>
+      <p className={`font-serif leading-[1.55] ${bodySize} ${textCol}`}>{stripOuterQuotes(review.text)}</p>
 
       {review.topics && review.topics.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -89,7 +90,7 @@ const TestimonialCard = ({ review, tone = 'light', size = 'md' }) => {
             Antwort von Fröhlich Vermögensberatung
           </p>
           <p className={`mt-1.5 font-serif italic leading-relaxed text-[13.5px] ${dark ? 'text-white/85' : 'text-bank-text'}`}>
-            {review.admin_response}
+            {stripOuterQuotes(review.admin_response)}
           </p>
         </div>
       )}

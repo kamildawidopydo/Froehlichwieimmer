@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import PageMeta from '@/components/PageMeta';
 import { StarsDisplay } from '@/components/reviews/RatingStars';
 import { reviewsApi, formatReviewDate } from '@/services/reviewsApi';
+import stripOuterQuotes from '@/lib/stripOuterQuotes';
 
 const TABS = [
   { key: 'pending', label: 'Neu' },
@@ -157,7 +158,7 @@ const ResponseModal = ({ review, onClose, onSaved }) => {
         </div>
 
         <div className="mt-4 rounded-xl border border-bank-border bg-neutral-50 p-3 text-[12.5px] leading-relaxed text-bank-text-muted">
-          <span className="font-medium text-bank-text">Kundenstimme:</span> „{review.text}"
+          <span className="font-medium text-bank-text">Kundenstimme:</span> {stripOuterQuotes(review.text)}
         </div>
 
         <label className="mt-5 block text-[11.5px] font-medium uppercase tracking-[0.16em] text-bank-text-muted">
@@ -487,14 +488,14 @@ const AdminReviews = () => {
                     <p className="mt-1 text-[12.5px] text-bank-text-muted">
                       {r.first_name} {r.last_name} · <span className="font-mono">{r.email}</span> · {formatReviewDate(r.created_at)}
                     </p>
-                    <p className="mt-3 whitespace-pre-line text-[14px] leading-relaxed text-bank-text">{r.text}</p>
+                    <p className="mt-3 whitespace-pre-line text-[14px] leading-relaxed text-bank-text">{stripOuterQuotes(r.text)}</p>
                     {r.admin_response && (
                       <div className="mt-3 rounded-xl border-l-2 border-bank-gold bg-bank-gold/[0.04] px-3 py-2" data-testid={`admin-review-response-${r.id}`}>
                         <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-bank-accent-strong">
                           Antwort von Fröhlich Vermögensberatung
                         </p>
                         <p className="mt-1 font-serif text-[13.5px] italic leading-relaxed text-bank-text">
-                          {r.admin_response}
+                          {stripOuterQuotes(r.admin_response)}
                         </p>
                       </div>
                     )}
