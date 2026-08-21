@@ -7,6 +7,21 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 20 (Feb 26, 2026) — Admin-CMS „Unsere Einordnung"
+
+**Backend**
+- `/api/einordnung/admin/list` erweitert um `q` (Fulltext auf title/teaser/slug via regex) + `category`-Filter.
+
+**Frontend (`/pages/AdminEinordnung.jsx`)**
+- Vollständiger CMS-Screen unter `/admin/einordnung` (in Nav-Gruppe „Produkte & Inhalte" verlinkt).
+- Übersicht: Tabelle mit Titel/Kategorie/Status/Veröffentlichungsdatum/Featured/Zuletzt bearbeitet/Aktionen (Öffnen · Bearbeiten · Löschen) + Filter (Suche, Status, Kategorie, DEMO ausblenden).
+- Editor-Overlay: Titel · Slug (mit Auto-Generierung + Slug-Änderungswarnung) · Kategorie · Autor · Teaser · Haupttext (Markdown-Hinweis für ## H2, ** fett **, * kursiv *, - Listen, [Link]) · Bild-URL · Verknüpfte Nachricht · Status · Veröffentlichungsdatum · Featured-Toggle.
+- Actions: Vorschau (Live-Preview mit Kategorie-Label, Bild, H2-Rendering und Disclaimer) · Als Entwurf speichern · Veröffentlichung planen · Veröffentlichen · Archivieren · Löschen (mit Extra-Warnung bei published).
+- Alle Endpoints require_admin — Non-Admins bekommen 401.
+
+**API-Verifikation** (curl-Roundtrip mit Admin-Login):
+- Suche `?q=gold` → 1 Treffer. Create Draft → PUT „published" → im Public-Feed sichtbar. Zweiter Create mit gleichem Titel → 409 Slug-Konflikt. Delete → 200. Non-Admin auf admin/list → 401.
+
 ## Session 19 (Feb 26, 2026) — Fröhlich „Unsere Einordnung"
 
 **Backend (`einordnung.py`)**

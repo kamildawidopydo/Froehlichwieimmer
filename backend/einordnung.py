@@ -248,12 +248,25 @@ def register(app_router, db):
     @router.get("/admin/list", summary="Admin: alle Einordnungen inkl. Entwürfe")
     async def _admin_list(_user: dict = Depends(require_admin),
                           status: Optional[str] = None,
+                          q: Optional[str] = None,
+                          category: Optional[str] = None,
                           limit: int = Query(50, ge=1, le=200)):
         query: dict = {}
         if status:
             if status not in STATUSES:
                 raise HTTPException(422, detail=f"Unbekannter Status: {status}")
             query["status"] = status
+        if category and category != "alle":
+            if category not in CATEGORY_SLUGS:
+                raise HTTPException(422, detail=f"Unbekannte Kategorie: {category}")
+            query["category"] = category
+        if q and q.strip():
+            needle = q.strip()
+            query["$or"] = [
+                {"title": {"$regex": needle, "$options": "i"}},
+                {"teaser": {"$regex": needle, "$options": "i"}},
+                {"slug": {"$regex": needle, "$options": "i"}},
+            ]
         cursor = db.einordnung_posts.find(query).sort([("updated_at", -1)]).limit(limit)
         docs = await cursor.to_list(limit)
         return {"items": [_to_public(d) for d in docs], "total": await db.einordnung_posts.count_documents(query)}

@@ -428,6 +428,7 @@ const AdminDashboardLayout = () => {
         { to: '/admin/offers', label: t('shell.admin.offers', { defaultValue: 'Angebote' }), icon: Tag },
         { to: '/admin/credit-offers', label: t('shell.admin.creditOffers', { defaultValue: 'Kredit-Angebote' }), icon: Tag },
         { to: '/admin/credit-bank-details', label: t('shell.admin.creditBankDetails', { defaultValue: 'Kredit-Bankdetails' }), icon: FileText },
+        { to: '/admin/einordnung', label: 'Unsere Einordnung', icon: FileText },
       ],
     },
   ];

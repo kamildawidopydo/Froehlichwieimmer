@@ -96,6 +96,7 @@ const DashboardLegacyRedirect = lazy(
 
 const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
 const AdminEditorial = lazy(() => import('@/pages/AdminEditorial'));
+const AdminEinordnung = lazy(() => import('@/pages/AdminEinordnung'));
 const AdminReviews = lazy(() => import('@/pages/AdminReviews'));
 const AdminBanks = lazy(() => import('@/pages/AdminBanks'));
 const AdminOffers = lazy(() => import('@/pages/AdminOffers'));
@@ -810,6 +811,7 @@ function App() {
                   <Route path="analytics" element={<AdminAnalytics />} />
                   <Route path="live-visitors" element={<AdminLiveVisitors />} />
                   <Route path="editorial" element={<AdminEditorial />} />
+                  <Route path="einordnung" element={<AdminEinordnung />} />
                   <Route path="reviews" element={<AdminReviews /> } />
                 </Route>
 
