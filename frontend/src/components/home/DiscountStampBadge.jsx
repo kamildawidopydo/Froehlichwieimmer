@@ -23,9 +23,9 @@ const DiscountStampBadge = ({
       style={{ width: dims, height: dims }}
       aria-hidden
     >
-      <svg viewBox="0 0 100 100" className="h-full w-full drop-shadow-[0_4px_12px_rgb(22_163_74/0.35)]">
-        <path d={STAMP_PATH} fill="#16a34a" />
-        <circle cx="50" cy="50" r="32" fill="#22c55e" />
+      <svg viewBox="0 0 100 100" className="h-full w-full drop-shadow-[0_4px_12px_rgb(76_124_186/0.35)]">
+        <path d={STAMP_PATH} fill="#3A6499" />
+        <circle cx="50" cy="50" r="32" fill="#4C7CBA" />
         <text
           x="50"
           y="36"

@@ -175,13 +175,13 @@ export const SpargeldBenefitsSidebar = ({ compact = false }) => {
 export const SpargeldHeaderPromo = ({ compact = false }) => (
   <div
     className={cn(
-      'relative flex min-w-0 items-center gap-2 overflow-hidden rounded-lg border border-emerald-200/90 bg-emerald-50/90',
+      'relative flex min-w-0 items-center gap-2 overflow-hidden rounded-lg border border-bank-signature/25 bg-bank-signature/[0.06]',
       compact ? 'px-2 py-1' : 'px-2.5 py-1.5',
     )}
   >
     <span
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-full bg-emerald-600 shadow-[0_2px_8px_-2px_rgb(5_150_105/0.35)]',
+        'flex shrink-0 items-center justify-center rounded-full bg-bank-primary shadow-[0_2px_8px_-2px_rgb(76_124_186/0.35)]',
         compact ? 'h-6 w-6' : 'h-7 w-7',
       )}
     >
@@ -194,7 +194,7 @@ export const SpargeldHeaderPromo = ({ compact = false }) => (
       )}
     >
       Neukundenbonus — bis zu{' '}
-      <span className="text-emerald-700">300&nbsp;€</span> zusätzlich
+      <span className="text-bank-primary">300&nbsp;€</span> zusätzlich
     </p>
     <DiscountStampBadge rate="300€" bottomLabel="BONUS" size="xs" className="hidden shrink-0 sm:block" />
   </div>
@@ -204,13 +204,13 @@ export const SpargeldHeaderPromo = ({ compact = false }) => (
 export const SpargeldPremiumBanner = ({ compact = false }) => (
   <div
     className={cn(
-      'flex items-center gap-2 overflow-hidden rounded-lg border border-emerald-300/80 bg-emerald-50/90',
+      'flex items-center gap-2 overflow-hidden rounded-lg border border-bank-signature/30 bg-bank-signature/[0.06]',
       compact ? 'mt-4 px-3 py-2.5' : 'mt-5 px-3.5 py-3.5 sm:items-center sm:gap-4 sm:px-4 sm:py-4',
     )}
   >
     <span
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-full bg-emerald-500 shadow-[0_2px_8px_-2px_rgb(16_185_129/0.45)]',
+        'flex shrink-0 items-center justify-center rounded-full bg-bank-primary shadow-[0_2px_8px_-2px_rgb(76_124_186/0.35)]',
         compact ? 'h-8 w-8' : 'h-10 w-10',
       )}
     >
@@ -219,7 +219,7 @@ export const SpargeldPremiumBanner = ({ compact = false }) => (
     <div className="min-w-0 flex-1">
       <p
         className={cn(
-          'font-bold uppercase tracking-[0.05em] text-emerald-700',
+          'font-bold uppercase tracking-[0.05em] text-bank-primary',
           compact ? 'text-[11px] leading-snug' : 'text-[11px] sm:text-[12px]',
         )}
       >

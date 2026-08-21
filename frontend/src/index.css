@@ -31,9 +31,9 @@
     --bank-gold:           76 124 186;   /* #4C7CBA = primary */
     --bank-gold-soft:      236 243 250;  /* #ECF3FA */
     --bank-success:        16 185 129;   /* #10B981 */
-    /* Signature CTA green — Formular + primary actions (not chrome/nav chrome) */
-    --bank-signature:        5 150 105;  /* #059669 */
-    --bank-signature-hover:  4 120 87;   /* #047857 */
+    /* Signature CTA — brand blue (primary action) */
+    --bank-signature:        76 124 186;  /* #4C7CBA */
+    --bank-signature-hover:  58 100 153;  /* #3A6499 */
     --bank-error:          220 38 38;
 
     /* Footer / contrast bands — mid cobalt (not deep navy) */
@@ -91,8 +91,8 @@
     --bank-gold:           125 165 206;   /* #7DA5CE */
     --bank-gold-soft:      20 40 64;     /* #142840 */
     --bank-success:        52 211 153;
-    --bank-signature:        16 185 129; /* #10B981 */
-    --bank-signature-hover:  5 150 105;  /* #059669 */
+    --bank-signature:        76 124 186; /* #4C7CBA */
+    --bank-signature-hover:  58 100 153; /* #3A6499 */
     --bank-error:          239 68 68;
 
     --bank-ink:            10 18 30;
@@ -149,8 +149,8 @@
     --bank-gold-soft:      236 243 250;  /* #ECF3FA */
 
     --bank-success:        16 185 129;
-    --bank-signature:        5 150 105;
-    --bank-signature-hover:  4 120 87;
+    --bank-signature:        76 124 186;
+    --bank-signature-hover:  58 100 153;
     --bank-error:          220 38 38;
   }
 
@@ -171,8 +171,8 @@
     --bank-gold:           125 165 206;
     --bank-gold-soft:      20 40 64;
 
-    --bank-signature:        16 185 129;
-    --bank-signature-hover:  5 150 105;
+    --bank-signature:        125 165 206;
+    --bank-signature-hover:  156 185 218;
   }
 
   * {
