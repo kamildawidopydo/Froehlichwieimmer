@@ -49,6 +49,7 @@ REFRESH_TOKEN_DAYS = 30
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 MARKETAUX_KEY = os.environ.get("MARKETAUX_KEY", "").strip()
 TWELVE_DATA_KEY = os.environ.get("TWELVE_DATA_KEY", "").strip()
+ALPHA_VANTAGE_KEY = (os.environ.get("ALPHA_VANTAGE_API_KEY") or os.environ.get("ALPHA_VANTAGE_KEY") or "").strip()
 MARKET_CACHE_SECONDS = 300  # 5 min cache to protect free-tier limits
 
 client = AsyncIOMotorClient(MONGO_URL, tz_aware=True)
@@ -742,15 +743,23 @@ async def news_markte_feed(category: Optional[str] = None, limit: int = 30):
 
 @api.get("/news-markte/markets", response_model=List[MarketInsight])
 async def news_markte_markets():
-    now = datetime.now(timezone.utc)
-    cached = _market_cache.get("data")
-    at = _market_cache.get("at")
-    if cached and at and (now - at).total_seconds() < MARKET_CACHE_SECONDS:
-        return cached
-    data = await _fetch_market_snapshots()
-    _market_cache["data"] = data
-    _market_cache["at"] = now
-    return data
+    """Serves the /news top strip. Uses the Phase 2 Alpha-Vantage market module
+    with in-memory + Mongo cache, falling back to deterministic stubs when no
+    provider key is configured. Currency shown as unit for indices/commodities
+    (USD-quoted via ETF proxies)."""
+    configs = MARKET_INDEX_SYMBOLS + MARKET_COMMODITY_SYMBOLS + MARKET_FX_SYMBOLS
+    quotes = await _fetch_many(configs)
+    out: List[dict] = []
+    for q in quotes:
+        out.append({
+            "symbol": q["symbol"],
+            "name": q["name"],
+            "value": float(q["price"]),
+            "change_pct": float(q["change_percent"]),
+            "unit": q.get("currency") or "",
+            "updated_at": q.get("last_updated") or _now_utc().isoformat(),
+        })
+    return out
 
 
 @api.get("/news-markte/editorial", response_model=List[EditorialOut])
@@ -1899,6 +1908,331 @@ async def seed_content():
     )
 
 
+# ---------------------------------------------------------------------------
+# Market Data — Alpha Vantage integration with MongoDB TTL cache & fallbacks
+# ---------------------------------------------------------------------------
+#
+# All external network calls are guarded by:
+#   1. Cache lookup in `market_quotes_cache` (TTL via `expires_at`).
+#   2. Provider call (only if key present + no fresh cache).
+#   3. Fallback stub values (deterministic, marked `data_source=fallback`).
+#
+# The API key is only read from ALPHA_VANTAGE_API_KEY (fallback ALPHA_VANTAGE_KEY).
+# It is never returned to the client, never logged.
+
+AV_BASE_URL = "https://www.alphavantage.co/query"
+AV_TIMEOUT_S = 6.0
+
+# TTL per data class (seconds)
+_TTL_QUOTE = 300      # 5 min for stocks / index ETFs / commodities
+_TTL_FX = 600         # 10 min for FX
+_TTL_STALE_KEEP = 3600 * 24  # keep last-known-good for 24 h even after TTL
+
+# Internal symbol → provider mapping. Alpha Vantage free plan does not offer
+# native DAX / SPX / commodities futures — we use widely-tracked ETF proxies
+# and mark those results with a `note`. Stocks with primary listing outside
+# NYSE/NASDAQ are looked up via their ADR ticker.
+MARKET_INDEX_SYMBOLS = [
+    {"symbol": "DAX",  "name": "DAX",       "av_symbol": "EWG",  "currency": "USD", "note": "DAX-Proxy (iShares MSCI Germany ETF)"},
+    {"symbol": "SPX",  "name": "S&P 500",   "av_symbol": "SPY",  "currency": "USD", "note": "S&P-500-Proxy (SPDR S&P 500 ETF)"},
+    {"symbol": "NDX",  "name": "Nasdaq",    "av_symbol": "QQQ",  "currency": "USD", "note": "Nasdaq-100-Proxy (Invesco QQQ)"},
+    {"symbol": "DJI",  "name": "Dow Jones", "av_symbol": "DIA",  "currency": "USD", "note": "Dow-Jones-Proxy (SPDR DJIA ETF)"},
+]
+
+MARKET_COMMODITY_SYMBOLS = [
+    {"symbol": "GOLD",   "name": "Gold",      "av_symbol": "GLD", "currency": "USD", "note": "Gold-Proxy (SPDR Gold Shares)"},
+    {"symbol": "SILVER", "name": "Silber",    "av_symbol": "SLV", "currency": "USD", "note": "Silber-Proxy (iShares Silver Trust)"},
+    {"symbol": "OIL",    "name": "Brent Öl",  "av_symbol": "USO", "currency": "USD", "note": "Öl-Proxy (US Oil Fund)"},
+]
+
+MARKET_FX_SYMBOLS = [
+    {"symbol": "EURUSD", "name": "EUR/USD", "from_curr": "EUR", "to_curr": "USD", "currency": "USD"},
+]
+
+MARKET_STOCK_SYMBOLS = [
+    {"symbol": "SAP",   "name": "SAP",           "av_symbol": "SAP",   "currency": "USD"},
+    {"symbol": "SIE",   "name": "Siemens",       "av_symbol": "SIEGY", "currency": "USD"},
+    {"symbol": "ALV",   "name": "Allianz",       "av_symbol": "ALIZY", "currency": "USD"},
+    {"symbol": "DBK",   "name": "Deutsche Bank", "av_symbol": "DB",    "currency": "USD"},
+    {"symbol": "IFX",   "name": "Infineon",      "av_symbol": "IFNNY", "currency": "USD"},
+    {"symbol": "RHM",   "name": "Rheinmetall",   "av_symbol": "RNMBY", "currency": "USD"},
+    {"symbol": "NVDA",  "name": "NVIDIA",        "av_symbol": "NVDA",  "currency": "USD"},
+    {"symbol": "AAPL",  "name": "Apple",         "av_symbol": "AAPL",  "currency": "USD"},
+    {"symbol": "MSFT",  "name": "Microsoft",     "av_symbol": "MSFT",  "currency": "USD"},
+    {"symbol": "GOOGL", "name": "Alphabet",      "av_symbol": "GOOGL", "currency": "USD"},
+    {"symbol": "AMZN",  "name": "Amazon",        "av_symbol": "AMZN",  "currency": "USD"},
+]
+
+# Deterministic fallback quotes (realistic reference prices as of early 2026).
+# `data_source=fallback` is transparently returned so the FE can badge them.
+_FALLBACK_QUOTES = {
+    "DAX":    {"price": 47.83, "change": 0.18, "change_percent": 0.38},
+    "SPX":    {"price": 512.44, "change": 1.62, "change_percent": 0.32},
+    "NDX":    {"price": 438.90, "change": 2.10, "change_percent": 0.48},
+    "DJI":    {"price": 405.12, "change": -0.35, "change_percent": -0.09},
+    "GOLD":   {"price": 218.65, "change": 0.82, "change_percent": 0.38},
+    "SILVER": {"price": 27.14, "change": -0.12, "change_percent": -0.44},
+    "OIL":    {"price": 78.32, "change": 0.44, "change_percent": 0.57},
+    "EURUSD": {"price": 1.0862, "change": 0.0012, "change_percent": 0.11},
+    "SAP":    {"price": 232.10, "change": 1.05, "change_percent": 0.45},
+    "SIE":    {"price": 108.44, "change": 0.62, "change_percent": 0.58},
+    "ALV":    {"price": 34.20,  "change": 0.18, "change_percent": 0.53},
+    "DBK":    {"price": 18.75,  "change": -0.11, "change_percent": -0.58},
+    "IFX":    {"price": 43.05,  "change": 0.35, "change_percent": 0.82},
+    "RHM":    {"price": 82.40,  "change": 1.20, "change_percent": 1.48},
+    "NVDA":   {"price": 138.85, "change": 2.10, "change_percent": 1.54},
+    "AAPL":   {"price": 226.02, "change": 0.88, "change_percent": 0.39},
+    "MSFT":   {"price": 434.55, "change": 1.42, "change_percent": 0.33},
+    "GOOGL":  {"price": 195.10, "change": 0.55, "change_percent": 0.28},
+    "AMZN":   {"price": 214.90, "change": 1.15, "change_percent": 0.54},
+}
+
+
+def _now_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _build_quote(cfg: dict, price: float, change: float, change_percent: float, source: str, note: Optional[str] = None) -> dict:
+    is_delayed = source != "provider_realtime"
+    return {
+        "symbol": cfg["symbol"],
+        "name": cfg["name"],
+        "price": round(float(price), 4),
+        "change": round(float(change), 4),
+        "change_percent": round(float(change_percent), 3),
+        "currency": cfg.get("currency", "USD"),
+        "last_updated": _now_utc().isoformat(),
+        "market_status": "delayed" if is_delayed else "live",
+        "data_source": source,
+        "is_delayed": is_delayed,
+        "note": note or cfg.get("note"),
+        "provider_symbol": cfg.get("av_symbol") or cfg.get("from_curr"),
+    }
+
+
+def _fallback_quote(cfg: dict, reason: str = "no_provider") -> dict:
+    fb = _FALLBACK_QUOTES.get(cfg["symbol"]) or {"price": 100.0, "change": 0.0, "change_percent": 0.0}
+    q = _build_quote(cfg, fb["price"], fb["change"], fb["change_percent"], source="fallback", note=cfg.get("note"))
+    q["fallback_reason"] = reason
+    return q
+
+
+async def _cache_get(symbol: str) -> Optional[dict]:
+    doc = await db.market_quotes_cache.find_one({"symbol": symbol})
+    if not doc:
+        return None
+    return doc
+
+
+async def _cache_put(symbol: str, quote: dict, ttl_s: int) -> None:
+    expires_at = _now_utc() + timedelta(seconds=max(ttl_s, 30))
+    await db.market_quotes_cache.update_one(
+        {"symbol": symbol},
+        {"$set": {
+            "symbol": symbol,
+            "quote": quote,
+            "cached_at": _now_utc(),
+            "expires_at": expires_at,
+        }},
+        upsert=True,
+    )
+
+
+async def _av_call(params: dict) -> Optional[dict]:
+    """Perform a single Alpha Vantage GET. Returns parsed JSON dict or None on any failure/limit."""
+    if not ALPHA_VANTAGE_KEY:
+        return None
+    params = {**params, "apikey": ALPHA_VANTAGE_KEY}
+    try:
+        async with httpx.AsyncClient(timeout=AV_TIMEOUT_S) as http:
+            r = await http.get(AV_BASE_URL, params=params)
+        if r.status_code != 200:
+            logger.warning("Alpha Vantage HTTP %s for function=%s", r.status_code, params.get("function"))
+            return None
+        data = r.json()
+        # Alpha Vantage puts rate-limit / error messages in "Note" or "Information".
+        note = data.get("Note") or data.get("Information") or data.get("Error Message")
+        if note:
+            logger.warning("Alpha Vantage limited/blocked: %s", str(note)[:120])
+            return None
+        return data
+    except (httpx.HTTPError, ValueError) as exc:
+        logger.warning("Alpha Vantage call failed function=%s: %s", params.get("function"), type(exc).__name__)
+        return None
+
+
+def _parse_global_quote(data: dict) -> Optional[dict]:
+    node = data.get("Global Quote") or data.get("globalQuote") or {}
+    if not node:
+        return None
+    try:
+        price = float(node.get("05. price") or 0.0)
+        change = float(node.get("09. change") or 0.0)
+        cp_raw = str(node.get("10. change percent") or "0").replace("%", "").strip()
+        change_pct = float(cp_raw or 0.0)
+    except (TypeError, ValueError):
+        return None
+    if price <= 0:
+        return None
+    return {"price": price, "change": change, "change_percent": change_pct}
+
+
+def _parse_fx(data: dict) -> Optional[dict]:
+    node = data.get("Realtime Currency Exchange Rate") or {}
+    if not node:
+        return None
+    try:
+        rate = float(node.get("5. Exchange Rate") or 0)
+    except (TypeError, ValueError):
+        return None
+    if rate <= 0:
+        return None
+    # Alpha Vantage FX endpoint does not include change; keep 0 → change_percent unknown.
+    return {"price": rate, "change": 0.0, "change_percent": 0.0}
+
+
+async def _fetch_quote(cfg: dict) -> dict:
+    """Return a normalised quote for one config entry. Uses cache → provider → fallback."""
+    symbol = cfg["symbol"]
+    ttl = _TTL_FX if cfg.get("from_curr") else _TTL_QUOTE
+
+    cached = await _cache_get(symbol)
+    if cached and cached.get("expires_at") and cached["expires_at"] > _now_utc():
+        q = dict(cached["quote"])
+        q["data_source"] = "cache"
+        q["last_updated"] = (cached.get("cached_at") or _now_utc()).isoformat() if isinstance(cached.get("cached_at"), datetime) else q.get("last_updated")
+        return q
+
+    provider_data = None
+    if ALPHA_VANTAGE_KEY:
+        if cfg.get("from_curr"):
+            provider_data = await _av_call({
+                "function": "CURRENCY_EXCHANGE_RATE",
+                "from_currency": cfg["from_curr"],
+                "to_currency": cfg["to_curr"],
+            })
+            parsed = _parse_fx(provider_data) if provider_data else None
+        else:
+            provider_data = await _av_call({
+                "function": "GLOBAL_QUOTE",
+                "symbol": cfg["av_symbol"],
+            })
+            parsed = _parse_global_quote(provider_data) if provider_data else None
+
+        if parsed:
+            quote = _build_quote(cfg, parsed["price"], parsed["change"], parsed["change_percent"],
+                                 source="alpha_vantage", note=cfg.get("note"))
+            await _cache_put(symbol, quote, ttl)
+            return quote
+
+    # Provider failed / rate-limited / no key → keep last known good if within stale window.
+    if cached and cached.get("cached_at"):
+        cached_age = (_now_utc() - cached["cached_at"]).total_seconds() if isinstance(cached["cached_at"], datetime) else 0
+        if cached_age < _TTL_STALE_KEEP:
+            q = dict(cached["quote"])
+            q["data_source"] = "stale_cache"
+            q["is_delayed"] = True
+            return q
+
+    reason = "no_api_key" if not ALPHA_VANTAGE_KEY else "provider_unavailable"
+    return _fallback_quote(cfg, reason=reason)
+
+
+async def _fetch_many(configs: List[dict]) -> List[dict]:
+    """Fetch quotes sequentially — Alpha Vantage free plan is 5 calls/min. Cache
+    covers repeat hits; we intentionally do NOT parallelise external calls."""
+    results = []
+    for cfg in configs:
+        try:
+            results.append(await _fetch_quote(cfg))
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("market fetch error for %s: %s", cfg.get("symbol"), type(exc).__name__)
+            results.append(_fallback_quote(cfg, reason="internal_error"))
+    return results
+
+
+def _find_cfg(symbol: str) -> Optional[dict]:
+    up = symbol.upper()
+    for pool in (MARKET_INDEX_SYMBOLS, MARKET_COMMODITY_SYMBOLS, MARKET_FX_SYMBOLS, MARKET_STOCK_SYMBOLS):
+        for c in pool:
+            if c["symbol"] == up:
+                return c
+    return None
+
+
+@api.get("/news-markte/market/overview")
+async def market_overview():
+    """Overview: DAX, S&P 500, Nasdaq, Dow, Gold, Silver, Oil, EUR/USD."""
+    indices = await _fetch_many(MARKET_INDEX_SYMBOLS)
+    commodities = await _fetch_many(MARKET_COMMODITY_SYMBOLS)
+    fx = await _fetch_many(MARKET_FX_SYMBOLS)
+    all_quotes = indices + commodities + fx
+    latest = max((q["last_updated"] for q in all_quotes), default=_now_utc().isoformat())
+    sources = {q["data_source"] for q in all_quotes}
+    return {
+        "indices": indices,
+        "commodities": commodities,
+        "fx": fx,
+        "last_updated": latest,
+        "is_delayed": True,
+        "provider_configured": bool(ALPHA_VANTAGE_KEY),
+        "data_source_summary": sorted(sources),
+    }
+
+
+@api.get("/news-markte/market/stocks")
+async def market_stocks():
+    quotes = await _fetch_many(MARKET_STOCK_SYMBOLS)
+    latest = max((q["last_updated"] for q in quotes), default=_now_utc().isoformat())
+    return {
+        "items": quotes,
+        "last_updated": latest,
+        "is_delayed": True,
+        "provider_configured": bool(ALPHA_VANTAGE_KEY),
+    }
+
+
+@api.get("/news-markte/market/indices")
+async def market_indices():
+    quotes = await _fetch_many(MARKET_INDEX_SYMBOLS)
+    return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True}
+
+
+@api.get("/news-markte/market/commodities")
+async def market_commodities():
+    quotes = await _fetch_many(MARKET_COMMODITY_SYMBOLS)
+    return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True}
+
+
+@api.get("/news-markte/market/fx")
+async def market_fx():
+    quotes = await _fetch_many(MARKET_FX_SYMBOLS)
+    return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True}
+
+
+@api.get("/news-markte/market/quote/{symbol}")
+async def market_quote(symbol: str):
+    cfg = _find_cfg(symbol)
+    if not cfg:
+        raise HTTPException(404, detail=f"Unbekanntes Symbol: {symbol}")
+    return await _fetch_quote(cfg)
+
+
+@api.get("/news-markte/market/quotes")
+async def market_quotes(symbols: str):
+    """Batch quote fetch. `symbols` is a comma-separated list of internal symbols."""
+    wanted = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    configs = [_find_cfg(s) for s in wanted]
+    known = [c for c in configs if c]
+    items = await _fetch_many(known)
+    return {
+        "items": items,
+        "unknown": [w for w, c in zip(wanted, configs) if not c],
+        "last_updated": max((q["last_updated"] for q in items), default=_now_utc().isoformat()),
+        "is_delayed": True,
+    }
+
+
 @app.on_event("startup")
 async def on_startup():
     await db.users.create_index("email", unique=True)
@@ -1922,6 +2256,8 @@ async def on_startup():
     await db.reviews.create_index([("status", 1), ("is_demo", 1), ("created_at", -1)])
     await db.review_invites.create_index("token", unique=True)
     await db.review_invites.create_index([("email", 1), ("created_at", -1)])
+    await db.market_quotes_cache.create_index("symbol", unique=True)
+    await db.market_quotes_cache.create_index("expires_at", expireAfterSeconds=0)
     await seed_admin()
     await seed_content()
     logger.info("Startup complete")

@@ -12,6 +12,7 @@ import {
   fetchMarketForex,
   fetchMarketIndices,
   formatChangePct,
+  formatLastUpdated,
   formatMarketPrice,
   MARKET_INDICES,
 } from '@/services/marketService';
@@ -343,8 +344,25 @@ const MarktuebersichtSidebar = () => {
       )}
 
       {marketError && (
-        <p className="mt-3 rounded-md border border-amber-200/80 bg-amber-50 px-3 py-2 text-[11px] text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
-          Marktdaten vorübergehend nicht verfügbar.
+        <p className="mt-3 rounded-md border border-amber-200/80 bg-amber-50 px-3 py-2 text-[11px] text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100" data-testid="market-error-hint">
+          Marktdaten sind derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.
+        </p>
+      )}
+
+      {!marketError && !loadingMarket && (activeRows[0]?.lastUpdated || activeRows[0]?.isDelayed) && (
+        <p
+          className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted"
+          data-testid="market-last-updated"
+        >
+          {activeRows[0]?.lastUpdated && (
+            <span>Letzte Aktualisierung: {formatLastUpdated(activeRows[0].lastUpdated)} Uhr</span>
+          )}
+          {activeRows[0]?.isDelayed && (
+            <span aria-hidden className="text-bank-gold">·</span>
+          )}
+          {activeRows[0]?.isDelayed && (
+            <span>Marktdaten zeitverzögert</span>
+          )}
         </p>
       )}
 

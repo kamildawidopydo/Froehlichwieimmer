@@ -3,6 +3,7 @@ import PageMeta from '@/components/PageMeta';
 import HeroTopNews from '@/components/news-markte/HeroTopNews';
 import NewsUeberblick from '@/components/news-markte/NewsUeberblick';
 import MarktInsights from '@/components/news-markte/MarktInsights';
+import AktienImFokus from '@/components/news-markte/AktienImFokus';
 import FondsEtfTopNews from '@/components/news-markte/FondsEtfTopNews';
 import InvestmentRadar from '@/components/news-markte/InvestmentRadar';
 import Anlagetrends from '@/components/news-markte/Anlagetrends';
@@ -74,6 +75,9 @@ const NewsMarkte = () => {
       <div className="mx-auto max-w-6xl space-y-2 px-6 pb-20 sm:px-10">
         {/* 1. Marktüberblick */}
         <MarktInsights insights={markets.data} loading={markets.loading} />
+
+        {/* 1b. Aktien im Fokus — echte Alpha-Vantage-Daten */}
+        <AktienImFokus />
 
         {/* 2. News im Überblick + Kategorien */}
         <NewsUeberblick

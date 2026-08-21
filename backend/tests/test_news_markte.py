@@ -112,13 +112,16 @@ class TestFeed:
 # --- Market insights --------------------------------------------------------
 class TestMarkets:
     def test_markets_returns_seven_insights(self):
+        # Phase 2 update: overview now returns 8 real-quote entries via the
+        # Alpha-Vantage-backed market module (DAX proxy, S&P 500, Nasdaq, Dow,
+        # Gold, Silber, Öl, EUR/USD). Test name kept for git history.
         r = requests.get(f"{BASE_URL}/api/news-markte/markets", timeout=TIMEOUT)
         assert r.status_code == 200, r.text
         data = r.json()
-        assert isinstance(data, list) and len(data) == 7, len(data)
+        assert isinstance(data, list) and len(data) == 8, len(data)
         names = [m["name"] for m in data]
-        for expected in ["DAX", "Dow Jones", "S&P 500", "Nasdaq 100",
-                         "Euro Stoxx 50", "Gold", "EUR/USD"]:
+        for expected in ["DAX", "Dow Jones", "S&P 500", "Nasdaq",
+                         "Gold", "Silber", "Brent Öl", "EUR/USD"]:
             assert expected in names, f"{expected} missing from {names}"
         for m in data:
             assert set(("symbol", "name", "value", "change_pct", "unit", "updated_at")) <= set(m)

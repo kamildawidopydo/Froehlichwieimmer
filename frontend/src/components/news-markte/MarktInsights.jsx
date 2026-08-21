@@ -8,7 +8,6 @@ const InsightTile = ({ insight }) => {
   const negative = insight.change_pct < 0;
   const Icon = positive ? TrendingUp : negative ? TrendingDown : Minus;
   const changeColor = positive ? 'text-emerald-700' : negative ? 'text-rose-700' : 'text-bank-text-muted';
-  const changePrefix = positive ? '+' : '';
   return (
     <div
       className="flex min-w-0 flex-col justify-between gap-4 border border-bank-border bg-white px-5 py-5 transition-colors hover:border-bank-accent-strong/50"
@@ -43,6 +42,15 @@ const InsightTile = ({ insight }) => {
   );
 };
 
+const latestClockLabel = (insights = []) => {
+  const times = insights
+    .map((i) => (i.updated_at ? new Date(i.updated_at).getTime() : null))
+    .filter((t) => t && !Number.isNaN(t))
+    .sort((a, b) => b - a);
+  if (times.length === 0) return null;
+  return new Date(times[0]).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+};
+
 const MarktInsights = ({ insights = [], loading }) => (
   <section
     className="border-t border-bank-border pt-14 sm:pt-16"
@@ -53,7 +61,7 @@ const MarktInsights = ({ insights = [], loading }) => (
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <h2 className="font-serif text-3xl leading-tight text-bank-text sm:text-4xl">Was an den Märkten passiert</h2>
         <p className="max-w-md text-[13.5px] text-bank-text-muted sm:text-right">
-          Kompakter Überblick über Indizes, Rohstoffe und Währungen. Aktualisiert alle 5 Minuten.
+          Kompakter Überblick über Indizes, Rohstoffe und Währungen.
         </p>
       </div>
     </div>
@@ -71,9 +79,20 @@ const MarktInsights = ({ insights = [], loading }) => (
         ))}
       </div>
     )}
-    <p className="mt-4 text-[11px] uppercase tracking-[0.16em] text-bank-text-muted">
-      Angaben ohne Gewähr · Aktualisierung alle 5 Minuten sobald der Live-Datenanbieter aktiv ist · keine Anlageempfehlung.
-    </p>
+    {!loading && insights.length > 0 && (
+      <p
+        className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] uppercase tracking-[0.16em] text-bank-text-muted"
+        data-testid="markt-insights-last-updated"
+      >
+        {latestClockLabel(insights) && (
+          <span>Letzte Aktualisierung: {latestClockLabel(insights)} Uhr</span>
+        )}
+        <span aria-hidden className="text-bank-gold">·</span>
+        <span>Marktdaten zeitverzögert</span>
+        <span aria-hidden className="text-bank-gold">·</span>
+        <span>Angaben ohne Gewähr — keine Anlageempfehlung</span>
+      </p>
+    )}
   </section>
 );
 
