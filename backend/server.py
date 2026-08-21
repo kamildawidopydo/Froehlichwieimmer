@@ -745,18 +745,29 @@ async def news_markte_feed(category: Optional[str] = None, limit: int = 30):
 async def news_markte_markets():
     """Serves the /news top strip. Uses the Phase 2 Alpha-Vantage market module
     with in-memory + Mongo cache, falling back to deterministic stubs when no
-    provider key is configured. Currency shown as unit for indices/commodities
-    (USD-quoted via ETF proxies)."""
+    provider key is configured. `value` is EUR-normalised where applicable;
+    `unit` is 'Punkte' for indices, currency label for commodities/stocks,
+    empty string for FX pairs.
+    """
     configs = MARKET_INDEX_SYMBOLS + MARKET_COMMODITY_SYMBOLS + MARKET_FX_SYMBOLS
-    quotes = await _fetch_many(configs)
+    quotes, _fx = await _fetch_many_display(configs, target="EUR")
     out: List[dict] = []
     for q in quotes:
+        asset_class = q.get("asset_class")
+        if asset_class == "index":
+            unit = "Punkte"
+        elif asset_class == "fx":
+            unit = ""
+        else:
+            unit_base = q.get("unit")  # e.g. Feinunze, Barrel
+            ccy = q.get("display_currency") or ""
+            unit = f"{ccy}/{unit_base}" if unit_base else ccy
         out.append({
             "symbol": q["symbol"],
             "name": q["name"],
-            "value": float(q["price"]),
+            "value": float(q.get("display_price") if q.get("display_price") is not None else q.get("price") or 0),
             "change_pct": float(q["change_percent"]),
-            "unit": q.get("currency") or "",
+            "unit": unit,
             "updated_at": q.get("last_updated") or _now_utc().isoformat(),
         })
     return out
@@ -2214,53 +2225,61 @@ _TTL_STALE_KEEP = 3600 * 24  # keep last-known-good for 24 h even after TTL
 # and mark those results with a `note`. Stocks with primary listing outside
 # NYSE/NASDAQ are looked up via their ADR ticker.
 MARKET_INDEX_SYMBOLS = [
-    {"symbol": "DAX",  "name": "DAX",       "av_symbol": "EWG",  "currency": "USD", "note": "DAX-Proxy (iShares MSCI Germany ETF)"},
-    {"symbol": "SPX",  "name": "S&P 500",   "av_symbol": "SPY",  "currency": "USD", "note": "S&P-500-Proxy (SPDR S&P 500 ETF)"},
-    {"symbol": "NDX",  "name": "Nasdaq",    "av_symbol": "QQQ",  "currency": "USD", "note": "Nasdaq-100-Proxy (Invesco QQQ)"},
-    {"symbol": "DJI",  "name": "Dow Jones", "av_symbol": "DIA",  "currency": "USD", "note": "Dow-Jones-Proxy (SPDR DJIA ETF)"},
+    {"symbol": "DAX",  "name": "DAX",       "av_symbol": "EWG",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "DAX-Proxy (iShares MSCI Germany ETF)"},
+    {"symbol": "SPX",  "name": "S&P 500",   "av_symbol": "SPY",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "S&P-500-Proxy (SPDR S&P 500 ETF)"},
+    {"symbol": "NDX",  "name": "Nasdaq",    "av_symbol": "QQQ",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "Nasdaq-100-Proxy (Invesco QQQ)"},
+    {"symbol": "DJI",  "name": "Dow Jones", "av_symbol": "DIA",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "Dow-Jones-Proxy (SPDR DJIA ETF)"},
 ]
 
 MARKET_COMMODITY_SYMBOLS = [
-    {"symbol": "GOLD",   "name": "Gold",      "av_symbol": "GLD", "currency": "USD", "note": "Gold-Proxy (SPDR Gold Shares)"},
-    {"symbol": "SILVER", "name": "Silber",    "av_symbol": "SLV", "currency": "USD", "note": "Silber-Proxy (iShares Silver Trust)"},
-    {"symbol": "OIL",    "name": "Brent Öl",  "av_symbol": "USO", "currency": "USD", "note": "Öl-Proxy (US Oil Fund)"},
+    {"symbol": "GOLD",   "name": "Gold",      "av_symbol": "GLD", "asset_class": "commodity", "unit": "Feinunze", "native_currency": "USD", "note": "Gold-Proxy (SPDR Gold Shares)"},
+    {"symbol": "SILVER", "name": "Silber",    "av_symbol": "SLV", "asset_class": "commodity", "unit": "Feinunze", "native_currency": "USD", "note": "Silber-Proxy (iShares Silver Trust)"},
+    {"symbol": "OIL",    "name": "Brent Öl",  "av_symbol": "USO", "asset_class": "commodity", "unit": "Barrel",   "native_currency": "USD", "note": "Öl-Proxy (US Oil Fund)"},
 ]
 
 MARKET_FX_SYMBOLS = [
-    {"symbol": "EURUSD", "name": "EUR/USD", "from_curr": "EUR", "to_curr": "USD", "currency": "USD"},
+    {"symbol": "EURUSD", "name": "EUR/USD", "asset_class": "fx", "unit": "", "from_curr": "EUR", "to_curr": "USD", "native_currency": None},
 ]
 
 MARKET_STOCK_SYMBOLS = [
-    {"symbol": "SAP",   "name": "SAP",           "av_symbol": "SAP",   "currency": "USD"},
-    {"symbol": "SIE",   "name": "Siemens",       "av_symbol": "SIEGY", "currency": "USD"},
-    {"symbol": "ALV",   "name": "Allianz",       "av_symbol": "ALIZY", "currency": "USD"},
-    {"symbol": "DBK",   "name": "Deutsche Bank", "av_symbol": "DB",    "currency": "USD"},
-    {"symbol": "IFX",   "name": "Infineon",      "av_symbol": "IFNNY", "currency": "USD"},
-    {"symbol": "RHM",   "name": "Rheinmetall",   "av_symbol": "RNMBY", "currency": "USD"},
-    {"symbol": "NVDA",  "name": "NVIDIA",        "av_symbol": "NVDA",  "currency": "USD"},
-    {"symbol": "AAPL",  "name": "Apple",         "av_symbol": "AAPL",  "currency": "USD"},
-    {"symbol": "MSFT",  "name": "Microsoft",     "av_symbol": "MSFT",  "currency": "USD"},
-    {"symbol": "GOOGL", "name": "Alphabet",      "av_symbol": "GOOGL", "currency": "USD"},
-    {"symbol": "AMZN",  "name": "Amazon",        "av_symbol": "AMZN",  "currency": "USD"},
+    # German blue chips — native EUR via XETRA (.DE); fallback prices are already in EUR.
+    {"symbol": "SAP",   "name": "SAP",           "av_symbol": "SAP.DE", "asset_class": "stock", "native_currency": "EUR"},
+    {"symbol": "SIE",   "name": "Siemens",       "av_symbol": "SIE.DE", "asset_class": "stock", "native_currency": "EUR"},
+    {"symbol": "ALV",   "name": "Allianz",       "av_symbol": "ALV.DE", "asset_class": "stock", "native_currency": "EUR"},
+    {"symbol": "DBK",   "name": "Deutsche Bank", "av_symbol": "DBK.DE", "asset_class": "stock", "native_currency": "EUR"},
+    {"symbol": "IFX",   "name": "Infineon",      "av_symbol": "IFX.DE", "asset_class": "stock", "native_currency": "EUR"},
+    {"symbol": "RHM",   "name": "Rheinmetall",   "av_symbol": "RHM.DE", "asset_class": "stock", "native_currency": "EUR"},
+    # US mega caps — native USD.
+    {"symbol": "NVDA",  "name": "NVIDIA",        "av_symbol": "NVDA",  "asset_class": "stock", "native_currency": "USD"},
+    {"symbol": "AAPL",  "name": "Apple",         "av_symbol": "AAPL",  "asset_class": "stock", "native_currency": "USD"},
+    {"symbol": "MSFT",  "name": "Microsoft",     "av_symbol": "MSFT",  "asset_class": "stock", "native_currency": "USD"},
+    {"symbol": "GOOGL", "name": "Alphabet",      "av_symbol": "GOOGL", "asset_class": "stock", "native_currency": "USD"},
+    {"symbol": "AMZN",  "name": "Amazon",        "av_symbol": "AMZN",  "asset_class": "stock", "native_currency": "USD"},
 ]
 
 # Deterministic fallback quotes (realistic reference prices as of early 2026).
 # `data_source=fallback` is transparently returned so the FE can badge them.
 _FALLBACK_QUOTES = {
+    # Indices — ETF proxy prices (in "Punkte" via ETF-USD). Kept as-is; display keeps them
+    # unformatted with unit "Punkte" (no currency symbol) because indices are point levels.
     "DAX":    {"price": 47.83, "change": 0.18, "change_percent": 0.38},
     "SPX":    {"price": 512.44, "change": 1.62, "change_percent": 0.32},
     "NDX":    {"price": 438.90, "change": 2.10, "change_percent": 0.48},
     "DJI":    {"price": 405.12, "change": -0.35, "change_percent": -0.09},
+    # Commodities — USD per unit (Feinunze / Barrel via ETF proxy)
     "GOLD":   {"price": 218.65, "change": 0.82, "change_percent": 0.38},
     "SILVER": {"price": 27.14, "change": -0.12, "change_percent": -0.44},
     "OIL":    {"price": 78.32, "change": 0.44, "change_percent": 0.57},
+    # FX — EUR/USD spot
     "EURUSD": {"price": 1.0862, "change": 0.0012, "change_percent": 0.11},
+    # German blue chips — XETRA-realistic EUR prices (already native EUR, no conversion)
     "SAP":    {"price": 232.10, "change": 1.05, "change_percent": 0.45},
-    "SIE":    {"price": 108.44, "change": 0.62, "change_percent": 0.58},
-    "ALV":    {"price": 34.20,  "change": 0.18, "change_percent": 0.53},
+    "SIE":    {"price": 178.44, "change": 0.62, "change_percent": 0.35},
+    "ALV":    {"price": 342.20, "change": 0.18, "change_percent": 0.05},
     "DBK":    {"price": 18.75,  "change": -0.11, "change_percent": -0.58},
-    "IFX":    {"price": 43.05,  "change": 0.35, "change_percent": 0.82},
-    "RHM":    {"price": 82.40,  "change": 1.20, "change_percent": 1.48},
+    "IFX":    {"price": 33.05,  "change": 0.35, "change_percent": 1.07},
+    "RHM":    {"price": 582.40, "change": 6.20, "change_percent": 1.08},
+    # US mega caps — native USD prices (get converted to EUR for display)
     "NVDA":   {"price": 138.85, "change": 2.10, "change_percent": 1.54},
     "AAPL":   {"price": 226.02, "change": 0.88, "change_percent": 0.39},
     "MSFT":   {"price": 434.55, "change": 1.42, "change_percent": 0.33},
@@ -2275,13 +2294,28 @@ def _now_utc() -> datetime:
 
 def _build_quote(cfg: dict, price: float, change: float, change_percent: float, source: str, note: Optional[str] = None) -> dict:
     is_delayed = source != "provider_realtime"
+    native_currency = cfg.get("native_currency") or cfg.get("currency")  # None for indices/FX
+    asset_class = cfg.get("asset_class", "stock")
+    price_r = round(float(price), 4)
     return {
         "symbol": cfg["symbol"],
         "name": cfg["name"],
-        "price": round(float(price), 4),
+        "asset_class": asset_class,
+        "unit": cfg.get("unit"),
+        # legacy fields (backwards compatible) — mirror display_* until conversion applied
+        "price": price_r,
+        "currency": native_currency,
         "change": round(float(change), 4),
         "change_percent": round(float(change_percent), 3),
-        "currency": cfg.get("currency", "USD"),
+        # new normalised currency model
+        "original_price": price_r,
+        "original_currency": native_currency,
+        "display_price": price_r,
+        "display_currency": native_currency,
+        "fx_rate": None,
+        "fx_updated_at": None,
+        "conversion_available": True,
+        # meta
         "last_updated": _now_utc().isoformat(),
         "market_status": "delayed" if is_delayed else "live",
         "data_source": source,
@@ -2432,6 +2466,94 @@ async def _fetch_many(configs: List[dict]) -> List[dict]:
     return results
 
 
+# ---------------------------------------------------------------------------
+# FX + display-currency normalisation
+# ---------------------------------------------------------------------------
+# Every quote is enriched with `display_price` / `display_currency` before the
+# API returns it, so React never has to do FX arithmetic. Central USD→EUR rate
+# is derived from the cached EURUSD quote (same TTL + stale fallback logic).
+
+async def _get_usd_to_eur() -> Optional[dict]:
+    """Return {'rate': 0.9207, 'updated_at': iso, 'source': ...} or None if unusable.
+
+    Reuses the standard EURUSD quote path so the FX rate benefits from the same
+    Mongo TTL cache + provider fallback machinery as the price quotes.
+    """
+    fx_cfg = MARKET_FX_SYMBOLS[0]
+    try:
+        q = await _fetch_quote(fx_cfg)
+    except Exception:  # noqa: BLE001
+        return None
+    eurusd = float(q.get("price") or 0)
+    if eurusd <= 0.1 or eurusd > 10:
+        return None
+    return {
+        "rate": round(1.0 / eurusd, 6),
+        "updated_at": q.get("last_updated"),
+        "source": q.get("data_source"),
+    }
+
+
+def _apply_display_currency(quote: dict, target: str = "EUR", fx_info: Optional[dict] = None) -> dict:
+    """Populate display_price / display_currency / fx_rate / fx_updated_at on `quote`.
+
+    Rules:
+    - asset_class in {'index', 'fx'} → no conversion (indices are points, FX pairs are rates).
+    - Same currency → display equals original.
+    - USD → EUR requires a valid `fx_info`; otherwise `conversion_available=False`
+      and display stays on the original currency (never invent a rate).
+    """
+    asset_class = quote.get("asset_class")
+    if asset_class in ("index", "fx"):
+        quote["display_currency"] = quote.get("original_currency")
+        quote["conversion_available"] = True
+        return quote
+
+    original_ccy = quote.get("original_currency")
+    if not original_ccy or original_ccy == target:
+        quote["display_price"] = quote.get("original_price")
+        quote["display_currency"] = original_ccy or target
+        quote["conversion_available"] = True
+        return quote
+
+    if original_ccy != "USD" or target != "EUR" or not fx_info:
+        quote["conversion_available"] = False
+        return quote
+
+    rate = fx_info.get("rate")
+    if not rate or rate <= 0:
+        quote["conversion_available"] = False
+        return quote
+
+    quote["display_price"] = round(float(quote["original_price"]) * float(rate), 2)
+    quote["display_currency"] = target
+    quote["fx_rate"] = rate
+    quote["fx_updated_at"] = fx_info.get("updated_at")
+    quote["conversion_available"] = True
+    # legacy alias — many FE readers still look at `price` / `currency`.
+    quote["price"] = quote["display_price"]
+    quote["currency"] = target
+    return quote
+
+
+async def _fetch_many_display(configs: List[dict], target: str = "EUR") -> tuple[List[dict], Optional[dict]]:
+    """Fetch quotes and enrich each with display fields in the target currency.
+
+    Returns (quotes, fx_info). `fx_info` is fetched once per call so all USD
+    quotes share the same FX rate + timestamp.
+    """
+    quotes = await _fetch_many(configs)
+    # Only fetch FX if at least one quote actually needs conversion.
+    needs_fx = any(
+        q.get("original_currency") == "USD" and q.get("asset_class") not in ("index", "fx")
+        for q in quotes
+    )
+    fx_info = await _get_usd_to_eur() if needs_fx else None
+    for q in quotes:
+        _apply_display_currency(q, target=target, fx_info=fx_info)
+    return quotes, fx_info
+
+
 def _find_cfg(symbol: str) -> Optional[dict]:
     up = symbol.upper()
     for pool in (MARKET_INDEX_SYMBOLS, MARKET_COMMODITY_SYMBOLS, MARKET_FX_SYMBOLS, MARKET_STOCK_SYMBOLS):
@@ -2443,10 +2565,15 @@ def _find_cfg(symbol: str) -> Optional[dict]:
 
 @api.get("/news-markte/market/overview")
 async def market_overview():
-    """Overview: DAX, S&P 500, Nasdaq, Dow, Gold, Silver, Oil, EUR/USD."""
-    indices = await _fetch_many(MARKET_INDEX_SYMBOLS)
-    commodities = await _fetch_many(MARKET_COMMODITY_SYMBOLS)
-    fx = await _fetch_many(MARKET_FX_SYMBOLS)
+    """Overview: DAX, S&P 500, Nasdaq, Dow, Gold, Silver, Oil, EUR/USD.
+
+    Prices are converted to EUR where applicable. Indices remain unitless
+    ('Punkte'), FX pairs stay as rates. Commodities carry both display (EUR)
+    and original (USD) values.
+    """
+    indices, _ = await _fetch_many_display(MARKET_INDEX_SYMBOLS, target="EUR")
+    commodities, fx_info = await _fetch_many_display(MARKET_COMMODITY_SYMBOLS, target="EUR")
+    fx, _ = await _fetch_many_display(MARKET_FX_SYMBOLS, target="EUR")
     all_quotes = indices + commodities + fx
     latest = max((q["last_updated"] for q in all_quotes), default=_now_utc().isoformat())
     sources = {q["data_source"] for q in all_quotes}
@@ -2458,36 +2585,40 @@ async def market_overview():
         "is_delayed": True,
         "provider_configured": bool(ALPHA_VANTAGE_KEY),
         "data_source_summary": sorted(sources),
+        "display_currency": "EUR",
+        "fx_usd_to_eur": fx_info,
     }
 
 
 @api.get("/news-markte/market/stocks")
 async def market_stocks():
-    quotes = await _fetch_many(MARKET_STOCK_SYMBOLS)
+    quotes, fx_info = await _fetch_many_display(MARKET_STOCK_SYMBOLS, target="EUR")
     latest = max((q["last_updated"] for q in quotes), default=_now_utc().isoformat())
     return {
         "items": quotes,
         "last_updated": latest,
         "is_delayed": True,
         "provider_configured": bool(ALPHA_VANTAGE_KEY),
+        "display_currency": "EUR",
+        "fx_usd_to_eur": fx_info,
     }
 
 
 @api.get("/news-markte/market/indices")
 async def market_indices():
-    quotes = await _fetch_many(MARKET_INDEX_SYMBOLS)
+    quotes, _ = await _fetch_many_display(MARKET_INDEX_SYMBOLS, target="EUR")
     return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True}
 
 
 @api.get("/news-markte/market/commodities")
 async def market_commodities():
-    quotes = await _fetch_many(MARKET_COMMODITY_SYMBOLS)
-    return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True}
+    quotes, fx_info = await _fetch_many_display(MARKET_COMMODITY_SYMBOLS, target="EUR")
+    return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True, "fx_usd_to_eur": fx_info}
 
 
 @api.get("/news-markte/market/fx")
 async def market_fx():
-    quotes = await _fetch_many(MARKET_FX_SYMBOLS)
+    quotes, _ = await _fetch_many_display(MARKET_FX_SYMBOLS, target="EUR")
     return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True}
 
 
@@ -2496,7 +2627,12 @@ async def market_quote(symbol: str):
     cfg = _find_cfg(symbol)
     if not cfg:
         raise HTTPException(404, detail=f"Unbekanntes Symbol: {symbol}")
-    return await _fetch_quote(cfg)
+    q = await _fetch_quote(cfg)
+    fx_info = None
+    if q.get("original_currency") == "USD" and q.get("asset_class") not in ("index", "fx"):
+        fx_info = await _get_usd_to_eur()
+    _apply_display_currency(q, target="EUR", fx_info=fx_info)
+    return q
 
 
 @api.get("/news-markte/market/quotes")
@@ -2505,12 +2641,14 @@ async def market_quotes(symbols: str):
     wanted = [s.strip().upper() for s in symbols.split(",") if s.strip()]
     configs = [_find_cfg(s) for s in wanted]
     known = [c for c in configs if c]
-    items = await _fetch_many(known)
+    items, fx_info = await _fetch_many_display(known, target="EUR")
     return {
         "items": items,
         "unknown": [w for w, c in zip(wanted, configs) if not c],
         "last_updated": max((q["last_updated"] for q in items), default=_now_utc().isoformat()),
         "is_delayed": True,
+        "display_currency": "EUR",
+        "fx_usd_to_eur": fx_info,
     }
 
 
@@ -2627,9 +2765,10 @@ async def watchlist_list(user: dict = Depends(get_current_user)):
             unknown_docs.append(d)
 
     quotes_by_symbol = {}
+    fx_info = None
     if known:
         cfgs = [c for _, c in known]
-        quotes = await _fetch_many(cfgs)
+        quotes, fx_info = await _fetch_many_display(cfgs, target="EUR")
         quotes_by_symbol = {q["symbol"]: q for q in quotes}
 
     items = [_watchlist_out(d, quotes_by_symbol.get(d["symbol"])) for d, _ in known]
@@ -2640,6 +2779,8 @@ async def watchlist_list(user: dict = Depends(get_current_user)):
         "items": items,
         "count": len(items),
         "provider_configured": bool(ALPHA_VANTAGE_KEY),
+        "display_currency": "EUR",
+        "fx_usd_to_eur": fx_info,
     }
 
 

@@ -44,10 +44,19 @@ export const normalizeMarketSymbol = (symbol) =>
 const mapQuoteToRow = (q, cfg = {}) => ({
   symbol: cfg.symbol ?? q.symbol,
   label: cfg.label ?? q.name ?? q.symbol,
-  price: q.price != null ? Number(q.price) : null,
+  price: q.display_price != null ? Number(q.display_price) : (q.price != null ? Number(q.price) : null),
   change: q.change != null ? Number(q.change) : null,
   changePct: q.change_percent != null ? Number(q.change_percent) : null,
-  currency: q.currency ?? null,
+  currency: q.display_currency ?? q.currency ?? null,
+  originalPrice: q.original_price != null ? Number(q.original_price) : null,
+  originalCurrency: q.original_currency ?? null,
+  displayPrice: q.display_price != null ? Number(q.display_price) : null,
+  displayCurrency: q.display_currency ?? null,
+  fxRate: q.fx_rate ?? null,
+  fxUpdatedAt: q.fx_updated_at ?? null,
+  conversionAvailable: q.conversion_available ?? true,
+  assetClass: q.asset_class ?? null,
+  unit: q.unit ?? null,
   decimals: cfg.decimals ?? null,
   compareColor: cfg.compareColor ?? null,
   lastUpdated: q.last_updated ?? null,
@@ -134,10 +143,16 @@ async function _fetchStocks() {
       symbol: q.symbol,
       exchange: null,
       displayOrder: 0,
-      price: q.price != null ? Number(q.price) : null,
+      price: q.display_price != null ? Number(q.display_price) : (q.price != null ? Number(q.price) : null),
       change: q.change != null ? Number(q.change) : null,
       changePct: q.change_percent != null ? Number(q.change_percent) : null,
-      currency: q.currency ?? 'USD',
+      currency: q.display_currency ?? q.currency ?? 'EUR',
+      originalPrice: q.original_price != null ? Number(q.original_price) : null,
+      originalCurrency: q.original_currency ?? null,
+      fxRate: q.fx_rate ?? null,
+      assetClass: q.asset_class ?? 'stock',
+      unit: q.unit ?? null,
+      conversionAvailable: q.conversion_available ?? true,
       lastUpdated: q.last_updated ?? null,
       dataSource: q.data_source ?? null,
       isDelayed: q.is_delayed ?? true,
@@ -181,6 +196,59 @@ export const formatMarketPrice = (value, { decimals } = {}) => {
     minimumFractionDigits: minDec,
     maximumFractionDigits: maxDec,
   });
+};
+
+// Currency-aware price formatting for the display layer.
+// Consumers pass either a backend quote or a normalised row and receive
+// { primary, secondary } strings ready for direct rendering:
+//   Aktien/Rohstoffe:  primary "119,42 €", secondary "138,85 USD" (if converted)
+//   Indizes:           primary "24.783,00", secondary "Punkte"
+//   FX-Paar:           primary "1,0862",   secondary "EUR/USD"
+const CURRENCY_SYMBOL = { EUR: '€', USD: '$', GBP: '£', JPY: '¥', CHF: 'CHF' };
+
+const _pick = (row, ...keys) => {
+  for (const k of keys) if (row?.[k] !== undefined && row[k] !== null) return row[k];
+  return null;
+};
+
+export const formatDisplayPrice = (row) => {
+  if (!row) return { primary: '–', secondary: null };
+  const assetClass = _pick(row, 'assetClass', 'asset_class');
+  const displayPrice = _pick(row, 'displayPrice', 'display_price', 'price');
+  const displayCcy = _pick(row, 'displayCurrency', 'display_currency', 'currency');
+  const originalPrice = _pick(row, 'originalPrice', 'original_price');
+  const originalCcy = _pick(row, 'originalCurrency', 'original_currency');
+  const unit = _pick(row, 'unit');
+
+  if (displayPrice == null) return { primary: '–', secondary: null };
+  const n = Number(displayPrice);
+
+  // Indices — points, no currency.
+  if (assetClass === 'index') {
+    return {
+      primary: n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      secondary: 'Punkte',
+    };
+  }
+  // FX — currency-pair rate, 4 decimals.
+  if (assetClass === 'fx') {
+    return {
+      primary: n.toLocaleString('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 }),
+      secondary: null,
+    };
+  }
+  // Commodity/Stock: primary in display currency.
+  const ccySym = CURRENCY_SYMBOL[displayCcy] || displayCcy || '';
+  const priceStr = n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const primary = ccySym === '€' || ccySym === '$' || ccySym === '£'
+    ? `${priceStr} ${ccySym}${unit && assetClass === 'commodity' ? ` / ${unit}` : ''}`
+    : `${priceStr}${ccySym ? ` ${ccySym}` : ''}${unit && assetClass === 'commodity' ? ` / ${unit}` : ''}`;
+  let secondary = null;
+  if (originalPrice != null && originalCcy && originalCcy !== displayCcy) {
+    const origStr = Number(originalPrice).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    secondary = `${origStr} ${originalCcy}${unit && assetClass === 'commodity' ? ` / ${unit}` : ''}`;
+  }
+  return { primary, secondary };
 };
 
 export const formatChangePct = (value) => {

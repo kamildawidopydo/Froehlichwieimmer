@@ -5,7 +5,7 @@ import Eyebrow from '@/components/editorial/Eyebrow';
 import MiniSparkline from '@/components/watchlist/MiniSparkline';
 import SymbolNews from '@/components/watchlist/SymbolNews';
 import { useWatchlist } from '@/services/watchlistApi';
-import { formatMarketPrice, formatChangePct, formatLastUpdated } from '@/services/marketService';
+import { formatDisplayPrice, formatChangePct, formatLastUpdated } from '@/services/marketService';
 
 const SPARKLINE_SYMBOLS = new Set(['DAX', 'SPX', 'NDX', 'DJI']);
 const ASSET_LABEL = {
@@ -18,6 +18,7 @@ const WatchlistRow = ({ item, onRemove }) => {
   const positive = (q?.change_percent ?? 0) >= 0;
   const Icon = positive ? TrendingUp : TrendingDown;
   const changeColor = positive ? 'text-emerald-700' : 'text-rose-700';
+  const { primary, secondary } = q ? formatDisplayPrice(q) : { primary: '–', secondary: null };
 
   return (
     <article
@@ -44,13 +45,13 @@ const WatchlistRow = ({ item, onRemove }) => {
           </div>
         )}
 
-        <div className="min-w-[76px] text-right">
-          <p className="font-serif text-[16px] tabular-nums text-bank-text" data-numeric>
-            {q?.price != null ? formatMarketPrice(q.price) : '–'}
-            {q?.currency && (
-              <span className="ml-1 text-[10px] font-mono uppercase tracking-[0.14em] text-bank-text-muted">{q.currency}</span>
-            )}
-          </p>
+        <div className="min-w-[96px] text-right">
+          <p className="font-serif text-[16px] tabular-nums text-bank-text" data-numeric>{primary}</p>
+          {secondary && (
+            <p className="mt-0.5 hidden font-mono text-[10px] uppercase tracking-[0.14em] text-bank-text-muted sm:block" data-testid={`watchlist-row-orig-${item.symbol}`}>
+              {secondary}
+            </p>
+          )}
           {q?.change_percent != null && (
             <p className={`mt-0.5 flex items-center justify-end gap-1 font-mono text-[11.5px] tabular-nums ${changeColor}`}>
               <Icon size={11} strokeWidth={1.8} />

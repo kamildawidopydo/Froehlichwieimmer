@@ -16,7 +16,7 @@ import MiniSparkline from '@/components/watchlist/MiniSparkline';
 import SymbolNews from '@/components/watchlist/SymbolNews';
 import { watchlistApi, useWatchlist } from '@/services/watchlistApi';
 import { symbolNewsApi } from '@/services/symbolNewsApi';
-import { formatMarketPrice, formatChangePct, formatLastUpdated } from '@/services/marketService';
+import { formatDisplayPrice, formatChangePct, formatLastUpdated } from '@/services/marketService';
 
 const SPARKLINE_SYMBOLS = new Set(['DAX', 'SPX', 'NDX', 'DJI']);
 const ASSET_LABEL = {
@@ -193,10 +193,20 @@ const SortableWatchlistItem = ({ item, onRemove, newsData }) => {
               <MiniSparkline symbol={item.symbol} width={90} height={26} />
             </div>
           )}
-          <div className="min-w-[76px] text-right">
-            <p className="font-serif text-[16px] tabular-nums text-bank-text" data-numeric>
-              {q?.price != null ? formatMarketPrice(q.price) : '–'}
-            </p>
+          <div className="min-w-[96px] text-right">
+            {(() => {
+              const { primary, secondary } = q ? formatDisplayPrice(q) : { primary: '–', secondary: null };
+              return (
+                <>
+                  <p className="font-serif text-[16px] tabular-nums text-bank-text" data-numeric>{primary}</p>
+                  {secondary && (
+                    <p className="mt-0.5 hidden font-mono text-[10px] uppercase tracking-[0.14em] text-bank-text-muted sm:block" data-testid={`watchlist-full-row-orig-${item.symbol}`}>
+                      {secondary}
+                    </p>
+                  )}
+                </>
+              );
+            })()}
             {q?.change_percent != null && (
               <p className={`mt-0.5 flex items-center justify-end gap-1 font-mono text-[11.5px] tabular-nums ${changeColor}`}>
                 <Icon size={11} strokeWidth={1.8} />

@@ -3,13 +3,14 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import WatchButton from '@/components/watchlist/WatchButton';
 import { useWatchlist } from '@/services/watchlistApi';
-import { fetchFeaturedStocks, formatMarketPrice, formatChangePct, formatLastUpdated } from '@/services/marketService';
+import { fetchFeaturedStocks, formatDisplayPrice, formatChangePct, formatLastUpdated } from '@/services/marketService';
 
 const StockCard = ({ row, watch }) => {
   const positive = (row.changePct ?? 0) >= 0;
   const Icon = positive ? TrendingUp : TrendingDown;
   const changeColor = positive ? 'text-emerald-700' : 'text-rose-700';
   const prefix = positive ? '+' : '−';
+  const { primary, secondary } = formatDisplayPrice(row);
   return (
     <div
       className="group relative flex min-w-0 flex-col justify-between gap-3 border border-bank-border bg-white px-5 py-4 transition-colors hover:border-bank-accent-strong/50"
@@ -32,9 +33,14 @@ const StockCard = ({ row, watch }) => {
         <Icon className={`h-4 w-4 shrink-0 ${changeColor}`} strokeWidth={1.5} />
       </div>
       <div className="flex items-end justify-between gap-2">
-        <p className="font-serif text-xl tabular-nums text-bank-text" data-numeric>
-          {formatMarketPrice(row.price)} <span className="text-[10.5px] font-mono uppercase tracking-[0.16em] text-bank-text-muted">{row.currency}</span>
-        </p>
+        <div className="min-w-0">
+          <p className="font-serif text-xl tabular-nums text-bank-text" data-numeric>{primary}</p>
+          {secondary && (
+            <p className="mt-0.5 hidden font-mono text-[10px] uppercase tracking-[0.14em] text-bank-text-muted sm:block" data-testid={`stock-tile-orig-${row.symbol}`}>
+              {secondary}
+            </p>
+          )}
+        </div>
         <span className={`font-mono text-[12.5px] tabular-nums ${changeColor}`}>
           {prefix}{formatChangePct(row.changePct)}
         </span>

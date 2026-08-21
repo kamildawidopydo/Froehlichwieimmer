@@ -78,10 +78,15 @@ def test_single_quote_full_shape(symbol):
                 "last_updated", "market_status", "data_source", "is_delayed"):
         assert key in q, f"{symbol}: missing {key}"
     assert isinstance(q["price"], (int, float)) and q["price"] > 0
-    assert q["currency"] in {"USD", "EUR", "GBP", "JPY", "CHF"}
+    assert q["currency"] in {"USD", "EUR", "GBP", "JPY", "CHF", None}
     assert q["market_status"] in {"live", "delayed"}
     assert q["data_source"] in {"alpha_vantage", "cache", "stale_cache", "fallback"}
     assert isinstance(q["is_delayed"], bool)
+    # New currency-normalisation contract
+    for key in ("asset_class", "original_price", "original_currency", "display_price",
+                "display_currency", "fx_rate", "fx_updated_at", "conversion_available"):
+        assert key in q, f"{symbol}: missing {key}"
+    assert q["asset_class"] in {"index", "stock", "commodity", "fx"}
 
 
 def test_unknown_symbol_returns_404():

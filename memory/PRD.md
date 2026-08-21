@@ -7,6 +7,35 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 16 (Feb 25, 2026) — /news Marktdaten EUR-Normalisierung
+
+**Backend (`server.py`)**
+- Neue Config-Felder pro Symbol: `asset_class` (index/stock/commodity/fx), `native_currency`, `unit` (Punkte / Feinunze / Barrel).
+- Deutsche Blue Chips (SAP, SIE, ALV, DBK, IFX, RHM) auf native `.DE`-Symbole umgestellt und `native_currency="EUR"` markiert — Fallback-Preise in EUR realistisch angepasst.
+- **Neuer FX-Helper `_get_usd_to_eur()`**: nutzt den EURUSD-Quote-Pfad (MongoDB-TTL-Cache + Stale-Fallback), invertiert die Rate, TTL 10 min. Keine hardcodierte Rate.
+- **Neuer `_apply_display_currency(quote, target="EUR", fx_info=…)`**: befüllt `display_price` / `display_currency` / `fx_rate` / `fx_updated_at` / `conversion_available`. Indizes & FX-Paare werden nie umgerechnet.
+- **Neuer `_fetch_many_display(configs, target="EUR")`**: batch-fetch + zentraler FX-Call (max 1 EUR/USD-Request pro Overview-Aufruf).
+- Alle Markt-Endpunkte (`/news-markte/market/overview|stocks|indices|commodities|fx|quote/{s}|quotes` + `/watchlist` + `/news-markte/markets`) liefern jetzt EUR-normalisierte Werte und geben `fx_usd_to_eur` mit zurück.
+- Quote-Shape erweitert: `{original_price, original_currency, display_price, display_currency, fx_rate, fx_updated_at, conversion_available, asset_class, unit}` — Legacy-Felder `price`/`currency` bleiben und spiegeln display_*.
+
+**Frontend**
+- `services/marketService.js`: `mapQuoteToRow` bevorzugt `display_price`/`display_currency`; neue Utility `formatDisplayPrice(row)` liefert `{primary, secondary}` mit deutschem Zahlenformat (`toLocaleString('de-DE')`).
+  - Aktien/Rohstoffe: „119,42 €" primär, „138,85 USD" sekundär (nur ab sm-Breakpoint, mobile ausgeblendet)
+  - Indizes: „24.783,00" + Sub-Label „Punkte"
+  - FX: nur Rate „1,0862"
+- `AktienImFokus.jsx`, `WatchlistSection.jsx`, `WatchlistPage.jsx`: nutzen `formatDisplayPrice`, blenden Originalpreis dezent unter dem EUR-Preis ein.
+- `MarktInsights.jsx` liest `insight.unit` unverändert — Backend liefert jetzt "Punkte" / "EUR/Feinunze" / "EUR/Barrel" / "" (FX).
+
+**Tests (`test_market_data_phase2.py`)** — erweitert um Currency-Contract-Prüfung: `asset_class`, `original_price/currency`, `display_price/currency`, `fx_rate`, `fx_updated_at`, `conversion_available`. **24/24 PASS**.
+
+**Verifikations-Beispiele (Fallback-Modus, EURUSD=1,0862 → USD/EUR≈0,9206)**
+- NVDA: orig 138,85 USD → disp 127,83 €
+- AAPL: orig 226,02 USD → disp 208,08 €
+- SAP:  orig 232,10 EUR → disp 232,10 € (keine Umrechnung)
+- GOLD: orig 218,65 USD → disp 201,30 € / Feinunze
+- DAX:  47,83 Punkte (kein €-Zeichen)
+- EUR/USD: 1,0862 (kein €-Zeichen)
+
 ## Session 15 (Feb 25, 2026) — Demo-Kundenstimmen komplett überarbeitet
 
 - `_generate_demo_reviews` + Pools in `server.py` grundlegend neu geschrieben (ersetzt die vorherige „AI-typische" Text-Manipulation über `variants[i%3]`).
