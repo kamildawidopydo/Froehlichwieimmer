@@ -7,6 +7,15 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 22 (Feb 26, 2026) — HomeNewsPreview: nach oben + Auto-Refresh
+
+- **Reihenfolge**: `HomeNewsPreview` in `pages/Home.js` von unten (vor Bonus-CTA) direkt **unter `<BankingHero />`** verschoben — sichtbar bei Offset ~1031 px vom Dokumentanfang.
+- **Auto-Refresh (5 Min)**: `setInterval(load, 300000)` in `HomeNewsPreview.jsx`; beim Unmount sauber `clearInterval`.
+- **Kein Flackern**: `Promise.allSettled` + Rejects behalten bisherige Items; Loading-Skeletons erscheinen nur beim initialen Laden.
+- **Sortierung**: News-Items werden nach `published_at desc` sortiert (`Array.sort` client-side).
+- **„Zuletzt aktualisiert vor X Min."**: dezenter Indikator unter der Headline, aktualisiert sich alle 60 s via zweitem Tick-Interval, ohne Netzwerk-Roundtrip.
+- **Verifiziert**: Screenshot zeigt die Sektion samt Indikator „ZULETZT AKTUALISIERT GERADE EBEN"; alle anderen Home-Sektionen bleiben unverändert.
+
 ## Session 21 (Feb 26, 2026) — Startseiten-News-Vorschau
 
 - **Neu**: `components/home/HomeNewsPreview.jsx` — kompakte News-Vorschau auf der Home unter `HomeInvestmentSpectrum` und vor dem Bonus-CTA.

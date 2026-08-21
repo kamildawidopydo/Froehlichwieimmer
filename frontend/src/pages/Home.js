@@ -156,6 +156,9 @@ const Home = () => {
       <ProductInquiryStickyCta onOpenWizard={openProductInquiry} />
       <BankingHero />
 
+      {/* ── News-Vorschau (kompakt, direkt unter dem Hero) ─────────────── */}
+      <HomeNewsPreview />
+
       <HomeTrustLine />
 
       <HomePlatformShowcase />
@@ -180,9 +183,6 @@ const Home = () => {
       <SpecialAifOverview />
 
       <HomeInvestmentSpectrum onOpenWizard={openProductInquiry} />
-
-      {/* ── News-Vorschau (kompakt) ─────────────────────────────────────── */}
-      <HomeNewsPreview />
 
       {/* ── Bonus CTA — refined accent on ink ──────────────────────────── */}
       <section

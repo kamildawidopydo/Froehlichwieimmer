@@ -82,20 +82,51 @@ const MarketStrip = () => {
 const HomeNewsPreview = () => {
   const [newsState, setNewsState] = useState({ items: [], loading: true });
   const [einState, setEinState] = useState({ items: [], loading: true });
+  const [lastUpdated, setLastUpdated] = useState(null);
+  // Force re-render for the "vor X Min." label every minute
+  const [, setTick] = useState(0);
 
   useEffect(() => {
     let alive = true;
-    api.get('/news/nachrichten', { params: { limit: 5 } })
-      .then(({ data }) => { if (alive) setNewsState({ items: data.items || [], loading: false }); })
-      .catch(() => { if (alive) setNewsState({ items: [], loading: false }); });
-    einordnungApi.list({ limit: 3 })
-      .then((d) => { if (alive) setEinState({ items: d.items || [], loading: false }); })
-      .catch(() => { if (alive) setEinState({ items: [], loading: false }); });
-    return () => { alive = false; };
+
+    const load = async () => {
+      // Fetch both in parallel; keep existing content on error → no flicker.
+      const [newsRes, einRes] = await Promise.allSettled([
+        api.get('/news/nachrichten', { params: { limit: 5 } }),
+        einordnungApi.list({ limit: 3 }),
+      ]);
+      if (!alive) return;
+      if (newsRes.status === 'fulfilled') {
+        const items = (newsRes.value.data.items || []).slice().sort((a, b) => {
+          const da = a.published_at ? new Date(a.published_at).getTime() : 0;
+          const db = b.published_at ? new Date(b.published_at).getTime() : 0;
+          return db - da;
+        });
+        setNewsState({ items, loading: false });
+      } else {
+        setNewsState((s) => ({ items: s.items, loading: false })); // preserve
+      }
+      if (einRes.status === 'fulfilled') {
+        setEinState({ items: einRes.value.items || [], loading: false });
+      } else {
+        setEinState((s) => ({ items: s.items, loading: false }));
+      }
+      setLastUpdated(new Date());
+    };
+
+    load();
+    const iv = setInterval(load, 5 * 60 * 1000); // 5 Minuten
+    const tickIv = setInterval(() => setTick((n) => n + 1), 60 * 1000); // Label alle 60 s
+    return () => {
+      alive = false;
+      clearInterval(iv);
+      clearInterval(tickIv);
+    };
   }, []);
 
   const top = newsState.items[0];
   const secondary = newsState.items.slice(1, 5);
+  const lastUpdatedLabel = lastUpdated ? timeAgo(lastUpdated.toISOString()) : '';
 
   return (
     <section className="bg-gradient-to-b from-bank-cream/40 to-white py-16 sm:py-20" data-testid="home-news-preview">
@@ -107,6 +138,11 @@ const HomeNewsPreview = () => {
             <h2 className="mt-3 font-serif text-4xl leading-[1.05] text-bank-text sm:text-5xl">
               Wichtige Themen.<br />Klar eingeordnet.
             </h2>
+            {lastUpdatedLabel && (
+              <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted" data-testid="home-news-last-updated">
+                Zuletzt aktualisiert {lastUpdatedLabel}
+              </p>
+            )}
             <p className="mt-5 max-w-md text-[14.5px] leading-relaxed text-bank-text-muted">
               Aktuelle Nachrichten, Entwicklungen an den Märkten und unsere Einordnung — kompakt für Sie zusammengestellt.
             </p>
