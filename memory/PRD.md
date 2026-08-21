@@ -7,6 +7,13 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 21 (Feb 26, 2026) — Startseiten-News-Vorschau
+
+- **Neu**: `components/home/HomeNewsPreview.jsx` — kompakte News-Vorschau auf der Home unter `HomeInvestmentSpectrum` und vor dem Bonus-CTA.
+- **Struktur** exakt zum Mockup: linkes Statement-Panel („Aktuelle Nachrichten / Wichtige Themen. Klar eingeordnet." + Teaser + „Zu den Nachrichten"-CTA) · große Top-News-Card (Bild + Kategorie + Titel + Teaser + Zeit) · Marktüberblick-Streifen (DAX · S&P 500 · Nasdaq · Gold · Öl · EUR/USD, snap-scroll, Link `/news`) · 4 sekundäre News-Cards + Sidebar mit 3 „Fröhlich — Unsere Einordnung"-Beiträgen · zentraler Abschluss-CTA „Weitere Nachrichten lesen" zu `/news/nachrichten`.
+- Daten kommen aus bestehenden Endpunkten (`/news/nachrichten?limit=5`, `/einordnung?limit=3`, `/news-markte/market/overview`). Home lädt bewusst nur die Preview, alle Tiefen bleiben auf den bestehenden Detailseiten.
+- Bestehende Home-Sektionen unverändert (HomeInvestmentSpectrum, Bonus-CTA, HomeTestimonials …); nur additiv integriert.
+
 ## Session 20 (Feb 26, 2026) — Admin-CMS „Unsere Einordnung"
 
 **Backend**
