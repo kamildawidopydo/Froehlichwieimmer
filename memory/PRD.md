@@ -7,6 +7,40 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 27 (Feb 27, 2026) — Editorial-Bildsprache statt Finanz-Klischees
+
+**Ziel** vom User: Bilder auf News- und Einordnung-Seite wirken „zu stark nach Aktien, Börse, Trading und Finanzen". Bilder sollen wie in einem großen Nachrichtenmagazin wirken — Häfen, Container, Windräder, Solarparks, Labore, EU-Parlament, Reichstag, Züge, Rechenzentren usw. Keine Candlestick-Charts, keine Ticker, keine Geldscheine, keine Wiederholungen.
+
+**Backend (`news_synthesizer.py`) — kompletter Rewrite der Bildlogik**
+- **90+ Themen-Overrides** in `EDITORIAL_TOPIC_QUERIES`: aus Titel + Summary extrahierte Kontext-Keywords steuern spezifische Editorial-Queries.
+  - DAX / Aktienmarkt → *frankfurt skyline banking district* (KEIN Chart!)
+  - Zölle / Handel → *container terminal customs harbor*
+  - EZB / Bundesbank / Fed → jeweils Zentralbank-Architektur, nicht Zinstabellen
+  - Deutsche Bahn / ICE → *modern train station platform germany*
+  - Volkswagen / BMW / Autoindustrie → *car factory assembly line*
+  - Offshore-Wind → *offshore wind farm turbines*
+  - Photovoltaik → *solar farm aerial landscape*
+  - Biontech / Pharma → *vaccine vial laboratory research*
+  - Chip / Halbleiter / KI → *data center* / *semiconductor wafer*
+  - Ukraine / China / Russland / USA / Frankreich → jeweils Landmarken-Skyline
+  - Bundestag / Regierung → *reichstag berlin dome*
+  - EU-Parlament / EU-Kommission → *berlaymont brussels* / *strasbourg parliament*
+  - Sozialhilfe / Bürgergeld → *community services building*
+  - Inflation / Verbraucherpreise → *supermarket shopping cart* (statt Ticker)
+- **Kategorie-Rotation** in `EDITORIAL_CATEGORY_QUERIES`: 5–6 Query-Varianten pro Kategorie, deterministisch per Titel-SHA1 verschoben — verhindert, dass Artikel derselben Kategorie dasselbe Motiv bekommen.
+- **`_build_image_queries(cat, title, summary)`** liefert bis zu 6 priorisierte Query-Kandidaten (Themen-Overrides zuerst, dann Kategorie-Rotation). Deduplizierung via `seen`-Set.
+- **Anti-Repetition**: `_recent_unsplash_ids(db, limit=60)` prüft die letzten 60 verwendeten Unsplash-Photo-IDs; Kandidaten aus API-Response werden gegen diesen Blacklist gefiltert. Nur wenn alle Ergebnisse bereits verwendet → nimm den besten aus dem Original-Set.
+- **Fallback-Pool** in `FALLBACK_POOL`: 4–5 kuratierte Editorial-Photos pro Kategorie (Container-Häfen, EU-Parlament-Chamber, Reichstag-Dome, Wind/Solar-Farm, Labor). Ohne `UNSPLASH_ACCESS_KEY` rotiert das Fallback per Titel-Hash — nie mehr überall dasselbe Bild.
+- **Persistente Metadaten**: `image_unsplash_id`, `image_unsplash_query` werden in `news_articles` gespeichert (für Anti-Repetition + Debug).
+- **Rate-Limit-Handling**: HTTP 403 → sofort Fallback-Pool statt weitere Queries zu feuern.
+
+**Migration**
+- Alle 6 bestehenden Artikel wurden mit der neuen Editorial-Logik re-imaged (Frankfurt-Skyline für DAX, Container-Terminal für USA-Zoll-Story, Reichstag für Sozialhilfe, EZB-Frankfurt für Lane, etc.).
+
+**Was NICHT verändert wurde** (per User-Vorgabe)
+- Layout, Typografie, Cards, Abstände, Seitenstruktur, Artikelinhalte, Kategorien, Funktionalität.
+
+
 ## Session 26 (Feb 27, 2026) — Preis-Alerts produktionsreif (Watchlist-scoped, Cron, Resend-Mail)
 
 **Backend**

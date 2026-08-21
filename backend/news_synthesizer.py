@@ -93,34 +93,13 @@ CATEGORY_MAP = {
 }
 DEFAULT_CATEGORY = "wirtschaft"
 
-# Kategorie → passendes Unsplash-Query
-UNSPLASH_QUERY_MAP = {
-    "wirtschaft": "frankfurt stock exchange",
-    "europa":     "european central bank frankfurt",
-    "politik":    "berlin reichstag politics",
-    "welt":       "world economy globe",
-    "umwelt":     "renewable energy wind",
-    "wissen":     "research laboratory science",
-}
+# Kategorie → passendes Unsplash-Query (Legacy — wird von der editorial-
+# Logik unten in `_build_image_queries` ersetzt; nur noch als Sicherheitsnetz
+# behalten, falls jemand direkt darauf zugreift).
+UNSPLASH_QUERY_MAP: dict[str, str] = {}
 
-# Thematische Feinsteuerung für Bilder anhand Titel-Keywords
-IMAGE_KEYWORD_OVERRIDES = [
-    (["ezb", "european central bank", "eurozone"], "european central bank frankfurt"),
-    (["bundesbank"],                                "deutsche bundesbank frankfurt"),
-    (["fed", "federal reserve"],                    "federal reserve washington"),
-    (["dax"],                                       "frankfurt stock exchange dax"),
-    (["s&p", "s&p 500", "nasdaq", "wall street"],   "wall street new york"),
-    (["gold"],                                      "gold bars finance"),
-    (["öl", "oel", "brent", "wti", "erdöl"],        "oil refinery industry"),
-    (["bafin"],                                     "financial regulation office"),
-    (["eur/usd", "euro dollar", "eur usd"],         "euro dollar currency"),
-    (["staatsanleih", "anleih", "bond"],            "bond market finance"),
-    (["inflation"],                                 "supermarket prices inflation"),
-    (["arbeitsmarkt", "arbeitslos"],                "employment office germany"),
-    (["china"],                                     "shanghai skyline finance"),
-    (["ukraine"],                                   "ukraine economy"),
-    (["klima", "co2"],                              "climate industry emissions"),
-]
+# Legacy-Overrides bleiben leer — die neue Editorial-Logik liegt unten.
+IMAGE_KEYWORD_OVERRIDES: list = []
 
 # ---------------------------------------------------------------------------
 # Quality thresholds
@@ -192,78 +171,391 @@ def _title_similarity(a: str, b: str) -> float:
 # Unsplash — official API with attribution
 # ---------------------------------------------------------------------------
 
-def _image_query_for(category: str, title: str) -> str:
-    t = (title or "").lower()
-    for keys, q in IMAGE_KEYWORD_OVERRIDES:
-        if any(k in t for k in keys):
-            return q
-    return UNSPLASH_QUERY_MAP.get(category, UNSPLASH_QUERY_MAP[DEFAULT_CATEGORY])
+# ---------------------------------------------------------------------------
+# Editorial Image Strategy
+# ---------------------------------------------------------------------------
+# Ziel: hochwertige, journalistische Bildsprache wie in Nachrichtenmagazinen.
+# NIEMALS als Standard: Candlestick-Charts, Trading-Screens, Aktienkurse,
+# Geldscheine, Münzen, Börsenticker, generische Finanzgrafiken.
+# Stattdessen: Häfen, Container, Züge, Windparks, Solarparks, Labore,
+# Parlamente, Regierungsgebäude, Städte, Rechenzentren usw.
+# ---------------------------------------------------------------------------
+
+# Pro Kategorie mehrere Editorial-Queries — durch Titel-Hash rotiert,
+# damit Artikel derselben Kategorie nicht dasselbe Bild bekommen.
+EDITORIAL_CATEGORY_QUERIES = {
+    "wirtschaft": [
+        "container port cranes aerial",
+        "cargo ship harbor logistics",
+        "industrial factory production hall",
+        "logistics warehouse editorial",
+        "german industry manufacturing",
+        "shipping port terminal",
+    ],
+    "europa": [
+        "european parliament brussels chamber",
+        "eu flags berlaymont building",
+        "european commission facade brussels",
+        "strasbourg parliament hemicycle",
+        "european quarter architecture",
+    ],
+    "politik": [
+        "reichstag berlin dome",
+        "bundestag plenary session",
+        "berlin government quarter",
+        "parliament chamber editorial",
+        "government cabinet meeting",
+    ],
+    "welt": [
+        "shanghai skyline pudong",
+        "container terminal aerial asia",
+        "world skyline urban editorial",
+        "port cargo terminal aerial",
+        "city skyline dusk architecture",
+    ],
+    "umwelt": [
+        "offshore wind farm turbines",
+        "solar farm aerial landscape",
+        "power grid transmission tower landscape",
+        "renewable energy landscape editorial",
+        "forest landscape aerial nature",
+        "coastal wind turbines",
+    ],
+    "wissen": [
+        "science laboratory researcher pipette",
+        "medical research microscope",
+        "pharmaceutical laboratory lab",
+        "chemistry laboratory research",
+        "scientist working laboratory",
+    ],
+}
+DEFAULT_CATEGORY_QUERIES = EDITORIAL_CATEGORY_QUERIES["wirtschaft"]
+
+# Themen-Overrides: extrahiert aus Titel + Summary. Erste passende Gruppe
+# gewinnt und liefert 2-3 spezifische Editorial-Queries, die vor der
+# Kategorie-Rotation gefragt werden.
+EDITORIAL_TOPIC_QUERIES: list[tuple[tuple[str, ...], list[str]]] = [
+    # --- Zentralbanken / Geldpolitik (Architektur statt Ticker) -----
+    (("ezb", "european central bank", "eurozone-zinsen", "eurozonen-zinsen"),
+        ["european central bank frankfurt building", "ezb tower architecture frankfurt"]),
+    (("bundesbank",),
+        ["deutsche bundesbank frankfurt building", "central bank architecture germany"]),
+    (("fed ", "federal reserve", "us-notenbank", "us notenbank"),
+        ["federal reserve building washington", "us treasury building architecture"]),
+    (("bafin", "finanzaufsicht"),
+        ["financial regulation office bonn", "regulatory authority building"]),
+    (("leitzins", "zinsentscheid", "zinsanhebung", "zinssenkung", "geldpolitik"),
+        ["european central bank architecture", "central bank building modern"]),
+
+    # --- Handel / Zölle / Konjunktur (Häfen, Fabriken — KEINE Charts!) ---
+    (("handelskrieg", "handelsstreit", "handelsabkommen", "exporte", "importe"),
+        ["container port cranes aerial", "cargo ship international trade"]),
+    (("zölle", "zoll ", "sonderzoll", "einfuhrzoll", "strafzoll", "zollzahlung"),
+        ["container terminal customs harbor", "cargo containers port aerial"]),
+    (("dax", "börse frankfurt", "aktienmarkt"),
+        ["frankfurt skyline banking district", "frankfurt am main skyline dusk"]),
+    (("s&p", "sp 500", "sp500", "nasdaq", "wall street", "us-börse"),
+        ["new york city skyline manhattan", "manhattan financial district architecture"]),
+    (("konjunktur", "wirtschaftswachstum", "bip ", "wirtschaftsleistung"),
+        ["german factory manufacturing hall", "industrial production line workers"]),
+    (("rezession", "abschwung"),
+        ["empty industrial workshop", "closed shop german street"]),
+    (("inflation", "verbraucherpreise", "teuerung", "preisanstieg"),
+        ["supermarket shopping cart", "grocery aisle supermarket"]),
+    (("arbeitsmarkt", "arbeitslos", "beschäftigung", "job", "stellenmarkt"),
+        ["office employees working editorial", "workers manufacturing hall"]),
+    (("ifo", "zew", "einkaufsmanager", "pmi", "geschäftsklima"),
+        ["business office glass tower", "office workers meeting editorial"]),
+    (("mittelstand", "familienunternehmen"),
+        ["german factory workshop", "small business workshop"]),
+    (("sozialhilfe", "bürgergeld", "grundsicherung", "sozialstaat"),
+        ["community services building germany", "welfare office queue editorial"]),
+    (("steuer", "steuern", "steuerreform", "steuerpolitik"),
+        ["tax office desk documents", "finance ministry berlin building"]),
+
+    # --- Bahn / Mobilität ---
+    (("deutsche bahn", "db-konzern", "schienenverkehr", "ice ", "regionalbahn", "s-bahn", "bahn "),
+        ["modern train station platform germany", "high speed train ice railway"]),
+    (("automobil", "autoindustrie", "automobilbranche", "vw ", "volkswagen", "bmw", "mercedes", "porsche", "audi"),
+        ["car factory assembly line", "automobile manufacturing plant germany"]),
+    (("elektroauto", "e-auto", "ev ", "elektromobilität"),
+        ["electric vehicle charging station", "ev assembly line factory"]),
+    (("luftfahrt", "airline", "flughafen", "fluggesellschaft", "lufthansa"),
+        ["airport terminal aircraft dusk", "commercial aircraft on tarmac"]),
+    (("schifffahrt", "hafen", "reederei", "container", "logistik"),
+        ["container harbor cranes aerial", "cargo ship container terminal"]),
+
+    # --- Energie / Klima ---
+    (("klima", "klimawandel", "co2", "co2-", "klimapolitik"),
+        ["wind farm coast landscape", "solar farm aerial landscape"]),
+    (("solar", "photovoltaik"),
+        ["solar farm aerial view landscape", "solar panels roof editorial"]),
+    (("windkraft", "windrad", "windpark", "offshore wind"),
+        ["offshore wind farm turbines", "wind turbines landscape editorial"]),
+    (("atomkraft", "kernkraft", "atomausstieg", "kernenergie"),
+        ["nuclear power plant cooling towers", "nuclear reactor building landscape"]),
+    (("strom", "stromnetz", "stromversorgung", "stromtrasse", "netzausbau"),
+        ["power grid transmission lines landscape", "electric transmission tower dusk"]),
+    (("erdgas", "gaspreis", "gasversorgung", "gasspeicher", "gas "),
+        ["natural gas pipeline landscape", "gas storage facility industry"]),
+    (("erneuerbare", "energiewende"),
+        ["wind and solar energy landscape", "renewable energy field landscape"]),
+
+    # --- Rohstoffe (physisch statt Chart!) ---
+    (("gold", "goldpreis", "edelmetall"),
+        ["gold bullion bars vault", "precious metal ingot editorial"]),
+    (("silber",),
+        ["silver bars precious metal", "silver ingots editorial"]),
+    (("öl ", "oel ", "brent", "wti", "erdöl", "ölpreis"),
+        ["oil refinery industry landscape", "offshore oil platform ocean"]),
+    (("kupfer", "eisenerz", "seltene erden", "lithium", "nickel"),
+        ["copper mine industrial landscape", "raw materials industry aerial"]),
+
+    # --- Gesundheit / Pharma ---
+    (("impfstoff", "vakzin", "impfung"),
+        ["vaccine vial laboratory research", "syringe vial editorial"]),
+    (("pharma", "arzneimittel", "medikament", "biontech", "pfizer"),
+        ["pharmaceutical laboratory research", "pill capsules laboratory close"]),
+    (("gesundheit", "medizin", "arzt", "klinik", "krankenhaus"),
+        ["hospital corridor doctor editorial", "medical hospital modern architecture"]),
+
+    # --- Politik ---
+    (("bundestag", "regierung", "kanzler", "koalition", "kabinett", "merz", "scholz"),
+        ["reichstag berlin building", "bundestag plenary chamber"]),
+    (("wahl", "wahlen", "landtagswahl", "bundestagswahl"),
+        ["polling station ballot box germany", "voting ballot box editorial"]),
+    (("eu-kommission", "eu-", "brüssel", "brussels"),
+        ["berlaymont brussels european commission", "european union headquarters"]),
+    (("europaparlament", "eu-parlament"),
+        ["european parliament strasbourg hemicycle", "eu parliament brussels chamber"]),
+    (("g7", "g20", "gipfel", "staatschefs"),
+        ["g7 leaders summit press hall", "international summit press conference"]),
+
+    # --- Sicherheit / Verteidigung (sachlich institutionell) ---
+    (("bundeswehr", "verteidigungsminister", "verteidigung", "aufrüstung"),
+        ["military parade ground editorial", "government defense ministry building"]),
+    (("nato",),
+        ["nato headquarters brussels", "nato flags editorial"]),
+    (("waffen", "rüstung", "rüstungsindustrie"),
+        ["defense industry factory hall", "steel manufacturing plant editorial"]),
+
+    # --- Länder-Kontext (Landmarken) ---
+    (("ukraine", "kyjiw", "kiew"),
+        ["kyiv skyline government building", "ukraine independence square editorial"]),
+    (("russland", "moskau", "putin"),
+        ["moscow skyline red square dusk", "kremlin architecture editorial"]),
+    (("china ", "peking", "beijing", "shanghai"),
+        ["shanghai skyline pudong dusk", "beijing forbidden city aerial"]),
+    (("usa", "amerika", "biden", "trump", "washington"),
+        ["washington capitol building", "washington dc capitol dome"]),
+    (("frankreich", "paris", "macron"),
+        ["paris skyline eiffel editorial", "french national assembly paris"]),
+    (("italien", "rom", "meloni"),
+        ["rome skyline dusk editorial", "italian parliament rome"]),
+    (("türkei", "erdogan", "istanbul"),
+        ["istanbul skyline bosphorus dusk", "turkish parliament ankara"]),
+
+    # --- Technologie ---
+    (("künstliche intelligenz", "ki-", " ki ", "artificial intelligence", "generative ai"),
+        ["data center server room aisle", "server room dark editorial"]),
+    (("halbleiter", "chip", "chips", "semiconductor", "nvidia", "tsmc"),
+        ["semiconductor wafer manufacturing", "silicon chip macro editorial"]),
+    (("rechenzentrum", "cloud", "server", "data center"),
+        ["data center server aisles editorial", "server room cabling editorial"]),
+    (("robotik", "roboter", "automatisierung", "industrie 4.0"),
+        ["industrial robot arm factory", "robotic assembly line editorial"]),
+    (("cyber", "hacker", "cyberangriff", "ransomware"),
+        ["dark server room security editorial", "cybersecurity data center editorial"]),
+
+    # --- Anleihen / Staatsfinanzen (Gebäude, Dokumente — keine Ticker) ---
+    (("staatsanleih", "anleih", "bond ", "bundesanleih", "us-treasury"),
+        ["finance ministry berlin architecture", "government building columns editorial"]),
+    (("haushalt", "schuldenbremse", "bundeshaushalt", "staatsverschuldung"),
+        ["reichstag berlin dome dusk", "german finance ministry building"]),
+
+    # --- Währungen (Zentralbank-Architektur statt Wechselkurs-Grafik) ---
+    (("eur/usd", "euro dollar", "eur usd", "wechselkurs", "devisen"),
+        ["european central bank frankfurt architecture", "frankfurt financial district skyline"]),
+
+    # --- Bau / Immobilien ---
+    (("immobilien", "wohnungsmarkt", "mieten", "wohnungsbau"),
+        ["berlin apartment buildings facade", "residential architecture editorial"]),
+    (("baubranche", "baustelle", "bauwirtschaft"),
+        ["construction site cranes editorial", "construction workers site editorial"]),
+]
 
 
-# Neutrale Fallback-Bilder aus Unsplash CDN (keine API nötig, öffentlich).
-# Werden nur genutzt, wenn UNSPLASH_ACCESS_KEY fehlt oder Rate-Limit greift.
-FALLBACK_IMAGES = {
-    "wirtschaft": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1600&q=75",
-    "europa":     "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=1600&q=75",
-    "politik":    "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1600&q=75",
-    "welt":       "https://images.unsplash.com/photo-1516738901171-8eb4fc13bd20?w=1600&q=75",
-    "umwelt":     "https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=1600&q=75",
-    "wissen":     "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1600&q=75",
+def _build_image_queries(category: str, title: str, summary: str) -> List[str]:
+    """Baue nach Themen priorisierte Suchanfrage-Liste (bis zu 6 Kandidaten)."""
+    text = f"{title} {summary}".lower()
+    queries: list[str] = []
+    seen: set[str] = set()
+
+    def _add(q: str) -> None:
+        if q and q not in seen:
+            seen.add(q)
+            queries.append(q)
+
+    # 1) Thematische Overrides — der spezifischste Kontext gewinnt.
+    for keys, qs in EDITORIAL_TOPIC_QUERIES:
+        if any(k in text for k in keys):
+            for q in qs:
+                _add(q)
+    # 2) Kategorie-Rotation — durch Titel-Hash deterministisch verschoben,
+    #    damit ähnliche Artikel derselben Kategorie NICHT dasselbe Bild ziehen.
+    cat_pool = EDITORIAL_CATEGORY_QUERIES.get(category) or DEFAULT_CATEGORY_QUERIES
+    seed = int(hashlib.sha1((title or "").encode()).hexdigest()[:8], 16)
+    off = seed % len(cat_pool)
+    for q in cat_pool[off:] + cat_pool[:off]:
+        _add(q)
+    return queries[:6]
+
+
+# Fallback-Pool pro Kategorie (rotiert per Titel-Hash — mehrere URLs pro
+# Kategorie, damit auch ohne UNSPLASH_ACCESS_KEY nicht überall dasselbe
+# Bild hängt). Alle IDs sind statische Unsplash-CDN-Motive im Editorial-Stil
+# — keine Trading-Charts, keine Ticker, keine Geldscheine.
+FALLBACK_POOL = {
+    "wirtschaft": [
+        # Container-Hafen / Logistik / Industrie
+        "https://images.unsplash.com/photo-1494412651409-8963ce7935a7?w=1600&q=75",  # containers stacked
+        "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=1600&q=75",  # cargo ship harbor
+        "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=1600&q=75",  # port terminal aerial
+        "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=1600&q=75",  # warehouse logistics
+        "https://images.unsplash.com/photo-1533310266094-8898a03807dd?w=1600&q=75",  # factory production
+    ],
+    "europa": [
+        # EU-Parlament / EU-Kommission / Brüssel / Straßburg
+        "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=1600&q=75",  # EU flags
+        "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1600&q=75",     # parliament chamber
+        "https://images.unsplash.com/photo-1573599852326-2d4da0bbe613?w=1600&q=75",  # eu parliament
+        "https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=1600&q=75",     # brussels
+    ],
+    "politik": [
+        # Reichstag / Bundestag / Regierungsgebäude
+        "https://images.unsplash.com/photo-1560969184-10fe8719e047?w=1600&q=75",  # reichstag berlin
+        "https://images.unsplash.com/photo-1587330979470-3016b6702d89?w=1600&q=75",  # reichstag dome
+        "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1600&q=75",  # parliament
+        "https://images.unsplash.com/photo-1585129777188-9989f61c5f9c?w=1600&q=75",  # government building
+    ],
+    "welt": [
+        # Skylines / Häfen / Städte
+        "https://images.unsplash.com/photo-1516738901171-8eb4fc13bd20?w=1600&q=75",  # shanghai dusk
+        "https://images.unsplash.com/photo-1526481280693-3bfa7568e0f3?w=1600&q=75",  # port aerial
+        "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1600&q=75",  # world map
+        "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1600&q=75",  # landscape
+    ],
+    "umwelt": [
+        # Windräder / Solar / Landschaft
+        "https://images.unsplash.com/photo-1466611653911-95081537e5b7?w=1600&q=75",  # wind turbines
+        "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=1600&q=75",  # solar farm
+        "https://images.unsplash.com/photo-1548337138-e87d889cc369?w=1600&q=75",     # power lines dusk
+        "https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?w=1600&q=75",  # forest landscape
+    ],
+    "wissen": [
+        # Labore / Forschung / Medizin
+        "https://images.unsplash.com/photo-1579154204601-01588f351e67?w=1600&q=75",  # laboratory
+        "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=1600&q=75",  # lab research
+        "https://images.unsplash.com/photo-1576086213369-97a306d36557?w=1600&q=75",  # laboratory research
+        "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=1600&q=75",  # science
+    ],
 }
 
 
-async def _fetch_unsplash_image(category: str, title: str) -> dict:
-    """Return dict: image_url, hero_image_url, image_author, image_source, image_source_url, image_attribution."""
-    key = os.environ.get("UNSPLASH_ACCESS_KEY", "").strip()
-    query = _image_query_for(category, title)
-    fallback = {
-        "image_url": FALLBACK_IMAGES.get(category, FALLBACK_IMAGES[DEFAULT_CATEGORY]),
-        "hero_image_url": FALLBACK_IMAGES.get(category, FALLBACK_IMAGES[DEFAULT_CATEGORY]),
+def _pick_fallback(category: str, title: str) -> dict:
+    pool = FALLBACK_POOL.get(category) or FALLBACK_POOL["wirtschaft"]
+    idx = int(hashlib.sha1((title or "x").encode()).hexdigest()[:8], 16) % len(pool)
+    url = pool[idx]
+    return {
+        "image_url": url,
+        "hero_image_url": url,
         "image_author": None,
+        "image_author_url": None,
         "image_source": "Unsplash",
         "image_source_url": None,
         "image_attribution": "Foto: Unsplash",
     }
+
+
+async def _recent_unsplash_ids(db, limit: int = 60) -> set[str]:
+    """Damit derselbe Unsplash-Photograf nicht drei Mal in Folge auftaucht."""
+    try:
+        cursor = db.news_articles.find({"image_unsplash_id": {"$exists": True, "$ne": None}}) \
+            .sort("published_at", -1).limit(limit)
+        return {d.get("image_unsplash_id") async for d in cursor if d.get("image_unsplash_id")}
+    except Exception:
+        return set()
+
+
+async def _fetch_unsplash_image(category: str, title: str, summary: str = "", *, db=None) -> dict:
+    """Sucht bei Unsplash nach dem thematisch passendsten Editorial-Motiv.
+
+    Ohne `UNSPLASH_ACCESS_KEY`: rotiert deterministisch durch Fallback-Pool
+    pro Kategorie. Mit Key: baut aus Titel+Summary+Kategorie mehrere
+    Query-Kandidaten, filtert Duplikate der letzten 60 Artikel raus und
+    speichert Fotograf-Attribution gemäss Unsplash-API-Vorgaben.
+    """
+    key = os.environ.get("UNSPLASH_ACCESS_KEY", "").strip()
     if not key:
-        logger.info("unsplash: no UNSPLASH_ACCESS_KEY set — using fallback image for %s", category)
-        return fallback
+        logger.info("unsplash: no UNSPLASH_ACCESS_KEY set — using editorial fallback pool for %s", category)
+        return _pick_fallback(category, title)
+
+    queries = _build_image_queries(category, title, summary)
+    used_ids = await _recent_unsplash_ids(db) if db is not None else set()
+    utm = "?utm_source=froehlich_vermoegensberatung&utm_medium=referral"
+
     try:
         async with httpx.AsyncClient(timeout=8.0) as client:
-            r = await client.get(
-                "https://api.unsplash.com/search/photos",
-                params={"query": query, "per_page": 5, "orientation": "landscape", "content_filter": "high"},
-                headers={"Authorization": f"Client-ID {key}", "Accept-Version": "v1"},
-            )
-        if r.status_code != 200:
-            logger.warning("unsplash: HTTP %s for query=%s", r.status_code, query)
-            return fallback
-        data = r.json()
-        results = data.get("results") or []
-        if not results:
-            return fallback
-        pick = results[0]
-        urls = pick.get("urls") or {}
-        user = pick.get("user") or {}
-        photo_link = pick.get("links", {}).get("html")
-        # Unsplash Guideline: hotlink via `urls.regular`, add utm & attribution.
-        utm = "?utm_source=froehlich_vermoegensberatung&utm_medium=referral"
-        img = urls.get("regular") or urls.get("full") or urls.get("small")
-        hero = urls.get("full") or urls.get("regular") or img
-        author_name = user.get("name") or "Unsplash Fotograf"
-        author_link = (user.get("links") or {}).get("html")
-        attribution = f'Foto: {author_name} auf Unsplash'
-        return {
-            "image_url": img,
-            "hero_image_url": hero,
-            "image_author": author_name,
-            "image_author_url": (author_link + utm) if author_link else None,
-            "image_source": "Unsplash",
-            "image_source_url": (photo_link + utm) if photo_link else None,
-            "image_attribution": attribution,
-        }
+            for q in queries:
+                try:
+                    r = await client.get(
+                        "https://api.unsplash.com/search/photos",
+                        params={"query": q, "per_page": 10, "orientation": "landscape",
+                                 "content_filter": "high"},
+                        headers={"Authorization": f"Client-ID {key}", "Accept-Version": "v1"},
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("unsplash: query failed q=%r err=%s", q, exc)
+                    continue
+                if r.status_code != 200:
+                    logger.warning("unsplash: HTTP %s for query=%r", r.status_code, q)
+                    if r.status_code == 403:
+                        return _pick_fallback(category, title)  # Rate-Limit → sofort Fallback
+                    continue
+                results = (r.json() or {}).get("results") or []
+                if not results:
+                    continue
+                # Bevorzuge Motive, die noch nicht kürzlich verwendet wurden
+                unused = [p for p in results if p.get("id") not in used_ids]
+                candidates = unused or results
+                # Deterministische Auswahl aus den Top-3 anhand Titel-Hash — Variation.
+                idx = int(hashlib.sha1((title or q).encode()).hexdigest()[:6], 16) % max(1, min(3, len(candidates)))
+                pick = candidates[idx]
+                urls = pick.get("urls") or {}
+                user = pick.get("user") or {}
+                photo_link = pick.get("links", {}).get("html")
+                img = urls.get("regular") or urls.get("full") or urls.get("small")
+                if not img:
+                    continue
+                hero = urls.get("full") or urls.get("regular") or img
+                author_name = user.get("name") or "Unsplash Fotograf"
+                author_link = (user.get("links") or {}).get("html")
+                logger.info("unsplash_ok query=%r photo_id=%s author=%s", q, pick.get("id"), author_name)
+                return {
+                    "image_url": img,
+                    "hero_image_url": hero,
+                    "image_unsplash_id": pick.get("id"),
+                    "image_unsplash_query": q,
+                    "image_author": author_name,
+                    "image_author_url": (author_link + utm) if author_link else None,
+                    "image_source": "Unsplash",
+                    "image_source_url": (photo_link + utm) if photo_link else None,
+                    "image_attribution": f"Foto: {author_name} auf Unsplash",
+                }
     except Exception as exc:  # noqa: BLE001
-        logger.warning("unsplash: request failed for query=%s: %s", query, exc)
-        return fallback
+        logger.warning("unsplash: unexpected failure: %s", exc)
+    # Nichts Passendes gefunden → Editorial-Fallback aus Kategorie-Pool.
+    return _pick_fallback(category, title)
 
 
 # ---------------------------------------------------------------------------
@@ -539,8 +831,9 @@ async def synthesize_pending(db, max_articles: int = 3) -> dict:
         is_primary = bool(raw.get("primary_source"))
         ok, reason = _quality_gate(article, sources, is_primary)
 
-        # 4. Bild via Unsplash-API (offiziell)
-        img = await _fetch_unsplash_image(category, article.get("title") or raw["title"])
+        # Bild via Unsplash-API (offiziell) — editorial, thematisch passend.
+        img = await _fetch_unsplash_image(category, article.get("title") or raw["title"],
+                                          summary=article.get("summary") or raw.get("summary", ""), db=db)
 
         slug = _slugify(article.get("title") or raw["title"])
         relevance = _score_relevance(raw)
@@ -558,6 +851,8 @@ async def synthesize_pending(db, max_articles: int = 3) -> dict:
             "raw_fingerprint": raw["fingerprint"],
             "image_url":         img["image_url"],
             "hero_image_url":    img["hero_image_url"],
+            "image_unsplash_id": img.get("image_unsplash_id"),
+            "image_unsplash_query": img.get("image_unsplash_query"),
             "image_author":      img.get("image_author"),
             "image_author_url":  img.get("image_author_url"),
             "image_source":      img.get("image_source"),
