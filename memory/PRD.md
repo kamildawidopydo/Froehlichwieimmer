@@ -7,6 +7,40 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## What's Been Implemented — Session 13 (Feb 24, 2026)
+
+### ✅ Phase 2c — Watchlist-News + Drag & Drop (Feb 24, 2026)
+
+**Backend (`server.py`)**
+- `GET /api/news-markte/symbol/{symbol}/news` — normalisierte News pro Symbol
+  - Alpha-Vantage NEWS_SENTIMENT (tickers für Aktien/ETFs, topics für Indizes/Rohstoffe/FX)
+  - Topic-Mapping: DAX/SPX/DJI→economy_macro, NDX→technology, GOLD/SILVER→financial_markets, OIL→energy_transportation, EURUSD→economy_monetary
+  - 30-min MongoDB-Cache via `symbol_news_cache` mit TTL-Index
+  - Ohne API-Key: `items: []`, `data_source: "empty"`, `empty_reason: "no_provider"` — **niemals Fake-News**
+  - Dedupliziert nach Title, Summary auf 320 Zeichen limitiert, Titel auf 220
+- `GET /api/news-markte/symbols/news?symbols=` — Batch-Endpoint (max 25 Symbole, sequenziell cache-first)
+- Response-Shape pro Item: `{title, source, published_at (ISO), summary, url, category}`
+
+**Frontend**
+- `services/symbolNewsApi.js` — `forSymbol` + `batch` mit relativer Zeitformatierung
+- `components/watchlist/SymbolNews.jsx` — 2 Varianten: `compact` (1 Item) für `/news`, `detailed` (bis 3) für `/news/watchlist`
+- Empty-State: „Aktuell keine relevanten Meldungen zu {name} verfügbar." + „News-Provider noch nicht konfiguriert" (bei fehlendem Key)
+- WatchlistSection rewritten: 1 News unter jeder Zeile, „Weitere News & Verwaltung"-Button
+- WatchlistPage rewritten: bis zu 3 News pro Zeile via Batch-Fetch (1 Request)
+- Leitidee: **„Beobachten. Verstehen. Einordnen."** — keine „Jetzt kaufen"/„Kursziel"-Suggestionen
+
+**Drag & Drop (`@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities`)**
+- Ersetzt Up/Down-Buttons auf `/news/watchlist`
+- GripVertical-Handle, cursor-grab/grabbing
+- PointerSensor (Desktop, 5 px) + TouchSensor (mobile, 150 ms) + KeyboardSensor (Leertaste + Pfeile)
+- ARIA: `aria-roledescription="Sortierbares Element"`, sprechendes `aria-label`
+- Sofortige serverseitige Persistenz via `PUT /api/watchlist/order`
+
+**Tests (`test_symbol_news_phase2c.py`)** — **8/8 PASS**
+- Normalisierte Shape, Empty-State ohne Provider, Symbol-Normalisierung, Batch-Endpoint, Batch-Max (25), Cache-Determinismus, Secret-Leak-Check, Topic-Indizes
+
+**Gesamt-Regression**: 49/49 in Phase 2 + 2b + 2c-Suiten
+
 ## What's Been Implemented — Session 12 (Feb 22-24, 2026)
 
 ### ✅ Kundenstimmen — 218 Demo-Daten & Volltest (Feb 24, 2026)

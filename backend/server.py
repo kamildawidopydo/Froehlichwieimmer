@@ -2575,6 +2575,145 @@ async def market_sparkline(symbol: str):
     }
 
 
+# ---------------------------------------------------------------------------
+# Symbol-News (Phase 2c) — Alpha Vantage NEWS_SENTIMENT with 30-min cache
+# ---------------------------------------------------------------------------
+# We prefer AV NEWS_SENTIMENT when a key is present. Without a key the
+# endpoint returns an EMPTY items list plus a hint — we deliberately do NOT
+# fabricate news so users never see fake headlines as if they were real.
+
+_NEWS_TTL_S = 1800  # 30 min per symbol per user spec
+_NEWS_LIMIT = 3     # up to 3 items per symbol
+_NEWS_BATCH_MAX = 25
+
+# For non-stock symbols we fall back to AV's `topics` parameter — mapped
+# per our internal symbol so the news are thematically on-target.
+_NEWS_TOPIC_MAP = {
+    "DAX":    "economy_macro",
+    "SPX":    "economy_macro",
+    "NDX":    "technology",
+    "DJI":    "economy_macro",
+    "GOLD":   "financial_markets",
+    "SILVER": "financial_markets",
+    "OIL":    "energy_transportation",
+    "EURUSD": "economy_monetary",
+}
+
+
+def _news_item_out(node: dict, category_hint: Optional[str] = None) -> dict:
+    """Normalise an Alpha-Vantage NEWS_SENTIMENT `feed` entry."""
+    ts_raw = node.get("time_published") or ""
+    ts_iso: Optional[str] = None
+    if ts_raw and len(ts_raw) >= 8:
+        try:
+            # Format: 20260821T134500 → ISO
+            ts = datetime.strptime(ts_raw[:15], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+            ts_iso = ts.isoformat()
+        except ValueError:
+            ts_iso = None
+    summary = (node.get("summary") or "").strip()
+    if len(summary) > 320:
+        summary = summary[:317].rstrip() + "…"
+    topics = node.get("topics") or []
+    category = category_hint
+    if not category and topics:
+        category = str(topics[0].get("topic") or "").replace("_", " ").title()
+    return {
+        "title": (node.get("title") or "").strip()[:220],
+        "source": (node.get("source") or "").strip()[:80],
+        "published_at": ts_iso,
+        "summary": summary,
+        "url": (node.get("url") or "").strip(),
+        "category": category or "Wirtschaft",
+    }
+
+
+async def _fetch_symbol_news(sym: str) -> dict:
+    """Cache-then-provider, returning {items, data_source, ...}. No fabricated
+    news — when the provider is unavailable, `items` is an empty list."""
+    cached = await db.symbol_news_cache.find_one({"symbol": sym})
+    if cached and cached.get("expires_at") and cached["expires_at"] > _now_utc():
+        return {
+            "symbol": sym,
+            "items": cached.get("items", []),
+            "data_source": cached.get("data_source", "cache"),
+            "cached_until": cached["expires_at"].isoformat(),
+        }
+
+    items: List[dict] = []
+    data_source = "empty"
+    if ALPHA_VANTAGE_KEY:
+        cfg = _find_cfg(sym) or _UNIVERSE_BY_SYMBOL.get(sym)
+        params: Optional[dict] = None
+        if cfg and cfg.get("av_symbol") and cfg.get("asset_type", "stock") not in {"index", "commodity", "fx"}:
+            # Stock/ETF → ticker-based
+            params = {"function": "NEWS_SENTIMENT", "tickers": cfg["av_symbol"], "limit": str(_NEWS_LIMIT * 3), "sort": "LATEST"}
+        else:
+            topic = _NEWS_TOPIC_MAP.get(sym, "financial_markets")
+            params = {"function": "NEWS_SENTIMENT", "topics": topic, "limit": str(_NEWS_LIMIT * 3), "sort": "LATEST"}
+        data = await _av_call(params)
+        feed = (data or {}).get("feed") or []
+        # De-duplicate by title
+        seen_titles: set = set()
+        for node in feed:
+            title = (node.get("title") or "").strip().lower()
+            if not title or title in seen_titles:
+                continue
+            seen_titles.add(title)
+            items.append(_news_item_out(node))
+            if len(items) >= _NEWS_LIMIT:
+                break
+        data_source = "alpha_vantage" if items else "empty"
+
+    expires_at = _now_utc() + timedelta(seconds=_NEWS_TTL_S)
+    await db.symbol_news_cache.update_one(
+        {"symbol": sym},
+        {"$set": {
+            "symbol": sym,
+            "items": items,
+            "data_source": data_source,
+            "cached_at": _now_utc(),
+            "expires_at": expires_at,
+        }},
+        upsert=True,
+    )
+    return {
+        "symbol": sym,
+        "items": items,
+        "data_source": data_source,
+        "cached_until": expires_at.isoformat(),
+    }
+
+
+@api.get("/news-markte/symbol/{symbol}/news")
+async def symbol_news(symbol: str):
+    sym = _clean_symbol(symbol)
+    if not sym:
+        raise HTTPException(400, detail="Ungültiges Symbol.")
+    result = await _fetch_symbol_news(sym)
+    result["provider_configured"] = bool(ALPHA_VANTAGE_KEY)
+    result["empty_reason"] = None
+    if not result["items"]:
+        result["empty_reason"] = "no_provider" if not ALPHA_VANTAGE_KEY else "no_matches"
+    return result
+
+
+@api.get("/news-markte/symbols/news")
+async def symbol_news_batch(symbols: str):
+    """Batch endpoint used by WatchlistPage. Symbols are fetched sequentially
+    from cache first; provider calls only fire for cache-misses. This keeps
+    Alpha-Vantage traffic bounded regardless of watchlist size."""
+    wanted = [_clean_symbol(s) for s in (symbols or "").split(",") if _clean_symbol(s)][:_NEWS_BATCH_MAX]
+    out: dict = {}
+    for sym in wanted:
+        out[sym] = await _fetch_symbol_news(sym)
+    return {
+        "by_symbol": out,
+        "provider_configured": bool(ALPHA_VANTAGE_KEY),
+        "requested": wanted,
+    }
+
+
 @app.on_event("startup")
 async def on_startup():
     await db.users.create_index("email", unique=True)
@@ -2604,6 +2743,8 @@ async def on_startup():
     await db.watchlists.create_index([("user_id", 1), ("sort_order", 1)])
     await db.sparkline_cache.create_index("symbol", unique=True)
     await db.sparkline_cache.create_index("expires_at", expireAfterSeconds=0)
+    await db.symbol_news_cache.create_index("symbol", unique=True)
+    await db.symbol_news_cache.create_index("expires_at", expireAfterSeconds=0)
     await seed_admin()
     await seed_content()
     logger.info("Startup complete")
