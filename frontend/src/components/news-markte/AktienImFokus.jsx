@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import WatchButton from '@/components/watchlist/WatchButton';
 import { useWatchlist } from '@/services/watchlistApi';
+import { useDisplayCurrency } from '@/context/DisplayCurrencyContext';
 import { fetchFeaturedStocks, formatDisplayPrice, formatChangePct, formatLastUpdated } from '@/services/marketService';
 
 const StockCard = ({ row, watch }) => {
@@ -54,15 +55,17 @@ const AktienImFokus = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const watch = useWatchlist();
+  const { currency } = useDisplayCurrency();
 
   useEffect(() => {
     let alive = true;
-    fetchFeaturedStocks(12)
+    setLoading(true);
+    fetchFeaturedStocks(12, currency)
       .then((r) => { if (alive) setRows(r); })
       .catch(() => { if (alive) setError(true); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, []);
+  }, [currency]);
 
   const lastUpdated = rows[0]?.lastUpdated;
   const isDelayed = rows[0]?.isDelayed ?? true;

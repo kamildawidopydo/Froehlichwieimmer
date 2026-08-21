@@ -177,6 +177,57 @@ def test_cache_ttl_index_present():
     assert asyncio.run(check()), "TTL index on market_quotes_cache.expires_at missing"
 
 
+def test_display_currency_defaults_to_eur():
+    q = _get("/news-markte/market/quote/NVDA").json()
+    assert q["display_currency"] == "EUR"
+    assert q["original_currency"] == "USD"
+    assert q["display_price"] < q["original_price"], "NVDA converted to EUR must be smaller than USD original"
+
+
+def test_display_currency_usd_target():
+    q = _get("/news-markte/market/quote/SAP", params={"display_currency": "USD"}).json()
+    assert q["display_currency"] == "USD"
+    assert q["original_currency"] == "EUR"
+    assert q["display_price"] > q["original_price"], "SAP converted to USD must be larger than EUR original"
+
+
+def test_display_currency_same_native_no_conversion():
+    q = _get("/news-markte/market/quote/NVDA", params={"display_currency": "USD"}).json()
+    assert q["display_currency"] == "USD"
+    assert q["display_price"] == q["original_price"]
+    assert q["fx_rate"] is None
+
+
+def test_display_currency_index_never_converts():
+    for target in ("EUR", "USD"):
+        q = _get("/news-markte/market/quote/DAX", params={"display_currency": target}).json()
+        assert q["asset_class"] == "index"
+        assert q["display_price"] == q["original_price"]
+
+
+def test_display_currency_fx_pair_untouched():
+    for target in ("EUR", "USD"):
+        q = _get("/news-markte/market/quote/EURUSD", params={"display_currency": target}).json()
+        assert q["asset_class"] == "fx"
+        assert q["display_price"] == q["original_price"]  # rate unchanged
+
+
+def test_overview_display_currency_usd():
+    d = _get("/news-markte/market/overview", params={"display_currency": "USD"}).json()
+    assert d["display_currency"] == "USD"
+    # Commodities converted to USD (native USD → no conversion but display stays USD)
+    for c in d["commodities"]:
+        assert c["display_currency"] == "USD"
+    # Indices ignore target
+    for i in d["indices"]:
+        assert i["asset_class"] == "index"
+
+
+def test_invalid_display_currency_falls_back_to_eur():
+    q = _get("/news-markte/market/quote/NVDA", params={"display_currency": "GBP"}).json()
+    assert q["display_currency"] == "EUR"
+
+
 # ----- regression: existing endpoints unaffected -----------------------------
 
 def test_existing_endpoints_still_ok():

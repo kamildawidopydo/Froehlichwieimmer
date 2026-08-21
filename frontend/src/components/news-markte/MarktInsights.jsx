@@ -51,18 +51,21 @@ const latestClockLabel = (insights = []) => {
   return new Date(times[0]).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 };
 
-const MarktInsights = ({ insights = [], loading }) => (
+const MarktInsights = ({ insights = [], loading, currencyToggle = null }) => (
   <section
     className="border-t border-bank-border pt-14 sm:pt-16"
     data-testid="markt-insights"
   >
     <div className="flex flex-col gap-3">
       <Eyebrow>Markt-Insights</Eyebrow>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <h2 className="font-serif text-3xl leading-tight text-bank-text sm:text-4xl">Was an den Märkten passiert</h2>
-        <p className="max-w-md text-[13.5px] text-bank-text-muted sm:text-right">
-          Kompakter Überblick über Indizes, Rohstoffe und Währungen.
-        </p>
+        <div className="flex flex-col items-start gap-3 sm:items-end sm:text-right">
+          {currencyToggle}
+          <p className="max-w-md text-[13.5px] text-bank-text-muted">
+            Kompakter Überblick über Indizes, Rohstoffe und Währungen.
+          </p>
+        </div>
       </div>
     </div>
 

@@ -7,6 +7,22 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 17 (Feb 25, 2026) — EUR | USD Anzeige-Umschalter
+
+**Backend**
+- `_apply_display_currency` unterstützt jetzt beide Richtungen: USD→EUR (× rate) und EUR→USD (÷ rate).
+- Alle Markt-Endpunkte (`/news-markte/market/overview|stocks|indices|commodities|fx|quote/{symbol}|quotes`, `/news-markte/markets`, `/watchlist`) akzeptieren `?display_currency=EUR|USD` (Default EUR, ungültige Werte werden auf EUR normalisiert).
+- Zentraler USD/EUR-FX-Cache wird für beide Richtungen wiederverwendet — keine doppelten FX-Requests.
+- **48/48 Tests grün**, davon 7 neue Cases (`test_display_currency_*`) für Default, USD-Target, Same-Native-No-Conversion, Index/FX unbeeinflusst, Overview-USD, Invalid-Fallback.
+
+**Frontend**
+- Neuer `DisplayCurrencyContext` mit localStorage-Persistenz (`display_currency_v1`), cross-tab-sync via storage-Event, Default EUR.
+- Neue `<DisplayCurrencyToggle />`-Komponente (Private-Banking-Stil: dezente Pill, aktive Auswahl in Dunkelblau, kleiner Trennstrich, kein Trading-App-Look).
+- App-weit im `App.js` gewrapped, damit `useDisplayCurrency()` überall verfügbar ist.
+- `marketService.js`, `newsMarkteApi.js`, `watchlistApi.js` reichen die aktive Währung als `?display_currency=` an die Backend-Endpunkte weiter.
+- `useMarketInsights`, `useWatchlist`, `AktienImFokus` haben `currency` in ihren useEffect-Dependencies → Umschaltung ohne Reload.
+- Toggle-Platzierung im Header der Markt-Insights-Sektion auf `/news` (rechts oben, klein). Wirkt auf alle Konsumenten: Marktüberblick, Aktien im Fokus, Watchlist (Home + `/news/watchlist`).
+
 ## Session 16 (Feb 25, 2026) — /news Marktdaten EUR-Normalisierung
 
 **Backend (`server.py`)**

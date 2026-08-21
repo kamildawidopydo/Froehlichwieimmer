@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
+import { useDisplayCurrency } from '@/context/DisplayCurrencyContext';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
@@ -13,7 +14,8 @@ const unwrap = (res) => res.data;
 export const newsMarkteApi = {
   feed: (category) =>
     api.get('/news-markte/feed', { params: category && category !== 'alle' ? { category } : {} }).then(unwrap),
-  markets: () => api.get('/news-markte/markets').then(unwrap),
+  markets: (displayCurrency) =>
+    api.get('/news-markte/markets', { params: displayCurrency ? { display_currency: displayCurrency } : {} }).then(unwrap),
   editorial: () => api.get('/news-markte/editorial').then(unwrap),
   adminList: () => api.get('/news-markte/editorial/admin').then(unwrap),
   adminCreate: (payload) => api.post('/news-markte/editorial', payload).then(unwrap),
@@ -39,12 +41,13 @@ export const useNewsFeed = (category) => {
 };
 
 export const useMarketInsights = () => {
+  const { currency } = useDisplayCurrency();
   const [state, setState] = useState({ data: [], loading: true, error: null });
   useEffect(() => {
     let alive = true;
     const load = async () => {
       try {
-        const data = await newsMarkteApi.markets();
+        const data = await newsMarkteApi.markets(currency);
         if (alive) setState({ data, loading: false, error: null });
       } catch (err) {
         if (alive) setState({ data: [], loading: false, error: err });
@@ -56,7 +59,7 @@ export const useMarketInsights = () => {
       alive = false;
       clearInterval(iv);
     };
-  }, []);
+  }, [currency]);
   return state;
 };
 

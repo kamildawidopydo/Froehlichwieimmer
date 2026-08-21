@@ -742,15 +742,16 @@ async def news_markte_feed(category: Optional[str] = None, limit: int = 30):
 
 
 @api.get("/news-markte/markets", response_model=List[MarketInsight])
-async def news_markte_markets():
+async def news_markte_markets(display_currency: Optional[str] = None):
     """Serves the /news top strip. Uses the Phase 2 Alpha-Vantage market module
     with in-memory + Mongo cache, falling back to deterministic stubs when no
-    provider key is configured. `value` is EUR-normalised where applicable;
-    `unit` is 'Punkte' for indices, currency label for commodities/stocks,
-    empty string for FX pairs.
+    provider key is configured. `value` is display-currency-normalised where
+    applicable; `unit` is 'Punkte' for indices, `<CCY>/<unit>` for commodities,
+    `<CCY>` for stocks, empty string for FX pairs.
     """
+    target = _normalise_target_currency(display_currency)
     configs = MARKET_INDEX_SYMBOLS + MARKET_COMMODITY_SYMBOLS + MARKET_FX_SYMBOLS
-    quotes, _fx = await _fetch_many_display(configs, target="EUR")
+    quotes, _fx = await _fetch_many_display(configs, target=target)
     out: List[dict] = []
     for q in quotes:
         asset_class = q.get("asset_class")
@@ -2500,9 +2501,11 @@ def _apply_display_currency(quote: dict, target: str = "EUR", fx_info: Optional[
     Rules:
     - asset_class in {'index', 'fx'} → no conversion (indices are points, FX pairs are rates).
     - Same currency → display equals original.
-    - USD → EUR requires a valid `fx_info`; otherwise `conversion_available=False`
-      and display stays on the original currency (never invent a rate).
+    - USD → EUR requires a valid `fx_info` with `rate` = EUR per USD (~0.92).
+    - EUR → USD uses the inverse (1/rate) of the same FX cache.
+    - Missing/invalid FX → conversion_available=False and display stays on original.
     """
+    target = (target or "EUR").upper()
     asset_class = quote.get("asset_class")
     if asset_class in ("index", "fx"):
         quote["display_currency"] = quote.get("original_currency")
@@ -2514,44 +2517,65 @@ def _apply_display_currency(quote: dict, target: str = "EUR", fx_info: Optional[
         quote["display_price"] = quote.get("original_price")
         quote["display_currency"] = original_ccy or target
         quote["conversion_available"] = True
+        quote["price"] = quote["display_price"]
+        quote["currency"] = quote["display_currency"]
         return quote
 
-    if original_ccy != "USD" or target != "EUR" or not fx_info:
+    if not fx_info:
         quote["conversion_available"] = False
         return quote
 
-    rate = fx_info.get("rate")
+    rate = fx_info.get("rate")  # EUR per USD (~0.92)
     if not rate or rate <= 0:
         quote["conversion_available"] = False
         return quote
 
-    quote["display_price"] = round(float(quote["original_price"]) * float(rate), 2)
-    quote["display_currency"] = target
-    quote["fx_rate"] = rate
+    original_price = float(quote["original_price"])
+    if original_ccy == "USD" and target == "EUR":
+        quote["display_price"] = round(original_price * float(rate), 2)
+        quote["display_currency"] = "EUR"
+        quote["fx_rate"] = rate
+    elif original_ccy == "EUR" and target == "USD":
+        quote["display_price"] = round(original_price / float(rate), 2)
+        quote["display_currency"] = "USD"
+        quote["fx_rate"] = round(1.0 / float(rate), 6)  # USD per EUR
+    else:
+        quote["conversion_available"] = False
+        return quote
+
     quote["fx_updated_at"] = fx_info.get("updated_at")
     quote["conversion_available"] = True
-    # legacy alias — many FE readers still look at `price` / `currency`.
     quote["price"] = quote["display_price"]
-    quote["currency"] = target
+    quote["currency"] = quote["display_currency"]
     return quote
 
 
 async def _fetch_many_display(configs: List[dict], target: str = "EUR") -> tuple[List[dict], Optional[dict]]:
     """Fetch quotes and enrich each with display fields in the target currency.
 
-    Returns (quotes, fx_info). `fx_info` is fetched once per call so all USD
-    quotes share the same FX rate + timestamp.
+    Returns (quotes, fx_info). `fx_info` is fetched once per call so all
+    conversions share the same FX rate + timestamp.
     """
+    target = (target or "EUR").upper()
     quotes = await _fetch_many(configs)
-    # Only fetch FX if at least one quote actually needs conversion.
+    # FX is needed whenever any quote's native currency differs from the target
+    # and it is not an index/fx pair.
     needs_fx = any(
-        q.get("original_currency") == "USD" and q.get("asset_class") not in ("index", "fx")
+        q.get("original_currency") in ("USD", "EUR")
+        and q.get("original_currency") != target
+        and q.get("asset_class") not in ("index", "fx")
         for q in quotes
     )
     fx_info = await _get_usd_to_eur() if needs_fx else None
     for q in quotes:
         _apply_display_currency(q, target=target, fx_info=fx_info)
     return quotes, fx_info
+
+
+def _normalise_target_currency(raw: Optional[str]) -> str:
+    """Constrain the query-string display currency to EUR | USD."""
+    value = (raw or "EUR").upper()
+    return value if value in {"EUR", "USD"} else "EUR"
 
 
 def _find_cfg(symbol: str) -> Optional[dict]:
@@ -2564,16 +2588,16 @@ def _find_cfg(symbol: str) -> Optional[dict]:
 
 
 @api.get("/news-markte/market/overview")
-async def market_overview():
+async def market_overview(display_currency: Optional[str] = None):
     """Overview: DAX, S&P 500, Nasdaq, Dow, Gold, Silver, Oil, EUR/USD.
 
-    Prices are converted to EUR where applicable. Indices remain unitless
-    ('Punkte'), FX pairs stay as rates. Commodities carry both display (EUR)
-    and original (USD) values.
+    `display_currency=EUR|USD` (default EUR) controls the currency for stocks
+    and commodities. Indices remain unitless ('Punkte'), FX pairs stay as rates.
     """
-    indices, _ = await _fetch_many_display(MARKET_INDEX_SYMBOLS, target="EUR")
-    commodities, fx_info = await _fetch_many_display(MARKET_COMMODITY_SYMBOLS, target="EUR")
-    fx, _ = await _fetch_many_display(MARKET_FX_SYMBOLS, target="EUR")
+    target = _normalise_target_currency(display_currency)
+    indices, _ = await _fetch_many_display(MARKET_INDEX_SYMBOLS, target=target)
+    commodities, fx_info = await _fetch_many_display(MARKET_COMMODITY_SYMBOLS, target=target)
+    fx, _ = await _fetch_many_display(MARKET_FX_SYMBOLS, target=target)
     all_quotes = indices + commodities + fx
     latest = max((q["last_updated"] for q in all_quotes), default=_now_utc().isoformat())
     sources = {q["data_source"] for q in all_quotes}
@@ -2585,69 +2609,77 @@ async def market_overview():
         "is_delayed": True,
         "provider_configured": bool(ALPHA_VANTAGE_KEY),
         "data_source_summary": sorted(sources),
-        "display_currency": "EUR",
+        "display_currency": target,
         "fx_usd_to_eur": fx_info,
     }
 
 
 @api.get("/news-markte/market/stocks")
-async def market_stocks():
-    quotes, fx_info = await _fetch_many_display(MARKET_STOCK_SYMBOLS, target="EUR")
+async def market_stocks(display_currency: Optional[str] = None):
+    target = _normalise_target_currency(display_currency)
+    quotes, fx_info = await _fetch_many_display(MARKET_STOCK_SYMBOLS, target=target)
     latest = max((q["last_updated"] for q in quotes), default=_now_utc().isoformat())
     return {
         "items": quotes,
         "last_updated": latest,
         "is_delayed": True,
         "provider_configured": bool(ALPHA_VANTAGE_KEY),
-        "display_currency": "EUR",
+        "display_currency": target,
         "fx_usd_to_eur": fx_info,
     }
 
 
 @api.get("/news-markte/market/indices")
-async def market_indices():
-    quotes, _ = await _fetch_many_display(MARKET_INDEX_SYMBOLS, target="EUR")
+async def market_indices(display_currency: Optional[str] = None):
+    target = _normalise_target_currency(display_currency)
+    quotes, _ = await _fetch_many_display(MARKET_INDEX_SYMBOLS, target=target)
     return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True}
 
 
 @api.get("/news-markte/market/commodities")
-async def market_commodities():
-    quotes, fx_info = await _fetch_many_display(MARKET_COMMODITY_SYMBOLS, target="EUR")
+async def market_commodities(display_currency: Optional[str] = None):
+    target = _normalise_target_currency(display_currency)
+    quotes, fx_info = await _fetch_many_display(MARKET_COMMODITY_SYMBOLS, target=target)
     return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True, "fx_usd_to_eur": fx_info}
 
 
 @api.get("/news-markte/market/fx")
-async def market_fx():
-    quotes, _ = await _fetch_many_display(MARKET_FX_SYMBOLS, target="EUR")
+async def market_fx(display_currency: Optional[str] = None):
+    target = _normalise_target_currency(display_currency)
+    quotes, _ = await _fetch_many_display(MARKET_FX_SYMBOLS, target=target)
     return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True}
 
 
 @api.get("/news-markte/market/quote/{symbol}")
-async def market_quote(symbol: str):
+async def market_quote(symbol: str, display_currency: Optional[str] = None):
     cfg = _find_cfg(symbol)
     if not cfg:
         raise HTTPException(404, detail=f"Unbekanntes Symbol: {symbol}")
+    target = _normalise_target_currency(display_currency)
     q = await _fetch_quote(cfg)
     fx_info = None
-    if q.get("original_currency") == "USD" and q.get("asset_class") not in ("index", "fx"):
+    original_ccy = q.get("original_currency")
+    if (original_ccy in ("USD", "EUR") and original_ccy != target
+            and q.get("asset_class") not in ("index", "fx")):
         fx_info = await _get_usd_to_eur()
-    _apply_display_currency(q, target="EUR", fx_info=fx_info)
+    _apply_display_currency(q, target=target, fx_info=fx_info)
     return q
 
 
 @api.get("/news-markte/market/quotes")
-async def market_quotes(symbols: str):
+async def market_quotes(symbols: str, display_currency: Optional[str] = None):
     """Batch quote fetch. `symbols` is a comma-separated list of internal symbols."""
     wanted = [s.strip().upper() for s in symbols.split(",") if s.strip()]
     configs = [_find_cfg(s) for s in wanted]
     known = [c for c in configs if c]
-    items, fx_info = await _fetch_many_display(known, target="EUR")
+    target = _normalise_target_currency(display_currency)
+    items, fx_info = await _fetch_many_display(known, target=target)
     return {
         "items": items,
         "unknown": [w for w, c in zip(wanted, configs) if not c],
         "last_updated": max((q["last_updated"] for q in items), default=_now_utc().isoformat()),
         "is_delayed": True,
-        "display_currency": "EUR",
+        "display_currency": target,
         "fx_usd_to_eur": fx_info,
     }
 
@@ -2748,12 +2780,13 @@ def _watchlist_out(doc: dict, quote: Optional[dict] = None) -> dict:
 
 
 @api.get("/watchlist")
-async def watchlist_list(user: dict = Depends(get_current_user)):
+async def watchlist_list(display_currency: Optional[str] = None, user: dict = Depends(get_current_user)):
     """List the current user's watchlist enriched with live quotes when available.
 
     Unknown symbols (added via search but not part of the known universe) get a
     `quote=None` payload — the FE renders them as neutral rows.
     """
+    target = _normalise_target_currency(display_currency)
     docs = await db.watchlists.find({"user_id": str(user["id"])}).sort([("sort_order", 1), ("created_at", 1)]).to_list(200)
     known = []
     unknown_docs = []
@@ -2768,7 +2801,7 @@ async def watchlist_list(user: dict = Depends(get_current_user)):
     fx_info = None
     if known:
         cfgs = [c for _, c in known]
-        quotes, fx_info = await _fetch_many_display(cfgs, target="EUR")
+        quotes, fx_info = await _fetch_many_display(cfgs, target=target)
         quotes_by_symbol = {q["symbol"]: q for q in quotes}
 
     items = [_watchlist_out(d, quotes_by_symbol.get(d["symbol"])) for d, _ in known]
@@ -2779,7 +2812,7 @@ async def watchlist_list(user: dict = Depends(get_current_user)):
         "items": items,
         "count": len(items),
         "provider_configured": bool(ALPHA_VANTAGE_KEY),
-        "display_currency": "EUR",
+        "display_currency": target,
         "fx_usd_to_eur": fx_info,
     }
 

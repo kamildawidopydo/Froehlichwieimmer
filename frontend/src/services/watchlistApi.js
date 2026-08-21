@@ -6,13 +6,14 @@
 import axios from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useDisplayCurrency } from '@/context/DisplayCurrencyContext';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
 const unwrap = (r) => r.data;
 
 export const watchlistApi = {
-  list: () => api.get('/watchlist').then(unwrap),
+  list: (displayCurrency) => api.get('/watchlist', { params: displayCurrency ? { display_currency: displayCurrency } : {} }).then(unwrap),
   add: (payload) => api.post('/watchlist', payload).then(unwrap),
   remove: (symbol) => api.delete(`/watchlist/${encodeURIComponent(symbol)}`).then(unwrap),
   reorder: (symbols) => api.put('/watchlist/order', { symbols }).then(unwrap),
@@ -31,6 +32,7 @@ export const watchlistApi = {
  */
 export function useWatchlist() {
   const { user } = useAuth();
+  const { currency } = useDisplayCurrency();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,7 +46,7 @@ export function useWatchlist() {
     setLoading(true);
     setError(null);
     try {
-      const data = await watchlistApi.list();
+      const data = await watchlistApi.list(currency);
       setItems(data.items || []);
     } catch (err) {
       const status = err?.response?.status;
@@ -56,7 +58,7 @@ export function useWatchlist() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, currency]);
 
   useEffect(() => { refresh(); }, [refresh]);
 

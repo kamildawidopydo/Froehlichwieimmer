@@ -81,9 +81,11 @@ const emptyForConfig = (config) => config.map((cfg) => mapQuoteToRow({ symbol: c
 // --- Public API --------------------------------------------------------------
 
 /** Full overview (indices + commodities + fx) — 1 network call. */
-export async function fetchMarketOverview() {
+export async function fetchMarketOverview(displayCurrency) {
   try {
-    const { data } = await api.get('/news-markte/market/overview');
+    const { data } = await api.get('/news-markte/market/overview', {
+      params: displayCurrency ? { display_currency: displayCurrency } : {},
+    });
     return {
       indices: applyConfig(data.indices, MARKET_INDICES),
       commodities: applyConfig(data.commodities, MARKET_COMMODITIES),
@@ -107,12 +109,12 @@ export async function fetchMarketOverview() {
 }
 
 /** Fetch by list of symbols; unknown symbols are silently ignored. */
-export async function fetchMarketQuotes(symbols) {
+export async function fetchMarketQuotes(symbols, displayCurrency) {
   const list = (symbols || []).map(normalizeMarketSymbol).filter(Boolean);
   if (list.length === 0) return [];
   try {
     const { data } = await api.get('/news-markte/market/quotes', {
-      params: { symbols: list.join(',') },
+      params: { symbols: list.join(','), ...(displayCurrency ? { display_currency: displayCurrency } : {}) },
     });
     return (data.items || []).map((q) => mapQuoteToRow(q));
   } catch {
@@ -135,9 +137,11 @@ export async function fetchMarketForex() {
   return overview.fx;
 }
 
-async function _fetchStocks() {
+async function _fetchStocks(displayCurrency) {
   try {
-    const { data } = await api.get('/news-markte/market/stocks');
+    const { data } = await api.get('/news-markte/market/stocks', {
+      params: displayCurrency ? { display_currency: displayCurrency } : {},
+    });
     return (data.items || []).map((q) => ({
       name: q.name,
       symbol: q.symbol,
@@ -163,8 +167,8 @@ async function _fetchStocks() {
 }
 
 /** Top % gainers — sorted by changePct desc, positives only. */
-export async function fetchFrankfurtWinners(limit = 12) {
-  const rows = await _fetchStocks();
+export async function fetchFrankfurtWinners(limit = 12, displayCurrency) {
+  const rows = await _fetchStocks(displayCurrency);
   return rows
     .filter((r) => Number(r.changePct) > 0)
     .sort((a, b) => Number(b.changePct) - Number(a.changePct))
@@ -172,14 +176,14 @@ export async function fetchFrankfurtWinners(limit = 12) {
 }
 
 /** Curated "Aktien im Fokus" — insertion order. */
-export async function fetchFeaturedStocks(limit = 12) {
-  const rows = await _fetchStocks();
+export async function fetchFeaturedStocks(limit = 12, displayCurrency) {
+  const rows = await _fetchStocks(displayCurrency);
   return rows.slice(0, limit);
 }
 
 /** Top movers — sorted by absolute changePct. */
-export async function fetchTopMovers(limit = 8) {
-  const rows = await _fetchStocks();
+export async function fetchTopMovers(limit = 8, displayCurrency) {
+  const rows = await _fetchStocks(displayCurrency);
   return rows
     .sort((a, b) => Math.abs(Number(b.changePct)) - Math.abs(Number(a.changePct)))
     .slice(0, limit);

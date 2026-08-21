@@ -11,6 +11,7 @@ import ScrollToTop from '@/components/ScrollToTop';
 import Layout from '@/components/Layout';
 import { AuthProvider } from '@/context/AuthContext';
 import { SocialPreviewProvider } from '@/context/SocialPreviewContext';
+import { DisplayCurrencyProvider } from '@/context/DisplayCurrencyContext';
 import SocialPreviewModal from '@/components/social/SocialPreviewModal';
 import { ThemeProvider } from '@/context/ThemeContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -197,6 +198,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <DisplayCurrencyProvider>
         <SocialPreviewProvider>
         <BrowserRouter>
           <ScrollToTop />
@@ -817,6 +819,7 @@ function App() {
           </MotionConfig>
         </BrowserRouter>
         </SocialPreviewProvider>
+        </DisplayCurrencyProvider>
       </AuthProvider>
     </ThemeProvider>
   );

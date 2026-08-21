@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PageMeta from '@/components/PageMeta';
+import DisplayCurrencyToggle from '@/components/DisplayCurrencyToggle';
 import HeroTopNews from '@/components/news-markte/HeroTopNews';
 import NewsUeberblick from '@/components/news-markte/NewsUeberblick';
 import MarktInsights from '@/components/news-markte/MarktInsights';
@@ -78,7 +79,11 @@ const NewsMarkte = () => {
         <WatchlistSection />
 
         {/* 1. Marktüberblick */}
-        <MarktInsights insights={markets.data} loading={markets.loading} />
+        <MarktInsights
+          insights={markets.data}
+          loading={markets.loading}
+          currencyToggle={<DisplayCurrencyToggle size="sm" />}
+        />
 
         {/* 1b. Aktien im Fokus — echte Alpha-Vantage-Daten */}
         <AktienImFokus />
