@@ -1,19 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
+import WatchButton from '@/components/watchlist/WatchButton';
+import { useWatchlist } from '@/services/watchlistApi';
 import { fetchFeaturedStocks, formatMarketPrice, formatChangePct, formatLastUpdated } from '@/services/marketService';
 
-const StockCard = ({ row }) => {
+const StockCard = ({ row, watch }) => {
   const positive = (row.changePct ?? 0) >= 0;
   const Icon = positive ? TrendingUp : TrendingDown;
   const changeColor = positive ? 'text-emerald-700' : 'text-rose-700';
   const prefix = positive ? '+' : '−';
   return (
     <div
-      className="flex min-w-0 flex-col justify-between gap-3 border border-bank-border bg-white px-5 py-4 transition-colors hover:border-bank-accent-strong/50"
+      className="group relative flex min-w-0 flex-col justify-between gap-3 border border-bank-border bg-white px-5 py-4 transition-colors hover:border-bank-accent-strong/50"
       data-testid={`stock-tile-${row.symbol}`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <WatchButton
+        symbol={row.symbol}
+        displayName={row.name}
+        assetType="stock"
+        watched={watch.isWatched(row.symbol)}
+        isAuthed={watch.isAuthed}
+        onAdd={watch.add}
+        onRemove={watch.remove}
+      />
+      <div className="flex items-start justify-between gap-3 pr-8">
         <div className="min-w-0">
           <p className="truncate font-serif text-[16px] text-bank-text">{row.name}</p>
           <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.2em] text-neutral-400">{row.symbol}</p>
@@ -36,6 +47,7 @@ const AktienImFokus = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const watch = useWatchlist();
 
   useEffect(() => {
     let alive = true;
@@ -79,7 +91,7 @@ const AktienImFokus = () => {
       ) : (
         <>
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" data-testid="aktien-grid">
-            {rows.map((r) => (<StockCard key={r.symbol} row={r} />))}
+            {rows.map((r) => (<StockCard key={r.symbol} row={r} watch={watch} />))}
           </div>
           <p
             className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] uppercase tracking-[0.16em] text-bank-text-muted"

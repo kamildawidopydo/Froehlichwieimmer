@@ -2233,6 +2233,348 @@ async def market_quotes(symbols: str):
     }
 
 
+# ---------------------------------------------------------------------------
+# Watchlist + Symbol Search + Sparklines (Phase 2b)
+# ---------------------------------------------------------------------------
+
+# Curated static universe used as (a) symbol-search fallback and (b) source of
+# truth for asset_type / display_name when the user adds a symbol we already
+# know about. Any provider (Alpha Vantage SYMBOL_SEARCH) response is merged
+# with this list — never replaced by it.
+_CURATED_UNIVERSE = [
+    # --- Indices (via ETF proxy) ---
+    {"symbol": "DAX",  "name": "DAX",              "asset_type": "index", "region": "DE"},
+    {"symbol": "SPX",  "name": "S&P 500",          "asset_type": "index", "region": "US"},
+    {"symbol": "NDX",  "name": "Nasdaq 100",       "asset_type": "index", "region": "US"},
+    {"symbol": "DJI",  "name": "Dow Jones",        "asset_type": "index", "region": "US"},
+    # --- Commodities / FX ---
+    {"symbol": "GOLD",   "name": "Gold",           "asset_type": "commodity", "region": "GL"},
+    {"symbol": "SILVER", "name": "Silber",         "asset_type": "commodity", "region": "GL"},
+    {"symbol": "OIL",    "name": "Brent Öl",       "asset_type": "commodity", "region": "GL"},
+    {"symbol": "EURUSD", "name": "EUR/USD",        "asset_type": "fx",        "region": "GL"},
+    # --- German blue chips (kuratiert für Fröhlich) ---
+    {"symbol": "SAP",     "name": "SAP",           "asset_type": "stock", "region": "DE"},
+    {"symbol": "SIE",     "name": "Siemens",       "asset_type": "stock", "region": "DE"},
+    {"symbol": "ALV",     "name": "Allianz",       "asset_type": "stock", "region": "DE"},
+    {"symbol": "DBK",     "name": "Deutsche Bank", "asset_type": "stock", "region": "DE"},
+    {"symbol": "IFX",     "name": "Infineon",      "asset_type": "stock", "region": "DE"},
+    {"symbol": "RHM",     "name": "Rheinmetall",   "asset_type": "stock", "region": "DE"},
+    {"symbol": "VOW3.DE", "name": "Volkswagen VZ", "asset_type": "stock", "region": "DE"},
+    {"symbol": "BAS.DE",  "name": "BASF",          "asset_type": "stock", "region": "DE"},
+    {"symbol": "ADS.DE",  "name": "Adidas",        "asset_type": "stock", "region": "DE"},
+    {"symbol": "DTE.DE",  "name": "Deutsche Telekom", "asset_type": "stock", "region": "DE"},
+    {"symbol": "MRK.DE",  "name": "Merck KGaA",    "asset_type": "stock", "region": "DE"},
+    {"symbol": "BMW.DE",  "name": "BMW",           "asset_type": "stock", "region": "DE"},
+    {"symbol": "MBG.DE",  "name": "Mercedes-Benz Group", "asset_type": "stock", "region": "DE"},
+    {"symbol": "AIR.DE",  "name": "Airbus",        "asset_type": "stock", "region": "DE"},
+    # --- US mega caps ---
+    {"symbol": "AAPL",  "name": "Apple",           "asset_type": "stock", "region": "US"},
+    {"symbol": "MSFT",  "name": "Microsoft",       "asset_type": "stock", "region": "US"},
+    {"symbol": "GOOGL", "name": "Alphabet",        "asset_type": "stock", "region": "US"},
+    {"symbol": "AMZN",  "name": "Amazon",          "asset_type": "stock", "region": "US"},
+    {"symbol": "NVDA",  "name": "NVIDIA",          "asset_type": "stock", "region": "US"},
+    {"symbol": "TSLA",  "name": "Tesla",           "asset_type": "stock", "region": "US"},
+    {"symbol": "META",  "name": "Meta Platforms",  "asset_type": "stock", "region": "US"},
+    {"symbol": "NFLX",  "name": "Netflix",         "asset_type": "stock", "region": "US"},
+    {"symbol": "AMD",   "name": "AMD",             "asset_type": "stock", "region": "US"},
+    {"symbol": "INTC",  "name": "Intel",           "asset_type": "stock", "region": "US"},
+    {"symbol": "JPM",   "name": "JPMorgan Chase",  "asset_type": "stock", "region": "US"},
+    {"symbol": "V",     "name": "Visa",            "asset_type": "stock", "region": "US"},
+    {"symbol": "MA",    "name": "Mastercard",      "asset_type": "stock", "region": "US"},
+    {"symbol": "KO",    "name": "Coca-Cola",       "asset_type": "stock", "region": "US"},
+    {"symbol": "PEP",   "name": "PepsiCo",         "asset_type": "stock", "region": "US"},
+    {"symbol": "MCD",   "name": "McDonald's",      "asset_type": "stock", "region": "US"},
+    {"symbol": "DIS",   "name": "Disney",          "asset_type": "stock", "region": "US"},
+    {"symbol": "PFE",   "name": "Pfizer",          "asset_type": "stock", "region": "US"},
+    {"symbol": "JNJ",   "name": "Johnson & Johnson", "asset_type": "stock", "region": "US"},
+    {"symbol": "XOM",   "name": "ExxonMobil",      "asset_type": "stock", "region": "US"},
+    {"symbol": "BRK.B", "name": "Berkshire Hathaway", "asset_type": "stock", "region": "US"},
+    # --- ETFs ---
+    {"symbol": "SPY",  "name": "SPDR S&P 500 ETF", "asset_type": "etf", "region": "US"},
+    {"symbol": "QQQ",  "name": "Invesco QQQ",     "asset_type": "etf", "region": "US"},
+    {"symbol": "IWDA.DE", "name": "iShares Core MSCI World", "asset_type": "etf", "region": "DE"},
+    {"symbol": "EUNL.DE", "name": "iShares Core MSCI World UCITS", "asset_type": "etf", "region": "DE"},
+    {"symbol": "VWCE.DE", "name": "Vanguard FTSE All-World", "asset_type": "etf", "region": "DE"},
+]
+_UNIVERSE_BY_SYMBOL = {u["symbol"].upper(): u for u in _CURATED_UNIVERSE}
+
+_ALLOWED_ASSET_TYPES = {"stock", "index", "commodity", "fx", "etf", "fund", "bond", "other"}
+
+# --- models ---------------------------------------------------------------
+
+class WatchlistAddInput(BaseModel):
+    symbol: str = Field(min_length=1, max_length=20)
+    display_name: Optional[str] = Field(default=None, max_length=80)
+    asset_type: Optional[str] = None
+
+
+class WatchlistReorderInput(BaseModel):
+    symbols: List[str] = Field(min_length=0, max_length=200)
+
+
+def _clean_symbol(raw: str) -> str:
+    return re.sub(r"[^A-Za-z0-9.\-_/]", "", str(raw or "")).upper()[:20]
+
+
+def _watchlist_out(doc: dict, quote: Optional[dict] = None) -> dict:
+    return {
+        "id": str(doc["_id"]),
+        "symbol": doc["symbol"],
+        "asset_type": doc.get("asset_type", "stock"),
+        "display_name": doc.get("display_name") or doc["symbol"],
+        "sort_order": int(doc.get("sort_order", 0)),
+        "created_at": doc["created_at"].isoformat() if isinstance(doc.get("created_at"), datetime) else str(doc.get("created_at") or ""),
+        "quote": quote,
+    }
+
+
+@api.get("/watchlist")
+async def watchlist_list(user: dict = Depends(get_current_user)):
+    """List the current user's watchlist enriched with live quotes when available.
+
+    Unknown symbols (added via search but not part of the known universe) get a
+    `quote=None` payload — the FE renders them as neutral rows.
+    """
+    docs = await db.watchlists.find({"user_id": str(user["id"])}).sort([("sort_order", 1), ("created_at", 1)]).to_list(200)
+    known = []
+    unknown_docs = []
+    for d in docs:
+        cfg = _find_cfg(d["symbol"]) or _UNIVERSE_BY_SYMBOL.get(d["symbol"])
+        if cfg and _find_cfg(d["symbol"]):
+            known.append((d, cfg))
+        else:
+            unknown_docs.append(d)
+
+    quotes_by_symbol = {}
+    if known:
+        cfgs = [c for _, c in known]
+        quotes = await _fetch_many(cfgs)
+        quotes_by_symbol = {q["symbol"]: q for q in quotes}
+
+    items = [_watchlist_out(d, quotes_by_symbol.get(d["symbol"])) for d, _ in known]
+    items += [_watchlist_out(d, None) for d in unknown_docs]
+    # Preserve stored order after quote enrichment
+    items.sort(key=lambda x: (x["sort_order"], x["created_at"]))
+    return {
+        "items": items,
+        "count": len(items),
+        "provider_configured": bool(ALPHA_VANTAGE_KEY),
+    }
+
+
+@api.post("/watchlist", status_code=201)
+async def watchlist_add(payload: WatchlistAddInput, user: dict = Depends(get_current_user)):
+    symbol = _clean_symbol(payload.symbol)
+    if not symbol:
+        raise HTTPException(400, detail="Ungültiges Symbol.")
+
+    curated = _UNIVERSE_BY_SYMBOL.get(symbol)
+    asset_type = (payload.asset_type or (curated["asset_type"] if curated else "stock")).lower()
+    if asset_type not in _ALLOWED_ASSET_TYPES:
+        raise HTTPException(400, detail=f"Unbekannter Asset-Typ: {asset_type}")
+    display_name = (payload.display_name or (curated["name"] if curated else symbol))[:80]
+
+    max_order_doc = await db.watchlists.find_one(
+        {"user_id": str(user["id"])},
+        sort=[("sort_order", -1)],
+    )
+    next_order = (max_order_doc["sort_order"] + 1) if max_order_doc else 0
+
+    doc = {
+        "user_id": str(user["id"]),
+        "symbol": symbol,
+        "asset_type": asset_type,
+        "display_name": display_name,
+        "created_at": _now_utc(),
+        "sort_order": next_order,
+    }
+    try:
+        result = await db.watchlists.insert_one(doc)
+    except Exception:  # noqa: BLE001 — duplicate key etc.
+        existing = await db.watchlists.find_one({"user_id": str(user["id"]), "symbol": symbol})
+        if existing:
+            return _watchlist_out(existing)
+        raise
+    doc["_id"] = result.inserted_id
+    return _watchlist_out(doc)
+
+
+@api.delete("/watchlist/{symbol}")
+async def watchlist_remove(symbol: str, user: dict = Depends(get_current_user)):
+    sym = _clean_symbol(symbol)
+    res = await db.watchlists.delete_one({"user_id": str(user["id"]), "symbol": sym})
+    if res.deleted_count == 0:
+        raise HTTPException(404, detail="Symbol nicht in der Watchlist.")
+    return {"ok": True, "symbol": sym}
+
+
+@api.put("/watchlist/order")
+async def watchlist_reorder(payload: WatchlistReorderInput, user: dict = Depends(get_current_user)):
+    """Reorder the caller's watchlist. Symbols not present are ignored;
+    missing symbols keep their existing sort_order after the provided list."""
+    ordered = [_clean_symbol(s) for s in payload.symbols if _clean_symbol(s)]
+    user_id = str(user["id"])
+    for idx, sym in enumerate(ordered):
+        await db.watchlists.update_one(
+            {"user_id": user_id, "symbol": sym},
+            {"$set": {"sort_order": idx}},
+        )
+    return {"ok": True, "reordered": len(ordered)}
+
+
+@api.get("/watchlist/search")
+async def watchlist_search(q: str = "", limit: int = 12, user: dict = Depends(get_current_user)):
+    """Symbol search. Prefers Alpha-Vantage SYMBOL_SEARCH when a key is set,
+    always augmented with matches from the curated universe."""
+    del user  # auth-only; user identity not needed for the search itself
+    query = (q or "").strip()
+    if not query:
+        return {"items": [], "source": "empty"}
+
+    q_upper = query.upper()
+    curated_hits = [
+        u for u in _CURATED_UNIVERSE
+        if q_upper in u["symbol"].upper() or query.lower() in u["name"].lower()
+    ][:limit]
+
+    provider_hits: List[dict] = []
+    if ALPHA_VANTAGE_KEY:
+        data = await _av_call({"function": "SYMBOL_SEARCH", "keywords": query})
+        for m in (data or {}).get("bestMatches", [])[:limit]:
+            symbol = _clean_symbol(m.get("1. symbol", ""))
+            if not symbol:
+                continue
+            provider_hits.append({
+                "symbol": symbol,
+                "name": m.get("2. name") or symbol,
+                "asset_type": (m.get("3. type") or "stock").lower(),
+                "region": m.get("4. region") or "",
+                "source": "alpha_vantage",
+            })
+
+    # Merge — curated first, then provider entries whose symbol isn't already there
+    seen = {u["symbol"] for u in curated_hits}
+    merged = [{**u, "source": "curated"} for u in curated_hits]
+    for m in provider_hits:
+        if m["symbol"] in seen:
+            continue
+        seen.add(m["symbol"])
+        merged.append(m)
+
+    return {
+        "items": merged[:limit],
+        "source": "alpha_vantage" if provider_hits else "curated",
+        "provider_configured": bool(ALPHA_VANTAGE_KEY),
+    }
+
+
+# --- Sparklines ------------------------------------------------------------
+
+# Only the four flagship indices (per Phase 2b scope). Any other symbol
+# returns a deterministic synthetic fallback so charts never break.
+_SPARKLINE_SUPPORTED = {"DAX", "SPX", "NDX", "DJI"}
+_SPARKLINE_TTL_S = 900   # 15 min per user requirement
+_SPARKLINE_POINTS = 24   # ~1 trading day at hourly resolution
+
+
+def _synthetic_sparkline(cfg: dict, seed_price: float) -> List[dict]:
+    """Deterministic synthetic sparkline based on the fallback/current price.
+    Used when the provider is unavailable. Marked upstream via data_source."""
+    rnd = random.Random(hash(cfg["symbol"]) & 0xFFFFFFFF)
+    points: List[dict] = []
+    price = seed_price
+    base_iso = _now_utc() - timedelta(hours=_SPARKLINE_POINTS)
+    for i in range(_SPARKLINE_POINTS):
+        drift = (rnd.random() - 0.5) * (seed_price * 0.006)
+        price = max(seed_price * 0.985, min(seed_price * 1.015, price + drift))
+        points.append({
+            "t": (base_iso + timedelta(hours=i)).isoformat(),
+            "c": round(price, 4),
+        })
+    return points
+
+
+def _parse_intraday(data: dict) -> Optional[List[dict]]:
+    ts_key = next((k for k in (data or {}) if k.startswith("Time Series")), None)
+    if not ts_key:
+        return None
+    series = data[ts_key]
+    pts: List[dict] = []
+    for ts_iso, row in sorted(series.items())[-_SPARKLINE_POINTS:]:
+        try:
+            pts.append({"t": ts_iso, "c": float(row.get("4. close") or row.get("4. Close") or 0.0)})
+        except (TypeError, ValueError):
+            continue
+    return pts if len(pts) >= 2 else None
+
+
+@api.get("/news-markte/market/sparkline/{symbol}")
+async def market_sparkline(symbol: str):
+    sym = _clean_symbol(symbol)
+    if sym not in _SPARKLINE_SUPPORTED:
+        raise HTTPException(404, detail=f"Sparkline nicht verfügbar für {sym}.")
+    cfg = _find_cfg(sym)
+    if not cfg:
+        raise HTTPException(404, detail=f"Symbol {sym} nicht gefunden.")
+
+    # cache lookup
+    cached = await db.sparkline_cache.find_one({"symbol": sym})
+    if cached and cached.get("expires_at") and cached["expires_at"] > _now_utc():
+        return {
+            "symbol": sym,
+            "name": cfg["name"],
+            "interval": "60min",
+            "points": cached["points"],
+            "prev_close": cached.get("prev_close"),
+            "data_source": cached.get("data_source", "cache"),
+            "cached_until": cached["expires_at"].isoformat(),
+            "provider_configured": bool(ALPHA_VANTAGE_KEY),
+        }
+
+    source = "fallback"
+    points: Optional[List[dict]] = None
+    if ALPHA_VANTAGE_KEY and cfg.get("av_symbol"):
+        data = await _av_call({
+            "function": "TIME_SERIES_INTRADAY",
+            "symbol": cfg["av_symbol"],
+            "interval": "60min",
+            "outputsize": "compact",
+        })
+        points = _parse_intraday(data) if data else None
+        if points:
+            source = "alpha_vantage"
+
+    if not points:
+        # deterministic fallback based on current fallback price
+        seed = _FALLBACK_QUOTES.get(sym, {}).get("price", 100.0)
+        points = _synthetic_sparkline(cfg, seed)
+
+    prev_close = round(points[0]["c"], 4) if points else None
+    expires_at = _now_utc() + timedelta(seconds=_SPARKLINE_TTL_S)
+    await db.sparkline_cache.update_one(
+        {"symbol": sym},
+        {"$set": {
+            "symbol": sym,
+            "points": points,
+            "prev_close": prev_close,
+            "data_source": source,
+            "cached_at": _now_utc(),
+            "expires_at": expires_at,
+        }},
+        upsert=True,
+    )
+    return {
+        "symbol": sym,
+        "name": cfg["name"],
+        "interval": "60min",
+        "points": points,
+        "prev_close": prev_close,
+        "data_source": source,
+        "cached_until": expires_at.isoformat(),
+        "provider_configured": bool(ALPHA_VANTAGE_KEY),
+    }
+
+
 @app.on_event("startup")
 async def on_startup():
     await db.users.create_index("email", unique=True)
@@ -2258,6 +2600,10 @@ async def on_startup():
     await db.review_invites.create_index([("email", 1), ("created_at", -1)])
     await db.market_quotes_cache.create_index("symbol", unique=True)
     await db.market_quotes_cache.create_index("expires_at", expireAfterSeconds=0)
+    await db.watchlists.create_index([("user_id", 1), ("symbol", 1)], unique=True)
+    await db.watchlists.create_index([("user_id", 1), ("sort_order", 1)])
+    await db.sparkline_cache.create_index("symbol", unique=True)
+    await db.sparkline_cache.create_index("expires_at", expireAfterSeconds=0)
     await seed_admin()
     await seed_content()
     logger.info("Startup complete")
