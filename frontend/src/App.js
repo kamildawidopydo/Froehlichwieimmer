@@ -41,6 +41,7 @@ const WissenArtikel = lazy(() => import('@/pages/WissenArtikel'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const CreditLeadPage = lazy(() => import('@/pages/CreditLeadPage'));
 const Bewertungen = lazy(() => import('@/pages/Bewertungen'));
+const Kundenstimmen = lazy(() => import('@/pages/Kundenstimmen'));
 const PublicNewsPage = lazy(() => import('@/pages/NewsMarkte'));
 const PublicNewsPageLegacy = lazy(() => import('@/pages/news/PublicNewsPage'));
 const NewsCategoryDetail = lazy(() => import('@/pages/NewsCategoryDetail'));
@@ -236,6 +237,7 @@ function App() {
                   <Route path="/kredit" element={<CreditLeadPage />} />
                   <Route path="/news" element={<PublicNewsPage />} />
                   <Route path="/bewertungen" element={<Bewertungen />} />
+                  <Route path="/kundenstimmen" element={<Kundenstimmen />} />
                   <Route path="/news/archiv" element={<PublicNewsPageLegacy />} />
                   <Route path="/news/kategorie/:category" element={<NewsCategoryDetail />} />
                   <Route path="/news/aktien" element={<NewsCategoryDetail categorySlug="aktien" />} />

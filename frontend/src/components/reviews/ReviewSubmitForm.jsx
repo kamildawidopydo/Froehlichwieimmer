@@ -8,10 +8,19 @@ import { reviewsApi } from '@/services/reviewsApi';
 
 const initialState = {
   first_name: '', last_name: '', email: '',
-  rating: 0, text: '', consent: false, website: '',
+  rating: 0, text: '', customer_since: '', consent: false, website: '',
 };
 
-const ReviewSubmitForm = ({ onSubmitted, dark = false }) => {
+const CUSTOMER_SINCE_OPTIONS = [
+  { value: '', label: 'Keine Angabe' },
+  { value: 'unter_1', label: 'weniger als 1 Jahr' },
+  { value: '1_bis_3', label: '1–3 Jahre' },
+  { value: '3_bis_5', label: '3–5 Jahre' },
+  { value: 'ueber_5', label: 'mehr als 5 Jahre' },
+];
+
+const ReviewSubmitForm = ({ onSubmitted, dark = false, variant = 'review' }) => {
+  const isTestimonial = variant === 'testimonial';
   const [form, setForm] = useState(initialState);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -22,7 +31,7 @@ const ReviewSubmitForm = ({ onSubmitted, dark = false }) => {
     if (!form.first_name.trim()) return 'Bitte geben Sie Ihren Vornamen an.';
     if (!form.last_name.trim()) return 'Bitte geben Sie Ihren Nachnamen an.';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return 'Bitte geben Sie eine gültige E-Mail-Adresse an.';
-    if (form.rating < 1 || form.rating > 5) return 'Bitte wählen Sie 1 bis 5 Sterne.';
+    if (!isTestimonial && (form.rating < 1 || form.rating > 5)) return 'Bitte wählen Sie 1 bis 5 Sterne.';
     if (form.text.trim().length < 10) return 'Bitte schreiben Sie mindestens 10 Zeichen zu Ihrer Erfahrung.';
     if (!form.consent) return 'Bitte bestätigen Sie die Datenschutzhinweise.';
     return null;
@@ -34,7 +43,10 @@ const ReviewSubmitForm = ({ onSubmitted, dark = false }) => {
     if (err) { toast.error(err); return; }
     setSubmitting(true);
     try {
-      await reviewsApi.submit(form);
+      const payload = { ...form };
+      if (isTestimonial && (!form.rating || form.rating < 1)) delete payload.rating;
+      if (!payload.customer_since) delete payload.customer_since;
+      await reviewsApi.submit(payload);
       setSuccess(true);
       setForm(initialState);
       onSubmitted?.();
@@ -60,10 +72,11 @@ const ReviewSubmitForm = ({ onSubmitted, dark = false }) => {
         role="status"
       >
         <CheckCircle2 className={dark ? 'h-8 w-8 text-emerald-300' : 'h-8 w-8 text-emerald-600'} strokeWidth={1.4} />
-        <h3 className="font-serif text-2xl">Vielen Dank für Ihre Bewertung.</h3>
+        <h3 className="font-serif text-2xl">Vielen Dank für Ihre Rückmeldung.</h3>
         <p className={`text-[14.5px] leading-relaxed ${label}`}>
-          Ihre Bewertung wurde erfolgreich übermittelt und wird vor der Veröffentlichung von uns geprüft. Nach der
-          Prüfung kann die Bewertung auf unserer Website veröffentlicht werden.
+          {isTestimonial
+            ? 'Ihre Erfahrung wurde erfolgreich übermittelt. Nach einer kurzen Prüfung kann sie auf unserer Website veröffentlicht werden.'
+            : 'Ihre Bewertung wurde erfolgreich übermittelt und wird vor der Veröffentlichung von uns geprüft. Nach der Prüfung kann die Bewertung auf unserer Website veröffentlicht werden.'}
         </p>
         <button
           type="button"
@@ -71,7 +84,7 @@ const ReviewSubmitForm = ({ onSubmitted, dark = false }) => {
           className={`mt-2 text-[12.5px] font-medium uppercase tracking-[0.2em] ${dark ? 'text-bank-gold' : 'text-bank-primary'} hover:underline`}
           data-testid="review-submit-another"
         >
-          Weitere Bewertung abgeben
+          {isTestimonial ? 'Weitere Erfahrung teilen' : 'Weitere Bewertung abgeben'}
         </button>
       </div>
     );
@@ -85,9 +98,13 @@ const ReviewSubmitForm = ({ onSubmitted, dark = false }) => {
       noValidate
     >
       <div>
-        <h3 className="font-serif text-2xl leading-snug">Ihre Meinung ist uns wichtig.</h3>
+        <h3 className="font-serif text-2xl leading-snug">
+          {isTestimonial ? 'Ihre Erfahrung mit uns' : 'Ihre Meinung ist uns wichtig.'}
+        </h3>
         <p className={`mt-2 text-[14px] leading-relaxed ${label}`}>
-          Sie sind Kunde bei uns und möchten Ihre Erfahrung teilen? Wir freuen uns über Ihr Feedback.
+          {isTestimonial
+            ? 'Sie sind Kunde von Fröhlich Vermögensberatung und möchten Ihre Erfahrung teilen? Wir freuen uns über Ihre persönliche Rückmeldung.'
+            : 'Sie sind Kunde bei uns und möchten Ihre Erfahrung teilen? Wir freuen uns über Ihr Feedback.'}
         </p>
       </div>
 
@@ -121,18 +138,40 @@ const ReviewSubmitForm = ({ onSubmitted, dark = false }) => {
       </label>
 
       <div className="flex flex-col gap-2">
-        <span className={`text-[12.5px] font-medium uppercase tracking-[0.14em] ${label}`}>Bewertung</span>
+        <span className={`text-[12.5px] font-medium uppercase tracking-[0.14em] ${label}`}>
+          {isTestimonial ? 'Zufriedenheit (optional)' : 'Bewertung'}
+        </span>
         <StarsPicker value={form.rating} onChange={(v) => set('rating', v)} size={34} />
       </div>
 
+      {isTestimonial && (
+        <label className="flex flex-col gap-1.5 text-[12.5px]">
+          <span className={`font-medium uppercase tracking-[0.14em] ${label}`}>Seit wann sind Sie Kunde? (optional)</span>
+          <select
+            value={form.customer_since}
+            onChange={(e) => set('customer_since', e.target.value)}
+            className={`h-11 rounded-xl border px-3 text-[14px] focus:outline-none focus:ring-2 ${input}`}
+            data-testid="review-customer-since"
+          >
+            {CUSTOMER_SINCE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <label className="flex flex-col gap-1.5 text-[12.5px]">
-        <span className={`font-medium uppercase tracking-[0.14em] ${label}`}>Ihre Erfahrung</span>
+        <span className={`font-medium uppercase tracking-[0.14em] ${label}`}>
+          {isTestimonial ? 'Ihre persönliche Erfahrung' : 'Ihre Erfahrung'}
+        </span>
         <textarea
           required minLength={10} maxLength={2000} rows={5}
           value={form.text} onChange={(e) => set('text', e.target.value)}
           className={`rounded-xl border px-3 py-2.5 text-[14px] leading-relaxed focus:outline-none focus:ring-2 ${input}`}
           data-testid="review-text"
-          placeholder="Beschreiben Sie Ihre Zusammenarbeit mit uns …"
+          placeholder={isTestimonial
+            ? 'Was schätzen Sie an unserer Zusammenarbeit? Wie erleben Sie unsere Betreuung, Erreichbarkeit oder Beratung?'
+            : 'Beschreiben Sie Ihre Zusammenarbeit mit uns …'}
         />
         <span className={`text-[11px] ${label}`}>{form.text.length} / 2000 Zeichen · Nur Text — HTML wird entfernt.</span>
       </label>
@@ -178,7 +217,7 @@ const ReviewSubmitForm = ({ onSubmitted, dark = false }) => {
           data-testid="review-submit-btn"
         >
           <Send className="mr-2 h-4 w-4" />
-          {submitting ? 'Wird übermittelt …' : 'Bewertung absenden'}
+          {submitting ? 'Wird übermittelt …' : (isTestimonial ? 'Erfahrung teilen' : 'Bewertung absenden')}
         </Button>
       </div>
     </form>

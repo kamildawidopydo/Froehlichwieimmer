@@ -826,8 +826,10 @@ def _review_to_public(d: dict) -> dict:
     return {
         "id": str(d["_id"]),
         "display_name": d.get("display_name") or _display_name(d.get("first_name"), d.get("last_name")),
-        "rating": int(d.get("rating", 0)),
+        "rating": int(d.get("rating") or 0),
         "text": d.get("text", ""),
+        "customer_since": d.get("customer_since") or None,
+        "is_featured": bool(d.get("is_featured", False)),
         "created_at": published.isoformat() if isinstance(published, datetime) else str(published or ""),
         "is_verified": bool(d.get("is_verified", False)),
     }
@@ -841,9 +843,11 @@ def _review_to_admin(d: dict) -> dict:
         "first_name": d.get("first_name", ""),
         "last_name": d.get("last_name", ""),
         "email": d.get("email", ""),
-        "rating": int(d.get("rating", 0)),
+        "rating": int(d.get("rating") or 0),
         "text": d.get("text", ""),
         "display_name": d.get("display_name") or _display_name(d.get("first_name"), d.get("last_name")),
+        "customer_since": d.get("customer_since") or None,
+        "is_featured": bool(d.get("is_featured", False)),
         "status": d.get("status", "pending"),
         "is_verified": bool(d.get("is_verified", False)),
         "created_at": published.isoformat() if isinstance(published, datetime) else str(published or ""),
@@ -857,8 +861,9 @@ class ReviewSubmit(BaseModel):
     first_name: str = Field(min_length=1, max_length=60)
     last_name: str = Field(min_length=1, max_length=60)
     email: EmailStr
-    rating: int = Field(ge=1, le=5)
+    rating: Optional[int] = Field(default=None, ge=1, le=5)
     text: str = Field(min_length=10, max_length=2000)
+    customer_since: Optional[str] = Field(default=None, max_length=20)
     consent: bool
     # Honeypot: must be empty. Bots typically fill all fields.
     website: Optional[str] = ""
@@ -868,6 +873,8 @@ class ReviewModerationInput(BaseModel):
     status: Optional[str] = None
     display_name: Optional[str] = Field(default=None, max_length=80)
     is_verified: Optional[bool] = None
+    is_featured: Optional[bool] = None
+    customer_since: Optional[str] = Field(default=None, max_length=20)
     admin_note: Optional[str] = Field(default=None, max_length=500)
 
 
@@ -905,11 +912,13 @@ async def submit_review(payload: ReviewSubmit, request: Request):
         "first_name": first_name,
         "last_name": last_name,
         "email": payload.email.lower(),
-        "rating": int(payload.rating),
+        "rating": int(payload.rating) if payload.rating else None,
         "text": text,
+        "customer_since": payload.customer_since if payload.customer_since in {"unter_1", "1_bis_3", "3_bis_5", "ueber_5"} else None,
         "status": "pending",
         "display_name": _display_name(first_name, last_name),
         "is_verified": False,
+        "is_featured": False,
         "created_at": now,
         "moderated_at": None,
         "moderated_by": None,
@@ -926,10 +935,13 @@ async def list_public_reviews(
     sort: str = "newest",
     limit: int = 12,
     offset: int = 0,
+    featured: bool = False,
 ):
     q: dict = {"status": "approved"}
     if rating and 1 <= rating <= 5:
         q["rating"] = rating
+    if featured:
+        q["is_featured"] = True
     sort_field = [("rating", -1), ("created_at", -1)] if sort == "best" else [("created_at", -1)]
     total = await db.reviews.count_documents(q)
     docs = await db.reviews.find(q).sort(sort_field).skip(max(offset, 0)).limit(min(max(limit, 1), 50)).to_list(limit)
@@ -1001,6 +1013,11 @@ async def moderate_review(review_id: str, payload: ReviewModerationInput, user: 
         update["display_name"] = _sanitize_text(payload.display_name, 80) or None
     if payload.is_verified is not None:
         update["is_verified"] = bool(payload.is_verified)
+    if payload.is_featured is not None:
+        update["is_featured"] = bool(payload.is_featured)
+    if payload.customer_since is not None:
+        cs = payload.customer_since.strip() if payload.customer_since else ""
+        update["customer_since"] = cs if cs in {"unter_1", "1_bis_3", "3_bis_5", "ueber_5"} else None
     if payload.admin_note is not None:
         update["admin_note"] = _sanitize_text(payload.admin_note, 500)
     if not update:

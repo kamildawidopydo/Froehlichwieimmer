@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Check, X, PenSquare, Trash2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Check, X, PenSquare, Trash2, ShieldCheck, AlertCircle, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PageMeta from '@/components/PageMeta';
 import { StarsDisplay } from '@/components/reviews/RatingStars';
 import { reviewsApi, formatReviewDate } from '@/services/reviewsApi';
 
 const TABS = [
-  { key: 'pending', label: 'Ausstehend' },
+  { key: 'pending', label: 'Neu' },
   { key: 'approved', label: 'Freigegeben' },
   { key: 'rejected', label: 'Abgelehnt' },
   { key: '', label: 'Alle' },
@@ -19,9 +19,19 @@ const STATUS_META = {
   rejected: { label: 'Abgelehnt', cls: 'bg-rose-50 text-rose-800 border-rose-100' },
 };
 
+const CUSTOMER_SINCE_OPTIONS = [
+  { value: '', label: '— keine Angabe —' },
+  { value: 'unter_1', label: 'weniger als 1 Jahr' },
+  { value: '1_bis_3', label: '1–3 Jahre' },
+  { value: '3_bis_5', label: '3–5 Jahre' },
+  { value: 'ueber_5', label: 'mehr als 5 Jahre' },
+];
+
 const EditModal = ({ review, onClose, onSaved }) => {
   const [displayName, setDisplayName] = useState(review.display_name || '');
   const [isVerified, setIsVerified] = useState(!!review.is_verified);
+  const [isFeatured, setIsFeatured] = useState(!!review.is_featured);
+  const [customerSince, setCustomerSince] = useState(review.customer_since || '');
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -30,6 +40,8 @@ const EditModal = ({ review, onClose, onSaved }) => {
       await reviewsApi.moderate(review.id, {
         display_name: displayName.trim() || undefined,
         is_verified: isVerified,
+        is_featured: isFeatured,
+        customer_since: customerSince || null,
       });
       toast.success('Anzeige aktualisiert.');
       onSaved();
@@ -46,7 +58,7 @@ const EditModal = ({ review, onClose, onSaved }) => {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-[10.5px] font-medium uppercase tracking-[0.28em] text-bank-text-muted">Bearbeiten</p>
-            <h2 className="mt-1 font-serif text-xl text-bank-text">Anzeigename &amp; Verifizierung</h2>
+            <h2 className="mt-1 font-serif text-xl text-bank-text">Öffentliche Darstellung</h2>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-1 text-bank-text-muted hover:bg-neutral-100" aria-label="Schließen">
             <X className="h-4 w-4" />
@@ -54,8 +66,8 @@ const EditModal = ({ review, onClose, onSaved }) => {
         </div>
 
         <p className="mt-4 rounded-xl bg-neutral-50 p-3 text-[12.5px] leading-relaxed text-bank-text-muted">
-          <span className="font-medium text-bank-text">Hinweis:</span> Der eigentliche Bewertungstext bleibt unverändert.
-          Sie ändern hier ausschließlich den öffentlich angezeigten Namen und den Verifizierungsstatus.
+          <span className="font-medium text-bank-text">Hinweis:</span> Der eigentliche Erfahrungstext bleibt unverändert.
+          Sie ändern hier ausschließlich Anzeigename, Kundendauer, Verifizierung und Startseiten-Auswahl.
         </p>
 
         <label className="mt-5 block text-[11.5px] font-medium uppercase tracking-[0.16em] text-bank-text-muted">
@@ -65,9 +77,34 @@ const EditModal = ({ review, onClose, onSaved }) => {
           type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={80}
           className="mt-2 w-full rounded-xl border border-bank-border px-3 py-2 text-[14px] focus:border-bank-primary focus:outline-none"
           data-testid="admin-review-displayname"
+          placeholder='z. B. "Michael K." oder "Michael – Kunde seit 2019"'
         />
 
+        <label className="mt-5 block text-[11.5px] font-medium uppercase tracking-[0.16em] text-bank-text-muted">
+          Kunde seit (öffentlich)
+        </label>
+        <select
+          value={customerSince}
+          onChange={(e) => setCustomerSince(e.target.value)}
+          className="mt-2 w-full rounded-xl border border-bank-border px-3 py-2 text-[14px] focus:border-bank-primary focus:outline-none"
+          data-testid="admin-review-customer-since"
+        >
+          {CUSTOMER_SINCE_OPTIONS.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+        </select>
+
         <label className="mt-5 flex items-center gap-3 text-[13px] text-bank-text">
+          <input
+            type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)}
+            className="h-4 w-4"
+            data-testid="admin-review-featured"
+          />
+          <span className="flex items-center gap-2">
+            <Star className="h-4 w-4 text-bank-gold" strokeWidth={1.4} fill="currentColor" />
+            Auf Startseite hervorheben
+          </span>
+        </label>
+
+        <label className="mt-3 flex items-center gap-3 text-[13px] text-bank-text">
           <input
             type="checkbox" checked={isVerified} onChange={(e) => setIsVerified(e.target.checked)}
             className="h-4 w-4"
@@ -139,9 +176,9 @@ const AdminReviews = () => {
       <header className="mb-8 flex items-start justify-between gap-4 border-b border-bank-border pb-6">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bank-text-muted">Moderation</p>
-          <h1 className="mt-2 font-serif text-3xl text-bank-text">Kundenbewertungen</h1>
+          <h1 className="mt-2 font-serif text-3xl text-bank-text">Kundenstimmen</h1>
           <p className="mt-1 text-sm text-bank-text-muted">
-            Neue Bewertungen erfordern manuelle Freigabe, bevor sie öffentlich sichtbar sind.
+            Neue Kundenstimmen erfordern manuelle Freigabe, bevor sie öffentlich sichtbar sind.
           </p>
         </div>
         {counts.pending > 0 && (
@@ -202,10 +239,16 @@ const AdminReviews = () => {
                           <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.6} /> Verifiziert
                         </span>
                       )}
+                      {r.is_featured && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-bank-gold/40 bg-bank-gold/10 px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-[0.18em] text-bank-gold" data-testid={`admin-featured-badge-${r.id}`}>
+                          <Star className="h-3.5 w-3.5" strokeWidth={1.4} fill="currentColor" /> Auf Startseite
+                        </span>
+                      )}
                     </div>
                     <p className="mt-3 font-serif text-lg text-bank-text">{r.display_name}</p>
                     <p className="mt-1 text-[12.5px] text-bank-text-muted">
                       {r.first_name} {r.last_name} · <span className="font-mono">{r.email}</span> · {formatReviewDate(r.created_at)}
+                      {r.customer_since && (<> · <span className="uppercase tracking-[0.12em]">{r.customer_since.replace('_bis_', '–').replace('ueber_', '&gt; ').replace('unter_1', '&lt; 1 Jahr')}</span></>)}
                     </p>
                     <p className="mt-3 whitespace-pre-line text-[14px] leading-relaxed text-bank-text">{r.text}</p>
                     {r.moderated_at && (

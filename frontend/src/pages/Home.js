@@ -5,7 +5,7 @@ import BankingHero from '@/components/BankingHero';
 import HomePostHero from '@/components/home/HomePostHero';
 import HomeSavingsInquirySection from '@/components/home/HomeSavingsInquirySection';
 import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
-import HomeCustomerReviews from '@/components/home/HomeCustomerReviews';
+import HomeTestimonials from '@/components/home/HomeTestimonials';
 import HomePlatformShowcase from '@/components/home/HomePlatformShowcase';
 import HomeCreditOffersSection from '@/components/home/HomeCreditOffersSection';
 import HomeSavingsOffersSection from '@/components/home/HomeSavingsOffersSection';
@@ -168,7 +168,7 @@ const Home = () => {
       {/* ── FAQ / Wissenscenter (vor Produktüberblick) ─────────────────── */}
       <HomeSavingsFaqSection />
 
-      <HomeCustomerReviews />
+      <HomeTestimonials />
 
       {/* ── Produktüberblick (Anleihen, Aktien, Kredit) ───────────────── */}
       <HomePostHero />
