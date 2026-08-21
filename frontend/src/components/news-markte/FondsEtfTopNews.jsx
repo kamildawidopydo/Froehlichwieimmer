@@ -4,7 +4,9 @@ import { ArrowUpRight } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { formatRelative } from '@/services/newsMarkteApi';
 
-const FALLBACK_IMG = 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1600&q=70';
+// Editorial-Fallback (Container-Terminal) — KEIN Trading-Chart. Nur wenn
+// das eigentliche Artikelbild lädt fehlschlägt, greift dieses neutrale Motiv.
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1494412651409-8963ce7935a7?auto=format&fit=crop&w=1600&q=70';
 const onImgError = (e) => { e.currentTarget.src = FALLBACK_IMG; };
 
 const Card = ({ article, primary }) => (

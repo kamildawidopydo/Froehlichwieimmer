@@ -114,7 +114,7 @@ _DEMO_POSTS = [
             "## Was bedeutet das für Anleger?\n"
             "Zinsen sind ein wichtiger, aber nur einer von vielen Faktoren. Wir beobachten sie im Gesamtzusammenhang und ordnen sie im Rahmen des individuellen Anlagehorizonts ein."
         ),
-        "image_url": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=1200&q=70",
+        "image_url": "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1200&q=70",
         "is_featured": True,
         "hours_ago": 24,
     },
@@ -132,7 +132,7 @@ _DEMO_POSTS = [
             "## Was bedeutet das für Anleger?\n"
             "Höchststände sind kein Kauf- oder Verkaufssignal. Sie sind ein guter Anlass, das eigene Risikoprofil erneut zu prüfen."
         ),
-        "image_url": "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=1200&q=70",
+        "image_url": "https://images.unsplash.com/photo-1494412651409-8963ce7935a7?w=1200&q=70",
         "hours_ago": 48,
     },
     {

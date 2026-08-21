@@ -7,6 +7,35 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 28 (Feb 27, 2026) — Chart-Bilder komplett aus News + Einordnung entfernt
+
+**User-Meldung**: „schwarze Finanzcharts / Candlestick-Kurse tauchen immer noch auf". Ursache: 4 Trading-Chart Unsplash-IDs waren an mehreren Stellen hardcoded (nicht nur im Synthesizer, sondern in Seed-Daten und Frontend-Fallback).
+
+**Identifizierte Chart-URLs (alle entfernt)**
+- `photo-1554224155-8d04cb21cd6c` (klassischer Trading-Chart) → 2 Vorkommen
+- `photo-1590283603385-17ffb3a7f29f` (dunkler Candlestick) → 3 Vorkommen
+- `photo-1526304640581-d334cdbbf45e` (Line-Chart) → 3 Vorkommen
+- `photo-1611974789855-9c2a0a7236a3` (Frankfurter Trading-Floor) → 3 Vorkommen
+
+**Ersetzt in Code**
+- `/app/backend/einordnung.py` — 2 Seed-Posts (Zinsen-Artikel → EU-Parlament, Höchststände → Container-Terminal)
+- `/app/backend/news_provider.py` — 2 Demo-Items (Exporte + Zinsentscheid), obwohl Demo-Provider deaktiviert (Hygiene)
+- `/app/backend/server.py` — 6 news_markte_articles-Seeds (EZB-Lagarde, DAX-Startet, US-Märkte, Bundesanleihe, Unternehmensanleihen, EUR/USD)
+- `/app/frontend/src/components/news-markte/FondsEtfTopNews.jsx` — Fallback-Konstante `FALLBACK_IMG`
+
+**Ersetzt in DB (Migration-Script)** — 9 bestehende Dokumente:
+- einordnung_posts × 2, news_markte_articles × 7 (ezb-lagarde, euro-dollar-parity, us-maerkte, ezb-zinsentscheid, bundesanleihe, dax-startet, unternehmensanleihen)
+
+**Neue Zuordnungen** (aus dem validierten Editorial-Fallback-Pool):
+- Zinsen / EZB / Zentralbank-Themen → *parliament chamber* (`photo-1541872703-74c5e44368f9`)
+- Aktienmärkte / Anleihen / Handel → *container port aerial* (`photo-1587293852726-70cdb56c2866` / `photo-1494412651409-8963ce7935a7`)
+- US-Märkte → *port terminal aerial* (`photo-1526481280693-3bfa7568e0f3`, statt Wall-Street-Chart)
+
+**Verifikation**
+- `grep photo-1554224155|photo-1590283603385|photo-1526304640581|photo-1611974789855` in `/app/backend` und `/app/frontend/src` → **ALL CLEAN**
+- Screenshots von Home + `/news/nachrichten` bestätigen: keine Candlesticks, keine Trading-Screens, keine schwarzen Charts. Motive: Warehouse (Logistik), Container-Terminal, Container-Kräne — editorial und thematisch.
+
+
 ## Session 27 (Feb 27, 2026) — Editorial-Bildsprache statt Finanz-Klischees
 
 **Ziel** vom User: Bilder auf News- und Einordnung-Seite wirken „zu stark nach Aktien, Börse, Trading und Finanzen". Bilder sollen wie in einem großen Nachrichtenmagazin wirken — Häfen, Container, Windräder, Solarparks, Labore, EU-Parlament, Reichstag, Züge, Rechenzentren usw. Keine Candlestick-Charts, keine Ticker, keine Geldscheine, keine Wiederholungen.
