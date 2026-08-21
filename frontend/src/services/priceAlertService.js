@@ -1,51 +1,76 @@
-import { supabase } from '@/lib/supabase';
+/**
+ * Price alerts service — FastAPI backend (`/api/alerts`).
+ *
+ * Replaces the earlier Supabase-based implementation. The FastAPI backend
+ * evaluates alerts every 15 minutes via cron and sends emails through Resend
+ * (managed via the Emergent Email integration). Users can also trigger a
+ * manual check via `checkPriceAlerts()`.
+ */
+import apiClient from './apiClient';
 
+/** Normalise backend payload to the shape existing UI already consumes. */
+const normalize = (row) => ({
+  id: row.id,
+  symbol: row.symbol,
+  direction: row.direction,
+  target_price: Number(row.target_price),
+  currency: row.currency || null,
+  note: row.note || null,
+  is_active: !!row.is_active,
+  triggered_at: row.triggered_at || null,
+  triggered_price: row.triggered_price ?? null,
+  triggered_count: Number(row.triggered_count || 0),
+  cooldown_until: row.cooldown_until || null,
+  created_at: row.created_at || null,
+});
+
+/** Only active alerts (for symbol-detail panel). */
 export async function fetchPriceAlerts() {
-  const { data, error } = await supabase
-    .from('user_price_alerts')
-    .select('*')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
+  const { data } = await apiClient.get('/alerts');
+  const items = (data?.items || []).map(normalize).filter((a) => a.is_active);
+  return items;
 }
 
+/** All alerts incl. triggered (for the dashboard `/dashboard/alarme` page). */
 export async function fetchAllPriceAlerts() {
-  const { data, error } = await supabase
-    .from('user_price_alerts')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(50);
-  if (error) throw error;
-  return data || [];
+  const { data } = await apiClient.get('/alerts');
+  return (data?.items || []).map(normalize);
 }
 
-export async function createPriceAlert({ symbol, direction, targetPrice }) {
-  const { data: userData } = await supabase.auth.getUser();
-  const userId = userData?.user?.id;
-  if (!userId) throw new Error('Nicht angemeldet');
-  const { data, error } = await supabase
-    .from('user_price_alerts')
-    .insert({
-      user_id: userId,
-      symbol: String(symbol).toUpperCase(),
-      direction,
-      target_price: Number(targetPrice),
-    })
-    .select('*')
-    .single();
-  if (error) throw error;
-  return data;
+export async function createPriceAlert({ symbol, direction, targetPrice, currency, note }) {
+  const { data } = await apiClient.post('/alerts', {
+    symbol: String(symbol).toUpperCase(),
+    direction: direction || 'above',
+    target_price: Number(targetPrice),
+    currency: currency || undefined,
+    note: note || undefined,
+  });
+  return normalize(data);
+}
+
+export async function updatePriceAlert(id, patch) {
+  const body = {};
+  if (patch.isActive !== undefined) body.is_active = !!patch.isActive;
+  if (patch.targetPrice !== undefined) body.target_price = Number(patch.targetPrice);
+  if (patch.direction !== undefined) body.direction = patch.direction;
+  if (patch.note !== undefined) body.note = patch.note;
+  const { data } = await apiClient.patch(`/alerts/${id}`, body);
+  return normalize(data);
 }
 
 export async function deletePriceAlert(id) {
-  const { error } = await supabase.from('user_price_alerts').delete().eq('id', id);
-  if (error) throw error;
+  await apiClient.delete(`/alerts/${id}`);
 }
 
-/** Invoke edge function to evaluate active alerts against cached prices. */
+/** Invoke the FastAPI trigger evaluator — only checks caller's own alerts. */
 export async function checkPriceAlerts() {
-  const { data, error } = await supabase.functions.invoke('check-price-alerts', { body: {} });
-  if (error) throw error;
-  return data;
+  const { data } = await apiClient.post('/alerts/check');
+  return {
+    triggered: data?.triggered || [],
+    stats: {
+      checked: data?.checked || 0,
+      triggered: data?.triggered_count || (data?.triggered || []).length,
+      mails_sent: data?.mails_sent || 0,
+    },
+  };
 }

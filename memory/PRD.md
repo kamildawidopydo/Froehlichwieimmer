@@ -7,6 +7,40 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 26 (Feb 27, 2026) — Preis-Alerts produktionsreif (Watchlist-scoped, Cron, Resend-Mail)
+
+**Backend**
+- **Neu**: `/app/backend/alerts.py` mit `register(api, db, get_current_user, require_admin, fetch_quote_fn, find_cfg_fn, send_email_fn)`. Dependency-Injection statt zirkulärer Import — nutzt bestehende Helfer aus `server.py` (`_fetch_quote`, `_find_cfg`, `_send_email_via_emergent`).
+- **Datenmodell** (Mongo `price_alerts`): `_id, user_id, symbol, direction ∈ {above,below,change_pct}, target_price, currency, is_active, triggered_at, triggered_price, triggered_count, cooldown_until, note, created_at, updated_at`.
+- **Endpunkte** (alle cookie-authentifiziert):
+  - `GET /api/alerts` — eigene Alerts + `cooldown_hours=6`
+  - `POST /api/alerts` — anlegen (validiert Symbol gegen curated universe + eigene Watchlist; Duplikat-Prevention; MAX 40/User)
+  - `PATCH /api/alerts/{id}` — is_active toggeln, target_price/direction/note ändern; Reset des Cooldown bei Änderung
+  - `DELETE /api/alerts/{id}` — 200 mit `removed:1`, 404 wenn nicht vorhanden
+  - `POST /api/alerts/check` — Ad-hoc-Check nur eigener Alerts (User-Button „Jetzt prüfen")
+  - `POST /api/alerts/admin/check-triggers` — admin-only, wird vom Cron gerufen
+- **Trigger-Logik**: 1 Quote-Call pro einzigartigem Symbol pro Check (batch-effizient), Auslöse-Kondition pro Direction, bei Match → `triggered_at`, `triggered_price`, `cooldown_until = now+6h`, `triggered_count++` UND HTML-Mail via Resend.
+- **Mail-Template**: seriös, Dunkelblau/Gold, Fröhlich-Branding, klarer Disclaimer „keine Anlageberatung/Empfehlung", Kontakt-Mailto zu `kundenservice@kapital-direkt24.de`.
+- **Cooldown 6 h** verhindert Mail-Spam bei Kurs-Oszillation um die Schwelle. Reaktivierung oder Threshold-Change resettet Cooldown.
+- **Startup**: `ensure_indexes` erzeugt `(user_id, is_active)` + `(user_id, symbol)` + sparse `cooldown_until`.
+
+**Frontend**
+- `/app/frontend/src/services/priceAlertService.js` komplett von Supabase auf FastAPI portiert. Signaturen bleiben unverändert (`fetchPriceAlerts`, `fetchAllPriceAlerts`, `createPriceAlert`, `deletePriceAlert`, `checkPriceAlerts`) → bestehende UI (`AlarmePage`, `PriceAlertPanel`) läuft ohne Anpassung.
+- Neu: `updatePriceAlert(id, patch)` für PATCH-Nutzung (aktivieren/pausieren).
+
+**Cron** (`.emergent/crons.yml`)
+- Dritter Eintrag: `price-alerts-check` alle 15 Min → `POST /api/alerts/admin/check-triggers`.
+
+**Verifiziert**
+- 3 Alerts angelegt (DAX above/below/change_pct) → 201 ✓
+- Manuelle Prüfung: `triggered=1, mails_sent=1, cooldown=0, unknown_symbol=0` ✓
+- Cooldown gesetzt (6 h) → zweiter Check würde `cooldown=1` liefern ✓
+- PATCH: is_active=false + target_price=18000 → 200 ✓
+- PATCH invalid direction → 400 ✓
+- DELETE → 200 (removed:1); DELETE nochmal → 404 ✓
+- Ohne Cookie → 401 ✓
+
+
 ## Session 25 (Feb 27, 2026) — News-Pipeline produktionsreif gehärtet
 
 **Backend (`news_synthesizer.py`) — vollständiger Rewrite**

@@ -12,3 +12,10 @@ crons:
     method: POST
     auth: admin
     description: "Stündlich bis zu 3 neue Artikel via Claude Sonnet 5 aus vorliegenden Feeds synthetisieren."
+
+  - name: price-alerts-check
+    schedule: "*/15 * * * *"
+    endpoint: "/api/alerts/admin/check-triggers"
+    method: POST
+    auth: admin
+    description: "Alle 15 Min aktive Preis-Alerts prüfen und ggf. Kursalarm-Mail versenden (Cooldown 6h)."

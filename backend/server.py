@@ -3225,6 +3225,7 @@ from news_synthesizer import (
     synthesize_pending as _news_synthesize,
     purge_demo_articles as _news_purge_demo,
 )  # noqa: E402
+from alerts import register as _register_alerts, ensure_indexes as _alerts_ensure_indexes  # noqa: E402
 
 # Inject the Mongo handle into the news provider so it can serve articles.
 _MongoNewsProvider.set_db(db)
@@ -3250,6 +3251,25 @@ async def _admin_news_list(_user: dict = Depends(require_admin), status: Optiona
             "items": [{**{k: v for k, v in d.items() if k != "_id"}, "id": str(d.get("_id"))} for d in docs]}
 
 _register_einordnung(api, db)
+
+# --- Price alerts (Watchlist-scoped, 15-min cron, Resend-Mail) ------------
+_register_alerts(
+    api,
+    db,
+    get_current_user=get_current_user,
+    require_admin=require_admin,
+    fetch_quote_fn=_fetch_quote,
+    find_cfg_fn=_find_cfg,
+    send_email_fn=_send_email_via_emergent,
+)
+
+
+@app.on_event("startup")
+async def _alerts_startup() -> None:
+    try:
+        await _alerts_ensure_indexes(db)
+    except Exception:  # noqa: BLE001
+        logger.exception("alerts index creation failed")
 
 
 @app.on_event("startup")
