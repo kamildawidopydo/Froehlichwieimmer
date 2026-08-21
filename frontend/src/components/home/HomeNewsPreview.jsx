@@ -157,7 +157,7 @@ const HomeNewsPreview = () => {
 
           {/* Top news card */}
           {top ? (
-            <Link to={`/news/euronews/${top.slug}`} className="group relative block overflow-hidden border border-bank-border bg-white" data-testid="home-news-top">
+            <Link to={`/news/nachrichten/${top.slug}`} className="group relative block overflow-hidden border border-bank-border bg-white" data-testid="home-news-top">
               <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
                 {top.image_url && (
                   <img src={top.image_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
@@ -197,7 +197,7 @@ const HomeNewsPreview = () => {
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {(newsState.loading ? Array.from({ length: 4 }) : secondary).slice(0, 4).map((item, idx) => (
                 item ? (
-                  <Link key={item.slug} to={`/news/euronews/${item.slug}`} className="group flex flex-col border border-bank-border bg-white transition-colors hover:border-bank-gold/60" data-testid={`home-news-card-${item.slug}`}>
+                  <Link key={item.slug} to={`/news/nachrichten/${item.slug}`} className="group flex flex-col border border-bank-border bg-white transition-colors hover:border-bank-gold/60" data-testid={`home-news-card-${item.slug}`}>
                     <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
                       {item.image_url && <img src={item.image_url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />}
                     </div>

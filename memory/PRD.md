@@ -7,6 +7,22 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 23 (Feb 26, 2026) — Interne Nachrichten-Detailseiten
+
+**Backend (`news_provider.py`)**
+- `_normalise()` erweitert um neue lizenz-bewusste Felder: `subtitle`, `source_name`, `source_url`, `hero_image_url`, `full_text`, `license_allows_fulltext`, `content_type` (`licensed_fulltext | editorial_summary | demo | video | article`).
+- Regel: `full_text` wird nur ausgeliefert, wenn `license_allows_fulltext=true`. Bei `false` gibt es nur den eigenen `article_content` (redaktionelle Zusammenfassung), niemals einen kopierten Fremdtext.
+- Alle 12 Demo-Items um `subtitle`, `hero_image_url`, `full_text`, `license_allows_fulltext=true`, `content_type='demo'` (bzw. `video`) erweitert.
+
+**Frontend**
+- Neue Seite `pages/news/NachrichtenDetailPage.jsx`:
+  - Rendert Kategorie · DEMO-Badge · Titel · kursiver Untertitel · Teaser · „TT.MM.JJJJ, HH:MM · Quelle: XYZ" · Hero-Bild (nutzt `hero_image_url`).
+  - Zeigt entweder `full_text` (bei `license_allows_fulltext=true`) ODER die eigene `article_content`-Zusammenfassung — nie beides, nie kopierten Fremdtext.
+  - Dezenter „Externe Quelle"-Block am Ende (nur Quellname, optional kleiner „Originalquelle ansehen"-Link mit `rel="noopener noreferrer nofollow"`).
+  - Zurück-Link „Zurück zu Nachrichten" oben.
+- Route `/news/nachrichten/:slug` (neu) und `/news/euronews/:slug` (BC-Redirect auf dasselbe Template) in `App.js`.
+- **Alle News-Links umgestellt** in `NachrichtenPage.jsx` (Hero, Headlines, Card-Grid), `HomeNewsPreview.jsx` (Top-News, sekundäre Cards) und `EinordnungPage.jsx` (verknüpfte Meldung) auf `/news/nachrichten/:slug`. Kein direkter Redirect zu Euronews/Reuters/dpa mehr.
+
 ## Session 22 (Feb 26, 2026) — HomeNewsPreview: nach oben + Auto-Refresh
 
 - **Reihenfolge**: `HomeNewsPreview` in `pages/Home.js` von unten (vor Bonus-CTA) direkt **unter `<BankingHero />`** verschoben — sichtbar bei Offset ~1031 px vom Dokumentanfang.

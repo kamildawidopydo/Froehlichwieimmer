@@ -37,7 +37,7 @@ const CategoryTag = ({ category }) => (
 );
 
 const HeadlineRow = ({ item }) => (
-  <Link to={`/news/euronews/${item.slug}`} className="group flex gap-3 border-b border-bank-border/70 py-3 last:border-b-0" data-testid={`headline-${item.slug}`}>
+  <Link to={`/news/nachrichten/${item.slug}`} className="group flex gap-3 border-b border-bank-border/70 py-3 last:border-b-0" data-testid={`headline-${item.slug}`}>
     <img src={item.image_url} alt="" loading="lazy" className="h-14 w-20 shrink-0 object-cover" />
     <div className="min-w-0 flex-1">
       <CategoryTag category={item.category} />
@@ -52,7 +52,7 @@ const HeadlineRow = ({ item }) => (
 );
 
 const HeroCard = ({ item }) => (
-  <Link to={`/news/euronews/${item.slug}`} className="group grid grid-cols-1 gap-6 border border-bank-border bg-white p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr]" data-testid="news-hero">
+  <Link to={`/news/nachrichten/${item.slug}`} className="group grid grid-cols-1 gap-6 border border-bank-border bg-white p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr]" data-testid="news-hero">
     <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
       <img src={item.image_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
       {item.content_type === 'video' && (
@@ -81,7 +81,7 @@ const HeroCard = ({ item }) => (
 );
 
 const NewsCard = ({ item }) => (
-  <Link to={`/news/euronews/${item.slug}`} className="group flex min-w-0 flex-col border border-bank-border bg-white transition-colors hover:border-bank-accent-strong/50" data-testid={`news-card-${item.slug}`}>
+  <Link to={`/news/nachrichten/${item.slug}`} className="group flex min-w-0 flex-col border border-bank-border bg-white transition-colors hover:border-bank-accent-strong/50" data-testid={`news-card-${item.slug}`}>
     <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
       <img src={item.image_url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
       {item.content_type === 'video' && (

@@ -54,6 +54,7 @@ const MarketInstrumentSnapshotPage = lazy(() => import('@/pages/news/MarketInstr
 const WatchlistPage = lazy(() => import('@/pages/news/WatchlistPage'));
 const NachrichtenPage = lazy(() => import('@/pages/news/NachrichtenPage'));
 const EuronewsArticlePage = lazy(() => import('@/pages/news/EuronewsArticlePage'));
+const NachrichtenDetailPage = lazy(() => import('@/pages/news/NachrichtenDetailPage'));
 const EinordnungPage = lazy(() => import('@/pages/news/EinordnungPage'));
 const Login = lazy(() => import('@/pages/Login'));
 const Register = lazy(() => import('@/pages/Register'));
@@ -245,7 +246,8 @@ function App() {
                   <Route path="/news" element={<PublicNewsPage />} />
                   <Route path="/news/watchlist" element={<WatchlistPage />} />
                   <Route path="/news/nachrichten" element={<NachrichtenPage />} />
-                  <Route path="/news/euronews/:slug" element={<EuronewsArticlePage />} />
+                  <Route path="/news/nachrichten/:slug" element={<NachrichtenDetailPage />} />
+                  <Route path="/news/euronews/:slug" element={<NachrichtenDetailPage />} />
                   <Route path="/news/einordnung/:slug" element={<EinordnungPage />} />
                   <Route path="/bewertungen" element={<Bewertungen />} />
                   <Route path="/kundenstimmen" element={<Kundenstimmen />} />

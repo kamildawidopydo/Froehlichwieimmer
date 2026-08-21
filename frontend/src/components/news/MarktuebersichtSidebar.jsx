@@ -349,18 +349,18 @@ const MarktuebersichtSidebar = () => {
         </p>
       )}
 
-      {!marketError && !loadingMarket && (activeRows[0]?.lastUpdated || activeRows[0]?.isDelayed) && (
+      {!marketError && !loadingMarket && (marketItems[0]?.lastUpdated || marketItems[0]?.isDelayed) && (
         <p
           className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted"
           data-testid="market-last-updated"
         >
-          {activeRows[0]?.lastUpdated && (
-            <span>Letzte Aktualisierung: {formatLastUpdated(activeRows[0].lastUpdated)} Uhr</span>
+          {marketItems[0]?.lastUpdated && (
+            <span>Letzte Aktualisierung: {formatLastUpdated(marketItems[0].lastUpdated)} Uhr</span>
           )}
-          {activeRows[0]?.isDelayed && (
+          {marketItems[0]?.isDelayed && (
             <span aria-hidden className="text-bank-gold">·</span>
           )}
-          {activeRows[0]?.isDelayed && (
+          {marketItems[0]?.isDelayed && (
             <span>Marktdaten zeitverzögert</span>
           )}
         </p>
