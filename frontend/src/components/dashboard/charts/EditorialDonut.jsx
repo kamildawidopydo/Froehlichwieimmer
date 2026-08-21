@@ -179,14 +179,14 @@ const EditorialDonut = ({
                   return (
                     <motion.path
                       key={prepared[idx]?.[idKey] ?? idx}
-                      d={path ?? undefined}
+                      d={path || 'M0 0'}
                       fill={arc.data.color}
                       stroke="#fff"
                       strokeWidth={prepared.length > 1 ? 2 : 0}
                       strokeLinejoin="round"
                       opacity={hoverIdx == null || isActive ? 1 : DIM_OPACITY}
                       className="cursor-pointer"
-                      animate={{ d: path ?? undefined, opacity: hoverIdx == null || isActive ? 1 : DIM_OPACITY }}
+                      animate={{ d: path || 'M0 0', opacity: hoverIdx == null || isActive ? 1 : DIM_OPACITY }}
                       transition={{ duration: 0.2, ease: DASHBOARD_EASE }}
                       onMouseEnter={() => setHoverIdx(idx)}
                     />

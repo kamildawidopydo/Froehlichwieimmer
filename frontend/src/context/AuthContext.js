@@ -205,7 +205,13 @@ export const AuthProvider = ({ children }) => {
       applyLanguage(profile);
       setUser(buildUserObject(me, profile));
       return true;
-    } catch {
+    } catch (err) {
+      // 401 for unauthenticated visitors is expected — do NOT log to console.
+      const status = err?.response?.status;
+      if (status && status !== 401 && status !== 403) {
+        // eslint-disable-next-line no-console
+        console.debug('[auth] hydrate failed:', status);
+      }
       return false;
     }
   }, []);
