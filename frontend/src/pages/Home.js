@@ -7,7 +7,6 @@ import HomeSavingsInquirySection from '@/components/home/HomeSavingsInquirySecti
 import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
 import HomeTestimonials from '@/components/home/HomeTestimonials';
 import HomeTrustLine from '@/components/home/HomeTrustLine';
-import HomeTrustSecurity from '@/components/home/HomeTrustSecurity';
 import HomePlatformShowcase from '@/components/home/HomePlatformShowcase';
 import HomeCreditOffersSection from '@/components/home/HomeCreditOffersSection';
 import HomeSavingsOffersSection from '@/components/home/HomeSavingsOffersSection';
@@ -176,8 +175,6 @@ const Home = () => {
 
       {/* ── Produktüberblick (Anleihen, Aktien, Kredit) ───────────────── */}
       <HomePostHero />
-
-      <HomeTrustSecurity />
 
       <SpecialAifOverview />
 
