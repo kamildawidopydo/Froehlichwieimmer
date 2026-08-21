@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { ArrowUpRight, ShieldCheck, HandCoins, Clock } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import TabletMockup from '@/components/editorial/TabletMockup';
+import DashboardShowcase from '@/components/editorial/DashboardShowcase';
 
 const EASE = [0.22, 1, 0.36, 1];
 const LUCIDE_STROKE = 1.4;
@@ -63,39 +65,55 @@ export default function PlatformShowcase() {
       className="relative border-t border-bank-border bg-bank-bg py-20 sm:py-24 lg:py-28"
     >
       <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
-        {/* LEDE */}
-        <motion.div {...fade(0)} className="max-w-4xl">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-gold">
-            Investmentplattform &amp; Vermögensberatung
-          </p>
-          <h2
-            id="platform-showcase-title"
-            className="mt-6 font-display text-[clamp(1.85rem,4vw+0.6rem,3rem)] font-light leading-[1.05] tracking-[-0.02em] text-bank-text"
-            style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
+        {/* LEDE + TABLET */}
+        <div className="grid gap-x-12 gap-y-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-x-16">
+          <motion.div {...fade(0)} className="max-w-3xl">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-gold">
+              Investmentplattform &amp; Vermögensberatung
+            </p>
+            <h2
+              id="platform-showcase-title"
+              className="mt-6 font-display text-[clamp(1.85rem,4vw+0.6rem,3rem)] font-light leading-[1.05] tracking-[-0.02em] text-bank-text"
+              style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
+            >
+              Ein Login. Alle Investments.
+              <br />
+              <span className="text-bank-primary">Ein Partner an Ihrer Seite.</span>
+            </h2>
+            <p className="mt-8 font-display text-[1.15rem] font-light leading-[1.5] tracking-[-0.005em] text-bank-text sm:text-[1.35rem]">
+              Ihr Vermögen verdient mehr als nur eine gute Rendite.
+            </p>
+            <div className="mt-8 space-y-5 text-[15.5px] leading-[1.85] text-bank-text-muted sm:text-[16px]">
+              <p>
+                Ob Tagesgeld, Festgeld, Flexgeld, Aktien, Anleihen oder Fonds — mit Fröhlich Vermögensberatung behalten Sie
+                Ihre Kapitalanlagen und Bankverbindungen zentral über eine einzige Oberfläche im Blick.
+              </p>
+              <p>
+                Doch für uns beginnt Vermögensberatung nicht bei der höchsten Rendite. Entscheidend ist das Zusammenspiel
+                aus Renditechancen, Sicherheit, Verfügbarkeit und Risiko — abgestimmt auf Ihre persönlichen Ziele.
+              </p>
+              <p>
+                Eine Empfehlung sprechen wir nur aus, wenn wir selbst davon überzeugt sind. Dafür prüfen, vergleichen und
+                hinterfragen wir. Denn hinter jedem Investment steht nicht nur Kapital, sondern Ihr Vertrauen und Ihre
+                Zukunft.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Tablet-Mockup rechts (Desktop) / darunter (Mobile) */}
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 24 }}
+            whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ duration: reduce ? 0 : 0.65, delay: reduce ? 0 : 0.15, ease: EASE }}
+            className="relative"
+            data-testid="platform-tablet-mockup"
           >
-            Ein Login. Alle Investments.
-            <br />
-            <span className="text-bank-primary">Ein Partner an Ihrer Seite.</span>
-          </h2>
-          <p className="mt-8 max-w-3xl font-display text-[1.15rem] font-light leading-[1.5] tracking-[-0.005em] text-bank-text sm:text-[1.35rem]">
-            Ihr Vermögen verdient mehr als nur eine gute Rendite.
-          </p>
-          <div className="mt-8 max-w-3xl space-y-5 text-[15.5px] leading-[1.85] text-bank-text-muted sm:text-[16px]">
-            <p>
-              Ob Tagesgeld, Festgeld, Flexgeld, Aktien, Anleihen oder Fonds — mit Fröhlich Vermögensberatung behalten Sie
-              Ihre Kapitalanlagen und Bankverbindungen zentral über eine einzige Oberfläche im Blick.
-            </p>
-            <p>
-              Doch für uns beginnt Vermögensberatung nicht bei der höchsten Rendite. Entscheidend ist das Zusammenspiel
-              aus Renditechancen, Sicherheit, Verfügbarkeit und Risiko — abgestimmt auf Ihre persönlichen Ziele.
-            </p>
-            <p>
-              Eine Empfehlung sprechen wir nur aus, wenn wir selbst davon überzeugt sind. Dafür prüfen, vergleichen und
-              hinterfragen wir. Denn hinter jedem Investment steht nicht nur Kapital, sondern Ihr Vertrauen und Ihre
-              Zukunft.
-            </p>
-          </div>
-        </motion.div>
+            <TabletMockup className="lg:ml-auto">
+              <DashboardShowcase />
+            </TabletMockup>
+          </motion.div>
+        </div>
 
         {/* KAPITEL — nummerierte editorial Struktur */}
         <div className="mt-20 grid gap-x-14 gap-y-16 sm:mt-24 lg:grid-cols-2 lg:gap-y-20">
