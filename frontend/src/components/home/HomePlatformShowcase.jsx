@@ -1,35 +1,13 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, ShieldCheck, HandCoins, Clock } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import TabletMockup from '@/components/editorial/TabletMockup';
 import DashboardShowcase from '@/components/editorial/DashboardShowcase';
 
 const EASE = [0.22, 1, 0.36, 1];
-const LUCIDE_STROKE = 1.4;
-
-const VALUES = [
-  {
-    icon: ShieldCheck,
-    label: 'Sicherheit & Rendite',
-    body:
-      'Investments werden nicht ausschließlich anhand der Rendite betrachtet. Sicherheit, Risiko, Verfügbarkeit und persönliche Ziele gehören zur Entscheidung.',
-  },
-  {
-    icon: HandCoins,
-    label: 'Langfristig an Ihrer Seite',
-    body:
-      'Die Betreuung endet nicht mit dem Abschluss eines Investments. Wir begleiten unsere Anleger auch bei zukünftigen finanziellen Entscheidungen und besonderen Situationen.',
-  },
-  {
-    icon: Clock,
-    label: '7 Tage erreichbar',
-    body:
-      'Persönliche Ansprechpartner und Erreichbarkeit sieben Tage die Woche für unsere Anleger.',
-  },
-];
 
 const CHAPTERS = [
   {
@@ -153,44 +131,8 @@ export default function PlatformShowcase() {
           </figcaption>
         </motion.figure>
 
-        {/* 3 WERTE — editorial, ohne Karten-Kasten */}
-        <motion.div {...fade(4)} className="mt-24 sm:mt-28">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-gold">Was uns ausmacht</p>
-          <p
-            className="mt-4 max-w-3xl font-display text-[1.25rem] font-light leading-[1.35] tracking-[-0.01em] text-bank-text sm:text-[1.45rem]"
-            style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
-          >
-            Alle Banken. Alle Investments. Eine Plattform. Sieben Tage die Woche an Ihrer Seite.
-          </p>
-
-          <div className="mt-10 grid gap-x-12 gap-y-12 lg:grid-cols-3 lg:gap-x-16">
-            {VALUES.map(({ icon: Icon, label, body }, i) => (
-              <div key={label} className="group">
-                <div className="flex items-center gap-4">
-                  <span className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <span className="h-px flex-1 bg-bank-border" aria-hidden />
-                  <Icon
-                    className="h-5 w-5 shrink-0 text-bank-primary transition-transform duration-300 group-hover:-translate-y-0.5"
-                    strokeWidth={LUCIDE_STROKE}
-                    aria-hidden
-                  />
-                </div>
-                <h3
-                  className="mt-5 font-display text-[1.3rem] font-light leading-tight tracking-[-0.01em] text-bank-text sm:text-[1.4rem]"
-                  style={{ fontVariationSettings: "'opsz' 120, 'SOFT' 100" }}
-                >
-                  {label}
-                </h3>
-                <p className="mt-3 text-[14.5px] leading-[1.75] text-bank-text-muted">{body}</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
         {/* CTA */}
-        <motion.div {...fade(5)} className="mt-24 flex flex-wrap items-center gap-3 border-t border-bank-border pt-12 sm:mt-28 sm:gap-4">
+        <motion.div {...fade(4)} className="mt-20 flex flex-wrap items-center gap-3 border-t border-bank-border pt-12 sm:mt-24 sm:gap-4">
           <Link
             to="/contact"
             data-testid="platform-showcase-cta-contact"
