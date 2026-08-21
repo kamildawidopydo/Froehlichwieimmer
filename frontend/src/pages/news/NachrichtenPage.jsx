@@ -4,6 +4,7 @@ import { PlayCircle, ArrowUpRight, RadioTower, ArrowLeft } from 'lucide-react';
 import axios from 'axios';
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
+import EinordnungSection from '@/components/nachrichten/EinordnungSection';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -216,15 +217,10 @@ const NachrichtenPage = () => {
           )}
         </div>
 
-        {/* Separator: eigene Einordnung */}
-        <div className="mt-16 border-t border-bank-border pt-10">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-accent-strong">Fröhlich Vermögensberatung — Unsere Einordnung</p>
-          <p className="mt-3 max-w-3xl text-[14px] leading-relaxed text-bank-text-muted">
-            Externe Nachrichten stammen von Euronews und sind entsprechend als solche gekennzeichnet.
-            Unsere eigene redaktionelle Einschätzung finden Sie in der Sektion „Unsere Einschätzung" auf der /news-Übersicht — bewusst getrennt vom externen Nachrichten-Feed.
-          </p>
-        </div>
       </div>
+
+      {/* Fröhlich — Unsere Einordnung: klar getrennter, redaktioneller Bereich */}
+      <EinordnungSection />
     </div>
   );
 };

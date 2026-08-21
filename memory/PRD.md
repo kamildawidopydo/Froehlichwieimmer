@@ -7,6 +7,18 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 19 (Feb 26, 2026) — Fröhlich „Unsere Einordnung"
+
+**Backend (`einordnung.py`)**
+- Neue Mongo-Collection `einordnung_posts` + `PyObjectId`-freundliches Schema (slug, title, category, teaser, body, author, image_url, related_news_slug, status, is_featured, is_demo, published_at, timestamps).
+- Public: `GET /api/einordnung` (Liste mit `category` + `featured_only` + Pagination + Kategorienliste), `GET /api/einordnung/{slug}`.
+- Admin (require_admin): `GET /admin/list?status=`, `POST /admin`, `PUT /admin/{id}`, `DELETE /admin/{id}` — Statusflow draft/scheduled/published/archived, Slug-Kollisionsschutz.
+- Startup-Seed: 4 DEMO-Beiträge (Zinsen, Aktienmärkte, Rohstoffe, Technologie), alle `is_demo=true` + `status=published`, jeder Beitrag hat H2-Zwischenüberschriften und einen „Was bedeutet das für Anleger?"-Abschluss.
+
+**Frontend**
+- `services/einordnungApi.js`, `components/nachrichten/EinordnungSection.jsx` (1 Feature-Card + 3 Standard-Cards, Gold-Akzentlinie, DEMO-Tag), `pages/news/EinordnungPage.jsx` (H2-Renderer, Persönliche-Beratung-CTA zu `/contact`, Disclaimer).
+- Neue Route `/news/einordnung/:slug` in `App.js`, Section unter Card-Grid auf `/news/nachrichten` (mit sichtbarer optischer Trennung zu externen Nachrichten).
+
 ## Session 18 (Feb 26, 2026) — Nachrichten-Bereich (Euronews DEMO)
 
 **Rechtlicher Kurzbefund**

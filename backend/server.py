@@ -3219,6 +3219,19 @@ async def on_shutdown():
 # Import the news provider abstraction at the very end so both files can
 # coexist without circular imports.
 from news_provider import active_provider as _news_provider, CATEGORIES as _NEWS_CATEGORIES  # noqa: E402
+from einordnung import register as _register_einordnung, seed_einordnung as _seed_einordnung  # noqa: E402
+
+_register_einordnung(api, db)
+
+
+@app.on_event("startup")
+async def _einordnung_startup() -> None:
+    try:
+        inserted = await _seed_einordnung(db)
+        if inserted:
+            logger.info("einordnung: seeded %d demo posts", inserted)
+    except Exception:  # noqa: BLE001
+        logger.exception("einordnung startup seed failed")
 
 
 @api.get("/news/nachrichten")
