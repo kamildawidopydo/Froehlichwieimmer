@@ -63,10 +63,13 @@ export const formatReviewDate = (iso) => {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 3600) return 'vor wenigen Minuten';
-  if (diff < 86400) return `vor ${Math.floor(diff / 3600)} Std.`;
-  if (diff < 604800) return `vor ${Math.floor(diff / 86400)} Tagen`;
-  if (diff < 2419200) return `vor ${Math.floor(diff / 604800)} Wochen`;
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
+};
+
+/** Öffentliches Kommentardatum im deutschen Kurzformat: TT.MM.JJJJ */
+export const formatCommentDate = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };

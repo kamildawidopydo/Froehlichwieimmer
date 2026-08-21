@@ -1,20 +1,14 @@
 import React from 'react';
 import { CheckCircle2, Quote, MessageCircle } from 'lucide-react';
 import { StarsDisplay } from '@/components/reviews/RatingStars';
-import { formatReviewDate } from '@/services/reviewsApi';
+import { formatCommentDate } from '@/services/reviewsApi';
 import { TOPIC_LABEL } from '@/data/reviewTopics';
 import stripOuterQuotes from '@/lib/stripOuterQuotes';
-
-export const CUSTOMER_SINCE_LABEL = {
-  unter_1: 'Neu bei uns',
-  '1_bis_3': 'Kunde seit 1–3 Jahren',
-  '3_bis_5': 'Kunde seit 3–5 Jahren',
-  ueber_5: 'Kunde seit mehreren Jahren',
-};
 
 /**
  * TestimonialCard — testimonial-focused layout: big serif quote, personal
  * intro, subtle stars, and optional response from Fröhlich Vermögensberatung.
+ * Publicly the card only shows the comment date — never customer tenure.
  */
 const TestimonialCard = ({ review, tone = 'light', size = 'md' }) => {
   const dark = tone === 'dark';
@@ -26,7 +20,7 @@ const TestimonialCard = ({ review, tone = 'light', size = 'md' }) => {
   const bodySize = size === 'lg' ? 'text-[17px] sm:text-[19px]' : 'text-[15px] sm:text-[16px]';
 
   const nameChip = (review.display_name || 'Kunde').slice(0, 2).toUpperCase();
-  const csLabel = review.customer_since ? CUSTOMER_SINCE_LABEL[review.customer_since] : null;
+  const commentDate = formatCommentDate(review.created_at);
 
   return (
     <article
@@ -106,8 +100,8 @@ const TestimonialCard = ({ review, tone = 'light', size = 'md' }) => {
         </span>
         <div className="min-w-0 flex-1">
           <p className={`font-serif text-[15.5px] ${textCol}`}>{review.display_name}</p>
-          <p className={`text-[11.5px] uppercase tracking-[0.18em] ${mutedCol}`}>
-            {csLabel ? csLabel : formatReviewDate(review.created_at)}
+          <p className={`text-[11.5px] uppercase tracking-[0.18em] ${mutedCol}`} data-testid="testimonial-comment-date">
+            {commentDate ? `Kommentar vom ${commentDate}` : ''}
           </p>
         </div>
         {review.rating > 0 && (

@@ -7,6 +7,13 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 14 (Feb 25, 2026) — Verifikation
+
+- Visuelle Verifikation der Testimonials-UI durchgeführt (Screenshots `/kundenstimmen` + Home).
+- Bestätigt: Karten zeigen `KOMMENTAR VOM TT.MM.JJJJ` (z. B. „KOMMENTAR VOM 21.08.2026"), VERIFIZIERT-Badge, Quote-Icon, Filter/Sortierung intakt.
+- Homepage lädt weiterhin exakt 2 Featured Cards + CTA zu `/kundenstimmen`.
+- Keine Code-Änderungen nötig. Alle Punkte aus Session 13 bleiben stabil.
+
 ## What's Been Implemented — Session 13 (Feb 24, 2026)
 
 ### ✅ Phase 2c — Watchlist-News + Drag & Drop (Feb 24, 2026)
