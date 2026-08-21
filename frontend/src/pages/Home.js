@@ -7,6 +7,7 @@ import HomeSavingsInquirySection from '@/components/home/HomeSavingsInquirySecti
 import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
 import HomePlatformShowcase from '@/components/home/HomePlatformShowcase';
 import HomeCreditOffersSection from '@/components/home/HomeCreditOffersSection';
+import HomeSavingsOffersSection from '@/components/home/HomeSavingsOffersSection';
 import { mapCreditOffersForCarousel } from '@/lib/creditOfferDisplay';
 import HomeInvestmentSpectrum from '@/components/home/HomeInvestmentSpectrum';
 import ProductInquiryWizard from '@/components/home/ProductInquiryWizard';
@@ -28,6 +29,7 @@ const { homeCta: ctaCopy, brandSlogan } = siteCopy;
 
 const Home = () => {
   const [creditOffers, setCreditOffers] = useState([]);
+  const [savingsOffers, setSavingsOffers] = useState([]);
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [inquiryProduct, setInquiryProduct] = useState(
     /** @type {'aktien' | 'anleihen' | 'spargeld' | null} */ (null),
@@ -71,7 +73,7 @@ const Home = () => {
           .eq('is_active', true),
         supabase
           .from('savings_offers')
-          .select('bank_id, interest_rate, banks(name)')
+          .select('*, banks(id, name, country, logo_url, founded_year, regulator_name)')
           .eq('is_active', true),
       ]);
 
@@ -103,6 +105,25 @@ const Home = () => {
       });
 
       setCreditOffers(mapCreditOffersForCarousel(enriched));
+
+      // Sparangebote fürs Home-Karussell: normalisieren wie /comparison-Konsumenten erwarten.
+      const savingsForCarousel = (savingsRes.data || [])
+        .filter((o) => o.bank_id && o.banks?.name)
+        .map((o) => ({
+          ...o,
+          bank_name: o.banks?.name,
+          country: o.banks?.country || o.country,
+          logo_url: o.banks?.logo_url,
+          founded_year: o.banks?.founded_year,
+          regulator_name: o.banks?.regulator_name,
+          rating_value: getOfferRatingValue({
+            bank_name: o.banks?.name || '',
+            interest_rate: Number(o.interest_rate || 0),
+          }),
+        }))
+        .sort((a, b) => Number(b.interest_rate || 0) - Number(a.interest_rate || 0))
+        .slice(0, 12);
+      setSavingsOffers(savingsForCarousel);
     } catch (error) {
       console.error('Failed to fetch credit offers:', error);
     }
@@ -137,6 +158,9 @@ const Home = () => {
 
       {/* ── Spar-Anfrage ──────────────────────────────────────────────── */}
       <HomeSavingsInquirySection />
+
+      {/* ── Sparangebote (Cover-Flow, Daten aus savings_offers) ───────── */}
+      <HomeSavingsOffersSection offers={savingsOffers} />
 
       {/* ── Kreditangebote (nach Anfrage, Daten wie /kredit) ─────────── */}
       <HomeCreditOffersSection offers={creditOffers} />
