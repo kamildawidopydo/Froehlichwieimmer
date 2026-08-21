@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, X, ChevronDown, Beaker } from 'lucide-react';
+import { Search, X, ChevronDown, ChevronUp, Beaker } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import PageMeta from '@/components/PageMeta';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,8 @@ import TestimonialCard from '@/components/reviews/TestimonialCard';
 import ReviewSubmitForm from '@/components/reviews/ReviewSubmitForm';
 import { reviewsApi } from '@/services/reviewsApi';
 
-const PAGE_SIZE = 12;
+const INITIAL_SIZE = 8;      // ruhige Ansicht beim ersten Aufruf
+const EXTRA_CHUNK  = 20;     // weitere Kundenstimmen hinter dem Button
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Neueste zuerst' },
@@ -31,9 +32,11 @@ const Kundenstimmen = () => {
   const [searchParams] = useSearchParams();
   const previewDemo = searchParams.get('admin_preview') === '1';
   const [items, setItems] = useState([]);
+  const [extras, setExtras] = useState([]);        // 20-er Batch hinter Button
+  const [extrasOpen, setExtrasOpen] = useState(false);
+  const [extrasLoaded, setExtrasLoaded] = useState(false);
   const [featured, setFeatured] = useState([]);
   const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -52,7 +55,7 @@ const Kundenstimmen = () => {
   }, [previewDemo]);
 
   const filterParams = useMemo(() => {
-    const params = { limit: PAGE_SIZE, sort };
+    const params = { limit: INITIAL_SIZE, sort };
     if (topic) params.topic = topic;
     if (rating) params.rating = rating;
     if (responseFilter) params.response_filter = responseFilter;
@@ -67,6 +70,10 @@ const Kundenstimmen = () => {
     let cancelled = false;
     setLoading(true);
     setError(false);
+    // Filter/Search zurücksetzen den Expand-State
+    setExtras([]);
+    setExtrasOpen(false);
+    setExtrasLoaded(false);
     const featuredPromise = hasActiveFilters
       ? Promise.resolve({ items: [] })
       : reviewsApi.list({ featured: true, limit: 3, sort: 'newest' });
@@ -79,20 +86,24 @@ const Kundenstimmen = () => {
         setFeatured(feat.items || []);
         setItems(all.items);
         setTotal(all.total);
-        setOffset(0);
       })
       .catch(() => { if (!cancelled) setError(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [filterParams, hasActiveFilters]);
 
-  const loadMore = async () => {
-    const next = offset + PAGE_SIZE;
+  const toggleExtras = async () => {
+    if (extrasOpen) { setExtrasOpen(false); return; }
+    if (extrasLoaded) { setExtrasOpen(true); return; }
     setLoadingMore(true);
     try {
-      const data = await reviewsApi.list({ ...filterParams, offset: next });
-      setItems((prev) => [...prev, ...data.items]);
-      setOffset(next);
+      const data = await reviewsApi.list({ ...filterParams, limit: EXTRA_CHUNK, offset: INITIAL_SIZE });
+      // Duplikate zu Featured + initialen Items ausfiltern
+      const seen = new Set([...featured.map((f) => f.id), ...items.map((i) => i.id)]);
+      const uniq = (data.items || []).filter((r) => !seen.has(r.id));
+      setExtras(uniq);
+      setExtrasLoaded(true);
+      setExtrasOpen(true);
       setTotal(data.total);
     } catch {
       setError(true);
@@ -342,13 +353,79 @@ const Kundenstimmen = () => {
             <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3" data-testid="kundenstimmen-grid">
               {rest.map((r) => (<TestimonialCard key={r.id} review={r} />))}
             </div>
-            {items.length < total && (
-              <div className="mt-10 flex justify-center">
-                <Button variant="outline" className="rounded-full" onClick={loadMore} disabled={loadingMore} data-testid="kundenstimmen-load-more">
-                  {loadingMore ? 'Wird geladen …' : `Weitere ${Math.min(PAGE_SIZE, total - items.length)} anzeigen`}
-                </Button>
-              </div>
-            )}
+
+            {/* Weitere Erfahrungen — 20 zusätzliche Stimmen hinter Button */}
+            {(() => {
+              const remaining = Math.max(0, total - (featured.length + rest.length));
+              if (remaining === 0 && !extrasOpen) return null;
+              return (
+                <div className="mt-14 border-t border-bank-border pt-12" data-testid="weitere-erfahrungen">
+                  <div className="mx-auto max-w-3xl text-center">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bank-accent-strong">
+                      Weitere Erfahrungen
+                    </p>
+                    <h3 className="mt-2 font-serif text-2xl text-bank-text sm:text-3xl">
+                      Noch mehr Stimmen unserer Kunden
+                    </h3>
+                    <p className="mt-3 text-[14px] leading-relaxed text-bank-text-muted">
+                      Lesen Sie weitere persönliche Erfahrungen unserer Kunden über die Zusammenarbeit mit
+                      Fröhlich Vermögensberatung.
+                    </p>
+                    <div className="mt-6 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={toggleExtras}
+                        disabled={loadingMore}
+                        aria-expanded={extrasOpen}
+                        aria-controls="kundenstimmen-extras"
+                        data-testid="kundenstimmen-expand-btn"
+                        className="group inline-flex w-full max-w-md items-center justify-center gap-2 bg-bank-primary px-6 py-3 text-[13.5px] font-medium tracking-wide text-white transition-all duration-200 hover:bg-bank-primary/90 hover:shadow-editorial-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/30 focus-visible:ring-offset-2 disabled:opacity-70 sm:w-auto sm:min-w-[320px]"
+                      >
+                        {loadingMore
+                          ? 'Wird geladen …'
+                          : extrasOpen
+                            ? 'Weniger Kundenstimmen anzeigen'
+                            : `${remaining >= EXTRA_CHUNK ? EXTRA_CHUNK : remaining} weitere Kundenstimme${remaining === 1 ? '' : 'n'} anzeigen`}
+                        {!loadingMore && (extrasOpen
+                          ? <ChevronUp size={16} strokeWidth={1.7} className="transition-transform group-hover:-translate-y-0.5" />
+                          : <ChevronDown size={16} strokeWidth={1.7} className="transition-transform group-hover:translate-y-0.5" />)}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Extras — fade-in Grid, 4-Spalten Desktop */}
+                  <div
+                    id="kundenstimmen-extras"
+                    className={`grid transition-all duration-500 ease-out ${extrasOpen ? 'mt-10 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'}`}
+                    aria-hidden={!extrasOpen}
+                  >
+                    <div className="min-h-0 overflow-hidden">
+                      {extrasOpen && extras.length > 0 && (
+                        <div
+                          className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4"
+                          data-testid="kundenstimmen-extras-grid"
+                        >
+                          {extras.map((r, idx) => (
+                            <div
+                              key={r.id}
+                              style={{ animationDelay: `${Math.min(idx * 40, 400)}ms` }}
+                              className="animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both"
+                            >
+                              <TestimonialCard review={r} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {extrasOpen && extras.length === 0 && extrasLoaded && (
+                        <p className="text-center text-[13px] text-bank-text-muted">
+                          Aktuell sind keine weiteren freigegebenen Kundenstimmen verfügbar.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </>
         )}
       </section>
