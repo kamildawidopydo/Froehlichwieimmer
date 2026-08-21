@@ -1,0 +1,53 @@
+{
+  "summary": "Iteration 12 — verified (A) the 218 demo reviews / Kundenstimmen filter & pagination module and (B) the Supabase -> FastAPI auth migration. Backend: new pytest suite /app/backend/tests/test_reviews_demo_auth.py with 37 cases (auth cookies/httpOnly/CORS/lockout/bcrypt, demo isolation from stats, pagination without duplicates, rating/sort/q/topic/response filters, admin include_demo, admin_response CRUD + sanitisation, idempotent demo seed, authz on admin endpoints) — 37/37 PASS. Frontend (public preview URL): /kundenstimmen public shows exactly 2 real reviews, no DEMO badge, no preview banner; ?admin_preview=1 shows amber 'Vorschau-Modus' banner, '220 Kundenstimmen gefunden', DEMO badges, 12-per-page load-more (10 -> 22 -> 34 after featured de-dup), search debounce, rating 5/4/3/2/1 (1 star = empty state), Mit/Ohne Antwort partition (143/77 = 220), sort best/worst, topic filter, combined filters, reset-filters, empty state, admin_response block with 'Antwort von Fröhlich Vermögensberatung', mobile 375px single column with zero horizontal overflow. Auth: /admin, /admin/reviews, /admin/editorial all redirect to /login?next=..., FastAPI login sets httpOnly access_token+refresh_token (SameSite=None), redirect into /admin, session survives reload, AdminReviews UI fully usable (tabs, demo toggle, DEMO dashed amber cards, response modal save/remove with 'Antwort gespeichert.' toast), logout clears cookie (/api/auth/me -> 401) and re-blocks /admin. One functional FE bug found (topic pills are not demo-aware) plus 4 minor issues.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/reviews/public?rating=1", "issue": "_generate_demo_reviews never produces a 1-star review (distribution 5:99, 4:77, 3:32, 2:12, 1:0), so the '1 ★' chip is permanently empty in preview mode. Fine for empty-state testing, but the demo set does not cover the lowest rating."},
+      {"endpoint": "GET /api/reviews/public?q=", "issue": "Full-text search covers only text + display_name, not admin_response, so an admin answer is not findable via the public search box (confirm this is intended)."},
+      {"endpoint": "OPTIONS /api/* (public URL)", "issue": "The edge proxy answers preflight itself with 'Access-Control-Allow-Origin: *' and no allow-credentials header; the FastAPI CORS policy is correct when hit internally (explicit origin + allow-credentials: true). Harmless today because FE and API share the same origin, but a real cross-origin client would fail preflight for credentialed requests."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Kundenstimmen.jsx / reviewsApi.topics()", "issue": "Topic pills are NOT demo-aware. reviewsApi.topics() has no params and Kundenstimmen never passes include_demo, so in ?admin_preview=1 the pills show real-review counts only: 'Alle Themen 2' while the result count says 220, 'Beratung 1' while the filter returns 95, and the 4 topics with 0 real reviews (Service, Erreichbarkeit, Transparenz, Investment-Übersicht) get no pill at all even though demo cards visibly carry those tags — those topics cannot be filtered in preview mode.", "selector": "[data-testid=\"topic-filter-all\"], [data-testid=\"topic-filter-beratung\"]", "priority": "MEDIUM"},
+      {"component": "Kundenstimmen.jsx loadMore()", "issue": "loadMore() has try/finally but no catch — a failed 'Weitere anzeigen' request produces an unhandled promise rejection and no user-visible error (button just stops appending).", "selector": "[data-testid=\"kundenstimmen-load-more\"]", "priority": "LOW"},
+      {"component": "Admin console (AdminSubpageChrome / admin layout)", "issue": "No logout control anywhere in /admin/* (no data-testid, no 'Abmelden' button). Logout is only reachable from the public Navigation (nav-logout-btn) after leaving the admin console. Logout itself works correctly.", "selector": "n/a", "priority": "LOW"},
+      {"component": "Login page redirect", "issue": "?next= is ignored: logging in on /login?next=%2Fadmin%2Freviews lands on /admin instead of the requested /admin/reviews (getPostLoginPath wins over the next param).", "selector": "[data-testid=\"login-submit-btn\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/kundenstimmen filter bar", "issues": ["Search field renders TWO clear affordances side by side: the native WebKit clear button of input type=\"search\" plus the custom X button — visible as '✕ ✕' whenever text is entered. Use type=\"text\" or hide ::-webkit-search-cancel-button."]},
+      {"screen": "/kundenstimmen public (no preview)", "issues": ["Both real reviews are is_featured, so 'Von uns hervorgehoben' shows them while the section below ('Alle freigegebenen Kundenstimmen', count = 2) renders the empty-state paragraph — reads as if there were no reviews. Consider excluding the featured items from the count or hiding the empty state when the only matches are the featured ones."]},
+      {"screen": "/ and /admin (pre-existing noise)", "issues": ["Console: ~4 Supabase 401s per page load (legacy fallback) and 3+ 'attribute d: Expected moveto path command, \"undefined\"' SVG errors. Not migration-related but still present."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_reviews_demo_auth.py",
+    "/app/test_reports/pytest/it12_results.xml"
+  ],
+  "action_items": [
+    "MEDIUM: make topics demo-aware — reviewsApi.topics(opts) -> /reviews/topics?include_demo=true when admin_preview=1, so pill counts/list match the 220-item preview set (currently 4 topics are unfilterable in preview).",
+    "LOW: add .catch to Kundenstimmen loadMore() with a visible error/retry.",
+    "LOW: add a logout button (with data-testid) to the admin console shell.",
+    "LOW: honour ?next= after a successful login instead of always redirecting to the role home.",
+    "LOW: remove the duplicate native clear icon in the Kundenstimmen search input.",
+    "OPTIONAL: give the demo generator at least a few 1-star entries; consider including admin_response in the public q search."
+  ],
+  "critical_code_review_comments": [
+    "reviewsApi.js: topics() accepts no options while list() already forwards include_demo — the asymmetry is the direct cause of the wrong pill counts in preview mode.",
+    "Kundenstimmen.jsx: offset/state reset on filter change is correct (verified 22 cards -> 12 after switching filter, no accumulation); load-more label uses Math.min(PAGE_SIZE, total - items.length) which is right.",
+    "server.py moderate_review: admin_response is sanitised (script tags stripped) and clearing it also nulls responded_at/responded_by — verified round-trip.",
+    "server.py list_public_reviews/review_stats: is_demo is excluded by default in both, so public stats stay 2 / 4.5 with 218 demo rows present — the core requirement holds.",
+    "server.py login: lockout identifier is email-only (correct behind the rotating-IP ingress) and admin seed keeps a real $2b$ bcrypt hash in sync with ADMIN_PASSWORD.",
+    "server.py is 1952 lines — split the reviews/auth/content routers into modules."
+  ],
+  "updated_files": ["/app/backend/tests/test_reviews_demo_auth.py"],
+  "success_rate": {"backend": "100% (37/37)", "frontend": "92% (all reviewed flows pass except demo-aware topic pill counts)"},
+  "seed_data_creation": "No permanent data added. Demo set left untouched at 218 (seed endpoint verified idempotent). Every admin_response created during testing (prefixed TEST_QA) was removed again; a pre-existing 'Testantwort zum Verifizieren.' response on demo review 'Daniel W.' was left as-is (created before this iteration).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@kapitalmitte.com / admin123 — works for FastAPI login AND now unlocks /admin/* React routes (migration verified).",
+  "context_for_next_testing_agent": "Backend: run `pytest /app/backend/tests/test_reviews_demo_auth.py -n 0` (serial; it triggers a brute-force lockout on test-lockout-probe@example.com only, never on the admin). Lockout is email-keyed with 5 fails / 15 min — do not spam wrong admin passwords (2 failed admin attempts were made in this iteration). Frontend: bypass the visitor gate + cookie consent by setting localStorage 'kapitalmitte_visitor_profile' and 'kapitalmitte_cookie_consent' and then re-navigating (the tool navigates before the script runs). Already verified and not worth re-testing unless code changes: public/preview counts, load-more pagination, search debounce, rating/response/sort/topic/combined filters, reset-filters, empty state, admin_response rendering, mobile 375px, admin login + protected routes + session persistence + logout, admin demo toggle/DEMO badge/response modal. Not tested: 'admin-seed-demo' button visibility (would require deleting the 218 demo rows) and the invite flow.",
+  "rca_of_the_issue": "Topic pill mismatch: /app/frontend/src/services/reviewsApi.js defines `topics: () => api.get('/reviews/topics')` with no query support, and Kundenstimmen.jsx calls it in a mount-only effect that has no access to previewDemo. The backend already supports GET /api/reviews/topics?include_demo=true (returns total_approved=220 and non-zero counts for all 8 topics), so the fix is purely on the client: pass include_demo when admin_preview=1 and re-fetch when that flag changes."
+}

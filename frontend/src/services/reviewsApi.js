@@ -12,8 +12,15 @@ export const reviewsApi = {
   submit: (payload) => api.post('/reviews/submit', payload).then(unwrap),
   list: (params = {}) => api.get('/reviews/public', { params }).then(unwrap),
   stats: () => api.get('/reviews/stats').then(unwrap),
-  topics: () => api.get('/reviews/topics').then(unwrap),
-  adminList: (status) => api.get('/reviews/admin', { params: status ? { status } : {} }).then(unwrap),
+  topics: (opts = {}) => api.get('/reviews/topics', {
+    params: opts.include_demo ? { include_demo: true } : undefined,
+  }).then(unwrap),
+  adminList: (status, opts = {}) => api.get('/reviews/admin', {
+    params: {
+      ...(status ? { status } : {}),
+      ...(opts.include_demo ? { include_demo: true } : {}),
+    },
+  }).then(unwrap),
   moderate: (id, payload) => api.put(`/reviews/${id}`, payload).then(unwrap),
   remove: (id) => api.delete(`/reviews/${id}`).then(unwrap),
   createInvite: (payload) => api.post('/reviews/invite', payload).then(unwrap),

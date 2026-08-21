@@ -104,6 +104,8 @@ const DashboardTopbar = ({ profilePath = '/dashboard/profil', onOpenMobileNav, s
           <PopoverTrigger asChild>
             <button
               type="button"
+              data-testid="topbar-user-menu-btn"
+              aria-label="Benutzer-Menü öffnen"
               className="inline-flex h-8 items-center gap-2 rounded-md border border-bank-border bg-white py-0 pl-0.5 pr-2 transition-colors hover:bg-bank-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/20 dark:bg-bank-surface"
             >
               <Avatar className="h-7 w-7">
@@ -130,6 +132,7 @@ const DashboardTopbar = ({ profilePath = '/dashboard/profil', onOpenMobileNav, s
             <div className="border-t border-bank-border p-1">
               <button
                 type="button"
+                data-testid="admin-logout-btn"
                 onClick={handleLogout}
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[13px] text-bank-error transition-colors hover:bg-bank-error/8"
               >

@@ -1,5 +1,6 @@
-import React, { createContext, useState, useEffect, useContext, useLayoutEffect, useRef } from 'react';
+import React, { createContext, useState, useEffect, useContext, useLayoutEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { authApi, extractErrorMessage } from '@/services/apiClient';
 import { logEvent, EVENTS } from '@/lib/activityLogger';
 import { logVisitorConversion } from '@/lib/logVisitorConversion';
 import { normalizeAppRole } from '@/lib/role';
@@ -10,10 +11,15 @@ const PRESENCE_INTERVAL_MS = 60_000;
 export const AuthContext = createContext();
 
 /**
- * Passwort-Reset: redirect_to muss mit https:// beginnen; sonst wertet Supabase die Domain
- * fälschlich als Pfad auf *.supabase.co aus (z. B. *.supabase.co/kapital-direkt24.de).
- * In Vercel REACT_APP_SITE_URL=# setzen.
+ * AuthContext migrated to FastAPI (Feb 2026).
+ *
+ * Primary auth source of truth: `/api/auth/*` via httpOnly cookies.
+ * Supabase is used ONLY for legacy profile data enrichment (address, favorites, etc.)
+ * and OTP challenges — it is no longer part of the authentication decision path.
+ *
+ * `useAuth()` return shape is preserved to keep the ~28 pages consuming it working.
  */
+
 function getPublicSiteOrigin() {
   const raw = (process.env.REACT_APP_SITE_URL || '').trim().replace(/\/$/, '');
   if (raw) {
@@ -82,7 +88,6 @@ function humanizeFunctionsErrorDetail(detail, fallbackMessage) {
   return raw;
 }
 
-/** Edge functions return JSON { error } on 4xx/5xx; supabase-js surfaces a generic message only. */
 async function throwIfFunctionsInvokeError(invokeResult, fallbackMessage) {
   const { data, error } = invokeResult;
   if (!error) return data;
@@ -97,9 +102,7 @@ async function throwIfFunctionsInvokeError(invokeResult, fallbackMessage) {
       try {
         const text = await error.context.clone().text();
         if (text) detail = text.slice(0, 400);
-      } catch {
-        /* ignore */
-      }
+      } catch { /* ignore */ }
     }
   }
   const err = new Error(humanizeFunctionsErrorDetail(detail, fallbackMessage));
@@ -117,6 +120,65 @@ function resolveLanguageFromPrefs(profile) {
   return 'de';
 }
 
+/**
+ * Build a `user` object from a FastAPI /auth/me response, optionally enriched
+ * with a Supabase `profiles` row for legacy dashboard fields.
+ * Kept backward-compatible with the ~28 consumers of `useAuth().user`.
+ */
+function buildUserObject(fastMe, supabaseProfile = null) {
+  const profile = supabaseProfile || {};
+  const role = normalizeAppRole(fastMe?.role || profile?.role);
+  const language = resolveLanguageFromPrefs(profile);
+  return {
+    id: fastMe?.id || profile?.id || null,
+    email: fastMe?.email || profile?.email || null,
+    role,
+    // Backend "name" splits into first/last for legacy compatibility (best-effort)
+    first_name: profile?.first_name || (fastMe?.name ? String(fastMe.name).split(' ')[0] : null),
+    last_name: profile?.last_name || (fastMe?.name ? String(fastMe.name).split(' ').slice(1).join(' ') || null : null),
+    country: profile?.country || null,
+    address: profile?.address || null,
+    address_street: profile?.address_street || null,
+    address_house_number: profile?.address_house_number || null,
+    address_line_2: profile?.address_line_2 || null,
+    address_postal_code: profile?.address_postal_code || null,
+    address_city: profile?.address_city || null,
+    phone: profile?.phone || null,
+    avatar_url: fastMe?.avatar_url || profile?.avatar_url || null,
+    verified: profile?.verified || false,
+    status: profile?.status || 'active',
+    favorites: profile?.favorites || [],
+    email_digest_enabled: profile?.email_digest_enabled ?? true,
+    notification_prefs: profile?.notification_prefs || null,
+    language,
+    onboarding_completed: role === 'admin' ? true : (profile?.onboarding_completed ?? false),
+    onboarding_completed_steps: profile?.onboarding_completed_steps || [],
+    must_change_password: profile?.must_change_password || false,
+    last_password_reset_at: profile?.last_password_reset_at || null,
+    last_seen_at: profile?.last_seen_at || null,
+    tax_allowance_eur: profile?.tax_allowance_eur ?? 0,
+    tax_allowance_used_eur: profile?.tax_allowance_used_eur ?? 0,
+    church_tax_enabled: profile?.church_tax_enabled ?? false,
+    church_tax_rate: profile?.church_tax_rate ?? 9,
+    tax_residency_country: profile?.tax_residency_country || null,
+    created_at: fastMe?.created_at || profile?.created_at || null,
+  };
+}
+
+async function fetchSupabaseProfileByEmail(email) {
+  if (!email) return null;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', String(email).toLowerCase())
+      .maybeSingle();
+    return data || null;
+  } catch {
+    return null;
+  }
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -131,43 +193,77 @@ export const AuthProvider = ({ children }) => {
     window.location.replace(`${window.location.origin}/reset-password${search}${hash}`);
   }, []);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        if (shouldDeferProfileFetch()) {
-          setLoading(false);
-          return;
-        }
-        fetchProfile(session.user);
-      } else {
-        if (typeof window !== 'undefined') {
-          const saved = window.localStorage.getItem(APP_LANG_STORAGE_KEY);
-          if (saved && SUPPORTED_LANGUAGES.includes(saved) && i18n.language !== saved) {
-            i18n.changeLanguage(saved);
-          }
-        }
-        setLoading(false);
-      }
-    });
+  /**
+   * FastAPI-first session hydration. Falls back to Supabase session only for
+   * legacy accounts that were never migrated (still allows read of Supabase
+   * profile for dashboard pages).
+   */
+  const hydrateFromFastAPI = useCallback(async () => {
+    try {
+      const me = await authApi.me();
+      const profile = await fetchSupabaseProfileByEmail(me.email);
+      applyLanguage(profile);
+      setUser(buildUserObject(me, profile));
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setLoading(false);
+  const applyLanguage = (profile) => {
+    const language = resolveLanguageFromPrefs(profile);
+    if (i18n.language !== language) i18n.changeLanguage(language);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(APP_LANG_STORAGE_KEY, language);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      if (shouldDeferProfileFetch()) {
+        if (!cancelled) setLoading(false);
         return;
       }
-      if (session?.user) {
-        if (shouldDeferProfileFetch()) {
-          setLoading(false);
-          return;
-        }
-        fetchProfile(session.user);
-      } else {
-        setUser(null);
+      const fastOk = await hydrateFromFastAPI();
+      if (cancelled) return;
+      if (!fastOk) {
+        // Legacy fallback — only if FastAPI has no session, check Supabase
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const profile = await fetchSupabaseProfileByEmail(session.user.email);
+            if (profile?.status === 'pending' || profile?.status === 'rejected') {
+              await supabase.auth.signOut();
+              if (!cancelled) setUser(null);
+            } else {
+              applyLanguage(profile);
+              if (!cancelled) setUser(buildUserObject({
+                id: session.user.id,
+                email: session.user.email,
+                role: profile?.role,
+                created_at: session.user.created_at,
+              }, profile));
+            }
+          }
+        } catch { /* ignore */ }
+      }
+      if (!cancelled) setLoading(false);
+    })();
+
+    // Supabase auth state listener — for OTP verification/legacy sessions.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Presence-Heartbeat — profiles.last_seen_at alle 60 Sekunden aktualisieren
@@ -185,10 +281,8 @@ export const AuthProvider = ({ children }) => {
         await supabase
           .from('profiles')
           .update({ last_seen_at: new Date().toISOString() })
-          .eq('id', user.id);
-      } catch (err) {
-        // still überspringen
-      }
+          .eq('email', String(user.email).toLowerCase());
+      } catch { /* silently skip */ }
     };
 
     ping();
@@ -204,86 +298,71 @@ export const AuthProvider = ({ children }) => {
       presenceTimerRef.current = null;
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [user?.id]);
+  }, [user?.id, user?.email]);
 
-  const fetchProfile = async (authUser) => {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
-
-      // Session beenden, wenn Freigabe aussteht oder abgelehnt wurde
-      if (profile?.status === 'pending' || profile?.status === 'rejected') {
-        await supabase.auth.signOut();
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
-      const language = resolveLanguageFromPrefs(profile);
-      if (i18n.language !== language) {
-        i18n.changeLanguage(language);
-      }
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(APP_LANG_STORAGE_KEY, language);
-      }
-
-      setUser({
-        id: authUser.id,
-        email: authUser.email,
-        role: normalizeAppRole(profile?.role),
-        first_name: profile?.first_name || null,
-        last_name: profile?.last_name || null,
-        country: profile?.country || null,
-        address: profile?.address || null,
-        address_street: profile?.address_street || null,
-        address_house_number: profile?.address_house_number || null,
-        address_line_2: profile?.address_line_2 || null,
-        address_postal_code: profile?.address_postal_code || null,
-        address_city: profile?.address_city || null,
-        phone: profile?.phone || null,
-        avatar_url: profile?.avatar_url || null,
-        verified: profile?.verified || false,
-        status: profile?.status || 'pending',
-        favorites: profile?.favorites || [],
-        email_digest_enabled: profile?.email_digest_enabled ?? true,
-        notification_prefs: profile?.notification_prefs || null,
-        language,
-        onboarding_completed: profile?.onboarding_completed || false,
-        onboarding_completed_steps: profile?.onboarding_completed_steps || [],
-        must_change_password: profile?.must_change_password || false,
-        last_password_reset_at: profile?.last_password_reset_at || null,
-        last_seen_at: profile?.last_seen_at || null,
-        tax_allowance_eur: profile?.tax_allowance_eur ?? 0,
-        tax_allowance_used_eur: profile?.tax_allowance_used_eur ?? 0,
-        church_tax_enabled: profile?.church_tax_enabled ?? false,
-        church_tax_rate: profile?.church_tax_rate ?? 9,
-        tax_residency_country: profile?.tax_residency_country || null,
-        created_at: authUser.created_at,
-      });
-    } catch (error) {
-      console.error('Failed to fetch profile:', error);
-      setUser({
-        id: authUser.id,
-        email: authUser.email,
-        role: 'user',
-        favorites: [],
-        notification_prefs: null,
-        language: 'de',
-        avatar_url: null,
-        onboarding_completed: false,
-        onboarding_completed_steps: [],
-        must_change_password: false,
-        last_password_reset_at: null,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  /**
+   * Login flow: FastAPI is primary. Legacy accounts that only exist in
+   * Supabase fall back to Supabase auth.
+   */
   const login = async (email, password) => {
+    // Try FastAPI first
+    let fastMe = null;
+    try {
+      fastMe = await authApi.login({ email, password });
+    } catch (err) {
+      const status = err?.response?.status;
+      // 401 / 429 (rate limit) → try Supabase legacy fallback ONLY if 401
+      if (status === 429) {
+        const detail = extractErrorMessage(err);
+        logEvent(EVENTS.LOGIN_FAILED, { email, reason: 'rate_limited' });
+        const e = new Error(detail || 'Zu viele Anmeldeversuche. Bitte kurz warten.');
+        throw e;
+      }
+      if (status !== 401 && status !== 404) {
+        logEvent(EVENTS.LOGIN_FAILED, { email, reason: extractErrorMessage(err) });
+        throw new Error(extractErrorMessage(err) || 'Anmeldung fehlgeschlagen.');
+      }
+      // 401 → fall through to Supabase legacy path below
+    }
+
+    if (fastMe) {
+      // Best-effort: also sign into Supabase so legacy pages can read profile via RLS
+      let supabaseUser = null;
+      try {
+        const { data } = await supabase.auth.signInWithPassword({ email, password });
+        supabaseUser = data?.user || null;
+      } catch { /* legacy Supabase login failed — proceed without it */ }
+
+      const profile = await fetchSupabaseProfileByEmail(fastMe.email);
+      // OTP challenge (opt-in via Supabase user prefs) — only meaningful if Supabase session exists
+      if (supabaseUser && profile?.notification_prefs?.email_otp_enabled) {
+        try {
+          const deviceHash = await buildDeviceHash();
+          const otpData = await throwIfFunctionsInvokeError(
+            await supabase.functions.invoke('auth-email-otp', {
+              body: { action: 'send', device_hash: deviceHash },
+            }),
+            'E-Mail-Code konnte nicht gesendet werden.',
+          );
+          if (otpData?.required) {
+            return {
+              user: { id: fastMe.id, email: fastMe.email },
+              requiresOtp: true,
+              challengeId: otpData.challenge_id,
+              deviceHash,
+              nextPath: getPostLoginPath({ role: fastMe.role, ...(profile || {}) }),
+            };
+          }
+        } catch { /* fall through — OTP not enforced if Edge Function fails */ }
+      }
+      applyLanguage(profile);
+      const merged = buildUserObject(fastMe, profile);
+      setUser(merged);
+      logEvent(EVENTS.LOGIN, { email }, { userId: fastMe.id });
+      return { user: merged, nextPath: getPostLoginPath(merged) };
+    }
+
+    // Legacy Supabase-only fallback
     let data;
     try {
       const res = await supabase.auth.signInWithPassword({ email, password });
@@ -294,12 +373,7 @@ export const AuthProvider = ({ children }) => {
       throw err;
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('status, role, must_change_password, onboarding_completed, notification_prefs')
-      .eq('id', data.user.id)
-      .single();
-
+    const profile = await fetchSupabaseProfileByEmail(data.user.email);
     if (profile?.status === 'pending') {
       logEvent(EVENTS.LOGIN_FAILED, { email, reason: 'pending' }, { userId: data.user.id });
       await supabase.auth.signOut();
@@ -309,7 +383,6 @@ export const AuthProvider = ({ children }) => {
       err.status = 'pending';
       throw err;
     }
-
     if (profile?.status === 'rejected') {
       logEvent(EVENTS.LOGIN_FAILED, { email, reason: 'rejected' }, { userId: data.user.id });
       await supabase.auth.signOut();
@@ -320,15 +393,11 @@ export const AuthProvider = ({ children }) => {
       throw err;
     }
 
-    const emailOtpEnabled = Boolean(profile?.notification_prefs?.email_otp_enabled);
-    if (emailOtpEnabled) {
+    if (profile?.notification_prefs?.email_otp_enabled) {
       const deviceHash = await buildDeviceHash();
       const otpData = await throwIfFunctionsInvokeError(
         await supabase.functions.invoke('auth-email-otp', {
-          body: {
-            action: 'send',
-            device_hash: deviceHash,
-          },
+          body: { action: 'send', device_hash: deviceHash },
         }),
         'E-Mail-Code konnte nicht gesendet werden.',
       );
@@ -343,11 +412,16 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
+    applyLanguage(profile);
+    const merged = buildUserObject({
+      id: data.user.id,
+      email: data.user.email,
+      role: profile?.role,
+      created_at: data.user.created_at,
+    }, profile);
+    setUser(merged);
     logEvent(EVENTS.LOGIN, { email }, { userId: data.user.id });
-    return {
-      user: data.user,
-      nextPath: getPostLoginPath(profile || {}),
-    };
+    return { user: merged, nextPath: getPostLoginPath(merged) };
   };
 
   const sendEmailOtpForCurrentSession = async ({ deviceHash }) => {
@@ -355,10 +429,7 @@ export const AuthProvider = ({ children }) => {
     if (!resolvedHash) throw new Error('Device fingerprint konnte nicht erstellt werden.');
     const data = await throwIfFunctionsInvokeError(
       await supabase.functions.invoke('auth-email-otp', {
-        body: {
-          action: 'send',
-          device_hash: resolvedHash,
-        },
+        body: { action: 'send', device_hash: resolvedHash },
       }),
       'E-Mail-Code konnte nicht gesendet werden.',
     );
@@ -371,7 +442,7 @@ export const AuthProvider = ({ children }) => {
 
   const verifyEmailOtp = async ({ challengeId, code, deviceHash, trustDevice = true }) => {
     const resolvedHash = deviceHash || (await buildDeviceHash());
-    return throwIfFunctionsInvokeError(
+    const result = await throwIfFunctionsInvokeError(
       await supabase.functions.invoke('auth-email-otp', {
         body: {
           action: 'verify',
@@ -383,69 +454,80 @@ export const AuthProvider = ({ children }) => {
       }),
       'Sicherheitscode konnte nicht bestätigt werden.',
     );
+    // After OTP success, re-hydrate from FastAPI
+    await hydrateFromFastAPI();
+    return result;
   };
 
   const register = async ({ email, password, first_name, last_name, country, phone, address }) => {
-    // 1. Nutzer in Supabase Auth anlegen
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
-
-    if (data.user) {
-      // 2. profiles aktualisieren — status: 'pending'
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          email,
-          first_name,
-          last_name,
-          country,
-          phone: phone || null,
-          address: address || null,
-          role: 'user',
-          verified: false,
-          status: 'pending',
-        })
-        .eq('id', data.user.id);
-
-      if (profileError) throw profileError;
-
-      logEvent(
-        EVENTS.REGISTER,
-        { email, first_name, last_name, country },
-        { userId: data.user.id }
-      );
-      logVisitorConversion('register', { email });
-
-      // Nach Registrierung abmelden — Login erst nach Admin-Freigabe
-      await supabase.auth.signOut();
+    // Register with FastAPI (primary account)
+    const name = [first_name, last_name].filter(Boolean).join(' ').trim() || email.split('@')[0];
+    try {
+      await authApi.register({ email, password, name });
+    } catch (err) {
+      // If already exists in FastAPI, that's still an error to the user
+      const msg = extractErrorMessage(err) || 'Registrierung fehlgeschlagen.';
+      throw new Error(msg);
     }
-
+    // Best-effort: create Supabase profile too so dashboard/onboarding legacy pages work
+    try {
+      const { data } = await supabase.auth.signUp({ email, password });
+      if (data?.user) {
+        try {
+          await supabase.from('profiles').update({
+            email,
+            first_name,
+            last_name,
+            country,
+            phone: phone || null,
+            address: address || null,
+            role: 'user',
+            verified: false,
+            status: 'pending',
+          }).eq('id', data.user.id);
+        } catch { /* ignore */ }
+        // Sign out Supabase — user must be approved before login
+        await supabase.auth.signOut();
+      }
+    } catch { /* Supabase sign-up optional */ }
+    // Sign out FastAPI so registration flow ends on Login page
+    try { await authApi.logout(); } catch { /* ignore */ }
+    logEvent(EVENTS.REGISTER, { email, first_name, last_name, country });
+    logVisitorConversion('register', { email });
     return { pendingApproval: true };
   };
 
   const logout = async () => {
     const currentId = user?.id;
     if (currentId) logEvent(EVENTS.LOGOUT, null, { userId: currentId });
-    await supabase.auth.signOut();
+    // Fire both logouts in parallel — swallow individual failures
+    await Promise.allSettled([
+      authApi.logout(),
+      supabase.auth.signOut(),
+    ]);
     setUser(null);
   };
 
   const refreshUser = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (authUser) await fetchProfile(authUser);
+    await hydrateFromFastAPI();
   };
 
   const requestPasswordReset = async (email) => {
-    const origin = getPublicSiteOrigin();
-    if (!origin) {
-      throw new Error(
-        'Öffentliche Site-URL fehlt. Bitte REACT_APP_SITE_URL setzen (z. B. #).'
-      );
+    try {
+      await authApi.forgotPassword(email);
+      logEvent(EVENTS.PASSWORD_RESET_REQUEST, { email });
+      return;
+    } catch {
+      // Legacy fallback via Supabase
+      const origin = getPublicSiteOrigin();
+      if (!origin) {
+        throw new Error('Öffentliche Site-URL fehlt. Bitte REACT_APP_SITE_URL setzen (z. B. #).');
+      }
+      const redirectTo = `${origin}/reset-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw error;
+      logEvent(EVENTS.PASSWORD_RESET_REQUEST, { email });
     }
-    const redirectTo = `${origin}/reset-password`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-    if (error) throw error;
-    logEvent(EVENTS.PASSWORD_RESET_REQUEST, { email });
   };
 
   return (

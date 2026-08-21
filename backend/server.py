@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
+import random
 import os
 import re
 import logging
@@ -932,6 +933,7 @@ def _display_name(first: str, last: str) -> str:
 
 def _review_to_public(d: dict) -> dict:
     published = d.get("created_at")
+    responded = d.get("responded_at")
     return {
         "id": str(d["_id"]),
         "display_name": d.get("display_name") or _display_name(d.get("first_name"), d.get("last_name")),
@@ -939,6 +941,9 @@ def _review_to_public(d: dict) -> dict:
         "text": d.get("text", ""),
         "customer_since": d.get("customer_since") or None,
         "is_featured": bool(d.get("is_featured", False)),
+        "is_demo": bool(d.get("is_demo", False)),
+        "admin_response": d.get("admin_response") or None,
+        "responded_at": responded.isoformat() if isinstance(responded, datetime) else (str(responded) if responded else None),
         "topics": [t for t in (d.get("topics") or []) if t in REVIEW_TOPIC_SLUGS],
         "created_at": published.isoformat() if isinstance(published, datetime) else str(published or ""),
         "is_verified": bool(d.get("is_verified", False)),
@@ -948,6 +953,7 @@ def _review_to_public(d: dict) -> dict:
 def _review_to_admin(d: dict) -> dict:
     published = d.get("created_at")
     moderated = d.get("moderated_at")
+    responded = d.get("responded_at")
     return {
         "id": str(d["_id"]),
         "first_name": d.get("first_name", ""),
@@ -959,6 +965,10 @@ def _review_to_admin(d: dict) -> dict:
         "customer_since": d.get("customer_since") or None,
         "topics": [t for t in (d.get("topics") or []) if t in REVIEW_TOPIC_SLUGS],
         "is_featured": bool(d.get("is_featured", False)),
+        "is_demo": bool(d.get("is_demo", False)),
+        "admin_response": d.get("admin_response") or None,
+        "responded_at": responded.isoformat() if isinstance(responded, datetime) else (str(responded) if responded else None),
+        "responded_by": d.get("responded_by"),
         "status": d.get("status", "pending"),
         "is_verified": bool(d.get("is_verified", False)),
         "invited": bool(d.get("invited", False)),
@@ -991,6 +1001,7 @@ class ReviewModerationInput(BaseModel):
     customer_since: Optional[str] = Field(default=None, max_length=20)
     topics: Optional[List[str]] = None
     admin_note: Optional[str] = Field(default=None, max_length=500)
+    admin_response: Optional[str] = Field(default=None, max_length=1000)
 
 
 class ReviewInviteInput(BaseModel):
@@ -1074,17 +1085,39 @@ async def list_public_reviews(
     offset: int = 0,
     featured: bool = False,
     topic: Optional[str] = None,
+    include_demo: bool = False,
+    response_filter: Optional[str] = None,
+    q: Optional[str] = None,
 ):
-    q: dict = {"status": "approved"}
+    query: dict = {"status": "approved"}
+    if not include_demo:
+        query["is_demo"] = {"$ne": True}
     if rating and 1 <= rating <= 5:
-        q["rating"] = rating
+        query["rating"] = rating
     if featured:
-        q["is_featured"] = True
+        query["is_featured"] = True
     if topic and topic in REVIEW_TOPIC_SLUGS:
-        q["topics"] = topic
-    sort_field = [("rating", -1), ("created_at", -1)] if sort == "best" else [("created_at", -1)]
-    total = await db.reviews.count_documents(q)
-    docs = await db.reviews.find(q).sort(sort_field).skip(max(offset, 0)).limit(min(max(limit, 1), 50)).to_list(limit)
+        query["topics"] = topic
+    if response_filter == "with":
+        query["admin_response"] = {"$exists": True, "$ne": None, "$nin": [""]}
+    elif response_filter == "without":
+        query["$or"] = [{"admin_response": {"$exists": False}}, {"admin_response": None}, {"admin_response": ""}]
+    if q and q.strip():
+        needle = re.escape(q.strip()[:80])
+        query["$and"] = query.get("$and", []) + [{"$or": [
+            {"text": {"$regex": needle, "$options": "i"}},
+            {"display_name": {"$regex": needle, "$options": "i"}},
+        ]}]
+
+    sort_map = {
+        "newest": [("created_at", -1)],
+        "oldest": [("created_at", 1)],
+        "best": [("rating", -1), ("created_at", -1)],
+        "worst": [("rating", 1), ("created_at", -1)],
+    }
+    sort_field = sort_map.get(sort, sort_map["newest"])
+    total = await db.reviews.count_documents(query)
+    docs = await db.reviews.find(query).sort(sort_field).skip(max(offset, 0)).limit(min(max(limit, 1), 100)).to_list(limit)
     return {
         "total": total,
         "items": [_review_to_public(d) for d in docs],
@@ -1093,28 +1126,31 @@ async def list_public_reviews(
 
 
 @api.get("/reviews/topics")
-async def list_review_topics():
+async def list_review_topics(include_demo: bool = False):
+    match: dict = {"status": "approved"}
+    if not include_demo:
+        match["is_demo"] = {"$ne": True}
     pipeline = [
-        {"$match": {"status": "approved"}},
+        {"$match": match},
         {"$unwind": "$topics"},
         {"$group": {"_id": "$topics", "count": {"$sum": 1}}},
     ]
     rows = await db.reviews.aggregate(pipeline).to_list(50)
     counts = {r["_id"]: int(r["count"]) for r in rows if r.get("_id")}
-    total = await db.reviews.count_documents({"status": "approved"})
+    total = await db.reviews.count_documents(match)
     return {
-        "topics": [
-            {"slug": slug, "label": label, "count": counts.get(slug, 0)}
-            for slug, label in REVIEW_TOPICS
-        ],
+        "topics": [{"slug": slug, "label": label, "count": counts.get(slug, 0)} for slug, label in REVIEW_TOPICS],
         "total_approved": total,
     }
 
 
 @api.get("/reviews/stats")
-async def review_stats():
+async def review_stats(include_demo: bool = False):
+    match: dict = {"status": "approved"}
+    if not include_demo:
+        match["is_demo"] = {"$ne": True}
     pipeline = [
-        {"$match": {"status": "approved"}},
+        {"$match": match},
         {"$group": {"_id": "$rating", "count": {"$sum": 1}}},
     ]
     rows = await db.reviews.aggregate(pipeline).to_list(10)
@@ -1141,17 +1177,22 @@ async def list_admin_reviews(
     status: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
+    include_demo: bool = False,
     _user: dict = Depends(require_admin),
 ):
     q: dict = {}
+    if not include_demo:
+        q["is_demo"] = {"$ne": True}
     if status and status in REVIEW_STATUS_VALUES:
         q["status"] = status
     total = await db.reviews.count_documents(q)
-    pending_count = await db.reviews.count_documents({"status": "pending"})
+    pending_count = await db.reviews.count_documents({"status": "pending", "is_demo": {"$ne": True}})
+    demo_count = await db.reviews.count_documents({"is_demo": True})
     docs = await db.reviews.find(q).sort("created_at", -1).skip(offset).limit(limit).to_list(limit)
     return {
         "total": total,
         "pending_count": pending_count,
+        "demo_count": demo_count,
         "items": [_review_to_admin(d) for d in docs],
     }
 
@@ -1181,6 +1222,11 @@ async def moderate_review(review_id: str, payload: ReviewModerationInput, user: 
         update["topics"] = [t for t in payload.topics if t in REVIEW_TOPIC_SLUGS][:3]
     if payload.admin_note is not None:
         update["admin_note"] = _sanitize_text(payload.admin_note, 500)
+    if payload.admin_response is not None:
+        cleaned = _sanitize_text(payload.admin_response, 1000)
+        update["admin_response"] = cleaned if cleaned else None
+        update["responded_at"] = datetime.now(timezone.utc) if cleaned else None
+        update["responded_by"] = user.get("email") if cleaned else None
     if not update:
         raise HTTPException(status_code=400, detail="Keine Änderungen übermittelt.")
     r = await db.reviews.update_one({"_id": ObjectId(review_id)}, {"$set": update})
@@ -1197,6 +1243,157 @@ async def delete_review(review_id: str, _user: dict = Depends(require_admin)):
     r = await db.reviews.delete_one({"_id": ObjectId(review_id)})
     if r.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Bewertung nicht gefunden.")
+    return {"deleted": r.deleted_count}
+
+
+# --- Review invites — tokenized share links for happy customers -------------
+
+# Demo review templates — used ONLY to seed synthetic test data.
+_DEMO_FIRST = ["Thomas", "Anna", "Michael", "Sabine", "Daniel", "Petra", "Julia", "Andreas", "Christina",
+               "Frank", "Katrin", "Stefan", "Nicole", "Markus", "Silke", "Peter", "Sandra", "Wolfgang",
+               "Simone", "Torsten", "Claudia", "Robert", "Susanne", "Christian", "Beate", "Martin",
+               "Kerstin", "Uwe", "Angelika", "Jörg"]
+_DEMO_LAST_INITIALS = list("BCDFGHJKLMNPRSTVWZ")
+_DEMO_TOPICS_POOL = ["persoenliche-betreuung", "vertrauen", "beratung", "erreichbarkeit",
+                     "langfristigkeit", "transparenz", "service", "investmentuebersicht"]
+_DEMO_SINCE = ["unter_1", "1_bis_3", "3_bis_5", "ueber_5"]
+
+_DEMO_5 = [
+    ("Sehr persönliche Betreuung und immer gut erreichbar.", ["persoenliche-betreuung", "erreichbarkeit"]),
+    ("Fragen werden verständlich erklärt — ich fühle mich rundum gut betreut.", ["beratung", "persoenliche-betreuung"]),
+    ("Wir arbeiten seit mehreren Jahren zusammen und haben stets das Gefühl, gut aufgehoben zu sein.", ["langfristigkeit", "vertrauen"]),
+    ("Transparente Kommunikation und eine sehr angenehme Beratung. Gerne wieder.", ["transparenz", "beratung"]),
+    ("Die Investmentübersicht ist übersichtlich und ich habe jederzeit den Überblick.", ["investmentuebersicht"]),
+    ("Was ich schätze: keine Verkaufsgespräche, sondern echte Beratung mit Blick auf meine Situation.", ["beratung", "vertrauen"]),
+    ("Herr Fröhlich nimmt sich immer die Zeit, komplexe Themen sauber zu erklären.", ["beratung", "persoenliche-betreuung"]),
+    ("Beim Onboarding wurde ich Schritt für Schritt begleitet — angenehm unaufgeregt.", ["service", "persoenliche-betreuung"]),
+    ("Die Plattform funktioniert stabil und der Login ist einfach.", ["investmentuebersicht", "service"]),
+    ("Ich fühle mich mit meiner Anlage sehr sicher aufgehoben.", ["vertrauen", "langfristigkeit"]),
+    ("Bei internationalen Transaktionen wurde ich professionell unterstützt.", ["service", "beratung"]),
+    ("Sicherheit steht bei mir an erster Stelle — hier wird das ernst genommen.", ["vertrauen"]),
+    ("Sehr gute Auswahl bei Tages- und Festgeldangeboten.", ["investmentuebersicht"]),
+    ("Meine ETF- und Fondsstrategie wurde in Ruhe mit mir aufgebaut.", ["beratung", "langfristigkeit"]),
+    ("Fühle mich als Mensch gesehen, nicht als Nummer.", ["persoenliche-betreuung", "vertrauen"]),
+    ("Beim Hauskauf im Ausland war die Unterstützung unbezahlbar.", ["beratung", "service"]),
+    ("Klare Empfehlungen, aber immer mit Blick auf mein Risikoprofil.", ["beratung", "vertrauen"]),
+    ("Sehr schnelle Rückmeldungen — das ist selten geworden.", ["erreichbarkeit", "service"]),
+    ("Beim Spezial-AIF Thema wurde ich fundiert beraten.", ["beratung"]),
+    ("Ich habe endlich einen festen Ansprechpartner, der mich und meine Ziele kennt.", ["persoenliche-betreuung", "langfristigkeit"]),
+    ("Die langfristige Planung überzeugt mich seit Jahren.", ["langfristigkeit"]),
+    ("Alle Kosten wurden im Voraus offen dargelegt.", ["transparenz"]),
+    ("Bei Marktturbulenzen ruhige, sachliche Einordnung — genau das brauche ich.", ["beratung", "vertrauen"]),
+]
+_DEMO_4 = [
+    ("Solide Beratung, die zu meinen Zielen passt.", ["beratung"]),
+    ("Die Zusammenarbeit ist professionell und angenehm.", ["persoenliche-betreuung"]),
+    ("Ich habe einen guten Überblick über meine Anlagen bekommen.", ["investmentuebersicht"]),
+    ("Onboarding war klar strukturiert.", ["service"]),
+    ("Bankauswahl wurde mir mit klaren Argumenten erklärt.", ["beratung", "transparenz"]),
+    ("Insgesamt bin ich zufrieden mit der Betreuung.", ["persoenliche-betreuung"]),
+    ("Die Plattform ist verständlich aufgebaut.", ["investmentuebersicht"]),
+    ("Termine werden zuverlässig eingehalten.", ["service", "erreichbarkeit"]),
+    ("Die Aktien- und ETF-Beratung war ausführlich.", ["beratung"]),
+    ("Guter Mix aus Sicherheit und Wachstumschancen.", ["beratung", "vertrauen"]),
+    ("Zufrieden — hätte mir bei einem Punkt etwas mehr Detail gewünscht.", ["beratung"]),
+    ("Alles in allem eine gute Erfahrung.", ["service"]),
+    ("Die Erklärungen zu Fonds und ETFs waren hilfreich.", ["beratung"]),
+    ("Habe mich zu Liquidität und Anlagehorizont gut beraten gefühlt.", ["beratung"]),
+]
+_DEMO_3 = [
+    ("Grundsätzlich zufrieden, gelegentlich hätte ich mir schnellere Rückmeldungen gewünscht.", ["erreichbarkeit"]),
+    ("Die Plattform ist übersichtlich, beim ersten Login musste ich mich kurz zurechtfinden.", ["investmentuebersicht", "service"]),
+    ("Die Beratung war ausführlich, teilweise hätte ich mir eine kürzere Zusammenfassung gewünscht.", ["beratung"]),
+    ("Alles läuft, für meinen Geschmack manchmal etwas formal.", ["service"]),
+    ("Solide, aber ich bin noch am Kennenlernen.", ["persoenliche-betreuung"]),
+]
+_DEMO_2 = [
+    ("Der Ablauf war ok, die Einrichtung meines Zugangs hat aber etwas länger gedauert.", ["service", "investmentuebersicht"]),
+    ("Bei meiner letzten Anfrage musste ich mehrere Tage auf eine Antwort warten.", ["erreichbarkeit"]),
+]
+_DEMO_RESPONSES_5 = [
+    "Herzlichen Dank für Ihre offenen Worte — genau diese Nähe möchten wir langfristig bewahren.",
+    "Vielen Dank für Ihre Rückmeldung. Es freut uns, dass Sie sich verstanden und gut betreut fühlen.",
+    "Wir danken Ihnen sehr für Ihr Vertrauen und die kontinuierliche Zusammenarbeit.",
+    "Ihre Rückmeldung ist für unser gesamtes Team ein wichtiger Ansporn — vielen Dank.",
+    "Vielen Dank — persönliche Nähe und langfristige Begleitung sind uns besonders wichtig.",
+    "Wir freuen uns sehr über Ihre Worte und die Klarheit, mit der Sie unsere Zusammenarbeit beschreiben.",
+]
+_DEMO_RESPONSES_4 = [
+    "Vielen Dank für Ihr positives Feedback und Ihren konkreten Hinweis — wir nehmen ihn gerne auf.",
+    "Danke für Ihre offene Rückmeldung. Wir freuen uns über die gute Zusammenarbeit und bleiben aufmerksam.",
+    "Ihr Feedback bestärkt uns, den eingeschlagenen Weg konsequent fortzuführen.",
+]
+_DEMO_RESPONSES_23 = [
+    "Vielen Dank für Ihre offene Rückmeldung. Eine zuverlässige Erreichbarkeit gehört zu unserem eigenen Anspruch — Ihren Hinweis nehmen wir ernst und arbeiten daran, unsere Abläufe kontinuierlich zu verbessern.",
+    "Danke für Ihre ehrlichen Worte. Wir prüfen den beschriebenen Punkt intern und werden gezielt daran arbeiten.",
+    "Herzlichen Dank für Ihr Feedback. Ihr Hinweis hilft uns dabei, unseren Service weiter zu verbessern — melden Sie sich gern direkt bei Ihrem Ansprechpartner.",
+]
+
+
+def _generate_demo_reviews(count: int = 218) -> list:
+    rnd = random.Random(42)
+    now = datetime.now(timezone.utc)
+    combos: list = []
+    # Distribution: 45% 5*, 35% 4*, 15% 3*, 5% 2*
+    buckets = [(5, int(count * 0.45), _DEMO_5, _DEMO_RESPONSES_5),
+               (4, int(count * 0.35), _DEMO_4, _DEMO_RESPONSES_4),
+               (3, int(count * 0.15), _DEMO_3, _DEMO_RESPONSES_23),
+               (2, count - int(count * 0.45) - int(count * 0.35) - int(count * 0.15), _DEMO_2, _DEMO_RESPONSES_23)]
+    for rating, needed, pool, responses in buckets:
+        for i in range(needed):
+            base_text, topics = pool[i % len(pool)]
+            # Add mild variation to avoid exact repeats: pick optional additive clause
+            add_clauses = [
+                "", " Danke!", " Weiter so.", " Empfehlenswert.",
+                " Wir bleiben gerne dabei.", " Auf viele weitere Jahre.",
+                " Sehr angenehmer Ton.", "", "", "",
+            ]
+            addition = add_clauses[(i * 3) % len(add_clauses)] if rating >= 4 else ""
+            variants = [
+                base_text + addition,
+                base_text + " " + ("Besonders bemerkenswert." if rating == 5 else "Aus meiner Sicht sinnvoll." if rating == 4 else "Aus meiner Sicht Luft nach oben." if rating == 3 else "Hier sehe ich Verbesserungspotenzial."),
+                ("Aus meiner Sicht: " if i % 3 == 0 else "Meine Erfahrung: " if i % 3 == 1 else "") + base_text,
+            ]
+            text = variants[i % 3].strip()
+            fn = _DEMO_FIRST[i % len(_DEMO_FIRST)]
+            ln_init = _DEMO_LAST_INITIALS[(i * 7) % len(_DEMO_LAST_INITIALS)]
+            since = _DEMO_SINCE[(i * 5) % len(_DEMO_SINCE)]
+            extra_topic = _DEMO_TOPICS_POOL[(i * 11) % len(_DEMO_TOPICS_POOL)]
+            all_topics = list(dict.fromkeys((topics or []) + ([extra_topic] if rnd.random() < 0.6 else [])))[:3]
+            add_response = rnd.random() < 0.7
+            response = responses[i % len(responses)] if add_response else None
+            created = now - timedelta(days=rnd.randint(1, 900), hours=rnd.randint(0, 23))
+            combos.append({
+                "first_name": fn, "last_name": f"Demo{i:03d}",
+                "email": f"demo{i:03d}@fvb-demo.local",
+                "rating": rating, "text": text,
+                "customer_since": since,
+                "topics": all_topics,
+                "status": "approved",
+                "display_name": f"{fn} {ln_init}.",
+                "is_verified": False, "is_featured": False, "invited": False,
+                "is_demo": True,
+                "admin_response": response,
+                "created_at": created, "moderated_at": created,
+                "moderated_by": "demo-seed", "admin_note": "DEMO — automatisch generiert",
+                "ip_hash": "",
+            })
+    return combos
+
+
+@api.post("/reviews/admin/demo/seed")
+async def seed_demo_reviews(_user: dict = Depends(require_admin), count: int = 218):
+    existing = await db.reviews.count_documents({"is_demo": True})
+    if existing > 0:
+        return {"ok": True, "inserted": 0, "existing": existing, "message": "Demo-Daten sind bereits vorhanden — bitte zuerst löschen."}
+    docs = _generate_demo_reviews(max(count, 218))
+    await db.reviews.insert_many(docs)
+    return {"ok": True, "inserted": len(docs), "existing": 0}
+
+
+@api.delete("/reviews/admin/demo")
+async def delete_demo_reviews(_user: dict = Depends(require_admin)):
+    r = await db.reviews.delete_many({"is_demo": True})
     return {"deleted": r.deleted_count}
 
 
@@ -1721,6 +1918,8 @@ async def on_startup():
     await db.user_preferences.create_index("user_id", unique=True)
     await db.reviews.create_index([("status", 1), ("created_at", -1)])
     await db.reviews.create_index([("rating", -1), ("created_at", -1)])
+    await db.reviews.create_index("is_demo")
+    await db.reviews.create_index([("status", 1), ("is_demo", 1), ("created_at", -1)])
     await db.review_invites.create_index("token", unique=True)
     await db.review_invites.create_index([("email", 1), ("created_at", -1)])
     await seed_admin()

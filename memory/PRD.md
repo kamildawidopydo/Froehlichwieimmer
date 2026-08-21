@@ -1,16 +1,95 @@
 # Kapitalmitte / Webmain — Migration PRD
 
 ## Original Problem Statement
-Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und auf FastAPI + MongoDB migrieren. Frontend behalten, Backend (Supabase + Cloudflare Workers) neu aufbauen.
+Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und auf FastAPI + MongoDB migrieren. Frontend behalten, Backend (Supabase + Cloudflare Workers) neu aufbauen. Massive Rebranding auf **„Fröhlich Vermögensberatung GmbH"** mit editorial Private-Banking-Design (kein Rounded-SaaS, Playfair Serif, Dunkelblau/Gold), Legal-Domain: `kapital-direkt24.de`.
 
-## User Choices (Feb 2026)
-- **Repo**: Zugriff via GitHub PAT (Token muss revoked werden!)
-- **DB**: MongoDB (Stack-Default)
-- **Marktdaten-Provider**: Alpha Vantage (default) — API-Key noch nicht gesetzt
-- **User-Migration**: Fresh JWT-Auth (keine Supabase-User-Migration)
-- **Content-Automation**: Aus Phase 1 raus
-- **LLM (später)**: Emergent Universal Key
-- **Umfang**: "alles" = a+b+c → Inventar + FastAPI-Migration; Supabase-Creds für b noch offen
+## User Choices
+- **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
+- **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
+
+## What's Been Implemented — Session 12 (Feb 22-24, 2026)
+
+### ✅ Kundenstimmen — 218 Demo-Daten & Volltest (Feb 24, 2026)
+- Backend: `/api/reviews/public` unterstützt `q`, `rating`, `sort`, `topic`, `response_filter (with/without)`, `include_demo`, `offset/limit`
+- Backend: `/api/reviews/topics?include_demo=` liefert Zähler pro Thema mit Demo-Toggle
+- Backend: `PUT /api/reviews/{id}` akzeptiert `admin_response` (+ `responded_at`, `responded_by`)
+- Backend: `POST /api/reviews/admin/demo/seed` (idempotent, 218 Demo-Reviews mit realistischer Verteilung) und `DELETE /api/reviews/admin/demo`
+- Backend: Demo-Reviews mit `is_demo=true` werden **niemals in `/api/reviews/stats`** eingerechnet (verifiziert: real total=2, avg=4.5, mit Demo=220)
+- Frontend `Kundenstimmen.jsx`: PAGE_SIZE=12, Suche (debounced), Rating-Chip (1-5★), Response-Filter (Mit/Ohne Antwort), Sort-Selector (newest/oldest/best/worst), Topic-Pills mit Zähler, Reset-Filter, Empty-State, Skeleton-Loading, Antwort-von-Fröhlich-Block
+- Frontend `TestimonialCard`: rendert `admin_response` in gold-gerahmtem italic Block "Antwort von Fröhlich Vermögensberatung", zeigt DEMO-Badge wenn `is_demo`
+- Frontend `AdminReviews`: DEMO-Badge (dashed amber border), Toggle "Demo-Daten anzeigen", Response-Modal ("Antworten"/"Antwort bearbeiten"), Seed/Delete-Demo-Buttons
+- Preview-Modus: `/kundenstimmen?admin_preview=1` zeigt Warn-Banner + Demo-Reviews sichtbar (nur QA)
+- **Testing (iteration 12): 37/37 Backend-Tests PASS, 92% Frontend-Flows PASS**
+
+### ✅ Auth-Migration Supabase → FastAPI (Feb 24, 2026)
+- `AuthContext.js` rewritten: `authApi.me()` primary, Supabase Fallback nur für Legacy-Accounts (best-effort)
+- Login → tries FastAPI first, fällt für Legacy-Users auf Supabase zurück
+- Logout → beide Sessions parallel
+- Register/Password-Reset → FastAPI primary, Supabase-Profile-Row als best-effort Nebenwirkung
+- `/admin/*` Routen: `ProtectedRoute` prüft `user.role === 'admin'` via FastAPI-hydratiertes User-Objekt
+- `?next=` URL-Parameter respektiert nach Login (mit safe-path Validierung)
+- `data-testid="admin-logout-btn"` + `topbar-user-menu-btn` für QA-Automation
+- OTP-Flow via Supabase Edge Functions bleibt erhalten (opt-in per user pref)
+- **Testing (iteration 12): unautorisierter Zugriff blockiert, Session persistiert, Logout säubert Cookies**
+
+### ✅ Follow-ups iteration 13 (Post-Testing Fixes, Feb 24, 2026)
+- `reviewsApi.topics({include_demo})` — Topic-Pills sind jetzt Preview-aware (alle 8 Themen mit Demo-Zählern sichtbar)
+- `loadMore()` mit `.catch` → Error-State bei fehlgeschlagenem Nachladen
+- Login: `?next=` respektiert nach erfolgreichem Login
+- Search-Input `type="text"` (kein doppelter native Clear-Icon)
+- DashboardTopbar-Logout mit `data-testid` für QA
+
+## Previous Sessions (History)
+
+### Homepage & Editorial Redesign (Session 11)
+- `PlatformFlowDiagram` entfernt
+- Massive `/news`-Portal (Top News, Market Insights, Editorials, Trends, Detail Pages)
+- Home-FAQ mit 4 neuen Investment-Kategorien (Stocks, Bonds, IPO, Crypto)
+- Kundenstimmen (Testimonials) System mit Admin Moderation, Resend E-Mail-Einladungen, Topic-Tags
+- Trust/Security Section (built, dann per User-Feedback wieder entfernt)
+
+### FastAPI Skeleton (Phase 1, Session 8-10)
+- FastAPI + Motor + JWT auth (register, login, me, refresh, logout, forgot, reset)
+- Public content APIs (banks, offers, news)
+- MongoDB indexes, brute-force lockout, admin seeding
+
+## Architecture
+
+### Frontend
+- React 18 + Craco + Tailwind + shadcn/ui + Radix
+- react-router-dom v7 (100+ Routen)
+- AuthContext hybrid: FastAPI primary, Supabase legacy fallback
+- `services/apiClient.js` (axios, `withCredentials=true`)
+- Location: `/app/frontend/`
+
+### Backend
+- FastAPI + Motor + JWT (bcrypt, httpOnly Cookies, tz-aware)
+- Endpoints: `/api/health`, `/api/auth/*`, `/api/content/*`, `/api/reviews/*`, `/api/news-markte/*`
+- 218 Demo-Reviews seedable via `/api/reviews/admin/demo/seed`
+- Location: `/app/backend/server.py` (~1950 Zeilen — Refactoring in Modules empfohlen)
+- Tests: `/app/backend/tests/test_reviews_demo_auth.py` (37 cases)
+
+### Legacy
+- `/app/legacy_source/` — Supabase Edge Functions, Cloudflare Workers, PDF/Content-Scripts
+
+## Roadmap
+
+### 🟠 P1 — Next Up
+- **Phase 2 Market Data**: Alpha Vantage Backend-Integration (aktuell mocked JSON in `/news`), `marketService.js` mit Real Data verdrahten
+- **Personal Watchlist**: Persistente Watchlist für eingeloggte User unter `/news`
+
+### 🟡 P2 — Later
+- Phase 3: PDF-Microservice (Puppeteer aus `/app/legacy_source/`)
+- Phase 4: Content Automation (Social Media)
+- Phase 5: Sentry, Rate-Limiting, Deploy
+
+### 🔵 Refactoring / Debt
+- `server.py` in Router-Module aufsplitten (reviews, auth, content, news-markte)
+- Kubernetes-Ingress-CORS-Override (verhindert korrekte Credentialed-Preflight)
+- Supabase-Konsolen-Log-Noise (401s aus Legacy-Fallback) reduzieren
+- Demo-Generator: mindestens 1× 1-Sterne-Bewertung ergänzen (aktuell 0)
+- Search Q auch auf `admin_response` erweitern (optional)
+
 
 ## Architecture
 

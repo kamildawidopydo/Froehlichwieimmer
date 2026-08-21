@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,8 +26,12 @@ const Login = () => {
   const [otpNextPath, setOtpNextPath] = useState('/dashboard');
   const { login, user, verifyEmailOtp, sendEmailOtpForCurrentSession } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextParam = searchParams.get('next');
 
+  const isSafeNextPath = (path) => typeof path === 'string' && path.startsWith('/') && !path.startsWith('//');
   const getPostLoginPath = (profileUser) => {
+    if (nextParam && isSafeNextPath(nextParam)) return nextParam;
     if (profileUser?.role === 'admin') return '/admin';
     if (profileUser?.must_change_password) return '/reset-password?mode=force';
     if (!profileUser?.onboarding_completed) return '/onboarding';
@@ -38,7 +42,8 @@ const Login = () => {
     if (user && !otpRequired && !authDecisionPending) {
       navigate(getPostLoginPath(user));
     }
-  }, [user, navigate, otpRequired, authDecisionPending]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, navigate, otpRequired, authDecisionPending, nextParam]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
