@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, MessageSquareQuote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ReviewCard from '@/components/reviews/ReviewCard';
+import CompactReviewCard from '@/components/reviews/CompactReviewCard';
 import ReviewsStats from '@/components/reviews/ReviewsStats';
 import { useReviewStats, usePublicReviews } from '@/services/reviewsApi';
 
@@ -40,12 +40,12 @@ const HomeCustomerReviews = () => {
             {list.loading ? (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-[220px] animate-pulse rounded-2xl bg-white/5" />
+                  <div key={i} className="h-[220px] animate-pulse rounded-none bg-white/5" />
                 ))}
               </div>
             ) : items.length === 0 ? (
               <div
-                className="flex min-h-[220px] flex-col items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-8"
+                className="flex min-h-[220px] flex-col items-start gap-3 border border-white/10 bg-white/[0.03] p-8"
                 data-testid="reviews-empty"
               >
                 <MessageSquareQuote className="h-6 w-6 text-bank-gold" strokeWidth={1.4} />
@@ -56,8 +56,9 @@ const HomeCustomerReviews = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {items.map((r) => (<ReviewCard key={r.id} review={r} dark />))}
+              // CompactReviewCard 1:1 wiederverwenden — kompakte Optik wie auf /kundenstimmen.
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="home-reviews-grid">
+                {items.map((r) => (<CompactReviewCard key={r.id} review={r} />))}
               </div>
             )}
 
