@@ -3300,15 +3300,18 @@ async def _admin_purge_demo(_user: dict = Depends(require_admin)):
 
 
 @api.get("/news/nachrichten")
-async def news_nachrichten_list(category: Optional[str] = None, limit: int = 24, skip: int = 0):
+async def news_nachrichten_list(category: Optional[str] = None, source: Optional[str] = None,
+                                 limit: int = 24, skip: int = 0):
     """Public news feed. Serves synthesized editorial articles + RSS-aggregator items
-    (Publisher-attributed) from a single pipeline. Supports pagination via skip/limit."""
+    (Publisher-attributed) from a single pipeline. Supports pagination via skip/limit
+    and case-insensitive Publisher filter via `source`."""
     limit = max(1, min(int(limit or 24), 60))
     skip = max(0, int(skip or 0))
-    items = await _news_provider.list_items(category=category, limit=limit, skip=skip)
+    src = (source or "").strip() or None
+    items = await _news_provider.list_items(category=category, limit=limit, skip=skip, source=src)
     total = None
     try:
-        total = await _news_provider.count_items(category=category)
+        total = await _news_provider.count_items(category=category, source=src)
     except Exception:  # noqa: BLE001
         total = None
     return {
@@ -3319,9 +3322,20 @@ async def news_nachrichten_list(category: Optional[str] = None, limit: int = 24,
         "total": total,
         "limit": limit,
         "skip": skip,
+        "source": src,
         "has_more": (total or 0) > (skip + len(items)),
         "last_updated": items[0]["published_at"] if items else datetime.now(timezone.utc).isoformat(),
     }
+
+
+@api.get("/news/publishers")
+async def news_publishers_list():
+    """Liefert alle distinct Publisher-Namen für das Frontend-Dropdown."""
+    try:
+        publishers = await _news_provider.list_publishers()
+    except Exception:  # noqa: BLE001
+        publishers = []
+    return {"publishers": publishers, "count": len(publishers)}
 
 
 @api.get("/news/nachrichten/{slug}")

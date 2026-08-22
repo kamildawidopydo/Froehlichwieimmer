@@ -175,16 +175,12 @@ const NachrichtenPage = () => {
   const PAGE = 24;
   const MORE = 18;
 
-  // Publisher-Auswahl aus einer breiten Basisliste ableiten (alle jemals gesehenen Publisher).
+  // Publisher-Auswahl serverseitig laden (distinct Publisher aus /news/publishers).
   useEffect(() => {
     let alive = true;
-    api.get('/news/nachrichten', { params: { limit: 60, skip: 0 } })
-      .then(({ data }) => {
-        if (!alive) return;
-        const uniq = Array.from(new Set((data.items || []).map((x) => x.source_name).filter(Boolean))).sort();
-        setPublishers(uniq);
-      })
-      .catch(() => {});
+    api.get('/news/publishers')
+      .then(({ data }) => { if (alive) setPublishers(data?.publishers || []); })
+      .catch(() => { if (alive) setPublishers([]); });
     return () => { alive = false; };
   }, []);
 
@@ -192,14 +188,14 @@ const NachrichtenPage = () => {
     let alive = true;
     setLoading(true);
     setItems([]);
-    api.get('/news/nachrichten', { params: { category, limit: PAGE, skip: 0 } })
+    const params = { category, limit: PAGE, skip: 0 };
+    if (publisher !== 'alle') params.source = publisher;
+    api.get('/news/nachrichten', { params })
       .then(({ data }) => {
         if (!alive) return;
-        const raw = data.items || [];
-        const filtered = publisher === 'alle' ? raw : raw.filter((x) => x.source_name === publisher);
-        setItems(filtered);
+        setItems(data.items || []);
         setHasMore(!!data.has_more);
-        setTotal(data.total || raw.length);
+        setTotal(data.total || (data.items || []).length);
         setMeta({ provider: data.provider, is_demo: !!data.is_demo, last_updated: data.last_updated });
       })
       .catch(() => { if (alive) setItems([]); })
@@ -211,13 +207,11 @@ const NachrichtenPage = () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      // Server pagination arbeitet mit skip = Gesamt-Bestand aus dem Backend,
-      // deshalb greifen wir auf `items.length` zurück und filtern lokal nach Publisher.
-      const skipBase = publisher === 'alle' ? items.length : Math.max(items.length, 0);
-      const { data } = await api.get('/news/nachrichten', { params: { category, limit: MORE, skip: skipBase } });
+      const params = { category, limit: MORE, skip: items.length };
+      if (publisher !== 'alle') params.source = publisher;
+      const { data } = await api.get('/news/nachrichten', { params });
       const seen = new Set(items.map((x) => x.slug));
-      let fresh = (data.items || []).filter((x) => !seen.has(x.slug));
-      if (publisher !== 'alle') fresh = fresh.filter((x) => x.source_name === publisher);
+      const fresh = (data.items || []).filter((x) => !seen.has(x.slug));
       setItems((prev) => [...prev, ...fresh]);
       setHasMore(!!data.has_more);
     } catch { /* silent */ } finally { setLoadingMore(false); }

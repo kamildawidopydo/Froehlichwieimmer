@@ -416,7 +416,8 @@ class MongoNewsProvider(NewsProvider):
             "is_demo": False,
         }
 
-    async def list_items(self, category: Optional[str] = None, limit: int = 20, skip: int = 0) -> List[dict]:
+    async def list_items(self, category: Optional[str] = None, limit: int = 20, skip: int = 0,
+                         source: Optional[str] = None) -> List[dict]:
         if self._db is None:
             return []
         cat = (category or "alle").lower()
@@ -433,6 +434,20 @@ class MongoNewsProvider(NewsProvider):
             else:
                 syn_query["category"] = cat
                 raw_query["category"] = cat
+
+        # Publisher-Filter (case-insensitive, robuste Normalisierung)
+        if source:
+            src_raw = str(source).strip()
+            src_norm = src_raw.lower().replace("ö", "oe").replace("ä", "ae").replace("ü", "ue")
+            # „Fröhlich Redaktion" ist unser Synthesizer-Label — nur eigene Artikel.
+            if src_norm.replace(" ", "") in {"froehlichredaktion", "froehlich", "redaktion"}:
+                raw_query = {"__never__": True}
+            else:
+                import re as _re
+                pattern = f"^{_re.escape(src_raw)}$"
+                raw_query["source_names.0"] = {"$regex": pattern, "$options": "i"}
+                # Keine Synthesizer-Artikel bei externem Publisher-Filter
+                syn_query = {"__never__": True}
 
         # Anzahl gross genug ziehen (Skip + Limit), damit Dedup nichts überspringt
         pool_size = max(limit + skip + 20, 60)
@@ -458,7 +473,6 @@ class MongoNewsProvider(NewsProvider):
             return _re.sub(r"\W+", " ", (t or "").lower()).strip()[:80]
 
         merged: list[dict] = []
-        # Redaktions-Artikel zuerst — die kennt der Nutzer als Fröhlich-Content
         for it in syn_items + raw_items:
             key = _title_key(it.get("title", ""))
             url = it.get("source_url") or ""
@@ -470,14 +484,10 @@ class MongoNewsProvider(NewsProvider):
             if url:
                 seen_urls.add(url)
             merged.append(it)
-        # Nach Publikations-Zeit sortieren, Top-News nach vorne
-        merged.sort(key=lambda x: (not x.get("is_top_news", False), x.get("published_at") or ""), reverse=False)
-        # is_top_news=True → nach vorne, published_at DESC (reverse=False mit not-Trick oben)
         merged.sort(key=lambda x: (x.get("is_top_news", False), x.get("published_at") or ""), reverse=True)
-
         return merged[skip: skip + limit]
 
-    async def count_items(self, category: Optional[str] = None) -> int:
+    async def count_items(self, category: Optional[str] = None, source: Optional[str] = None) -> int:
         if self._db is None:
             return 0
         cat = (category or "alle").lower()
@@ -488,9 +498,36 @@ class MongoNewsProvider(NewsProvider):
         if cat != "alle":
             syn_q["category"] = cat
             raw_q["category"] = cat
+        if source:
+            src_raw = str(source).strip()
+            src_norm = src_raw.lower().replace("ö", "oe").replace("ä", "ae").replace("ü", "ue")
+            if src_norm.replace(" ", "") in {"froehlichredaktion", "froehlich", "redaktion"}:
+                raw_q = {"__never__": True}
+            else:
+                import re as _re
+                raw_q["source_names.0"] = {"$regex": f"^{_re.escape(src_raw)}$", "$options": "i"}
+                syn_q = {"__never__": True}
         syn_n = await self._db.news_articles.count_documents(syn_q)
         raw_n = await self._db.news_raw.count_documents(raw_q)
         return syn_n + raw_n
+
+    async def list_publishers(self) -> List[str]:
+        """Distinct Publisher-Namen für das Frontend-Dropdown."""
+        if self._db is None:
+            return []
+        names: set[str] = set()
+        # Aggregator-Publisher aus news_raw
+        pipeline = [
+            {"$match": {"is_aggregated": True, "is_published": True}},
+            {"$group": {"_id": {"$arrayElemAt": ["$source_names", 0]}}},
+        ]
+        async for doc in self._db.news_raw.aggregate(pipeline):
+            if doc.get("_id"):
+                names.add(doc["_id"])
+        # Fröhlich-Redaktion nur, wenn tatsächlich synthetisierte Artikel vorhanden
+        if await self._db.news_articles.count_documents({"is_published": True, "status": "published"}) > 0:
+            names.add("Fröhlich Redaktion")
+        return sorted(names)
 
     async def get_item(self, slug: str) -> Optional[dict]:
         if self._db is None:

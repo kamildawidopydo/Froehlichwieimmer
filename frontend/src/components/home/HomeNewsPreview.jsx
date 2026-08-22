@@ -148,11 +148,13 @@ const ExtendedTopicSections = () => {
 
   if (state.loading) return <div className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({length:6}).map((_,i)=><div key={i} className="h-[280px] animate-pulse border border-bank-border bg-neutral-50"/>)}</div>;
   if (!Object.keys(state.sections).length) return null;
+  // Nur Sektionen anzeigen, für die aktuell mindestens 6 echte Artikel vorhanden sind.
+  const MIN = 6;
   return (
     <>
-      {state.sections.wirtschaft?.length > 0 && <Section title="Wirtschaft" cat="wirtschaft" items={state.sections.wirtschaft} />}
-      {state.sections.europa?.length > 0 &&     <Section title="Europa"     cat="europa"     items={state.sections.europa} />}
-      {state.sections.technologie?.length > 0 &&<Section title="Technologie"cat="technologie"items={state.sections.technologie} />}
+      {(state.sections.wirtschaft?.length || 0) >= MIN && <Section title="Wirtschaft" cat="wirtschaft" items={state.sections.wirtschaft} />}
+      {(state.sections.europa?.length || 0) >= MIN &&     <Section title="Europa"     cat="europa"     items={state.sections.europa} />}
+      {(state.sections.technologie?.length || 0) >= MIN &&<Section title="Technologie"cat="technologie"items={state.sections.technologie} />}
     </>
   );
 };
