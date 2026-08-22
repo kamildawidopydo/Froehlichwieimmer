@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, X, ChevronDown, ChevronUp, Beaker } from 'lucide-react';
+import { Search, X, ChevronDown, ChevronLeft, ChevronRight, Beaker } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import PageMeta from '@/components/PageMeta';
-import { Button } from '@/components/ui/button';
-import TestimonialCard from '@/components/reviews/TestimonialCard';
+import CompactReviewCard from '@/components/reviews/CompactReviewCard';
 import ReviewSubmitForm from '@/components/reviews/ReviewSubmitForm';
 import { reviewsApi } from '@/services/reviewsApi';
 
-const INITIAL_SIZE = 8;      // ruhige Ansicht beim ersten Aufruf
-const EXTRA_CHUNK  = 20;     // weitere Kundenstimmen hinter dem Button
+const PAGE_SIZE   = 6;       // 3×2 Grid pro Seite (Desktop)
+const POOL_SIZE   = 60;      // clientseitige Pagination auf einem gecachten Pool
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Neueste zuerst' },
@@ -32,14 +31,11 @@ const Kundenstimmen = () => {
   const [searchParams] = useSearchParams();
   const previewDemo = searchParams.get('admin_preview') === '1';
   const [items, setItems] = useState([]);
-  const [extras, setExtras] = useState([]);        // 20-er Batch hinter Button
-  const [extrasOpen, setExtrasOpen] = useState(false);
-  const [extrasLoaded, setExtrasLoaded] = useState(false);
-  const [featured, setFeatured] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [fadeKey, setFadeKey] = useState(0); // triggert Fade-Animation beim Seitenwechsel
 
   const [topic, setTopic] = useState('');
   const [rating, setRating] = useState(0);
@@ -55,7 +51,7 @@ const Kundenstimmen = () => {
   }, [previewDemo]);
 
   const filterParams = useMemo(() => {
-    const params = { limit: INITIAL_SIZE, sort };
+    const params = { limit: POOL_SIZE, sort };
     if (topic) params.topic = topic;
     if (rating) params.rating = rating;
     if (responseFilter) params.response_filter = responseFilter;
@@ -70,47 +66,17 @@ const Kundenstimmen = () => {
     let cancelled = false;
     setLoading(true);
     setError(false);
-    // Filter/Search zurücksetzen den Expand-State
-    setExtras([]);
-    setExtrasOpen(false);
-    setExtrasLoaded(false);
-    const featuredPromise = hasActiveFilters
-      ? Promise.resolve({ items: [] })
-      : reviewsApi.list({ featured: true, limit: 3, sort: 'newest' });
-    Promise.all([
-      featuredPromise,
-      reviewsApi.list({ ...filterParams, offset: 0 }),
-    ])
-      .then(([feat, all]) => {
+    setPage(1);
+    reviewsApi.list({ ...filterParams, offset: 0 })
+      .then((data) => {
         if (cancelled) return;
-        setFeatured(feat.items || []);
-        setItems(all.items);
-        setTotal(all.total);
+        setItems(data.items || []);
+        setTotal(data.total || 0);
       })
       .catch(() => { if (!cancelled) setError(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [filterParams, hasActiveFilters]);
-
-  const toggleExtras = async () => {
-    if (extrasOpen) { setExtrasOpen(false); return; }
-    if (extrasLoaded) { setExtrasOpen(true); return; }
-    setLoadingMore(true);
-    try {
-      const data = await reviewsApi.list({ ...filterParams, limit: EXTRA_CHUNK, offset: INITIAL_SIZE });
-      // Duplikate zu Featured + initialen Items ausfiltern
-      const seen = new Set([...featured.map((f) => f.id), ...items.map((i) => i.id)]);
-      const uniq = (data.items || []).filter((r) => !seen.has(r.id));
-      setExtras(uniq);
-      setExtrasLoaded(true);
-      setExtrasOpen(true);
-      setTotal(data.total);
-    } catch {
-      setError(true);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+  }, [filterParams]);
 
   const resetFilters = () => {
     setTopic('');
@@ -120,8 +86,20 @@ const Kundenstimmen = () => {
     setSearchInput('');
   };
 
-  const featuredIds = new Set(featured.map((f) => f.id));
-  const rest = items.filter((r) => !featuredIds.has(r.id));
+  // Client-seitige Pagination auf dem Cache-Pool.
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const pageItems  = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const rangeFrom  = items.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeTo    = Math.min(page * PAGE_SIZE, items.length);
+  const goPage = (p) => {
+    const target = Math.min(Math.max(1, p), totalPages);
+    if (target !== page) {
+      setPage(target);
+      setFadeKey((k) => k + 1);
+      // Sanft nach oben scrollen, damit die neuen Karten sichtbar sind.
+      try { document.getElementById('kundenstimmen-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* noop */ }
+    }
+  };
 
   return (
     <div className="bg-white" data-testid="kundenstimmen-page">
@@ -153,31 +131,10 @@ const Kundenstimmen = () => {
         </div>
       </section>
 
-      {/* Featured */}
-      {featured.length > 0 && (
-        <section className="mx-auto max-w-6xl px-6 py-16 sm:px-10 sm:py-20">
-          <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bank-accent-strong">Ausgewählte Stimmen</p>
-          <h2 className="mt-2 font-serif text-3xl text-bank-text sm:text-4xl">Von uns hervorgehoben</h2>
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {featured.map((r) => (<TestimonialCard key={r.id} review={r} />))}
-          </div>
-        </section>
-      )}
-
       {/* All */}
-      <section className={`mx-auto max-w-6xl px-6 pb-20 sm:px-10 ${featured.length === 0 ? 'pt-16 sm:pt-20' : ''}`}>
-        {featured.length === 0 && (
-          <>
-            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bank-accent-strong">Alle Rückmeldungen</p>
-            <h2 className="mt-2 font-serif text-3xl text-bank-text sm:text-4xl">Kundenstimmen im Überblick</h2>
-          </>
-        )}
-        {featured.length > 0 && (
-          <>
-            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bank-accent-strong">Weitere Erfahrungen</p>
-            <h2 className="mt-2 font-serif text-3xl text-bank-text sm:text-4xl">Alle freigegebenen Kundenstimmen</h2>
-          </>
-        )}
+      <section className="mx-auto max-w-6xl px-6 pb-20 pt-16 sm:px-10 sm:pt-20">
+        <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bank-accent-strong">Alle Rückmeldungen</p>
+        <h2 className="mt-2 font-serif text-3xl text-bank-text sm:text-4xl">Kundenstimmen im Überblick</h2>
 
         {/* Filter Bar */}
         <div className="mt-6 border-b border-bank-border pb-6">
