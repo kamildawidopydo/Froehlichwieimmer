@@ -7,6 +7,32 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 30 (Feb 27, 2026) — Home-Sektionen · Publisher-Filter · Env-Keys verifiziert
+
+**Home-Feed** (`components/home/HomeNewsPreview.jsx`)
+- Neue Komponente `ExtendedTopicSections` unter dem bestehenden Preview + über dem CTA. Lädt parallel `wirtschaft`, `europa`, `technologie` (je 6 Items) aus **derselben Aggregator-API** `/api/news/nachrichten?category=…&limit=6`.
+- Jede Sektion: Eyebrow + H3 + „Alle X-News →" + 3-spaltiges Card-Grid mit Bild, Kategorie-Tag, Publisher-Tag, Titel, Teaser, Zeit.
+- Aggregator-Cards öffnen extern (`target="_blank" rel="noopener"`), Fröhlich-Redaktions-Cards intern (`Link to="/news/nachrichten/:slug"`).
+- Bestehender Marktüberblick / Top-News / Einordnung / CTA / Watchlist bleiben unverändert.
+
+**Publisher-Filter** (`pages/news/NachrichtenPage.jsx`)
+- Neuer `<select>` mit `data-testid="news-publisher-select"` direkt unter der Kategorie-Navigation.
+- Publisher-Liste wird beim Mount aus `/api/news/nachrichten?limit=60` extrahiert (alle sichtbaren Herausgeber, alphabetisch sortiert).
+- Filter arbeitet clientseitig auf den bereits geladenen Items — Pagination/„Mehr laden" bleiben unverändert. Reset-Link erscheint, sobald ein Publisher aktiv ist.
+- 12 Publisher aktuell verfügbar (FAZ Politik, FAZ Wirtschaft, Fröhlich Redaktion, Handelsblatt, SPIEGEL Politik, WirtschaftsWoche, ZEIT Politik, …).
+
+**JSX-Fixes**
+- `HeadlineRow`, `NewsCard`, `HeroCard` schließen jetzt korrekt mit `</SmartLink>` (statt verwaisten `</Link>`).
+- Doppelte `const HomeNewsPreview = () => {`-Deklaration bereinigt.
+- Compile: **OK**, keine Babel-Fehler mehr.
+
+**Env-Keys**
+- `UNSPLASH_ACCESS_KEY` (leer): RSS-Bilder haben Vorrang, Fallback-Pool aktiv, keine Hardcodings.
+- `ALPHA_VANTAGE_API_KEY` (leer): Server liest bereits ausschließlich aus Env (`server.py:52`), `provider_configured=false`, Fallback-Kurse aktiv. Sobald der User seinen Key einträgt und Backend neustartet → automatisch Live-Kurse für Marktkacheln + Preis-Alerts.
+
+**Bestehende Funktionen unangetastet**: Design, Watchlist, Marktübersicht, „Unsere Einordnung", Cron-Struktur, RSS→Mongo-Pipeline.
+
+
 ## Session 29 (Feb 27, 2026) — News-Bereich als Aggregator-Plattform ausgebaut (67 Artikel, 18 Publisher, 17 Kategorien)
 
 **Zielbild**: Aus einer einzigen bestehenden Pipeline (RSS→Mongo-Cache) soll die Website deutlich lebendiger wirken — mit 50-100+ aktuellen Artikeln, breiterer Kategorienvielfalt, „Mehr laden" und sichtbaren Publisher-Namen.

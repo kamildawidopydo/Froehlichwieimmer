@@ -79,6 +79,84 @@ const MarketStrip = () => {
   );
 };
 
+/** Extended topic feeds — Wirtschaft, Europa, Technologie mit je 6 Cards. */
+const ExtendedTopicSections = () => {
+  const [state, setState] = useState({ loading: true, sections: {} });
+  useEffect(() => {
+    let alive = true;
+    Promise.all([
+      api.get('/news/nachrichten', { params: { category: 'wirtschaft', limit: 6, skip: 0 } }),
+      api.get('/news/nachrichten', { params: { category: 'europa', limit: 6, skip: 0 } }),
+      api.get('/news/nachrichten', { params: { category: 'technologie', limit: 6, skip: 0 } }),
+    ]).then(([w, e, t]) => {
+      if (!alive) return;
+      setState({
+        loading: false,
+        sections: {
+          wirtschaft: (w?.data?.items || []).slice(0, 6),
+          europa:     (e?.data?.items || []).slice(0, 6),
+          technologie:(t?.data?.items || []).slice(0, 6),
+        },
+      });
+    }).catch(() => setState({ loading: false, sections: {} }));
+    return () => { alive = false; };
+  }, []);
+
+  const linkFor = (item) => (item?.content_type === 'aggregated' && item?.source_url)
+    ? { href: item.source_url, isExternal: true }
+    : { href: `/news/nachrichten/${item.slug}`, isExternal: false };
+
+  const Section = ({ title, cat, items }) => (
+    <section className="mt-16" data-testid={`home-topic-${cat}`}>
+      <div className="flex items-end justify-between border-b border-bank-border pb-3">
+        <div>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">{title}</p>
+          <h3 className="mt-1 font-serif text-2xl leading-tight text-bank-text sm:text-[28px]">Aktuell aus {title}</h3>
+        </div>
+        <Link to={`/news/nachrichten`} className="hidden font-mono text-[11px] uppercase tracking-[0.18em] text-bank-primary hover:underline sm:inline-flex" data-testid={`home-topic-${cat}-more`}>
+          Alle {title}-News →
+        </Link>
+      </div>
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid={`home-topic-${cat}-grid`}>
+        {items.map((it) => {
+          const { href, isExternal } = linkFor(it);
+          const CardTag = isExternal ? 'a' : Link;
+          const props = isExternal
+            ? { href, target: '_blank', rel: 'noopener noreferrer' }
+            : { to: href };
+          const publisher = it.content_type === 'aggregated' ? (it.source_name || 'Externer Publisher') : 'Fröhlich Redaktion';
+          return (
+            <CardTag key={it.slug} {...props} className="group flex flex-col border border-bank-border bg-white transition-colors hover:border-bank-accent-strong/50" data-testid={`home-topic-${cat}-card`}>
+              <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
+                <img src={it.image_url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
+              </div>
+              <div className="flex flex-1 flex-col gap-2 px-4 py-4">
+                <div className="flex items-center gap-2">
+                  <CategoryTag category={it.category} />
+                  <span className="ml-1 font-mono text-[10px] uppercase tracking-[0.2em] text-bank-text-muted">· {publisher}</span>
+                </div>
+                <h4 className="font-serif text-[16px] leading-snug text-bank-text group-hover:text-bank-primary">{it.title}</h4>
+                <p className="line-clamp-2 text-[12.5px] leading-relaxed text-bank-text-muted">{it.summary}</p>
+                <p className="mt-auto text-[10.5px] uppercase tracking-[0.16em] text-bank-text-muted">{timeAgo(it.published_at)}</p>
+              </div>
+            </CardTag>
+          );
+        })}
+      </div>
+    </section>
+  );
+
+  if (state.loading) return <div className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({length:6}).map((_,i)=><div key={i} className="h-[280px] animate-pulse border border-bank-border bg-neutral-50"/>)}</div>;
+  if (!Object.keys(state.sections).length) return null;
+  return (
+    <>
+      {state.sections.wirtschaft?.length > 0 && <Section title="Wirtschaft" cat="wirtschaft" items={state.sections.wirtschaft} />}
+      {state.sections.europa?.length > 0 &&     <Section title="Europa"     cat="europa"     items={state.sections.europa} />}
+      {state.sections.technologie?.length > 0 &&<Section title="Technologie"cat="technologie"items={state.sections.technologie} />}
+    </>
+  );
+};
+
 const HomeNewsPreview = () => {
   const [newsState, setNewsState] = useState({ items: [], loading: true });
   const [einState, setEinState] = useState({ items: [], loading: true });
@@ -243,6 +321,9 @@ const HomeNewsPreview = () => {
             </Link>
           </aside>
         </div>
+
+        {/* Erweiterte Themen-Sektionen — direkt aus Aggregator-Pipeline */}
+        <ExtendedTopicSections />
 
         {/* Final CTA */}
         <div className="mt-14 border-t border-bank-border pt-10 text-center">

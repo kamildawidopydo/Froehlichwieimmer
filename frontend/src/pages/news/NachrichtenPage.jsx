@@ -129,12 +129,17 @@ const NewsCard = ({ item }) => (
     <div className="flex flex-1 flex-col gap-2 px-4 py-4">
       <div className="flex items-center gap-2">
         <CategoryTag category={item.category} />
+        <PublisherTag item={item} />
       </div>
-      <h3 className="font-serif text-[16px] leading-snug text-bank-text group-hover:text-bank-primary">{item.title}</h3>
+      <h3 className="font-serif text-[17px] leading-tight text-bank-text group-hover:text-bank-primary">
+        {item.title}
+      </h3>
       <p className="line-clamp-3 text-[13px] leading-relaxed text-bank-text-muted">{item.summary}</p>
-      <p className="mt-auto pt-2 text-[10.5px] uppercase tracking-[0.16em] text-bank-text-muted">{timeAgo(item.published_at)}</p>
+      <p className="mt-auto text-[10.5px] uppercase tracking-[0.16em] text-bank-text-muted">
+        {timeAgo(item.published_at)}
+      </p>
     </div>
-  </Link>
+  </SmartLink>
 );
 
 const RedaktionSlot = () => (
@@ -159,6 +164,8 @@ const RedaktionSlot = () => (
 const NachrichtenPage = () => {
   const [items, setItems] = useState([]);
   const [category, setCategory] = useState('alle');
+  const [publisher, setPublisher] = useState('alle');
+  const [publishers, setPublishers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -168,6 +175,19 @@ const NachrichtenPage = () => {
   const PAGE = 24;
   const MORE = 18;
 
+  // Publisher-Auswahl aus einer breiten Basisliste ableiten (alle jemals gesehenen Publisher).
+  useEffect(() => {
+    let alive = true;
+    api.get('/news/nachrichten', { params: { limit: 60, skip: 0 } })
+      .then(({ data }) => {
+        if (!alive) return;
+        const uniq = Array.from(new Set((data.items || []).map((x) => x.source_name).filter(Boolean))).sort();
+        setPublishers(uniq);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -175,30 +195,32 @@ const NachrichtenPage = () => {
     api.get('/news/nachrichten', { params: { category, limit: PAGE, skip: 0 } })
       .then(({ data }) => {
         if (!alive) return;
-        setItems(data.items || []);
+        const raw = data.items || [];
+        const filtered = publisher === 'alle' ? raw : raw.filter((x) => x.source_name === publisher);
+        setItems(filtered);
         setHasMore(!!data.has_more);
-        setTotal(data.total || (data.items || []).length);
+        setTotal(data.total || raw.length);
         setMeta({ provider: data.provider, is_demo: !!data.is_demo, last_updated: data.last_updated });
       })
       .catch(() => { if (alive) setItems([]); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [category]);
+  }, [category, publisher]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      const { data } = await api.get('/news/nachrichten', { params: { category, limit: MORE, skip: items.length } });
+      // Server pagination arbeitet mit skip = Gesamt-Bestand aus dem Backend,
+      // deshalb greifen wir auf `items.length` zurück und filtern lokal nach Publisher.
+      const skipBase = publisher === 'alle' ? items.length : Math.max(items.length, 0);
+      const { data } = await api.get('/news/nachrichten', { params: { category, limit: MORE, skip: skipBase } });
       const seen = new Set(items.map((x) => x.slug));
-      const fresh = (data.items || []).filter((x) => !seen.has(x.slug));
+      let fresh = (data.items || []).filter((x) => !seen.has(x.slug));
+      if (publisher !== 'alle') fresh = fresh.filter((x) => x.source_name === publisher);
       setItems((prev) => [...prev, ...fresh]);
       setHasMore(!!data.has_more);
-    } catch {
-      // Nächster Versuch beim erneuten Klick — kein UI-Fehler
-    } finally {
-      setLoadingMore(false);
-    }
+    } catch { /* silent */ } finally { setLoadingMore(false); }
   };
 
   const hero = items[0];
@@ -276,6 +298,30 @@ const NachrichtenPage = () => {
             </button>
           ))}
         </nav>
+
+        {/* Publisher filter */}
+        <div className="mt-4 flex flex-wrap items-center gap-3" data-testid="news-publisher-filter">
+          <label htmlFor="publisher-select" className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted">
+            Publisher
+          </label>
+          <select
+            id="publisher-select"
+            value={publisher}
+            onChange={(e) => setPublisher(e.target.value)}
+            data-testid="news-publisher-select"
+            className="min-w-[180px] border border-bank-border bg-white px-3 py-1.5 font-mono text-[11.5px] uppercase tracking-[0.14em] text-bank-text focus:border-bank-primary focus:outline-none"
+          >
+            <option value="alle">Alle Publisher ({publishers.length})</option>
+            {publishers.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+          {publisher !== 'alle' && (
+            <button type="button" onClick={() => setPublisher('alle')} className="text-[11px] uppercase tracking-[0.18em] text-bank-primary hover:underline" data-testid="news-publisher-reset">
+              Filter zurücksetzen
+            </button>
+          )}
+        </div>
 
         {/* Cards grid */}
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="news-card-grid">
