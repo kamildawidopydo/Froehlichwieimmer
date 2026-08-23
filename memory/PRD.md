@@ -1,5 +1,35 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 70 (Feb 25, 2026) — 3 intern lösbare Items DONE ✅
+
+**Item 1 · Digest-Preview** ✅ `GET /api/newsletter/admin/preview-weekly-digest`
+- Nutzt dieselben Funktionen wie der Versand: neuer gemeinsamer Helper `_load_recent_articles(db, limit, days)` in `weekly_digest.py`, `build_digest_html` bleibt der einzige Renderer für Preview + Versand.
+- Kein `send_email_fn`-Aufruf, KEIN Insert/Update in `newsletter_digests` (verifiziert: Collection blieb bei 1 Doc nach mehreren Preview-Aufrufen).
+- Preview ohne Daten → freundlicher HTML-State „Kein Digest verfügbar" statt 500.
+- Auth: bestehende `require_admin` (JWT-Cookie via `/api/auth/login`). Ohne Cookie → 401.
+
+**Item 2 · Öffentliche `/newsletter`-Page** ✅
+- Neue Seite `frontend/src/pages/NewsletterPage.jsx` mit Hero + `NewsletterSignup` (wiederverwendet) + Digest-Historie.
+- Neuer öffentlicher Endpoint `GET /api/newsletter/digests?limit=12` in `weekly_digest.py`. Payload nur: `week_label, subject, articles[{slug,title,category}], article_count, started_at, finished_at`. Verifiziert: keine `recipients_total/sent/failed/emails/ip/token/user_agent`-Felder.
+- Historie-Cards linken zu `/nachrichten/:slug`, snippets pro Ausgabe max. 5.
+- Route registriert: `/newsletter` in `App.js`.
+- Footer bekommt einen dezenten Link („wöchentlichen Finanznachrichten-Digest") in bestehendem Disclaimer.
+
+**Item 3 · Interstitial nur einmal pro Session** ✅
+- Bestehender `InvestmentTopicTeaser` hatte bereits `sessionStorage:invtopic:shown_in_session`-Flag + `alreadyShownThisSession()`-Guard beim Trigger. Zusätzliche Härtung: `handleClose()` markiert das Flag jetzt als Sicherheitsnetz (falls Trigger-Write scheiterte). Neue Browser-Session → sessionStorage leer → Interstitial darf wieder erscheinen.
+
+**Files**
+- `backend/weekly_digest.py` (Preview-Endpoint, `/newsletter/digests` History, `_load_recent_articles`, `_iso_week_label`, `_iso_week_subject`)
+- `frontend/src/App.js` (Route `/newsletter`)
+- `frontend/src/pages/NewsletterPage.jsx` (neu)
+- `frontend/src/components/investment/InvestmentTopicTeaser.jsx` (Close-Härtung)
+- `frontend/src/components/Footer.js` (dezenter Newsletter-Link)
+
+**ENV:** keine neuen. Preview nutzt bestehenden `require_admin`. History-Endpoint ist öffentlich.
+
+**Externer Blocker weiterhin offen:** Supabase-CHECK-Constraint (Session 65). Nicht angefasst.
+
+
 ## Session 69 · Nachbesserung nach iteration_43 ✅
 
 **Interstitial + Consent-Link Overlap behoben**

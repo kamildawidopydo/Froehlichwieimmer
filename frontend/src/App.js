@@ -40,6 +40,7 @@ const Leistungen = lazy(() => import('@/pages/Leistungen'));
 const Wissen = lazy(() => import('@/pages/Wissen'));
 const WissenArtikel = lazy(() => import('@/pages/WissenArtikel'));
 const FinanzwissenArtikel = lazy(() => import('@/pages/FinanzwissenArtikel'));
+const NewsletterPage = lazy(() => import('@/pages/NewsletterPage'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const InvestmentTopicPage = lazy(() => import('@/pages/InvestmentTopicPage'));
 const HandelnHub = lazy(() => import('@/pages/HandelnHub'));
@@ -259,6 +260,7 @@ function App() {
                   <Route path="/news/nachrichten/:slug" element={<NachrichtenDetailPage />} />
                   <Route path="/nachrichten" element={<NachrichtenPage />} />
                   <Route path="/nachrichten/:slug" element={<NachrichtenDetailPage />} />
+                  <Route path="/newsletter" element={<NewsletterPage />} />
                   <Route path="/news/euronews/:slug" element={<NachrichtenDetailPage />} />
                   <Route path="/news/einordnung/:slug" element={<EinordnungPage />} />
                   <Route path="/bewertungen" element={<Bewertungen />} />

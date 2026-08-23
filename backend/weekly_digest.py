@@ -240,15 +240,110 @@ async def send_weekly_digest(db, send_email_fn, *, force: bool = False, limit_ar
 
 
 # ---------------------------------------------------------------------------
+# Artikel-Auswahl + Metadaten (gemeinsame Basis für Versand, Preview, History)
+# ---------------------------------------------------------------------------
+
+def _iso_week_label(now: datetime | None = None) -> str:
+    now = now or datetime.now(timezone.utc)
+    y, w, _ = now.isocalendar()
+    return f"{y}-W{w:02d}"
+
+
+def _iso_week_subject(now: datetime | None = None) -> str:
+    now = now or datetime.now(timezone.utc)
+    _, w, _ = now.isocalendar()
+    return f"Fröhlich Digest · Finanznachrichten KW{w:02d}"
+
+
+async def _load_recent_articles(db, *, limit: int = 6, days: int = 7) -> list[dict]:
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    cursor = db.news_articles.find(
+        {"status": "published", "is_published": True, "published_at": {"$gte": since}}
+    ).sort("published_at", -1).limit(80)
+    docs = await cursor.to_list(80)
+    return _pick_articles(docs, limit=limit)
+
+
+# ---------------------------------------------------------------------------
 # Routen-Registrierung
 # ---------------------------------------------------------------------------
 
 def register(api: APIRouter, db, send_email_fn, require_admin):
+    from fastapi.responses import HTMLResponse
+
     @api.post("/newsletter/admin/send-weekly-digest",
               summary="Admin/Cron: wöchentlichen Digest zusammenstellen und versenden")
     async def _admin_send_weekly_digest(force: bool = False, limit: int = 6,
                                           _user: dict = Depends(require_admin)):
         return await send_weekly_digest(db, send_email_fn, force=force, limit_articles=max(1, min(12, limit)))
+
+    @api.get("/newsletter/admin/preview-weekly-digest",
+             summary="Admin: HTML-Vorschau des Wochen-Digests (kein Versand, kein Dedup-Eintrag)")
+    async def _admin_preview_weekly_digest(limit: int = 6,
+                                            _user: dict = Depends(require_admin)):
+        # Nutzt bewusst dieselbe Selektions- + Render-Funktion wie der Versand.
+        # KEIN Update in newsletter_digests, KEIN send_email_fn-Aufruf.
+        articles = await _load_recent_articles(db, limit=max(1, min(12, limit)))
+        preview_email = "preview@froehlich-vermoegensberatung.de"
+        week_label = _iso_week_label()
+        if not articles:
+            body = (
+                '<div style="max-width:520px;margin:32px auto;padding:24px;'
+                'font-family:Georgia,serif;background:#fff;border:1px solid #e5e7eb">'
+                '<p style="color:#c9a961;font-size:11px;letter-spacing:0.2em;'
+                'text-transform:uppercase;margin:0 0 10px">Preview · '
+                f'{escape(week_label)}</p>'
+                '<h1 style="font-weight:400;font-size:20px;color:#0f1d34;margin:0 0 8px">'
+                'Kein Digest verfügbar</h1>'
+                '<p style="color:#3f4a5f;font-size:14px;line-height:1.6">In den vergangenen '
+                '7 Tagen liegen keine veröffentlichten Meldungen im News-Store. Der '
+                'Freitag-Cron würde in dieser Woche keinen Digest verschicken.</p></div>'
+            )
+            return HTMLResponse(content=body, status_code=200)
+        html = build_digest_html(articles, preview_email, week_label)
+        return HTMLResponse(content=html, status_code=200)
+
+    @api.get("/newsletter/digests",
+             summary="Öffentliche Digest-Historie (keine PII, keine Empfänger, keine Tokens)")
+    async def _public_digest_history(limit: int = 12):
+        limit = max(1, min(24, limit))
+        cursor = db.newsletter_digests.find(
+            {"articles": {"$gt": 0}}
+        ).sort("started_at", -1).limit(limit)
+        raw = await cursor.to_list(limit)
+        out = []
+        for d in raw:
+            slugs = d.get("article_slugs") or []
+            slugs = [s for s in slugs if s]
+            # Titel + Kategorie für die Slugs beziehen (Snapshot des News-Store)
+            article_docs = []
+            if slugs:
+                acur = db.news_articles.find(
+                    {"slug": {"$in": slugs}},
+                    {"_id": 0, "slug": 1, "title": 1, "category": 1, "published_at": 1},
+                )
+                by_slug = {a.get("slug"): a for a in await acur.to_list(len(slugs))}
+                for s in slugs:
+                    a = by_slug.get(s)
+                    if a:
+                        article_docs.append({
+                            "slug": s, "title": a.get("title") or "",
+                            "category": a.get("category") or "",
+                        })
+                    else:
+                        # Artikel wurde entfernt → nur den Slug als Hinweis
+                        article_docs.append({"slug": s, "title": "(nicht mehr verfügbar)", "category": ""})
+            # ISO-Woche → Datumsbereich (Mo–So) für Anzeige
+            week_label = d.get("digest_id") or d.get("week_label") or ""
+            out.append({
+                "week_label": week_label,
+                "subject": _iso_week_subject(),
+                "articles": article_docs,
+                "article_count": d.get("articles", len(article_docs)),
+                "started_at": d.get("started_at"),
+                "finished_at": d.get("finished_at"),
+            })
+        return {"items": out, "total": len(out)}
 
     @api.get("/newsletter/unsubscribe", summary="Abmelde-Link aus Digest-Mail")
     async def _newsletter_unsubscribe(
@@ -264,7 +359,6 @@ def register(api: APIRouter, db, send_email_fn, require_admin):
             {"$set": {"unsubscribed": True, "unsubscribed_at": now_iso}},
         )
         if result.matched_count == 0:
-            # Nicht gefunden: aus Sicherheitsgründen trotzdem generischer Erfolg
             logger.info("newsletter_unsubscribe.miss email_hash=%s",
                           hashlib.sha256(norm.encode()).hexdigest()[:10])
         html = (
@@ -281,5 +375,4 @@ def register(api: APIRouter, db, send_email_fn, require_admin):
             f'<p><a href="{escape(FROEHLICH_SITE_URL)}">Zurück zur Startseite</a></p>'
             '</main></body></html>'
         )
-        from fastapi.responses import HTMLResponse
         return HTMLResponse(content=html, status_code=200)

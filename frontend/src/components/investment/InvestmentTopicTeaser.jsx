@@ -182,6 +182,9 @@ const InvestmentTopicTeaser = () => {
 
   const handleClose = () => {
     if (topic) markDismissed(topic.slug);
+    // Sicherheitsnetz: falls das Session-Flag beim Trigger nicht gesetzt wurde
+    // (z. B. write-race), spätestens beim Close explizit markieren.
+    markShownThisSession();
     setVisible(false);
   };
 

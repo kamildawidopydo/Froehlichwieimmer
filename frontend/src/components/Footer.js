@@ -220,7 +220,11 @@ const Footer = () => {
             <Link to="/contact" className="text-white/85 underline-offset-2 hover:text-white hover:underline">
               Kontakt
             </Link>
-            ) aufzunehmen. Überdies werden die Nutzer gebeten, sich bei Fragen zur Interpretation der
+            ) aufzunehmen oder den{' '}
+            <Link to="/newsletter" className="text-white/85 underline-offset-2 hover:text-white hover:underline" data-testid="footer-newsletter-link">
+              wöchentlichen Finanznachrichten-Digest
+            </Link>{' '}
+            zu abonnieren. Überdies werden die Nutzer gebeten, sich bei Fragen zur Interpretation der
             Nutzungsbedingungen an ihren Rechts-/Steuerberater zu wenden.
           </p>
         </div>
