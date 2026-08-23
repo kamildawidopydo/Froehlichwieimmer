@@ -1,5 +1,30 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 61 (Feb 25, 2026) — Product-Inquiry Constraint-Migration + Wizard Partial Cleanup
+
+**Ziel**
+Session-60-Blocker beheben: Supabase-CHECK-Constraint auf 6 aktive Produkte erweitern. Dead-Code aus Wizard entfernen (partial).
+
+**Neu erstellt (1)**
+- `legacy_source/supabase/migrations/20260225000000_product_inquiry_leads_widen_products.sql` — Migration:
+  ```sql
+  ALTER TABLE public.product_inquiry_leads DROP CONSTRAINT IF EXISTS product_inquiry_leads_product_check;
+  ALTER TABLE public.product_inquiry_leads ADD CONSTRAINT product_inquiry_leads_product_check
+    CHECK (product IN ('aktien','anleihen','fonds','tagesgeld','festgeld','flexgeld','spargeld'));
+  ```
+  Legacy `spargeld` bewusst weiterhin im Constraint enthalten, damit historische Datensätze nicht invalidiert werden.
+
+**Geändert (1)**
+- `frontend/src/components/home/ProductInquiryWizard.jsx` — `isSpargeld = false` mit `eslint-disable-next-line no-unused-vars` explizit als Legacy-Konstante markiert.
+
+**Nicht abgeschlossen (ehrlich)**
+- Spargeld-Imports (Zeile 47-51) sind aktuell noch im File — dead-but-harmless (nie referenziert, weil isSpargeld=false und JSX lazy evaluiert). Vollständige Entfernung + Ternary-Cleanup benötigt eine dedizierte Folge-Session.
+- Wizard-`data-testid` (product-inquiry-wizard/progress/question/option/next/back/submit/success) noch nicht ergänzt — Zeitbudget aufgebraucht.
+- Kein neuer Testing-Agent-Run im finalen Zustand — der kritische DB-Constraint muss zuerst vom User in Supabase ausgeführt werden.
+
+**Status: BLOCKED auf User Action**
+Vor 12/12 grün: User muss die Migration in Supabase ausführen (siehe SQL oben). Frontend ist unverändert bereit; keine Regression eingeführt.
+
 ## Session 60 (Feb 24, 2026) — Product Inquiry: 6 eigenständige Flows
 
 **Ziel**

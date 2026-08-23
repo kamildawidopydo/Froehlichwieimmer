@@ -201,7 +201,9 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
   const successCopy = product ? productInquirySuccessCopy[product] : null;
   const isAktien = product === 'aktien';
   const isAnleihen = product === 'anleihen';
-  // spargeld branching removed in Session 60 — tagesgeld/festgeld/flexgeld are independent products now.
+  // spargeld branching entfernt in Session 60/61 — tagesgeld/festgeld/flexgeld sind eigenständig.
+  // Konstante bleibt vorübergehend für dead-branch-Sicherheit; die Zweige selbst laufen nie.
+  // eslint-disable-next-line no-unused-vars
   const isSpargeld = false;
   const compactQuestionStep = !isContactStep && !done;
 
