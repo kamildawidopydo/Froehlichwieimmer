@@ -197,7 +197,7 @@ const Navigation = () => {
                                   to={link.path}
                                   data-testid={`nav-${link.name.toLowerCase().replace(/\s/g, '-')}`}
                                   className={cn(
-                                    'group/item flex flex-col gap-0.5 px-4 py-2.5 transition-colors duration-150',
+                                    'group/item flex flex-col gap-0.5 px-4 py-2.5 transition-colors duration-150 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-bank-gold',
                                     active ? 'bg-bank-bg' : 'hover:bg-bank-bg',
                                   )}
                                 >
@@ -397,7 +397,7 @@ const Navigation = () => {
                               to={link.path}
                               data-testid={`nav-${link.name.toLowerCase().replace(/\s/g, '-')}`}
                               className={cn(
-                                'flex flex-col gap-0.5 py-3.5 transition-colors',
+                                'flex flex-col gap-0.5 py-3.5 transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bank-gold',
                                 link.accent || active
                                   ? 'text-bank-gold'
                                   : 'text-bank-text hover:text-bank-primary',

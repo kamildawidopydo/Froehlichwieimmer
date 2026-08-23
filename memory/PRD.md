@@ -1,5 +1,25 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 52 (Feb 24, 2026) — Wissen-Nav-Integration
+
+**Ziel**
+Handeln und Investmentthemen aus dem globalen „Wissen"-Dropdown erreichbar machen. Bestehende Route `/themen` verwenden — keine neue Route erfunden. Beide Menüs (Desktop + Mobile) speisen sich aus derselben `siteCopy`-Datenquelle, daher eine einzige Datenänderung.
+
+**Geänderte Dateien (2)**
+- `frontend/src/data/siteCopy.js` — 2 neue Links im Wissen-Dropdown (Position 2 & 3):
+  - „Investment & Börse" → `/handeln`
+  - „Investmentthemen" → `/themen`
+  Reihenfolge: Wissen & Perspektiven · Investment & Börse · Investmentthemen · Fonds-Grundlagen · So funktioniert es · Rechner · Sicherheit · Compliance · Steuern · FAQ
+- `frontend/src/components/Navigation.js` — `focus-visible:outline focus-visible:outline-2 focus-visible:outline-bank-gold` an Desktop-Dropdown-Link (offset -2px) und Mobile-Drawer-Link (offset 2px) ergänzt für Forced-Colors-Robustheit. Keine strukturellen Änderungen.
+
+**Bewusst NICHT geändert**
+- knowledgeGraph, RelatedKnowledge, HandelnHub, Wissen-Landing
+- Investment-Funnels, News-Cross-Links, Fonds-ETF-Seed
+- Dropdown-/Drawer-Verhalten & ARIA-Semantik
+
+**Außer-Scope-Beobachtung (dokumentiert, nicht behoben)**
+- `siteCopy.js` Zeile 103: „Handeln" innerhalb der Gruppe „Angebote" verweist mit Beschreibung „Aktien und Anleihen im Depot" auf `/handeln`. Nach der Umwidmung von `/handeln` zum öffentlichen Wissenshub in Session 48 ist diese Beschreibung inhaltlich nicht mehr präzise. Sollte in einer separaten kleinen Session angepasst werden (Beschreibungstext oder Verschiebung).
+
 ## Session 51 (Feb 24, 2026) — Wissen-Landing als redaktioneller Hub
 
 **Ziel**

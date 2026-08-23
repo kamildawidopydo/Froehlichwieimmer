@@ -112,6 +112,8 @@ export const siteCopy = {
         label: 'Wissen',
         links: [
           { name: 'Wissen & Perspektiven', path: '/wissen', desc: 'Ratgeber zu Sparen, Anlageklassen und Planung' },
+          { name: 'Investment & Börse', path: '/handeln', desc: 'Grundlagen, Orderarten und Börsen-ABC im Wissenshub' },
+          { name: 'Investmentthemen', path: '/themen', desc: 'Aktien, Anleihen und Dividenden im Fokus' },
           { name: 'Fonds-Grundlagen', path: '/fonds-grundlagen', desc: 'Wie ein Fonds funktioniert — verständlich erklärt' },
           { name: 'So funktioniert es', path: '/how-it-works', desc: 'Der Ablauf in vier übersichtlichen Schritten' },
           { name: 'Rechner', path: '/calculator', desc: 'Zinserträge und Laufzeiten berechnen' },

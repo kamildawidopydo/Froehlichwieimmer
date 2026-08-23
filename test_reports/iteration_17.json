@@ -1,0 +1,24 @@
+{
+  "summary": "Session 52 frontend-only E2E verification of the extended global Wissen dropdown (desktop + mobile). Verified all 10 Wissen links render in the exact required order with correct testids/hrefs in the desktop hover dropdown and in the mobile drawer; verified navigation for Investment & Börse (/handeln, H1 'Investieren, verständlich.'), Investmentthemen (/themen, H1 'Investmentthemen im Überblick') and Wissen & Perspektiven (/wissen, wissen-page); keyboard: Enter on Wissen button opens dropdown, Tab order matches DOM order across all 10 links, each shows solid 2px rgb(201,169,97) outline at offset -2px (mobile drawer offset 2px), Enter activates navigation; mobile 390x844 drawer opens/closes on tap and has zero horizontal overflow open or closed; all 10 Wissen paths return HTTP 200; navbar regression (Angebote, Unternehmen, News & Märkte, nav-formular-btn, nav-dokument-upload-btn, nav-login-btn, nav-register-btn) intact; content regression intact (handeln-related 3, fonds-grundlagen-related 3, topic-aktien/anleihen/dividenden-related 2 each, /wissen 4 sections + 4 wissen-card-*, seeded news fonds-grundlagen-crosslink -> /fonds-grundlagen). 100% pass, no code changes required.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Out-of-scope (confirmed live, not a Session 52 defect): siteCopy 'Angebote' group still contains 'Handeln' -> /handeln with desc 'Aktien und Anleihen im Depot'. This produces two nav entries pointing at /handeln (nav-handeln in Angebote and nav-investment-&-börse in Wissen) with a now-inaccurate description. Consider removing/retitling the Angebote entry.",
+    "Pre-existing console noise (seen in iterations 6/7/11/12/14 too, unrelated to Session 52): repeated 'Error: <path> attribute d: Expected moveto path command, \"undefined\"' from an icon component receiving an undefined path, plus a few ERR_BLOCKED_BY_RESPONSE.NotSameOrigin third-party resource loads.",
+    "Auto-generated data-testid from link.name produces testids containing '&' and umlauts (nav-investment-&-börse). Works but requires attribute selectors (a[data-testid=\"nav-investment-&-börse\"]) rather than Playwright CSS escaping; consider slugifying for testid stability."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "not required (all tested routes are public; visitor gate bypassed via localStorage)",
+  "context_for_next_testing_agent": "Session 52 fully verified, no open defects. Visitor-gate bypass still works: goto page, set localStorage kapitalmitte_visitor_profile={residence:'DE',role:'private',isUsPerson:false} and kapitalmitte_cookie_consent={necessary:true,analytics:true,marketing:true}, then re-goto. Desktop dropdowns open on HOVER (group-hover) but Enter/focus on the group button also reveals them. Gotchas: (1) desktop dropdown links for ALL groups are present in the DOM and have offsetParent!==null even when the group is closed, so never assert visibility by offsetParent — scope queries to the specific group's link list; (2) /handeln appears twice in nav (nav-handeln in Angebote + nav-investment-&-börse in Wissen), filter by data-testid not href; (3) testids contain '&' and umlauts, use a[data-testid=\"...\"] attribute selectors. Baseline counts unchanged: handeln-related 3, fonds-grundlagen-related 3, each /themen/* 2, /wissen 4 cards.",
+  "rca_of_the_issue": "No defect found. The single script-level failure during testing was a test-harness artifact (href-based filtering picked up the unrelated Angebote 'Handeln' link); after scoping by testid the Wissen group matched the expected 10-link order exactly."
+}
