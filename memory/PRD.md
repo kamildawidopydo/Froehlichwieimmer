@@ -7,6 +7,35 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 45 (Feb 23, 2026) — Fix: Fonds-Grundlagen-Link „reagiert nicht"
+
+**Ursache-Analyse**
+- Route `/fonds-grundlagen` existiert bereits in `App.js:238` (`<Route path="/fonds-grundlagen" element={<FondsGrundlagen />} />`) ✓
+- Alle internen Links (Nav-Mega-Menu, Footer, CommandPalette, SpezialAif) zeigen korrekt auf `/fonds-grundlagen` ✓
+- Direct-URL-Aufruf liefert HTTP 200 ✓
+- Playwright Click-Test bestätigt: **Link navigiert technisch korrekt**, URL wechselt zu `/fonds-grundlagen`, H1 lädt
+- **Tatsächliches Problem**: Die Seite renderte bisher **nur** `<FondsGrundlagenInfographic />` mit H1 „Ihr Kapital. Unsere Expertise." — visuell **identisch** zur `/spezial-aif`-Seite. Nutzer klickt „Fonds-Grundlagen", URL ändert sich, sieht aber denselben Content wie vorher → wahrgenommenes „nichts passiert".
+- Zusatzblocker: Visitor-Gate-Modal (z-[10000]) blockiert **alle** Klicks bis Wohnort + Rolle gewählt + „Akzeptieren". Betrifft aber alle Links gleichermaßen und ist gewolltes Verhalten.
+
+**Fix**
+- `pages/FondsGrundlagen.js` komplett neu geschrieben mit echtem, klar erkennbarem „Fonds-Grundlagen"-Content im bestehenden Fröhlich-Editorial-Design:
+  - Breadcrumb `Home › Fonds-Grundlagen`
+  - Eigene H1 „Fonds verstehen — verständlich erklärt"
+  - Sektionen: Was ist ein Fonds · Wie funktioniert ein Fonds (4 Karten) · Fonds vs. Einzelanlage · Fonds vs. ETF · Chancen (4 Karten) · Risiken (6 Bullet-Points) · Kosten (3 Karten) · Für wen · Anwendungsbeispiel Spezial-AIF (bestehende Infografik als Zusatz) · CTA
+  - Compliance: keine Empfehlungen, „historische Entwicklungen sind keine Prognose", Verweis auf Prospekt/KID
+- `data-testid="fonds-grundlagen-page"` am Root-Container ergänzt
+- **Route + Link-Struktur unverändert** — kein Änderung an Nav, Footer, Router, CommandPalette
+
+**Getestet**
+- Direct URL `/fonds-grundlagen` → HTTP 200, neue H1 „Fonds verstehen"
+- Interner Link via Angebote-Dropdown → Klick navigiert, neue Seite lädt mit deutlich anderem Content als Spezial-AIF
+- Regression: `/spezial-aif`, `/themen/*`, `/news/*` unverändert (keine Änderung an ihren Codepfaden)
+
+**Bewusst NICHT geändert**
+- Visitor-Gate (gewolltes UX-Feature — kein Bug)
+- FondsGrundlagenInfographic-Komponente (wird als Anwendungsbeispiel weiter genutzt)
+- Route-Definitions, Nav-Struktur, Footer-Links, CommandPalette-Einträge
+
 ## Session 44 (Feb 23, 2026) — Realistische Social-Media-Profilbilder
 
 **Geänderte Datei (1)**
