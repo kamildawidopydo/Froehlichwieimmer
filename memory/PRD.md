@@ -7,6 +7,48 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 42 (Feb 23, 2026) — Investment-Topic-Select im News-Admin
+
+**Zielbild**: News-Artikeln direkt in einer Admin-UI ein Investment-Thema zuordnen können, ohne DB-Zugriff. Cross-Link-Box auf öffentlichen Detailseiten reagiert unmittelbar auf Änderungen.
+
+**Backend (`investment_topics.py`)**
+- Modul-Scope Modell `NewsTopicPatch { investment_topic_slug: Optional[str] }` — bewusst auf Modul-Ebene, damit FastAPI die Klasse als Request-Body erkennt (Body-Parsing würde bei einer geschlossenen `register()`-lokalen Klasse fehlschlagen).
+- Neuer Endpoint `PATCH /api/admin/news/{slug}` (admin-only):
+  - `null`/leerer String → Zuordnung entfernen
+  - Nicht-leerer Slug → muss in `investment_topics` existieren, sonst **400** „Unbekannter Investment-Topic-Slug: …"
+  - Kein Overwrite anderer News-Felder (Synthesizer bleibt unangefochten)
+  - Setzt zusätzlich `updated_at`
+- Neuer Endpoint `GET /api/admin/news` (admin-only): Liste mit Paging (`limit`, `skip`), Volltext-Suche (`q`), Topic-Filter (`?topic=<slug>`, `?topic=__none__` → nur unzugeordnete). Liefert `slug/title/category/published_at/investment_topic_slug`.
+- **Kein** Datenmodell-Wechsel — `news_articles.investment_topic_slug` existiert bereits aus Session 41.
+- Auth-Guard: unauth → **401**.
+
+**Frontend (`pages/admin/AdminNewsArticles.jsx`, neu)**
+- Route `/admin/news-articles` (geschützt via bestehendes `ProtectedRoute requireAdmin`).
+- Tabelle mit Titel/Slug, Kategorie, Datum, **Investment-Thema-Dropdown**, Öffnen-Link.
+- Dropdown-Werte: `Kein Thema` + alle Themen aus `/api/admin/investment-topics` (inkl. deaktivierter mit Suffix „(deaktiviert)" — falls Admin bewusst assignen möchte, wird die Box beim Rendern automatisch ausgeblendet).
+- **Auto-Save on change**: Selectionwechsel schickt sofort `PATCH`, zeigt Spinner, Toast-Feedback, optimistisches UI mit Rollback bei Fehler.
+- Filter: Suchfeld (Titel/Slug/Kategorie), Topic-Filter, Paging (25 pro Seite).
+- Stabile Test-Selektoren: `admin-news-articles`, `admin-news-row-{slug}`, `news-investment-topic-select-{slug}`, `admin-news-search`, `admin-news-topic-filter`.
+- `App.js`: neue Route registriert.
+
+**Verhalten der öffentlichen CrossLinkBox (aus Session 41, unverändert)**
+- Zeigt sich nur bei gesetztem `investment_topic_slug` UND aktivem (`enabled=true`) Zielthema.
+- Deaktiviert man das Zielthema → Zuordnung bleibt persistiert, Box verschwindet automatisch.
+
+**Verifikation (mit Admin-Login `admin@kapitalmitte.com` / `admin123`)**
+1. `PATCH /admin/news/{slug}` ohne Auth → **401** ✓
+2. Invalider Slug (`totally-fake`) → **400** „Unbekannter Investment-Topic-Slug: totally-fake" ✓
+3. Valider Slug `anleihen` → **200** `{ok:true, slug, investment_topic_slug:"anleihen"}`; public detail: `investment_topic_slug=anleihen` ✓
+4. `PATCH … {"investment_topic_slug": null}` → **200** null; public detail: `None` ✓
+5. `PATCH … {}` → default `None` → **200**, Zuordnung entfernt (regression-safe für existierende PATCH-Aufrufer ohne Feld) ✓
+6. `PATCH … "aktien"` → **200**, öffentlicher Detail-Screenshot: Cross-Link-Box „Aktien & Kapitalmärkte verstehen" weiterhin sichtbar (Regression grün) ✓
+7. Filter `?topic=aktien` → 1 Treffer; `?topic=__none__` → 5 Treffer ✓
+8. Regression: `/themen/aktien` (Wissen-Block + Related), `/themen/anleihen`, `/themen`-Grid unverändert (keine Änderungen an diesen Codepfaden).
+
+**Offene Punkte**
+- Frontend-Playwright-Test für Admin-UI benötigt E2E-Login-Flow — Backend-Tests decken alle Validierungspfade ab; UI ist per Tests-IDs vorbereitet.
+- Compliance-Freigabe für Wording bleibt ausstehend.
+
 ## Session 41 (Feb 23, 2026) — Wissen-Block · News-Cross-Link · Admin-UI Investment-Themen
 
 **Backend (`investment_topics.py`, `server.py`, `news_provider.py`)**

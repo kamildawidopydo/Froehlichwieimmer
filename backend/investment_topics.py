@@ -176,6 +176,12 @@ class LeadIn(BaseModel):
     referrer_path: Optional[str] = Field(None, max_length=300)
 
 
+class NewsTopicPatch(BaseModel):
+    """Admin: nur `investment_topic_slug` editierbar (Modul-Scope, damit
+    FastAPI die Klasse als Request-Body erkennt)."""
+    investment_topic_slug: Optional[str] = Field(None, max_length=120)
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -392,3 +398,64 @@ def register(api: APIRouter, db, send_email_fn, require_admin=None):
                 "published_at": pub.isoformat() if hasattr(pub, "isoformat") else pub,
             })
         return {"items": items, "count": len(items)}
+
+    # -----------------------------------------------------------------
+    # ADMIN — News-Artikel Investment-Topic-Zuordnung
+    # -----------------------------------------------------------------
+    @api.get("/admin/news", summary="Admin: News-Artikel-Liste (für Topic-Zuordnung)")
+    async def _admin_news_list(
+        q: str = "", topic: Optional[str] = None, limit: int = 50, skip: int = 0,
+        _u: dict = Depends(require_admin),
+    ):
+        limit = max(1, min(100, limit))
+        skip = max(0, skip)
+        query: dict = {"is_published": True, "status": "published"}
+        if q:
+            import re as _re
+            rx = {"$regex": _re.escape(q.strip()), "$options": "i"}
+            query["$or"] = [{"title": rx}, {"slug": rx}, {"category": rx}]
+        if topic:
+            if topic == "__none__":
+                query["$and"] = [{
+                    "$or": [
+                        {"investment_topic_slug": {"$exists": False}},
+                        {"investment_topic_slug": None},
+                        {"investment_topic_slug": ""},
+                    ],
+                }]
+            else:
+                query["investment_topic_slug"] = topic
+        total = await db.news_articles.count_documents(query)
+        cursor = db.news_articles.find(query, {
+            "slug": 1, "title": 1, "category": 1,
+            "published_at": 1, "investment_topic_slug": 1,
+        }).sort([("published_at", -1)]).skip(skip).limit(limit)
+        items = []
+        async for d in cursor:
+            pub = d.get("published_at")
+            items.append({
+                "slug": d["slug"],
+                "title": d.get("title", ""),
+                "category": d.get("category"),
+                "published_at": pub.isoformat() if hasattr(pub, "isoformat") else pub,
+                "investment_topic_slug": d.get("investment_topic_slug") or None,
+            })
+        return {"items": items, "total": total, "count": len(items)}
+
+    @api.patch("/admin/news/{slug}", summary="Admin: News-Artikel Investment-Topic-Zuordnung setzen")
+    async def _admin_news_patch(slug: str, payload: NewsTopicPatch, _u: dict = Depends(require_admin)):
+        existing = await db.news_articles.find_one({"slug": slug})
+        if not existing:
+            raise HTTPException(404, detail="News-Artikel nicht gefunden.")
+        raw = payload.investment_topic_slug
+        # Normalisieren: leerer String → None (Zuordnung entfernen).
+        norm = (raw or "").strip() or None
+        if norm is not None:
+            topic = await db.investment_topics.find_one({"slug": norm})
+            if not topic:
+                raise HTTPException(400, detail=f"Unbekannter Investment-Topic-Slug: {norm}")
+        await db.news_articles.update_one(
+            {"_id": existing["_id"]},
+            {"$set": {"investment_topic_slug": norm, "updated_at": datetime.now(timezone.utc)}},
+        )
+        return {"ok": True, "slug": slug, "investment_topic_slug": norm}
