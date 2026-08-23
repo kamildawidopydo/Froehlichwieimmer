@@ -1,5 +1,32 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 74 (Feb 28, 2026) — Product-Inquiry-Wizard Redesign (UI/UX only) ✅
+
+**Ziel:** Wizard-Modal seriös, banktypisch, mit größerer Typografie, hochwertigen Selection-Cards, klarem Trust-Bereich und größerem Weiter-Button. Keine funktionalen Änderungen, keine neuen Bildassets.
+
+**Files geändert** (nur `frontend/src/components/home/ProductInquiryWizard.jsx`)
+- Header (compact question step): mehr Padding, Eyebrow „KURZFRAGEBOGEN" jetzt in bank-primary, Produkttitel `text-[1.9rem] sm:text-[2.35rem] lg:text-[2.6rem]` (Display-Font), immer sichtbare Subline „Wir finden gemeinsam die passende Anlagestrategie für Ihre Ziele.", Progress-Bar `h-2` + `Schritt X / Y` als semi-fett.
+- Question-Card: neue `rounded-2xl` Karte mit weicherem Schatten; Section-Headline „6 kurze Fragen zu Ihrer Anlage" (`text-[1.45rem] → 1.85rem`); Frage-Row mit größerem Nummer-Badge (h-12) + Icon-Badge; Frage-Text `text-[1.15rem] → 1.4rem`; Trust-Micro-Line mit ShieldCheck-Icon.
+- Antwort-Cards: hochwertige Selection-Cards mit Icon-Tile links (Fallback: Frage-Icon, wenn kein OptionIcon), Label prominent (`text-[15.5px]` semibold), ArrowRight rechts; `border-2`; Selected-State: `border-bank-primary` + `bg-bank-primary/[0.06]`; Focus-Ring; Mobile 1-Spalte, sm+ 2-Spalten (bei 4 Optionen).
+- Trust-Row: 3 Pillars horizontal (Vertraulich & sicher / Nur wenige Minuten / Kostenlos & unverbindlich) mit ShieldCheck + Clock3 + BadgeCheck. Icon-Gewichtungen jetzt konsistent (Feedback iteration_45).
+- Weiter-Button: `h-12 sm:h-[3.25rem]` + `text-[15px] → 15.5px` + Focus-Ring + `Sicher & verschlüsselt · SSL/TLS` mit Lock-Icon unter dem Button.
+
+**Testing (Playwright, iteration_45)** — 100 % Pass (7/7):
+- Alle 6 Produkt-Wizards öffnen fehlerfrei mit korrektem Titel.
+- Voller 6-Fragen-Flow (Aktien) inkl. Progress 1/7→6/7 und Back-Button.
+- Kontakt-Step mit allen Feldern + Consent-Checkboxen funktional.
+- Aktien + Anleihen submitten erfolgreich (`product-inquiry-success`).
+- Sticky-CTA-Popup-Weg zum Wizard funktional.
+- Desktop 1440x900 + Mobile 390x844 visuell sauber, kein horizontales Scrollen, kein Bild im Wizard.
+- Keine neuen Console-Errors, keine Regression.
+
+**Follow-up Cosmetic Fixes (Session 74.1)**
+- `Check` → `BadgeCheck` im Trust-Row (visuell konsistent).
+- Icon-Tile unselected: `QuestionIcon` statt leerem Dot.
+- Card-Padding & Spacings gestrafft, damit Trust-Row auf 1440x900 above-the-fold sichtbar.
+
+**Externer Blocker weiter offen:** Supabase-CHECK-Constraint für fonds/tagesgeld/festgeld/flexgeld (nicht Teil dieses Redesigns).
+
 ## Session 73 (Feb 28, 2026) — Sticky-Popup-Refactor + Tracking-Fix + Bonus-Cleanup ✅
 
 **Files geändert**

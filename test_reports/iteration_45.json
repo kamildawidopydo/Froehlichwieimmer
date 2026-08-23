@@ -1,0 +1,30 @@
+{
+  "summary": "Session 74 – Frontend-only QA of the redesigned ProductInquiryWizard on https://finance-platform-v2.preview.emergentagent.com/. Consent modal (DE / privatperson) closed first. Verified: (1) all 6 product wizards open with correct header title (aktien, anleihen, fonds/ETFs, tagesgeld, festgeld, flexgeld), (2) full 6-question flow for aktien (volume, horizon, experience, volatility, liquidity, goal) with progress 1/7..6/7 and working back button, (3) contact step form fields + both required consent checkboxes + submit, (4) successful submit -> product-inquiry-success for BOTH aktien and anleihen, (5) all 4 remaining wizards reach the contact step, (6) sticky-CTA popup path -> aktien wizard opens, (7) desktop 1440x900 visual structure (eyebrow, 41.6px Newsreader display title, subtitle, progress bar + '1 / 7', 32px headline, question row with number+icon badge, 4 selection cards 423x80 with icon+label+ArrowRight, data-selected='true' on click, 3-item trust row, 56px-high Weiter button + 'Sicher & verschlüsselt · SSL/TLS' line), (8) mobile 390x844 (no horizontal overflow, single-column cards 298x72 >= 3.5rem, no clipped labels, next button + secure line visible, progress '1 / 7' visible). No images inside the wizard (img count = 0) - icon/typography only, as required. No new console errors and no React crash triggered by the redesign.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ProductInquiryWizard question step (desktop + mobile)", "issues": ["Trust row icon for 'Kostenlos & unverbindlich' (lucide Check) renders visually much lighter/thinner than the ShieldCheck/Clock3 icons next to it - inconsistent visual weight in the 3-item trust row (cosmetic).", "Unselected answer cards show only a tiny 6px dot placeholder in the 40/44px icon tile; spec asked for an 'Icon links' - consider a per-option lucide icon (as already done for anleihen volume) so the tile does not look empty.", "At 1440x900 the question card content (premium banner + trust row) sits below the fold and requires scrolling inside the modal; the headline '6 kurze Fragen zu Ihrer Anlage' scrolls out of view. Functionally fine, but the trust block is not visible without scrolling."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional/cosmetic: align the trust-row Check icon weight with the other two icons.",
+    "Optional: add per-option lucide icons (or a neutral placeholder icon) for non-anleihen questions so unselected selection cards do not show an empty icon tile.",
+    "Optional testability: contact-step inputs use ids (#pi-first, #pi-last, #pi-phone, #pi-email, #pi-cust) and the consent checkboxes have no data-testid; adding data-testid would make E2E tests less brittle (not blocking - tests currently use ids/role=checkbox).",
+    "Pre-existing (NOT from this redesign, seen on the home page only, wizard opens with 0 new errors): repeated console errors 'Failed to load resource: 401' and 'Error: <path> attribute d: Expected moveto path command (M or m), \"undefined\"' - some page-level SVG receives an undefined path d."
+  ],
+  "critical_code_review_comments": [
+    "ProductInquiryWizard.jsx is 972 lines and mixes header, question step, contact step, success step, promo banners and submit logic - split into sub-components (WizardHeader, QuestionStep, ContactStep, SuccessStep) to stay maintainable; the compactQuestionStep ternaries now duplicate almost every class list.",
+    "Answer-card markup is duplicated between the compactQuestionStep branch and the legacy branch (lines 805-881); extract one OptionCard component with a variant prop (DRY)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100% (7/7 requested feature areas pass)"},
+  "seed_data_creation": "Two real leads submitted via the public wizard: TESTVorname TESTNachname, qa_aktien@example.test (product aktien) and qa_anleihen@example.test (product anleihen). Both returned product-inquiry-success - may need cleanup in the lead store/Supabase.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "none required (public page, consent modal only)",
+  "context_for_next_testing_agent": "Consent gate: select [data-testid=visitor-residence]='DE', [data-testid=visitor-role]='privatperson', leave US checkbox unchecked, click [data-testid=visitor-accept-btn]. Wizard cards: [data-testid=home-product-wizard-card-<key>]. Flow helper: click first [data-testid^=product-inquiry-option-] then [data-testid=product-inquiry-next] 6x -> contact step; fill #pi-first/#pi-last/#pi-phone/#pi-email, check first two button[role=checkbox] inside the wizard, click [data-testid=product-inquiry-submit], wait ~6s for [data-testid=product-inquiry-success]. Note: fonds title is 'Fonds / ETFs'; liquidity question has 3 options, all others 4. Supabase submit blocker for fonds/tagesgeld/festgeld/flexgeld was NOT re-verified end-to-end (only contact step reached, per instructions). aktien+anleihen submitted successfully in this run.",
+  "rca_of_the_issue": "No functional regression found. Redesign is purely presentational; all documented testids (product-inquiry-wizard, -back, -progress, -question, -option-<value>, -next, -submit, -success, -sticky-cta) are unchanged and resolve correctly."
+}

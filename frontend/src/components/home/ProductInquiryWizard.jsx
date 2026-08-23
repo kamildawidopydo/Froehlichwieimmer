@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowRight,
+  BadgeCheck,
   BarChart3,
   Check,
   Clock3,
@@ -297,7 +298,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
         <div
           className={cn(
             'relative shrink-0 overflow-visible border-b border-bank-border bg-bank-surface',
-            compactQuestionStep ? 'px-4 pb-2.5 pt-7 sm:px-5' : 'px-4 pb-4 pt-10 sm:px-7 sm:pb-5 sm:pt-12',
+            compactQuestionStep ? 'px-5 pb-4 pt-8 sm:px-7 sm:pb-5 sm:pt-9' : 'px-4 pb-4 pt-10 sm:px-7 sm:pb-5 sm:pt-12',
             done && !compactQuestionStep && 'pb-8 sm:pb-10',
           )}
         >
@@ -325,18 +326,18 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
             <div className="min-w-0 flex-1 pr-8 sm:pr-10">
               <p
                 className={cn(
-                  'flex items-center gap-1.5 font-mono font-semibold uppercase tracking-[0.22em] text-bank-text-muted',
-                  compactQuestionStep ? 'text-[9px]' : 'text-[9px] tracking-[0.26em]',
+                  'flex items-center gap-1.5 font-mono font-semibold uppercase tracking-[0.24em] text-bank-primary',
+                  compactQuestionStep ? 'text-[10.5px]' : 'text-[9px] tracking-[0.26em] text-bank-text-muted',
                 )}
               >
-                <span className={cn('h-px bg-bank-border', compactQuestionStep ? 'w-4' : 'w-6')} aria-hidden />
+                <span className={cn('h-px', compactQuestionStep ? 'w-6 bg-bank-primary/40' : 'w-6 bg-bank-border')} aria-hidden />
                 Kurzfragebogen
               </p>
               <DialogTitle
                 className={cn(
-                  'font-display font-light leading-tight tracking-tight text-bank-ink',
+                  'font-display font-light leading-[1.05] tracking-tight text-bank-ink',
                   compactQuestionStep
-                    ? 'mt-0.5 text-xl sm:text-[1.35rem]'
+                    ? 'mt-1.5 text-[1.9rem] sm:text-[2.35rem] lg:text-[2.6rem]'
                     : 'mt-1 text-[1.35rem] sm:text-2xl',
                 )}
               >
@@ -354,7 +355,11 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
               </div>
             ) : null}
           </div>
-          {!compactQuestionStep && (
+          {compactQuestionStep ? (
+            <DialogDescription className="relative z-[1] mt-2 max-w-[54ch] text-left text-[13.5px] leading-relaxed text-bank-text-muted sm:text-[14.5px]">
+              Wir finden gemeinsam die passende Anlagestrategie für Ihre Ziele.
+            </DialogDescription>
+          ) : (
             <DialogDescription className="relative z-[1] mt-2 max-w-[52ch] text-left text-[12px] leading-snug text-bank-text-muted sm:text-[13px] sm:leading-relaxed">
               {done
                 ? 'Ihre Angaben wurden übermittelt. Diese Kurzabfrage ersetzt keine individuelle Anlageberatung nach WpHG.'
@@ -369,17 +374,17 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
               data-total={totalSteps}
             >
               {compactQuestionStep ? (
-                <div className="flex items-center gap-3">
+                <div className="mt-4 flex items-center gap-4">
                   <div className="min-w-0 flex-1">
-                    <div className="h-1.5 overflow-hidden rounded-full bg-bank-border">
+                    <div className="h-2 overflow-hidden rounded-full bg-bank-border">
                       <div
                         className="h-full rounded-full bg-bank-primary transition-[width] duration-500 ease-out"
                         style={{ width: `${progressPct}%` }}
                       />
                     </div>
                   </div>
-                  <p className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-bank-text-muted">
-                    {Math.min(step + 1, totalSteps)}/{totalSteps}
+                  <p className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-bank-ink">
+                    {Math.min(step + 1, totalSteps)} / {totalSteps}
                   </p>
                 </div>
               ) : (
@@ -705,45 +710,58 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                 <>
                   <div
                     className={cn(
-                      'rounded-xl border border-bank-border bg-white shadow-sm',
-                      compactQuestionStep ? 'p-4 sm:p-4.5' : 'p-4 sm:p-5',
+                      'rounded-2xl border border-bank-border bg-white shadow-[0_2px_12px_-6px_rgb(9_33_66/0.08)]',
+                      compactQuestionStep ? 'p-4 sm:p-5 lg:p-6' : 'p-4 sm:p-5',
                     )}
                   >
                     <p
                       className={cn(
-                        'font-display font-light tracking-tight text-bank-ink',
-                        compactQuestionStep ? 'text-[1.125rem] sm:text-xl' : 'text-[1.25rem] sm:text-[1.4rem]',
+                        'font-display font-light leading-[1.1] tracking-tight text-bank-ink',
+                        compactQuestionStep
+                          ? 'text-[1.45rem] sm:text-[1.7rem] lg:text-[1.85rem]'
+                          : 'text-[1.25rem] sm:text-[1.4rem]',
                       )}
                     >
                       {questionCount} kurze Fragen zu Ihrer Anlage
                     </p>
-                    <p className={cn('text-bank-text-muted', compactQuestionStep ? 'mt-1.5 text-[12px]' : 'mt-1.5 text-[12px] sm:text-[13px]')}>
-                      Bitte markieren Sie je eine Antwort.
+                    <p
+                      className={cn(
+                        'text-bank-text-muted',
+                        compactQuestionStep
+                          ? 'mt-1.5 text-[13px] leading-relaxed sm:text-[13.5px]'
+                          : 'mt-1.5 text-[12px] sm:text-[13px]',
+                      )}
+                    >
+                      {compactQuestionStep
+                        ? 'Ihre Antworten helfen uns, eine passende Empfehlung zu finden.'
+                        : 'Bitte markieren Sie je eine Antwort.'}
                     </p>
 
                     <div
                       className={cn(
-                        'flex flex-wrap items-start gap-2.5 border-t border-dashed border-[rgb(var(--bank-ink)/0.1)]',
-                        compactQuestionStep ? 'mt-4 gap-3 pt-4' : 'mt-5 gap-3 pt-5',
+                        'flex flex-wrap items-start gap-3 border-t border-bank-border',
+                        compactQuestionStep ? 'mt-4 pt-4 sm:mt-5 sm:pt-5' : 'mt-5 gap-3 pt-5 border-dashed border-[rgb(var(--bank-ink)/0.1)]',
                       )}
                     >
-                      <div className="flex shrink-0 items-center gap-1.5">
+                      <div className="flex shrink-0 items-center gap-2">
                         <div
                           className={cn(
-                            'flex items-center justify-center rounded-lg bg-bank-primary font-semibold text-white shadow-[0_4px_12px_-4px_rgb(45_100_255/0.35)]',
-                            compactQuestionStep ? 'h-9 w-9 text-[13px] rounded-xl' : 'h-10 w-10 rounded-xl text-[13px]',
+                            'flex items-center justify-center rounded-xl bg-bank-primary font-semibold text-white shadow-[0_6px_16px_-6px_rgb(76_124_186/0.55)]',
+                            compactQuestionStep ? 'h-11 w-11 text-[15px] sm:h-12 sm:w-12 sm:text-[16px]' : 'h-10 w-10 text-[13px]',
                           )}
                         >
                           {step + 1}
                         </div>
                         <div
                           className={cn(
-                            'flex items-center justify-center rounded-lg border-2 border-[rgb(var(--bank-primary)/0.3)] bg-white text-bank-ink shadow-sm',
-                            compactQuestionStep ? 'h-9 w-9 rounded-xl' : 'h-10 w-10 rounded-xl',
+                            'flex items-center justify-center rounded-xl border bg-bank-primary/[0.06] text-bank-primary',
+                            compactQuestionStep
+                              ? 'h-11 w-11 border-bank-primary/25 sm:h-12 sm:w-12'
+                              : 'h-10 w-10 border-2 border-[rgb(var(--bank-primary)/0.3)] bg-white text-bank-ink shadow-sm',
                           )}
                         >
                           <QuestionIcon
-                            className={compactQuestionStep ? 'h-[1.1rem] w-[1.1rem]' : 'h-[1.15rem] w-[1.15rem]'}
+                            className={compactQuestionStep ? 'h-[1.25rem] w-[1.25rem] sm:h-[1.4rem] sm:w-[1.4rem]' : 'h-[1.15rem] w-[1.15rem]'}
                             strokeWidth={LUCIDE_STROKE}
                           />
                         </div>
@@ -752,19 +770,28 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                         data-testid="product-inquiry-question"
                         data-question-id={currentQuestion?.id || ''}
                         className={cn(
-                          'min-w-0 flex-1 font-display font-light leading-snug text-bank-ink',
-                          compactQuestionStep ? 'text-base sm:text-[1.15rem]' : 'text-[1.05rem] sm:text-[1.2rem]',
+                          'min-w-0 flex-1 font-display font-light leading-[1.25] tracking-tight text-bank-ink',
+                          compactQuestionStep
+                            ? 'self-center text-[1.15rem] sm:text-[1.3rem] lg:text-[1.4rem]'
+                            : 'text-[1.05rem] sm:text-[1.2rem]',
                         )}
                       >
                         {currentQuestion?.prompt}
                       </p>
                     </div>
 
+                    {compactQuestionStep ? (
+                      <p className="mt-2.5 flex items-center gap-2 text-[12.5px] leading-snug text-bank-text-muted sm:text-[13px]">
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-bank-primary/70" strokeWidth={LUCIDE_STROKE} aria-hidden />
+                        <span>Ihre Angaben werden vertraulich behandelt.</span>
+                      </p>
+                    ) : null}
+
                     <div
                       className={cn(
                         'grid',
-                        compactQuestionStep ? 'mt-4 gap-2' : 'mt-5 gap-2.5',
-                        (currentQuestion?.options.length || 0) === 4 && 'grid-cols-2',
+                        compactQuestionStep ? 'mt-4 gap-2.5 sm:mt-5 sm:gap-3' : 'mt-5 gap-2.5',
+                        (currentQuestion?.options.length || 0) === 4 && (compactQuestionStep ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2'),
                         (currentQuestion?.options.length || 0) === 3 && 'grid-cols-1 sm:grid-cols-3',
                         (currentQuestion?.options.length || 0) <= 2 && 'grid-cols-1 sm:grid-cols-2',
                         (currentQuestion?.options.length || 0) >= 5 && 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
@@ -776,6 +803,56 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                           isAnleihen && currentQuestion.id === 'volume'
                             ? ANLEIHEN_VOLUME_ICONS[opt.value]
                             : null;
+                        if (compactQuestionStep) {
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => selectOption(currentQuestion.id, opt)}
+                              data-testid={`product-inquiry-option-${opt.value}`}
+                              data-selected={selected ? 'true' : 'false'}
+                              className={cn(
+                                'group/opt relative flex w-full items-center gap-3 rounded-xl border-2 bg-white px-4 py-3.5 text-left transition-all duration-150',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/30 focus-visible:ring-offset-1',
+                                'min-h-[3.5rem] sm:min-h-[3.75rem] sm:gap-3.5 sm:px-5 sm:py-4',
+                                selected
+                                  ? 'border-bank-primary bg-bank-primary/[0.06]'
+                                  : 'border-bank-border hover:border-bank-primary/45 hover:bg-bank-primary/[0.03]',
+                              )}
+                            >
+                              <span
+                                aria-hidden
+                                className={cn(
+                                  'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-colors sm:h-11 sm:w-11',
+                                  selected
+                                    ? 'border-bank-primary bg-bank-primary text-white'
+                                    : 'border-bank-border bg-bank-surface text-bank-primary/80 group-hover/opt:border-bank-primary/30 group-hover/opt:bg-bank-primary/10 group-hover/opt:text-bank-primary',
+                                )}
+                              >
+                                {OptionIcon ? (
+                                  <OptionIcon className="h-[1.05rem] w-[1.05rem]" strokeWidth={LUCIDE_STROKE} />
+                                ) : selected ? (
+                                  <Check className="h-4 w-4" strokeWidth={2.6} />
+                                ) : (
+                                  <QuestionIcon className="h-[1.05rem] w-[1.05rem]" strokeWidth={LUCIDE_STROKE} />
+                                )}
+                              </span>
+                              <span className="min-w-0 flex-1 text-[14.5px] font-semibold leading-snug text-bank-ink sm:text-[15.5px]">
+                                {opt.label}
+                              </span>
+                              <ArrowRight
+                                className={cn(
+                                  'h-4 w-4 shrink-0 transition-transform',
+                                  selected
+                                    ? 'text-bank-primary translate-x-0.5'
+                                    : 'text-bank-text-muted/60 group-hover/opt:translate-x-0.5 group-hover/opt:text-bank-primary',
+                                )}
+                                strokeWidth={LUCIDE_STROKE}
+                                aria-hidden
+                              />
+                            </button>
+                          );
+                        }
                         return (
                           <button
                             key={opt.value}
@@ -786,9 +863,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                             className={cn(
                               'group/opt relative flex w-full items-center justify-center rounded-lg border px-3 text-center font-medium leading-snug transition-colors duration-150',
                               OptionIcon && 'gap-2',
-                              compactQuestionStep
-                                ? 'min-h-[2.75rem] py-2.5 text-[13px]'
-                                : 'min-h-[3rem] py-3 text-[13px]',
+                              'min-h-[3rem] py-3 text-[13px]',
                               selected
                                 ? 'border-bank-signature bg-bank-signature/[0.08] text-bank-ink ring-1 ring-bank-signature/25'
                                 : 'border-bank-border bg-white text-bank-ink hover:border-bank-signature/35 hover:bg-bank-signature/[0.04]',
@@ -809,6 +884,29 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
 
                     {isAktien ? <AktienPremiumBanner compact={compactQuestionStep} /> : null}
                     {isAnleihen ? <AnleihenPremiumBanner compact={compactQuestionStep} /> : null}
+
+                    {compactQuestionStep ? (
+                      <div className="mt-5 grid grid-cols-1 gap-3 border-t border-bank-border pt-4 sm:mt-6 sm:grid-cols-3 sm:gap-4 sm:pt-5">
+                        {[
+                          { Icon: ShieldCheck, title: 'Vertraulich & sicher', body: 'Ihre Angaben werden geschützt verarbeitet.' },
+                          { Icon: Clock3, title: 'Nur wenige Minuten', body: 'Schnell zur passenden Orientierung.' },
+                          { Icon: BadgeCheck, title: 'Kostenlos & unverbindlich', body: 'Sie entscheiden ohne Verpflichtung.' },
+                        ].map(({ Icon, title, body }) => (
+                          <div key={title} className="flex items-start gap-2.5">
+                            <span
+                              aria-hidden
+                              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-bank-primary/20 bg-bank-primary/[0.06] text-bank-primary"
+                            >
+                              <Icon className="h-4 w-4" strokeWidth={LUCIDE_STROKE} />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-[13px] font-semibold leading-tight text-bank-ink">{title}</p>
+                              <p className="mt-0.5 text-[12px] leading-snug text-bank-text-muted">{body}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 </>
               )}
@@ -818,7 +916,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                 <div
                   className={cn(
                     'shrink-0 border-t border-bank-border bg-white px-4 sm:px-5',
-                    compactQuestionStep ? 'pb-3 pt-2.5' : 'pb-3 pt-3 sm:pb-4 sm:pt-3.5',
+                    compactQuestionStep ? 'pb-3.5 pt-3 sm:pb-4 sm:pt-3.5' : 'pb-3 pt-3 sm:pb-4 sm:pt-3.5',
                   )}
                 >
                   {isContactStep && submitError ? (
@@ -836,7 +934,8 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                     data-testid={isContactStep ? 'product-inquiry-submit' : 'product-inquiry-next'}
                     className={cn(
                       'w-full rounded-xl border border-bank-signature/10 bg-bank-signature font-semibold tracking-wide text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-bank-signature-hover hover:shadow-md active:translate-y-0 active:scale-[0.99]',
-                      compactQuestionStep ? 'h-10 text-[14px]' : 'h-11 text-[14px] sm:h-12 sm:text-[15px]',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2',
+                      compactQuestionStep ? 'h-12 text-[15px] sm:h-[3.25rem] sm:text-[15.5px]' : 'h-11 text-[14px] sm:h-12 sm:text-[15px]',
                     )}
                     onClick={handleNext}
                   >
@@ -848,10 +947,16 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                     ) : (
                       <>
                         Weiter
-                        <ArrowRight className="ml-2 h-4 w-4" strokeWidth={LUCIDE_STROKE} />
+                        <ArrowRight className="ml-2 h-[1.05rem] w-[1.05rem]" strokeWidth={LUCIDE_STROKE} />
                       </>
                     )}
                   </Button>
+                  {compactQuestionStep ? (
+                    <p className="mt-2.5 flex items-center justify-center gap-1.5 text-[11.5px] font-medium text-bank-text-muted">
+                      <Lock className="h-3 w-3" strokeWidth={LUCIDE_STROKE} aria-hidden />
+                      <span>Sicher &amp; verschlüsselt · SSL/TLS</span>
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
