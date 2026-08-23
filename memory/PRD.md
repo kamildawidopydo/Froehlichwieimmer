@@ -7,6 +7,43 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 41 (Feb 23, 2026) — Wissen-Block · News-Cross-Link · Admin-UI Investment-Themen
+
+**Backend (`investment_topics.py`, `server.py`, `news_provider.py`)**
+- `investment_topics` erweitert um `related_news_slugs: []` (max 6). `TopicOut` + `TopicPatch` Modelle mit Validator: dedupliziert, limitiert, prüft Existenz veröffentlichter News-Slugs.
+- `seed_investment_topics` bleibt idempotent, überschreibt **niemals** Admin-Werte (nur `not in existing` → backfill).
+- Neue Endpoints:
+  - `GET /api/news/by-slugs?slugs=a,b,c` — bewahrt Anfragereihenfolge, überspringt fehlende/deaktivierte Slugs (kein Fehler)
+  - `GET /api/admin/investment-topics` — Übersicht mit Status, Priority, News-Count, updated_at (admin-only)
+  - `GET /api/admin/investment-topics/{slug}` — Detail
+  - `PATCH /api/admin/investment-topics/{slug}` — editiert nur Whitelist-Felder, validiert Priority (0–100), Cooldown (1–90), News-Slugs (max 6, nur veröffentlichte)
+  - `GET /api/admin/news-search?q=...` — Titel/Slug/Category Suche
+- `news_provider.MongoNewsProvider._to_public` liefert jetzt `investment_topic_slug` an das Frontend.
+
+**Frontend**
+- `lib/investmentAnalytics.js`: Events `RELATED_NEWS_VIEW`, `RELATED_NEWS_CLICK` + PII-Whitelist um `article_slug`, `position` erweitert.
+- `components/investment/TopicWissenBlock.jsx` (neu): lädt kuratierte News via `/news/by-slugs`, rendert 2–3 Cards (Kategorie/Datum/Titel/Summary/Bild), blendet sich aus wenn 0 gültige Slugs, view-Event nur einmal pro Page-View (guard).
+- `pages/InvestmentTopicPage.jsx`: `<TopicWissenBlock>` zwischen letzten Content-Sektionen und Conversion; liest `related_news_slugs` aus der `/active`-Antwort für aktuelles Slug.
+- `components/investment/TopicCrossLinkBox.jsx` (neu): dezente Box am Ende eines News-Artikels — nur wenn `investment_topic_slug` gesetzt UND Thema in `/active` enthalten. Copy pro Slug (Aktien/Anleihen), Fallback für neue Themen.
+- `pages/news/NachrichtenDetailPage.jsx`: rendert Cross-Link-Box zwischen Hinweis und `NachrichtenRelated`.
+- `pages/admin/AdminInvestmentTopics.jsx` (neu, Route `/admin/investment-topics`):
+  - Tabelle mit Slug/Kategorie/Status-Pill/Priority/News-Anzahl/Aktualisierung/Aktionen.
+  - Inline-Toggle „Aktivieren/Deaktivieren" mit Warn-Toast über Cross-Link-Effekt.
+- `pages/admin/AdminInvestmentTopicEdit.jsx` (neu, `/admin/investment-topics/:slug`):
+  - Basis-Section (Kategorie, Overview, Bild-URL, Priority, Aktiv-Toggle mit Ausblendungs-Hinweis).
+  - Teaser-Section (Headline, Text, Delay, Scroll, Cooldown).
+  - News-Zuordnung: Suchfeld → Trefferliste mit „Hinzufügen"; Zuordnungsliste mit Hoch/Runter/Entfernen; Zähler `X/6`; verwaiste Artikel (nicht mehr in DB) mit Amber-Hint.
+  - Alle Requests via Axios + Supabase-Session-Bearer-Token.
+- `App.js`: 2 neue geschützte Admin-Routes registriert.
+
+**Verifikation**
+- API `/api/news/by-slugs?slugs=a,b,nonexistent` → 2 Items, kein Fehler bei fehlendem Slug.
+- API `GET /api/admin/investment-topics` ohne Auth → 401.
+- Mongo: `aktien.related_news_slugs=[dax…, usa…]` via direktes Update (simuliert Admin-Patch).
+- Playwright `/themen/aktien`: `topic-wissen-block` present, `related-news-item-*` = 2, Related-Topics + Form-Section vorhanden.
+- Playwright News-Detail: `news-topic-crosslink` + `news-topic-crosslink-cta-aktien` present. Screenshot: Box „Aktien & Kapitalmärkte verstehen" sichtbar zwischen Quellen und Related-News.
+- Aktien-/Anleihen-Funnels + `/themen`-Grid unverändert (keine Regression).
+
 ## Session 40 (Feb 23, 2026) — Themenübersicht `/themen` · Anleihen-Funnel · Multi-Topic-Teaser
 
 **Zielbild**: Investment-Themenbereich erweitern — zentrale Übersicht `/themen`, zweites Thema „Anleihen", automatische Querverlinkung zwischen Themenseiten, Teaser rotiert deterministisch zwischen Themen (max 1 pro Session).

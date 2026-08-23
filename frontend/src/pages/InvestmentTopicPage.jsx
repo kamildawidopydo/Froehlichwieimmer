@@ -11,6 +11,7 @@ import { submitInvestmentLead, fetchActiveInvestmentTopics } from '@/services/in
 import { trackInvestmentEvent, InvestmentEvents } from '@/lib/investmentAnalytics';
 import InvestmentTopicCard from '@/components/investment/InvestmentTopicCard';
 import InvestmentBreadcrumbs from '@/components/investment/InvestmentBreadcrumbs';
+import TopicWissenBlock from '@/components/investment/TopicWissenBlock';
 
 // ---------------------------------------------------------------------------
 // Statische Inhaltsvorlagen — pro Themen-Slug. Backend liefert nur Metadaten
@@ -187,6 +188,7 @@ const InvestmentTopicPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [relatedTopics, setRelatedTopics] = useState([]);
+  const [relatedNewsSlugs, setRelatedNewsSlugs] = useState([]);
   const formRef = useRef(null);
   const learnMoreRef = useRef(null);
   const formStartedRef = useRef(false);
@@ -204,10 +206,12 @@ const InvestmentTopicPage = () => {
     fetchActiveInvestmentTopics()
       .then((items) => {
         if (!alive) return;
+        const current = (items || []).find((t) => t.slug === slug);
+        setRelatedNewsSlugs(current?.related_news_slugs || []);
         const others = (items || []).filter((t) => t.slug !== slug).slice(0, 3);
         setRelatedTopics(others);
       })
-      .catch(() => { if (alive) setRelatedTopics([]); });
+      .catch(() => { if (alive) { setRelatedTopics([]); setRelatedNewsSlugs([]); } });
     return () => { alive = false; };
   }, [slug]);
 
@@ -420,6 +424,8 @@ const InvestmentTopicPage = () => {
       </section>
 
       {/* CONVERSION */}
+      <TopicWissenBlock topicSlug={slug} relatedSlugs={relatedNewsSlugs} maxDisplay={3} />
+
       <section className="border-b border-bank-border">
         <div className="mx-auto max-w-6xl px-6 py-20 sm:px-10">
           <h2 className="max-w-3xl font-serif text-[30px] leading-tight text-bank-text sm:text-[36px]">

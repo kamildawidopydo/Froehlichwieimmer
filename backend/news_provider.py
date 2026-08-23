@@ -376,6 +376,7 @@ class MongoNewsProvider(NewsProvider):
             "is_top_news": bool(doc.get("is_top_news", False)),
             "is_breaking": bool(doc.get("is_breaking", False)),
             "relevance_score": int(doc.get("relevance_score", 0)),
+            "investment_topic_slug": doc.get("investment_topic_slug") or None,
             "is_demo": False,
         }
 

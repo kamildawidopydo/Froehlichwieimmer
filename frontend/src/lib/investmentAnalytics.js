@@ -21,7 +21,7 @@ export function trackInvestmentEvent(name, props = {}) {
   try {
     // Keine PII in Analytics — Payload gezielt einschränken.
     const safe = {};
-    ['topic', 'topic_slug', 'placement', 'route', 'source_page'].forEach((k) => {
+    ['topic', 'topic_slug', 'placement', 'route', 'source_page', 'article_slug', 'position'].forEach((k) => {
       if (props[k] != null) safe[k] = String(props[k]).slice(0, 120);
     });
     if (typeof window.gtag === 'function') {
@@ -49,4 +49,6 @@ export const InvestmentEvents = {
   TOPICS_OVERVIEW_VIEW: 'investment_topics_overview_view',
   TOPIC_CARD_CLICK: 'investment_topic_card_click',
   RELATED_TOPIC_CLICK: 'investment_related_topic_click',
+  RELATED_NEWS_VIEW: 'investment_related_news_view',
+  RELATED_NEWS_CLICK: 'investment_related_news_click',
 };

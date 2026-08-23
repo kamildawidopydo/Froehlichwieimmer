@@ -8,8 +8,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, EmailStr, Field
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 router = APIRouter()
 
@@ -86,22 +86,27 @@ async def seed_investment_topics(db) -> int:
 
     Zusätzlich werden fehlende **neue Felder** auf bereits vorhandenen Dokumenten
     per `$set … $exists:false` nachgezogen, damit ältere Seeds (ohne
-    `priority` oder `overview_short`) nicht manuell repariert werden müssen.
+    `priority`, `overview_short` oder `related_news_slugs`) nicht manuell
+    repariert werden müssen. Wichtig: **niemals** vorhandene Werte
+    überschreiben — Admin-Änderungen bleiben nach Restart erhalten.
     """
     inserted = 0
     for topic in DEFAULT_TOPICS:
         existing = await db.investment_topics.find_one({"slug": topic["slug"]})
         if not existing:
-            doc = {**topic, "created_at": datetime.now(timezone.utc)}
+            doc = {
+                **topic,
+                "related_news_slugs": topic.get("related_news_slugs", []),
+                "created_at": datetime.now(timezone.utc),
+            }
             await db.investment_topics.insert_one(doc)
             inserted += 1
             continue
-        # Backfill: neue Felder auf existierende Docs übernehmen, ohne
-        # redaktionelle Anpassungen (headline/teaser) zu überschreiben.
         backfill = {}
-        for key in ("priority", "overview_short"):
-            if key not in existing or existing.get(key) in (None, ""):
-                backfill[key] = topic.get(key)
+        for key in ("priority", "overview_short", "related_news_slugs"):
+            # Nur setzen, wenn Feld nicht existiert — Admin-Werte niemals überschreiben.
+            if key not in existing:
+                backfill[key] = topic.get(key, [] if key == "related_news_slugs" else None)
         if backfill:
             await db.investment_topics.update_one(
                 {"_id": existing["_id"]},
@@ -128,6 +133,37 @@ class TopicOut(BaseModel):
     allowed_routes: list[str] = []
     excluded_routes: list[str] = []
     compliance_label: Optional[str] = None
+    related_news_slugs: list[str] = []
+
+
+class TopicPatch(BaseModel):
+    """Admin-Patch — nur ausgewählte Felder editierbar."""
+    category: Optional[str] = Field(None, max_length=120)
+    overview_short: Optional[str] = Field(None, max_length=600)
+    image_url: Optional[str] = Field(None, max_length=500)
+    enabled: Optional[bool] = None
+    priority: Optional[int] = Field(None, ge=0, le=100)
+    headline: Optional[str] = Field(None, max_length=200)      # Teaser-Headline
+    teaser: Optional[str] = Field(None, max_length=600)         # Teaser-Text
+    display_delay_ms: Optional[int] = Field(None, ge=0, le=600000)
+    scroll_threshold_pct: Optional[int] = Field(None, ge=0, le=100)
+    cooldown_days: Optional[int] = Field(None, ge=1, le=90)
+    related_news_slugs: Optional[list[str]] = None
+
+    @field_validator("related_news_slugs")
+    @classmethod
+    def _dedupe_and_limit(cls, v):
+        if v is None:
+            return v
+        seen, out = set(), []
+        for s in v:
+            s = (s or "").strip()
+            if s and s not in seen:
+                seen.add(s)
+                out.append(s)
+        if len(out) > 6:
+            raise ValueError("Maximal 6 News-Zuordnungen erlaubt.")
+        return out
 
 
 class LeadIn(BaseModel):
@@ -144,8 +180,8 @@ class LeadIn(BaseModel):
 # Routes
 # ---------------------------------------------------------------------------
 
-def register(api: APIRouter, db, send_email_fn):
-    """Register `/api/investment-topics/*` endpoints on the shared `/api` router."""
+def register(api: APIRouter, db, send_email_fn, require_admin=None):
+    """Register `/api/investment-topics/*` + `/api/admin/investment-topics/*`."""
 
     @api.get("/investment-topics/active", summary="Aktive Investment-Themen für den Teaser")
     async def _active_topics():
@@ -169,6 +205,7 @@ def register(api: APIRouter, db, send_email_fn):
                     allowed_routes=d.get("allowed_routes") or [],
                     excluded_routes=d.get("excluded_routes") or [],
                     compliance_label=d.get("compliance_label"),
+                    related_news_slugs=d.get("related_news_slugs") or [],
                 ).model_dump())
             except Exception:  # noqa: BLE001
                 continue
@@ -231,3 +268,127 @@ def register(api: APIRouter, db, send_email_fn):
             pass
 
         return {"ok": True, "lead_id": str(result.inserted_id), "topic": topic_label}
+
+    # -----------------------------------------------------------------
+    # NEWS-Lookup für Wissen-Block (public — nur veröffentlichte Artikel)
+    # -----------------------------------------------------------------
+    @api.get("/news/by-slugs", summary="Mehrere News-Artikel per Slug-Liste laden")
+    async def _news_by_slugs(slugs: str = ""):
+        raw = [s.strip() for s in (slugs or "").split(",") if s.strip()]
+        raw = raw[:10]
+        if not raw:
+            return {"items": []}
+        cursor = db.news_articles.find({
+            "slug": {"$in": raw},
+            "is_published": True,
+            "status": "published",
+        })
+        by_slug = {}
+        async for d in cursor:
+            pub = d.get("published_at")
+            by_slug[d["slug"]] = {
+                "id": str(d.get("_id") or d["slug"]),
+                "slug": d["slug"],
+                "title": d.get("title", ""),
+                "summary": (d.get("summary") or "")[:280],
+                "category": d.get("category"),
+                "image_url": d.get("image_url"),
+                "published_at": pub.isoformat() if hasattr(pub, "isoformat") else pub,
+            }
+        # Reihenfolge der Anfrage bewahren, unbekannte Slugs überspringen (kein Error).
+        items = [by_slug[s] for s in raw if s in by_slug]
+        return {"items": items}
+
+    # -----------------------------------------------------------------
+    # ADMIN — Investment-Themen-Verwaltung
+    # -----------------------------------------------------------------
+    if require_admin is None:
+        return  # Admin-Endpoints nur registrieren, wenn Dependency vorhanden
+
+    @api.get("/admin/investment-topics", summary="Admin: Übersicht Investment-Themen")
+    async def _admin_list(_u: dict = Depends(require_admin)):
+        cursor = db.investment_topics.find().sort([("priority", -1), ("created_at", -1)])
+        items = []
+        async for d in cursor:
+            items.append({
+                "slug": d.get("slug"),
+                "category": d.get("category"),
+                "headline": d.get("headline"),
+                "overview_short": d.get("overview_short"),
+                "image_url": d.get("image_url"),
+                "enabled": bool(d.get("enabled", True)),
+                "priority": int(d.get("priority") or 0),
+                "teaser": d.get("teaser"),
+                "display_delay_ms": int(d.get("display_delay_ms") or 35000),
+                "scroll_threshold_pct": int(d.get("scroll_threshold_pct") or 50),
+                "cooldown_days": int(d.get("cooldown_days") or 7),
+                "related_news_slugs": d.get("related_news_slugs") or [],
+                "related_news_count": len(d.get("related_news_slugs") or []),
+                "updated_at": (d.get("updated_at") or d.get("created_at")).isoformat()
+                    if (d.get("updated_at") or d.get("created_at")) else None,
+            })
+        return {"items": items, "count": len(items)}
+
+    @api.get("/admin/investment-topics/{slug}", summary="Admin: Detail Investment-Thema")
+    async def _admin_detail(slug: str, _u: dict = Depends(require_admin)):
+        d = await db.investment_topics.find_one({"slug": slug})
+        if not d:
+            raise HTTPException(404, detail="Thema nicht gefunden.")
+        return {
+            "slug": d["slug"],
+            "category": d.get("category"),
+            "headline": d.get("headline"),
+            "teaser": d.get("teaser"),
+            "overview_short": d.get("overview_short"),
+            "image_url": d.get("image_url"),
+            "enabled": bool(d.get("enabled", True)),
+            "priority": int(d.get("priority") or 0),
+            "display_delay_ms": int(d.get("display_delay_ms") or 35000),
+            "scroll_threshold_pct": int(d.get("scroll_threshold_pct") or 50),
+            "cooldown_days": int(d.get("cooldown_days") or 7),
+            "related_news_slugs": d.get("related_news_slugs") or [],
+        }
+
+    @api.patch("/admin/investment-topics/{slug}", summary="Admin: Investment-Thema aktualisieren")
+    async def _admin_patch(slug: str, payload: TopicPatch, _u: dict = Depends(require_admin)):
+        existing = await db.investment_topics.find_one({"slug": slug})
+        if not existing:
+            raise HTTPException(404, detail="Thema nicht gefunden.")
+        update = payload.model_dump(exclude_unset=True)
+        # News-Slugs validieren: nur veröffentlichte Artikel akzeptieren
+        if "related_news_slugs" in update and update["related_news_slugs"]:
+            valid = []
+            async for d in db.news_articles.find(
+                {"slug": {"$in": update["related_news_slugs"]}, "is_published": True, "status": "published"},
+                {"slug": 1},
+            ):
+                valid.append(d["slug"])
+            invalid = [s for s in update["related_news_slugs"] if s not in valid]
+            if invalid:
+                raise HTTPException(400, detail=f"Unbekannte oder unveröffentlichte News-Slugs: {invalid}")
+        update["updated_at"] = datetime.now(timezone.utc)
+        await db.investment_topics.update_one({"_id": existing["_id"]}, {"$set": update})
+        return {"ok": True, "slug": slug, "updated_fields": list(update.keys())}
+
+    @api.get("/admin/news-search", summary="Admin: News-Artikel suchen (für Themen-Zuordnung)")
+    async def _admin_news_search(q: str = "", limit: int = 15, _u: dict = Depends(require_admin)):
+        q = (q or "").strip()
+        limit = max(1, min(30, limit))
+        query: dict = {"is_published": True, "status": "published"}
+        if q:
+            import re as _re
+            rx = {"$regex": _re.escape(q), "$options": "i"}
+            query["$or"] = [{"title": rx}, {"slug": rx}, {"category": rx}]
+        cursor = db.news_articles.find(query, {
+            "slug": 1, "title": 1, "category": 1, "published_at": 1,
+        }).sort([("published_at", -1)]).limit(limit)
+        items = []
+        async for d in cursor:
+            pub = d.get("published_at")
+            items.append({
+                "slug": d["slug"],
+                "title": d.get("title", ""),
+                "category": d.get("category"),
+                "published_at": pub.isoformat() if hasattr(pub, "isoformat") else pub,
+            })
+        return {"items": items, "count": len(items)}

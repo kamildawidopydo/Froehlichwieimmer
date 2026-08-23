@@ -3259,7 +3259,7 @@ async def _admin_news_list(_user: dict = Depends(require_admin), status: Optiona
 _register_einordnung(api, db)
 
 # --- Investment-Topic-Funnel (Themen-Teaser + Lead-Aufnahme) --------------
-_register_investment_topics(api, db, _send_email_via_emergent)
+_register_investment_topics(api, db, _send_email_via_emergent, require_admin)
 
 
 @app.on_event("startup")

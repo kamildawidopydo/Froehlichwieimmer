@@ -5,6 +5,7 @@ import axios from 'axios';
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import NachrichtenRelated from '@/components/news/NachrichtenRelated';
+import TopicCrossLinkBox from '@/components/investment/TopicCrossLinkBox';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -216,6 +217,8 @@ const NachrichtenDetailPage = () => {
               Einordnung finden Sie in der Rubrik „Fröhlich Vermögensberatung — Unsere Einordnung".
             </p>
           </div>
+
+          {item.investment_topic_slug && <TopicCrossLinkBox topicSlug={item.investment_topic_slug} />}
 
           <NachrichtenRelated slug={slug} />
         </article>
