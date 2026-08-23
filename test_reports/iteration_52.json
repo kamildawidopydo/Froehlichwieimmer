@@ -1,0 +1,23 @@
+{
+  "summary": "Session 74.7 (Mobile Sticky-CTA Single-Line ~56px) frontend-only auf der Preview-URL getestet. Consent-Gate jeweils via visitor-residence=DE + visitor-role=privatperson + visitor-accept-btn geschlossen. Gemessen MOBILE 390x844 (nach Ablauf des One-Shot-Pulses): [data-testid=product-inquiry-sticky-cta] 280x60 px, innerer Wrapper 280x60, main-button [product-inquiry-sticky-compact] 240x56 (computed min-height 56px), Icon-Tile 36x36, Inner MessageCircleQuestion 17x17, ArrowRight 14.6, X-Button 36.5x56.8 mit border-left 1px solid, X-Icon 14.2, Haupttext 14px/600. Container hat exakt 2 direkte Kinder (compact + dismiss). Text-Sichtbarkeit auf Mobile: nur 'Fragen beantworten' sichtbar; 'Kurzfragebogen' und 'In wenigen Minuten zur persoenlichen Empfehlung' display:none (0 sichtbare Treffer im Main-CTA); auf Desktop 1440 beide sichtbar. Active-State: mousedown -> matrix(0.98,0,0,0.98,0,0). Klick auf main-button oeffnet Popup (aria-expanded=true, data-menu-open=true, Menu-Breite 280 = CTA-Breite, alle 6 Produktoptionen sichtbar); Hoehe bleibt 60/56, transform none, reduzierter Shadow '0 8px 20px -12px' (geschlossen '0 10px 24px -12px'), data-pulse=false. Auswahl 'aktien' oeffnet spectrum-wizard-aktien. X-Klick: cta count 0, kein Menu, Restore-Pill 280x56 mit 36x36 Icon und nur 'Fragen beantworten' (Eyebrow/Benefit display:none); Klick stellt Main-CTA wieder her. Responsive 320/375/390/430: Container konstant 280x60, main 56, Text 1 Zeile ohne Truncation, kein horizontales Scrolling. DESKTOP 1440x900 unveraendert vs. Baseline iter_51: main-button 384x104.3, Wrapper inkl. X 432x108.3, Icon-Tile 56x56, Inner-Icon 24, X 44, Typo 10.5/17/12, 3-zeilig. Regressionen ok: Interstitial-Hide (#invtopic-teaser data-visible=true -> sticky-cta count 0), nearForm Newsletter (data-near-form=true, x=16 links, 280x60), Attention-Pulse 1x/Session (sessionStorage-Flag) und bei prefers-reduced-motion deaktiviert (data-pulse=false, animation-name none). Keine neuen Console-Errors (nur vorbestehende 401 der Auth-Endpoints sowie ERR_BLOCKED_BY_RESPONSE.NotSameOrigin / ERR_HTTP2_PROTOCOL_ERROR bei Drittanbieter-Ressourcen).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Mobile Sticky-CTA (390x844 u. a.)", "issues": ["Gesamt-Aussenhoehe des CTA-Containers ist 60 px, nicht 56 px: der Main-Button erreicht exakt min-h 56px, der umgebende Container addiert border-2 (2px oben/unten). Liegt innerhalb der geforderten Toleranz 54-60 px, markiert aber das obere Ende. Falls exakt 56 px Aussenmass gewuenscht: min-h auf 3.25rem senken oder border auf 1px reduzieren."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Spezifikation im Testauftrag ('Bei 320px -> 296px') widerspricht der Implementierung: w-[min(17.5rem,calc(100vw-1.5rem))] ergibt bei 320px min(280,296)=280 px. Gemessen 280 px auf allen 4 Breiten - Implementierung ist konsistent, die Erwartung im Auftrag war falsch."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100%"},
+  "seed_data_creation": "keine",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 52 Messwerte (Preview-URL, Consent via visitor-residence=DE / visitor-role=privatperson / visitor-accept-btn): WICHTIG - vor Messungen ~4.2 s warten, damit der One-Shot-Attention-Pulse (scale 1.015 / translateY -2px) abgelaufen ist, sonst verfaelschte Bounding-Boxen. Ausserdem erzeugt mouse.down+mouse.up bereits einen Click (toggelt das Menu) - Active-State-Test und Popup-Test trennen. MOBILE 390x844: cta 280x60, main 240x56 (min-height 56px), Icon-Tile 36x36, Inner-Icon 17, Arrow 14.6, X 36.5 + border-l 1px solid, X-Icon 14.2, Text 14px/600 einzeilig; Eyebrow+Benefit display:none. Menu-Open: data-menu-open=true, data-pulse=false, Shadow 0 8px 20px -12px, Hoehe 60 unveraendert, Menu-Breite 280. Restore-Pill 280x56, Icon 36x36. Responsive 320/375/390/430 alle 280x60, kein H-Scroll. DESKTOP 1440: main 384x104.3, Wrapper 432x108.3, Icon 56x56, Inner 24, X 44, Typo 10.5/17/12 - identisch zu iter_51. Fuer nearForm-Test muss zuerst das Investment-Interstitial (#invtopic-teaser) geschlossen werden (erster Button im Teaser), da der CTA sonst per hiddenForTeaser komplett unmounted ist.",
+  "rca_of_the_issue": "Kein Defekt gefunden. Die 4-px-Differenz zur Zielhoehe 56 px entsteht durch border-2 am aeusseren Wrapper (2px oben + unten) zusaetzlich zur min-h-[3.5rem] des Main-Buttons."
+}

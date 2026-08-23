@@ -69,9 +69,8 @@ const WIZARD_BENEFITS = WIZARD_TRUST_POINTS.slice(0, 3);
 
 /**
  * CompactPill — kompakter Restore-Pill für den Sticky-CTA.
- * Wird nur im Restore-State verwendet (nach Dismiss). Der Main-CTA hat auf
- * beiden Breakpoints einen inline aufgebauten Divider-Layout mit X-Button.
- * Mobile-Höhe ~68 px, Desktop-Höhe ~96 px. Attention-Pulse ist optional.
+ * Wird nur im Restore-State verwendet (nach Dismiss).
+ * Mobile Single-Line ~56 px hoch mit nur Haupttext, Desktop-3-Zeilen unverändert.
  */
 function CompactPill({ onClick, className, testId, ariaLabel, fixed = true, pulse = false }) {
   return (
@@ -79,12 +78,11 @@ function CompactPill({ onClick, className, testId, ariaLabel, fixed = true, puls
       type="button"
       onClick={onClick}
       className={cn(
-        'group relative inline-flex w-[min(20rem,calc(100vw-1.5rem))] items-center gap-2.5 rounded-2xl border-2 border-bank-primary/25 bg-white px-3 py-2 text-left',
-        'min-h-[4.25rem] sm:min-h-[6rem] sm:w-[22rem] sm:gap-4 sm:px-5 sm:py-4',
-        'shadow-[0_16px_40px_-16px_rgb(9_33_66/0.26)] sm:shadow-[0_20px_50px_-18px_rgb(9_33_66/0.30)]',
+        'group relative inline-flex w-[min(17.5rem,calc(100vw-1.5rem))] items-center gap-2.5 rounded-2xl border-2 border-bank-primary/25 bg-white px-2.5 py-1.5 text-left',
+        'min-h-[3.5rem] sm:min-h-[6rem] sm:w-[22rem] sm:gap-4 sm:px-5 sm:py-4',
+        'shadow-[0_12px_28px_-12px_rgb(9_33_66/0.22)] sm:shadow-[0_20px_50px_-18px_rgb(9_33_66/0.30)]',
         'transition-all duration-200 ease-out',
-        // Desktop: sanftes Lift + Scale beim Hover. Mobile: kein Scale, nur Press-Feedback.
-        'sm:hover:-translate-y-0.5 sm:hover:scale-[1.02] hover:border-bank-primary/55 hover:bg-bank-primary/[0.04] hover:shadow-[0_28px_64px_-18px_rgb(9_33_66/0.38)]',
+        'sm:hover:-translate-y-0.5 sm:hover:scale-[1.02] hover:border-bank-primary/55 hover:bg-bank-primary/[0.04] sm:hover:shadow-[0_28px_64px_-18px_rgb(9_33_66/0.38)]',
         'active:scale-[0.98] sm:active:scale-[1.045] active:bg-bank-primary/[0.07] active:border-bank-primary/65',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2',
         'dark:border-bank-border dark:bg-bank-surface-elev',
@@ -99,31 +97,30 @@ function CompactPill({ onClick, className, testId, ariaLabel, fixed = true, puls
       <span
         aria-hidden
         className={cn(
-          'flex h-[2.625rem] w-[2.625rem] shrink-0 items-center justify-center rounded-lg border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
-          'shadow-[0_6px_18px_-8px_rgb(76_124_186/0.55)] transition-colors',
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
+          'shadow-[0_4px_12px_-6px_rgb(76_124_186/0.55)] transition-colors',
           'group-hover:bg-[rgb(var(--bank-primary)/0.16)] group-hover:border-bank-primary/35',
           'sm:h-16 sm:w-16 sm:rounded-xl',
         )}
       >
-        <MessageCircleQuestion className="h-[1.25rem] w-[1.25rem] sm:h-7 sm:w-7" strokeWidth={LUCIDE_STROKE} />
+        <MessageCircleQuestion className="h-[1.05rem] w-[1.05rem] sm:h-7 sm:w-7" strokeWidth={LUCIDE_STROKE} />
       </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-[1px] sm:gap-0.5">
-        <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-bank-primary sm:text-[11px] sm:tracking-[0.20em]">
+      <span className="flex min-w-0 flex-1 flex-col sm:gap-0.5">
+        <span className="hidden font-mono text-[11px] font-semibold uppercase tracking-[0.20em] text-bank-primary sm:inline">
           Kurzfragebogen
         </span>
-        <span className="text-[15px] font-semibold leading-[1.1] tracking-tight text-bank-ink sm:text-[18px] sm:leading-[1.15]">
+        <span className="truncate text-[14px] font-semibold leading-[1.15] tracking-tight text-bank-ink sm:text-[18px]">
           Fragen beantworten
         </span>
-        <span className="block w-full truncate whitespace-nowrap text-[11px] leading-[1.25] text-bank-text-muted sm:whitespace-normal sm:text-[12.5px] sm:leading-snug">
-          <span className="sm:hidden">In wenigen Minuten</span>
-          <span className="hidden sm:inline">In wenigen Minuten zur persönlichen Empfehlung</span>
+        <span className="hidden text-[12.5px] leading-snug text-bank-text-muted sm:block">
+          In wenigen Minuten zur persönlichen Empfehlung
         </span>
       </span>
       <ArrowRight
         aria-hidden
         strokeWidth={LUCIDE_STROKE}
         className={cn(
-          'ml-0.5 h-[0.95rem] w-[0.95rem] shrink-0 text-bank-text-muted/60 transition-all sm:ml-1 sm:h-[1.05rem] sm:w-[1.05rem]',
+          'ml-0.5 h-[0.9rem] w-[0.9rem] shrink-0 text-bank-text-muted/60 transition-all sm:ml-1 sm:h-[1.05rem] sm:w-[1.05rem]',
           'group-hover:translate-x-0.5 group-hover:text-bank-primary',
         )}
       />
@@ -446,18 +443,18 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
             prefersReduced={prefersReduced}
             onPick={pickProduct}
             className={cn(
-              'absolute bottom-full mb-2 w-[min(20rem,calc(100vw-1.5rem))] rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev',
+              'absolute bottom-full mb-2 w-[min(17.5rem,calc(100vw-1.5rem))] rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev',
               nearForm ? 'left-0' : 'right-0',
             )}
           />
-          {/* Kompakter Mobile-Main-CTA — integrierter Divider + X. */}
+          {/* Kompakter Mobile-Main-CTA — Single-Line 56 px mit integriertem Divider + X. */}
           <div
             className={cn(
-              'flex w-[min(20rem,calc(100vw-1.5rem))] items-stretch overflow-hidden rounded-2xl border-2 border-bank-primary/25 bg-white',
+              'flex w-[min(17.5rem,calc(100vw-1.5rem))] items-stretch overflow-hidden rounded-2xl border-2 border-bank-primary/25 bg-white',
               'transition-shadow duration-200 ease-out',
               menuOpen
-                ? 'shadow-[0_10px_24px_-14px_rgb(9_33_66/0.22)] border-bank-primary/20'
-                : 'shadow-[0_14px_32px_-14px_rgb(9_33_66/0.24)]',
+                ? 'shadow-[0_8px_20px_-12px_rgb(9_33_66/0.22)] border-bank-primary/20'
+                : 'shadow-[0_10px_24px_-12px_rgb(9_33_66/0.22)]',
               pulse && !menuOpen && 'sticky-cta-pulse',
               'dark:border-bank-border dark:bg-bank-surface-elev',
             )}
@@ -472,8 +469,8 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
               onClick={openMenu}
               data-testid="product-inquiry-sticky-compact"
               className={cn(
-                'group flex min-w-0 flex-1 items-center gap-2.5 py-2 pl-3 pr-2 text-left',
-                'min-h-[4.25rem]',
+                'group flex min-w-0 flex-1 items-center gap-2.5 py-1.5 pl-2.5 pr-2 text-left',
+                'min-h-[3.5rem]',
                 'transition-colors duration-200 ease-out',
                 'hover:bg-bank-primary/[0.04]',
                 'active:scale-[0.98] active:bg-bank-primary/[0.07]',
@@ -483,28 +480,20 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
               <span
                 aria-hidden
                 className={cn(
-                  'flex h-[2.625rem] w-[2.625rem] shrink-0 items-center justify-center rounded-lg border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
-                  'shadow-[0_6px_18px_-8px_rgb(76_124_186/0.55)] transition-colors',
+                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
+                  'shadow-[0_4px_12px_-6px_rgb(76_124_186/0.55)] transition-colors',
                   'group-hover:bg-[rgb(var(--bank-primary)/0.16)] group-hover:border-bank-primary/35',
                 )}
               >
-                <MessageCircleQuestion className="h-[1.25rem] w-[1.25rem]" strokeWidth={LUCIDE_STROKE} />
+                <MessageCircleQuestion className="h-[1.05rem] w-[1.05rem]" strokeWidth={LUCIDE_STROKE} />
               </span>
-              <span className="flex min-w-0 flex-1 flex-col gap-[1px]">
-                <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-bank-primary">
-                  Kurzfragebogen
-                </span>
-                <span className="text-[15px] font-semibold leading-[1.1] tracking-tight text-bank-ink">
-                  Fragen beantworten
-                </span>
-                <span className="block w-full truncate whitespace-nowrap text-[11px] leading-[1.25] text-bank-text-muted">
-                  In wenigen Minuten
-                </span>
+              <span className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-[1.15] tracking-tight text-bank-ink">
+                Fragen beantworten
               </span>
               <ArrowRight
                 aria-hidden
                 strokeWidth={LUCIDE_STROKE}
-                className="ml-0.5 h-[0.95rem] w-[0.95rem] shrink-0 text-bank-text-muted/60 transition-transform group-hover:translate-x-0.5 group-hover:text-bank-primary"
+                className="ml-0.5 h-[0.9rem] w-[0.9rem] shrink-0 text-bank-text-muted/60 transition-transform group-hover:translate-x-0.5 group-hover:text-bank-primary"
               />
             </button>
             <button
@@ -512,7 +501,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
               onClick={dismiss}
               onPointerDown={(e) => e.stopPropagation()}
               className={cn(
-                'flex w-10 shrink-0 items-center justify-center border-l border-bank-border/80 text-bank-text-muted',
+                'flex w-9 shrink-0 items-center justify-center border-l border-bank-border/80 text-bank-text-muted',
                 'transition-colors hover:bg-bank-primary/[0.06] hover:text-bank-ink',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bank-primary/40',
                 'dark:border-bank-border',
@@ -520,7 +509,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
               aria-label="Hinweis ausblenden"
               data-testid="product-inquiry-sticky-dismiss"
             >
-              <X className="h-4 w-4" strokeWidth={2.2} aria-hidden />
+              <X className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
             </button>
           </div>
         </div>

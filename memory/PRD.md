@@ -1,5 +1,34 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 74.7 (Feb 28, 2026) — Mobile Sticky-CTA Single-Line ~56 px ✅
+
+**Warum nachgebessert:** User-Feedback: iter_51 (72 px) immer noch zu groß. Neuer Zielbereich: 56 px Höhe, ~280 px Breite, Single-Line-Layout mit nur Icon + Haupttext + Pfeil + X.
+
+**File geändert** (nur `frontend/src/components/home/ProductInquiryStickyCta.jsx`)
+- **Mobile Main-CTA:** `min-h-[3.5rem]` (56 px), `w-[min(17.5rem,calc(100vw-1.5rem))]` (~280 px). Padding `py-1.5 pl-2.5 pr-2`, `gap-2.5`.
+- **Icon-Tile:** 36×36 (`h-9 w-9`), Inner-Icon 16.8 px (`h-[1.05rem]`).
+- **Text-Reduktion:** Nur noch **eine Zeile** „Fragen beantworten" (14 px semibold). Eyebrow und Benefit-Zeile auf Mobile via `hidden sm:inline/block` ausgeblendet. Desktop weiter 3-zeilig.
+- **X-Button:** `w-9` (36 px), X-Icon `h-3.5 w-3.5` (14 px). Border-l bleibt als Divider.
+- **ArrowRight:** 14.4 px (`h-[0.9rem]`).
+- **Popup-Menü:** Breite matched CTA (`w-[min(17.5rem,…)]`) → keine visuelle Diskrepanz.
+- **CompactPill (Restore):** identische Single-Line-Mobile-Version, Desktop unverändert.
+
+**Erhalten:** alle Testids (`sticky-cta`, `sticky-compact`, `sticky-dismiss`, `sticky-restore`), Analytics, Handler, nearForm, Interstitial-Hide, Pulse, ESC/Outside-Click, Produktmenü-Inhalt, Desktop 1440.
+
+**Externer Blocker weiter offen:** Supabase-CHECK-Constraint für fonds/tagesgeld/festgeld/flexgeld.
+
+**Testergebnisse (iteration_52, 100 % Pass)**
+- ✅ Mobile 390: Container 280×60 (inner 56 + border 2×2), Main 240×56, Icon-Tile 36×36, Inner 17 px, Arrow 14.6, X 36.5×56 + border-l 1 px, X-Icon 14.2.
+- ✅ Text: nur „Fragen beantworten" (14 px semibold) sichtbar; Eyebrow + Benefit `display:none` auf Mobile, auf Desktop weiter sichtbar.
+- ✅ Container: exakt 2 direkte Kinder (compact + dismiss), keine Floating-Circle.
+- ✅ Menu-Open: `data-menu-open=true`, Shadow reduziert, Höhe bleibt 60 px, `transform none`.
+- ✅ Active: `matrix(0.98,…)` bei mousedown.
+- ✅ Restore-Pill 280×56, nur Haupttext sichtbar.
+- ✅ Responsive 320/375/390/430: alle 280×60, kein H-Scroll, kein Truncation.
+- ✅ Desktop 1440 unverändert: 384×104, Icon 56×56, 3-zeilig — identisch zu iter_51.
+- ✅ Regression: 6 Wizards öffnen (spectrum-wizard-aktien), Interstitial-Hide, nearForm Newsletter (280×60), Pulse 1×/Session + reduced-motion, ESC/Outside-Click.
+- ✅ Keine neuen Console-Errors.
+
 ## Session 74.6 (Feb 28, 2026) — Mobile Sticky-CTA drastisch kompakter ✅
 
 **Warum nachgebessert:** Session 74.5 landete bei 80 px Höhe / 320 px Breite. User-Feedback: immer noch zu dominant. Neuer Zielbereich: 68–76 px Höhe, 300–330 px Breite, integrierter X mit Divider (statt Floating-Circle).
