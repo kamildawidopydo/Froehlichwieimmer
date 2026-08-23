@@ -1,5 +1,39 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 68 (Feb 25, 2026) — 3/4 Action Items DONE, Supabase weiter BLOCKED
+
+**Item 1 · Supabase-Constraint** — extern BLOCKED (Session 65 gilt unverändert)
+- Live-Probe: aktien/anleihen 201 ✅, fonds/tagesgeld/festgeld/flexgeld 400/23514 ❌
+- Kein `SUPABASE_SERVICE_ROLE_KEY` / Management-Token verfügbar → DDL aus Emergent nicht möglich.
+- User-Aktion siehe Session 65 (Table Editor `product_inquiry_leads` → Constraints → Edit `product IN ('aktien','anleihen','fonds','tagesgeld','festgeld','flexgeld','spargeld')`).
+
+**Item 2 · Kategorie-Deep-Links** ✅ DONE
+- `HomeFinanceNews.jsx`: neuer initial-State via `readCategoryFromHash()` (Whitelist `ALLOWED_HASH_CATEGORIES`), `hashchange`-Listener + `applyCategory()` mit `history.pushState` — Back/Forward navigiert zwischen Filtern. Ungültige Hashes → 'all'. Featured-Dedup bleibt erhalten (Filter schließt Featured-Slug explizit aus).
+- Hash-Format: `#kategorie={key}`, `all` löscht den Hash.
+
+**Item 3 · Bildvalidator im News-Sync** ✅ DONE
+- `news_synthesizer.py`: neue `_validate_image_url(url, timeout=5.0)` — HEAD zuerst, GET-Stream-Fallback bei 405 oder fehlendem `content-type`, `follow_redirects=True`. Rückgabe True nur bei 2xx UND `content-type: image/*`. Einzelne fehlerhafte Hosts werfen keine Exception (BLE-Guard).
+- Eingesetzt an 3 Stellen:
+  1. `_fetch_unsplash_image` — Pick wird verworfen, Suche geht weiter
+  2. `fetch_feeds` — ungültiges RSS-Bild → deterministischer Kategorie-Fallback
+  3. `synthesize_pending` — letzter Validierungsgang vor Mongo-Insert
+- Verifiziert: Merz-404-URL → valid=False → Fallback greift. Sync-Job bleibt bei einzelnen kaputten Bildhosts intakt.
+
+**Item 4 · Newsletter-Anmeldung** ✅ DONE
+- Backend: `POST /api/newsletter/subscribe` (server.py) mit `EmailStr` + Consent-Guard. Persistenz in Mongo `newsletter_subscribers` (unique index auf email). Idempotent: bereits eingetragen → 200 `already_subscribed` + `resubmit_count++`. Doku im Log per E-Mail-Hash (kein Klartext).
+- Frontend: neue Komponente `NewsletterSignup.jsx` unter `HomeFinanceNews` in Home.js gemountet. E-Mail-Feld + Consent-Checkbox mit Datenschutzlink + Send-Button; Loading (Spinner + „Wird gesendet"), Success (Check-Panel), Error (Inline). Vollständig im Fröhlich-Design (font-mono uppercase Eyebrow, bank-ink CTAs).
+- Curl-Verifikation: fresh subscribe 200, idempotent 200 (`already_subscribed`), invalid email 422, missing consent 400.
+
+**Files geändert**
+- `frontend/src/components/home/HomeFinanceNews.jsx` (Hash-Persistenz + Featured-Dedup-Regel geschärft)
+- `frontend/src/components/home/NewsletterSignup.jsx` (neu)
+- `frontend/src/pages/Home.js` (NewsletterSignup gemountet)
+- `backend/server.py` (Newsletter-Route, Mongo-Index-Startup, `import hashlib`)
+- `backend/news_synthesizer.py` (`_validate_image_url` + 3 Einsatzstellen)
+
+**Status: 3/4 DONE · Item 1 BLOCKED extern**
+
+
 ## Session 67 — Nachbesserung nach iteration_41 ✅
 
 **iteration_41: 10/12 fully PASS, 2 partial → alle 2 gefixt.**

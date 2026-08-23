@@ -626,6 +626,48 @@ def _pick_fallback(category: str, title: str) -> dict:
     }
 
 
+async def _validate_image_url(url: str, *, timeout: float = 5.0) -> bool:
+    """Prüfe eine externe Bild-URL bevor sie in Mongo landet.
+    HEAD zuerst, dann sicherer GET-Fallback (nur die ersten Bytes lesen).
+    Rückgabe True = URL antwortet 2xx UND Content-Type startet mit 'image/'.
+    Kein Exception-Bubble — ein einzelner defekter Host darf den Sync nicht killen.
+    """
+    if not url or not isinstance(url, str):
+        return False
+    if not url.startswith(("http://", "https://")):
+        return False
+    try:
+        async with httpx.AsyncClient(
+            timeout=timeout,
+            follow_redirects=True,
+            headers={"User-Agent": "FroehlichNewsSync/1.0"},
+        ) as client:
+            try:
+                r = await client.head(url)
+            except Exception:
+                r = None
+            if r is not None and 200 <= r.status_code < 400:
+                ct = (r.headers.get("content-type") or "").lower()
+                if ct.startswith("image/"):
+                    return True
+                # Manche CDNs liefern bei HEAD keinen sinnvollen Content-Type → GET-Fallback
+                if not ct or "octet-stream" in ct:
+                    r = None
+            if r is None or r.status_code == 405 or r.status_code >= 400:
+                # HEAD nicht unterstützt oder Server verweigert → GET, nur Header lesen
+                async with client.stream("GET", url) as g:
+                    if g.status_code < 200 or g.status_code >= 400:
+                        return False
+                    ct = (g.headers.get("content-type") or "").lower()
+                    return ct.startswith("image/")
+            return False
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("image_validate_failed url=%s err=%s", url[:120], exc)
+        return False
+
+
+
+
 async def _recent_unsplash_ids(db, limit: int = 60) -> set[str]:
     """Damit derselbe Unsplash-Photograf nicht drei Mal in Folge auftaucht."""
     try:
@@ -689,6 +731,11 @@ async def _fetch_unsplash_image(category: str, title: str, summary: str = "", *,
                 hero = urls.get("full") or urls.get("regular") or img
                 author_name = user.get("name") or "Unsplash Fotograf"
                 author_link = (user.get("links") or {}).get("html")
+                # Vor dem Rückgabezeitpunkt validieren, damit tote Unsplash-IDs
+                # gar nicht erst in die DB gelangen.
+                if not await _validate_image_url(img):
+                    logger.info("unsplash_pick_invalid photo_id=%s → skip", pick.get("id"))
+                    continue
                 logger.info("unsplash_ok query=%r photo_id=%s author=%s", q, pick.get("id"), author_name)
                 return {
                     "image_url": img,
@@ -834,6 +881,10 @@ async def fetch_feeds(db, *, trigger_source: str = "manual") -> dict:
             category = _detect_category(f"{title} {summary}",
                                           fallback=feed_cfg.get("default_category", DEFAULT_CATEGORY))
             # Editorial-Fallback anwenden, falls RSS kein brauchbares Bild lieferte
+            # ODER wenn das RSS-Bild nicht mehr erreichbar ist (HEAD-Check).
+            if rss_image and not await _validate_image_url(rss_image):
+                logger.info("rss_image_invalid feed=%s url=%s → fallback", feed_cfg["name"], rss_image[:120])
+                rss_image = None
             if not rss_image:
                 fb = _pick_fallback(category, title)
                 rss_image = fb["image_url"]
@@ -1231,6 +1282,12 @@ async def synthesize_pending(db, max_articles: int = 25) -> dict:
             category, article.get("title") or anchor["title"],
             summary=article.get("summary") or anchor.get("summary", ""), db=db,
         )
+        # Letzter Validierungsgang: sollte _fetch_unsplash_image trotz interner
+        # Validierung ein defektes Motiv geliefert haben, greift der deterministische
+        # Fallback aus dem Kategorie-Pool.
+        if not await _validate_image_url(img.get("image_url", "")):
+            logger.info("synth_image_invalid slug=%s → category-fallback", anchor.get("slug"))
+            img = _pick_fallback(category, article.get("title") or anchor["title"])
 
         slug = _slugify(article.get("title") or anchor["title"])
         doc = {

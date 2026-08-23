@@ -37,6 +37,22 @@ const CATEGORY_LABEL = {
   'fonds-etfs': 'Fonds & ETFs',
 };
 
+/** Whitelist gültiger Hash-Werte für den Deep-Link.
+ *  Alles außerhalb dieser Liste fällt auf 'all' zurück. */
+const ALLOWED_HASH_CATEGORIES = new Set([
+  'all', ...Object.keys(CATEGORY_LABEL).filter((k) => k !== 'alle'),
+]);
+
+const HASH_PREFIX = '#kategorie=';
+
+const readCategoryFromHash = () => {
+  if (typeof window === 'undefined') return 'all';
+  const raw = (window.location.hash || '').toLowerCase();
+  if (!raw.startsWith(HASH_PREFIX)) return 'all';
+  const key = decodeURIComponent(raw.slice(HASH_PREFIX.length));
+  return ALLOWED_HASH_CATEGORIES.has(key) ? key : 'all';
+};
+
 const CATEGORY_ORDER_HINT = [
   'wirtschaft', 'maerkte', 'unternehmen', 'zinsen', 'fonds-etfs',
   'europa', 'welt', 'politik', 'rohstoffe', 'energie', 'technologie',
@@ -270,7 +286,27 @@ const HomeFinanceNews = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState(() => readCategoryFromHash());
+
+  // Deep-Link: Hash ↔ activeCategory. Zwei Wege:
+  //  1) Hash-Änderung von außen (Back/Forward, direktes Setzen) → State updaten
+  //  2) State-Änderung im Component → Hash aktualisieren (replaceState, kein Reload)
+  useEffect(() => {
+    const onHash = () => setActiveCategory(readCategoryFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  const applyCategory = (key) => {
+    setActiveCategory(key);
+    if (typeof window === 'undefined') return;
+    const nextHash = key === 'all' ? '' : `${HASH_PREFIX}${key}`;
+    const current = window.location.hash || '';
+    if (current === nextHash) return;
+    // pushState statt replaceState, damit Back/Forward auch zwischen Filtern navigiert.
+    const url = window.location.pathname + window.location.search + nextHash;
+    window.history.pushState(null, '', url);
+  };
 
   useEffect(() => {
     let alive = true;
@@ -419,7 +455,7 @@ const HomeFinanceNews = () => {
                   <button
                     key={cat.key}
                     type="button"
-                    onClick={() => setActiveCategory(cat.key)}
+                    onClick={() => applyCategory(cat.key)}
                     data-testid={`home-finance-news-filter-${cat.key}`}
                     data-active={active ? 'true' : 'false'}
                     className={cn(

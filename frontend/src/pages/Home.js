@@ -13,6 +13,7 @@ import HomeNewsPreview from '@/components/home/HomeNewsPreview';
 import { mapCreditOffersForCarousel } from '@/lib/creditOfferDisplay';
 import HomeInvestmentSpectrum from '@/components/home/HomeInvestmentSpectrum';
 import HomeFinanceNews from '@/components/home/HomeFinanceNews';
+import NewsletterSignup from '@/components/home/NewsletterSignup';
 import ProductInquiryWizard from '@/components/home/ProductInquiryWizard';
 import ProductInquiryStickyCta from '@/components/home/ProductInquiryStickyCta';
 import SpecialAifOverview from '@/components/home/SpecialAifOverview';
@@ -183,6 +184,9 @@ const Home = () => {
 
       {/* ── Aktuelle Finanznachrichten (Live-Sync, mindestens stündlich) ─ */}
       <HomeFinanceNews />
+
+      {/* ── Newsletter-Digest ──────────────────────────────────────────── */}
+      <NewsletterSignup />
 
       {/* ── Bonus CTA — refined accent on ink ──────────────────────────── */}
       <section

@@ -1,0 +1,43 @@
+{
+  "summary": "Session 68 frontend-only verification: HomeFinanceNews Kategorie-Deep-Links (URL-Hash) und neue Newsletter-Anmeldung. Alle 10 angeforderten Testfaelle wurden auf der Public-Preview-URL mit Playwright ausgefuehrt und sind gruen. Zusaetzlich Mobile-Layout-Check (390px) der Newsletter-Sektion.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Home (390px mobil)",
+        "issues": [
+          "Beim Scrollen zur Newsletter-Sektion wird ein bestehendes Kampagnen-Interstitial ('Aktien im Fokus') plus Chat-Bubble 'Fragen beantworten' eingeblendet, das unteren Seitenbereich verdeckt. Klick auf das Newsletter-Formular war im Test nicht betroffen (Element ausserhalb des Overlays), aber das Overlay kann auf kleinen Viewports Interaktionen ueberdecken - Nice-to-have: Interstitial nicht ueber Formularbereichen anzeigen."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "HomeFinanceNews.applyCategory nutzt window.history.pushState und setzt den State direkt; da pushState kein hashchange feuert, ist das korrekt und Back/Forward funktioniert nachweislich (hashchange bei History-Navigation). Kein Handlungsbedarf.",
+    "Ungueltiger Hash (#kategorie=blablanotreal) bleibt in der URL stehen, waehrend intern 'all' aktiv ist - funktional ok (kein Empty-State), optional koennte der Hash bereinigt werden, damit URL und Filter konsistent sind.",
+    "NewsletterSignup: Client-Validierung (EMAIL_RE + consent) verhindert unnoetige Requests; Fehlerpfade zeigen role=alert. Gut. Kein Retry/Rate-Limit-Feedback im UI, aber Backend liefert 200 idempotent."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "not tested (frontend-only request)", "frontend": "100% (10/10 items)" },
+  "seed_data_creation": "Newsletter-Abonnenten in Mongo (newsletter_subscribers): qa.session68.ui@example.com (2x -> 2. Mal already_subscribed). qa.session68.noconsent@example.com wurde NICHT gesendet (Client-Guard).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "keine benoetigt; Visitor-Gate via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent umgangen",
+  "detailed_results": {
+    "item1_hash_deeplink_initial": "PASS - /#kategorie=wirtschaft: filter-wirtschaft data-active=true, filter-all=false, 6 Grid-Cards alle Kategorie 'Wirtschaft', Featured nicht im Grid dupliziert.",
+    "item2_hash_on_click": "PASS - Klick 'Europa' -> hash '#kategorie=europa'; Klick 'Alle' -> hash '' .",
+    "item3_back_forward": "PASS - wirtschaft->europa, back() -> hash #kategorie=wirtschaft & wirtschaft aktiv (Grid Wirtschaft), forward() -> #kategorie=europa & europa aktiv.",
+    "item4_invalid_hash": "PASS - filter-all data-active=true, kein grid-empty, keine pageerrors; Hash bleibt in URL (erwartet).",
+    "item5_newsletter_success": "PASS - POST /api/newsletter/subscribe = 200, home-newsletter-success mit 'Vielen Dank.' + Digest-Text innerhalb <5s.",
+    "item6_newsletter_idempotent": "PASS - 200, Success-State mit 'Sie sind bereits eingetragen - danke fuer Ihr Interesse.'",
+    "item7_no_consent": "PASS - home-newsletter-error 'Bitte bestaetigen Sie den Datenschutzhinweis.', kein POST.",
+    "item8_invalid_email": "PASS - home-newsletter-error 'Bitte eine gueltige E-Mail-Adresse eingeben.', kein POST.",
+    "item9_regression_homefinancenews": "PASS - featured sichtbar, secondary-0..2 sichtbar, 6 Chips (all + wirtschaft, fonds-etfs, europa, welt, politik), Card-Links /nachrichten/<slug> laden mit 1 h1.",
+    "item10_route_regression": "PASS - /, /nachrichten, /nachrichten/etf-zufluesse-europa-neues-jahreshoch, /wissen, /finanzwissen/etfs-verstehen-worauf-anleger-achten-sollten, /handeln, /fonds-grundlagen: alle 200, je 1 h1, 0 pageerrors."
+  },
+  "context_for_next_testing_agent": "Session 68 Frontend vollstaendig gruen. Supabase-Constraint (Wizard-Submit fonds/tagesgeld/festgeld/flexgeld -> 400/23514) bleibt extern blockiert und wurde bewusst nicht getestet. Testdaten-Emails qa.session68.ui@example.com existieren bereits in newsletter_subscribers -> weitere Tests mit dieser Adresse liefern already_subscribed. Visitor-Gate-Bypass funktioniert wie dokumentiert.",
+  "rca_of_the_issue": "n/a - keine Defekte gefunden"
+}

@@ -26,6 +26,7 @@ from typing import Optional, List
 
 import bcrypt
 import jwt
+import hashlib
 import httpx
 from bson import ObjectId
 from fastapi import FastAPI, APIRouter, Request, Response, HTTPException, Depends
@@ -3332,6 +3333,65 @@ async def _news_post_deploy_fetch() -> None:
 async def _admin_purge_demo(_user: dict = Depends(require_admin)):
     removed = await _news_purge_demo(db)
     return {"removed": removed}
+
+
+# --- Newsletter-Digest (wöchentlich, Mongo-persistiert) --------------------
+
+class _NewsletterSubscribeIn(BaseModel):
+    email: EmailStr
+    source: Optional[str] = None
+    consent: bool = True
+
+
+@api.post("/newsletter/subscribe", summary="Newsletter-Anmeldung (wöchentlicher Digest)")
+async def _newsletter_subscribe(payload: _NewsletterSubscribeIn, request: Request):
+    if not payload.consent:
+        raise HTTPException(400, detail="Consent required.")
+    email = payload.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(400, detail="Ungültige E-Mail-Adresse.")
+    now = datetime.now(timezone.utc)
+    try:
+        client_ip = (request.client.host if request and request.client else "") or ""
+    except Exception:
+        client_ip = ""
+    existing = await db.newsletter_subscribers.find_one({"email": email})
+    if existing:
+        # Idempotent: bereits eingetragen → 200 + Status
+        await db.newsletter_subscribers.update_one(
+            {"_id": existing["_id"]},
+            {"$set": {"last_seen_at": now.isoformat()},
+             "$inc": {"resubmit_count": 1}},
+        )
+        return {"status": "already_subscribed", "email": email}
+    doc = {
+        "email": email,
+        "source": (payload.source or "unknown")[:64],
+        "consent": True,
+        "consent_at": now.isoformat(),
+        "created_at": now.isoformat(),
+        "last_seen_at": now.isoformat(),
+        "ip": client_ip[:64],
+        "user_agent": (request.headers.get("user-agent") or "")[:200] if request else "",
+        "resubmit_count": 0,
+        "unsubscribed": False,
+    }
+    try:
+        await db.newsletter_subscribers.insert_one(doc)
+    except Exception:  # noqa: BLE001
+        logger.exception("newsletter_subscribe insert failed for %s", email[:60])
+        raise HTTPException(500, detail="Anmeldung konnte gerade nicht gespeichert werden.")
+    logger.info("newsletter_subscribed email_hash=%s source=%s", hashlib.sha256(email.encode()).hexdigest()[:10], doc["source"])
+    return {"status": "subscribed", "email": email}
+
+
+@app.on_event("startup")
+async def _newsletter_indexes_startup() -> None:
+    try:
+        await db.newsletter_subscribers.create_index("email", unique=True)
+    except Exception:  # noqa: BLE001
+        logger.exception("newsletter index creation failed")
+
 
 
 @api.get("/news/nachrichten")
