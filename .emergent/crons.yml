@@ -1,20 +1,12 @@
 crons:
-  # Stündliche Nachrichten-Aktualisierung (User-Vorgabe: 0 * * * *).
-  # Beide Cron-Jobs teilen sich denselben Endpoint mit Mongo-Lock — parallele
-  # Läufe werden atomar verhindert (siehe fetch_feeds).
-  - name: news-hourly-refresh
-    schedule: "0 * * * *"
-    endpoint: "/api/news/admin/fetch-feeds?trigger=hourly_cron"
-    method: POST
-    auth: admin
-    description: "Stündliches News-Refresh — fetch RSS, insert new, update changed titles/summaries/images."
-
+  # RSS-Feed-Refresh alle 15 Min — läuft dadurch automatisch auch zur vollen Stunde.
+  # Mongo-Lock in fetch_feeds() verhindert parallele Läufe (z. B. mit Post-Deploy-Fetch).
   - name: news-fetch-feeds
     schedule: "*/15 * * * *"
     endpoint: "/api/news/admin/fetch-feeds?trigger=15min_cron"
     method: POST
     auth: admin
-    description: "Ergänzender 15-Min-Fetch für maximale Aktualität — überspringt sauber, wenn hourly gerade läuft."
+    description: "Alle 15 Min RSS-Feeds abrufen (deckt stündliches Refresh automatisch mit ab)."
 
   - name: news-synthesize
     schedule: "0 * * * *"
