@@ -42,6 +42,55 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 logger = logging.getLogger("news_synthesizer")
 
 # ---------------------------------------------------------------------------
+# Topic grouping / entity extraction — helpers for multi-source clustering
+# ---------------------------------------------------------------------------
+# Ziel: mehrere RSS-Meldungen desselben Ereignisses zu einer Gruppe
+# zusammenfassen, damit die LLM einen konsolidierten Artikel mit allen
+# Quellen erzeugt (statt N fast-identischer Duplikate).
+
+# Bekannte Institutionen / Unternehmen / Orte — als Anker für Gruppierung.
+_KNOWN_ENTITIES = {
+    "ezb", "fed", "bundesbank", "bafin", "eu-kommission", "eu kommission",
+    "bundestag", "bundesregierung", "kanzler", "kanzleramt", "merz", "scholz",
+    "putin", "trump", "biden", "macron", "meloni", "erdogan", "xi",
+    "volkswagen", "vw", "bmw", "mercedes", "porsche", "audi",
+    "siemens", "bosch", "bayer", "basf", "sap", "biontech", "pfizer",
+    "deutsche bank", "commerzbank", "sparkasse",
+    "lufthansa", "deutsche bahn", "tsmc", "nvidia", "apple", "google", "microsoft",
+    "ukraine", "russland", "china", "usa", "iran", "israel", "gaza",
+    "brüssel", "washington", "moskau", "peking", "shanghai", "istanbul",
+    "berlin", "frankfurt", "paris", "london", "rom", "wien",
+    "dax", "s&p 500", "nasdaq", "nikkei", "hang seng",
+    "brent", "wti", "gold", "silber", "kupfer",
+}
+
+
+def _extract_entities(title: str, summary: str = "") -> set[str]:
+    """Leichte Entity-Extraktion: bekannte Named Entities + Großbuchstaben-Tokens."""
+    text = f"{title} {summary}".lower()
+    ents: set[str] = set()
+    for kw in _KNOWN_ENTITIES:
+        if kw in text:
+            ents.add(kw)
+    # Zusätzlich Groß-geschriebene Wörter aus Titel (Personen/Firmen/Orte)
+    for tok in re.findall(r"\b([A-ZÄÖÜ][a-zäöüß]{3,})\b", title or ""):
+        t = tok.lower()
+        if t not in _STOPWORDS_EXTRA:
+            ents.add(t)
+    return ents
+
+
+_STOPWORDS_EXTRA = {
+    "aktien", "aktie", "börse", "boerse", "nachrichten", "meldung", "meldungen",
+    "prozent", "million", "milliarden", "milliarde", "millionen",
+    "januar", "februar", "märz", "april", "mai", "juni", "juli",
+    "august", "september", "oktober", "november", "dezember",
+    "montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag", "sonntag",
+    "heute", "gestern", "morgen", "jahr", "woche", "monat", "tag",
+    "bericht", "berichte", "analyse", "kommentar", "interview",
+}
+
+# ---------------------------------------------------------------------------
 # Sources
 # ---------------------------------------------------------------------------
 FEEDS = [
@@ -167,11 +216,13 @@ UNSPLASH_QUERY_MAP: dict[str, str] = {}
 IMAGE_KEYWORD_OVERRIDES: list = []
 
 # ---------------------------------------------------------------------------
-# Quality thresholds
+# Quality thresholds — Untergrenze niedriger, um kurze Ticker-Meldungen
+# (300–500 Wörter) nicht durchs Raster fallen zu lassen. Bei sehr dünner
+# Faktenlage sind auch 250 Wörter akzeptabel.
 # ---------------------------------------------------------------------------
-MIN_WORDS = 350
-IDEAL_MIN_WORDS = 500
-IDEAL_MAX_WORDS = 900
+MIN_WORDS = 250
+IDEAL_MIN_WORDS = 400
+IDEAL_MAX_WORDS = 1000
 
 # Duplikat-Zeitfenster: gleiche Institution + ähnliche Kernaussage innerhalb 24 h
 DUP_TIME_WINDOW = timedelta(hours=24)
@@ -837,64 +888,96 @@ async def fetch_feeds(db, *, trigger_source: str = "manual") -> dict:
 
 
 # ---------------------------------------------------------------------------
-# LLM synthesis
+# LLM synthesis — variabler Umfang je Kategorie / Faktenlage
 # ---------------------------------------------------------------------------
-_SYSTEM_PROMPT = (
-    "Du bist ein erfahrener deutscher Wirtschafts- und Finanzredakteur der Fröhlich "
-    "Vermögensberatung GmbH. Du erstellst aus offiziellen Fakten (Tagesschau, EZB, "
-    "Bundesbank, DW, EU-Kommission, BaFin) eigenständige, seriöse deutsche "
-    "Nachrichtenartikel für Kunden einer Vermögensberatung.\n\n"
-    "ABSOLUTE REGELN:\n"
-    "1. NIEMALS Fremdtexte 1:1 übernehmen. Umformulieren in eigener Redaktionssprache.\n"
-    "2. NIEMALS Zahlen, Zitate oder konkrete Aussagen erfinden. Nur verwenden, was "
-    "   explizit in den bereitgestellten Fakten steht. Wenn eine Zahl unklar ist, "
-    "   allgemein formulieren statt raten.\n"
-    "3. NIEMALS Kauf-/Verkaufsempfehlungen, keine individuelle Anlageberatung.\n"
-    "4. Ton: sachlich, neutral, präzise. Kein Clickbait. Keine Superlative ohne Beleg.\n"
-    "5. Umfang: 500–900 Wörter. Bei sehr kleiner Faktenlage darf der Artikel kürzer "
-    "   sein (min. 350 Wörter), aber niemals künstlich aufgebläht.\n\n"
-    "PFLICHT-STRUKTUR mit `## `-Zwischenüberschriften (in dieser Reihenfolge):\n"
-    "  ## Was ist passiert?\n"
-    "  ## Der Hintergrund\n"
-    "  ## Warum ist das für Wirtschaft und Märkte wichtig?\n"
-    "  ## Was bedeutet das für Anleger?\n"
-    "  ## Was jetzt wichtig wird\n"
-    "Der Abschnitt „Was jetzt wichtig wird“ enthält 2–5 klare Beobachtungspunkte "
-    "als Aufzählung (Bullet Points mit `- `). Keine Anlageempfehlungen — nur "
-    "Beobachtungspunkte, was Anleger im Auge behalten sollten.\n\n"
-    "ANTWORTFORMAT: Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt "
-    "(kein Codefence, kein zusätzlicher Text) mit den Feldern:\n"
-    "  - title      (string, seriöse, konkrete Schlagzeile ohne Clickbait)\n"
-    "  - subtitle   (string, kurzer erläuternder Untertitel)\n"
-    "  - summary    (string, 2–3 Sätze mit der wichtigsten Aussage)\n"
-    "  - content    (string, gesamter Artikel mit `## `-Zwischenüberschriften)\n"
-)
+# Kurze Meldung / Ticker  : 300–500 Wörter
+# Normale Nachricht        : 500–800 Wörter
+# Analyse / Hintergrund    : 700–1000 Wörter
+_LONG_CATEGORIES = {"wirtschaft", "zinsen", "maerkte", "politik", "europa", "welt", "unternehmen"}
+_SHORT_CATEGORIES = {"kultur", "sport", "wissen"}
 
 
-async def _synthesize_article(raw_items: List[dict]) -> Optional[dict]:
-    """Bündelt raw-Items zu einem Artikel via Claude Sonnet 5."""
+def _target_length(category: str, sources: List[str], is_primary: bool, relevance: int) -> Tuple[int, int]:
+    n_src = len(sources or [])
+    if relevance >= 60 or n_src >= 3 or (is_primary and category in _LONG_CATEGORIES):
+        return (700, 1000)
+    if n_src >= 2 or is_primary or category in _LONG_CATEGORIES:
+        return (500, 800)
+    if category in _SHORT_CATEGORIES:
+        return (300, 500)
+    return (400, 650)
+
+
+def _build_system_prompt(min_w: int, max_w: int) -> str:
+    return (
+        "Du bist ein erfahrener deutscher Wirtschafts- und Finanzredakteur der Fröhlich "
+        "Vermögensberatung GmbH. Du erstellst aus offiziellen Fakten mehrerer Quellen "
+        "(Tagesschau, EZB, Bundesbank, DW, EU-Kommission, BaFin, Handelsblatt, SPIEGEL, FAZ, "
+        "ZEIT, Reuters, dpa u. a.) eigenständige, seriöse deutsche Nachrichtenartikel für "
+        "Kunden einer Vermögensberatung.\n\n"
+        "ABSOLUTE REGELN:\n"
+        "1. NIEMALS Fremdtexte 1:1 übernehmen — vollständig in eigener Redaktionssprache formulieren.\n"
+        "2. Wenn mehrere Quellen zum gleichen Ereignis vorliegen: konsolidieren, sich ergänzende Fakten "
+        "   nutzen, ohne einzelne Formulierungen zu übernehmen.\n"
+        "3. NIEMALS Zahlen, Zitate, Personen, Orte oder konkrete Aussagen erfinden. Nur nutzen, was "
+        "   in den bereitgestellten Fakten explizit steht. Bei unklarer Datenlage allgemein bleiben.\n"
+        "4. NIEMALS Kauf-/Verkaufsempfehlungen, keine individuelle Anlageberatung.\n"
+        "5. Ton: sachlich, neutral, präzise. Kein Clickbait. Keine Superlative ohne Beleg.\n"
+        f"6. Umfang: {min_w}–{max_w} Wörter. Bei dünner Faktenlage darf der Artikel kürzer sein "
+        "   (min. 250 Wörter), aber niemals künstlich aufgebläht. Keine Wiederholungen zum Streckenlegen.\n\n"
+        "PFLICHT-STRUKTUR mit `## `-Zwischenüberschriften (in dieser Reihenfolge):\n"
+        "  ## Was ist passiert?\n"
+        "  ## Der Hintergrund\n"
+        "  ## Warum ist das für Wirtschaft und Märkte wichtig?\n"
+        "  ## Was bedeutet das für Anleger?\n"
+        "  ## Was jetzt wichtig wird\n"
+        "Der Abschnitt \u201eWas jetzt wichtig wird\u201c enthält 2\u20135 klare Beobachtungspunkte als Aufzählung "
+        "(Bullet Points mit `- `). Keine Anlageempfehlungen — nur Beobachtungspunkte.\n\n"
+        "ANTWORTFORMAT: Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt "
+        "(kein Codefence, kein zusätzlicher Text) mit den Feldern:\n"
+        "  - title      (string, seriöse, konkrete Schlagzeile ohne Clickbait)\n"
+        "  - subtitle   (string, kurzer erläuternder Untertitel)\n"
+        "  - summary    (string, 2–3 Sätze mit der wichtigsten Aussage)\n"
+        "  - content    (string, gesamter Artikel mit `## `-Zwischenüberschriften)\n"
+    )
+
+
+async def _synthesize_article(raw_items: List[dict], *, target: Tuple[int, int] = (500, 800)) -> Optional[dict]:
+    """Bündelt raw-Items zu einem Artikel via Claude Sonnet 5.
+
+    Bei mehreren raw_items (Multi-Publisher-Gruppe) werden alle Fakten in einem
+    einzigen LLM-Call zusammengeführt, so dass ein konsolidierter Artikel mit
+    einheitlicher Quellenangabe entsteht.
+    """
     api_key = os.environ.get("EMERGENT_LLM_KEY")
     if not api_key:
         logger.error("EMERGENT_LLM_KEY missing — synthesis skipped")
         return None
-    facts = "\n\n".join(
-        f"[Quelle: {', '.join(r.get('source_names', []))}]\nTitel: {r['title']}\nInhalt: {r['summary']}"
-        for r in raw_items
-    )
+    min_w, max_w = target
+    facts_blocks = []
+    for r in raw_items:
+        publisher = ", ".join(r.get("source_names", []) or ["Unbekannt"])
+        published = r.get("published_at")
+        published_str = published.isoformat() if hasattr(published, "isoformat") else str(published or "")
+        facts_blocks.append(
+            f"[Publisher: {publisher} | Zeit: {published_str}]\n"
+            f"Titel: {r['title']}\nInhalt: {r.get('summary', '')}"
+        )
+    facts = "\n\n".join(facts_blocks)
     chat = LlmChat(
         api_key=api_key,
         session_id=f"news-{raw_items[0]['fingerprint'][:8]}",
-        system_message=_SYSTEM_PROMPT,
+        system_message=_build_system_prompt(min_w, max_w),
     ).with_model("anthropic", "claude-sonnet-5")
-    user = UserMessage(text=(
-        "Erstelle einen eigenständigen deutschen Nachrichtenartikel aus folgenden "
-        "Fakten. Halte dich strikt an die vorgegebene Struktur und das JSON-Format.\n\n"
-        + facts
-    ))
+    intro = (
+        f"Erstelle EINEN eigenständigen deutschen Nachrichtenartikel ({min_w}–{max_w} Wörter) "
+        "aus den folgenden Faktenlagen. Wenn mehrere Publisher-Meldungen vorliegen, konsolidiere "
+        "sie zu einem kohärenten Artikel — behalte alle belegten Fakten, vermeide Widersprüche.\n\n"
+    )
+    user = UserMessage(text=intro + facts)
     try:
         response = await chat.send_message(user)
         raw = getattr(response, "text", None) or str(response)
-        # Robust: greifen wir das erste vollständige JSON-Objekt.
         m = re.search(r"\{.*\}", raw, re.DOTALL)
         data = json.loads(m.group(0)) if m else json.loads(raw)
     except Exception as exc:  # noqa: BLE001
@@ -989,33 +1072,128 @@ async def _find_existing_similar(db, raw: dict, category: str) -> Optional[dict]
 # Main synthesis loop
 # ---------------------------------------------------------------------------
 
-async def synthesize_pending(db, max_articles: int = 3) -> dict:
-    """Wandle bis zu `max_articles` neue Roh-Items in publizierte Artikel."""
-    stats = {"processed": 0, "published": 0, "needs_review": 0,
+# ---------------------------------------------------------------------------
+# Topic clustering — mehrere Publisher zum selben Ereignis zusammenführen
+# ---------------------------------------------------------------------------
+
+def _cluster_raw_items(raws: List[dict]) -> List[List[dict]]:
+    """Greedy Clustering: gruppiere Roh-Items desselben Ereignisses.
+
+    Zwei Items gehören zusammen, wenn:
+      - published_at innerhalb 24h liegt, UND
+      - title_similarity ≥ 0.5 und ≥ 1 Entity überlappt, ODER
+      - title_similarity ≥ 0.65 (sehr hoch, auch ohne Entity-Match)
+
+    Konservative Schwellen: lieber getrennte Artikel als falsche Merges.
+    """
+    groups: List[List[dict]] = []
+    # Sortieren nach primary_source zuerst (die Institution setzt den "Anker")
+    ordered = sorted(raws, key=lambda r: (
+        not r.get("primary_source", False),
+        -_score_relevance(r),
+    ))
+    for raw in ordered:
+        r_ents = _extract_entities(raw.get("title", ""), raw.get("summary", ""))
+        r_time = raw.get("published_at") or raw.get("fetched_at")
+        placed = False
+        for g in groups:
+            ref = g[0]
+            ref_time = ref.get("published_at") or ref.get("fetched_at")
+            if r_time and ref_time:
+                try:
+                    if abs((r_time - ref_time).total_seconds()) > 24 * 3600:
+                        continue
+                except Exception:
+                    pass
+            sim = _title_similarity(raw.get("title", ""), ref.get("title", ""))
+            ref_ents = _extract_entities(ref.get("title", ""), ref.get("summary", ""))
+            overlap = len(r_ents & ref_ents)
+            same_cat = (raw.get("category") == ref.get("category"))
+            # Konservative Merges, mehrere Signale kombinieren:
+            #  - sehr hohe Titel-Ähnlichkeit (>=0.65) → immer mergen
+            #  - hohe Ähnlichkeit + Entity-Match + gleiche Kategorie
+            #  - >=2 gemeinsame Entities + gleiche Kategorie
+            #    (belastbar, wenn Titel unterschiedlich formuliert sind)
+            #  - >=3 gemeinsame Entities kategorie-übergreifend
+            if sim >= 0.65 \
+               or (sim >= 0.5 and overlap >= 1 and same_cat) \
+               or (overlap >= 2 and same_cat) \
+               or (overlap >= 3):
+                g.append(raw)
+                placed = True
+                break
+        if not placed:
+            groups.append([raw])
+    return groups
+
+
+def _merge_group_meta(group: List[dict]) -> dict:
+    """Aggregiere Metadaten (source_names, source_urls, category, fingerprint) einer Gruppe."""
+    seen_srcs: dict[str, str] = {}
+    fingerprints: list[str] = []
+    is_primary = False
+    max_weight = 0.0
+    for r in group:
+        for n, u in zip(r.get("source_names", []), r.get("source_urls", [])):
+            if n and n not in seen_srcs:
+                seen_srcs[n] = u
+        fingerprints.append(r.get("fingerprint", ""))
+        if r.get("primary_source"):
+            is_primary = True
+        max_weight = max(max_weight, r.get("source_weight_max", r.get("source_weight", 1.0)))
+    anchor = group[0]
+    return {
+        "sources": list(seen_srcs.keys()),
+        "urls": [seen_srcs[n] for n in seen_srcs],
+        "fingerprints": fingerprints,
+        "is_primary": is_primary,
+        "max_weight": max_weight,
+        "anchor": anchor,
+    }
+
+
+async def synthesize_pending(db, max_articles: int = 25) -> dict:
+    """Wandle unbenutzte Roh-Items in publizierte Artikel um.
+
+    Neu: gruppiert erst alle unbenutzten Items nach Ereignis (title-similarity +
+    entity-overlap + Zeitfenster), führt dann pro Gruppe genau EINEN LLM-Call
+    aus und speichert einen konsolidierten Artikel mit allen Quellen.
+    """
+    stats = {"groups_total": 0, "processed": 0, "published": 0, "needs_review": 0,
              "skipped_duplicate": 0, "updated_existing": 0, "llm_failed": 0}
-    cursor = db.news_raw.find({"used_for_synthesis": False}).sort([("fetched_at", -1)]).limit(30)
-    candidates = await cursor.to_list(30)
-    # Priorisierung: Multi-Quelle + hoher Relevance-Score + Primärquellen
-    candidates.sort(key=lambda r: (
-        r.get("primary_source", False),
-        len(r.get("source_names", [])),
-        _score_relevance(r),
+    # Roh-Items der letzten 48h (mehr Kontext für Gruppierung)
+    since = datetime.now(timezone.utc) - timedelta(hours=48)
+    cursor = db.news_raw.find({
+        "used_for_synthesis": False,
+        "$or": [{"published_at": {"$gte": since}}, {"fetched_at": {"$gte": since}}],
+    }).sort([("published_at", -1), ("fetched_at", -1)]).limit(120)
+    candidates = await cursor.to_list(120)
+    groups = _cluster_raw_items(candidates)
+    stats["groups_total"] = len(groups)
+    # Höchste Priorität zuerst
+    groups.sort(key=lambda g: (
+        any(r.get("primary_source") for r in g),
+        len({n for r in g for n in r.get("source_names", [])}),
+        max((_score_relevance(r) for r in g), default=0),
     ), reverse=True)
+
     now = datetime.now(timezone.utc)
-    for raw in candidates:
+    for group in groups:
         if stats["published"] >= max_articles:
             break
         stats["processed"] += 1
-        category = _detect_category(f"{raw['title']} {raw['summary']}")
-        # 1. Duplikat-Prüfung: bestehender Artikel zum selben Ereignis?
-        existing = await _find_existing_similar(db, raw, category)
+        meta = _merge_group_meta(group)
+        anchor = meta["anchor"]
+        category = _detect_category(f"{anchor['title']} {anchor.get('summary', '')}")
+
+        # 1. Duplikat-Prüfung: existiert bereits Artikel zum Ereignis?
+        existing = await _find_existing_similar(db, anchor, category)
         if existing:
-            # Ggf. Quellenliste erweitern (neuer Feed hat dasselbe Ereignis bestätigt).
-            new_sources = [n for n in raw.get("source_names", []) if n not in existing.get("source_names", [])]
+            new_sources = [n for n in meta["sources"] if n not in existing.get("source_names", [])]
             if new_sources:
                 merged_sources = existing.get("source_names", []) + new_sources
                 merged_urls = existing.get("source_urls", []) + [
-                    u for n, u in zip(raw.get("source_names", []), raw.get("source_urls", [])) if n in new_sources
+                    meta["urls"][meta["sources"].index(n)] for n in new_sources
                 ]
                 await db.news_articles.update_one(
                     {"_id": existing["_id"]},
@@ -1031,28 +1209,30 @@ async def synthesize_pending(db, max_articles: int = 3) -> dict:
                 logger.info("duplicate_updated slug=%s added_sources=%s", existing.get("slug"), new_sources)
             else:
                 stats["skipped_duplicate"] += 1
-                logger.info("duplicate_skipped slug=%s title=%s", existing.get("slug"), raw["title"][:80])
-            await db.news_raw.update_one({"_id": raw["_id"]}, {"$set": {"used_for_synthesis": True}})
+            for r in group:
+                await db.news_raw.update_one({"_id": r["_id"]}, {"$set": {"used_for_synthesis": True}})
             continue
 
-        # 2. LLM-Synthese
-        logger.info("synthesis_start title=%s sources=%s", raw["title"][:80], raw.get("source_names"))
-        article = await _synthesize_article([raw])
+        # 2. LLM-Synthese für gesamte Gruppe
+        relevance = max((_score_relevance(r) for r in group), default=0)
+        target = _target_length(category, meta["sources"], meta["is_primary"], relevance)
+        logger.info("synthesis_start title=%s sources=%s target=%s group_size=%d",
+                    anchor["title"][:80], meta["sources"], target, len(group))
+        article = await _synthesize_article(group, target=target)
         if not article:
             stats["llm_failed"] += 1
             continue
 
         # 3. Qualitäts-Gate
-        sources = raw.get("source_names", [])
-        is_primary = bool(raw.get("primary_source"))
-        ok, reason = _quality_gate(article, sources, is_primary)
+        ok, reason = _quality_gate(article, meta["sources"], meta["is_primary"])
 
-        # Bild via Unsplash-API (offiziell) — editorial, thematisch passend.
-        img = await _fetch_unsplash_image(category, article.get("title") or raw["title"],
-                                          summary=article.get("summary") or raw.get("summary", ""), db=db)
+        # 4. Bild via Unsplash — editorial, thematisch passend
+        img = await _fetch_unsplash_image(
+            category, article.get("title") or anchor["title"],
+            summary=article.get("summary") or anchor.get("summary", ""), db=db,
+        )
 
-        slug = _slugify(article.get("title") or raw["title"])
-        relevance = _score_relevance(raw)
+        slug = _slugify(article.get("title") or anchor["title"])
         doc = {
             "slug": slug,
             "title": article.get("title"),
@@ -1061,10 +1241,11 @@ async def synthesize_pending(db, max_articles: int = 3) -> dict:
             "content": article.get("content"),
             "category": category,
             "content_type": "news_synthesis",
-            "sources":       [{"name": n, "url": u} for n, u in zip(sources, raw.get("source_urls", []))],
-            "source_names":  sources,
-            "source_urls":   raw.get("source_urls", []),
-            "raw_fingerprint": raw["fingerprint"],
+            "sources":       [{"name": n, "url": u} for n, u in zip(meta["sources"], meta["urls"])],
+            "source_names":  meta["sources"],
+            "source_urls":   meta["urls"],
+            "raw_fingerprint": anchor["fingerprint"],
+            "raw_fingerprints": meta["fingerprints"],
             "image_url":         img["image_url"],
             "hero_image_url":    img["hero_image_url"],
             "image_unsplash_id": img.get("image_unsplash_id"),
@@ -1080,11 +1261,10 @@ async def synthesize_pending(db, max_articles: int = 3) -> dict:
             "last_verified_at": now,
             "status": "published" if ok else "needs_review",
             "is_published": ok,
-            # is_top_news: markiert das Ereignis als hoch relevant. Wird zusätzlich
-            # zum sortierten Score auf der Startseite als "Top-News" hervorgehoben.
             "is_top_news":  ok and relevance >= 55,
             "is_breaking":  False,
             "relevance_score": relevance,
+            "target_length": {"min": target[0], "max": target[1]},
             "quality_note": None if ok else reason,
         }
         try:
@@ -1092,11 +1272,12 @@ async def synthesize_pending(db, max_articles: int = 3) -> dict:
         except Exception:  # noqa: BLE001
             logger.exception("save_article_failed slug=%s", slug)
             continue
-        await db.news_raw.update_one({"_id": raw["_id"]}, {"$set": {"used_for_synthesis": True}})
+        for r in group:
+            await db.news_raw.update_one({"_id": r["_id"]}, {"$set": {"used_for_synthesis": True}})
         if ok:
             stats["published"] += 1
-            logger.info("article_published slug=%s score=%d words=%d",
-                        slug, relevance, len((article.get("content") or "").split()))
+            logger.info("article_published slug=%s score=%d words=%d sources=%d",
+                        slug, relevance, len((article.get("content") or "").split()), len(meta["sources"]))
         else:
             stats["needs_review"] += 1
             logger.info("article_needs_review slug=%s reason=%s", slug, reason)

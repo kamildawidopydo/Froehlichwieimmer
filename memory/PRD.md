@@ -7,6 +7,50 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 37 (Feb 23, 2026) — Volltext-Pipeline · Multi-Source-Merge · strikter Stunden-Cron
+
+**Zielbild**: Kein Aggregator-Modus mehr — jede Meldung erscheint als eigener, redaktionell formulierter Volltext auf der Fröhlich-Website. Mehrere Publisher zum selben Ereignis werden zu einem Artikel konsolidiert. Quellen dezent am Ende.
+
+**Backend (`news_synthesizer.py`)**
+- **Entity-Extraktion** (`_extract_entities`) + **Topic-Clustering** (`_cluster_raw_items`): greedy Grouping über Titel-Similarity, Entity-Overlap (bekannte Institutionen/Personen/Orte + Groß-Tokens) und Zeitfenster (24 h). Konservative Schwellen:
+  - `sim ≥ 0.65` → immer merge
+  - `sim ≥ 0.5` + Entity-Overlap ≥ 1 + gleiche Kategorie → merge
+  - Entity-Overlap ≥ 2 + gleiche Kategorie → merge (Titel darf abweichen)
+  - Entity-Overlap ≥ 3 kategorie-übergreifend → merge
+- **`_target_length(category, sources, primary, relevance)`**: variable Wortzahl je Kategorie/Faktenlage — Ticker 300–500, Standard 500–800, Analyse/Hintergrund 700–1000.
+- **`_build_system_prompt(min_w, max_w)`**: LLM-Prompt reicht Zielrahmen durch, verbietet Streckenlege-Passagen, betont Multi-Source-Konsolidierung.
+- **`synthesize_pending(max_articles=25)`**: pullt Roh-Items der letzten 48 h, gruppiert, führt genau EINEN Claude-Sonnet-5-Call pro Gruppe aus, speichert konsolidierten Artikel mit allen `source_names`/`source_urls`.
+- Quality-Gate: Untergrenze auf 250 Wörter gesenkt (Ticker-tauglich), Struktur-Check (≥ 2 `## `-Sections) unverändert.
+
+**Backend (`news_provider.py`)**
+- `list_items` liefert **nur** noch synthetisierte Artikel — keine Aggregator-Karten mit externen Publisher-Links. Publisher-Filter matcht case-insensitive auf `source_names` (Array-Elemente).
+- `list_publishers` aggregiert alle Publisher aus `source_names` per `$unwind`, ergänzt „Fröhlich Redaktion" wenn Artikel ohne externe Quellen existieren.
+- `get_item` erkennt nur noch Slugs von `news_articles`; das Roh-Item-Fallback wurde entfernt.
+
+**Cron (`.emergent/crons.yml`)**
+- `news-fetch-feeds`: strikt stündlich `0 * * * *` (15-Min-Cron entfernt).
+- `news-synthesize`: `10 * * * *` (10 Min Versatz, damit Fetch garantiert durch ist) mit `max_articles=25`.
+- Mongo-Lock `job_locks._id="fetch_feeds"` bleibt unverändert.
+
+**Server (`server.py`)**
+- Admin-Endpoint `/api/news/admin/synthesize` akzeptiert jetzt `max_articles` bis 50 (Default 25).
+
+**Backfill (`scripts/backfill_content.py`)**
+- Einmalig ausführbar via `cd /app/backend && python -m scripts.backfill_content`.
+- Verarbeitet max. 100 Artikel ohne ausreichenden `content` (< 200 Wörter), nutzt gespeicherte `source_names`/`source_urls`, ruft `_synthesize_article` einmal pro Artikel auf, setzt `content_backfilled_at`-Marker (idempotent).
+- Bereits vollständige Artikel werden markiert und übersprungen — beim nächsten Lauf zero-cost.
+
+**Frontend**
+- Detailseite `NachrichtenDetailPage.jsx` war bereits volltext-fähig (`renderBody(item.full_text)` + Quellenblock). Da `MongoNewsProvider._to_public` `license_allows_fulltext=True` und `full_text=content` setzt, rendert die Seite ohne Anpassung den Redaktions-Volltext mit `## `-Zwischenüberschriften und Bullet-Points. Hinweis + Quellenblock am Ende.
+
+**Verifikation**
+- Unit-Tests im REPL: EZB×2 + DAX×2 werden gemerged, Lufthansa/VW/Bundeswehr bleiben getrennt.
+- API: `/api/news/nachrichten?limit=3` → alle Items `content_type=news_synthesis`, jeweils 400+ Wörter Volltext, Multi-Publisher (`['Tagesschau','Deutsche Welle']`).
+- API: `/api/news/publishers` → 4 Publisher aus `source_names` (Tagesschau, Deutsche Welle, EZB, Tagesschau Inland).
+- Publisher-Filter: `?source=Tagesschau` → 3 Treffer.
+- Detailseite (Playwright): H1 sichtbar, `[data-testid="news-detail-fulltext"]` present, `[data-testid="news-detail-sources"]` present.
+- Backfill-Script: 6 Kandidaten, alle bereits > 200 Wörter → 6 skipped_already_done, korrekt idempotent.
+
 ## Session 30 (Feb 27, 2026) — Home-Sektionen · Publisher-Filter · Env-Keys verifiziert
 
 **Home-Feed** (`components/home/HomeNewsPreview.jsx`)

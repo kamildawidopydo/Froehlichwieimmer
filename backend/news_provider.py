@@ -425,67 +425,35 @@ class MongoNewsProvider(NewsProvider):
         alias_map = {"umwelt": "klima", "aktien": "maerkte", "aktienmaerkte": "maerkte"}
         cat = alias_map.get(cat, cat)
 
-        # 1) Synthesizer-Artikel (eigene Redaktion)
+        # Nur synthetisierte Artikel ausliefern — jeder Publisher fließt über
+        # source_names in unseren konsolidierten Redaktionsartikel ein.
         syn_query: dict = {"is_published": True, "status": "published", "content_type": {"$ne": "demo"}}
-        raw_query: dict = {"is_aggregated": True, "is_published": True}
         if cat != "alle":
             if cat == "videos":
                 syn_query["content_type"] = "video"
             else:
                 syn_query["category"] = cat
-                raw_query["category"] = cat
 
-        # Publisher-Filter (case-insensitive, robuste Normalisierung)
         if source:
             src_raw = str(source).strip()
             src_norm = src_raw.lower().replace("ö", "oe").replace("ä", "ae").replace("ü", "ue")
-            # „Fröhlich Redaktion" ist unser Synthesizer-Label — nur eigene Artikel.
             if src_norm.replace(" ", "") in {"froehlichredaktion", "froehlich", "redaktion"}:
-                raw_query = {"__never__": True}
+                # Nur eigene Redaktions-Artikel ohne externe Publisher
+                syn_query["$or"] = [
+                    {"source_names": {"$exists": False}},
+                    {"source_names": {"$size": 0}},
+                ]
             else:
                 import re as _re
-                pattern = f"^{_re.escape(src_raw)}$"
-                raw_query["source_names.0"] = {"$regex": pattern, "$options": "i"}
-                # Keine Synthesizer-Artikel bei externem Publisher-Filter
-                syn_query = {"__never__": True}
+                syn_query["source_names"] = {"$regex": f"^{_re.escape(src_raw)}$", "$options": "i"}
 
-        # Anzahl gross genug ziehen (Skip + Limit), damit Dedup nichts überspringt
-        pool_size = max(limit + skip + 20, 60)
-        syn_cursor = (self._db.news_articles.find(syn_query)
-                       .sort([("is_top_news", -1), ("relevance_score", -1), ("published_at", -1)])
-                       .limit(pool_size))
-        syn_docs = await syn_cursor.to_list(pool_size)
-        syn_items = [self._to_public(d) for d in syn_docs]
-
-        # 2) Aggregierte RSS-Roh-Items (externer Publisher, kein LLM-Rewrite)
-        raw_cursor = (self._db.news_raw.find(raw_query)
-                       .sort([("published_at", -1), ("fetched_at", -1)])
-                       .limit(pool_size))
-        raw_docs = await raw_cursor.to_list(pool_size)
-        raw_items = [self._to_raw_public(d) for d in raw_docs]
-
-        # 3) Zusammenführen + Dedup (normalisierter Titel + externe URL)
-        seen_titles: set[str] = set()
-        seen_urls: set[str] = set()
-
-        def _title_key(t: str) -> str:
-            import re as _re
-            return _re.sub(r"\W+", " ", (t or "").lower()).strip()[:80]
-
-        merged: list[dict] = []
-        for it in syn_items + raw_items:
-            key = _title_key(it.get("title", ""))
-            url = it.get("source_url") or ""
-            if not key:
-                continue
-            if key in seen_titles or (url and url in seen_urls):
-                continue
-            seen_titles.add(key)
-            if url:
-                seen_urls.add(url)
-            merged.append(it)
-        merged.sort(key=lambda x: (x.get("is_top_news", False), x.get("published_at") or ""), reverse=True)
-        return merged[skip: skip + limit]
+        pool_size = max(limit + skip + 10, 60)
+        cursor = (self._db.news_articles.find(syn_query)
+                  .sort([("is_top_news", -1), ("relevance_score", -1), ("published_at", -1)])
+                  .limit(pool_size))
+        docs = await cursor.to_list(pool_size)
+        items = [self._to_public(d) for d in docs]
+        return items[skip: skip + limit]
 
     async def count_items(self, category: Optional[str] = None, source: Optional[str] = None) -> int:
         if self._db is None:
@@ -493,53 +461,57 @@ class MongoNewsProvider(NewsProvider):
         cat = (category or "alle").lower()
         alias_map = {"umwelt": "klima", "aktien": "maerkte", "aktienmaerkte": "maerkte"}
         cat = alias_map.get(cat, cat)
-        syn_q: dict = {"is_published": True, "status": "published", "content_type": {"$ne": "demo"}}
-        raw_q: dict = {"is_aggregated": True, "is_published": True}
+        q: dict = {"is_published": True, "status": "published", "content_type": {"$ne": "demo"}}
         if cat != "alle":
-            syn_q["category"] = cat
-            raw_q["category"] = cat
+            q["category"] = cat
         if source:
             src_raw = str(source).strip()
             src_norm = src_raw.lower().replace("ö", "oe").replace("ä", "ae").replace("ü", "ue")
             if src_norm.replace(" ", "") in {"froehlichredaktion", "froehlich", "redaktion"}:
-                raw_q = {"__never__": True}
+                q["$or"] = [
+                    {"source_names": {"$exists": False}},
+                    {"source_names": {"$size": 0}},
+                ]
             else:
                 import re as _re
-                raw_q["source_names.0"] = {"$regex": f"^{_re.escape(src_raw)}$", "$options": "i"}
-                syn_q = {"__never__": True}
-        syn_n = await self._db.news_articles.count_documents(syn_q)
-        raw_n = await self._db.news_raw.count_documents(raw_q)
-        return syn_n + raw_n
+                q["source_names"] = {"$regex": f"^{_re.escape(src_raw)}$", "$options": "i"}
+        return await self._db.news_articles.count_documents(q)
 
     async def list_publishers(self) -> List[str]:
-        """Distinct Publisher-Namen für das Frontend-Dropdown."""
+        """Distinct Publisher-Namen aus allen synthetisierten Artikeln.
+
+        Sammelt alle in `source_names` referenzierten Publisher (jeder Artikel
+        kann mehrere haben, wenn Meldungen aus mehreren Quellen zusammengeführt
+        wurden). „Fröhlich Redaktion" wird nur ausgegeben, wenn es Artikel ohne
+        externe Quellen gibt.
+        """
         if self._db is None:
             return []
         names: set[str] = set()
-        # Aggregator-Publisher aus news_raw
         pipeline = [
-            {"$match": {"is_aggregated": True, "is_published": True}},
-            {"$group": {"_id": {"$arrayElemAt": ["$source_names", 0]}}},
+            {"$match": {"is_published": True, "status": "published"}},
+            {"$unwind": "$source_names"},
+            {"$group": {"_id": "$source_names"}},
         ]
-        async for doc in self._db.news_raw.aggregate(pipeline):
+        async for doc in self._db.news_articles.aggregate(pipeline):
             if doc.get("_id"):
                 names.add(doc["_id"])
-        # Fröhlich-Redaktion nur, wenn tatsächlich synthetisierte Artikel vorhanden
-        if await self._db.news_articles.count_documents({"is_published": True, "status": "published"}) > 0:
+        # Reine Redaktions-Artikel (ohne source_names)?
+        has_editorial = await self._db.news_articles.count_documents({
+            "is_published": True, "status": "published",
+            "$or": [{"source_names": {"$exists": False}}, {"source_names": {"$size": 0}}],
+        })
+        if has_editorial:
             names.add("Fröhlich Redaktion")
         return sorted(names)
 
     async def get_item(self, slug: str) -> Optional[dict]:
         if self._db is None:
             return None
-        # 1) Synthetisierte Artikel (eigene Detailseite)
+        # Nur synthetisierte Artikel — alle News laufen jetzt durch das LLM.
         doc = await self._db.news_articles.find_one({"slug": slug, "is_published": True})
         if doc:
             return self._to_public(doc)
-        # 2) Aggregator-Artikel (RSS Roh-Item mit gleichem Slug)
-        raw = await self._db.news_raw.find_one({"slug": slug, "is_aggregated": True})
-        if raw:
-            return self._to_raw_public(raw)
         return None
 
 

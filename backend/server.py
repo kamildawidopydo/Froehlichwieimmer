@@ -3240,8 +3240,8 @@ async def _admin_fetch_feeds(trigger: Optional[str] = None, _user: dict = Depend
 
 
 @api.post("/news/admin/synthesize", summary="Admin: neue Artikel synthetisieren")
-async def _admin_synthesize(_user: dict = Depends(require_admin), max_articles: int = 3):
-    return await _news_synthesize(db, max_articles=max(1, min(10, max_articles)))
+async def _admin_synthesize(_user: dict = Depends(require_admin), max_articles: int = 25):
+    return await _news_synthesize(db, max_articles=max(1, min(50, max_articles)))
 
 
 @api.get("/news/admin/list", summary="Admin: alle Artikel inkl. needs_review")

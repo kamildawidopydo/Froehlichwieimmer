@@ -1,19 +1,21 @@
 crons:
-  # RSS-Feed-Refresh alle 15 Min — läuft dadurch automatisch auch zur vollen Stunde.
-  # Mongo-Lock in fetch_feeds() verhindert parallele Läufe (z. B. mit Post-Deploy-Fetch).
+  # RSS-Feed-Refresh strikt stündlich (0 * * * *). Mongo-Lock in fetch_feeds()
+  # verhindert parallele Läufe (z. B. mit Post-Deploy-Fetch).
   - name: news-fetch-feeds
-    schedule: "*/15 * * * *"
-    endpoint: "/api/news/admin/fetch-feeds?trigger=15min_cron"
-    method: POST
-    auth: admin
-    description: "Alle 15 Min RSS-Feeds abrufen (deckt stündliches Refresh automatisch mit ab)."
-
-  - name: news-synthesize
     schedule: "0 * * * *"
-    endpoint: "/api/news/admin/synthesize"
+    endpoint: "/api/news/admin/fetch-feeds?trigger=hourly_cron"
     method: POST
     auth: admin
-    description: "Stündlich bis zu 3 neue Fröhlich-Redaktionsartikel via Claude Sonnet 5 synthetisieren."
+    description: "Stündlich alle RSS-Feeds abrufen und in news_raw speichern."
+
+  # Synthese läuft 10 Min nach dem Fetch, damit alle Feeds sicher persistiert
+  # sind. Gruppiert neue Roh-Items thematisch und erzeugt konsolidierte Artikel.
+  - name: news-synthesize
+    schedule: "10 * * * *"
+    endpoint: "/api/news/admin/synthesize?max_articles=25"
+    method: POST
+    auth: admin
+    description: "Stündlich bis zu 25 konsolidierte Fröhlich-Artikel via Claude Sonnet 5 synthetisieren (mit Multi-Source-Merging)."
 
   - name: price-alerts-check
     schedule: "*/15 * * * *"
