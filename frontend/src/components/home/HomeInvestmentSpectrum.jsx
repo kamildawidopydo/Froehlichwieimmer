@@ -1,4 +1,4 @@
-/** @typedef {'aktien' | 'anleihen' | 'spargeld'} ProductInquiryKey */
+/** @typedef {'aktien' | 'anleihen' | 'fonds' | 'tagesgeld' | 'festgeld' | 'flexgeld'} ProductInquiryKey */
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -14,7 +14,7 @@ const PAPER_NOISE_DATA_URL =
 /** Produkt-Screenshot: persönlicher Bereich / Dashboard (public) */
 const EDITORIAL_KONDITIONEN_IMAGE_SRC = `${process.env.PUBLIC_URL ?? ''}/assets/marketing/home-konditionen-dashboard.png`;
 
-const PRODUCT_ORDER = /** @type {const} */ (['aktien', 'anleihen', 'spargeld']);
+const PRODUCT_ORDER = /** @type {const} */ (['aktien', 'anleihen', 'fonds', 'tagesgeld', 'festgeld', 'flexgeld']);
 
 const PROCESS_ICON = siteImages.home.processIcons;
 
@@ -23,7 +23,7 @@ const PROCESS_STEPS = [
   {
     key: '1',
     title: 'Produkt wählen',
-    detail: 'Aktien, Anleihen oder Spargeld',
+    detail: 'Aktien, Anleihen, Fonds, Tages-, Fest- oder Flexgeld',
     iconSrc: PROCESS_ICON.chooseProduct,
     iconAlt: 'Produkt wählen — gestapelte Produktkarten',
   },

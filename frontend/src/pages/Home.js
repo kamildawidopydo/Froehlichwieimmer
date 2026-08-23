@@ -34,7 +34,7 @@ const Home = () => {
   const [savingsOffers, setSavingsOffers] = useState([]);
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [inquiryProduct, setInquiryProduct] = useState(
-    /** @type {'aktien' | 'anleihen' | 'spargeld' | null} */ (null),
+    /** @type {'aktien' | 'anleihen' | 'fonds' | 'tagesgeld' | 'festgeld' | 'flexgeld' | null} */ (null),
   );
   const prefersReduced = useReducedMotion();
   const location = useLocation();
@@ -238,7 +238,7 @@ const Home = () => {
             size="xl"
             className="shrink-0 focus-visible:ring-offset-bank-ink"
             data-testid="bonus-cta-compare-btn"
-            onClick={() => openProductInquiry('spargeld')}
+            onClick={() => openProductInquiry('tagesgeld')}
           >
             {ctaCopy.bonus.button}
             <ArrowRight className="ml-1 h-4 w-4" strokeWidth={LUCIDE_STROKE} />

@@ -8,7 +8,7 @@ import { productInquiryCards } from '@/data/productInquiryQuestions';
 
 const STORAGE_KEY = 'productInquiryStickyDismissed';
 
-const PRODUCTS = /** @type {const} */ (['aktien', 'anleihen', 'spargeld']);
+const PRODUCTS = /** @type {const} */ (['aktien', 'anleihen', 'fonds', 'tagesgeld', 'festgeld', 'flexgeld']);
 
 const BOTTOM =
   'bottom-[max(4.5rem,calc(env(safe-area-inset-bottom,0px)+4rem+var(--live-ticker-h,0px)))] sm:bottom-[max(0.875rem,calc(env(safe-area-inset-bottom,0px)+0.5rem+var(--live-ticker-h,0px)))]';
@@ -101,7 +101,7 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
 
 /**
  * Sticky CTA — öffnet denselben Produkt-Kurzfragebogen wie die Karten-Buttons.
- * @param {{ onOpenWizard: (key: 'aktien' | 'anleihen' | 'spargeld') => void }} props
+ * @param {{ onOpenWizard: (key: 'aktien' | 'anleihen' | 'fonds' | 'tagesgeld' | 'festgeld' | 'flexgeld') => void }} props
  */
 const ProductInquiryStickyCta = ({ onOpenWizard }) => {
   const prefersReduced = useReducedMotion();

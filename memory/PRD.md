@@ -1,5 +1,43 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 60 (Feb 24, 2026) — Product Inquiry: 6 eigenständige Flows
+
+**Ziel**
+Multi-Produkt-Anfrage-Funnel von 3 auf 6 eigenständige Produkte ausbauen: `aktien`, `anleihen`, `fonds` (neu), `tagesgeld`, `festgeld`, `flexgeld` (aus `spargeld`-Branching aufgesplittet). Bestehende Wizard-, Progress-, Card-, Sticky-CTA- und Form-Komponenten wiederverwendet — kein neues Design-System.
+
+**Neue Produkt-Keys:** `fonds`, `tagesgeld`, `festgeld`, `flexgeld`. Alter Key `spargeld` vollständig entfernt.
+
+**Geänderte Dateien (7)**
+- `frontend/src/data/productInquiryQuestions.js` — **komplett neu geschrieben** (Overwrite): 6 Configs mit je 5–6 Fragen, kuratierten Antworten, Cards, Labels, Success-Copy. Aktien/Anleihen inhaltlich unverändert. Gemeinsame `VOLUME`-Frage extrahiert (DRY).
+- `frontend/src/lib/submitProductInquiryLead.js` — `VALID_PRODUCTS` auf 6 Keys erweitert, Fallback von `spargeld` auf `tagesgeld`.
+- `frontend/src/components/home/HomeInvestmentSpectrum.jsx` — `PRODUCT_ORDER` und Typedef auf 6 Keys.
+- `frontend/src/components/home/ProductInquiryStickyCta.jsx` — `PRODUCTS` Array + Typedef auf 6 Keys.
+- `frontend/src/components/home/ProductInquiryWizard.jsx` — `isSpargeld` als konstant `false` gesetzt (Branching entfernt, dead code für product_mix/fest_duration bleibt harmlos), Typedef aktualisiert.
+- `frontend/src/components/home/HomeSavingsInquirySection.jsx` — Bonus-Section-Referenz von `spargeld` auf `tagesgeld` gemappt (semantisch korrekt).
+- `frontend/src/pages/Home.js` — Bonus-CTA `openProductInquiry('tagesgeld')`, Typedef aktualisiert.
+- `frontend/src/pages/AdminProductInquiryLeads.js` — Dropdown-Filter: 4 neue Optionen statt `spargeld`.
+
+**Nicht gemacht (explizit außer Scope per User)**
+- Kein Backend-Endpoint `/api/product-inquiry`
+- Keine MongoDB-Persistenz
+- Kein UI-Redesign (bestehende Cards/Wizard beibehalten)
+- Keine neue State-Library — bestehende useState-Patterns beibehalten
+
+**Verifiziert (iteration_33: 70 % Pass, 8/12)**
+- ✅ Sticky-CTA-Menü zeigt genau 6 Optionen, HomeInvestmentSpectrum rendert 6 Cards, Wizard öffnet mit korrektem kicker/title je Produkt, kein depositType/product_mix-Frageschritt mehr, Zurück-Nav behält Antworten, State ist frisch zwischen Produkten (tagesgeld 3/7 → festgeld frisch), bonus-cta-compare-btn öffnet nun Tagesgeld-Wizard
+- ✅ Aktien/Anleihen submits: HTTP 201, Success-Screens „Ihre Aktien-/Anleihen-Anfrage ist bei uns" gerendert (Regression bestanden)
+- ✅ Route-Regression aller anderen Seiten grün: /handeln, /wissen, /themen, /fonds-grundlagen (H1=1, FAQ 6 Items), Mobile 390×840 ohne Overflow, Sticky-Pill weiterhin 72 px vom Boden (Session 59 Baseline erhalten)
+- ❌ **KRITISCH — Supabase DB-Constraint blockiert Submits für Fonds/Tagesgeld/Festgeld/Flexgeld:** CHECK-Constraint `product_inquiry_leads_product_check` erlaubt nur `('aktien','anleihen','spargeld')`. Neue Produktinserts liefern HTTP 400 (Code 23514). Success-Screens werden für 4 der 6 neuen Flows nie erreicht. **Erforderliche Migration (User Action):** `ALTER TABLE public.product_inquiry_leads DROP CONSTRAINT product_inquiry_leads_product_check; ALTER TABLE public.product_inquiry_leads ADD CONSTRAINT product_inquiry_leads_product_check CHECK (product IN ('aktien','anleihen','fonds','tagesgeld','festgeld','flexgeld','spargeld'));`
+
+**Follow-up-Fix in dieser Session**
+- `HomeInvestmentSpectrum.jsx` Zeile 26 — „Aktien, Anleihen oder Spargeld" → „Aktien, Anleihen, Fonds, Tages-, Fest- oder Flexgeld"
+- JSDoc-Typen in `ProductInquiryStickyCta.jsx`, `Home.js` und `ProductInquiryWizard.jsx` auf 6 Keys aktualisiert
+
+**Testing-Agent-Hinweise für spätere Sessions**
+- Wizard hat keine `data-testid` auf Dialog, Prompt, Optionen, Weiter/Zurück/Absenden, Progress — Testing-Agent musste Tailwind-Selektoren nutzen
+- Dead code in `ProductInquiryWizard.jsx`: `isSpargeld=false`, Spargeld-Promo-Imports (Sidebar/HeaderPromo/PremiumBanner/SPARGELD_VOLUME_ICONS) sind unreachable
+- Pre-existing Console-Noise: `<path> d=undefined` (pre-existing)
+
 ## Session 59 (Feb 24, 2026) — Mobile Widget Offset Fix
 
 **Ziel**

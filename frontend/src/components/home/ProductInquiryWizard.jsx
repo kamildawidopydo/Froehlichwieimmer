@@ -64,7 +64,7 @@ const initialContact = {
 const QUESTION_ICONS = [Euro, Clock3, BarChart3, Shield, Target];
 
 /**
- * @param {{ open: boolean; onOpenChange: (open: boolean) => void; product: 'aktien' | 'anleihen' | 'spargeld' | null }} props
+ * @param {{ open: boolean; onOpenChange: (open: boolean) => void; product: 'aktien' | 'anleihen' | 'fonds' | 'tagesgeld' | 'festgeld' | 'flexgeld' | null }} props
  */
 const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
   const reduceMotion = useReducedMotion();
@@ -201,7 +201,8 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
   const successCopy = product ? productInquirySuccessCopy[product] : null;
   const isAktien = product === 'aktien';
   const isAnleihen = product === 'anleihen';
-  const isSpargeld = product === 'spargeld';
+  // spargeld branching removed in Session 60 — tagesgeld/festgeld/flexgeld are independent products now.
+  const isSpargeld = false;
   const compactQuestionStep = !isContactStep && !done;
 
   const linkClass =

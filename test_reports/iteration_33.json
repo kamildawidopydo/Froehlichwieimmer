@@ -1,0 +1,44 @@
+{
+  "summary": "Session 60 acceptance (frontend only, no backend tests). On-disk gate: grep returned 0 for productInquiryQuestions.js, submitProductInquiryLead.js, HomeInvestmentSpectrum.jsx, HomeSavingsInquirySection.jsx but 1 for ProductInquiryStickyCta.jsx (line 104 JSDoc) and Home.js (line 37 JSDoc type comment) — both are comments only, no runtime spargeld. All 6 product configs verified on disk (6 questions each; fonds order = goal, horizon, volume, investment_mode, risk_tolerance, experience; tagesgeld/festgeld/flexgeld start with volume; festgeld 2nd = duration 3-12m/1-3y/3-5y/>5y). Live UI: sticky CTA menu shows exactly 6 options (aktien/anleihen/fonds/tagesgeld/festgeld/flexgeld, 6 nodes total), HomeInvestmentSpectrum renders all 6 cards, wizard opens with correct kicker/title per product, no depositType/product_mix question anywhere, back button preserves prior selection, state is fresh between products (tagesgeld left at 3/7 -> festgeld and flexgeld open at 1/7 with no selection), bonus-cta-compare-btn now opens the Tagesgeld wizard. BLOCKER: submitting fonds/tagesgeld/festgeld/flexgeld fails — Supabase returns 400 code 23514 'product_inquiry_leads_product_check' (constraint still only allows aktien/anleihen/spargeld), so 4 of 6 flows never reach the success screen. aktien (201) and anleihen submits succeed and show their success screens. Route regression (/handeln, /wissen, /themen, /themen/aktien|anleihen|dividenden, /fonds-grundlagen h1=1, faq 6, related 3 links) and mobile 390x844 baseline (pill 72px from bottom, height 42px, no overflow, no overlap with home-faq-ask-question, 6 menu options) all PASS.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "supabase POST /rest/v1/product_inquiry_leads", "issue": "DB check constraint product_inquiry_leads_product_check still only allows ('aktien','anleihen','spargeld'). Inserts for fonds/tagesgeld/festgeld/flexgeld return 400 {code:23514}; wizard shows error toast and never reaches success screen. Needs a new Supabase migration: ALTER TABLE public.product_inquiry_leads DROP CONSTRAINT product_inquiry_leads_product_check; ADD CONSTRAINT ... CHECK (product IN ('aktien','anleihen','fonds','tagesgeld','festgeld','flexgeld','spargeld')) plus backfill/mapping decision for legacy 'spargeld' rows.", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "/api/submit-product-inquiry-lead", "issue": "Returns 404 on every submit (endpoint not implemented in FastAPI); the client silently falls back to the direct Supabase insert. Pre-existing, but pollutes console and hides real errors."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "HomeInvestmentSpectrum (how-it-works step 'Produkt wählen')", "issue": "Stale copy still says 'Aktien, Anleihen oder Spargeld' (HomeInvestmentSpectrum.jsx line 26) although spargeld no longer exists and there are now 6 products", "selector": "[data-testid=\"home-investment-spectrum\"]", "priority": "MEDIUM"},
+      {"component": "ProductInquiryWizard next button", "issue": "Spec expected 'Weiter' to be disabled until an answer is chosen; it is always enabled (disabled={submitting} only) and instead shows a toast 'Bitte eine Antwort auswählen.' Step does not advance, so it is functionally guarded but not disabled.", "selector": "role=button[name=Weiter]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Product inquiry submit (fonds / tagesgeld / festgeld / flexgeld)", "issue": "Submit fails with Supabase 400 23514 (product check constraint). Success screens 'Ihre Fonds-/ETF-Anfrage ist bei uns', 'Ihre Tagesgeld-Anfrage ist bei uns', 'Ihre Festgeld-Anfrage ist bei uns', 'Ihre Flexgeld-Anfrage ist bei uns' were therefore never rendered.", "affected_selectors": ["role=button[name=Anfrage absenden]"]}
+    ],
+    "design_issues": [
+      {"screen": "Wizard progress", "issues": ["Progress reads 1/7 .. 6/7 for the 6 questions (contact counts as step 7), not 1/6..6/6 as stated in the test request — informational, matches totalSteps = questions + 1"]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/ui_it33", "/app/test_reports/ui_it33b", "/app/test_reports/ui_it33c", "/app/test_reports/ui_it33d", "/app/test_reports/ui_it33e", "/app/test_reports/ui_it33f", "/app/test_reports/ui_it33g", "/app/test_reports/ui_it33h"],
+  "action_items": [
+    "CRITICAL: add Supabase migration widening product_inquiry_leads_product_check to the 6 new product keys (and decide on legacy 'spargeld' rows) — without it 4 of 6 new flows cannot submit.",
+    "Update HomeInvestmentSpectrum.jsx line 26 detail copy 'Aktien, Anleihen oder Spargeld' to reflect the 6 products.",
+    "Optional: remove leftover 'spargeld' JSDoc types in ProductInquiryStickyCta.jsx (line 104) and Home.js (line 37) so the grep gate returns 0.",
+    "Optional: implement or remove the /api/submit-product-inquiry-lead endpoint (currently always 404 before the direct-insert fallback).",
+    "Optional cleanup: ProductInquiryWizard.jsx keeps dead spargeld branches (isSpargeld = false, SpargeldBenefitsSidebar/HeaderPromo/PremiumBanner/SPARGELD_VOLUME_ICONS imports) — unreachable code, 862 lines file.",
+    "Pre-existing console error on every page: <path> attribute d: 'undefined' (icon rendered without path data)."
+  ],
+  "critical_code_review_comments": [
+    "Frontend VALID_PRODUCTS and the DB CHECK constraint are duplicated sources of truth and are now out of sync — the wizard accepts products the database rejects; add the migration in the same change set.",
+    "ProductInquiryWizard.jsx (862 lines) still imports and branches on Spargeld promo components with a hardcoded isSpargeld=false; dead code should be deleted, file split.",
+    "Wizard has no data-testid on dialog, question prompt, options, Weiter/Zurück/Absenden buttons or progress — all assertions had to rely on Tailwind class selectors (button.group/opt, p.min-w-0.flex-1). Please add data-testids (e.g. product-inquiry-wizard, -question-prompt, -option-N, -next, -back, -submit, -progress)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested", "frontend": "70% (8/12 request items fully PASS; 4 submit flows blocked by DB constraint)"},
+  "seed_data_creation": "2 real leads inserted via successful aktien and anleihen submits (TESTVorname TESTNachname, qa.aktien@example.test / qa.anleihen@example.test). Visitor gate bypassed via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Wizard has no data-testids; scope the dialog with '[role=\"dialog\"]:has-text(\"KURZFRAGEBOGEN\")' (a separate 'Aktien im Fokus' promo dialog also matches [role=dialog] and can intercept clicks / block the sticky CTA — press Escape until it is gone). Options = 'button.group\\/opt', prompt = 'p.min-w-0.flex-1', progress = 'p.font-mono' (last), contact ids #pi-first/#pi-last/#pi-phone/#pi-email, consents = first two button[role=checkbox]. Progress is x/7 (6 questions + contact). Retest after the Supabase constraint migration: fonds/tagesgeld/festgeld/flexgeld submits must return 201 and show their success titles. Mobile baseline (Session 59) still holds: pill 72px from bottom, no overlap with home-faq-ask-question.",
+  "rca_of_the_issue": "Submit failure RCA: frontend posts to /api/submit-product-inquiry-lead (404, not implemented) and falls back to a direct Supabase insert. The table created by /app/legacy_source/supabase/migrations/20260512150000_product_inquiry_leads.sql defines constraint product_inquiry_leads_product_check CHECK (product IN ('aktien','anleihen','spargeld')). Session 60 introduced fonds/tagesgeld/festgeld/flexgeld in the frontend only, so PostgREST rejects those rows with HTTP 400 / SQLSTATE 23514 and mapProductInquiryInsertError shows a generic error toast. Reproduce: open home -> sticky CTA -> product-inquiry-option-fonds -> answer 6 questions -> fill contact + 2 consents -> Absenden -> network shows 400 23514. Mitigation: widen the CHECK constraint via migration."
+}

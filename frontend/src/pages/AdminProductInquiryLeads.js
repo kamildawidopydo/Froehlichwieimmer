@@ -246,7 +246,10 @@ const AdminProductInquiryLeads = () => {
                 <option value="all">Alle Produkte</option>
                 <option value="aktien">Aktien</option>
                 <option value="anleihen">Anleihen</option>
-                <option value="spargeld">Tagesgeld / Festgeld / Flexgeld</option>
+                <option value="tagesgeld">Tagesgeld</option>
+                <option value="festgeld">Festgeld</option>
+                <option value="flexgeld">Flexgeld</option>
+                <option value="fonds">Fonds / ETFs</option>
               </select>
             </div>
           </AdminToolbarCard>

@@ -160,7 +160,7 @@ export default function HomeSavingsInquirySection() {
     setSubmitting(true);
     try {
       const payload = {
-        product: 'spargeld',
+        product: 'tagesgeld',
         answers: {
           source: 'home_savings_inquiry',
           investment_type: productType,
@@ -186,10 +186,10 @@ export default function HomeSavingsInquirySection() {
       try {
         await logEvent(
           EVENTS.PRODUCT_INQUIRY_SUBMIT,
-          { product: 'spargeld', source: 'home_savings_inquiry' },
+          { product: 'tagesgeld', source: 'home_savings_inquiry' },
           { userId: user?.id ?? null },
         );
-        logVisitorConversion('product_inquiry', { product: 'spargeld', source: 'home_savings_inquiry' });
+        logVisitorConversion('product_inquiry', { product: 'tagesgeld', source: 'home_savings_inquiry' });
       } catch (logErr) {
         console.warn(logErr);
       }

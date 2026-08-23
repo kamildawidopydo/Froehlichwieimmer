@@ -1,11 +1,11 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-const VALID_PRODUCTS = new Set(['aktien', 'anleihen', 'spargeld']);
+const VALID_PRODUCTS = new Set(['aktien', 'anleihen', 'fonds', 'tagesgeld', 'festgeld', 'flexgeld']);
 
 export function sanitizeLeadPayload(payload) {
-  const product = String(payload?.product || 'spargeld').trim();
+  const product = String(payload?.product || 'tagesgeld').trim();
   return {
-    product: VALID_PRODUCTS.has(product) ? product : 'spargeld',
+    product: VALID_PRODUCTS.has(product) ? product : 'tagesgeld',
     answers:
       payload?.answers && typeof payload.answers === 'object' && !Array.isArray(payload.answers)
         ? payload.answers
