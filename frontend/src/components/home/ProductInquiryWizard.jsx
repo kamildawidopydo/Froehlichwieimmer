@@ -43,12 +43,6 @@ import {
   AnleihenHeaderPromo,
   AnleihenPremiumBanner,
 } from '@/components/home/AnleihenInquiryPromo';
-import {
-  SPARGELD_VOLUME_ICONS,
-  SpargeldBenefitsSidebar,
-  SpargeldHeaderPromo,
-  SpargeldPremiumBanner,
-} from '@/components/home/SpargeldInquiryPromo';
 import { sanitizeFormField } from '@/lib/formInputSanitize';
 import { validatePersonName } from '@/lib/personName';
 import { sanitizePhoneInput } from '@/lib/phoneNumber';
@@ -82,6 +76,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
   const [consentTerms, setConsentTerms] = useState(false);
   const [consentMarketing, setConsentMarketing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [done, setDone] = useState(false);
 
   const reset = useCallback(() => {
@@ -92,6 +87,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
     setConsentTerms(false);
     setConsentMarketing(false);
     setSubmitting(false);
+    setSubmitError('');
     setDone(false);
   }, []);
 
@@ -160,6 +156,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
   const handleSubmit = async () => {
     if (!validateContact() || !product) return;
     setSubmitting(true);
+    setSubmitError('');
     try {
       const firstNameCheck = validatePersonName(contact.firstName, { label: 'Vorname' });
       const lastNameCheck = validatePersonName(contact.lastName, { label: 'Nachname' });
@@ -178,7 +175,11 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
       const result = await submitProductInquiryLead(payload);
       if (result.error) {
         console.error('[product-inquiry-wizard]', result.error);
-        toast.error(mapProductInquiryInsertError(result.error));
+        const message = mapProductInquiryInsertError(result.error);
+        setSubmitError(
+          'Die Anfrage konnte gerade nicht gesendet werden. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.',
+        );
+        toast.error(message);
         return;
       }
       try {
@@ -191,6 +192,9 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
       toast.success('Vielen Dank — wir prüfen Ihre Anfrage persönlich und melden uns bei Ihnen.');
     } catch (e) {
       console.error(e);
+      setSubmitError(
+        'Die Anfrage konnte gerade nicht gesendet werden. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.',
+      );
       toast.error(mapProductInquiryInsertError(e));
     } finally {
       setSubmitting(false);
@@ -201,10 +205,6 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
   const successCopy = product ? productInquirySuccessCopy[product] : null;
   const isAktien = product === 'aktien';
   const isAnleihen = product === 'anleihen';
-  // spargeld branching entfernt in Session 60/61 — tagesgeld/festgeld/flexgeld sind eigenständig.
-  // Konstante bleibt vorübergehend für dead-branch-Sicherheit; die Zweige selbst laufen nie.
-  // eslint-disable-next-line no-unused-vars
-  const isSpargeld = false;
   const compactQuestionStep = !isContactStep && !done;
 
   const linkClass =
@@ -278,22 +278,13 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
     >
       <AnleihenBenefitsSidebar compact={compactQuestionStep} />
     </aside>
-  ) : isSpargeld ? (
-    <aside
-      className={cn(
-        'flex min-h-0 w-full shrink-0 flex-col overflow-y-auto overscroll-y-contain border-t border-bank-border bg-bank-surface [scrollbar-width:thin] lg:border-l lg:border-t-0',
-        compactQuestionStep
-          ? 'hidden p-2.5 sm:p-3 lg:flex lg:w-[min(260px,30%)] lg:max-w-[272px] lg:pl-2.5'
-          : 'p-3 sm:p-3.5 lg:w-[min(280px,32%)] lg:max-w-[300px] lg:pl-3.5',
-      )}
-    >
-      <SpargeldBenefitsSidebar compact={compactQuestionStep} />
-    </aside>
   ) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        data-testid="product-inquiry-wizard"
+        data-product={product || ''}
         className={cn(
           'flex max-h-[min(98dvh,940px)] min-h-0 w-[min(calc(100%-0.75rem),960px)] max-w-[min(96%,960px)] flex-col overflow-hidden rounded-[1.25rem] border border-bank-border bg-white p-0 shadow-[0_24px_64px_-32px_rgb(7_18_34/0.18)]',
           'gap-0 print:hidden',
@@ -319,6 +310,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
               <button
                 type="button"
                 onClick={handleBack}
+                data-testid="product-inquiry-back"
                 className={cn(
                   'flex shrink-0 items-center justify-center rounded-lg border border-bank-border bg-white text-bank-ink shadow-sm transition-colors hover:border-bank-primary/25 hover:bg-bank-surface-elev',
                   compactQuestionStep ? 'mt-0 h-8 w-8' : 'mt-0.5 h-9 w-9',
@@ -344,9 +336,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                 className={cn(
                   'font-display font-light leading-tight tracking-tight text-bank-ink',
                   compactQuestionStep
-                    ? product === 'spargeld'
-                      ? 'mt-0.5 text-base leading-snug sm:text-lg'
-                      : 'mt-0.5 text-xl sm:text-[1.35rem]'
+                    ? 'mt-0.5 text-xl sm:text-[1.35rem]'
                     : 'mt-1 text-[1.35rem] sm:text-2xl',
                 )}
               >
@@ -363,11 +353,6 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                 <AnleihenHeaderPromo compact />
               </div>
             ) : null}
-            {isSpargeld && compactQuestionStep ? (
-              <div className="hidden min-w-0 max-w-[min(340px,46%)] lg:block">
-                <SpargeldHeaderPromo compact />
-              </div>
-            ) : null}
           </div>
           {!compactQuestionStep && (
             <DialogDescription className="relative z-[1] mt-2 max-w-[52ch] text-left text-[12px] leading-snug text-bank-text-muted sm:text-[13px] sm:leading-relaxed">
@@ -377,7 +362,12 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
             </DialogDescription>
           )}
           {!done && (
-            <div className="relative z-[1] mt-2">
+            <div
+              className="relative z-[1] mt-2"
+              data-testid="product-inquiry-progress"
+              data-step={Math.min(step + 1, totalSteps)}
+              data-total={totalSteps}
+            >
               {compactQuestionStep ? (
                 <div className="flex items-center gap-3">
                   <div className="min-w-0 flex-1">
@@ -423,7 +413,10 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
         </div>
 
         {done ? (
-          <div className="relative flex flex-col bg-bank-bg px-4 pb-10 pt-2 sm:px-8 sm:pb-12 sm:pt-3">
+          <div
+            className="relative flex flex-col bg-bank-bg px-4 pb-10 pt-2 sm:px-8 sm:pb-12 sm:pt-3"
+            data-testid="product-inquiry-success"
+          >
             <motion.div
               className="mx-auto flex w-full max-w-md flex-col items-center text-center"
               initial={reduceMotion ? false : 'hidden'}
@@ -756,6 +749,8 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                         </div>
                       </div>
                       <p
+                        data-testid="product-inquiry-question"
+                        data-question-id={currentQuestion?.id || ''}
                         className={cn(
                           'min-w-0 flex-1 font-display font-light leading-snug text-bank-ink',
                           compactQuestionStep ? 'text-base sm:text-[1.15rem]' : 'text-[1.05rem] sm:text-[1.2rem]',
@@ -780,14 +775,14 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                         const OptionIcon =
                           isAnleihen && currentQuestion.id === 'volume'
                             ? ANLEIHEN_VOLUME_ICONS[opt.value]
-                            : isSpargeld && currentQuestion.id === 'volume'
-                              ? SPARGELD_VOLUME_ICONS[opt.value]
-                              : null;
+                            : null;
                         return (
                           <button
                             key={opt.value}
                             type="button"
                             onClick={() => selectOption(currentQuestion.id, opt)}
+                            data-testid={`product-inquiry-option-${opt.value}`}
+                            data-selected={selected ? 'true' : 'false'}
                             className={cn(
                               'group/opt relative flex w-full items-center justify-center rounded-lg border px-3 text-center font-medium leading-snug transition-colors duration-150',
                               OptionIcon && 'gap-2',
@@ -814,7 +809,6 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
 
                     {isAktien ? <AktienPremiumBanner compact={compactQuestionStep} /> : null}
                     {isAnleihen ? <AnleihenPremiumBanner compact={compactQuestionStep} /> : null}
-                    {isSpargeld ? <SpargeldPremiumBanner compact={compactQuestionStep} /> : null}
                   </div>
                 </>
               )}
@@ -827,9 +821,19 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                     compactQuestionStep ? 'pb-3 pt-2.5' : 'pb-3 pt-3 sm:pb-4 sm:pt-3.5',
                   )}
                 >
+                  {isContactStep && submitError ? (
+                    <div
+                      role="alert"
+                      data-testid="product-inquiry-error"
+                      className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13px] leading-snug text-red-900"
+                    >
+                      {submitError}
+                    </div>
+                  ) : null}
                   <Button
                     type="button"
                     disabled={submitting}
+                    data-testid={isContactStep ? 'product-inquiry-submit' : 'product-inquiry-next'}
                     className={cn(
                       'w-full rounded-xl border border-bank-signature/10 bg-bank-signature font-semibold tracking-wide text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-bank-signature-hover hover:shadow-md active:translate-y-0 active:scale-[0.99]',
                       compactQuestionStep ? 'h-10 text-[14px]' : 'h-11 text-[14px] sm:h-12 sm:text-[15px]',
@@ -838,7 +842,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                   >
                     {isContactStep ? (
                       <>
-                        {submitting ? 'Wird gesendet…' : 'Anfrage absenden'}
+                        {submitting ? 'Wird gesendet…' : submitError ? 'Erneut senden' : 'Anfrage absenden'}
                         <Send className="ml-2 h-4 w-4" strokeWidth={LUCIDE_STROKE} />
                       </>
                     ) : (

@@ -1,5 +1,59 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 63 (Feb 25, 2026) — Frontend-Stabilisierung ProductInquiryWizard ✅
+
+**Ziel:** 5 offene Frontend-Punkte aus Session 62 abschließen (kein Feature-Ausbau).
+
+**Umgesetzt & getestet (iteration_37 → 6/6 PASS, 100 %)**
+1. FAQ „Frage stellen"-CTA repariert
+   - `HomeInvestmentSpectrum.jsx` erhält `id="home-investment-spectrum"` auf dem Root-Div (data-testid bleibt zusätzlich).
+   - `HOME_SAVINGS_INQUIRY_ID` zeigt sauber dorthin. scrollY-Delta +3216 gemessen, landet exakt auf Spectrum-Top.
+2. Toter Import entfernt
+   - `Home.js`: `HomeSavingsInquirySection`-Import + auskommentierter Section-Block gelöscht.
+   - Orphan-Dateien gelöscht: `HomeSavingsInquirySection.jsx`, `SpargeldInquiryPromo.jsx`.
+3. Inline-Submit-Fehler im Wizard
+   - Neuer `submitError`-State in `ProductInquiryWizard.jsx`.
+   - Bei Supabase-Fehler (z. B. 400/23514) erscheint sichtbares Error-Panel `[data-testid=product-inquiry-error]` über dem Submit-Button mit Text „Die Anfrage konnte gerade nicht gesendet werden. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.".
+   - Button-Label wechselt zu „Erneut senden", `disabled=false`, Loading endet, Antworten bleiben erhalten, Retry möglich, kein technischer Supabase-Code in der UI.
+4. Data-Testids vollständig
+   - `product-inquiry-wizard` (mit `data-product`), `product-inquiry-progress` (`data-step`, `data-total`), `product-inquiry-question` (`data-question-id`), `product-inquiry-back`, `product-inquiry-next`, `product-inquiry-submit`, `product-inquiry-success`, `product-inquiry-error`, `product-inquiry-option-{value}` (mit `data-selected`).
+5. Spargeld-Dead-Code komplett raus
+   - Entfernt: `isSpargeld`-Konstante, Spargeld-Header-Promo-Branch, Spargeld-Sidebar-Branch, Spargeld-Premium-Banner, `SPARGELD_VOLUME_ICONS`-Import, `product === 'spargeld'`-Title-Zweig.
+   - `depositType` / `product_mix` waren bereits nicht mehr aktiv referenziert.
+
+**Bekannter externer Blocker (nicht Teil dieser Session)**
+- Supabase-CHECK-Constraint `product_inquiry_leads_product_check` lehnt weiterhin `fonds/tagesgeld/festgeld/flexgeld` ab (400 / 23514). Nur Aktien + Anleihen erreichen den Success-Screen. Die UI reagiert jetzt sauber mit sichtbarem Fehler.
+
+**Files geändert**
+- `frontend/src/components/home/HomeInvestmentSpectrum.jsx`
+- `frontend/src/pages/Home.js`
+- `frontend/src/components/home/ProductInquiryWizard.jsx`
+- `frontend/src/components/home/HomeSavingsInquirySection.jsx` (gelöscht)
+- `frontend/src/components/home/SpargeldInquiryPromo.jsx` (gelöscht)
+
+**Status: DONE WITH EXTERNAL DB BLOCKER**
+
+
+## Session 62 (Feb 25, 2026) — Legacy Spargeld-Formular entfernt
+
+**Ursache**
+`HomeSavingsInquirySection.jsx` (551 Zeilen) — die alte Inline-Einlagen-Anfrage mit „Anlageart"-Radios (Tagesgeld/Flexgeld/Festgeld) — lief parallel zum neuen Wizard und war weiterhin auf der Startseite sichtbar. `Home.js:167` renderte `<HomeSavingsInquirySection />` ohne `onOpenWizard`-Prop, verwendete daher weiter das Legacy-Formular statt der 6 Produkt-Configs.
+
+**Fix (2 Dateien)**
+- `frontend/src/pages/Home.js` — `<HomeSavingsInquirySection />` aus dem Render entfernt (Import bleibt harmlos, kann in Follow-up-Session entfernt werden). Alle 6 Produkte sind über `HomeInvestmentSpectrum` (Line 185) sowie den Sticky-CTA korrekt an den neuen Wizard angebunden.
+- `frontend/src/data/homeSavingsFaq.js` — `HOME_SAVINGS_INQUIRY_ID` von `'home-savings-inquiry'` auf `'home-investment-spectrum'` umgemappt. „Frage stellen"-CTA im FAQ scrollt jetzt zur Produktübersicht statt zum gelöschten Formular.
+
+**Zustand nach Fix**
+- Kein „Anlageart"-Block mehr im aktiven Nutzerpfad
+- Jeder Produkt-Klick öffnet den zugehörigen Wizard mit Config aus `productInquiryQuestions.js`
+- Fonds hat 6 Fragen · Tagesgeld/Festgeld/Flexgeld starten direkt mit `volume`, kein depositType-Schritt
+- `HomeSavingsInquirySection.jsx` bleibt als Dead-Code im Repo (nicht mehr gemountet) — Cleanup in Follow-up
+
+**Nicht Teil dieser Session**
+- Wizard-`data-testid` (Backlog)
+- Vollständiger Dead-Code-Purge von HomeSavingsInquirySection + Spargeld-Wizard-Imports (Backlog)
+- Supabase-Constraint (separater Track, siehe Session 61 Follow-up)
+
 ## Session 61 Follow-up (Feb 25, 2026) — Migration nicht wirksam
 
 **Testing-Agent iteration_34: 4/12 verifiziert, 3 Submits weiterhin blockiert**

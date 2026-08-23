@@ -1,0 +1,35 @@
+{
+  "summary": "Session 63 frontend verification (frontend only, no backend tests requested). ALL 6 review items PASS. (1) FAQ 'Frage stellen' CTA now scrolls: document.getElementById('home-investment-spectrum') !== null, click on [data-testid=home-faq-ask-question] moved scrollY 7519 -> 10735 (delta +3216) and landed exactly on the spectrum top (specTop 10735, viewport top 0.45px) — the Session 62 no-op is fixed. (2) Dead import gone: Home.js has no HomeSavingsInquirySection import (source scan of pages/Home.js imports), and on / there are 0 input[type=radio], no 'Anlageart' text, getElementById('home-savings-inquiry') === null, [data-testid=home-savings-inquiry] === null, 0 pageerrors, h1 count = 1. (3) Inline submit error works: Fonds wizard, all 6 questions answered + contact data + both mandatory checkboxes -> Supabase POST product_inquiry_leads returns 400; [data-testid=product-inquiry-error] becomes visible with exactly 'Die Anfrage konnte gerade nicht gesendet werden. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.', button label flips to 'Erneut senden' and is NOT disabled (no stuck loading), no success screen, back-navigation still shows the previously selected option (data-selected=true on product-inquiry-option-none), and a second submit click re-fires and re-shows the error. Contrast case: Aktien wizard with identical flow reaches [data-testid=product-inquiry-success] ('Ihre Aktien-Anfrage ist bei uns'), no error element. (4) data-testid suite complete: product-inquiry-wizard (with data-product), product-inquiry-progress (data-step/data-total = 1/7), product-inquiry-question (data-question-id: goal, horizon, volume, investment_mode, risk_tolerance, experience), product-inquiry-back (absent on step 1, visible from step 2), product-inquiry-next on question steps, product-inquiry-submit on contact step, 4 product-inquiry-option-* buttons per question (>=2 required), product-inquiry-error, product-inquiry-success. (5) Spargeld dead code: all 6 cards open the correct wizard (card0 aktien/'Aktien', card1 anleihen/'Anleihen', card2 fonds/'Fonds / ETFs', card3 tagesgeld/'Tagesgeld', card4 festgeld/'Festgeld', card5 flexgeld/'Flexgeld'), each progress 1/7, no 'Anlageart' and no 'Spargeld' in any dialog text, 0 pageerrors across all opens. (6) Regression: /, /handeln, /wissen, /fonds-grundlagen all HTTP 200, exactly 1 <h1>, 0 pageerrors.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST <REACT_APP_SUPABASE_URL>/rest/v1/product_inquiry_leads",
+        "issue": "UNCHANGED known external blocker: product_inquiry_leads_product_check still rejects fonds/tagesgeld/festgeld/flexgeld (400, code 23514). Expected per session scope — the UI now surfaces this correctly. DB migration still pending (user action).",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional cleanup: /app/frontend/src/components/home/HomeSavingsInquirySection.jsx and /app/frontend/src/components/home/SpargeldInquiryPromo.jsx are now orphan files (no importer anywhere in src except HomeSavingsInquirySection importing homeSavingsFaq). Delete them to finish the dead-code removal.",
+    "DB (user action, unchanged): widen product_inquiry_leads_product_check to include fonds/tagesgeld/festgeld/flexgeld."
+  ],
+  "critical_code_review_comments": [
+    "ProductInquiryWizard: submitError is only rendered when isContactStep is true; if a future flow moves the submit off the contact step the error would silently disappear. Currently correct, low risk.",
+    "Orphan components HomeSavingsInquirySection.jsx / SpargeldInquiryPromo.jsx still ship in the bundle graph as unreferenced files — remove for a clean tree."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "6/6 review items PASS (100%)"},
+  "seed_data_creation": "Supabase product_inquiry_leads rows created via anon insert during tests: qa.aktien.session63@example.test (aktien, 201). qa.fonds.session63@example.test was rejected (400) so no row. May need manual cleanup.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "not needed (no auth flow in scope; /app/memory/test_credentials.md not used)",
+  "context_for_next_testing_agent": "Visitor gate bypass via add_init_script (kapitalmitte_visitor_profile + kapitalmitte_cookie_consent) still works. Wizard now fully testid-driven: [data-testid=product-inquiry-wizard] (data-product attr), -progress (data-step/data-total), -question (data-question-id), -option-<value> (data-selected), -next, -submit, -back, -error, -success. Spectrum CTAs: [data-testid=home-investment-spectrum] button:has-text('Fragen beantworten'), order aktien, anleihen, fonds, tagesgeld, festgeld, flexgeld. Contact: #pi-first/#pi-last/#pi-phone/#pi-email + first two button[role=checkbox] inside the wizard. Only remaining blocker is the Supabase CHECK constraint (fonds/tagesgeld/festgeld/flexgeld -> 400/23514).",
+  "rca_of_the_issue": "Session 62's two defects are resolved: HOME_SAVINGS_INQUIRY_ID now points to 'home-investment-spectrum' AND HomeInvestmentSpectrum's root div carries id='home-investment-spectrum' (both were required, verified via getElementById), and Home.js no longer imports the removed section. The remaining 400 on fonds/tagesgeld/festgeld/flexgeld is a database CHECK constraint, not frontend."
+}

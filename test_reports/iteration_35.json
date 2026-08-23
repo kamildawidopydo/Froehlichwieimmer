@@ -1,0 +1,39 @@
+{
+  "summary": "Session 61 FINAL retest (frontend only). The Supabase CHECK constraint is STILL NOT widened. Direct REST probe against project vitmvkmjjwabfzndynlj proves the old constraint is live: POST /rest/v1/product_inquiry_leads with product='aktien' -> 201, 'anleihen' -> 201, 'spargeld' -> 201, while 'fonds', 'tagesgeld', 'festgeld', 'flexgeld' all -> HTTP 400 {\"code\":\"23514\",...\"violates check constraint \\\"product_inquiry_leads_product_check\\\"\"}. i.e. the constraint is still CHECK (product IN ('aktien','anleihen','spargeld')) — the re-run ALTER TABLE did not reach this project/table. Then ran all 6 UI E2E flows anyway (sticky CTA -> product option -> 6 questions [option + 'Weiter'] -> contact fields + 2 consents -> 'Anfrage absenden'): aktien PASS (201, 'Ihre Aktien-Anfrage ist bei uns'), anleihen PASS (201, 'Ihre Anleihen-Anfrage ist bei uns'), fonds/tagesgeld/festgeld/flexgeld FAIL (each: POST /api/submit-product-inquiry-lead 404 fallback, then Supabase 400/23514, no success screen). Payload mapping verified correct for all 6: submitted product == wizard key (fonds/tagesgeld/festgeld/flexgeld/aktien/anleihen), never 'spargeld'. Route regression PASS: /, /handeln, /wissen, /fonds-grundlagen all render (h1=1, zero pageerrors). GREEN COUNT: 8/12 (routes x4, aktien, anleihen, payload-key mapping, wizard mechanics); FAIL: 4 submits + the zero-400 criterion.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST <REACT_APP_SUPABASE_URL>/rest/v1/product_inquiry_leads", "issue": "DB CHECK constraint product_inquiry_leads_product_check still only allows aktien/anleihen/spargeld. Proof via curl on the live project: aktien 201, anleihen 201, spargeld 201, fonds/tagesgeld/festgeld/flexgeld 400 {\"code\":\"23514\",\"details\":null,\"hint\":null,\"message\":\"new row for relation \\\"product_inquiry_leads\\\" violates check constraint \\\"product_inquiry_leads_product_check\\\"\"}. pg_get_constraintdef is NOT exposed via PostgREST (no such RPC -> 404), so verify in the SQL editor. Migration must be re-applied on project vitmvkmjjwabfzndynlj, schema public.", "priority": "CRITICAL"},
+      {"endpoint": "/api/submit-product-inquiry-lead", "issue": "Returns 404 on every submit; client always falls back to direct Supabase insert (works for allowed products, but masks server-side validation and floods console).", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "DELETE /rest/v1/product_inquiry_leads?email=like.*", "issue": "Anon DELETE returns 204 but likely no-ops under RLS; the 3 TEST rows inserted by the curl probe (aktien/anleihen/spargeld, emails qa.curl.*.session61b@example.test) and 2 UI rows (qa.aktien/qa.anleihen.session61b@example.test) may still exist and need manual cleanup."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ProductInquiryWizard contact step", "issue": "Silent failure: when the Supabase insert returns 400/23514 the wizard shows NO error message at all (dialog stays on contact step, no toast, no inline error). mapProductInquiryInsertError() output is never surfaced in the preview build (dev hint suppressed + no visible error node). User cannot tell the submit failed.", "selector": "[role='dialog'] button:has-text('Anfrage absenden')", "priority": "HIGH"}
+    ],
+    "integration_issues": [
+      {"flow": "Product inquiry submit (fonds / tagesgeld / festgeld / flexgeld)", "issue": "Blocked by Supabase 400/23514; success screens never render. Frontend VALID_PRODUCTS offers 6 products the DB rejects for 4 of them.", "affected_selectors": ["[data-testid='product-inquiry-option-fonds']", "[data-testid='product-inquiry-option-tagesgeld']", "[data-testid='product-inquiry-option-festgeld']", "[data-testid='product-inquiry-option-flexgeld']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/ui_it35/fonds_fail.png"],
+  "action_items": [
+    "USER/DB ACTION (blocker): re-apply on project vitmvkmjjwabfzndynlj: ALTER TABLE public.product_inquiry_leads DROP CONSTRAINT product_inquiry_leads_product_check; ADD CONSTRAINT ... CHECK (product IN ('aktien','anleihen','fonds','tagesgeld','festgeld','flexgeld','spargeld')); then confirm with select pg_get_constraintdef(oid) from pg_constraint where conname='product_inquiry_leads_product_check';",
+    "Fix silent submit failure: render a visible error (toast/inline) when submitProductInquiryLead returns an error — currently the user sees nothing on 23514/404.",
+    "Implement or remove /api/submit-product-inquiry-lead (permanent 404 in preview).",
+    "Clean up TEST rows with email like 'qa.%session61b@example.test' and 'qa.curl.%' using a service-role key."
+  ],
+  "critical_code_review_comments": [
+    "Frontend VALID_PRODUCTS (submitProductInquiryLead.js:3) and the DB CHECK constraint are duplicated, unsynchronised sources of truth. Worse, sanitizeLeadPayload silently rewrites unknown products to 'tagesgeld' — with the current DB state that would also fail. Validate server-side or drop the CHECK in favour of a lookup table.",
+    "Error path of the wizard submit is untested/unsurfaced: add loading/error UI states and a data-testid on the error node."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request); Supabase REST probe: 3/7 products accepted", "frontend": "8/12 green — 4 route/page checks + aktien + anleihen submits + payload-key mapping + wizard mechanics PASS; fonds/tagesgeld/festgeld/flexgeld submits and the zero-400 criterion FAIL"},
+  "seed_data_creation": "TEST rows attempted: curl probes (aktien, anleihen, spargeld -> 201) and UI submits (aktien, anleihen -> 201) with emails qa.curl.<product>.session61b@example.test / qa.<product>.session61b@example.test. Anon DELETE returned 204 but is probably RLS-blocked; verify/purge with service role.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Working wizard selectors (session 61b): sticky CTA [data-testid='product-inquiry-sticky-cta'] -> product [data-testid='product-inquiry-option-<key>'] -> dialog [role='dialog'] -> per question: click first 'button.group\\/opt' THEN click the 'Weiter' button (the wizard no longer auto-advances — this caused earlier false 'contact form not reached' failures) -> 6 steps -> #pi-first/#pi-last/#pi-phone/#pi-email + first two button[role='checkbox'] -> 'Anfrage absenden'. Gate bypass via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent works. Fastest constraint check without the UI: curl POST to <SUPABASE_URL>/rest/v1/product_inquiry_leads with apikey=REACT_APP_SUPABASE_ANON_KEY and Prefer: return=minimal for each product key.",
+  "rca_of_the_issue": "Unchanged from iterations 33/34: public.product_inquiry_leads in Supabase project vitmvkmjjwabfzndynlj still carries CHECK (product IN ('aktien','anleihen','spargeld')) — proven by 'spargeld' inserting successfully (201) while the four new keys return SQLSTATE 23514. The claimed ALTER TABLE was not applied to this project/table (or was rolled back). Frontend code and payload mapping are correct; this is a database/environment fix. Secondary defect (code-side): the failed submit produces no user-visible error."
+}

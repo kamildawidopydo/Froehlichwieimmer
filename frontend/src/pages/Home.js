@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import BankingHero from '@/components/BankingHero';
 import HomePostHero from '@/components/home/HomePostHero';
-import HomeSavingsInquirySection from '@/components/home/HomeSavingsInquirySection';
 import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
 import HomeTestimonials from '@/components/home/HomeTestimonials';
 import HomeTrustLine from '@/components/home/HomeTrustLine';
@@ -162,9 +161,6 @@ const Home = () => {
       <HomeTrustLine />
 
       <HomePlatformShowcase />
-
-      {/* ── Spar-Anfrage ──────────────────────────────────────────────── */}
-      <HomeSavingsInquirySection />
 
       {/* ── Sparangebote (Cover-Flow, Daten aus savings_offers) ───────── */}
       <HomeSavingsOffersSection offers={savingsOffers} />

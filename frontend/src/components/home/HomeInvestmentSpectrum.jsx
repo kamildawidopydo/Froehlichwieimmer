@@ -233,6 +233,7 @@ const HomeInvestmentSpectrum = ({ onOpenWizard }) => {
 
   return (
     <div
+      id="home-investment-spectrum"
       className="relative border-b border-[rgb(var(--bank-ink)/0.06)] bg-[linear-gradient(180deg,#f4f4f2_0%,#fafafa_45%,#ffffff_100%)]"
       data-testid="home-investment-spectrum"
     >

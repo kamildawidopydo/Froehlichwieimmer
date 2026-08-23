@@ -12,7 +12,7 @@ export function getHomeFaqByCategory(categoryId) {
   return HOME_FAQ_ITEMS.filter((item) => item.category === categoryId);
 }
 
-export const HOME_SAVINGS_INQUIRY_ID = 'home-savings-inquiry';
+export const HOME_SAVINGS_INQUIRY_ID = 'home-investment-spectrum';
 
 export function scrollToHomeSavingsInquiry() {
   const el = document.getElementById(HOME_SAVINGS_INQUIRY_ID);

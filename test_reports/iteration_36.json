@@ -1,0 +1,73 @@
+{
+  "summary": "Session 62 verification (frontend only). CONFIRMED: the legacy HomeSavingsInquirySection is truly gone from the DOM on / — document.querySelector('[data-testid=\"home-savings-inquiry\"]') === null, getElementById('home-savings-inquiry') === null, 0 occurrences of 'Anfrage · Vertraulich & unverbindlich', and document.body.innerHTML does NOT contain the string 'Anlageart' anywhere. HomeInvestmentSpectrum renders exactly 6 product cards (Aktienanlage, Festverzinsliche Wertpapiere, Fonds- und ETF-Anlage, Tagesgeld, Festgeld, Flexgeld) and each 'Fragen beantworten' CTA opens the Wizard with the correct product key: card0->'Aktien', card1->'Anleihen', card2->'Fonds / ETFs', card3->'Tagesgeld', card4->'Festgeld', card5->'Flexgeld'. All 6 wizards show '6 kurze Fragen zu Ihrer Anlage', progress 1/7 (6 questions + contact step), NO product-selection step and NO 'Anlageart' text in the dialog. Fonds starts with 'Was ist Ihr Hauptziel mit Fonds oder ETFs?'; tagesgeld/festgeld/flexgeld/aktien/anleihen all start with 'Wie hoch ist Ihr geplantes Anlagevolumen?'. Zero pageerrors on /, and no new React errors. Routes /handeln, /wissen, /fonds-grundlagen: 200, h1=1, zero pageerrors. TWO FAILURES: (1) HOME_SAVINGS_INQUIRY_ID was NOT updated — /app/frontend/src/data/homeSavingsFaq.js:15 still reads 'home-savings-inquiry', so the FAQ 'Frage stellen' CTA is now a silent no-op (scrollY 7519 -> 7519, delta 0; spectrum still 3216px away). No JS error (getElementById is null-guarded) but the CTA does nothing. (2) Supabase CHECK constraint still not widened: direct REST probe gives aktien 201 while fonds/tagesgeld/festgeld/flexgeld -> 400 {\"code\":\"23514\"} — pre-existing, not a Session 62 regression.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST <REACT_APP_SUPABASE_URL>/rest/v1/product_inquiry_leads",
+        "issue": "UNCHANGED from iteration_35: constraint product_inquiry_leads_product_check still only allows aktien/anleihen/spargeld. Probe (session62): aktien 201, fonds/tagesgeld/festgeld/flexgeld 400 {\"code\":\"23514\",\"message\":\"...violates check constraint product_inquiry_leads_product_check\"}. UI E2E confirms: aktien + anleihen submits reach the 'Anfrage gesendet' success screen; fonds/tagesgeld/festgeld/flexgeld stay on SCHRITT 7 VON 7 with no success screen. Not a Session 62 issue — DB migration still pending.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "/api/submit-product-inquiry-lead",
+        "issue": "Still 404 {\"detail\":\"Not Found\"} on every submit (all 6 flows); client falls back to direct Supabase insert."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "HomeSavingsFaqSection / homeSavingsFaq.js",
+        "issue": "REGRESSION from Session 62: HOME_SAVINGS_INQUIRY_ID is still 'home-savings-inquiry' (data/homeSavingsFaq.js:15), but that element no longer exists. scrollToHomeSavingsInquiry() early-returns, so 'Frage stellen' does nothing (measured scrollY delta = 0). Same dead path is used by HomeSavingsFaqModal.jsx:37. Fix: set HOME_SAVINGS_INQUIRY_ID = 'home-investment-spectrum' (element carries data-testid AND needs an id, or switch the helper to querySelector('[data-testid=\"home-investment-spectrum\"]') — it currently has no id attribute, so changing only the constant will still fail with getElementById).",
+        "selector": "[data-testid='home-faq-ask-question']",
+        "priority": "HIGH"
+      },
+      {
+        "component": "ProductInquiryWizard contact step",
+        "issue": "Still present (it35): on Supabase 400/23514 the wizard shows NO error/toast; user sees no feedback that the submit failed.",
+        "selector": "div[role='dialog'][data-state='open'] button:has-text('Anfrage absenden')",
+        "priority": "HIGH"
+      },
+      {
+        "component": "ProductInquiryWizard close animation",
+        "issue": "Cosmetic: on close, product is reset to null while the dialog is still animating out, so questions=[] and the dialog briefly flashes 'Ihre Kontaktdaten' / 'SCHRITT 1 VON 1'. Reset product in an onAnimationEnd/close-complete handler or keep last product until unmount.",
+        "selector": "div[role='dialog'][data-state='closed']",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Product inquiry submit (fonds/tagesgeld/festgeld/flexgeld)",
+        "issue": "Blocked by the Supabase CHECK constraint (400/23514). Payload product key is correct for all 6 (verified in request bodies: aktien, anleihen, fonds, tagesgeld, festgeld, flexgeld — never 'spargeld').",
+        "affected_selectors": ["[data-testid='home-investment-spectrum'] button:has-text('Fragen beantworten')"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Home (pre-existing console noise, unchanged)",
+        "issues": ["Repeated 401s from an unauthenticated data call", "SVG <path> attribute d: 'undefined' console errors (4x)"]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix the FAQ 'Frage stellen' scroll target: HOME_SAVINGS_INQUIRY_ID is still 'home-savings-inquiry' (claim #1 in the review request is NOT satisfied). Note HomeInvestmentSpectrum's root has only data-testid, no id — add id=\"home-investment-spectrum\" or use querySelector in scrollToHomeSavingsInquiry.",
+    "Remove the now-unused import of HomeSavingsInquirySection in /app/frontend/src/pages/Home.js:6 (dead import, CRA lint warning).",
+    "Surface submit errors in ProductInquiryWizard (inline error/toast) instead of silently staying on the contact step.",
+    "DB (user action, unchanged): widen product_inquiry_leads_product_check to include fonds/tagesgeld/festgeld/flexgeld on project referenced by REACT_APP_SUPABASE_URL.",
+    "Optional: add data-testid to the 6 spectrum product CTAs and to wizard dialog/options/Weiter/Absenden — tests still rely on text + Tailwind class selectors."
+  ],
+  "critical_code_review_comments": [
+    "homeSavingsFaq.js exports HOME_SAVINGS_INQUIRY_ID which is now consumed only by the unmounted HomeSavingsInquirySection; the constant + helper are a dangling reference that silently disables two CTAs. Point them at a mounted anchor or delete the helper and wire the FAQ CTA to openProductInquiry().",
+    "Home.js still imports HomeSavingsInquirySection although the render is commented out — dead code/import."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (Supabase REST probe only)", "frontend": "7/9 review items PASS (items 1-partial, 2, 3, 4, 5, 7, 9); FAIL: item 1 constant + item 6 FAQ CTA scroll; item 8 = 2/6 submits succeed (DB constraint)"},
+  "seed_data_creation": "Supabase product_inquiry_leads rows created by tests (anon RLS): qa.aktien.session62@example.test, qa.anleihen.session62@example.test, qa.probe.aktien.session62@example.test. May need manual cleanup.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "not needed (no auth flow tested; /app/memory/test_credentials.md not used)",
+  "context_for_next_testing_agent": "Visitor gate bypass via add_init_script setting kapitalmitte_visitor_profile + kapitalmitte_cookie_consent works. Use div[role=\"dialog\"][data-state=\"open\"] for the wizard — plain [role=\"dialog\"] hits the invtopic-teaser too (strict mode violation). Spectrum CTAs: [data-testid=\"home-investment-spectrum\"] button:has-text(\"Fragen beantworten\"), index order = aktien, anleihen, fonds, tagesgeld, festgeld, flexgeld. Wizard flow: for each of 6 questions click div.grid > button[type=\"button\"] first, then 'Weiter'; contact fields #pi-first/#pi-last/#pi-phone/#pi-email + first two button[role=checkbox].",
+  "rca_of_the_issue": "Session 62 removed <HomeSavingsInquirySection> from Home.js (verified: render line is inside a JSX comment) but did NOT change HOME_SAVINGS_INQUIRY_ID in data/homeSavingsFaq.js (still 'home-savings-inquiry'). scrollToHomeSavingsInquiry() therefore resolves getElementById to null and returns early — no exception, but the FAQ 'Frage stellen' CTA and HomeSavingsFaqModal's post-close scroll are both dead. Additionally, even after changing the constant to 'home-investment-spectrum', the target element only has data-testid and no id attribute, so getElementById would still return null."
+}
