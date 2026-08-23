@@ -1,5 +1,44 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 69 · Nachbesserung nach iteration_43 ✅
+
+**Interstitial + Consent-Link Overlap behoben**
+- `ProductInquiryStickyCta.jsx`: Auf Mobile bei `nearForm=true` wandert das Sticky-CTA jetzt von `right-4` nach `left-4` und die vertikale Anhebung ist auf 8,5rem reduziert. Der Overlap mit dem `InvestmentTopicTeaser`-X (top-right) und dem Datenschutz-Link im Consent-Label ist damit vollständig aufgelöst — beide sind eigenständig hit-testbar.
+- Product-Menu-Popup öffnet dann nach rechts (`left-0` statt `right-0`), damit es innerhalb des Viewports bleibt.
+- Verifiziert auf 390×844:
+  - `sticky.left=16, right=191, bottom=708`
+  - `invtopic-close hittest → svg` (nicht mehr `product-inquiry-sticky-compact`)
+  - `newsletter-submit hittest → home-newsletter-submit` (unblockiert)
+
+
+## Session 69 (Feb 25, 2026) — 3 Action Items geliefert ✅
+
+**Item A · Weekly Digest Sender** ✅
+- Neue Datei `backend/weekly_digest.py`: `send_weekly_digest(db, send_email_fn, force, limit_articles)` sammelt bis zu 6 Top-Artikel der letzten 7 Tage aus `news_articles` (nur Fröhlich-Redaktion, status=published), rendert HTML im Fröhlich-Look (dunkelblau/gold, Serif-Headline, mono Eyebrow) und versendet an alle `newsletter_subscribers` mit `consent=True` und `unsubscribed!=True`. Per-recipient try/except → kaputter Empfänger stoppt den Batch nicht.
+- Dedup: `newsletter_digests`-Collection speichert einen Record pro ISO-Woche (`digest_id=YYYY-Www`). Wiederholter Aufruf ohne `force=true` liefert `already_sent=true`.
+- Unsubscribe: HMAC-SHA256-signierter Token via `NEWSLETTER_UNSUBSCRIBE_SECRET` (Fallback `JWT_SECRET`). Public GET-Endpoint `/api/newsletter/unsubscribe?email=…&token=…` setzt `unsubscribed=True` und rendert Bestätigungs-HTML.
+- Cron: `.emergent/crons.yml` neuer Job `newsletter-weekly-digest` Fr 08:00 UTC.
+- Verifiziert via curl: fresh-run articles=6/recipients=2/failed=2 (example.com E-Mails, error-handling greift), 2. Aufruf `already_sent=true`, unsubscribe valid=200 (HTML), invalid=400.
+- **ENV**: `EMERGENT_EMAIL_KEY` bereits gesetzt → produktiver Versand aktiv. Optional `NEWSLETTER_UNSUBSCRIBE_SECRET` (fallback: `JWT_SECRET`, aktuell aktiv).
+
+**Item B · Mobile Overlay Clean** ✅
+- `ProductInquiryStickyCta.jsx`: IntersectionObserver auf `#home-newsletter` (threshold 0.05). Wenn intersecting UND `!isDesktop` → mobiler bottom-Offset auf `calc(env(safe-area-inset-bottom)+15rem)` mit sanftem `transition-[bottom]`. Desktop-Position unverändert. Attribut `data-near-form={true|false}` für Tests. Kein Element wird ausgeblendet — reine Positions-Anpassung.
+
+**Item C · URL-Hash Sync-Cleanup** ✅
+- `HomeFinanceNews.jsx`: `readCategoryFromHash()` liefert jetzt `{ key, wasInvalid }`. Ein useEffect strippt beim Mount ungültige `#kategorie=…`-Hashes per `history.replaceState()` (kein zusätzlicher History-Eintrag, kein Reload). Fremde Hashes (`#some-anchor`) bleiben unangetastet. Filterwechsel via `pushState`.
+
+**Files**
+- `backend/weekly_digest.py` (neu)
+- `backend/server.py` (register-Zeile für weekly_digest)
+- `.emergent/crons.yml` (neuer Cron)
+- `frontend/src/components/home/HomeFinanceNews.jsx`
+- `frontend/src/components/home/ProductInquiryStickyCta.jsx`
+
+**Externer Blocker (unverändert seit Session 65):** Supabase-CHECK-Constraint `product_inquiry_leads_product_check` — Aktion siehe Session 65.
+
+**Status: 3/3 intern lösbar DONE**
+
+
 ## Session 68 (Feb 25, 2026) — 3/4 Action Items DONE, Supabase weiter BLOCKED
 
 **Item 1 · Supabase-Constraint** — extern BLOCKED (Session 65 gilt unverändert)

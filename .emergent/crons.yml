@@ -23,3 +23,12 @@ crons:
     method: POST
     auth: admin
     description: "Alle 15 Min aktive Preis-Alerts prüfen und ggf. Kursalarm-Mail versenden (Cooldown 6h)."
+
+  # Freitagvormittag Digest an alle aktiven Newsletter-Abonnenten.
+  # Dedup pro ISO-Woche via Collection `newsletter_digests`.
+  - name: newsletter-weekly-digest
+    schedule: "0 8 * * 5"
+    endpoint: "/api/newsletter/admin/send-weekly-digest"
+    method: POST
+    auth: admin
+    description: "Freitag 08:00 UTC: Wochen-Digest mit den 6 wichtigsten Fröhlich-Artikeln der letzten 7 Tage."

@@ -3229,6 +3229,8 @@ from news_synthesizer import (
     _extract_entities as _news_extract_entities,
     _title_similarity as _news_title_similarity,
 )  # noqa: E402
+from weekly_digest import register as _register_weekly_digest  # noqa: E402
+_register_weekly_digest(api, db, _send_email_via_emergent, require_admin)
 from alerts import register as _register_alerts, ensure_indexes as _alerts_ensure_indexes  # noqa: E402
 from investment_topics import register as _register_investment_topics, seed_investment_topics as _seed_investment_topics  # noqa: E402
 

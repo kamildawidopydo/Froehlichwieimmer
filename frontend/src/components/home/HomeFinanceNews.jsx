@@ -46,11 +46,16 @@ const ALLOWED_HASH_CATEGORIES = new Set([
 const HASH_PREFIX = '#kategorie=';
 
 const readCategoryFromHash = () => {
-  if (typeof window === 'undefined') return 'all';
+  if (typeof window === 'undefined') return { key: 'all', wasInvalid: false };
   const raw = (window.location.hash || '').toLowerCase();
-  if (!raw.startsWith(HASH_PREFIX)) return 'all';
+  if (!raw) return { key: 'all', wasInvalid: false };
+  if (!raw.startsWith(HASH_PREFIX)) {
+    // Fremder Hash (z. B. #ankermarke) — nicht als „ungültig" behandeln, unangetastet lassen.
+    return { key: 'all', wasInvalid: false };
+  }
   const key = decodeURIComponent(raw.slice(HASH_PREFIX.length));
-  return ALLOWED_HASH_CATEGORIES.has(key) ? key : 'all';
+  if (ALLOWED_HASH_CATEGORIES.has(key)) return { key, wasInvalid: false };
+  return { key: 'all', wasInvalid: true };
 };
 
 const CATEGORY_ORDER_HINT = [
@@ -286,13 +291,20 @@ const HomeFinanceNews = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [activeCategory, setActiveCategory] = useState(() => readCategoryFromHash());
+  const [activeCategory, setActiveCategory] = useState(() => readCategoryFromHash().key);
 
   // Deep-Link: Hash ↔ activeCategory. Zwei Wege:
   //  1) Hash-Änderung von außen (Back/Forward, direktes Setzen) → State updaten
-  //  2) State-Änderung im Component → Hash aktualisieren (replaceState, kein Reload)
+  //  2) State-Änderung im Component → Hash aktualisieren (pushState, kein Reload)
+  // Zusätzlich: Beim ersten Mount ungültige #kategorie=<x>-Hashes SILENT via
+  // replaceState entfernen, damit URL und aktiver Filter konsistent sind.
   useEffect(() => {
-    const onHash = () => setActiveCategory(readCategoryFromHash());
+    const initial = readCategoryFromHash();
+    if (initial.wasInvalid && typeof window !== 'undefined') {
+      const url = window.location.pathname + window.location.search;
+      window.history.replaceState(null, '', url);
+    }
+    const onHash = () => setActiveCategory(readCategoryFromHash().key);
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
@@ -303,7 +315,7 @@ const HomeFinanceNews = () => {
     const nextHash = key === 'all' ? '' : `${HASH_PREFIX}${key}`;
     const current = window.location.hash || '';
     if (current === nextHash) return;
-    // pushState statt replaceState, damit Back/Forward auch zwischen Filtern navigiert.
+    // pushState statt replaceState, damit Back/Forward zwischen Filtern navigiert.
     const url = window.location.pathname + window.location.search + nextHash;
     window.history.pushState(null, '', url);
   };

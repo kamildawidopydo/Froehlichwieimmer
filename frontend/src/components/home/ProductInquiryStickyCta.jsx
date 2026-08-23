@@ -109,11 +109,33 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
   const [mounted, setMounted] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Sichtbar-Guard: wenn das Newsletter-Formular im Viewport ist, das sticky CTA
+  // auf Mobile temporär höher legen, damit Submit/Consent nicht überdeckt werden.
+  const [nearForm, setNearForm] = useState(false);
   const rootRef = useRef(null);
 
   useEffect(() => {
     setDismissed(readDismissed());
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    // IDs, die das Sticky CTA auf Mobile nicht verdecken darf.
+    const AVOID_IDS = ['home-newsletter'];
+    const targets = AVOID_IDS
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+    if (!targets.length) return undefined;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const anyVisible = entries.some((e) => e.isIntersecting);
+        setNearForm(anyVisible);
+      },
+      { threshold: 0.05 },
+    );
+    targets.forEach((el) => io.observe(el));
+    return () => io.disconnect();
   }, []);
 
   useEffect(() => {
@@ -173,17 +195,31 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
   }
 
   if (!isDesktop) {
+    // Auf kleinen Viewports: wenn ein zu vermeidendes Formular im Viewport ist,
+    // die Sticky-Position vertikal anheben UND horizontal von rechts nach links
+    // wechseln — der Interstitial-Close-Button (top-right) und der Newsletter-
+    // Consent-Link bleiben so komplett bedienbar. Desktop unverändert.
+    const mobilePos = nearForm
+      ? 'bottom-[calc(env(safe-area-inset-bottom,0px)+8.5rem)] left-4'
+      : `${BOTTOM} right-4`;
     return createPortal(
       <div
         ref={rootRef}
-        className={cn('fixed z-[90]', BOTTOM, 'right-4')}
+        className={cn(
+          'fixed z-[90] transition-[bottom,left,right] duration-300 ease-out',
+          mobilePos,
+        )}
         data-testid="product-inquiry-sticky-cta"
+        data-near-form={nearForm ? 'true' : 'false'}
       >
         <ProductMenu
           menuOpen={menuOpen}
           prefersReduced={prefersReduced}
           onPick={pickProduct}
-          className="absolute bottom-full right-0 mb-2 flex w-[min(17rem,calc(100vw-2rem))] flex-col gap-0.5 rounded-xl border border-bank-border bg-white p-1.5 shadow-[0_16px_40px_-20px_rgb(9_33_66/0.28)] dark:bg-bank-surface-elev"
+          className={cn(
+            'absolute bottom-full mb-2 flex w-[min(17rem,calc(100vw-2rem))] flex-col gap-0.5 rounded-xl border border-bank-border bg-white p-1.5 shadow-[0_16px_40px_-20px_rgb(9_33_66/0.28)] dark:bg-bank-surface-elev',
+            nearForm ? 'left-0' : 'right-0',
+          )}
         />
         <CompactPill
           fixed={false}

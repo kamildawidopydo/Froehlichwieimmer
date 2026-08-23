@@ -1,0 +1,57 @@
+{
+  "summary": "Session 69 frontend-only verification on the public preview URL. All 9 requested items (URL-Hash cleanup + 3 hash regressions, mobile sticky shift at 320/375/390/430, desktop no-shift regression, newsletter signup flow, 7 routes, HomeFinanceNews regression) were executed with Playwright and are GREEN. One NEW overlay regression found: the shifted mobile sticky CTA fully covers the close (X) button of the InvestmentTopicTeaser interstitial ([data-testid=invtopic-teaser-close]) and partially covers the 'Datenschutzerklaerung' link inside the newsletter consent label.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ProductInquiryStickyCta (mobile nearForm shift) vs InvestmentTopicTeaser interstitial",
+        "issue": "Bei nearForm=true liegt das Sticky-CTA auf bottom ~240px - genau auf der Kopfzeile des fixed Interstitials (z-index 40, rect y=540.8 h=303, viewport 390x844). document.elementFromPoint auf dem X-Button [data-testid=invtopic-teaser-close] liefert 'product-inquiry-sticky-compact' => X ist zu 100% vom CTA (z-index 90) verdeckt und nicht klickbar. Der Text-Button 'Schliessen' bleibt erreichbar, d.h. kein Totalblocker, aber der primaere Close-Affordance ist unbenutzbar.",
+        "selector": "[data-testid=invtopic-teaser-close] / [data-testid=product-inquiry-sticky-cta]",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "NewsletterSignup consent label (mobil 390)",
+        "issue": "Der Link 'Datenschutzerklaerung' im Consent-Label (rect x=235 y=555 w=129 h=16) wird vom geshifteten CTA (y=562.5) teilweise ueberdeckt; elementFromPoint in der Linkmitte liefert 'product-inquiry-sticky-compact'. Playwright-Trial-Click gelingt noch ueber den freien linken Linkbereich, Checkbox und Submit sind vollstaendig klickbar. Kosmetisch/Teil-Obstruktion.",
+        "selector": "[data-testid=home-newsletter-form] a",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Home mobil (320/375/390/430)",
+        "issues": [
+          "Der feste 15rem-Shift (240px) trifft reproduzierbar die Interstitial-Kopfzeile. Empfehlung: AVOID_IDS um die Interstitial-ID erweitern bzw. Interstitial bei nearForm=true nach unten/aus dem Weg schieben oder CTA-z-index unter dem Interstitial halten."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Overlay-Konflikt beheben: geshiftetes Sticky-CTA verdeckt [data-testid=invtopic-teaser-close] (X) des Interstitials auf Mobile komplett; zusaetzlich Teilverdeckung des Datenschutz-Links im Newsletter-Consent."
+  ],
+  "critical_code_review_comments": [
+    "HomeFinanceNews: readCategoryFromHash/replaceState-Cleanup arbeitet korrekt - invalider #kategorie=... Hash wird still entfernt, fremde Hashes (#some-anchor) bleiben unangetastet, gueltige Hashes bleiben erhalten, Back/Forward ohne Loop. Kein Handlungsbedarf.",
+    "ProductInquiryStickyCta: IntersectionObserver-Setup laeuft nur einmal beim Mount ueber document.getElementById('home-newsletter'). Auf Routen, die die Newsletter-Sektion erst spaeter (lazy/Suspense) mounten, wird kein Observer registriert (targets.length === 0 -> early return, kein Retry). Auf / funktioniert es, aber ein MutationObserver-Fallback oder Re-Run bei Location-Change waere robuster.",
+    "Der Shift-Wert 'bottom-[calc(env(safe-area-inset-bottom,0px)+15rem)]' ist hart kodiert und ignoriert --live-ticker-h (im Basis-BOTTOM beruecksichtigt); bei sichtbarem Live-Ticker kann die Position inkonsistent wirken."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "not tested (frontend-only request)", "frontend": "100% (9/9 requested items PASS)" },
+  "seed_data_creation": "Newsletter-Abonnent qa.session69.<ts>@example.com in newsletter_subscribers (1x neu + 1x already_subscribed).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "keine benoetigt (UI); Visitor-Gate via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent umgangen",
+  "detailed_results": {
+    "item1_invalid_hash_cleanup": "PASS - /#kategorie=blablanotreal: hash='' (href = / ohne Hash), filter-all data-active=true, history.length=3 (kein Reload, keine Endlosschleife), 0 pageerrors.",
+    "item2_valid_hash": "PASS - /#kategorie=wirtschaft: hash bleibt exakt '#kategorie=wirtschaft', filter-wirtschaft=true, filter-all=false.",
+    "item3_back_forward": "PASS - europa (#kategorie=europa) -> welt (#kategorie=welt); back -> #kategorie=europa + europa aktiv; back -> hash '' + all aktiv. Keine Loops.",
+    "item4_foreign_hash": "PASS - /#some-anchor: hash unveraendert '#some-anchor', filter-all aktiv.",
+    "item5_mobile_shift": "PASS - 390/320/375/430: near-form vor Scroll=false, nach Scroll auf #home-newsletter=true, bottom-Offset exakt 240px, kein Overlap mit [data-testid=home-newsletter-submit] (Submit trial-click OK).",
+    "item6_desktop_regression": "PASS - 1440x900: y bleibt 828 vor/nach Newsletter-Sichtbarkeit, bottom-Offset 14px, rechte Kante 1420, data-near-form nicht gesetzt (Desktop-Branch).",
+    "item7_newsletter_flow": "PASS - invalid email ('Bitte eine gueltige E-Mail-Adresse eingeben.', kein Request), no consent ('Bitte bestaetigen Sie den Datenschutzhinweis.', kein Request), success (POST /api/newsletter/subscribe -> 'Vielen Dank - der woechentliche Digest kommt jeden Freitagvormittag.'), idempotent ('Sie sind bereits eingetragen').",
+    "item8_routes": "PASS - /, /nachrichten, /nachrichten/etf-zufluesse-europa-neues-jahreshoch, /wissen, /finanzwissen/etfs-verstehen-worauf-anleger-achten-sollten, /handeln, /fonds-grundlagen: alle 200, je 1 h1, 0 pageerrors.",
+    "item9_homefinancenews_regression": "PASS - Featured (/nachrichten/eu-kommission-genehmigt-...), secondary-0..2 vorhanden, 6 dynamische Chips (all, wirtschaft, fonds-etfs, europa, welt, politik), 8 Grid-Cards; bei jedem Filter featured_dup=0."
+  },
+  "context_for_next_testing_agent": "Session 69 Frontend komplett gruen (9/9). Einzige offene Beobachtung: geshiftetes Mobile-Sticky-CTA (bottom 240px, z-90) verdeckt den X-Button des fixed InvestmentTopicTeaser-Interstitials (z-40, [data-testid=invtopic-teaser-close]) sowie teilweise den Datenschutz-Link im Newsletter-Consent. Weekly Digest Backend wurde gemaess Main-Agent bereits per curl verifiziert und war nicht Teil dieses Runs. Visitor-Gate-Bypass via localStorage funktioniert weiterhin.",
+  "rca_of_the_issue": "Der Mobile-Shift verwendet einen festen Offset von 15rem (240px). Der InvestmentTopicTeaser ist ein fixed Element mit Top-Kante bei y~541 (390x844) und seinem Close-X in der rechten oberen Ecke - genau im Bereich y 562-604, den das CTA nach dem Shift belegt. Da das CTA z-index 90 hat und das Interstitial nur 40, gewinnt das CTA den Hit-Test (elementFromPoint -> product-inquiry-sticky-compact). Reproduktion: 390x844, / laden, zu [data-testid=home-newsletter] scrollen, ~3 s warten bis das Interstitial erscheint."
+}
