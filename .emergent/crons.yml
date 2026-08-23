@@ -1,20 +1,20 @@
 crons:
   # Stündliche Nachrichten-Aktualisierung (User-Vorgabe: 0 * * * *).
-  # Der 15-Min-Fetcher unten läuft zusätzlich häufiger — beide Jobs teilen sich
-  # denselben Endpoint, Duplikate werden via fingerprint / source_url erkannt.
+  # Beide Cron-Jobs teilen sich denselben Endpoint mit Mongo-Lock — parallele
+  # Läufe werden atomar verhindert (siehe fetch_feeds).
   - name: news-hourly-refresh
     schedule: "0 * * * *"
-    endpoint: "/api/news/admin/fetch-feeds"
+    endpoint: "/api/news/admin/fetch-feeds?trigger=hourly_cron"
     method: POST
     auth: admin
     description: "Stündliches News-Refresh — fetch RSS, insert new, update changed titles/summaries/images."
 
   - name: news-fetch-feeds
     schedule: "*/15 * * * *"
-    endpoint: "/api/news/admin/fetch-feeds"
+    endpoint: "/api/news/admin/fetch-feeds?trigger=15min_cron"
     method: POST
     auth: admin
-    description: "Ergänzender 15-Min-Fetch für maximale Aktualität."
+    description: "Ergänzender 15-Min-Fetch für maximale Aktualität — überspringt sauber, wenn hourly gerade läuft."
 
   - name: news-synthesize
     schedule: "0 * * * *"

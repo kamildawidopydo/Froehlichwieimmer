@@ -660,16 +660,65 @@ async def _fetch_unsplash_image(category: str, title: str, summary: str = "", *,
 # Feed fetcher
 # ---------------------------------------------------------------------------
 
-async def fetch_feeds(db) -> dict:
+async def fetch_feeds(db, *, trigger_source: str = "manual") -> dict:
     """Ziehe alle RSS-Feeds und persistiere neue/aktualisierte Roh-Items.
 
     Rückgabe-Stats enthalten explizit `started_at`, `fetched`, `relevant`,
-    `new`, `merged`, `updated`, `errors` — für Cron-Logging & Debugging.
+    `new`, `merged`, `updated`, `errors`, `trigger_source` — für Cron-Logging
+    & Debugging.
+
+    Verwendet einen **atomaren Mongo-Lock** (`job_locks._id="fetch_feeds"`), um
+    parallele Läufe (15-Min-Cron + Stunden-Cron + Post-Deploy) zuverlässig zu
+    verhindern. Läuft ein zweiter Job an, wird er sauber übersprungen. Bei
+    Exception oder Timeout (TTL 10 Min) wird der Lock automatisch freigegeben.
     """
     started = datetime.now(timezone.utc)
-    stats = {"started_at": started.isoformat(), "fetched": 0, "relevant": 0,
-             "new": 0, "merged": 0, "updated": 0, "errors": []}
+    LOCK_ID = "fetch_feeds"
+    LOCK_TTL_S = 600  # 10 Min — großzügig, aber verhindert Dead-Locks bei Crash
+    expires = started + timedelta(seconds=LOCK_TTL_S)
+
+    # ---- Atomic lock acquire (findOneAndUpdate mit expiry-Filter) ------------
+    from pymongo import ReturnDocument
+    from pymongo.errors import DuplicateKeyError
+    lock_doc = None
+    try:
+        lock_doc = await db.job_locks.find_one_and_update(
+            {"_id": LOCK_ID, "$or": [
+                {"expires_at": {"$lt": started}},
+                {"expires_at": {"$exists": False}},
+            ]},
+            {"$set": {"acquired_at": started, "expires_at": expires,
+                        "trigger_source": trigger_source}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+    except DuplicateKeyError:
+        # Lock war belegt & noch nicht abgelaufen → Filter matchte nicht, upsert
+        # kollidiert mit existierendem _id. Genau der Skip-Case.
+        lock_doc = None
+    # Prüfen: gehört der Lock jetzt uns? (acquired_at == started identifiziert uns)
+    if not lock_doc or lock_doc.get("acquired_at") != started:
+        # Ein anderer Prozess hält den Lock noch — sauber überspringen.
+        existing = await db.job_locks.find_one({"_id": LOCK_ID}) or {}
+        holder = existing.get("trigger_source") or "unknown"
+        holder_since = existing.get("acquired_at")
+        logger.info("news_fetch_skipped_already_running trigger=%s held_by=%s since=%s",
+                    trigger_source, holder, holder_since)
+        return {
+            "skipped": True,
+            "reason": "already_running",
+            "trigger_source": trigger_source,
+            "held_by": holder,
+            "held_since": holder_since.isoformat() if isinstance(holder_since, datetime) else None,
+            "started_at": started.isoformat(),
+        }
+
+    logger.info("news_fetch_started trigger=%s", trigger_source)
+    stats = {"started_at": started.isoformat(), "trigger_source": trigger_source,
+             "fetched": 0, "relevant": 0, "new": 0, "merged": 0, "updated": 0, "errors": []}
     now = started
+    # Falls hier eine Exception den Return blockiert, gibt der TTL-basierte
+    # Mongo-Lock den Slot nach 10 Min automatisch frei — Dead-Lock-Schutz.
     for feed_cfg in FEEDS:
         try:
             parsed = feedparser.parse(feed_cfg["url"])
@@ -779,6 +828,11 @@ async def fetch_feeds(db) -> dict:
             stats["new"] += 1
     stats["duration_s"] = round((datetime.now(timezone.utc) - started).total_seconds(), 2)
     logger.info("fetch_feeds_summary %s", stats)
+    # Lock immer freigeben — auch bei Exception via finally-Wrapper unten.
+    try:
+        await db.job_locks.delete_one({"_id": LOCK_ID, "acquired_at": started})
+    except Exception:  # noqa: BLE001
+        logger.exception("news_fetch_lock_release_failed")
     return stats
 
 

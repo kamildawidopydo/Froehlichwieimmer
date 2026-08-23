@@ -3233,8 +3233,10 @@ _MongoNewsProvider.set_db(db)
 
 
 @api.post("/news/admin/fetch-feeds", summary="Admin: RSS-Feeds sofort abrufen")
-async def _admin_fetch_feeds(_user: dict = Depends(require_admin)):
-    return await _news_fetch_feeds(db)
+async def _admin_fetch_feeds(trigger: Optional[str] = None, _user: dict = Depends(require_admin)):
+    valid = {"15min_cron", "hourly_cron", "post_deploy", "manual"}
+    src = trigger if trigger in valid else "manual"
+    return await _news_fetch_feeds(db, trigger_source=src)
 
 
 @api.post("/news/admin/synthesize", summary="Admin: neue Artikel synthetisieren")
@@ -3303,7 +3305,7 @@ async def _news_post_deploy_fetch() -> None:
         try:
             await asyncio.sleep(30)  # kurz warten, damit alles initialisiert ist
             logger.info("news_post_deploy_fetch: starting one-shot fetch")
-            stats = await _news_fetch_feeds(db)
+            stats = await _news_fetch_feeds(db, trigger_source="post_deploy")
             logger.info("news_post_deploy_fetch: done — %s", stats)
         except Exception:  # noqa: BLE001
             logger.exception("news post-deploy fetch failed")
