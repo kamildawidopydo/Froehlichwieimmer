@@ -1,5 +1,31 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 65 (Feb 25, 2026) — Constraint-Fix aus Emergent nicht möglich
+
+**Systematische Selbstprüfung durchgeführt (alle automatisierbaren Optionen)**
+- Repo-weite Suche nach `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `POSTGRES_URL`, `DATABASE_URL`, `SUPABASE_DB_PASSWORD` → **nichts**. Nur anon-key ist in `frontend/.env`.
+- Supabase-CLI → nicht installiert (`npm error npx canceled … supabase@2.115.0`); wäre ohnehin ohne Access-Token nutzlos.
+- Supabase Management API `api.supabase.com/v1/projects/vitmvkmjjwabfzndynlj` → **401 Unauthorized** (kein Token verfügbar).
+- Anon-Zugriff auf `pg_constraint` / OpenAPI-Introspection → **401**; PostgREST verweigert Schema-Read für anon.
+- Suche nach public RPC die DDL ausführen könnte → `exec_sql`/`sql_exec`/`widen_product_inquiry` alle 404. `refresh_stock_fundamentals_now` existiert (200), tut aber nichts zum Constraint.
+- `psql` / `pg_isready` → nicht installiert; ohne DB-Passwort auch nicht nutzbar.
+- Legacy-Migration-Datei `20260225000000_product_inquiry_leads_widen_products.sql` liegt bereit und ist syntaktisch korrekt, kann aber ohne DDL-Rechte nicht angewendet werden.
+
+**Live-Probe (Endzustand nach 4 User-SQL-Anläufen)**
+- `aktien / anleihen / spargeld` → 201 (alte Liste)
+- `fonds / tagesgeld / festgeld / flexgeld` → weiterhin **400 code 23514**
+- `xxxinvalid` → 400 (Constraint aktiv, nur eben mit alter Werteliste)
+- **Diagnose:** Alle 4 ALTER-TABLE-Ausführungen der Session sind NICHT im Projekt `vitmvkmjjwabfzndynlj` gelandet. Mögliche Gründe: falsches Projekt-Tab, falsche Rolle im SQL-Editor, Studio-AI-Preview statt Run.
+
+**Frontend Regression (nach Session 64)**
+- /, /handeln, /wissen, /fonds-grundlagen alle HTTP 200
+- Wizard funktioniert unverändert (Session-63/64 6/6 PASS Baseline, iteration_37 + iteration_38)
+- aktien + anleihen submits erreichen den Success-Screen
+- fonds/tagesgeld/festgeld/flexgeld zeigen sichtbaren Inline-Error mit Retry-Button — Verhalten korrekt für den externen Blocker
+
+**Status: BLOCKED** — es gibt genau eine offene Aktion für den User (siehe Table-Editor-Anleitung im Chat).
+
+
 ## Session 64 (Feb 25, 2026) — Submit-Pfad bereinigt, Supabase-Constraint bleibt extern blockiert
 
 **P1 — Supabase-Constraint (BLOCKED, User-Action erforderlich)**
