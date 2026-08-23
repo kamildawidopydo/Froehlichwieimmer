@@ -1,0 +1,28 @@
+{
+  "summary": "Session 53 RETEST (frontend only) on the preview URL. The 'Handeln' removal from siteCopy.nav.groups[angebote] IS now live. Desktop 1440x900: Angebote dropdown renders exactly 6 links in the required order (Sparvergleich→/comparison, Kredit→/kredit, Spezial-AIF→/spezial-aif, Festgeld→/produkte/festgeld, Flexgeld→/produkte/flexgeld, Tagesgeld→/produkte/tagesgeld); document.querySelectorAll('[data-testid=\"nav-handeln\"]').length === 0 on desktop AND on mobile 390x844 with the drawer open. Only remaining top-nav link to /handeln is 'Investment & Börse' (data-testid='nav-investment-&-börse', href=/handeln) in the Wissen dropdown; clicking it on desktop navigates to /handeln with H1 'Investieren, verständlich.'. Mobile drawer contains exactly 6 Angebote items and 10 Wissen items; tapping the drawer-scoped 'Investment & Börse' loads /handeln correctly. Focus-visible outline confirmed as 2px solid rgb(201,169,97) with 2px offset via keyboard Tab on both desktop dropdown and mobile drawer links. No horizontal overflow on mobile (scrollWidth 390 = clientWidth 390). Regression: /wissen, /handeln, /fonds-grundlagen, /themen, /themen/aktien, /themen/anleihen, /themen/dividenden all return 200 with correct H1s. No new React errors or missing-key warnings; only the pre-existing baseline console noise (Supabase 401s on public pages and repeated SVG '<path> attribute d ... undefined' errors).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "TopicPage /themen/dividenden hero", "issue": "Pre-existing (out of scope per request): remote Unsplash hero image previously reported as broken; not re-verified in depth this run.", "selector": "img[src*='photo-1554224154']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "None for Session 53 — change verified live. Optional cleanup: an anchor with text 'Handeln' and href='/handeln' still exists outside the top nav (no data-testid, footer/section link) — confirm this is intentional.",
+    "Optional: fix pre-existing console noise (SVG path 'undefined' from an icon component receiving an undefined path, and Supabase 401 requests fired on public pages)."
+  ],
+  "critical_code_review_comments": [
+    "Auto-generated nav testids still embed '&' and umlauts (nav-investment-&-börse); slugify for selector stability.",
+    "Public pages still trigger 401 Supabase requests — guard those calls behind an authenticated check to reduce noise/latency."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100% of Session 53 checks passed"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "not required (public routes; visitor gate bypassed via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent init script)",
+  "context_for_next_testing_agent": "Bypass the visitor gate with an init script setting localStorage keys kapitalmitte_visitor_profile and kapitalmitte_cookie_consent before goto. Angebote group = 6 links (Handeln removed, verified live). nav-investment-&-börse exists in both desktop dropdown and mobile drawer DOM — scope to [data-testid='mobile-menu'] on mobile. Programmatic .focus() in the mobile drawer does NOT trigger :focus-visible (outline color transparent); use keyboard Tab to validate the gold 2px outline.",
+  "rca_of_the_issue": "Iteration_18 failure was a hot-reload/bundle race; after the frontend supervisor restart the new bundle serves the 6-link Angebote group, confirming the disk edit."
+}

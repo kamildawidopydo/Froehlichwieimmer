@@ -1,0 +1,30 @@
+{
+  "summary": "Session 53 verification (frontend-only): the requested change was NOT applied. /app/frontend/src/data/siteCopy.js line 103 still contains { name: 'Handeln', path: '/handeln', desc: 'Aktien und Anleihen im Depot' } inside the Angebote group. Live verification on the preview URL confirms: desktop Angebote dropdown renders 7 links (Sparvergleich, Kredit, Handeln, Spezial-AIF, Festgeld, Flexgeld, Tagesgeld) and document.querySelectorAll('[data-testid=\"nav-handeln\"]').length === 1 on desktop (2 in DOM once mobile drawer markup is mounted) instead of the required 0. Mobile 390x844 drawer likewise still shows Handeln in the Angebote section. Everything else is unchanged/green: Wissen dropdown still has all 10 links in the Session 52 order with nav-investment-&-börse -> /handeln; clicking it navigates to /handeln with H1 'Investieren, verständlich.'; no horizontal overflow on mobile (scrollWidth 390 = clientWidth 390); content regression intact (handeln-related 3 items, fonds-grundlagen-related 3, topic-aktien/anleihen/dividenden-related 2 each, /wissen 4 wissen-card-*, /themen overview loads).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Navigation / siteCopy.nav.groups[angebote]", "issue": "Session 53 removal not applied: 'Handeln' -> /handeln still present as 3rd item in the Angebote dropdown (desktop and mobile). Angebote has 7 links instead of 6 and data-testid 'nav-handeln' still exists (expected 0 occurrences). Duplicate link to /handeln remains (also in Wissen as Investment & Börse) with the outdated desc 'Aktien und Anleihen im Depot'.", "selector": "[data-testid=\"nav-handeln\"]", "priority": "HIGH"},
+      {"component": "TopicPage /themen/dividenden hero", "issue": "Hero image broken (naturalWidth 0): remote https://images.unsplash.com/photo-1554224154-26032cdc0b4c?w=1400&q=75 fails to load, alt text shown in an empty grey box. Pre-existing, not Session 53 related.", "selector": "img[src*='photo-1554224154']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Remove line 103 of /app/frontend/src/data/siteCopy.js ({ name: 'Handeln', path: '/handeln', desc: 'Aktien und Anleihen im Depot' }) so the Angebote group has exactly 6 links and nav-handeln disappears. The edit appears to have never been saved to disk.",
+    "Optionally fix the broken Unsplash hero image on /themen/dividenden (self-host or replace URL)."
+  ],
+  "critical_code_review_comments": [
+    "siteCopy.js Angebote group unchanged since Session 52 — the reported 'manual smoke-check confirmed nav-handeln gone' does not match the live app or the file on disk; re-verify after saving the edit.",
+    "Pre-existing console noise persists (unchanged baseline): repeated 'Error: <path> attribute d: Expected moveto path command, \"undefined\"' from an icon component receiving an undefined path, plus 401s from Supabase calls on public pages.",
+    "Auto-generated testids still contain '&'/umlauts (nav-investment-&-börse); consider slugifying for test stability."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "not tested (frontend-only request)", "frontend": "Session 53 target: 0% (change absent); regression checks: 100%" },
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": true,
+  "test_credentials": "not required (public routes; visitor gate bypassed via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent)",
+  "context_for_next_testing_agent": "Verify after the siteCopy.js edit is actually saved: Angebote dropdown must list exactly Sparvergleich, Kredit, Spezial-AIF, Festgeld, Flexgeld, Tagesgeld and document.querySelectorAll('[data-testid=\"nav-handeln\"]').length must be 0 on both desktop 1920 and mobile 390. Gotcha: nav-investment-&-börse exists twice in DOM (desktop dropdown + mobile drawer); when clicking in the mobile drawer, scope the locator to the drawer or use .last, otherwise Playwright picks the hidden desktop node and times out. Content regression baseline confirmed unchanged in this iteration.",
+  "rca_of_the_issue": "The Session 53 one-line deletion was never persisted: /app/frontend/src/data/siteCopy.js:103 still holds the Handeln entry, and the live bundle (hot reload active) renders 7 Angebote links with nav-handeln present. No code defect otherwise."
+}

@@ -100,7 +100,6 @@ export const siteCopy = {
         links: [
           { name: 'Sparvergleich', path: '/comparison', desc: 'Festgeld, Tagesgeld und Flexgeld im Überblick' },
           { name: 'Kredit', path: '/kredit', desc: 'Kreditangebote strukturiert vergleichen' },
-          { name: 'Handeln', path: '/handeln', desc: 'Aktien und Anleihen im Depot' },
           { name: 'Spezial-AIF', path: '/spezial-aif', desc: 'Fondsprofil und Anlagestrategie' },
           { name: 'Festgeld', path: '/produkte/festgeld', desc: savingsCopy.guides.festgeld.cardLede },
           { name: 'Flexgeld', path: '/produkte/flexgeld', desc: savingsCopy.guides.flexgeld.cardLede },

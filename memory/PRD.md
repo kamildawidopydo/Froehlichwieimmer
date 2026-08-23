@@ -1,5 +1,20 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 53 (Feb 24, 2026) — Angebote-Nav aufräumen (`/handeln`)
+
+**Ziel**
+Veralteten „Handeln"-Eintrag mit Beschreibung „Aktien und Anleihen im Depot" aus der Angebote-Navigation entfernen. Nach Umwidmung von `/handeln` zum öffentlichen Wissenshub in Session 48 gehört der Link inhaltlich in die Wissen-Gruppe (dort seit Session 52 als „Investment & Börse" prominent verlinkt).
+
+**Entscheidung**
+Vollständig entfernt statt umbenannt, weil (a) semantisch keine Produkt-/Depot-Bedeutung mehr, (b) Wissen-Dropdown erfüllt Auffindbarkeit vollständig, (c) doppelte Nav-Einträge zur selben Route waren aus Session 52 als Nutzerreibung dokumentiert.
+
+**Geänderte Dateien (1)**
+- `frontend/src/data/siteCopy.js` — Zeile 103 entfernt. Angebote enthält jetzt 6 Einträge: Sparvergleich · Kredit · Spezial-AIF · Festgeld · Flexgeld · Tagesgeld.
+
+**Nicht geändert**
+- `Navigation.js` (datengetrieben, keine Code-Änderung nötig)
+- Wissen-Dropdown, RelatedKnowledge, HandelnHub, Wissen-Landing, alle Routen
+
 ## Session 52 (Feb 24, 2026) — Wissen-Nav-Integration
 
 **Ziel**
