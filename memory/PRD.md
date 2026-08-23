@@ -1,5 +1,28 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 51 (Feb 24, 2026) — Wissen-Landing als redaktioneller Hub
+
+**Ziel**
+`/wissen` von einer reinen Ratgeber-Artikelliste zu einem echten Wissenshub ausbauen, der Handeln, Fonds-Grundlagen und die drei Investmentthemen prominent zusammenführt. Konsistent mit `knowledgeGraph.js`-Terminologie, keine neuen UI-Abstraktionen, bestehende Beitragsliste bleibt erhalten.
+
+**Geänderte Dateien (1)**
+- `frontend/src/pages/Wissen.js` — komplett neu strukturiert:
+  1. Hero (Hub-Fokus, Text gestrafft)
+  2. **NEU** Investment-Wissenshub — 2 große editorial-Cards: Handeln + Fonds-Grundlagen mit CTAs „Zum Wissenshub" / „Grundlagen ansehen"
+  3. **NEU** Themen im Fokus — 3 Listen-Items (Aktien/Anleihen/Dividenden) mit CTA „Thema verstehen" + Link „Alle Investmentthemen" → /themen
+  4. Ratgeber & Perspektiven — bestehende `WISSEN_ARTICLES`-Liste unverändert (nur H2 heruntergestuft, damit Hierarchie stimmt: 1× H1 → 3× H2 → Rest H3)
+  5. Hinweis + CTA (Persönliches Gespräch / Leistungen) — unverändert
+
+**Terminologie (mit knowledgeGraph abgeglichen)**
+- CTAs: „Zum Wissenshub" / „Grundlagen ansehen" / „Thema verstehen"
+- Eyebrows: „Investment-Wissenshub" / „Themen im Fokus" / „Ratgeber & Perspektiven"
+
+**Bewusst NICHT verändert**
+- `WISSEN_ARTICLES` Daten & wissen-card-* Testids
+- knowledgeGraph.js, RelatedKnowledge, KnowledgeCrossLinkBox, TopicCrossLinkBox
+- Bestehende Sub-Nav („Wissen"-Dropdown), Investment-Funnels, Fonds-ETF-Seed
+- Keine automatischen Keyword-Links, keine redundanten RelatedKnowledge-Blöcke auf dieser Seite (Hub-Struktur erfüllt denselben Zweck)
+
 ## Session 50 (Feb 24, 2026) — Fonds-ETFs News Seed
 
 **Ziel**

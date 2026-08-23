@@ -1,0 +1,52 @@
+{
+  "summary": "Session 51 frontend-only E2E verification of the rewritten /wissen editorial knowledge hub. Verified page load with visitor-gate bypass, all 4 sections (Investment-Wissenshub, Themen im Fokus, Ratgeber & Perspektiven, CTA), 6 outbound link navigations, keyboard accessibility (tab order + focus ring + Enter activation), heading hierarchy, mobile 390x844 layout/overflow, console/network hygiene, and full regression on /handeln, /fonds-grundlagen, all 3 /themen/* RelatedKnowledge blocks, the seeded fonds-etfs news cross-link box, and the navbar Wissen dropdown. Result: 100% pass, no functional or design defects found. No code changes were required.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "/wissen (non-blocking observations)",
+        "issues": [
+          "Navbar 'Wissen' dropdown does not expose /themen (Investmentthemen overview) or /handeln (Investment-Wissenshub); both are now prominent on /wissen but are not discoverable from the global nav. Cosmetic/IA suggestion only, not a Session 51 regression.",
+          "Focus-visible on hub/topic links relies on box-shadow ring only (computed outline-color is transparent). Ring is clearly visible (gold rgba(201,169,97,0.3) 2px on hub cards, blue rgba(76,124,186,0.38) 4px on topic rows) so keyboard focus is perceivable; noted for reference in case of forced-colors/high-contrast mode where box-shadow is dropped."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/ui_it16/wissen_desktop.jpeg",
+    "/app/test_reports/ui_it16c/mobile_hub.jpeg",
+    "/app/test_reports/ui_it16c/nav_dropdown.jpeg"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Wissen.js is 309 lines, well structured, HUB_ITEMS/TOPIC_ITEMS extracted as data constants with stable keys — no DRY or file-size issues.",
+    "Terminology is consistent with knowledgeGraph.js CTA_BY_TYPE ('Zum Wissenshub' / 'Grundlagen ansehen' / 'Thema verstehen'). Verified rendered text case-insensitively since Tailwind applies uppercase transform.",
+    "Optional hardening: add explicit outline-color on focus-visible (e.g. focus-visible:outline-bank-gold) instead of outline-none + ring-only, so focus remains visible under Windows high-contrast/forced-colors mode."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "not required — /wissen is public; visitor gate bypassed via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent",
+  "detailed_results": {
+    "page_load": "PASS — data-testid='wissen-page' present; exactly 1 H1 rendering 'Finanzwissen,' + accent 'verständlich erklärt.'",
+    "section_1_investment_hub": "PASS — eyebrow 'Investment-Wissenshub', H2 'Die zwei Ausgangspunkte für jede Anlageentscheidung.'; wissen-hub-handeln is <a href='/handeln'> with H3 'Investment & Börse verstehen' + CTA 'Zum Wissenshub'; wissen-hub-fonds-grundlagen is <a href='/fonds-grundlagen'> with H3 'Fonds & ETFs verstehen' + CTA 'Grundlagen ansehen'.",
+    "section_2_themen": "PASS — eyebrow 'Themen im Fokus', H2 'Was wir aktuell einordnen.'; wissen-topic-aktien|anleihen|dividenden are <a> inside <li> with correct /themen/* hrefs and CTA 'Thema verstehen'; wissen-topics-overview -> /themen, text 'Alle Investmentthemen'.",
+    "section_3_ratgeber": "PASS — exactly 4 wissen-card-* items unchanged (tagesgeld-vs-festgeld, diversifikation, anleihe-erklaert, anlagehorizont); clicking first navigated to /wissen/tagesgeld-vs-festgeld with no 404.",
+    "section_4_ctas": "PASS — wissen-cta-contact -> /contact, wissen-cta-leistungen -> /leistungen.",
+    "navigation": "PASS 6/6 — /handeln (H1 'Investieren, verständlich.'), /fonds-grundlagen (H1 'Fonds verstehen — verständlich erklärt'), /themen/aktien (H1 'Aktien als Baustein Ihrer Vermögensstrategie'), /themen/anleihen (H1 'Anleihen als Baustein einer Vermögensstrategie'), /themen/dividenden (H1 'Dividenden strategisch einordnen'), /themen (H1 'Investmentthemen im Überblick').",
+    "accessibility": "PASS — all 5 hub/topic items plus overview link are real <a> tags; tab order matched DOM order exactly [hub-handeln, hub-fonds-grundlagen, topic-aktien, topic-anleihen, topic-dividenden, topics-overview]; focus ring (box-shadow) computed on each; Enter on focused wissen-hub-handeln navigated to /handeln.",
+    "heading_hierarchy": "PASS — 1x H1, 3x H2 (one per content section), H3 for both hub-card titles, 3 topic titles and 4 article titles. No skipped levels within the page content (remaining H3s belong to the shared trust/footer band).",
+    "mobile_390x844": "PASS — scrollWidth 390 == clientWidth 390 (no horizontal overflow); hub cards stack single-column (y 845 vs 1164, both x=20 w=350); topic rows stack (y 1797 / 2044 / 2268); Ratgeber cards readable; mobile clicks on wissen-hub-handeln and wissen-topic-aktien navigated correctly.",
+    "console_network": "PASS for /wissen-specific issues — no React errors, no missing-key warnings, no 404s. Pre-existing/benign only: 3x 401 on /api/auth/me (expected for anonymous visitor, unrelated to Session 51) and one Chrome 'overflow: visible on img' informational warning.",
+    "regression": "PASS — /handeln handeln-related 3 items, /fonds-grundlagen fonds-grundlagen-related 3 items, topic-aktien-related 2, topic-anleihen-related 2, topic-dividenden-related 2; /news/nachrichten/etf-zufluesse-europa-neues-jahreshoch still renders fonds-grundlagen-crosslink + fonds-grundlagen-crosslink-cta linking to /fonds-grundlagen; navbar Wissen dropdown opens on hover with all existing sub-links (Wissen & Perspektiven, Fonds-Grundlagen, So funktioniert es, Rechner, Sicherheit, Compliance, Steuern, FAQ)."
+  },
+  "context_for_next_testing_agent": "Session 51 /wissen hub is fully verified (iteration_16) — no open defects, no retest needed. Visitor-gate bypass recipe that works: goto page, set localStorage kapitalmitte_visitor_profile={residence:'DE',role:'private',isUsPerson:false} and kapitalmitte_cookie_consent={necessary:true,analytics:true,marketing:true}, then re-goto. IMPORTANT gotcha: CTA labels on /wissen ('Zum Wissenshub', 'Grundlagen ansehen', 'Thema verstehen', 'Alle Investmentthemen') are rendered UPPERCASE via Tailwind text-transform, so inner_text() returns uppercase — always compare case-insensitively. Baseline RelatedKnowledge item counts: handeln 3, fonds-grundlagen 3, each /themen/* 2. Note /api/auth/me returns 401 for anonymous visitors on every page — this is expected noise, not a bug.",
+  "rca_of_the_issue": "Not applicable — no failures reproduced. The only initially-red assertions in the first run (CTA text 'cta_ok=False' on all 5 hub/topic links) were a test-script artifact: Tailwind's uppercase utility changes the rendered casing returned by inner_text(). Re-running with a case-insensitive comparison confirmed all 5 CTA labels are correct and match knowledgeGraph.js terminology."
+}
