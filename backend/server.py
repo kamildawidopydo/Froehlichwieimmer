@@ -17,6 +17,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 import random
 import os
+import asyncio
 import re
 import logging
 import secrets
@@ -3291,6 +3292,22 @@ async def _news_purge_startup() -> None:
             logger.info("news_synthesizer: purged %d demo articles on startup", removed)
     except Exception:  # noqa: BLE001
         logger.exception("news demo purge failed")
+
+
+@app.on_event("startup")
+async def _news_post_deploy_fetch() -> None:
+    """Post-Deploy: einmalig RSS-Feeds ziehen (30s nach Start), damit nicht bis
+    zum nächsten Cron gewartet werden muss. Läuft im Hintergrund, blockiert
+    den Server-Startup nicht."""
+    async def _run():
+        try:
+            await asyncio.sleep(30)  # kurz warten, damit alles initialisiert ist
+            logger.info("news_post_deploy_fetch: starting one-shot fetch")
+            stats = await _news_fetch_feeds(db)
+            logger.info("news_post_deploy_fetch: done — %s", stats)
+        except Exception:  # noqa: BLE001
+            logger.exception("news post-deploy fetch failed")
+    asyncio.create_task(_run())
 
 
 @api.post("/news/admin/purge-demo", summary="Admin: DEMO-Nachrichten aus DB entfernen")

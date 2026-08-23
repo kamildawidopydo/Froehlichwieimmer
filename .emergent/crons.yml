@@ -1,17 +1,27 @@
 crons:
+  # Stündliche Nachrichten-Aktualisierung (User-Vorgabe: 0 * * * *).
+  # Der 15-Min-Fetcher unten läuft zusätzlich häufiger — beide Jobs teilen sich
+  # denselben Endpoint, Duplikate werden via fingerprint / source_url erkannt.
+  - name: news-hourly-refresh
+    schedule: "0 * * * *"
+    endpoint: "/api/news/admin/fetch-feeds"
+    method: POST
+    auth: admin
+    description: "Stündliches News-Refresh — fetch RSS, insert new, update changed titles/summaries/images."
+
   - name: news-fetch-feeds
     schedule: "*/15 * * * *"
     endpoint: "/api/news/admin/fetch-feeds"
     method: POST
     auth: admin
-    description: "Alle 15 Min RSS-Feeds abrufen (Tagesschau, DW, EZB, Bundesbank, BaFin, EU-Kommission)."
+    description: "Ergänzender 15-Min-Fetch für maximale Aktualität."
 
   - name: news-synthesize
     schedule: "0 * * * *"
     endpoint: "/api/news/admin/synthesize"
     method: POST
     auth: admin
-    description: "Stündlich bis zu 3 neue Artikel via Claude Sonnet 5 aus vorliegenden Feeds synthetisieren."
+    description: "Stündlich bis zu 3 neue Fröhlich-Redaktionsartikel via Claude Sonnet 5 synthetisieren."
 
   - name: price-alerts-check
     schedule: "*/15 * * * *"

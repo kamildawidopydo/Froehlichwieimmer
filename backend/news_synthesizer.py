@@ -661,9 +661,15 @@ async def _fetch_unsplash_image(category: str, title: str, summary: str = "", *,
 # ---------------------------------------------------------------------------
 
 async def fetch_feeds(db) -> dict:
-    """Ziehe alle RSS-Feeds und persistiere neue relevante Roh-Items."""
-    stats = {"fetched": 0, "relevant": 0, "new": 0, "merged": 0, "errors": []}
-    now = datetime.now(timezone.utc)
+    """Ziehe alle RSS-Feeds und persistiere neue/aktualisierte Roh-Items.
+
+    Rückgabe-Stats enthalten explizit `started_at`, `fetched`, `relevant`,
+    `new`, `merged`, `updated`, `errors` — für Cron-Logging & Debugging.
+    """
+    started = datetime.now(timezone.utc)
+    stats = {"started_at": started.isoformat(), "fetched": 0, "relevant": 0,
+             "new": 0, "merged": 0, "updated": 0, "errors": []}
+    now = started
     for feed_cfg in FEEDS:
         try:
             parsed = feedparser.parse(feed_cfg["url"])
@@ -687,9 +693,31 @@ async def fetch_feeds(db) -> dict:
                 continue
             stats["relevant"] += 1
             fp = _fingerprint(title)
-            existing = await db.news_raw.find_one({"fingerprint": fp})
+            # 1) Dedup nach externer URL (source URL) — falls Publisher den Link
+            #    wiederverwendet, ist das der stabilste Anker.
+            existing = await db.news_raw.find_one({"source_urls": link})
+            if not existing:
+                existing = await db.news_raw.find_one({"fingerprint": fp})
             if existing:
-                # Zweitquelle für dasselbe Ereignis → ideal für Bestätigung.
+                # 2) Update bestehendes Item, wenn Titel, Summary oder Bild sich
+                #    tatsächlich verändert haben (Publisher überschreiben oft).
+                changed_fields: dict = {}
+                if title and title != existing.get("title"):
+                    changed_fields["title"] = title
+                new_summary_clean = summary[:2000]
+                if new_summary_clean and new_summary_clean != existing.get("summary"):
+                    changed_fields["summary"] = new_summary_clean
+                # Bild nur updaten, wenn Publisher jetzt eines liefert und bisher Fallback lief.
+                rss_image_now = _extract_rss_image(entry)
+                if rss_image_now and rss_image_now != existing.get("image_url"):
+                    changed_fields["image_url"] = rss_image_now
+                    changed_fields["image_attribution"] = f"Foto: {feed_cfg['name']}"
+                    changed_fields["image_source"] = feed_cfg["name"]
+                if changed_fields:
+                    changed_fields["updated_at"] = now
+                    await db.news_raw.update_one({"_id": existing["_id"]}, {"$set": changed_fields})
+                    stats["updated"] = stats.get("updated", 0) + 1
+                # 3) Zweit-Publisher desselben Ereignisses hinterlegen.
                 if feed_cfg["name"] not in existing.get("source_names", []):
                     await db.news_raw.update_one(
                         {"_id": existing["_id"]},
@@ -749,6 +777,7 @@ async def fetch_feeds(db) -> dict:
                 "is_published": True,
             })
             stats["new"] += 1
+    stats["duration_s"] = round((datetime.now(timezone.utc) - started).total_seconds(), 2)
     logger.info("fetch_feeds_summary %s", stats)
     return stats
 
