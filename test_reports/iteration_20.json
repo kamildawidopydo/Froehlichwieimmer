@@ -1,0 +1,40 @@
+{
+  "summary": "Session 54 frontend-only verification of the /themen/dividenden hero image fix. RESULT: THE CLAIMED FIX IS NOT PRESENT IN THE CODEBASE. /app/frontend/src/pages/InvestmentTopicPage.jsx line 181 still contains the old broken URL 'photo-1554224154-26032cdc0b4c' with alt 'Zurueckhaltendes Buerogebaeude in Daemmerung - editorial'. Live page still renders the empty grey box: img.complete=true but naturalWidth=0/naturalHeight=0 (browser-confirmed) and curl HEAD on that URL returns HTTP 404. The proposed replacement URL photo-1554224155-1696413565d3?w=1400&q=75 was independently verified by curl to return HTTP 200, so the intended fix is valid but was never saved/applied. All other regression checks pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "InvestmentTopicPage (dividenden hero)", "issue": "Hero image still uses the 404 URL https://images.unsplash.com/photo-1554224154-26032cdc0b4c?w=1400&q=75 (curl: 404). Rendered <img> has naturalWidth=0, naturalHeight=0, complete=true -> empty grey 486x389 box on desktop and mobile. Session 54 edit was NOT applied to /app/frontend/src/pages/InvestmentTopicPage.jsx:181-182 (alt also still the old text, not the 'Bankfassade' alt).", "selector": "img[src*='photo-1554224154-26032cdc0b4c']", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/themen/dividenden hero", "issues": ["Broken image shows raw alt text over a grey placeholder box, visually inconsistent with /themen/aktien and /themen/anleihen which render correctly (naturalWidth=1400)"]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/ui_it20/div_desktop.png", "/app/test_reports/ui_it20/div_mobile.png"],
+  "action_items": [
+    "Re-apply Session 54 change at /app/frontend/src/pages/InvestmentTopicPage.jsx line 181-182: hero_image -> 'https://images.unsplash.com/photo-1554224155-1696413565d3?w=1400&q=75' (curl verified 200) and hero_image_alt -> 'Editoriale Aufnahme einer historischen Bankfassade - ruhige, langfristige Bildsprache passend zu Dividenden'. The previous edit did not persist.",
+    "After re-applying, confirm in browser that img.naturalWidth > 0 (aktien/anleihen return 1400)."
+  ],
+  "critical_code_review_comments": [
+    "Hero <img> has no onError fallback: a 404 CDN URL yields a silent empty box with visible alt text. Consider an onError handler/placeholder for all hero_image usages so a dead CDN URL degrades gracefully.",
+    "Hard-coded external Unsplash URLs across three topic entries are unvalidated; a build-time or CI link check would have caught this 404."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "10/11 checks passed (91%); the primary Session 54 fix FAILED"},
+  "verified_passing": [
+    "GET /themen/dividenden -> 200, H1 'Dividenden strategisch einordnen' unchanged",
+    "Hero container object-fit: cover, 486x389 box, no layout shift",
+    "Mobile 390x844: scrollWidth 390 == clientWidth 390, no horizontal overflow",
+    "Regression /themen/aktien hero photo-1554224155-6726b3ff858f naturalWidth=1400",
+    "Regression /themen/anleihen hero photo-1554224155-8d04cb21cd6c naturalWidth=1400",
+    "/themen H1 'Investmentthemen im Ueberblick'",
+    "topic-dividenden-related shows 2 links: /themen/aktien, /handeln",
+    "/wissen 4 wissen-card-*, /handeln 3 related items, /fonds-grundlagen 3 related items",
+    "Console: only pre-existing noise (repeated 401 on /api/auth/me, 'overflow: visible on img' warning). No new React errors."
+  ],
+  "seed_data_creation": "none; visitor gate bypassed via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Only the dividenden hero URL is outstanding. Use localStorage gate bypass. Verify via page.evaluate on the img: src must contain 1554224155-1696413565d3 and naturalWidth must be ~1400. aktien/anleihen heros are the working baseline. Ignore /api/auth/me 401 noise.",
+  "rca_of_the_issue": "Root cause: the Session 54 source edit was never written to disk (grep of /app/frontend/src shows only 1554224154-26032cdc0b4c for dividenden). The Unsplash photo id 1554224154-26032cdc0b4c no longer exists (HTTP 404), so the browser loads nothing -> naturalWidth 0 and an empty grey box with alt text. Mitigation: re-apply the one-line URL+alt change; the replacement id 1554224155-1696413565d3 returns HTTP 200."
+}

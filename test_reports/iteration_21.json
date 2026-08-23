@@ -1,0 +1,19 @@
+{
+  "summary": "Session 54 RETEST (post frontend restart) of the dividenden hero image fix. All target checks PASS. /themen/dividenden returns 200; hero img src = https://images.unsplash.com/photo-1554224155-1696413565d3?w=1400&q=75 (old 1554224154-26032cdc0b4c gone), network response 200, complete=true, naturalWidth=1400 (1400x933), alt contains 'Bankfassade', object-fit: cover, no distortion/layout shift on desktop 1440x900. Mobile 390x844: page loads, hero visible with naturalWidth 1400, no horizontal overflow (scrollWidth 390 == clientWidth 390). H1 unchanged: 'Dividenden strategisch einordnen'. Regressions clean: /themen/aktien hero (photo-1554224155-6726b3ff858f, nw 1400), /themen/anleihen hero (photo-1554224155-8d04cb21cd6c, nw 1400), /themen overview 200 with 3 topic cards, topic-dividenden-related has exactly 2 items (/themen/aktien, /handeln), /wissen 4 wissen-card-*, /handeln handeln-related 3 items, /fonds-grundlagen 3 related items. iteration_20's 'change not present' finding was indeed a stale-bundle race; the change is now live.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/ui_it21", "/app/test_reports/ui_it21b"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested", "frontend": "100%"},
+  "seed_data_creation": "none; visitor gate bypassed via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Selector note: '[data-testid^=\"<page>-related\"]' matches the container PLUS the items, so /handeln returns 4 nodes for 3 items (container + item-0..2). Assert on '-related-item-' prefix instead. Only console noise observed: repeated Supabase 401s (pre-existing, out of scope). No unsplash 404s. After any file edit, restart frontend or hard-reload to avoid the stale-bundle race seen in iterations 18/20.",
+  "rca_of_the_issue": "iteration_20 failure was a hot-reload/bundle race, not a code defect. After `supervisorctl restart frontend`, the served bundle contains the new hero URL and all assertions pass."
+}

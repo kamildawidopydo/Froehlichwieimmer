@@ -1,5 +1,18 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 54 (Feb 24, 2026) — Dividenden Hero Fix
+
+**Ursache**
+Unsplash-Foto-ID `photo-1554224154-26032cdc0b4c` liefert HTTP 404 (Bild wurde entfernt/dereferenziert). Ergebnis auf `/themen/dividenden`: `img.naturalWidth === 0`, graue Fläche.
+
+**Fix**
+`frontend/src/pages/InvestmentTopicPage.jsx` Zeile 181 — Bild-URL ersetzt durch `photo-1554224155-1696413565d3` (HTTP 200, gehört zur selben editorialen `1554224155`-Serie wie die funktionierenden Heroes von `/themen/aktien` und `/themen/anleihen` → visuell kohärente Bankfassaden-Bildsprache). Alt-Text präzisiert.
+
+**Bewusst NICHT geändert**
+- Bestehendes `<img src alt>`-Pattern (kein neuer Image-Loader eingeführt, DoD verlangt Wiederverwendung)
+- Andere Topic-Heros, RelatedKnowledge, TopicWissenBlock, Wissen-Navigation
+- SVG `<path> d = undefined` und Supabase-401 Console-Noise (ausdrücklich außer Scope)
+
 ## Session 53 (Feb 24, 2026) — Angebote-Nav aufräumen (`/handeln`)
 
 **Ziel**

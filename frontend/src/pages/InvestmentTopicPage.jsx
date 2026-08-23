@@ -178,8 +178,8 @@ const TOPIC_CONTENT = {
       'Dividenden sind Ausschüttungen, mit denen Unternehmen ihre Aktionäre am Gewinn beteiligen können. Für viele Anleger sind sie ein Baustein einer langfristigen Aktienstrategie.',
       'Ob und in welcher Höhe eine Dividende gezahlt wird, ist jedoch nicht garantiert. Eine hohe Ausschüttungsrendite allein sagt zudem wenig über die Qualität eines Unternehmens aus.',
     ],
-    hero_image: 'https://images.unsplash.com/photo-1554224154-26032cdc0b4c?w=1400&q=75',
-    hero_image_alt: 'Zurückhaltendes Bürogebäude in Dämmerung – editorial',
+    hero_image: 'https://images.unsplash.com/photo-1554224155-1696413565d3?w=1400&q=75',
+    hero_image_alt: 'Editoriale Aufnahme einer historischen Bankfassade – ruhige, langfristige Bildsprache passend zu Dividenden',
     why: {
       headline: 'Warum sich Anleger mit Dividenden beschäftigen',
       intro:
