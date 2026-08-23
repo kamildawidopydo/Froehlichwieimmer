@@ -1,0 +1,26 @@
+{
+  "summary": "Session 74.3 Sticky-CTA-Redesign (ProductInquiryStickyCta.jsx) frontend-only getestet auf der Preview-URL (Consent-Modal jeweils via visitor-residence=DE / visitor-role=privatperson / visitor-accept-btn geschlossen). Getestet: Größe/Inhalt des Sticky-CTAs (1440x900), Hover-/Active-States, Popup-Öffnung + Analytics-Events, X-Separierung + Dismiss/Restore inkl. localStorage, Attention-Pulse (1x/Session + reduced-motion-Guard), Mobile 390x844 inkl. separatem X-Target, nearForm-Anti-Overlap am #home-newsletter (Position + left-0 Menü + Formular-Bedienbarkeit), ESC/Outside-Click, alle 6 Wizards über den Popup-Weg, Responsive 320/375/390/430/768/1440. Ergebnis: alle spezifizierten Punkte erfüllt, keine neuen Konsolen-/Page-Errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Sticky-CTA Desktop 1440x900", "issues": ["Benefit-Zeile 'In wenigen Minuten zur persönlichen Empfehlung' bricht bei 24rem Main-Button in 2 Zeilen um (kein Truncate, voll lesbar) — Pill-Höhe daher 104px statt der min-h 92px. Nur kosmetisch, optional Breite/Fontsize justieren."]},
+      {"screen": "Mobile 390x844 nearForm (#home-newsletter / Interstitial 'Aktien im Fokus')", "issues": ["Im nearForm-Zustand (bottom 8.5rem, left-4) überlagert die Pill den Textkörper der Interstitial-Karte 'Aktien im Fokus'. Deren Close-X, 'MEHR ERFAHREN' und 'SCHLIESSEN' bleiben frei/klickbar; Newsletter-Input, Consent-Checkbox, Submit und Datenschutz-Link ebenfalls (verifiziert). Nur visuelle Überlappung."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "useAttentionPulse (Zeile 51-56): das `return () => clearTimeout(stop)` steht INNERHALB des setTimeout-Callbacks und ist damit ein No-op — der 1500ms-Stop-Timer wird bei Unmount nicht aufgeräumt (potenzielles setState-after-unmount). Stop-Timer-Ref außerhalb halten und im Effect-Cleanup clearen.",
+    "Minor: der Restore-Pill-Branch (dismissed) hängt nicht am rootRef; da dort kein Menü existiert derzeit unkritisch, sollte aber bei künftigen Outside-Click-Handlern beachtet werden."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100%"},
+  "seed_data_creation": "keine (nur qa@example.test in Newsletter-Feld getippt, nicht abgesendet)",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "nicht benötigt",
+  "context_for_next_testing_agent": "Verifizierte Messwerte Session 74.3: Desktop 1440 root 432x108 (main 384x104, X 44 breit), Icon-Badge exakt 56x56, Fontsizes eyebrow 10.5px / headline 17px / benefit 12px. Hover: transform matrix(1.02,...,-2), border rgba(76,124,186,0.55), bg rgba(76,124,186,0.04), transition 0.2s. Active(mousedown): scale 1.02 + bg rgba(76,124,186,0.07). Pulse: data-pulse=true + class sticky-cta-pulse ~1.4s nach Mount, danach false, sessionStorage productInquiryStickyPulseFired=1; Reload derselben Session kein erneuter Pulse; prefers-reduced-motion=reduce -> attr false und sessionStorage bleibt null. Analytics via window.dataLayer-Hook: product_inquiry_open{source:sticky_cta} und product_inquiry_select{product:aktien,source:sticky_popup} korrekt. X klickt kein Menü auf, setzt localStorage productInquiryStickyDismissed=1, Restore-Pill (359x114) an gleicher Stelle, Klick entfernt Key. Mobile 390: root/pill 336x106, X separat 32x32 bei x=346/y=662, kein h-Scroll; nearForm=true, box x=16 y=602, Menü-Class enthält left-0. Alle 6 Wizards öffnen (aktien/anleihen/fonds/tagesgeld/festgeld/flexgeld). Konsolen-401s stammen ausschließlich von supabase functions/v1/stock-history und /api/auth/me (unauthentifiziert) — vorbestehend, nicht redesign-bezogen. Screenshots: .screenshots/desktop_open.png, desktop_hover.png, mobile_sticky.png, mobile_nearform.png, mobile_nearform2.png",
+  "rca_of_the_issue": "n/a — keine Defekte reproduziert. Nur ein latenter Timer-Cleanup-Bug im useAttentionPulse-Hook (No-op-Return im setTimeout-Callback) und zwei kosmetische Overlap/Umbruch-Beobachtungen."
+}

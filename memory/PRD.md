@@ -1,5 +1,23 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 74.3 (Feb 28, 2026) — Sticky-CTA visuelles Redesign ✅
+
+**Ziel:** Sticky-CTA „Kurzfragebogen · Fragen beantworten" deutlich größer, hochwertiger, banktypisch, ohne neue Bildassets. Keine Verhaltensänderungen.
+
+**File geändert** (nur `frontend/src/components/home/ProductInquiryStickyCta.jsx` — komplett neu geschrieben)
+- **Größe:** Desktop-Main-CTA min-h-[5.75rem] (~92 px) mit `w-[24rem]` + separatem `w-11` X-Divider. Mobile-CompactPill min-h-[5.5rem]/[6rem] mit `w-[21rem]/22rem`.
+- **Typografie:** Eyebrow „Kurzfragebogen" mono `text-[10.5px] tracking-[0.20em] font-semibold text-bank-primary`; Haupttext „Fragen beantworten" `text-[16-17px] font-semibold text-bank-ink`; Benefit „In wenigen Minuten zur persönlichen Empfehlung" `text-[11.5-12.5px] text-bank-text-muted`.
+- **Icon-Badge:** MessageCircleQuestion in 56×56 (Mobile 56, sm 64) rounded-xl mit bank-primary/10 fill + bank-primary/20 border + subtle blue shadow.
+- **Border/Shadow:** `border-2 border-bank-primary/25` + `shadow-[0_20px_50px_-18px_rgb(9_33_66/0.30)]`.
+- **Hover-State:** `-translate-y-0.5 scale-[1.02]` + `border-bank-primary/55` + `bg-bank-primary/[0.04]` + stärkerer Shadow, 200ms ease-out.
+- **Active-State:** `active:scale-[1.045]` (Mobile), `active:scale-[1.02]` (Desktop) + `active:bg-bank-primary/[0.07]` + `border-bank-primary/65`.
+- **X separiert:** Desktop → eigener Button mit `border-l` als vertikaler Divider und `onPointerDown stopPropagation`. Mobile → in eigenen Floating-Circle-Button `-right-1 -top-1` oben-rechts über der Pill verschoben (unabhängige 32×32 Touch-Fläche). aria-label + testid `product-inquiry-sticky-dismiss` erhalten.
+- **Attention-Pulse:** neuer `useAttentionPulse`-Hook + `<PulseStyle>` mit `@keyframes sticky-cta-pulse-kf` (Shadow + minimal Scale) → **einmalig pro Session** nach 1.4 s, 1.5 s Dauer, `sessionStorage.productInquiryStickyPulseFired='1'` blockiert Wiederholung, respektiert `prefers-reduced-motion` doppelt (Hook + CSS media query).
+- **Analytics erweitert:** `openMenu` ruft neu `trackInvestmentEvent('product_inquiry_open', { source: 'sticky_cta' })` — vorher fehlte das Event auf dem Sticky-Weg. `product_inquiry_select` mit `source: 'sticky_popup'` unverändert.
+- **Erhalten:** testids (sticky-cta / -restore / -compact / -dismiss / option-<key>), Popup, Wizard-Routing, Session-Regeln, nearForm-IntersectionObserver auf #home-newsletter, localStorage-Dismiss, ESC + Outside-Click.
+
+**Externer Blocker weiter offen (nicht angefasst):** Supabase-CHECK-Constraint für fonds/tagesgeld/festgeld/flexgeld.
+
 ## Session 74.2 (Feb 28, 2026) — Sparkline Guards + Consent Testids + framer-motion Path-Fix ✅
 
 **Ziel:** Zwei kleine risikoarme Follow-ups aus Session 74 + Follow-up-Fix nach Testing Agent RCA.

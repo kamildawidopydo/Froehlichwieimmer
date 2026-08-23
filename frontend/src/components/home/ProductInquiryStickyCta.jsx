@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { MessageCircleQuestion, X } from 'lucide-react';
+import { MessageCircleQuestion, X, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { trackInvestmentEvent } from '@/lib/investmentAnalytics';
@@ -9,6 +9,7 @@ import { getProductCatalog, WIZARD_TRUST_POINTS } from '@/data/productWizardCata
 import { BANK_BONUS_COPY } from '@/data/bankBonusTexts';
 
 const STORAGE_KEY = 'productInquiryStickyDismissed';
+const PULSE_SESSION_KEY = 'productInquiryStickyPulseFired';
 
 const BOTTOM =
   'bottom-[max(4.5rem,calc(env(safe-area-inset-bottom,0px)+4rem+var(--live-ticker-h,0px)))] sm:bottom-[max(0.875rem,calc(env(safe-area-inset-bottom,0px)+0.5rem+var(--live-ticker-h,0px)))]';
@@ -33,39 +34,96 @@ function useIsDesktop() {
   return isDesktop;
 }
 
+/**
+ * One-shot Attention-Pulse: nach kurzer Verzögerung EINMAL pro Session ein
+ * dezenter Shadow+Scale-Pulse. Respektiert prefers-reduced-motion.
+ */
+function useAttentionPulse(active) {
+  const prefersReduced = useReducedMotion();
+  const [pulse, setPulse] = useState(false);
+  useEffect(() => {
+    if (!active || prefersReduced) return undefined;
+    let fired = false;
+    try {
+      fired = sessionStorage.getItem(PULSE_SESSION_KEY) === '1';
+    } catch { /* ignore */ }
+    if (fired) return undefined;
+    // Beide Timer-Handles im Closure halten, damit der Effect-Cleanup
+    // auch den 1.5s-Stop-Timer sauber aufräumt (kein setState-after-unmount).
+    let stopTimer = null;
+    const startTimer = setTimeout(() => {
+      setPulse(true);
+      try { sessionStorage.setItem(PULSE_SESSION_KEY, '1'); } catch { /* ignore */ }
+      stopTimer = setTimeout(() => setPulse(false), 1500);
+    }, 1400);
+    return () => {
+      clearTimeout(startTimer);
+      if (stopTimer) clearTimeout(stopTimer);
+    };
+  }, [active, prefersReduced]);
+  return pulse;
+}
+
 const PRODUCT_CATALOG = getProductCatalog();
 const WIZARD_BENEFITS = WIZARD_TRUST_POINTS.slice(0, 3);
 
-function CompactPill({ onClick, className, testId, ariaLabel, fixed = true }) {
+/**
+ * CompactPill — großes, banktypisches Sticky-CTA-Element.
+ * Wird sowohl im Restore-State als auch als Mobile-CTA verwendet.
+ * Attention-Pulse ist optional (`data-pulse`), respektiert reduced-motion.
+ */
+function CompactPill({ onClick, className, testId, ariaLabel, fixed = true, pulse = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        'group inline-flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-xl border border-bank-ink/12 bg-white px-4 py-3 text-left',
-        'shadow-[0_16px_44px_-18px_rgb(9_33_66/0.32)] transition-all hover:-translate-y-0.5 hover:border-bank-accent/50 hover:shadow-[0_20px_56px_-18px_rgb(9_33_66/0.4)]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/40',
+        'group relative inline-flex w-[min(21rem,calc(100vw-2rem))] items-center gap-4 rounded-2xl border-2 border-bank-primary/25 bg-white px-4 py-4 text-left',
+        'min-h-[5.5rem] sm:min-h-[6rem] sm:w-[22rem] sm:gap-4 sm:px-5',
+        'shadow-[0_20px_50px_-18px_rgb(9_33_66/0.30)]',
+        'transition-all duration-200 ease-out',
+        'hover:-translate-y-0.5 hover:scale-[1.02] hover:border-bank-primary/55 hover:bg-bank-primary/[0.04] hover:shadow-[0_28px_64px_-18px_rgb(9_33_66/0.38)]',
+        'active:scale-[1.045] active:bg-bank-primary/[0.07] active:border-bank-primary/65',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2',
         'dark:border-bank-border dark:bg-bank-surface-elev',
+        pulse && 'sticky-cta-pulse',
         fixed && ['fixed z-[90]', BOTTOM, 'right-4 sm:right-5'],
         className,
       )}
       data-testid={testId}
+      data-pulse={pulse ? 'true' : 'false'}
       aria-label={ariaLabel}
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-bank-accent/20 bg-bank-accent/5 text-bank-accent">
-        <MessageCircleQuestion className="h-4 w-4" strokeWidth={LUCIDE_STROKE} aria-hidden />
+      <span
+        aria-hidden
+        className={cn(
+          'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
+          'shadow-[0_6px_18px_-8px_rgb(76_124_186/0.55)] transition-colors',
+          'group-hover:bg-[rgb(var(--bank-primary)/0.16)] group-hover:border-bank-primary/35',
+          'sm:h-16 sm:w-16',
+        )}
+      >
+        <MessageCircleQuestion className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={LUCIDE_STROKE} />
       </span>
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.22em] text-bank-text-muted">
-          Kurzfragebogen · persönliche Empfehlung
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.20em] text-bank-primary sm:text-[11px]">
+          Kurzfragebogen
         </span>
-        <span className="truncate text-[14px] font-semibold leading-tight text-bank-ink">
+        <span className="text-[16px] font-semibold leading-[1.15] tracking-tight text-bank-ink sm:text-[18px]">
           Fragen beantworten
         </span>
-        <span className="hidden text-[11px] leading-snug text-bank-text-muted sm:inline">
-          In wenigen Minuten · kostenlos &amp; unverbindlich
+        <span className="text-[11.5px] leading-snug text-bank-text-muted sm:text-[12.5px]">
+          In wenigen Minuten zur persönlichen Empfehlung
         </span>
       </span>
+      <ArrowRight
+        aria-hidden
+        strokeWidth={LUCIDE_STROKE}
+        className={cn(
+          'ml-1 h-4 w-4 shrink-0 text-bank-text-muted/60 transition-all sm:h-[1.05rem] sm:w-[1.05rem]',
+          'group-hover:translate-x-0.5 group-hover:text-bank-primary',
+        )}
+      />
     </button>
   );
 }
@@ -173,6 +231,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
   // auf Mobile temporär höher legen, damit Submit/Consent nicht überdeckt werden.
   const [nearForm, setNearForm] = useState(false);
   const rootRef = useRef(null);
+  const pulse = useAttentionPulse(mounted && !dismissed && !menuOpen);
 
   useEffect(() => {
     setDismissed(readDismissed());
@@ -236,6 +295,13 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
     }
   };
 
+  const openMenu = () => {
+    try {
+      trackInvestmentEvent('product_inquiry_open', { source: 'sticky_cta' });
+    } catch { /* ignore */ }
+    setMenuOpen((v) => !v);
+  };
+
   const pickProduct = (key) => {
     try { trackInvestmentEvent('product_inquiry_select', { product: key, source: 'sticky_popup' }); } catch {}
     onOpenWizard(key);
@@ -246,11 +312,14 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
 
   if (dismissed) {
     return createPortal(
-      <CompactPill
-        onClick={restore}
-        testId="product-inquiry-sticky-restore"
-        ariaLabel="Kurzfragebogen einblenden"
-      />,
+      <>
+        <PulseStyle />
+        <CompactPill
+          onClick={restore}
+          testId="product-inquiry-sticky-restore"
+          ariaLabel="Kurzfragebogen einblenden"
+        />
+      </>,
       document.body,
     );
   }
@@ -264,103 +333,164 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
       ? 'bottom-[calc(env(safe-area-inset-bottom,0px)+8.5rem)] left-4'
       : `${BOTTOM} right-4`;
     return createPortal(
-      <div
-        ref={rootRef}
-        className={cn(
-          'fixed z-[90] transition-[bottom,left,right] duration-300 ease-out',
-          mobilePos,
-        )}
-        data-testid="product-inquiry-sticky-cta"
-        data-near-form={nearForm ? 'true' : 'false'}
-      >
-        <ProductMenu
-          menuOpen={menuOpen}
-          prefersReduced={prefersReduced}
-          onPick={pickProduct}
+      <>
+        <PulseStyle />
+        <div
+          ref={rootRef}
           className={cn(
-            'absolute bottom-full mb-2 w-[min(21rem,calc(100vw-1.5rem))] rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev',
-            nearForm ? 'left-0' : 'right-0',
+            'fixed z-[90] transition-[bottom,left,right] duration-300 ease-out',
+            mobilePos,
           )}
-        />
-        <CompactPill
-          fixed={false}
-          onClick={() => setMenuOpen((v) => !v)}
-          testId="product-inquiry-sticky-compact"
-          ariaLabel="Fragen beantworten — Produkt wählen"
-        />
-      </div>,
+          data-testid="product-inquiry-sticky-cta"
+          data-near-form={nearForm ? 'true' : 'false'}
+        >
+          <ProductMenu
+            menuOpen={menuOpen}
+            prefersReduced={prefersReduced}
+            onPick={pickProduct}
+            className={cn(
+              'absolute bottom-full mb-2 w-[min(21rem,calc(100vw-1.5rem))] rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev',
+              nearForm ? 'left-0' : 'right-0',
+            )}
+          />
+          {/* Dismiss-X separat oben-rechts über der Pill — separates Touch-Target */}
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Hinweis ausblenden"
+            data-testid="product-inquiry-sticky-dismiss"
+            className={cn(
+              'absolute -right-1 -top-1 z-[1] flex h-8 w-8 items-center justify-center rounded-full border border-bank-border bg-white text-bank-text-muted shadow-md',
+              'transition-colors hover:border-bank-primary/40 hover:text-bank-ink',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-1',
+              'dark:border-bank-border dark:bg-bank-surface-elev',
+            )}
+          >
+            <X className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
+          </button>
+          <CompactPill
+            fixed={false}
+            onClick={openMenu}
+            testId="product-inquiry-sticky-compact"
+            ariaLabel="Fragen beantworten — Produkt wählen"
+            pulse={pulse && !menuOpen}
+          />
+        </div>
+      </>,
       document.body,
     );
   }
 
   return createPortal(
-    <div
-      ref={rootRef}
-      className={cn('fixed z-[90]', BOTTOM, 'right-5')}
-      data-testid="product-inquiry-sticky-cta"
-    >
-      <div className="relative">
-        <ProductMenu
-          menuOpen={menuOpen}
-          prefersReduced={prefersReduced}
-          onPick={pickProduct}
-          className="absolute bottom-full right-0 mb-2 w-[21rem] max-w-[calc(100vw-2rem)] rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev"
-        />
+    <>
+      <PulseStyle />
+      <div
+        ref={rootRef}
+        className={cn('fixed z-[90]', BOTTOM, 'right-5')}
+        data-testid="product-inquiry-sticky-cta"
+      >
+        <div className="relative">
+          <ProductMenu
+            menuOpen={menuOpen}
+            prefersReduced={prefersReduced}
+            onPick={pickProduct}
+            className="absolute bottom-full right-0 mb-2 w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev"
+          />
 
-        <div
-          className={cn(
-            'flex items-stretch overflow-hidden rounded-xl border border-bank-border/90 bg-white shadow-[0_12px_32px_-16px_rgb(9_33_66/0.28)]',
-            'dark:border-bank-border dark:bg-bank-surface-elev',
-            menuOpen && 'border-bank-accent/35',
-          )}
-        >
-          <button
-            type="button"
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-            aria-label="Fragen beantworten — Produkt wählen"
-            onClick={() => setMenuOpen((v) => !v)}
+          <div
             className={cn(
-              'group flex min-w-0 items-center gap-3 py-2.5 pl-3 pr-3 text-left transition-colors',
-              'hover:bg-bank-surface/80',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bank-accent/40',
+              'group/cta flex items-stretch overflow-hidden rounded-2xl border-2 border-bank-primary/25 bg-white',
+              'shadow-[0_20px_50px_-18px_rgb(9_33_66/0.30)]',
+              'transition-all duration-200 ease-out',
+              'hover:-translate-y-0.5 hover:scale-[1.02] hover:border-bank-primary/55 hover:shadow-[0_28px_64px_-18px_rgb(9_33_66/0.38)]',
+              'dark:border-bank-border dark:bg-bank-surface-elev',
+              menuOpen && 'border-bank-primary/55 shadow-[0_24px_60px_-18px_rgb(9_33_66/0.36)]',
+              pulse && !menuOpen && 'sticky-cta-pulse',
             )}
+            data-pulse={pulse && !menuOpen ? 'true' : 'false'}
           >
-            <span
-              aria-hidden
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[rgb(var(--bank-accent)/0.1)] text-bank-accent transition-colors group-hover:bg-[rgb(var(--bank-accent)/0.16)]"
+            {/* Main click area — Icon + Text + Benefit */}
+            <button
+              type="button"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              aria-label="Fragen beantworten — Produkt wählen"
+              onClick={openMenu}
+              className={cn(
+                'group flex min-w-0 flex-1 items-center gap-4 py-4 pl-5 pr-4 text-left transition-colors duration-200',
+                'w-[24rem] min-h-[5.75rem]',
+                'hover:bg-bank-primary/[0.04]',
+                'active:scale-[1.02] active:bg-bank-primary/[0.07]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bank-primary/40',
+              )}
             >
-              <MessageCircleQuestion className="h-4 w-4" strokeWidth={LUCIDE_STROKE} />
-            </span>
-            <span className="flex min-w-0 flex-col leading-tight">
-              <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-bank-text-muted">
-                Kurzfragebogen
+              <span
+                aria-hidden
+                className={cn(
+                  'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
+                  'shadow-[0_6px_18px_-8px_rgb(76_124_186/0.55)] transition-colors duration-200',
+                  'group-hover:bg-[rgb(var(--bank-primary)/0.16)] group-hover:border-bank-primary/35',
+                )}
+              >
+                <MessageCircleQuestion className="h-6 w-6" strokeWidth={LUCIDE_STROKE} />
               </span>
-              <span className="mt-0.5 whitespace-nowrap text-[14px] font-medium tracking-[-0.01em] text-bank-ink">
-                Fragen beantworten
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.20em] text-bank-primary">
+                  Kurzfragebogen
+                </span>
+                <span className="text-[17px] font-semibold leading-[1.15] tracking-tight text-bank-ink">
+                  Fragen beantworten
+                </span>
+                <span className="text-[12px] leading-snug text-bank-text-muted">
+                  In wenigen Minuten zur persönlichen Empfehlung
+                </span>
               </span>
-            </span>
-          </button>
+              <ArrowRight
+                aria-hidden
+                strokeWidth={LUCIDE_STROKE}
+                className="h-[1.1rem] w-[1.1rem] shrink-0 text-bank-text-muted/60 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-bank-primary"
+              />
+            </button>
 
-          <button
-            type="button"
-            onClick={dismiss}
-            className={cn(
-              'flex w-9 shrink-0 items-center justify-center border-l border-bank-border/80 text-bank-text-muted',
-              'transition-colors hover:bg-bank-surface hover:text-bank-ink',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bank-accent/40',
-              'dark:border-bank-border',
-            )}
-            aria-label="Hinweis ausblenden"
-            data-testid="product-inquiry-sticky-dismiss"
-          >
-            <X className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-          </button>
+            {/* Separater X-Button — eigenes Touch-Target */}
+            <button
+              type="button"
+              onClick={dismiss}
+              onPointerDown={(e) => e.stopPropagation()}
+              className={cn(
+                'flex w-11 shrink-0 items-center justify-center border-l border-bank-border/80 text-bank-text-muted',
+                'transition-colors hover:bg-bank-primary/[0.06] hover:text-bank-ink',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bank-primary/40',
+                'dark:border-bank-border',
+              )}
+              aria-label="Hinweis ausblenden"
+              data-testid="product-inquiry-sticky-dismiss"
+            >
+              <X className="h-4 w-4" strokeWidth={2.2} aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
-    </div>,
+    </>,
     document.body,
   );
 };
+
+/**
+ * Einmalige CSS-Keyframes für den dezenten Attention-Pulse.
+ * Wird via `.sticky-cta-pulse` conditional aktiviert. Respektiert
+ * automatisch prefers-reduced-motion via Hook-Guard in useAttentionPulse.
+ */
+const PulseStyle = () => (
+  <style>{`
+    @keyframes sticky-cta-pulse-kf {
+      0%   { box-shadow: 0 20px 50px -18px rgba(9,33,66,0.30), 0 0 0 0 rgba(76,124,186,0.30); transform: translateY(0) scale(1); }
+      40%  { box-shadow: 0 26px 60px -18px rgba(9,33,66,0.34), 0 0 0 10px rgba(76,124,186,0.12); transform: translateY(-2px) scale(1.015); }
+      100% { box-shadow: 0 20px 50px -18px rgba(9,33,66,0.30), 0 0 0 0 rgba(76,124,186,0.0); transform: translateY(0) scale(1); }
+    }
+    .sticky-cta-pulse { animation: sticky-cta-pulse-kf 1500ms ease-in-out 1; }
+    @media (prefers-reduced-motion: reduce) { .sticky-cta-pulse { animation: none !important; } }
+  `}</style>
+);
 
 export default ProductInquiryStickyCta;
