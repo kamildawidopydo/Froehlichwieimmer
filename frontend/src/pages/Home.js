@@ -5,7 +5,6 @@ import BankingHero from '@/components/BankingHero';
 import HomePostHero from '@/components/home/HomePostHero';
 import HomeSavingsInquirySection from '@/components/home/HomeSavingsInquirySection';
 import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
-import HomeHandelnTeaser from '@/components/home/HomeHandelnTeaser';
 import HomeTestimonials from '@/components/home/HomeTestimonials';
 import HomeTrustLine from '@/components/home/HomeTrustLine';
 import HomePlatformShowcase from '@/components/home/HomePlatformShowcase';
@@ -173,11 +172,8 @@ const Home = () => {
       {/* ── Kreditangebote (nach Anfrage, Daten wie /kredit) ─────────── */}
       <HomeCreditOffersSection offers={creditOffers} />
 
-      {/* ── FAQ / Wissenscenter (vor Produktüberblick) ─────────────────── */}
+      {/* ── FAQ / Wissenscenter (inkl. integriertem Handeln-Teaser) ─── */}
       <HomeSavingsFaqSection />
-
-      {/* ── Investment & Börse verstehen — kurzer Wissenshub-Teaser ──── */}
-      <HomeHandelnTeaser />
 
       <HomeTestimonials />
 

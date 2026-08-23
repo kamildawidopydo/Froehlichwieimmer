@@ -1,0 +1,52 @@
+{
+  "summary": "Session 58 RETEST (frontend only) of the integrated 'Mehr verstehen' teaser inside HomeSavingsFaqSection. STEP 1 on-disk grep verification PASSED (HomeHandelnTeaser count in Home.js = 0; 6 matches in HomeSavingsFaqSection.jsx at lines 92/104/105/108/111/130; file mtime Aug 23 11:42 — iteration_29 was indeed a false negative). Live DOM, content, DOM order, keyboard, navigation (click + Enter), 3 viewports and full route regression suite were all executed. 13 of 14 Session 58 acceptance criteria PASS. ONE criterion FAILS: heading hierarchy inside home-savings-faq is 1 h2 + 7 h3 (expected 1 h2 + 1 h3) because the shared shadcn/Radix AccordionTrigger wraps each of the 6 accordion triggers in AccordionPrimitive.Header, which Radix renders as <h3> by default.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "components/ui/accordion.jsx -> AccordionTrigger (affects HomeSavingsFaqSection)",
+        "issue": "Heading hierarchy criterion FAILS. Inside [data-testid=\"home-savings-faq\"] there are 1 h2 and 7 h3 elements, not 1 h3. Radix <AccordionPrimitive.Header> defaults to rendering an h3, so each of the 6 FAQ accordion triggers emits an <h3> containing a <button>. The teaser's own h3 ('Investment & Börse Schritt für Schritt verstehen') is the 7th. Fix requires passing asChild / a div wrapper on AccordionPrimitive.Header in the shared UI component (app-wide impact — left to main agent, out of test-fix scope).",
+        "selector": "[data-testid=\"home-savings-faq\"] h3",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "Kurzfragebogen floating chat widget",
+        "issue": "At 390x844 the fixed bottom-right 'Fragen beantworten' widget visually overlaps the 'Frage stellen' CTA ([data-testid=\"home-faq-ask-question\"]) in the 'Frage nicht gefunden' card, partially covering its label. Not a Session 58 regression but a mobile usability defect.",
+        "selector": "[data-testid=\"home-faq-ask-question\"]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Homepage / home-savings-faq (1440x900, 1920x1080, 390x844)",
+        "issues": [
+          "No issues found. Section background is uniform rgb(236,243,250) (bank-surface-elev) across FAQ CTA, teaser and 'Frage nicht gefunden' card — no bank-white section break between FAQ CTA and the sub-block. Gap FAQ CTA -> teaser = 40px, teaser -> ask-card = 24px at all three viewports (tight, visually one block). Horizontal overflow = 0px at 1440/1920/390."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_30.json"
+  ],
+  "action_items": [
+    "Make Radix AccordionPrimitive.Header render a non-heading element (e.g. <AccordionPrimitive.Header asChild><div className=\"flex\">…) in /app/frontend/src/components/ui/accordion.jsx so accordion triggers stop emitting h3. Verify all other accordion usages (FAQ page, fonds-faq-list, etc.) after the change.",
+    "Fix mobile (390px) overlap of the floating 'Fragen beantworten' Kurzfragebogen widget over the 'Frage stellen' CTA — add bottom padding to the section or offset the widget."
+  ],
+  "critical_code_review_comments": [
+    "HomeSavingsFaqSection.jsx (182 lines) is clean: single source for the teaser, comment documents the intentional merge, Link (not <button onClick>) used for /handeln so middle-click/Enter/SEO all work. Good.",
+    "Accessibility: the teaser uses aria-labelledby=\"home-handeln-teaser-heading\" on the motion.div but the div has no role/region semantics; consider role=\"region\" or converting to a <section> so the aria-labelledby is actually consumed by AT.",
+    "Verified NO leftover import or render of HomeHandelnTeaser in Home.js. If /app/frontend/src/components/home/HomeHandelnTeaser.jsx still exists on disk it is now dead code and should be deleted."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "93% (13/14 Session 58 criteria)"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "not required — all flows tested anonymously. Note: the visitor-welcome-gate modal ([data-testid=\"visitor-welcome-gate\"]) blocks all pointer interaction on first visit and MUST be dismissed (select the 2nd <select> role option, then click 'Akzeptieren') before any click-based Playwright test on the homepage.",
+  "context_for_next_testing_agent": "Session 58 detailed results — PASS: (1) grep Home.js HomeHandelnTeaser = 0; (2) 6 grep matches in HomeSavingsFaqSection.jsx; (3) document.querySelectorAll('[data-testid=\"home-handeln-teaser\"]').length === 1; (4) faq.contains(teaser) === true; (5) FAQ CTA text = 'Alle FAQs ansehen' (old 'Alle wichtigen Antworten ansehen' gone), testid home-faq-open-wissenscenter; (6) intro paragraph = 'Schnelle Antworten auf häufige Fragen zu Aktien, Anleihen, IPO, Kryptowerten und Wertpapierdepots.'; (7) eyebrow 'Mehr verstehen', H3 'Investment & Börse Schritt für Schritt verstehen', 2 body paragraphs, 36 words (within 30–100); (8) CTA = <a href=\"/handeln\" data-testid=\"home-handeln-teaser-cta\"> text 'Investment & Börse verstehen'; (9) Enter key nav -> /handeln h1 'Investieren, verständlich.'; (10) mouse click nav -> /handeln h1 'Investieren, verständlich.' (only after dismissing visitor-welcome-gate); (11) exactly 1 h2; (12) DOM order = h2 -> accordion -> faqCta -> teaser -> ask (home-faq-ask-question) -> full-FAQ link — correct; (13) Tab order from last accordion trigger = home-faq-open-wissenscenter -> home-handeln-teaser-cta -> home-faq-ask-question -> '/faq' link, all with visible 2px focus rings; (14) viewports 1920/1440/390 — 0 overflow, uniform bank-surface-elev bg, gaps 40px/24px. FAIL: h3 count = 7 (6 Radix accordion headers + 1 teaser). Regression suite all PASS: /handeln h1=1 + 4 'handeln-related*' testids (container + 3 items); /wissen 4 wissen-card-*; /fonds-grundlagen h1=1, fonds-faq-list 6 children, 4 fonds-grundlagen-related* (container + 3); /themen h1=1 + 3 topic links; /themen/aktien, /themen/anleihen, /themen/dividenden each topic-<slug>-related container + 2 items. Homepage sections intact: banking-hero, home-news-preview, home-savings-inquiry, home-savings-offers, home-credit-offers, home-savings-faq, home-testimonials, home-post-hero-products, home-special-aif-overview, bonus-cta-section. Console: NO new React errors. Pre-existing noise only: repeated 401s (anonymous auth probes), 'Error: <path> attribute d: Expected moveto path command, \"undefined\".' (an SVG icon/chart receives an undefined path — pre-existing, worth a separate look), ERR_BLOCKED_BY_RESPONSE.NotSameOrigin, ERR_HTTP2_PROTOCOL_ERROR.",
+  "rca_of_the_issue": "Heading-hierarchy failure RCA: /app/frontend/src/components/ui/accordion.jsx wraps every trigger in <AccordionPrimitive.Header className=\"flex\"> (line 15). @radix-ui/react-accordion renders AccordionPrimitive.Header as an <h3> by default, so the 6 FAQ preview items each contribute an h3 to home-savings-faq. HomeSavingsFaqSection.jsx itself is correct (a single h2 + a single h3 for the teaser). Fix belongs in the shared UI primitive, not in the section. iteration_29 false negative RCA: it reported a stale mtime (Aug 21) for HomeSavingsFaqSection.jsx; the current file is dated Aug 23 11:42 and contains all Session 58 changes, confirmed by grep -n."
+}

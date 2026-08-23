@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, BookOpen, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, BookOpen, CheckCircle2 } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -56,7 +56,8 @@ export default function HomeSavingsFaqSection() {
               <span className="italic text-bank-primary">kompakt &amp; klar.</span>
             </h2>
             <p className="mt-5 text-base leading-relaxed text-bank-text-muted sm:text-lg">
-              Wichtige Fragen zu Aktien, Anleihen, IPO und Krypto — kompakt beantwortet.
+              Schnelle Antworten auf häufige Fragen zu Aktien, Anleihen, IPO, Kryptowerten
+              und Wertpapierdepots.
             </p>
           </motion.div>
 
@@ -88,15 +89,61 @@ export default function HomeSavingsFaqSection() {
                 data-testid="home-faq-open-wissenscenter"
               >
                 <BookOpen className="h-4 w-4 shrink-0" strokeWidth={LUCIDE_STROKE} />
-                <span className="min-w-0">Alle wichtigen Antworten ansehen</span>
+                <span className="min-w-0">Alle FAQs ansehen</span>
                 <ArrowRight className="h-4 w-4 shrink-0" strokeWidth={LUCIDE_STROKE} />
               </Button>
             </div>
           </motion.div>
 
+          {/* MEHR VERSTEHEN — integrierter Wissenshub-Teaser (ehemals HomeHandelnTeaser).
+              Bewusst innerhalb derselben FAQ-Section, damit FAQ (schnelle Antwort) und
+              /handeln (Vertiefung) als EIN zusammenhängender Wissensbereich erscheinen. */}
           <motion.div
             {...reveal(2)}
-            className="mx-auto mt-10 flex max-w-3xl flex-col gap-4 rounded-2xl border border-bank-border bg-white p-5 shadow-editorial-sm sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-6"
+            className="mx-auto mt-10 max-w-3xl rounded-2xl border border-bank-border bg-white p-6 shadow-editorial-sm sm:p-8"
+            data-testid="home-handeln-teaser"
+            aria-labelledby="home-handeln-teaser-heading"
+          >
+            <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.28em] text-bank-gold">
+              Mehr verstehen
+            </p>
+            <h3
+              id="home-handeln-teaser-heading"
+              className="font-display mt-3 text-[clamp(1.35rem,2.6vw,1.9rem)] font-light leading-tight text-bank-text"
+              style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
+            >
+              Investment &amp; Börse Schritt für Schritt verstehen
+            </h3>
+            <div className="mt-4 space-y-3 text-[15px] leading-relaxed text-bank-text-muted">
+              <p>
+                Von Aktien und Anleihen über Börsenhandel bis zu Anlageklassen und
+                Risiken: In unserem Wissensbereich erklären wir die wichtigsten Grundlagen
+                verständlich und ohne unnötigen Fachjargon.
+              </p>
+              <p>
+                Ideal für Einsteiger — und für alle, die ihr Wissen vertiefen möchten.
+              </p>
+            </div>
+            <div className="mt-6">
+              <Link
+                to="/handeln"
+                data-testid="home-handeln-teaser-cta"
+                className="group inline-flex items-center gap-2 rounded-full border border-bank-primary px-6 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-bank-primary transition-colors hover:bg-bank-primary hover:text-white focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bank-gold"
+              >
+                <BookOpen className="h-4 w-4 shrink-0" strokeWidth={LUCIDE_STROKE} aria-hidden />
+                Investment &amp; Börse verstehen
+                <ArrowUpRight
+                  className="h-4 w-4 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  strokeWidth={LUCIDE_STROKE}
+                  aria-hidden
+                />
+              </Link>
+            </div>
+          </motion.div>
+
+          <motion.div
+            {...reveal(3)}
+            className="mx-auto mt-6 flex max-w-3xl flex-col gap-4 rounded-2xl border border-bank-border bg-white p-5 shadow-editorial-sm sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-6"
           >
             <div className="flex gap-4">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-bank-border bg-bank-bg text-bank-primary">

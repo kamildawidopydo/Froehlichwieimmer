@@ -1,0 +1,33 @@
+{
+  "summary": "Session 58 FINAL retest (frontend only). BLOCKER: the two claimed Session 58 fixes were NEVER written to disk. /app/frontend/src/components/ui/accordion.jsx line 15 still reads `<AccordionPrimitive.Header className=\"flex\">` with NO asChild, and /app/frontend/src/components/home/HomeHandelnTeaser.jsx still exists (mtime Aug 23 11:24, unchanged; git HEAD is still Session 57). Consequently STEP 1 and STEP 2 FAIL exactly as in iteration_30: [data-testid=\"home-savings-faq\"] renders 1 h2 + 7 h3 (6 Radix accordion-trigger h3s + the teaser h3), verified live at both 1920x1080 and 390x844. All other steps (3,4,5,6,7,8,9,10) PASS — accordion mouse/keyboard behaviour, sub-block nesting, CTA nav (click + Enter), CTA texts, app-wide accordion regression (/faq 30 triggers, /calculator 5, /produkte/festgeld 6, HomeSavingsFaqModal 57 — all open with aria-expanded=true), route regression, styling and mobile overflow 0px.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "components/ui/accordion.jsx -> AccordionTrigger", "issue": "CLAIMED FIX NOT APPLIED. Line 15 is still `<AccordionPrimitive.Header className=\"flex\">` (no asChild, no <div className='flex'> child). Radix therefore still renders an <h3> per trigger. Live DOM: [data-testid=\"home-savings-faq\"] h2=1, h3=7 (expected h3=1). Confirmed app-wide: document.querySelectorAll('h3 > button[aria-expanded]') = 30 on /faq, 5 on /calculator, 6 on /produkte/festgeld.", "selector": "[data-testid=\"home-savings-faq\"] h3", "priority": "HIGH"},
+      {"component": "components/home/HomeHandelnTeaser.jsx", "issue": "CLAIMED DELETION NOT APPLIED. File still present (3555 bytes, mtime Aug 23 11:24). It is dead code — zero imports anywhere in /app/frontend/src (only a comment reference in HomeSavingsFaqSection.jsx:98). Home.js reference count = 0 (correct).", "selector": "n/a", "priority": "LOW"},
+      {"component": "Kurzfragebogen floating widget", "issue": "PRE-EXISTING (noted only, not a Session 58 regression): at 390x844 the fixed bottom-right 'Fragen beantworten' widget overlays FAQ section content / the 'Frage stellen' CTA.", "selector": "[data-testid=\"home-faq-ask-question\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Homepage /home-savings-faq", "issues": ["No visual regression. Accordion items keep rounded-2xl (16px), 1px rgb(226,232,240) border. NOTE: computed box-shadow on the accordion item resolves to 'rgba(0,0,0,0) 0px 0px 0px' i.e. shadow-editorial-sm renders as effectively invisible on these items — same as before, cosmetic only.", "Mobile 390x844 horizontal overflow = 0px."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_31.json"],
+  "action_items": [
+    "ACTUALLY WRITE the accordion fix to disk: in /app/frontend/src/components/ui/accordion.jsx replace `<AccordionPrimitive.Header className=\"flex\">` with `<AccordionPrimitive.Header asChild><div className=\"flex\">` (and close with `</div></AccordionPrimitive.Header>`). Verify with `grep -n asChild` before dispatching a retest.",
+    "ACTUALLY DELETE /app/frontend/src/components/home/HomeHandelnTeaser.jsx (confirmed dead code, safe).",
+    "Optional: check that shadow-editorial-sm actually resolves to a visible shadow on white accordion items (currently computes to transparent)."
+  ],
+  "critical_code_review_comments": [
+    "Main agent reported fixes that are not on disk — file mtime and git log both show no Session 58 edits. Always re-grep after an edit before dispatching a retest.",
+    "The `visitor-welcome-gate` dialog (z-[10000], role=dialog) blocks ALL pointer interaction on first visit and is not auto-dismissible; automated tests must select the role dropdown + click 'Akzeptieren' first. Keyboard focus+Enter bypasses it, which is why iteration_30 keyboard tests passed while mouse clicks time out."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested", "frontend": "82% (9/11 checks pass; STEP1 + STEP2 fail)"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "not required",
+  "context_for_next_testing_agent": "Dismiss [data-testid=\"visitor-welcome-gate\"] (select any non-empty option in both <select>s, then click 'Akzeptieren') before any mouse click, otherwise every click times out. Heading-count assertion: document.querySelectorAll('[data-testid=\"home-savings-faq\"] h3').length must be 1. Quick on-disk precheck: grep -n asChild /app/frontend/src/components/ui/accordion.jsx. Accordion regression pages: /faq, /calculator, /produkte/festgeld, HomeSavingsFaqModal via [data-testid=\"home-faq-open-wissenscenter\"]. /fonds-grundlagen fonds-faq-list is a <dl> (6 <dt>), not an accordion.",
+  "rca_of_the_issue": "Iteration_30's single failure was caused by Radix AccordionPrimitive.Header defaulting to <h3>. The proposed asChild fix is correct but was never persisted to /app/frontend/src/components/ui/accordion.jsx, so the live DOM is byte-identical to iteration_30 (1 h2 + 7 h3). No code change = no behaviour change."
+}

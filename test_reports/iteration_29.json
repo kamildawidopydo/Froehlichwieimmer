@@ -1,0 +1,64 @@
+{
+  "summary": "Session 58 verification ABORTED at STEP 1 (on-disk gate) per instructions. The FAQ/Handeln-Teaser merge was NEVER applied to disk. `grep -c 'HomeHandelnTeaser' /app/frontend/src/pages/Home.js` returns 2 (import on line 8, render on line 180) instead of the required 0, and `grep -n 'home-handeln-teaser|Mehr verstehen|Alle FAQs ansehen' /app/frontend/src/components/home/HomeSavingsFaqSection.jsx` returns NO matches (exit 1). Live-DOM cross-check on the public URL confirms the on-disk state is what is actually served (this is NOT a stale-file false negative): home-handeln-teaser is still a top-level <section> SIBLING of home-savings-faq (section index 8 vs 7) and containment is FALSE. File mtimes confirm no Session 58 edit: HomeSavingsFaqSection.jsx = Aug 21 11:42, HomeHandelnTeaser.jsx = Aug 23 11:24, i.e. the section file was not touched. Remaining Session 58 assertions (sub-block wording, H3 hierarchy, DOM order, focus traversal, visual single-surface, mobile stacking) are NOT TESTED because the precondition failed. Homepage regression sanity was still run and PASSES.",
+  "on_disk_check": "FAIL",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "pages/Home.js", "issue": "BLOCKER — HomeHandelnTeaser is still imported (line 8) and rendered as a standalone <section> (line 180, directly after <HomeSavingsFaqSection />). Session 58 required removal of both.", "selector": "[data-testid=\"home-handeln-teaser\"]", "priority": "CRITICAL"},
+      {"component": "HomeSavingsFaqSection.jsx", "issue": "BLOCKER — file contains NO merged sub-block. No 'home-handeln-teaser', no 'Mehr verstehen' eyebrow, no H3 'Investment & Börse Schritt für Schritt verstehen', no internal <Link to='/handeln'>. File is unchanged (135 lines, mtime Aug 21).", "selector": "[data-testid=\"home-savings-faq\"]", "priority": "CRITICAL"},
+      {"component": "Containment", "issue": "document.querySelector('[data-testid=\"home-savings-faq\"]').contains(document.querySelector('[data-testid=\"home-handeln-teaser\"]')) === FALSE (measured live). Teaser is a sibling section, not a descendant.", "selector": "[data-testid=\"home-handeln-teaser\"]", "priority": "CRITICAL"},
+      {"component": "FAQ CTA copy", "issue": "Expected text containing 'Alle FAQs ansehen'; actual rendered text is 'ALLE WICHTIGEN ANTWORTEN ANSEHEN' (source line 91: 'Alle wichtigen Antworten ansehen').", "selector": "[data-testid=\"home-faq-open-wissenscenter\"]", "priority": "HIGH"},
+      {"component": "FAQ intro paragraph", "issue": "Expected mention of 'Aktien, Anleihen, IPO, Kryptowerten und Wertpapierdepots'; actual is 'Wichtige Fragen zu Aktien, Anleihen, IPO und Krypto — kompakt beantwortet.' The intro rewording from the mockup was not applied.", "selector": "[data-testid=\"home-savings-faq\"] p", "priority": "MEDIUM"},
+      {"component": "HomeHandelnTeaser content", "issue": "Old standalone content still live: eyebrow 'WISSENSHUB' (expected 'Mehr verstehen'), heading is an H2 'Investment & Börse verstehen' (expected H3 'Investment & Börse Schritt für Schritt verstehen'), THREE <p> paragraphs (~110 words, expected TWO at 30–100 words), CTA text 'WEITERLESEN' (expected 'Investment & Börse verstehen').", "selector": "[data-testid=\"home-handeln-teaser-cta\"]", "priority": "HIGH"},
+      {"component": "Heading hierarchy", "issue": "Because the teaser is still a standalone section, the page has two sibling H2s ('Die wichtigsten Antworten…' and 'Investment & Börse verstehen'). The single-H2 + single-H3 hierarchy required inside home-savings-faq is not met.", "selector": "[data-testid=\"home-savings-faq\"] h2", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home — FAQ + Handeln teaser at 1440x900", "issues": ["Not one unified surface: home-savings-faq uses bg-bank-surface-elev with border-b, while home-handeln-teaser is a separate full-width white section with its own border-t and py-16/py-20 padding — producing exactly the double-section seam Session 58 was supposed to eliminate.", "Teaser uses max-w-[1200px] vs FAQ's max-w-[1440px]/max-w-3xl content column, so gutters do not align."]}
+    ]
+  },
+  "passed_checks": [
+    "Page loads on public URL with visitor-gate localStorage bypass (kapitalmitte_visitor_profile + kapitalmitte_cookie_consent).",
+    "Exactly ONE [data-testid='home-handeln-teaser'] in DOM (count === 1) — no duplicate render.",
+    "home-savings-faq present with eyebrow 'HÄUFIGE FRAGEN' and H2 'Die wichtigsten Antworten — kompakt & klar.'",
+    "FAQ accordion renders 6 items (6 H3 question triggers).",
+    "home-faq-ask-question ('Frage nicht gefunden?' block) present.",
+    "Full-FAQ link a[href='/faq'] present at bottom of section.",
+    "home-handeln-teaser-cta is a real <a href='/handeln'>.",
+    "No horizontal overflow at 1440 (scrollWidth 1440 === clientWidth 1440).",
+    "Homepage section regression: banking-hero, home-news-preview, home-trust-line, platform-tablet-mockup, home-savings-inquiry, home-savings-offers, home-credit-offers, home-testimonials, home-post-hero-products, home-special-aif-overview, home-investment-spectrum, bonus-cta-section, product-inquiry-sticky-cta — all present exactly once."
+  ],
+  "not_tested_due_to_blocker": [
+    "DOM order within home-savings-faq (heading → accordion → CTA → sub-block → Frage-nicht-gefunden → full-FAQ link)",
+    "Sub-block word count 30–100 and two-paragraph structure",
+    "Tab-order traversal accordion triggers → FAQ CTA → home-handeln-teaser-cta → home-faq-ask-question with gold 2px focus ring",
+    "Unified-surface visual review at 1440x900 and 1920x1080",
+    "Mobile 390x844 stacking order of the merged section",
+    "FAQ modal open via home-faq-open-wissenscenter and keyboard nav to /handeln",
+    "Route regression: /handeln, /wissen, /fonds-grundlagen, /themen, /themen/aktien|anleihen|dividenden"
+  ],
+  "test_report_links": ["/app/test_reports/ui_it29/faq_area.png"],
+  "action_items": [
+    "APPLY the Session 58 edit — it is absent from disk. Verify with: grep -c 'HomeHandelnTeaser' /app/frontend/src/pages/Home.js  (must print 0).",
+    "Remove the HomeHandelnTeaser import (Home.js line 8) and the <HomeHandelnTeaser /> render (Home.js line 180).",
+    "Inside HomeSavingsFaqSection.jsx, insert the 'Mehr verstehen' rounded-card sub-block between the home-faq-open-wissenscenter CTA <div> (ends line 94) and the 'Frage nicht gefunden' motion.div (starts line 97), carrying data-testid='home-handeln-teaser' with an inner <Link to='/handeln' data-testid='home-handeln-teaser-cta'>.",
+    "Use H3 (not H2) for 'Investment & Börse Schritt für Schritt verstehen' and compress body copy to two paragraphs / 30–100 words.",
+    "Update FAQ CTA label to 'Alle FAQs ansehen' (currently 'Alle wichtigen Antworten ansehen').",
+    "Update FAQ intro paragraph to the mockup wording mentioning 'Aktien, Anleihen, IPO, Kryptowerten und Wertpapierdepots'.",
+    "After editing, confirm the file mtime actually changes and re-run the test agent."
+  ],
+  "critical_code_review_comments": [
+    "File mtimes prove the edit never reached disk: HomeSavingsFaqSection.jsx is unchanged from Aug 21 while the review request claims it was modified in Session 58. The write likely failed silently or targeted a different path — verify the write result before restarting the frontend and claiming completion.",
+    "Restarting supervisor + waiting 15s cannot compensate for an unwritten file; hot-reload was never the issue this session.",
+    "HomeHandelnTeaser.jsx (79 lines) becomes dead code once merged — delete it or the duplicated 'home-handeln-teaser' testid will be a latent regression trap if it is ever re-imported.",
+    "HomeSavingsFaqSection.jsx will exceed a reasonable size once the sub-block lands; consider extracting the sub-block into a presentational child component while keeping it rendered inside home-savings-faq to satisfy the containment requirement."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "0% of Session 58 acceptance criteria (blocked at STEP 1); homepage regression baseline 100%"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "not required for this flow; /app/memory/test_credentials.md not consumed",
+  "context_for_next_testing_agent": "Session 58 merge is NOT on disk as of iteration 29. Before any browser work, run the two greps: Home.js must have 0 'HomeHandelnTeaser' matches, and HomeSavingsFaqSection.jsx must match 'home-handeln-teaser'. Current baseline (unchanged from Session 57): home-savings-faq = section index 7, home-handeln-teaser = section index 8 (siblings, containment false), FAQ CTA text 'Alle wichtigen Antworten ansehen', teaser eyebrow 'Wissenshub', teaser heading is H2, teaser CTA text 'Weiterlesen', 3 paragraphs. Visitor gate is bypassed by setting localStorage kapitalmitte_visitor_profile and kapitalmitte_cookie_consent before a second goto. Out-of-scope console noise confirmed still present: many Supabase 401s, SVG '<path> d=undefined' x4, an 'overflow: visible on img' warning, ERR_BLOCKED_BY_RESPONSE.NotSameOrigin x3 and one ERR_HTTP2_PROTOCOL_ERROR. No React key-collision or render errors observed.",
+  "rca_of_the_issue": "Root cause is not a UI defect but a missing code change. Both target files are byte-identical to the Session 57 state (mtimes Aug 21 11:42 and Aug 23 11:24; git status shows no modification to either file). The rendered page served from the public URL mirrors disk exactly — home-handeln-teaser is a top-level sibling section immediately following home-savings-faq — so the failure is reproducible and deterministic, not a lazy-chunk or hot-reload timing artifact. Reproduction: (1) grep -c 'HomeHandelnTeaser' /app/frontend/src/pages/Home.js → 2; (2) grep 'Mehr verstehen' /app/frontend/src/components/home/HomeSavingsFaqSection.jsx → no match; (3) in the browser, faq.contains(teaser) → false. Mitigation: the developer agent must actually write the merge into HomeSavingsFaqSection.jsx and strip the import/render from Home.js, then re-verify on disk before requesting a retest."
+}

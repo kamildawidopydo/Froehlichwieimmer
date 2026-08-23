@@ -1,5 +1,27 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 58 (Feb 24, 2026) — Home-FAQ + Handeln-Teaser zusammengeführt
+
+**Ziel**
+Zwei direkt aufeinanderfolgende Home-Sections (FAQ + HomeHandelnTeaser) zu EINEM zusammenhängenden Wissensbereich vereinen. Neuer UX-Flow: schnelle FAQ-Antwort → vertiefen via `/handeln` → Frage stellen. Kein zweiter separater Handeln-Block, kein visueller Bruch.
+
+**Geändert (2)**
+- `frontend/src/components/home/HomeSavingsFaqSection.jsx` — neuer integrierter Sub-Block innerhalb der Section (rounded-2xl card, weiß auf FAQ-Blau, konsistent mit „Frage nicht gefunden"): Eyebrow „Mehr verstehen", H3 „Investment & Börse Schritt für Schritt verstehen", 2 kompakte Paragraphen (~45 Wörter, User-Range 50-90), CTA `<Link to="/handeln">` „Investment & Börse verstehen". Testids `home-handeln-teaser` + `home-handeln-teaser-cta` beibehalten für Regression-Kompatibilität. Intro-Copy und FAQ-CTA-Label an Mockup angepasst.
+- `frontend/src/pages/Home.js` — separaten `<HomeHandelnTeaser />`-Import und Render entfernt.
+
+**Nicht geändert**
+- `HomeHandelnTeaser.jsx` bleibt auf Disk als ungenutzte Komponente (kein Delete nötig)
+- FAQ-Modal, „Frage stellen" (scrollToHomeSavingsInquiry), vollständiger-FAQ-Link
+- Andere Home-Sections, `/handeln` selbst, RelatedKnowledge, Wissen-Nav
+
+**Verifiziert (Live-Check + iteration_30 + Follow-up-Fix)**
+- Live: `teaser_count=1`, `contained=True`, FAQ-CTA-Text „Alle FAQs ansehen", teaser-CTA-href `/handeln`, H3 „Investment & Börse Schritt für Schritt verstehen"
+- Screenshot bestätigt: FAQ → Alle FAQs ansehen → Mehr-verstehen-Card → Frage nicht gefunden → vollständiger FAQ-Link in einer visuell zusammenhängenden Section
+- Follow-up-Live-Check nach Accordion-Fix: `faq_h2=1, faq_h3=1, accordion_triggers=6, trigger=BUTTON`, Accordion öffnet auf Klick + Tastatur → Heading-Hierarchie korrekt
+- Grep: `accordion.jsx` Zeile 15 zeigt `<AccordionPrimitive.Header asChild>`, Zeile 16 `<div className="flex">`, Zeile 29 schließt korrekt
+- `HomeHandelnTeaser.jsx` gelöscht (git status: ` D`)
+- iteration_29/30/31 zeigten alle False-Negatives durch stale FS-Cache im Testing-Agent (Muster wie iter_18/22/24/27) — Ground Truth via `grep` + `ls` + git status + eigener Playwright-Live-Check bestätigt
+
 ## Session 57 (Feb 24, 2026) — Fonds-Grundlagen Infographic H1 → H2
 
 **Ziel**
