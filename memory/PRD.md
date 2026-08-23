@@ -1,5 +1,23 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 71 (Feb 25, 2026) — „Produkt wählen"-Popup + Sticky-CTA aufgewertet ✅
+
+**Datei geändert:** `frontend/src/components/home/ProductInquiryStickyCta.jsx`
+
+**UX-Änderungen (mobile-first, banktypisch)**
+- `ProductMenu`-Popup jetzt strukturiert in drei Blöcke:
+  - **Header** mit Eyebrow „Produktwahl", H3 „Finden Sie die passende Geldanlage für Ihre Ziele." und Erklärungstext („Wählen Sie direkt ein Produkt — oder beantworten Sie wenige Fragen und erhalten Sie eine persönliche Empfehlung mit **möglichen Vorteilen und passenden Angeboten**.")
+  - **6 rich Produkt-Cards** — jede mit `kicker` (z. B. `AKTIEN`), fettem Produkt-Titel und einer Kurzbeschreibung (Aktien → „Langfristige Chancen …", Anleihen → „Planbare Erträge und Stabilität …", Fonds → „Breit gestreut und flexibel …", Tagesgeld → „Flexibel sparen mit täglicher Verfügbarkeit …", Festgeld → „Planbare Laufzeit …", Flexgeld → „Zinsen und Flexibilität kombiniert.")
+  - **Nutzen-Panel** „Kurzfragebogen — Ihr Nutzen" mit drei kompakten Chips: „Passende Empfehlung", „Mögliche Vorteile" (rechtssicher, keine Bonus-Versprechen), „Kostenlos & unverbindlich" + Trust-Line „In wenigen Minuten · kostenlos & unverbindlich".
+  - Popup-Breite von 17 auf 21 rem erhöht; `max-h-[min(78vh,640px)]` mit `overflow-y-auto`, damit das Panel auf 320px bis Desktop sauber passt.
+- `CompactPill` mit Icon-Badge + zweizeiliger Struktur: Eyebrow „Kurzfragebogen · persönliche Empfehlung" + Titel „Fragen beantworten" + auf ≥sm zusätzlich „In wenigen Minuten · kostenlos & unverbindlich"; hover lift + accent-Border.
+
+**Erhaltene Funktionalität**
+- Alle sechs `product-inquiry-option-{aktien|anleihen|fonds|tagesgeld|festgeld|flexgeld}` Testids und Klick-Verhalten unverändert. Wizard-Logik nicht angefasst.
+- Bestehende Mobile-Anti-Overlap-Logik aus Session 69 unverändert (`nearForm` verschiebt CTA nach links-oben bei sichtbarem Newsletter).
+- Keine neuen Bildassets, nur Typografie/Icons/Tokens.
+
+
 ## Session 70 (Feb 25, 2026) — 3 intern lösbare Items DONE ✅
 
 **Item 1 · Digest-Preview** ✅ `GET /api/newsletter/admin/preview-weekly-digest`

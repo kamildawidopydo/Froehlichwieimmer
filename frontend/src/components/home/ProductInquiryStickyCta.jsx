@@ -33,24 +33,51 @@ function useIsDesktop() {
   return isDesktop;
 }
 
+const PRODUCT_BENEFITS = {
+  aktien:    'Langfristige Chancen für Ihren Vermögensaufbau.',
+  anleihen:  'Planbare Erträge und Stabilität für Ihr Depot.',
+  fonds:     'Breit gestreut und flexibel investieren.',
+  tagesgeld: 'Flexibel sparen mit täglicher Verfügbarkeit.',
+  festgeld:  'Planbare Laufzeit und attraktive Verzinsung.',
+  flexgeld:  'Zinsen und Flexibilität sinnvoll kombiniert.',
+};
+
+const WIZARD_BENEFITS = [
+  { title: 'Passende Empfehlung',    body: 'Anlage passend zu Zielen und Horizont.' },
+  { title: 'Mögliche Vorteile',      body: 'Passende Konditionen und Aktionen entdecken.' },
+  { title: 'Kostenlos & unverbindlich', body: 'Keine Verpflichtung, keine versteckten Kosten.' },
+];
+
 function CompactPill({ onClick, className, testId, ariaLabel, fixed = true }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-lg border border-bank-ink/10 bg-white px-3.5 py-2.5 text-[13px] font-medium text-bank-ink',
-        'shadow-[0_10px_28px_-14px_rgb(9_33_66/0.28)] transition-colors hover:bg-bank-surface',
+        'group inline-flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-xl border border-bank-ink/12 bg-white px-4 py-3 text-left',
+        'shadow-[0_16px_44px_-18px_rgb(9_33_66/0.32)] transition-all hover:-translate-y-0.5 hover:border-bank-accent/50 hover:shadow-[0_20px_56px_-18px_rgb(9_33_66/0.4)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/40',
-        'dark:border-bank-border dark:bg-bank-surface-elev dark:hover:bg-bank-surface',
+        'dark:border-bank-border dark:bg-bank-surface-elev',
         fixed && ['fixed z-[90]', BOTTOM, 'right-4 sm:right-5'],
         className,
       )}
       data-testid={testId}
       aria-label={ariaLabel}
     >
-      <MessageCircleQuestion className="h-4 w-4 shrink-0 text-bank-accent" strokeWidth={LUCIDE_STROKE} aria-hidden />
-      <span className="truncate">Fragen beantworten</span>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-bank-accent/20 bg-bank-accent/5 text-bank-accent">
+        <MessageCircleQuestion className="h-4 w-4" strokeWidth={LUCIDE_STROKE} aria-hidden />
+      </span>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.22em] text-bank-text-muted">
+          Kurzfragebogen · persönliche Empfehlung
+        </span>
+        <span className="truncate text-[14px] font-semibold leading-tight text-bank-ink">
+          Fragen beantworten
+        </span>
+        <span className="hidden text-[11px] leading-snug text-bank-text-muted sm:inline">
+          In wenigen Minuten · kostenlos &amp; unverbindlich
+        </span>
+      </span>
     </button>
   );
 }
@@ -61,38 +88,82 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
       {menuOpen ? (
         <motion.div
           role="menu"
-          aria-label="Produkt wählen"
+          aria-label="Passende Geldanlage wählen"
           initial={prefersReduced ? false : { opacity: 0, y: 6, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={prefersReduced ? undefined : { opacity: 0, y: 4, scale: 0.98 }}
           transition={{ duration: prefersReduced ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
           className={className}
         >
-          <p className="px-3 pb-1.5 pt-1 text-[10px] font-medium uppercase tracking-[0.16em] text-bank-text-muted">
-            Produkt wählen
-          </p>
-          {PRODUCTS.map((key) => {
-            const meta = productInquiryCards[key];
-            return (
-              <button
-                key={key}
-                type="button"
-                role="menuitem"
-                data-testid={`product-inquiry-option-${key}`}
-                onClick={() => onPick(key)}
-                className={cn(
-                  'flex w-full flex-col gap-0.5 rounded-md px-3 py-2.5 text-left transition-colors',
-                  'hover:bg-bank-surface',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/30',
-                )}
-              >
-                <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-bank-text-muted">
-                  {meta.kicker}
-                </span>
-                <span className="text-[14px] font-medium leading-snug text-bank-ink">{meta.title}</span>
-              </button>
-            );
-          })}
+          <div className="max-h-[min(78vh,640px)] overflow-y-auto overscroll-contain px-3.5 py-3.5 [scrollbar-width:thin] sm:px-4 sm:py-4">
+            {/* Header — klärt Ziel & Nutzen in Sekunden */}
+            <div className="mb-3 border-b border-bank-border pb-3">
+              <p className="font-mono text-[9.5px] font-medium uppercase tracking-[0.22em] text-bank-primary/80">
+                Produktwahl
+              </p>
+              <h3 className="mt-1.5 font-display text-[15.5px] font-light leading-snug tracking-tight text-bank-ink sm:text-[16.5px]">
+                Finden Sie die passende Geldanlage für Ihre Ziele.
+              </h3>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-bank-text-muted">
+                Wählen Sie direkt ein Produkt — oder beantworten Sie wenige Fragen und
+                erhalten Sie eine persönliche Empfehlung mit möglichen Vorteilen und
+                passenden Angeboten.
+              </p>
+            </div>
+
+            {/* Rich Product Cards */}
+            <div className="flex flex-col gap-1.5">
+              {PRODUCTS.map((key) => {
+                const meta = productInquiryCards[key];
+                const benefit = PRODUCT_BENEFITS[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="menuitem"
+                    data-testid={`product-inquiry-option-${key}`}
+                    onClick={() => onPick(key)}
+                    className={cn(
+                      'group flex w-full flex-col gap-0.5 rounded-lg border border-transparent px-3 py-2.5 text-left transition-all',
+                      'hover:border-bank-accent/30 hover:bg-bank-surface',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/30',
+                    )}
+                  >
+                    <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.16em] text-bank-primary/80">
+                      {meta.kicker}
+                    </span>
+                    <span className="text-[13.5px] font-semibold leading-snug text-bank-ink transition-colors group-hover:text-bank-primary">
+                      {meta.title}
+                    </span>
+                    <span className="text-[11.5px] leading-snug text-bank-text-muted">
+                      {benefit}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Wizard-Nutzen-Chips */}
+            <div className="mt-3.5 rounded-lg border border-bank-border bg-bank-surface/60 px-3 py-3">
+              <p className="font-mono text-[9.5px] font-medium uppercase tracking-[0.2em] text-bank-primary/80">
+                Kurzfragebogen — Ihr Nutzen
+              </p>
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {WIZARD_BENEFITS.map((b) => (
+                  <li key={b.title} className="flex items-start gap-2">
+                    <span aria-hidden className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-bank-primary/60" />
+                    <span className="min-w-0">
+                      <span className="text-[12px] font-medium text-bank-ink">{b.title}</span>
+                      <span className="ml-1 text-[11.5px] leading-snug text-bank-text-muted">— {b.body}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bank-text-muted">
+                In wenigen Minuten · kostenlos &amp; unverbindlich
+              </p>
+            </div>
+          </div>
         </motion.div>
       ) : null}
     </AnimatePresence>
@@ -217,7 +288,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
           prefersReduced={prefersReduced}
           onPick={pickProduct}
           className={cn(
-            'absolute bottom-full mb-2 flex w-[min(17rem,calc(100vw-2rem))] flex-col gap-0.5 rounded-xl border border-bank-border bg-white p-1.5 shadow-[0_16px_40px_-20px_rgb(9_33_66/0.28)] dark:bg-bank-surface-elev',
+            'absolute bottom-full mb-2 w-[min(21rem,calc(100vw-1.5rem))] rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev',
             nearForm ? 'left-0' : 'right-0',
           )}
         />
@@ -243,7 +314,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
           menuOpen={menuOpen}
           prefersReduced={prefersReduced}
           onPick={pickProduct}
-          className="absolute bottom-full right-0 mb-2 flex w-[17rem] flex-col gap-0.5 rounded-xl border border-bank-border bg-white p-1.5 shadow-[0_16px_40px_-20px_rgb(9_33_66/0.28)] dark:bg-bank-surface-elev"
+          className="absolute bottom-full right-0 mb-2 w-[21rem] max-w-[calc(100vw-2rem)] rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev"
         />
 
         <div
