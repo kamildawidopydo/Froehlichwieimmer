@@ -1,5 +1,26 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 61 Follow-up (Feb 25, 2026) — Migration nicht wirksam
+
+**Testing-Agent iteration_34: 4/12 verifiziert, 3 Submits weiterhin blockiert**
+- Fonds/Tagesgeld/Festgeld Submits liefern weiterhin HTTP 400 mit `code:23514, message:"new row for relation \"product_inquiry_leads\" violates check constraint \"product_inquiry_leads_product_check\""`
+- Payload-Mapping ist korrekt: Client sendet `product: 'fonds'` / `'tagesgeld'` / `'festgeld'` (nie `spargeld`)
+- Route-Regression grün: /, /handeln, /wissen, /fonds-grundlagen laden ohne Fehler
+
+**Ursache**
+Die vom User ausgeführte Migration hat den aktiven Constraint auf dem Supabase-Projekt `vitmvkmjjwabfzndynlj` (per `REACT_APP_SUPABASE_URL`) nicht ersetzt. Mögliche Gründe: Falsches Projekt/Schema, Rollback durch pooling, Migration nicht committed.
+
+**Verifikation empfohlen (User Action)**
+```sql
+-- 1) Aktive Definition prüfen
+SELECT pg_get_constraintdef(oid) FROM pg_constraint
+WHERE conname = 'product_inquiry_leads_product_check';
+-- Erwartet nach erfolgreicher Migration:
+-- CHECK ((product = ANY (ARRAY['aktien'::text,'anleihen'::text,'fonds'::text,'tagesgeld'::text,'festgeld'::text,'flexgeld'::text,'spargeld'::text])))
+
+-- 2) Falls old-Definition zurück ist, Migration erneut ausführen (Projekt: vitmvkmjjwabfzndynlj)
+```
+
 ## Session 61 (Feb 25, 2026) — Product-Inquiry Constraint-Migration + Wizard Partial Cleanup
 
 **Ziel**

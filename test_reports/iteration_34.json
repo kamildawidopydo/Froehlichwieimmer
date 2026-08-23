@@ -1,0 +1,35 @@
+{
+  "summary": "Session 61 verification (frontend only). STOPPED EARLY per instructions: the Supabase CHECK-constraint migration did NOT take effect. Ran fonds, tagesgeld and festgeld happy-paths end-to-end (sticky CTA -> product option -> 6 questions, first option each -> contact fields TESTVorname/TESTNachname/+4915112345678/qa.<product>.session61@example.test + 2 consents -> 'Anfrage absenden'). All three submits: POST /api/submit-product-inquiry-lead -> 404 (expected fallback), then POST https://<supabase>/rest/v1/product_inquiry_leads -> HTTP 400 with {\"code\":\"23514\",\"details\":null,\"hint\":null,\"message\":\"new row for relation \\\"product_inquiry_leads\\\" violates check constraint \\\"product_inquiry_leads_product_check\\\"\"}. No success screens rendered. Flexgeld/aktien/anleihen submits were NOT run (stop rule). Wizard mechanics, question order and payload mapping are all correct: submitted product field = 'fonds' / 'tagesgeld' / 'festgeld' respectively (never 'spargeld'). Route regression PASS: /, /handeln, /wissen, /fonds-grundlagen all load with h1=1, zero pageerrors; only pre-existing console noise (401s from an unauthenticated data call, <path> attribute d: 'undefined').",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST <SUPABASE_URL>/rest/v1/product_inquiry_leads", "issue": "Check constraint product_inquiry_leads_product_check still rejects 'fonds', 'tagesgeld', 'festgeld' (presumably also 'flexgeld'). Exact response: {\"code\":\"23514\",\"details\":null,\"hint\":null,\"message\":\"new row for relation \\\"product_inquiry_leads\\\" violates check constraint \\\"product_inquiry_leads_product_check\\\"\"}. The reported ALTER TABLE either was not executed, was executed on a different project/schema, or the old constraint was re-added. Verify with: select pg_get_constraintdef(oid) from pg_constraint where conname='product_inquiry_leads_product_check'; against project vitmvkmjjwabfzndynlj, table public.product_inquiry_leads.", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "/api/submit-product-inquiry-lead", "issue": "Still returns 404 on every submit; client falls back to direct Supabase insert. Pollutes console and masks real errors."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Product inquiry submit (fonds / tagesgeld / festgeld)", "issue": "Submit blocked by Supabase 400/23514; success screens 'Ihre Fonds-/ETF-Anfrage ist bei uns', 'Ihre Tagesgeld-Anfrage ist bei uns', 'Ihre Festgeld-Anfrage ist bei uns' never rendered.", "affected_selectors": ["role=button[name=Anfrage absenden]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/ui_it34", "/app/test_reports/ui_it34b"],
+  "action_items": [
+    "USER/DB ACTION REQUIRED: re-apply the migration on the Supabase project referenced by REACT_APP_SUPABASE_URL (vitmvkmjjwabfzndynlj): ALTER TABLE public.product_inquiry_leads DROP CONSTRAINT product_inquiry_leads_product_check; ALTER TABLE public.product_inquiry_leads ADD CONSTRAINT product_inquiry_leads_product_check CHECK (product IN ('aktien','anleihen','fonds','tagesgeld','festgeld','flexgeld','spargeld')); then verify via pg_get_constraintdef.",
+    "Re-run the 6-flow verification only after the constraint is confirmed widened.",
+    "Optional: implement or remove /api/submit-product-inquiry-lead (permanent 404).",
+    "Optional: add data-testids to the wizard (dialog, prompt, options, Weiter/Zurueck/Absenden, progress) — tests still depend on Tailwind class selectors."
+  ],
+  "critical_code_review_comments": [
+    "Frontend VALID_PRODUCTS and the DB CHECK constraint remain duplicated, unsynchronised sources of truth; consider dropping the CHECK in favour of a lookup table or validating server-side so the UI cannot offer products the DB rejects."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested", "frontend": "green count 4/12 verified this run (routes /, /handeln, /wissen, /fonds-grundlagen). 3 submit flows FAIL (fonds, tagesgeld, festgeld). 5 items not executed due to stop rule (flexgeld, aktien, anleihen submits, no-400 check, payload check for those)."},
+  "seed_data_creation": "None persisted — all three attempted inserts were rejected by the DB.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Wizard selectors (still no data-testids): dialog '[role=\"dialog\"]:has-text(\"KURZFRAGEBOGEN\")', options 'button.group\\/opt', prompt 'p.min-w-0.flex-1', progress 'p.font-mono' (last, x/7), contact #pi-first/#pi-last/#pi-phone/#pi-email, consents = first two button[role=checkbox]. Gate bypass via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent works. Wizard flow itself is fully functional and payload product key is correct — only the DB constraint blocks. Once the constraint is fixed, rerun all 6 flows; only the submit result needs re-verification.",
+  "rca_of_the_issue": "Identical to iteration_33: PostgREST rejects inserts with SQLSTATE 23514 because public.product_inquiry_leads still carries the original CHECK (product IN ('aktien','anleihen','spargeld')). The claimed ALTER TABLE is not reflected in the live database used by the preview frontend (project vitmvkmjjwabfzndynlj), so this is an environment/DB fix, not a code fix."
+}
