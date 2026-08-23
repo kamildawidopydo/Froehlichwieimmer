@@ -40,6 +40,7 @@ const Leistungen = lazy(() => import('@/pages/Leistungen'));
 const Wissen = lazy(() => import('@/pages/Wissen'));
 const WissenArtikel = lazy(() => import('@/pages/WissenArtikel'));
 const Contact = lazy(() => import('@/pages/Contact'));
+const InvestmentTopicPage = lazy(() => import('@/pages/InvestmentTopicPage'));
 const CreditLeadPage = lazy(() => import('@/pages/CreditLeadPage'));
 const Bewertungen = lazy(() => import('@/pages/Bewertungen'));
 const Kundenstimmen = lazy(() => import('@/pages/Kundenstimmen'));
@@ -242,6 +243,7 @@ function App() {
                   <Route path="/wissen/:slug" element={<WissenArtikel />} />
                   <Route path="/bausteine" element={<Navigate to="/leistungen#bausteine" replace />} />
                   <Route path="/contact" element={<Contact />} />
+                  <Route path="/themen/:slug" element={<InvestmentTopicPage />} />
                   <Route path="/kredit" element={<CreditLeadPage />} />
                   <Route path="/news" element={<PublicNewsPage />} />
                   <Route path="/news/watchlist" element={<WatchlistPage />} />

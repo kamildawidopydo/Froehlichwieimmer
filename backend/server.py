@@ -3229,6 +3229,7 @@ from news_synthesizer import (
     _title_similarity as _news_title_similarity,
 )  # noqa: E402
 from alerts import register as _register_alerts, ensure_indexes as _alerts_ensure_indexes  # noqa: E402
+from investment_topics import register as _register_investment_topics, seed_investment_topics as _seed_investment_topics  # noqa: E402
 
 # Inject the Mongo handle into the news provider so it can serve articles.
 _MongoNewsProvider.set_db(db)
@@ -3256,6 +3257,19 @@ async def _admin_news_list(_user: dict = Depends(require_admin), status: Optiona
             "items": [{**{k: v for k, v in d.items() if k != "_id"}, "id": str(d.get("_id"))} for d in docs]}
 
 _register_einordnung(api, db)
+
+# --- Investment-Topic-Funnel (Themen-Teaser + Lead-Aufnahme) --------------
+_register_investment_topics(api, db, _send_email_via_emergent)
+
+
+@app.on_event("startup")
+async def _investment_topics_startup() -> None:
+    try:
+        inserted = await _seed_investment_topics(db)
+        if inserted:
+            logger.info("investment_topics: seeded %d topic(s)", inserted)
+    except Exception:  # noqa: BLE001
+        logger.exception("investment_topics seed failed")
 
 # --- Price alerts (Watchlist-scoped, 15-min cron, Resend-Mail) ------------
 _register_alerts(

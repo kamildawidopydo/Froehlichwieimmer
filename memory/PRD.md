@@ -7,6 +7,54 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 39 (Feb 23, 2026) — Investment-Themen-Funnel „Aktien im Fokus"
+
+**Zielbild**: Wiederverwendbares Themen-Funnel-System — Floating-Teaser sitewide, dedizierte Themenseite `/themen/:slug`, kurzes Lead-Formular ohne parallele Kontakt-Infrastruktur. Compliance-freundlich (keine Empfehlungen/Renditeversprechen), Analytics vorbereitet.
+
+**Backend**
+- Neues Modul `backend/investment_topics.py`:
+  - Collection `investment_topics` — Felder: `slug, category, headline, teaser, target_url, image_url, enabled, display_delay_ms, scroll_threshold_pct, cooldown_days, allowed_routes, excluded_routes, compliance_label`.
+  - `seed_investment_topics(db)` — idempotent, seeded initial „aktien" (35s Delay, 50% Scroll, 7d Cooldown, exkl. Login/Admin/Dashboard/eigene Themenseite).
+  - Endpoints:
+    - `GET /api/investment-topics/active` → aktive Themen für den Teaser (max 20).
+    - `GET /api/investment-topics/{slug}` → Detail-Metadaten.
+    - `POST /api/investment-topics/lead` → Pydantic `LeadIn` mit `EmailStr`+`consent`-Check, speichert in `investment_leads`, sendet interne Bestätigungsmail via bestehendem `_send_email_via_emergent` (Resend). Kein Mail-Fehler wird zum User propagiert.
+- `server.py`: `_register_investment_topics(api, db, _send_email_via_emergent)` + Startup-Hook `_investment_topics_startup`.
+
+**Frontend**
+- `lib/investmentAnalytics.js` — `trackInvestmentEvent(name, props)` mit Consent-Guard (`window.__consent_analytics__`), Support für `gtag`, `dataLayer`, `plausible`. Keine PII (nur `topic`, `topic_slug`, `placement`, `route`).
+- `services/investmentTopics.js` — Axios-Wrapper.
+- `components/investment/InvestmentTopicTeaser.jsx`:
+  - Floating Card (desktop unten rechts, mobile bottom sheet), Fade + Slide-in.
+  - Trigger: `display_delay_ms` **oder** `scroll_threshold_pct` — je nachdem was zuerst.
+  - Cooldown via `localStorage["invtopic:dismissed:<slug>"]` (Timestamp, Reset nach `cooldown_days`).
+  - „Max. 1 Teaser pro Session" via `sessionStorage["invtopic:shown_in_session"]`.
+  - Blocklist über `excluded_routes` (Präfix-Match) und `allowed_routes`.
+  - Accessibility: `role="dialog"`, `aria-labelledby`/`aria-describedby`, ESC schließt, Fokus auf Close-Button beim Öffnen, Tastatur-navigierbar.
+  - `data-testid`: `invtopic-teaser`, `invtopic-teaser-close`, `invtopic-teaser-cta`.
+- `pages/InvestmentTopicPage.jsx` — Route `/themen/:slug`:
+  - Content-Registry `TOPIC_CONTENT["aktien"]` (Hero, Why-Cards, Risks, Einordnung-Steps, Conversion, Compliance-Label).
+  - 6 Sektionen exakt nach Vorgabe: Hero mit 2 CTAs → Why (3 Cards) → Risks (Left Rail Headline + Body) → Persönliche Beratung (3 Steps) → Conversion mit „Ich bin bereits Kunde"-Inline-Box → Kurzformular (Vorname/Nachname/E-Mail/Telefon optional/Consent).
+  - Fallback-Route rendert Hinweis + Link zur Kontaktseite, wenn Slug unbekannt.
+- `App.js`: Route `<Route path="/themen/:slug" element={<InvestmentTopicPage />} />` in Marketing-Layout registriert.
+- `Layout.js`: Teaser sitewide via `<InvestmentTopicTeaser />` gemountet.
+
+**Analytics-Ereignisse (vorbereitet)**
+`investment_teaser_view`, `investment_teaser_click`, `investment_topic_page_view`, `investment_topic_cta_click`, `investment_existing_customer_click`, `investment_appointment_start`, `investment_appointment_submit`.
+
+**Compliance**
+- Kein Ratschlag, keine Renditeversprechen, keine konkreten Aktien.
+- Formular-Untertext: „Unverbindliche Gesprächsanfrage. Eine Anlageentscheidung erfolgt nicht über dieses Formular."
+- Kennzeichnung „Information der Fröhlich Vermögensberatung" unter Teaser und Formular.
+- Consent-Checkbox mit Link zur Datenschutzerklärung (`/legal/privacy`).
+
+**Verifikation**
+- `GET /api/investment-topics/active` → 1 Topic mit vollen Metadaten.
+- `POST /api/investment-topics/lead` (valid) → `200 {ok:true, lead_id, topic}`.
+- `POST /api/investment-topics/lead` (`consent=false`) → `400`.
+- Mongo: 1 Topic seeded, 1 Lead gespeichert (Verifikation via `motor` REPL).
+- Playwright `/themen/aktien`: H1 „Aktien als Baustein Ihrer Vermögensstrategie", alle 4 Sektionen (`topic-why-section`, `topic-risks-section`, `topic-form-section`, CTAs) present. Backend startet fehlerfrei mit Log-Zeile `investment_topics: seeded 1 topic(s)`.
+
 ## Session 38 (Feb 23, 2026) — Related-News unter jeder Detailseite
 
 **Zielbild**: Nach dem Lesen eines Artikels sollen 3 thematisch verwandte Artikel als interne Empfehlungen erscheinen — keine externen Links, keine LLM-Calls beim Seitenaufruf.
