@@ -27,18 +27,53 @@ DEFAULT_TOPICS = [
             "Erfahren Sie, welche Chancen und Risiken Anleger kennen sollten und wie wir das "
             "Thema gemeinsam mit Ihnen einordnen."
         ),
+        "overview_short": (
+            "Wie funktionieren Unternehmensbeteiligungen und welche Rolle können Aktien "
+            "innerhalb einer langfristigen Vermögensstrategie spielen?"
+        ),
         "target_url": "/themen/aktien",
         "image_url": None,
         "enabled": True,
+        "priority": 10,
         "display_delay_ms": 35000,
         "scroll_threshold_pct": 50,
         "cooldown_days": 7,
-        "allowed_routes": [],       # leer = überall erlaubt (außer excluded)
+        "allowed_routes": [],
         "excluded_routes": [
-            "/themen/aktien",       # nie auf der eigenen Themenseite
+            "/themen/aktien",
             "/login", "/register", "/forgot-password", "/reset-password",
             "/formular", "/dokumente/vorschau",
-            "/admin",               # Präfix-Match unten
+            "/admin",
+            "/dashboard",
+        ],
+        "compliance_label": "Information der Fröhlich Vermögensberatung",
+    },
+    {
+        "slug": "anleihen",
+        "category": "Anleihen & Zinsen",
+        "headline": "Zinsen sind zurück – aber worauf kommt es bei Anleihen an?",
+        "teaser": (
+            "Anleihen können unterschiedliche Funktionen innerhalb einer Vermögensstrategie "
+            "übernehmen. Erfahren Sie, welche Faktoren Anleger bei Laufzeit, Zins und "
+            "Bonität beachten sollten."
+        ),
+        "overview_short": (
+            "Wie funktionieren Anleihen, welche Rolle spielen Zinsen und welche Chancen und "
+            "Risiken sollten Anleger kennen?"
+        ),
+        "target_url": "/themen/anleihen",
+        "image_url": None,
+        "enabled": True,
+        "priority": 9,
+        "display_delay_ms": 35000,
+        "scroll_threshold_pct": 50,
+        "cooldown_days": 7,
+        "allowed_routes": [],
+        "excluded_routes": [
+            "/themen/anleihen",
+            "/login", "/register", "/forgot-password", "/reset-password",
+            "/formular", "/dokumente/vorschau",
+            "/admin",
             "/dashboard",
         ],
         "compliance_label": "Information der Fröhlich Vermögensberatung",
@@ -47,7 +82,12 @@ DEFAULT_TOPICS = [
 
 
 async def seed_investment_topics(db) -> int:
-    """Idempotent Seeding — schreibt nur, wenn Slug fehlt."""
+    """Idempotent Seeding — schreibt nur, wenn Slug fehlt.
+
+    Zusätzlich werden fehlende **neue Felder** auf bereits vorhandenen Dokumenten
+    per `$set … $exists:false` nachgezogen, damit ältere Seeds (ohne
+    `priority` oder `overview_short`) nicht manuell repariert werden müssen.
+    """
     inserted = 0
     for topic in DEFAULT_TOPICS:
         existing = await db.investment_topics.find_one({"slug": topic["slug"]})
@@ -55,6 +95,18 @@ async def seed_investment_topics(db) -> int:
             doc = {**topic, "created_at": datetime.now(timezone.utc)}
             await db.investment_topics.insert_one(doc)
             inserted += 1
+            continue
+        # Backfill: neue Felder auf existierende Docs übernehmen, ohne
+        # redaktionelle Anpassungen (headline/teaser) zu überschreiben.
+        backfill = {}
+        for key in ("priority", "overview_short"):
+            if key not in existing or existing.get(key) in (None, ""):
+                backfill[key] = topic.get(key)
+        if backfill:
+            await db.investment_topics.update_one(
+                {"_id": existing["_id"]},
+                {"$set": backfill},
+            )
     return inserted
 
 
@@ -66,8 +118,10 @@ class TopicOut(BaseModel):
     category: str
     headline: str
     teaser: str
+    overview_short: Optional[str] = None
     target_url: str
     image_url: Optional[str] = None
+    priority: int = 0
     display_delay_ms: int
     scroll_threshold_pct: int
     cooldown_days: int
@@ -95,7 +149,7 @@ def register(api: APIRouter, db, send_email_fn):
 
     @api.get("/investment-topics/active", summary="Aktive Investment-Themen für den Teaser")
     async def _active_topics():
-        cursor = db.investment_topics.find({"enabled": True}).sort("created_at", -1).limit(20)
+        cursor = db.investment_topics.find({"enabled": True}).sort([("priority", -1), ("created_at", -1)]).limit(20)
         docs = await cursor.to_list(20)
         items = []
         for d in docs:
@@ -105,8 +159,10 @@ def register(api: APIRouter, db, send_email_fn):
                     category=d.get("category", ""),
                     headline=d.get("headline", ""),
                     teaser=d.get("teaser", ""),
+                    overview_short=d.get("overview_short"),
                     target_url=d.get("target_url", "/"),
                     image_url=d.get("image_url"),
+                    priority=int(d.get("priority") or 0),
                     display_delay_ms=int(d.get("display_delay_ms") or 35000),
                     scroll_threshold_pct=int(d.get("scroll_threshold_pct") or 50),
                     cooldown_days=int(d.get("cooldown_days") or 7),
@@ -128,6 +184,7 @@ def register(api: APIRouter, db, send_email_fn):
             "category": d.get("category", ""),
             "headline": d.get("headline", ""),
             "teaser": d.get("teaser", ""),
+            "overview_short": d.get("overview_short"),
             "target_url": d.get("target_url", ""),
             "image_url": d.get("image_url"),
             "compliance_label": d.get("compliance_label"),

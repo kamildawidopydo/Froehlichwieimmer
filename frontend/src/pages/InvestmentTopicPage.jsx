@@ -7,8 +7,10 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { submitInvestmentLead } from '@/services/investmentTopics';
+import { submitInvestmentLead, fetchActiveInvestmentTopics } from '@/services/investmentTopics';
 import { trackInvestmentEvent, InvestmentEvents } from '@/lib/investmentAnalytics';
+import InvestmentTopicCard from '@/components/investment/InvestmentTopicCard';
+import InvestmentBreadcrumbs from '@/components/investment/InvestmentBreadcrumbs';
 
 // ---------------------------------------------------------------------------
 // Statische Inhaltsvorlagen — pro Themen-Slug. Backend liefert nur Metadaten
@@ -88,7 +90,85 @@ const TOPIC_CONTENT = {
     form_topic_label: 'Aktien & Kapitalmärkte',
     compliance_label: 'Information der Fröhlich Vermögensberatung',
   },
+  anleihen: {
+    seo: {
+      title: 'Anleihen & Zinsen | Fröhlich Vermögensberatung',
+      description:
+        'Anleihen verstehen, Zinsentwicklungen einordnen und gemeinsam mit Ihrem Berater prüfen, welche Rolle festverzinsliche Anlagen in Ihrer Vermögensstrategie spielen können.',
+    },
+    breadcrumb_label: 'Anleihen',
+    eyebrow: 'Anleihen & Zinsen',
+    h1: 'Anleihen als Baustein einer Vermögensstrategie',
+    intro: [
+      'Anleihen gehören zu den klassischen Instrumenten der Kapitalanlage. Anleger stellen Staaten, Unternehmen oder anderen Emittenten Kapital zur Verfügung und erhalten dafür grundsätzlich vereinbarte Zinszahlungen.',
+      'Welche Chancen und Risiken damit verbunden sind, hängt unter anderem von Laufzeit, Bonität, Zinsniveau und Ausgestaltung der jeweiligen Anleihe ab.',
+    ],
+    hero_image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=1400&q=75',
+    hero_image_alt: 'Klassisches Bankengebäude bei Dämmerung – editorial',
+    why: {
+      headline: 'Warum Anleihen interessant sein können',
+      intro:
+        'Festverzinsliche Anlagen können unterschiedliche Funktionen innerhalb einer breit aufgestellten Vermögensstruktur übernehmen.',
+      cards: [
+        {
+          title: 'Planbare Zahlungsströme',
+          body: 'Viele Anleihen sehen regelmäßige Zinszahlungen sowie eine Rückzahlung zum Laufzeitende vor. Ob diese Zahlungen tatsächlich erfolgen, hängt jedoch von der Zahlungsfähigkeit des Emittenten ab.',
+        },
+        {
+          title: 'Unterschiedliche Laufzeiten und Risiken',
+          body: 'Anleihen gibt es mit unterschiedlichen Laufzeiten, Zinssätzen, Währungen und Bonitäten. Dadurch können sie verschiedene Funktionen innerhalb einer Vermögensstruktur übernehmen.',
+        },
+        {
+          title: 'Ergänzung zu anderen Anlageklassen',
+          body: 'Je nach Marktumfeld, persönlichem Anlageziel und Risikoprofil können Anleihen eine Ergänzung zu anderen Anlageklassen darstellen.',
+        },
+      ],
+    },
+    risks: {
+      headline: 'Auch Anleihen sind nicht risikofrei',
+      body: [
+        'Der Wert einer Anleihe kann während der Laufzeit schwanken. Insbesondere Veränderungen des allgemeinen Zinsniveaus können sich auf den Marktpreis bestehender Anleihen auswirken.',
+        'Darüber hinaus besteht das Risiko, dass ein Emittent Zins- oder Rückzahlungen nicht vollständig leisten kann.',
+        'Bei Anleihen in Fremdwährungen können zusätzlich Wechselkursrisiken entstehen. Je nach Produkt können weitere Risiken bestehen.',
+      ],
+      note: 'Die Auswahl geeigneter Anlagen sollte immer im Zusammenhang mit Ihrer gesamten finanziellen Situation, Ihren Zielen, Ihrem Anlagehorizont und Ihrer Risikobereitschaft betrachtet werden.',
+    },
+    einordnung: {
+      eyebrow: 'Persönliche Beratung',
+      headline: 'Entscheidend ist nicht nur der Zins',
+      body: [
+        'Eine hohe Verzinsung allein sagt wenig darüber aus, ob eine Anleihe zu Ihrer persönlichen Vermögensstrategie passt.',
+        'Unsere Berater betrachten deshalb unter anderem Laufzeit, Bonität, Risiken und die Einbindung in Ihre bestehende Vermögensstruktur.',
+        'Bei speziellen Fragestellungen können unsere Berater zusätzlich auf spezialisierte Ansprechpartner zurückgreifen.',
+      ],
+      steps: [
+        { n: '01', title: 'Ausgangssituation betrachten', body: 'Wir berücksichtigen Ihre Ziele, Ihre bestehende Vermögensstruktur und Ihren Anlagehorizont.' },
+        { n: '02', title: 'Chancen und Risiken einordnen', body: 'Wir besprechen, welche Eigenschaften und Risiken verschiedener Anlageformen relevant sein können.' },
+        { n: '03', title: 'Strategie abstimmen', body: 'Gemeinsam betrachten wir, welche Rolle festverzinsliche Anlagen grundsätzlich in Ihrer Vermögensstrategie spielen können.' },
+      ],
+    },
+    conversion: {
+      headline: 'Sie möchten über Anleihen und Zinsen sprechen?',
+      body: [
+        'Wenn Sie bereits von uns betreut werden, sprechen Sie Ihren persönlichen Berater jederzeit auf das Thema Anleihen und Zinsanlagen an.',
+        'Bei Bedarf können spezialisierte Ansprechpartner in das Gespräch einbezogen werden.',
+      ],
+      existing_headline: 'Bereits Kunde bei uns?',
+      existing_body: [
+        'Sprechen Sie Ihren zuständigen Berater einfach auf das Thema Anleihen & Zinsanlagen an.',
+        'Ihr Berater kann Ihre bestehende Situation berücksichtigen und bei Bedarf einen spezialisierten Ansprechpartner hinzuziehen.',
+      ],
+    },
+    form_topic_label: 'Anleihen & Zinsen',
+    compliance_label: 'Information der Fröhlich Vermögensberatung',
+    hero_learn_more_label: 'Mehr über Anleihen erfahren',
+  },
 };
+
+// Fallback-Label für den Breadcrumb — wird verwendet, wenn im Content-Objekt
+// selbst noch kein `breadcrumb_label` gepflegt ist (z. B. beim Aktien-Slug).
+const _defaultBreadcrumbLabel = (slug) =>
+  (slug && slug.charAt(0).toUpperCase() + slug.slice(1)) || 'Thema';
 
 const Chapter = ({ n, title, body }) => (
   <article className="border-t border-bank-border pt-8">
@@ -106,6 +186,7 @@ const InvestmentTopicPage = () => {
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', consent: false });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [relatedTopics, setRelatedTopics] = useState([]);
   const formRef = useRef(null);
   const learnMoreRef = useRef(null);
   const formStartedRef = useRef(false);
@@ -116,6 +197,19 @@ const InvestmentTopicPage = () => {
       topic: topic.form_topic_label, topic_slug: slug, route: location.pathname,
     });
   }, [slug, topic, location.pathname]);
+
+  // Weitere Investmentthemen laden — dieselbe /active-API wie Übersicht + Teaser.
+  useEffect(() => {
+    let alive = true;
+    fetchActiveInvestmentTopics()
+      .then((items) => {
+        if (!alive) return;
+        const others = (items || []).filter((t) => t.slug !== slug).slice(0, 3);
+        setRelatedTopics(others);
+      })
+      .catch(() => { if (alive) setRelatedTopics([]); });
+    return () => { alive = false; };
+  }, [slug]);
 
   const scrollToForm = () => {
     trackInvestmentEvent(InvestmentEvents.TOPIC_CTA_CLICK, {
@@ -213,7 +307,15 @@ const InvestmentTopicPage = () => {
 
       {/* HERO */}
       <section className="border-b border-bank-border">
-        <div className="mx-auto grid max-w-6xl gap-12 px-6 pb-16 pt-14 sm:px-10 sm:pt-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center">
+        <div className="mx-auto max-w-6xl px-6 pb-16 pt-14 sm:px-10 sm:pt-20">
+          <InvestmentBreadcrumbs
+            items={[
+              { label: 'Home', to: '/' },
+              { label: 'Themen', to: '/themen' },
+              { label: topic.breadcrumb_label || _defaultBreadcrumbLabel(slug) },
+            ]}
+          />
+          <div className="mt-6 grid gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center">
           <div>
             <Eyebrow>{topic.eyebrow}</Eyebrow>
             <h1 className="mt-4 font-serif text-3xl leading-tight text-bank-text sm:text-[42px]">
@@ -238,7 +340,7 @@ const InvestmentTopicPage = () => {
                 data-testid="topic-hero-cta-secondary"
                 className={cn(buttonVariants({ variant: 'outline-ink', size: 'lg' }), 'inline-flex cursor-pointer')}
               >
-                Mehr über Aktien erfahren
+                {topic.hero_learn_more_label || 'Mehr über Aktien erfahren'}
                 <ArrowDown className="ml-2 h-4 w-4" strokeWidth={1.6} />
               </button>
             </div>
@@ -250,6 +352,7 @@ const InvestmentTopicPage = () => {
               className="h-full w-full object-cover"
               loading="eager"
             />
+          </div>
           </div>
         </div>
       </section>
@@ -482,6 +585,32 @@ const InvestmentTopicPage = () => {
           </p>
         </div>
       </section>
+
+      {/* RELATED TOPICS — nur, wenn mind. 1 weiteres Thema aktiv */}
+      {relatedTopics.length > 0 && (
+        <section className="border-t border-bank-border bg-bank-bg" data-testid="topic-related-section">
+          <div className="mx-auto max-w-6xl px-6 py-16 sm:px-10">
+            <Eyebrow>Themenbereich</Eyebrow>
+            <h2 className="mt-3 font-serif text-[26px] leading-tight text-bank-text sm:text-[32px]">
+              Weitere Investmentthemen
+            </h2>
+            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {relatedTopics.map((t, idx) => (
+                <InvestmentTopicCard key={t.slug} topic={{ ...t, short_title: (t.slug || '').charAt(0).toUpperCase() + (t.slug || '').slice(1) }} source="related" index={idx} />
+              ))}
+            </div>
+            <div className="mt-8">
+              <Link
+                to="/themen"
+                className="inline-flex items-center gap-1.5 border-b border-bank-primary pb-0.5 text-[12px] font-medium uppercase tracking-[0.16em] text-bank-primary hover:text-bank-primary/80"
+              >
+                Alle Investmentthemen
+                <ArrowUpRight size={13} strokeWidth={1.7} />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 };

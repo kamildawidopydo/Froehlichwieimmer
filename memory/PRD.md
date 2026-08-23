@@ -7,6 +7,52 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 40 (Feb 23, 2026) — Themenübersicht `/themen` · Anleihen-Funnel · Multi-Topic-Teaser
+
+**Zielbild**: Investment-Themenbereich erweitern — zentrale Übersicht `/themen`, zweites Thema „Anleihen", automatische Querverlinkung zwischen Themenseiten, Teaser rotiert deterministisch zwischen Themen (max 1 pro Session).
+
+**Backend (`investment_topics.py`)**
+- `DEFAULT_TOPICS`: neuer Eintrag `anleihen` (Category „Anleihen & Zinsen", Priority 9, Overview-Short, eigene excluded_routes inkl. `/themen/anleihen`).
+- `aktien` mit `priority: 10` + `overview_short` ergänzt.
+- `TopicOut` um `overview_short: Optional[str]` und `priority: int` erweitert.
+- `/active` sortiert jetzt nach `priority DESC, created_at DESC`.
+- `seed_investment_topics(db)`: bleibt idempotent für Slug-Existenz, **backfillt zusätzlich fehlende neue Felder** (`priority`, `overview_short`) auf existierenden Docs via `$set` — kein manueller DB-Fix nötig.
+
+**Frontend**
+- `pages/InvestmentTopicsOverviewPage.jsx` (neu, Route `/themen`):
+  - Hero mit Breadcrumb `Home → Themen`, Eyebrow, H1, Intro, `Themen entdecken ↓`-Anchor.
+  - Grid lädt via `fetchActiveInvestmentTopics()` — dieselbe API, keine separate Overview-Route.
+  - Loading-Skeletons, Empty-State-Karte wenn keine Themen aktiv.
+- `components/investment/InvestmentTopicCard.jsx` (neu, wiederverwendbar):
+  - Wird sowohl im `/themen`-Grid als auch im „Weitere Investmentthemen"-Block auf Detailseiten eingesetzt.
+  - Bild-Fallback: numerisches 01/02-Motiv + Kategorie-Label im Card-Header, falls kein `image_url`.
+  - `data-testid="investment-topic-card-{slug}"`.
+  - Trackt `TOPIC_CARD_CLICK` (overview) bzw. `RELATED_TOPIC_CLICK` (related).
+- `components/investment/InvestmentBreadcrumbs.jsx` (neu):
+  - Semantisches `<nav aria-label="Breadcrumb"><ol>` mit `aria-current="page"` auf letztem Item.
+  - `data-testid="topic-breadcrumbs"`.
+- `pages/InvestmentTopicPage.jsx`:
+  - `TOPIC_CONTENT["anleihen"]` ergänzt (Hero, Why, Risks, Persönliche Beratung mit 3 Steps, Conversion — alle Texte aus dem Prompt 1:1 übernommen).
+  - Breadcrumb-Header `Home → Themen → {breadcrumb_label}` im Hero.
+  - Sekundäre CTA-Beschriftung via `topic.hero_learn_more_label` steuerbar (Aktien: „Mehr über Aktien erfahren", Anleihen: „Mehr über Anleihen erfahren").
+  - Neue Sektion `[data-testid="topic-related-section"]` unten: bis zu 3 weitere aktive Themen, aktuelles Slug ausgefiltert, wiederverwendete `InvestmentTopicCard`. Zusätzlich Link „Alle Investmentthemen" → `/themen`.
+- `components/investment/InvestmentTopicTeaser.jsx`:
+  - Lädt jetzt **alle** aktiven Topics.
+  - Wählt deterministisch: Route-Filter (excluded/allowed) → Priority DESC → bei Gleichstand `(slugHash + dayOfYear) % 100` als stabiler Tiebreaker (kein Wechsel bei Re-Render, aber tägliche Rotation).
+  - Cooldown/Session-Regeln pro Slug bleiben unverändert.
+- `lib/investmentAnalytics.js`:
+  - Neue Events `TOPICS_OVERVIEW_VIEW`, `TOPIC_CARD_CLICK`, `RELATED_TOPIC_CLICK`.
+  - PII-Whitelist um `source_page` erweitert.
+- `App.js`: `<Route path="/themen" element={<InvestmentTopicsOverviewPage />} />` vor `/themen/:slug` registriert.
+
+**Verifikation**
+- API `/investment-topics/active` → **2 Themen** (`anleihen` prio 9 → zuerst, `aktien` prio 10 nach Backfill), beide mit `overview_short`.
+- API `/investment-topics/anleihen` → korrekte Metadaten.
+- API `POST /lead` mit `topic_slug=anleihen` → 200 + `topic: "Anleihen & Zinsen"`.
+- Mongo: `topics=2, leads=2`.
+- Playwright `/themen`: Breadcrumbs sichtbar, H1 „Investmentthemen im Überblick", Card `investment-topic-card-aktien` UND `-anleihen` vorhanden.
+- Playwright `/themen/anleihen`: H1 „Anleihen als Baustein einer Vermögensstrategie", alle Sektionen (`topic-why-section`, `topic-risks-section`, `topic-form-section`, `topic-related-section`) — Related zeigt `aktien`-Card, keine `anleihen`-Card (aktuelles Thema korrekt ausgefiltert).
+
 ## Session 39 (Feb 23, 2026) — Investment-Themen-Funnel „Aktien im Fokus"
 
 **Zielbild**: Wiederverwendbares Themen-Funnel-System — Floating-Teaser sitewide, dedizierte Themenseite `/themen/:slug`, kurzes Lead-Formular ohne parallele Kontakt-Infrastruktur. Compliance-freundlich (keine Empfehlungen/Renditeversprechen), Analytics vorbereitet.

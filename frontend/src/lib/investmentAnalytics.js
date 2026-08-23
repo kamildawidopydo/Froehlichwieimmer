@@ -21,7 +21,7 @@ export function trackInvestmentEvent(name, props = {}) {
   try {
     // Keine PII in Analytics — Payload gezielt einschränken.
     const safe = {};
-    ['topic', 'topic_slug', 'placement', 'route'].forEach((k) => {
+    ['topic', 'topic_slug', 'placement', 'route', 'source_page'].forEach((k) => {
       if (props[k] != null) safe[k] = String(props[k]).slice(0, 120);
     });
     if (typeof window.gtag === 'function') {
@@ -46,4 +46,7 @@ export const InvestmentEvents = {
   EXISTING_CUSTOMER_CLICK: 'investment_existing_customer_click',
   APPOINTMENT_START: 'investment_appointment_start',
   APPOINTMENT_SUBMIT: 'investment_appointment_submit',
+  TOPICS_OVERVIEW_VIEW: 'investment_topics_overview_view',
+  TOPIC_CARD_CLICK: 'investment_topic_card_click',
+  RELATED_TOPIC_CLICK: 'investment_related_topic_click',
 };

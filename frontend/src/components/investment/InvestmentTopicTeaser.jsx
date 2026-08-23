@@ -48,6 +48,16 @@ const markShownThisSession = () => {
   try { sessionStorage.setItem(SESSION_SHOWN_KEY, '1'); } catch {}
 };
 
+// Deterministischer Hash (stringify → 32-bit Rolling-Sum) — für stabile
+// Themen-Rotation, ohne pro Render zu wechseln.
+const slugHash = (s) => {
+  let h = 0;
+  for (let i = 0; i < (s || '').length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+};
+
 /**
  * Investment-Themen-Teaser (sitewide).
  * Erscheint nach `display_delay_ms` ODER `scroll_threshold_pct`, je nachdem
@@ -68,11 +78,39 @@ const InvestmentTopicTeaser = () => {
     fetchActiveInvestmentTopics()
       .then((items) => {
         if (!alive || !items?.length) return;
-        setTopic(items[0]);
+        // Route-Filter + Präferenz: aktuelles Thema ausschließen, sonst nach
+        // priority (desc) sortiert. Bei Gleichstand deterministisch per Slug-Hash.
+        const currentPath = window.location.pathname || '/';
+        const eligible = items.filter((t) => {
+          const excluded = (t.excluded_routes || []).some((ex) => {
+            const exL = (ex || '').toLowerCase();
+            const p = currentPath.toLowerCase();
+            return exL && (p === exL || p.startsWith(exL + '/'));
+          });
+          if (excluded) return false;
+          const allowed = t.allowed_routes || [];
+          if (allowed.length && !allowed.some((a) => currentPath.toLowerCase().startsWith(a.toLowerCase()))) return false;
+          return true;
+        });
+        if (!eligible.length) return;
+        // deterministische Rotation: (Tag-des-Jahres) + slug-hash → stabil pro Tag
+        const dayOfYear = Math.floor(
+          (Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000,
+        );
+        const scored = eligible
+          .map((t) => ({
+            t,
+            score: (t.priority || 0) * 1000 - (((slugHash(t.slug) + dayOfYear) % 100)),
+          }))
+          .sort((a, b) => b.score - a.score);
+        setTopic(scored[0].t);
       })
       .catch(() => {});
     return () => { alive = false; };
   }, []);
+
+  // ---- deterministische Slug-Hash-Helferfunktion (nur intern verwendet) ----
+  // Ausgelagert für Testbarkeit / Vermeidung von Neuberechnungen pro Render.
 
   const canShowOnRoute = useCallback(() => {
     if (!topic) return false;
