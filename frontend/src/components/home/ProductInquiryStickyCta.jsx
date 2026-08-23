@@ -5,6 +5,7 @@ import { MessageCircleQuestion, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { productInquiryCards } from '@/data/productInquiryQuestions';
+import { trackInvestmentEvent } from '@/lib/investmentAnalytics';
 
 const STORAGE_KEY = 'productInquiryStickyDismissed';
 
@@ -248,6 +249,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
   };
 
   const pickProduct = (key) => {
+    try { trackInvestmentEvent('product_inquiry_select', { product: key, source: 'sticky_popup' }); } catch {}
     onOpenWizard(key);
     setMenuOpen(false);
   };

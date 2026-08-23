@@ -1,5 +1,37 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 72 (Feb 25, 2026) — Große Inline-Produkt-Section + Bonus-Feed + Analytics ✅
+
+**Neue Files**
+- `frontend/src/data/productWizardCatalog.js` — zentrale Datenstruktur (`PRODUCT_KEYS`, `PRODUCT_BENEFIT_COPY`, `WIZARD_TRUST_POINTS`, `PRODUCT_BONUS_SOURCE`, `getProductCatalog()`). Popup + Inline-Section teilen jetzt dieselbe Quelle.
+- `frontend/src/components/home/HomeProductWizardSection.jsx` — vollwertige Homepage-Section: Eyebrow „Produktwahl" + H2 „Finden Sie die passende Geldanlage für Ihre Ziele." + 4 Trust-Punkte (ShieldCheck/HandCoins/CheckCircle2/Clock) + 3-spaltiges Card-Grid (2-Spalten auf Tablet, 1-Spalten Mobile) mit Kategorie, Titel, Nutzenzeile, optionalem Bonus-Badge und „Fragen beantworten →"-Zeile. Position: unmittelbar nach `HomeInvestmentSpectrum` in `Home.js`.
+
+**Bonus-Feed**
+- Statisches Mapping in `PRODUCT_BONUS_SOURCE`: nur `tagesgeld`, `festgeld`, `flexgeld` haben aktuell einen Slug + Label (`Aktueller Vorteil` / `Mögliche Aktion`). Aktien/Anleihen/Fonds → kein Badge.
+- Bonus-Text kommt aus dem bestehenden `BANK_BONUS_COPY[slug].summary` in `bankBonusTexts.js` — keine parallele Copy, keine Fake-Bonusversprechen. Wenn `BANK_BONUS_COPY[slug]` fehlt, wird kein Badge gerendert.
+
+**Analytics**
+- Bestehender `trackInvestmentEvent(name, props)` (aus `lib/investmentAnalytics.js`) wiederverwendet — kein neuer Layer.
+- Events:
+  - `product_inquiry_open` mit `{ source: 'inline_home' }` beim ersten Mouse-Enter der Section.
+  - `product_inquiry_select` mit `{ product, source: 'inline_home' }` beim Card-Click (Inline).
+  - `product_inquiry_select` mit `{ product, source: 'sticky_popup' }` beim Popup-Card-Click (`ProductInquiryStickyCta.pickProduct`).
+- Try/catch um jedes Tracking-Callsite — Wizard-Öffnen blockiert nie.
+- Kein PII in Payloads.
+
+**Files geändert**
+- `frontend/src/pages/Home.js` (Section eingehängt)
+- `frontend/src/components/home/ProductInquiryStickyCta.jsx` (Tracking in `pickProduct`)
+
+**Verifikation (Playwright)**
+- Mobile 390×844: `section=1`, `cards=6`, `bonuses=3` (tagesgeld/festgeld/flexgeld), Klick auf Tagesgeld-Card öffnet `product-inquiry-wizard=1` (Wizard-Routing intakt).
+- Desktop 1440×900: `cards=6` in 3-Spalten-Grid.
+
+**Sticky-Popup** unverändert erhalten (sekundärer Einstieg, mobile-Anti-Overlap intakt).
+
+**Externer Blocker weiter offen:** Supabase-CHECK-Constraint (Session 65).
+
+
 ## Session 71 (Feb 25, 2026) — „Produkt wählen"-Popup + Sticky-CTA aufgewertet ✅
 
 **Datei geändert:** `frontend/src/components/home/ProductInquiryStickyCta.jsx`

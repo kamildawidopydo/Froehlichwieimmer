@@ -299,7 +299,7 @@ const Kundenstimmen = () => {
           <p className="mt-8 rounded-3xl border border-rose-200 bg-rose-50 p-8 text-[14px] text-rose-800" data-testid="kundenstimmen-error">
             Die Kundenstimmen konnten nicht geladen werden. Bitte laden Sie die Seite später erneut.
           </p>
-        ) : rest.length === 0 ? (
+        ) : items.length === 0 ? (
           <p className="mt-8 rounded-3xl border border-bank-border bg-neutral-50 p-8 text-[14px] text-bank-text-muted" data-testid="kundenstimmen-empty">
             {hasActiveFilters
               ? 'Für die aktuellen Filter liegen keine Kundenstimmen vor. Passen Sie die Filter an oder setzen Sie sie zurück.'
@@ -307,82 +307,15 @@ const Kundenstimmen = () => {
           </p>
         ) : (
           <>
-            <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3" data-testid="kundenstimmen-grid">
-              {rest.map((r) => (<TestimonialCard key={r.id} review={r} />))}
+            <div
+              key={fadeKey}
+              className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in duration-300"
+              data-testid="kundenstimmen-grid"
+            >
+              {items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((r) => (
+                <CompactReviewCard key={r.id} review={r} />
+              ))}
             </div>
-
-            {/* Weitere Erfahrungen — 20 zusätzliche Stimmen hinter Button */}
-            {(() => {
-              const remaining = Math.max(0, total - (featured.length + rest.length));
-              if (remaining === 0 && !extrasOpen) return null;
-              return (
-                <div className="mt-14 border-t border-bank-border pt-12" data-testid="weitere-erfahrungen">
-                  <div className="mx-auto max-w-3xl text-center">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bank-accent-strong">
-                      Weitere Erfahrungen
-                    </p>
-                    <h3 className="mt-2 font-serif text-2xl text-bank-text sm:text-3xl">
-                      Noch mehr Stimmen unserer Kunden
-                    </h3>
-                    <p className="mt-3 text-[14px] leading-relaxed text-bank-text-muted">
-                      Lesen Sie weitere persönliche Erfahrungen unserer Kunden über die Zusammenarbeit mit
-                      Fröhlich Vermögensberatung.
-                    </p>
-                    <div className="mt-6 flex justify-center">
-                      <button
-                        type="button"
-                        onClick={toggleExtras}
-                        disabled={loadingMore}
-                        aria-expanded={extrasOpen}
-                        aria-controls="kundenstimmen-extras"
-                        data-testid="kundenstimmen-expand-btn"
-                        className="group inline-flex w-full max-w-md items-center justify-center gap-2 bg-bank-primary px-6 py-3 text-[13.5px] font-medium tracking-wide text-white transition-all duration-200 hover:bg-bank-primary/90 hover:shadow-editorial-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/30 focus-visible:ring-offset-2 disabled:opacity-70 sm:w-auto sm:min-w-[320px]"
-                      >
-                        {loadingMore
-                          ? 'Wird geladen …'
-                          : extrasOpen
-                            ? 'Weniger Kundenstimmen anzeigen'
-                            : `${remaining >= EXTRA_CHUNK ? EXTRA_CHUNK : remaining} weitere Kundenstimme${remaining === 1 ? '' : 'n'} anzeigen`}
-                        {!loadingMore && (extrasOpen
-                          ? <ChevronUp size={16} strokeWidth={1.7} className="transition-transform group-hover:-translate-y-0.5" />
-                          : <ChevronDown size={16} strokeWidth={1.7} className="transition-transform group-hover:translate-y-0.5" />)}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Extras — fade-in Grid, 4-Spalten Desktop */}
-                  <div
-                    id="kundenstimmen-extras"
-                    className={`grid transition-all duration-500 ease-out ${extrasOpen ? 'mt-10 grid-rows-[1fr] opacity-100' : 'mt-0 grid-rows-[0fr] opacity-0'}`}
-                    aria-hidden={!extrasOpen}
-                  >
-                    <div className="min-h-0 overflow-hidden">
-                      {extrasOpen && extras.length > 0 && (
-                        <div
-                          className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4"
-                          data-testid="kundenstimmen-extras-grid"
-                        >
-                          {extras.map((r, idx) => (
-                            <div
-                              key={r.id}
-                              style={{ animationDelay: `${Math.min(idx * 40, 400)}ms` }}
-                              className="animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both"
-                            >
-                              <TestimonialCard review={r} />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {extrasOpen && extras.length === 0 && extrasLoaded && (
-                        <p className="text-center text-[13px] text-bank-text-muted">
-                          Aktuell sind keine weiteren freigegebenen Kundenstimmen verfügbar.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
           </>
         )}
       </section>

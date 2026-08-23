@@ -12,6 +12,7 @@ import HomeSavingsOffersSection from '@/components/home/HomeSavingsOffersSection
 import HomeNewsPreview from '@/components/home/HomeNewsPreview';
 import { mapCreditOffersForCarousel } from '@/lib/creditOfferDisplay';
 import HomeInvestmentSpectrum from '@/components/home/HomeInvestmentSpectrum';
+import HomeProductWizardSection from '@/components/home/HomeProductWizardSection';
 import HomeFinanceNews from '@/components/home/HomeFinanceNews';
 import NewsletterSignup from '@/components/home/NewsletterSignup';
 import ProductInquiryWizard from '@/components/home/ProductInquiryWizard';
@@ -181,6 +182,9 @@ const Home = () => {
       <SpecialAifOverview />
 
       <HomeInvestmentSpectrum onOpenWizard={openProductInquiry} />
+
+      {/* ── Große Inline-Produkt-Section (Session 72) ─────────────────── */}
+      <HomeProductWizardSection onOpenWizard={openProductInquiry} />
 
       {/* ── Aktuelle Finanznachrichten (Live-Sync, mindestens stündlich) ─ */}
       <HomeFinanceNews />
