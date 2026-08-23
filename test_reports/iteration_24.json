@@ -1,0 +1,27 @@
+{
+  "summary": "Session 56 (Handeln-Teaser on homepage) could NOT be tested because the feature is not present in the codebase or the running app. /app/frontend/src/components/home/HomeHandelnTeaser.jsx does not exist, `grep -rn 'home-handeln-teaser' /app/frontend/src` returns zero matches, and /app/frontend/src/pages/Home.js renders HomeTestimonials directly after HomeSavingsFaqSection (lines 176-178) with no teaser import. `git status` shows no new/modified source files since commit 8d87427 (Session 55). Live DOM confirms: data-testid='home-handeln-teaser' count = 0 and 'home-handeln-teaser-cta' count = 0 on the homepage after bypassing the visitor gate with cache-busting + networkidle + 2.5s settle. Regression checks of all other homepage sections and all knowledge-hub routes PASS.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "HomeHandelnTeaser", "issue": "Component file was never written to disk; section absent from homepage DOM. All Session 56 acceptance criteria (eyebrow 'Wissenshub', H2 'Investment & Börse verstehen', 2 paragraphs, 'Weiterlesen' CTA -> /handeln, keyboard focus, mobile stacking, word count) are UNTESTABLE.", "selector": "[data-testid=\"home-handeln-teaser\"]", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/ui_it24/home.jpeg"],
+  "action_items": [
+    "Create /app/frontend/src/components/home/HomeHandelnTeaser.jsx (data-testid='home-handeln-teaser', CTA data-testid='home-handeln-teaser-cta' as <Link to='/handeln'>) and import + render it in /app/frontend/src/pages/Home.js between <HomeSavingsFaqSection /> (line 176) and <HomeTestimonials /> (line 178). The edit appears to have been lost / never saved.",
+    "After writing the files, verify with `grep -rn 'home-handeln-teaser' /app/frontend/src` before requesting retest."
+  ],
+  "critical_code_review_comments": [
+    "No Session 56 diff exists on disk — verify file writes succeeded before handing off to QA; the previous restart of the frontend was unnecessary since no source changed."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "Session 56 feature 0% (not implemented); regression 100%"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "not required (public homepage)",
+  "context_for_next_testing_agent": "Regression verified on this build: homepage sections present -> banking-hero, home-news-preview, home-trust-line, platform-tablet-mockup (HomePlatformShowcase has no section-level testid; use platform-tablet-mockup), home-savings-inquiry, home-savings-offers, home-credit-offers, home-savings-faq, home-testimonials, home-post-hero-products, home-special-aif-overview, home-investment-spectrum, bonus-cta-section, product-inquiry-sticky-cta. Desktop horizontal overflow = 0. Routes OK: /handeln (H1 'Investieren, verständlich.', 4 handeln-related* nodes incl. container), /wissen (4 wissen-card-*), /fonds-grundlagen (7 fonds-faq-* incl. list container = 6 items), /themen, /themen/aktien|anleihen|dividenden (3 topic-*-related nodes each incl. container). Console noise: repeated Supabase 401s and SVG '<path> d=undefined' errors — pre-existing/out of scope. Correct testid for FAQ section is 'home-savings-faq' (not 'home-savings-faq-section').",
+  "rca_of_the_issue": "Root cause: the Session 56 source changes were never persisted. git status shows only untracked .env/lock/log files; Home.js is unmodified relative to Session 55 commit and HomeHandelnTeaser.jsx does not exist. Therefore the served bundle legitimately lacks the section — this is not a lazy-chunk/cache race (cache-busting query param + networkidle + 2.5s settle + full scroll were used, and every other lazily-rendered section resolved)."
+}

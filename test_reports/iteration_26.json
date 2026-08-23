@@ -1,0 +1,27 @@
+{
+  "summary": "Session 56 third retest of HomeHandelnTeaser word-count fix. ON-DISK CHECK FIRST: /app/frontend/src/components/home/HomeHandelnTeaser.jsx is STILL 3246 bytes (mtime Aug 23 11:17, unchanged) and still contains only TWO body <p> paragraphs. The claimed expansion to 3 paragraphs / ~83 words was NOT persisted to the file. Browser verification of the live page confirms this: rendered teaser has 2 body paragraphs totalling 48 words (test found 3 <p> nodes only because the Eyebrow 'WISSENSHUB' renders as a <p>), and there is no 'Börsen-ABC' / '>50 Begriffe' mention anywhere (grep across /app/frontend/src/components/home returned zero hits). All OTHER acceptance criteria re-verified and PASS: data-testid='home-handeln-teaser' present, eyebrow 'Wissenshub', H2 'Investment & Börse verstehen', CTA data-testid='home-handeln-teaser-cta' is a real <a href='/handeln'> with text 'Weiterlesen' that navigates to /handeln with H1 'Investieren, verstandlich.', and DOM order home-savings-faq (y=8491) < home-handeln-teaser (y=9547) < home-testimonials (y=9937). Console: only pre-existing Supabase 401s and SVG '<path> d=undefined' errors (out of scope); no new React errors, no key warnings, no 404s.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "HomeHandelnTeaser", "issue": "Content edit was never saved. File unchanged at 3246 bytes with 2 body paragraphs; rendered body copy is 48 words (requirement 60-180, expected ~83). Third paragraph and the Börsen-ABC / '>50 Begriffe' mention are absent from both source and DOM.", "selector": "[data-testid='home-handeln-teaser'] p", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Actually write the 3-paragraph (~83 word) body copy into /app/frontend/src/components/home/HomeHandelnTeaser.jsx — the previous edit did not reach disk (file size/mtime unchanged). Include the Börsen-ABC (>50 Begriffe) sentence.",
+    "After editing, verify with `wc -c` / grep that the file changed before requesting a retest."
+  ],
+  "critical_code_review_comments": [
+    "JSDoc header claims '~110 Wörter Body-Copy' while actual copy is 48 words — keep the doc comment in sync with the content.",
+    "Word-count assertions should target the body wrapper (div.mt-6 > p) not all <p> inside the section, since Eyebrow also renders a <p>."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested", "frontend": "88% (7/8 teaser criteria pass; word count + Börsen-ABC mention fail)"},
+  "seed_data_creation": "none; visitor gate bypassed via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Only the body word count / third paragraph remains unverified. Bypass visitor gate by setting localStorage keys kapitalmitte_visitor_profile and kapitalmitte_cookie_consent then reload with ?_ts=. Count words on [data-testid='home-handeln-teaser'] div p (exclude Eyebrow p). Everything else (CTA anchor, navigation, DOM order) has passed in iterations 25 and 26.",
+  "rca_of_the_issue": "Root cause of the repeated word-count failure is not a rendering/caching problem but that the source file was never modified: size 3246 bytes and mtime Aug 23 11:17 identical to the pre-fix state, and grep for 'Börsen-ABC' in /app/frontend/src/components/home returns nothing. The live DOM matches the on-disk source exactly, so hot reload is working fine."
+}

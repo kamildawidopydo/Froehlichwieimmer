@@ -5,6 +5,7 @@ import BankingHero from '@/components/BankingHero';
 import HomePostHero from '@/components/home/HomePostHero';
 import HomeSavingsInquirySection from '@/components/home/HomeSavingsInquirySection';
 import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
+import HomeHandelnTeaser from '@/components/home/HomeHandelnTeaser';
 import HomeTestimonials from '@/components/home/HomeTestimonials';
 import HomeTrustLine from '@/components/home/HomeTrustLine';
 import HomePlatformShowcase from '@/components/home/HomePlatformShowcase';
@@ -174,6 +175,9 @@ const Home = () => {
 
       {/* ── FAQ / Wissenscenter (vor Produktüberblick) ─────────────────── */}
       <HomeSavingsFaqSection />
+
+      {/* ── Investment & Börse verstehen — kurzer Wissenshub-Teaser ──── */}
+      <HomeHandelnTeaser />
 
       <HomeTestimonials />
 

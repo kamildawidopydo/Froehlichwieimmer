@@ -1,0 +1,29 @@
+{
+  "summary": "Session 56 RETEST of HomeHandelnTeaser. On-disk verification passed first (HomeHandelnTeaser.jsx = 3246 bytes, Aug 23 11:17; grep matches in component + Home.js line 8 import and line 180 render). iteration_24 was indeed a stale-bundle/timing false negative — the teaser renders correctly in the live preview bundle. Ran browser tests with visitor-gate + cookie-consent localStorage bypass, cache-buster query, networkidle + 3s settle + full scroll. 9 of 10 assertions pass; the only failure is body-copy word count (48 words vs required 60-180).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "HomeHandelnTeaser", "issue": "Body copy is only 48 words across the two <p> paragraphs (26 + 22), below the required 60-180 word range. The component's own JSDoc claims '~110 Wörter'. Copy needs to be expanded (~60-120 words) to satisfy the editorial spec.", "selector": "[data-testid=\"home-handeln-teaser\"] p", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Homepage / HomeHandelnTeaser (desktop 1920)", "issues": ["Because the section uses lg:grid-cols-[minmax(0,1fr)_auto] with lg:items-end and the copy block is capped at max-w-2xl, there is a very large empty gap (~600px) between the text column and the right-aligned 'Weiterlesen' CTA. Visually acceptable in editorial style, but the CTA reads as disconnected from the copy on wide screens — consider capping container or moving CTA under the text."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Expand HomeHandelnTeaser body copy from 48 to 60-180 words (spec + own comment says ~110).",
+    "Optional: tighten desktop layout so the right-side CTA is not ~600px away from the copy block at 1920px."
+  ],
+  "critical_code_review_comments": [
+    "Component code is clean: uses react-router <Link to=\"/handeln\"> (renders real <a href=\"/handeln\">, no absolute preview URL), respects useReducedMotion, has data-testid on section and CTA, aria-labelledby wired to the h2 id.",
+    "Homepage console shows many 401s for API resources and repeated SVG errors: 'Error: <path> attribute d: Expected moveto path command (M or m), \"undefined\"' — pre-existing, unrelated to this teaser, but worth fixing (an icon component receives an undefined path)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "90% (9/10 assertions passed)"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Verified PASS: teaser present with data-testid=home-handeln-teaser; eyebrow 'Wissenshub'; H2 'Investment & Börse verstehen'; CTA is a real <a> with href='/handeln' and text 'Weiterlesen'; click AND keyboard Enter both navigate to /handeln (H1 'Investieren, verständlich.'); Tab focus shows 2px solid rgb(201,169,97) gold outline with 2px offset; DOM order home-savings-faq (245) < home-handeln-teaser (248) < home-testimonials (250); mobile 390x844 scrollWidth==clientWidth==390, single-column stack, teaser height 555px; all 14 regression homepage testids present (banking-hero, home-news-preview, home-trust-line, platform-tablet-mockup, home-savings-inquiry, home-savings-offers, home-credit-offers, home-savings-faq, home-testimonials, home-post-hero-products, home-special-aif-overview, home-investment-spectrum, bonus-cta-section, product-inquiry-sticky-cta); /wissen, /fonds-grundlagen (fonds-faq-list with 6 items), /themen, /themen/aktien, /themen/anleihen, /themen/dividenden all 200 with correct H1s. ONLY FAIL: word count 48 < 60. When testing new components, always append a cache-buster and wait networkidle + 3s; iteration_22 and _24 were stale-bundle false negatives.",
+  "rca_of_the_issue": "iteration_24's 'source absent' claim was a false negative — the source exists on disk and renders in the served bundle (re-verified with ls/grep before browser checks). The only genuine deviation from spec is copy length: the two body paragraphs total 48 words instead of the specified 60-180."
+}

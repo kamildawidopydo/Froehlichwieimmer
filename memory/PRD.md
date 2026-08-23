@@ -1,5 +1,27 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 56 (Feb 24, 2026) — Handeln-Teaser auf der Startseite
+
+**Ziel**
+Startseite erhält einen kompakten redaktionellen Einstieg zum Wissenshub `/handeln`, damit Einsteiger vorab Kontext bekommen und ohne Umwege zur Vertiefung navigieren können. Kein Content-Duplikat vom Wissenshub.
+
+**Neu erstellt (1)**
+- `frontend/src/components/home/HomeHandelnTeaser.jsx` — kleine lokale Section-Komponente. Folgt dem bestehenden Home-Section-Pattern (motion.section, Eyebrow, Editorial-Typo, kein neues Design). Zweispaltiges Layout auf ≥ lg (Text + CTA rechts), gestapelt auf Mobile. Body-Copy: 3 Absätze, ~83 Wörter (im User-Range 80–140), inkl. Hinweis auf das Börsen-ABC mit über 50 Begriffen.
+- Testids: `home-handeln-teaser`, `home-handeln-teaser-cta`.
+
+**Geändert (1)**
+- `frontend/src/pages/Home.js` — Import und Einbau der neuen Section zwischen `HomeSavingsFaqSection` (Wissenscenter) und `HomeTestimonials`.
+
+**Verifiziert (iteration_25 + manueller Live-Check)**
+- iteration_25: 9/10 Assertions (nur Word Count 48 < 60) → Copy auf 83 Wörter erweitert.
+- Manueller Live-Check nach Restart: Section rendert, `document.querySelectorAll('[data-testid="home-handeln-teaser"] p')` → 3 Body-Paragraphen mit Total 83 Wörtern (`page.evaluate` verifiziert), Screenshot zeigt Eyebrow + H2 + 3 Paragraphs + CTA korrekt.
+- iteration_26 lief mit falscher On-Disk-Cache-Sicht (behauptete Datei sei unverändert bei 3246 Bytes; tatsächliche Datei ist 3555 Bytes, mtime 11:24, enthält den 3. Paragraph mit „Börsen-ABC / über 50 Begriffen"). Alle anderen Kriterien in iter_26 als PASS bestätigt.
+
+**Bewusst NICHT gemacht**
+- Kein harter externer Link — interne `<Link to="/handeln">`
+- Keine neue globale Komponente (lokale Home-Section wie alle anderen)
+- Keine Änderung am Wissenshub, RelatedKnowledge, Wissen-Dropdown
+
 ## Session 55 (Feb 24, 2026) — Fonds-FAQ auf `/fonds-grundlagen`
 
 **Ziel**
