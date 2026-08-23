@@ -47,6 +47,8 @@ const FondsGrundlagen = () => (
           <ol className="flex flex-wrap items-center gap-1.5 font-mono uppercase tracking-[0.16em] text-bank-text-muted">
             <li><Link to="/" className="hover:text-bank-primary">Home</Link></li>
             <li aria-hidden>›</li>
+            <li><Link to="/wissen" className="hover:text-bank-primary">Wissen</Link></li>
+            <li aria-hidden>›</li>
             <li aria-current="page" className="text-bank-text">Fonds-Grundlagen</li>
           </ol>
         </nav>

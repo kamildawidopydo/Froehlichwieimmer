@@ -102,7 +102,6 @@ export const siteCopy = {
           { name: 'Kredit', path: '/kredit', desc: 'Kreditangebote strukturiert vergleichen' },
           { name: 'Handeln', path: '/handeln', desc: 'Aktien und Anleihen im Depot' },
           { name: 'Spezial-AIF', path: '/spezial-aif', desc: 'Fondsprofil und Anlagestrategie' },
-          { name: 'Fonds-Grundlagen', path: '/fonds-grundlagen', desc: 'Wie ein Fonds funktioniert — verständlich erklärt' },
           { name: 'Festgeld', path: '/produkte/festgeld', desc: savingsCopy.guides.festgeld.cardLede },
           { name: 'Flexgeld', path: '/produkte/flexgeld', desc: savingsCopy.guides.flexgeld.cardLede },
           { name: 'Tagesgeld', path: '/produkte/tagesgeld', desc: savingsCopy.guides.tagesgeld.cardLede },
@@ -113,6 +112,7 @@ export const siteCopy = {
         label: 'Wissen',
         links: [
           { name: 'Wissen & Perspektiven', path: '/wissen', desc: 'Ratgeber zu Sparen, Anlageklassen und Planung' },
+          { name: 'Fonds-Grundlagen', path: '/fonds-grundlagen', desc: 'Wie ein Fonds funktioniert — verständlich erklärt' },
           { name: 'So funktioniert es', path: '/how-it-works', desc: 'Der Ablauf in vier übersichtlichen Schritten' },
           { name: 'Rechner', path: '/calculator', desc: 'Zinserträge und Laufzeiten berechnen' },
           { name: 'Sicherheit', path: '/security', desc: 'EU-Einlagensicherung und Schutzmechanismen' },
@@ -205,7 +205,7 @@ export const siteCopy = {
       { to: '/kredit', label: 'Kredit' },
       { to: '/handeln', label: 'Handeln' },
       { to: '/spezial-aif', label: 'Spezial-AIF' },
-      { to: '/fonds-grundlagen', label: 'Fonds-Grundlagen' },
+    ],
     ],
     company: [
       { to: '/dokumente', label: 'Dokumente', accent: true, desc: 'PDFs zum Download' },

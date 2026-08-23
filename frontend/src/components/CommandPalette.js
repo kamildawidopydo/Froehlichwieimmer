@@ -68,10 +68,10 @@ const CommandPalette = ({ open, onOpenChange }) => {
     { label: 'Kredit anfragen', path: '/kredit', icon: Banknote, keywords: 'kredit kreditanfrage darlehen loan finanzierung' },
     { label: 'Handeln', path: '/dashboard/handeln', icon: LineChart, keywords: 'handeln trade aktien anleihen wertpapiere börse markt' },
     { label: 'Spezial-AIF', path: '/spezial-aif', icon: PieChart, keywords: 'spezial aif fonds kagb investment fondsprofil strategie' },
-    { label: 'Fonds-Grundlagen', path: '/fonds-grundlagen', icon: BookOpen, keywords: 'fonds grundlagen wie funktioniert fonds erklärung' },
   ];
 
   const NAV_ITEMS_INFO = [
+    { label: 'Fonds-Grundlagen', path: '/fonds-grundlagen', icon: BookOpen, keywords: 'wissen fonds grundlagen wie funktioniert fonds erklärung etf' },
     { label: 'Dokumente', path: '/dokumente', icon: FileText, keywords: 'dokumente dokument pdf download kundendokumente freistellungsauftrag risiken informationsbogen' },
     { label: 'So funktioniert es', path: '/how-it-works', icon: Route, keywords: 'so funktioniert ablauf how it works schritte vier schritten anleitung' },
     { label: t('calculator.title', { defaultValue: 'Zinsrechner' }), path: '/calculator', icon: Calculator, keywords: 'rechner calc zinsrechner zinsen kalkulieren' },

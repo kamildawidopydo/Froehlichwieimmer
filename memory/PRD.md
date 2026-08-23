@@ -7,6 +7,37 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 46 (Feb 23, 2026) — Fonds-Grundlagen in den Wissensbereich verschoben
+
+**Vorher / Nachher**
+- Vorher: Nav-Eintrag „Fonds-Grundlagen" befand sich im Menü **Angebote** (`siteCopy.js nav.groups[0].links`) und in der CommandPalette-Sektion **Investment**
+- Nachher: Eintrag ist im Menü **Wissen** direkt nach „Wissen & Perspektiven" (Position 2), in der CommandPalette in Sektion **Wissen & Ratgeber**
+- Angebote-Menü ist wieder frei von Wissens-Inhalten (Handeln + Spezial-AIF bleiben als Angebote-Einträge — sinnvoller Funnel-Zweck)
+
+**Geänderte Dateien (3)**
+- `frontend/src/data/siteCopy.js`: Nav-Eintrag aus `angebote` in `wissen` verschoben; Footer-Wissenslink im Wissens-Block belassen (bereits vorhanden gewesen)
+- `frontend/src/components/CommandPalette.js`: `Fonds-Grundlagen` von `NAV_ITEMS_PRODUCTS` in `NAV_ITEMS_INFO` verschoben, Keywords um `wissen` und `etf` erweitert für bessere Suche
+- `frontend/src/pages/FondsGrundlagen.js`: Breadcrumb erweitert auf `Home › Wissen › Fonds-Grundlagen` (Wissen-Link zeigt auf existierende Route `/wissen`)
+
+**Verifizierte Tests**
+- **Desktop**: Hover „Wissen" → `data-testid="nav-fonds-grundlagen"` sichtbar; Hover „Angebote" → Eintrag **nicht mehr** vorhanden; Klick öffnet `/fonds-grundlagen` mit H1 „Fonds verstehen — verständlich erklärt"; Breadcrumb-Wissen-Link vorhanden
+- **Mobile (390×844)**: Hamburger-Menü → Wissen-Gruppe → Fonds-Grundlagen sichtbar; Klick öffnet Seite; `data-testid="fonds-grundlagen-page"` gerendert
+- **Direct URL** `/fonds-grundlagen` → HTTP 200 unverändert
+- **Refresh** funktioniert unverändert
+- **CommandPalette** (⌘K) findet Fonds-Grundlagen unter „Wissen & Ratgeber"; Suche nach `fonds` matcht via Keywords
+- **Regression grün**: `/spezial-aif`, `/themen/*`, `/wissen`, Investment-Topic-System, Admin, News unverändert
+
+**Bewusst NICHT geändert**
+- Inhalt von `FondsGrundlagen.js` (nur Breadcrumb erweitert)
+- Handeln-Seite (kein aktuelles Cross-Link-Fenster in bestehender Struktur; siehe „Cross-Link-Struktur" unten)
+- FondsGrundlagenInfographic
+- Route-Definition, App-Router, Visitor-Gate, Investment-Funnel
+
+**Cross-Link-Struktur für „Fonds & ETFs" (vorbereitet, noch nicht ausgeführt)**
+- News-Kategorie-Slug `fonds-etfs` existiert bereits (`App.js:245 <Route path="/news/kategorie/fonds-etfs">`)
+- Empfohlener nächster Schritt: In der News-Kategorie-Sidebar oder unterhalb der Artikelliste einen dezenten „Grundlagen kompakt"-Link zu `/fonds-grundlagen` platzieren. Umsetzung analog zur TopicCrossLinkBox aus Session 41 möglich, ohne neue Datenmodelle.
+- Auf Detailseiten von News mit `category=fonds-etfs` könnte automatisch ein Hinweisblock „Was sind Fonds eigentlich? → /fonds-grundlagen" erscheinen — Implementierung analog zu `NachrichtenRelated`, ohne LLM-Call.
+
 ## Session 45 (Feb 23, 2026) — Fix: Fonds-Grundlagen-Link „reagiert nicht"
 
 **Ursache-Analyse**
