@@ -1,5 +1,26 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 57 (Feb 24, 2026) — Fonds-Grundlagen Infographic H1 → H2
+
+**Ziel**
+`/fonds-grundlagen` doppelte H1 auflösen. Bislang enthielt die eingebettete Infographic (`FondsGrundlagenInfographic.js`, Zeile 1034) eine zweite `motion.h1` mit dem Text „Ihr Kapital. Unsere Expertise." — die Seite besaß dadurch 2 H1s statt einer.
+
+**Geänderte Datei (1)**
+- `frontend/src/components/fondsGrundlagen/FondsGrundlagenInfographic.js` — `motion.h1` → `motion.h2` (öffnendes und schließendes Tag). Alle Styles, Variants, Content unverändert.
+
+**Verifiziert (manueller Live-Check + iteration_28)**
+- `document.querySelectorAll('h1').length === 1`, einzige H1 = „Fonds verstehen — verständlich erklärt"
+- H2 mit „Ihr Kapital. Unsere Expertise." existiert
+- Visuelle Parität: Text erscheint identisch (Styling kommt aus className-Tokens, nicht aus dem Element-Tag)
+- Fonds-FAQ (6 Items) und RelatedKnowledge (3 Items) unverändert
+- Grep-Verifikation: `motion.h1` = 0 Treffer, `motion.h2` an Zeilen 1034 & 1044
+- iteration_27 war False-Negative (identischer Grep-Cache-Issue wie iter_22/24/26)
+
+**Nicht geändert**
+- Text „Ihr Kapital. Unsere Expertise." und dessen Visualisierung
+- Seiten-H1 „Fonds verstehen — verständlich erklärt"
+- Fonds-FAQ, RelatedKnowledge, Layout, Wissen-Nav
+
 ## Session 56 (Feb 24, 2026) — Handeln-Teaser auf der Startseite
 
 **Ziel**

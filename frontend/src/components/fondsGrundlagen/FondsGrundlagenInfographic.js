@@ -1031,7 +1031,7 @@ export default function FondsGrundlagenInfographic() {
                 </motion.div>
                 <span className="sr-only">Fröhlich Vermögensberatung</span>
 
-                <motion.h1
+                <motion.h2
                   variants={heroChildVariants}
                   className={cn(
                     'mt-6 max-w-xl font-display font-light leading-[1.08] text-white text-balance',
@@ -1041,7 +1041,7 @@ export default function FondsGrundlagenInfographic() {
                   style={{ fontVariationSettings: "'opsz' 132, 'SOFT' 100" }}
                 >
                   {fgHero.title}
-                </motion.h1>
+                </motion.h2>
 
                 {fgHero.tagline ? (
                   <motion.p

@@ -1,0 +1,49 @@
+{
+  "summary": "Session 57 verification (frontend only). The requested h1->h2 change in FondsGrundlagenInfographic.js was NEVER applied to disk. `grep -n 'motion.h1' /app/frontend/src/components/fondsGrundlagen/FondsGrundlagenInfographic.js` still returns matches at lines 1034 (open) and 1044 (close); no motion.h2 exists. Browser confirms document.querySelectorAll('h1').length === 2 on /fonds-grundlagen ('Fonds verstehen — verständlich erklärt' + 'Ihr Kapital. Unsere Expertise.'). This is a genuine failure, NOT the stale-bundle false negative of iterations 18/20/22/24/26 — source-of-truth grep proves the edit is missing. All other Session 55/56 content and full regression suite pass.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "FondsGrundlagenInfographic.js (lines 1034 & 1044)",
+        "issue": "Double H1 on /fonds-grundlagen is UNFIXED. The infographic hero heading (fgHero.title = 'Ihr Kapital. Unsere Expertise.') is still rendered as <motion.h1>. Expected <motion.h2>. Verified both on disk (grep) and in the rendered DOM (h1 count = 2). The Session 57 edit was not written to the file.",
+        "selector": "h1:has-text('Ihr Kapital. Unsere Expertise.')",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Actually apply the edit: in /app/frontend/src/components/fondsGrundlagen/FondsGrundlagenInfographic.js change `<motion.h1` at line 1034 to `<motion.h2` and `</motion.h1>` at line 1044 to `</motion.h2>`. Keep variants/className/style identical so visuals are unchanged. Re-verify with grep before dispatching a retest.",
+    "Informational: [data-testid='home-handeln-teaser'] contains 4 <p> elements (spec expected 3 body paragraphs) — likely an extra eyebrow/kicker paragraph counted; confirm intent, no visual issue observed."
+  ],
+  "critical_code_review_comments": [
+    "The claim in the review request that 'grep returns no matches' was incorrect — the file was never modified. Always verify the write succeeded (grep/diff) before requesting verification; git HEAD is still at Session 56 (9232f63) with no working-tree diff for this file.",
+    "Visual parity after the h1->h2 swap is safe: all typography (font-display, font-light, clamp size, drop-shadow) comes from explicit className tokens, not from the element tag, so only the open/close tag tokens need changing."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "not tested (frontend-only request)", "frontend": "90% (9/10 checks pass; the single target fix fails)" },
+  "seed_data_creation": "None. Visitor gate bypassed via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "not required",
+  "detailed_results": {
+    "on_disk_grep": "FAIL — motion.h1 present at 1034/1044; no motion.h2",
+    "/fonds-grundlagen HTTP": "PASS 200",
+    "h1 count === 1": "FAIL — 2 h1s: ['Fonds verstehen — verständlich erklärt', 'Ihr Kapital. Unsere Expertise.']",
+    "h2 contains 'Ihr Kapital. Unsere Expertise.'": "FAIL — false",
+    "visual style of infographic heading": "Unchanged (still original h1 styling) — no regression, but fix absent",
+    "fonds-faq-list + 6 items + H2 'Fonds in Kürze — FAQ'": "PASS",
+    "fonds-grundlagen-related 3 items": "PASS",
+    "mobile 390x844 overflow": "PASS (scrollWidth 390 = clientWidth 390)",
+    "/wissen 4 wissen-card-*": "PASS",
+    "/handeln H1 'Investieren, verständlich.' + 3 related": "PASS",
+    "/themen overview": "PASS (1 h1)",
+    "/themen/aktien|anleihen|dividenden": "PASS (2 related each, 1 h1 each, dividenden hero naturalWidth=1400)",
+    "Startseite home-handeln-teaser": "PASS (present, CTA href='/handeln', 4 <p> incl. kicker)",
+    "console": "Only pre-existing out-of-scope noise: Supabase 401s, SVG '<path> d=undefined', a cross-origin ERR_BLOCKED_BY_RESPONSE and one ERR_HTTP2_PROTOCOL_ERROR on third-party asset. No React key warnings, no new errors."
+  },
+  "context_for_next_testing_agent": "Iterations 18/20/22/24/26 were suspected stale-bundle false negatives. Iteration 27 settles it: the h1->h2 edit has never been persisted to FondsGrundlagenInfographic.js. ALWAYS run `grep -n 'motion.h1\\|motion.h2' /app/frontend/src/components/fondsGrundlagen/FondsGrundlagenInfographic.js` first — if motion.h1 is still there the browser result is correct, not stale. Everything else (Session 55 FAQ, Session 56 home teaser, /wissen, /handeln, /themen/*) is a green baseline as of this iteration.",
+  "rca_of_the_issue": "Root cause: the source edit was never written to disk. git HEAD remains at Session 56 (9232f63) and FondsGrundlagenInfographic.js contains <motion.h1> at line 1034 and </motion.h1> at line 1044 wrapping fgHero.title ('Ihr Kapital. Unsere Expertise.' from /app/frontend/src/data/fondsGrundlagenContent.js:36). Because /app/frontend/src/pages/FondsGrundlagen.js:59 renders its own <h1>, the page ships two H1s. Reproduction: load /fonds-grundlagen with the visitor-gate localStorage keys set, scroll to bottom to mount the lazy infographic chunk, then evaluate document.querySelectorAll('h1').length -> 2. Mitigation: change only the two tag tokens (open/close) to motion.h2; all styling is class-driven so the render is pixel-identical. I did not apply the change myself since it is an application/markup change outside the tester fix scope."
+}
