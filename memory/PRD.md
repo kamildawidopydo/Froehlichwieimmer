@@ -7,6 +7,39 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 38 (Feb 23, 2026) — Related-News unter jeder Detailseite
+
+**Zielbild**: Nach dem Lesen eines Artikels sollen 3 thematisch verwandte Artikel als interne Empfehlungen erscheinen — keine externen Links, keine LLM-Calls beim Seitenaufruf.
+
+**Backend (`server.py`)**
+- Neuer Endpoint `GET /api/news/nachrichten/{slug}/related?limit=3` — reines DB-Ranking über die letzten 60 Tage:
+  - gleiche Kategorie: +4
+  - je gemeinsame Entity (via `_extract_entities` aus `news_synthesizer`): +5, max +25
+  - Titel+Summary Jaccard-Similarity: `round(sim*10)` → 0..+5
+  - ≤ 7 Tage alt: +2; ≤ 30 Tage: +1
+- Nur veröffentlichte Artikel mit ≥ 250 Wörtern Volltext kommen in Frage. Aktueller Artikel wird per `{"slug": {"$ne": slug}}` immer ausgeschlossen.
+- **Fallback-Kaskade**: unter Limit → neueste derselben Kategorie → sonst neueste kategorie-übergreifend. Weiterhin Volltext-Filter. Wenn 0 Kandidaten existieren → leere Liste (Component blendet sich aus).
+- Response nur mit Mini-Payload: `id, slug, title, summary (max 280 Chars), category, image_url, published_at` — kein Volltext übertragen.
+- Verwendet vorhandene `_extract_entities` + `_title_similarity` aus dem Synthesizer — kein neuer Index nötig (Query nutzt bereits `slug/is_published/status/published_at`, alle vorhanden bzw. per Default in Mongo indiziert).
+
+**Frontend**
+- Neue Komponente `components/news/NachrichtenRelated.jsx`:
+  - Ruft `/api/news/nachrichten/{slug}/related?limit=3` via Axios (mit Abort-Guard).
+  - `[data-testid="news-detail-related"]` + `[data-testid="related-news-card-<slug>"]` je Karte.
+  - 3 Spalten auf Desktop (`lg:grid-cols-3`), 2 Spalten Tablet (`sm:grid-cols-2`), 1 Spalte Mobile.
+  - Karte: Bild (16:9), Kategorie-Eyebrow (`font-mono uppercase tracking`), H3 Serif-Titel, 2-line Summary, Datum. Kompletter Card-Bereich ist `<Link to="/news/nachrichten/{slug}">` — echter interner Link (SEO-freundlich).
+  - Bestehende Fröhlich-Design-Tokens: `border-bank-border`, `bg-white`, `bank-primary`, `bank-accent-strong`, `bank-text-muted`, `font-serif`. Kein neues Design-System.
+  - Skeletons während Loading, Component rendert `null`, wenn Backend keine Items liefert.
+- Mount in `pages/news/NachrichtenDetailPage.jsx` unter dem Hinweis-Block: `<NachrichtenRelated slug={slug} />`.
+- Alte Komponente `RelatedNewsArticles.jsx` (Supabase-basiert, falscher Link `/news/${slug}`) bleibt unangetastet für PublicNewsDetailPage — der Detailseiten-Flow (`NachrichtenDetailPage`) nutzt jetzt aber `NachrichtenRelated`.
+
+**Verifikation**
+- API-Call: `GET /api/news/nachrichten/dax-.../related?limit=3` → 3 Items, alle Wirtschaft-Kategorie (Sozialhilfe, EZB-Lane, Lagarde), alle mit Bild, Datum, Kurz-Summary.
+- 404-Case: `.../does-not-exist/related` → `{"items": []}` (kein Fehler).
+- Playwright: `[data-testid="news-detail-related"]` sichtbar, 3 `related-news-card-*` Karten, Heading „Mehr zu diesem Thema".
+- Aktueller Artikel nicht in Response enthalten (Filter `slug != current`).
+- Response überträgt nur Mini-Payload (kein `full_text`-Feld) — bestätigt via `has_full_text_field=False`.
+
 ## Session 37 (Feb 23, 2026) — Volltext-Pipeline · Multi-Source-Merge · strikter Stunden-Cron
 
 **Zielbild**: Kein Aggregator-Modus mehr — jede Meldung erscheint als eigener, redaktionell formulierter Volltext auf der Fröhlich-Website. Mehrere Publisher zum selben Ereignis werden zu einem Artikel konsolidiert. Quellen dezent am Ende.

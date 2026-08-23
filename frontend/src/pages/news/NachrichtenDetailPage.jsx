@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUpRight, PlayCircle } from 'lucide-react';
 import axios from 'axios';
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
+import NachrichtenRelated from '@/components/news/NachrichtenRelated';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -215,6 +216,8 @@ const NachrichtenDetailPage = () => {
               Einordnung finden Sie in der Rubrik „Fröhlich Vermögensberatung — Unsere Einordnung".
             </p>
           </div>
+
+          <NachrichtenRelated slug={slug} />
         </article>
       )}
     </div>

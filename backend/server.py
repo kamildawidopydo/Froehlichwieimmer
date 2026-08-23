@@ -3225,6 +3225,8 @@ from news_synthesizer import (
     fetch_feeds as _news_fetch_feeds,
     synthesize_pending as _news_synthesize,
     purge_demo_articles as _news_purge_demo,
+    _extract_entities as _news_extract_entities,
+    _title_similarity as _news_title_similarity,
 )  # noqa: E402
 from alerts import register as _register_alerts, ensure_indexes as _alerts_ensure_indexes  # noqa: E402
 
@@ -3363,6 +3365,122 @@ async def news_nachrichten_detail(slug: str):
     if not item:
         raise HTTPException(404, detail="Nachricht nicht gefunden.")
     return item
+
+
+@api.get("/news/nachrichten/{slug}/related")
+async def news_nachrichten_related(slug: str, limit: int = 3):
+    """Thematisch verwandte Artikel für die Detailseite.
+
+    Ranking (rein DB-basiert, keine LLM-Calls):
+      - gleiche Kategorie: +4
+      - je gemeinsame Entity (Person/Firma/Ort/Thema): +5, max +25
+      - Titel/Summary Jaccard-Similarity: 0..+5 (round(sim*10))
+      - veröffentlicht ≤ 7 Tagen: +2, ≤ 30 Tagen: +1
+    Fallback: bei < limit Treffern werden neueste Artikel derselben Kategorie
+    (dann kategorie-übergreifend) aufgefüllt. Aktueller Artikel wird immer
+    ausgeschlossen. Nur veröffentlichte Artikel mit Volltext (>=250 Wörter)
+    werden berücksichtigt.
+    """
+    limit = max(1, min(int(limit or 3), 6))
+    current = await db.news_articles.find_one({"slug": slug, "is_published": True})
+    if not current:
+        return {"items": []}
+
+    cur_ents = _news_extract_entities(current.get("title", ""), current.get("summary", ""))
+    cur_cat = current.get("category")
+    cur_title = current.get("title", "")
+    cur_summary = current.get("summary", "")
+    now = datetime.now(timezone.utc)
+
+    # Pool: veröffentlichte Artikel der letzten 60 Tage (ohne aktuellen)
+    since = now - timedelta(days=60)
+    pool_cursor = db.news_articles.find({
+        "slug": {"$ne": slug},
+        "is_published": True,
+        "status": "published",
+        "content_type": {"$ne": "demo"},
+        "$or": [{"published_at": {"$gte": since}}, {"generated_at": {"$gte": since}}],
+    }).sort([("published_at", -1)]).limit(120)
+    pool = await pool_cursor.to_list(120)
+
+    scored: list[tuple[int, dict]] = []
+    for doc in pool:
+        content = (doc.get("content") or "")
+        if len(content.split()) < 250:
+            continue  # nur Artikel mit echtem Volltext empfehlen
+        score = 0
+        if cur_cat and doc.get("category") == cur_cat:
+            score += 4
+        d_ents = _news_extract_entities(doc.get("title", ""), doc.get("summary", ""))
+        overlap = len(cur_ents & d_ents)
+        if overlap:
+            score += min(overlap * 5, 25)
+        sim = _news_title_similarity(
+            f"{cur_title} {cur_summary}",
+            f"{doc.get('title', '')} {doc.get('summary', '')}",
+        )
+        score += round(sim * 10)
+        pub = doc.get("published_at") or doc.get("generated_at")
+        if isinstance(pub, datetime):
+            age = (now - pub).total_seconds()
+            if age <= 7 * 86400:
+                score += 2
+            elif age <= 30 * 86400:
+                score += 1
+        if score > 0:
+            scored.append((score, doc))
+
+    # Sortieren: Score desc, dann published_at desc
+    scored.sort(key=lambda x: (x[0], x[1].get("published_at") or datetime.min.replace(tzinfo=timezone.utc)),
+                reverse=True)
+    picked = [d for _, d in scored[:limit]]
+
+    # Fallback 1: gleiche Kategorie, neueste
+    if len(picked) < limit and cur_cat:
+        picked_slugs = {d["slug"] for d in picked}
+        cat_fill_cursor = db.news_articles.find({
+            "slug": {"$ne": slug, "$nin": list(picked_slugs)},
+            "category": cur_cat,
+            "is_published": True,
+            "status": "published",
+            "content_type": {"$ne": "demo"},
+        }).sort([("published_at", -1)]).limit(limit - len(picked) + 3)
+        async for d in cat_fill_cursor:
+            if len((d.get("content") or "").split()) >= 250:
+                picked.append(d)
+                if len(picked) >= limit:
+                    break
+
+    # Fallback 2: neueste kategorie-übergreifend
+    if len(picked) < limit:
+        picked_slugs = {d["slug"] for d in picked}
+        any_cursor = db.news_articles.find({
+            "slug": {"$ne": slug, "$nin": list(picked_slugs)},
+            "is_published": True,
+            "status": "published",
+            "content_type": {"$ne": "demo"},
+        }).sort([("published_at", -1)]).limit(limit - len(picked) + 3)
+        async for d in any_cursor:
+            if len((d.get("content") or "").split()) >= 250:
+                picked.append(d)
+                if len(picked) >= limit:
+                    break
+
+    picked = picked[:limit]
+
+    def _mini(d: dict) -> dict:
+        pub = d.get("published_at")
+        return {
+            "id": str(d.get("_id") or d.get("slug")),
+            "slug": d["slug"],
+            "title": d.get("title", ""),
+            "summary": (d.get("summary") or "")[:280],
+            "category": d.get("category"),
+            "image_url": d.get("image_url"),
+            "published_at": pub.isoformat() if isinstance(pub, datetime) else pub,
+        }
+
+    return {"items": [_mini(d) for d in picked]}
 
 
 app.include_router(api)
