@@ -1,5 +1,29 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 55 (Feb 24, 2026) — Fonds-FAQ auf `/fonds-grundlagen`
+
+**Ziel**
+Kompakter FAQ-Block am Ende des redaktionellen Hauptinhalts — nach „Anwendungsbeispiel" (Spezial-AIF), vor CTA und RelatedKnowledge. 6 kurze Antworten (2–4 Sätze), keine Dopplungen mit bereits vorhandenen Abschnitten.
+
+**Geänderte Dateien (1)**
+- `frontend/src/pages/FondsGrundlagen.js` — neue `Section` mit `eyebrow="Häufige Fragen"`, `id="fonds-faq"`, `alt={true}` (visuelle Trennung zum weißen Anwendungsbeispiel und weißen CTA). Semantisches `<dl>/<dt>/<dd>` mit H3-Fragen, alle Antworten sind DOM-präsent (kein Accordion). Testids: `fonds-faq-list`, `fonds-faq-item-0..5`.
+
+**FAQ-Themen (nicht-überlappend zu bestehenden Sektionen)**
+1. Unterschied Fonds vs. ETF
+2. Aktiv vs. passiv gemanagt
+3. Welche Kosten fallen an (TER, Ausgabeaufschlag, Ordergebühren, Spread)
+4. Wie breit sollte gestreut werden
+5. Welche Risiken haben Fonds (mit Sondervermögen-Hinweis)
+6. Für wen eignen sich Fonds
+
+Die Frage „Was ist ein Fonds?" bewusst weggelassen — bereits ausführlich in Sektion 1 der Seite behandelt (Dopplung vermieden).
+
+**Bewusst NICHT gemacht**
+- Kein Accordion (offene Prosa reicht, DOM-vollständig, SEO-freundlich)
+- Keine neue globale FAQ-Komponente (lokales Pattern via bestehende `Section` + `<dl>`)
+- Kein FAQ-Schema-Markup (kein etabliertes Pattern im Projekt)
+- Keine Änderung an RelatedKnowledge, Hero, Chancen/Risiken/Kosten/Für-wen-Sektionen
+
 ## Session 54 (Feb 24, 2026) — Dividenden Hero Fix
 
 **Ursache**

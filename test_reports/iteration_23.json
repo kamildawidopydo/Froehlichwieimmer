@@ -1,0 +1,28 @@
+{
+  "summary": "Session 55 RETEST (frontend only). Re-grepped source (FAQ present at lines 214-282 of /app/frontend/src/pages/FondsGrundlagen.js) and re-ran browser tests with a cache-busting ?_ts= param after visitor-gate bypass via localStorage. iteration_22's 'FAQ not on disk / not in DOM' finding was a FALSE NEGATIVE (stale webpack chunk). All 12 Session 55 acceptance criteria now PASS: fonds-faq-list present, exactly 6 items (fonds-faq-item-0..5), each with an H3 question and non-empty <dd> answer (264-321 chars), H2 'Fonds in Kürze — FAQ' with eyebrow 'Häufige Fragen', anchor id='fonds-faq' present, DOM order correct (Anwendungsbeispiel idx 384 < FAQ 1386 < CTA 1434 < related 1441), RelatedKnowledge fonds-grundlagen-related shows 3 items -> /handeln, /themen/aktien, /themen/anleihen. Mobile 390x844: 6 items stacked, scrollWidth==clientWidth==390 (no horizontal overflow). Regression all green: /wissen 4 wissen-card-*, /handeln handeln-related 3 links, /themen overview renders, /themen/aktien 2 (/handeln, /themen/dividenden), /themen/anleihen 2 (/handeln, /fonds-grundlagen), /themen/dividenden 2 + hero image naturalWidth 1400, news article etf-zufluesse-europa-neues-jahreshoch still renders fonds-grundlagen-crosslink. No React errors, no key-collision warnings, no 404s.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/fonds-grundlagen (embedded FondsGrundlagenInfographic)", "issues": ["PRE-EXISTING (not Session 55): second H1 'Ihr Kapital. Unsere Expertise.' inside FondsGrundlagenInfographic -> page has 2 H1s. The page code itself correctly has exactly 1 H1 'Fonds verstehen — verständlich erklärt'.", "PRE-EXISTING: an empty bordered box renders above the 'Wichtige Hinweise' block in the infographic (likely a chart/table container rendering blank on 1920px desktop) — worth a look, unrelated to the FAQ."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/ui_it23", "/app/test_reports/ui_it23b", "/app/test_reports/ui_it23c"],
+  "action_items": [
+    "None for Session 55 — FAQ implementation verified working end-to-end. Optional cleanup: demote the infographic's H1 to H2/H3 and investigate the empty bordered container in FondsGrundlagenInfographic."
+  ],
+  "critical_code_review_comments": [
+    "FAQ uses a non-interactive <dl>/<dt>(h3)/<dd> structure with all answers in DOM — good for SEO/a11y. Consider adding FAQPage JSON-LD schema for the 6 Q&A pairs to gain rich-result eligibility.",
+    "The FAQ data array is inlined inside JSX; extracting it to /app/frontend/src/data/ would keep the 320-line page component cleaner and reusable.",
+    "Console shows a recurring 401 for an auth/session endpoint on anonymous public pages (pre-existing, harmless but noisy) — consider skipping the session probe when no auth cookie exists."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (skipped per request)", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "not required (public pages)",
+  "context_for_next_testing_agent": "Visitor gate bypass: set localStorage kapitalmitte_visitor_profile={residence:'DE',role:'private',isUsPerson:false} and kapitalmitte_cookie_consent={necessary:true,analytics:true,marketing:true} on root URL before navigating. Correct related-knowledge testIds on topic pages are topic-{slug}-related / topic-{slug}-related-item-{i} (NOT aktien-related). FondsGrundlagen FAQ verified in iteration_23. Remaining known cosmetic items: duplicate H1 and empty bordered box, both inside FondsGrundlagenInfographic.js.",
+  "rca_of_the_issue": "iteration_22 false negative root cause: the /fonds-grundlagen route is lazily code-split; the test ran while webpack was still recompiling that chunk, so the browser served the pre-change chunk and the FAQ nodes were absent from the DOM even though the source contained them. Mitigation used here: frontend restart + navigation with a ?_ts={timestamp} cache-buster and wait_until='networkidle' plus a 2s settle before DOM assertions."
+}

@@ -1,0 +1,28 @@
+{
+  "summary": "Session 55 frontend-only verification of the new FAQ section on /fonds-grundlagen. RESULT: the FAQ feature is NOT implemented at all — neither in source (/app/frontend/src/pages/FondsGrundlagen.js, 250 lines, no FAQ markup, no 'fonds-faq' testid, no <dl>/<dt>/<dd> block) nor in the live DOM (fonds-faq-list count 0, fonds-faq-item-* count 0, texts 'Fonds in Kürze' / 'Häufige Fragen' not found anywhere). grep across /app/frontend/src for 'fonds-faq', 'FAQ', 'Häufige Fragen', 'Fonds in Kürze' returned no page code. All regression checks (page load, RelatedKnowledge, /wissen, /handeln, /themen, /themen/aktien, /themen/anleihen, /themen/dividenden, news crosslink, mobile overflow, JS errors) PASS.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "FondsGrundlagen.js", "issue": "FAQ section is completely missing: no section with id='fonds-faq', no data-testid='fonds-faq-list', no fonds-faq-item-0..5, no H2 'Fonds in Kürze — FAQ', no eyebrow 'Häufige Fragen'. The edit described in the review request is not present in the file (page code goes straight from the Spezial-AIF Anwendungsbeispiel Section to the CTA section). Not a stale-bundle issue — the source file itself has no FAQ code.", "selector": "[data-testid=\"fonds-faq-list\"]", "priority": "CRITICAL"},
+      {"component": "FondsGrundlagenInfographic.js:1034", "issue": "Heading hierarchy violation on /fonds-grundlagen: 2 H1 elements present ('Fonds verstehen — verständlich erklärt' from the page hero and 'Ihr Kapital. Unsere Expertise.' rendered as motion.h1 inside the embedded infographic). Requirement was exactly 1 H1. Pre-existing, but it fails the requested heading-hierarchy check.", "selector": "h1", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/ui_it22", "/app/test_reports/ui_it22b"],
+  "action_items": [
+    "Actually implement the FAQ section in /app/frontend/src/pages/FondsGrundlagen.js: <Section eyebrow='Häufige Fragen' headline='Fonds in Kürze — FAQ' alt id='fonds-faq'> with <dl data-testid='fonds-faq-list'> and 6 items data-testid='fonds-faq-item-0..5' (H3 question in <dt>, answer in <dd>), inserted after the Anwendungsbeispiel Section and before the CTA section so RelatedKnowledge stays last. Verify the file is saved (previous edit appears to have been lost / never written).",
+    "Optional: demote the infographic's motion.h1 ('Ihr Kapital. Unsere Expertise.') to h2 so /fonds-grundlagen has exactly one H1."
+  ],
+  "critical_code_review_comments": [
+    "The claimed Session 55 change is absent from the repo — re-verify writes before restarting supervisor; a frontend restart cannot surface code that was never persisted.",
+    "FondsGrundlagenInfographic.js is ~1000+ lines; consider splitting (exceeds the 700-line guideline) — it also owns the duplicate H1."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested", "frontend": "0% of new FAQ requirements (feature absent); 100% of regression checks"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Visitor gate bypass via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent works (set on / then navigate). Regression baseline verified green in this iteration: /wissen 4 wissen-card-*, /handeln 3 related + H1 'Investieren, verständlich.', /themen H1 'Investmentthemen im Überblick', aktien/anleihen/dividenden related counts 2/2/2, dividenden hero naturalWidth 1875, news article crosslink 'fonds-grundlagen-crosslink' -> /fonds-grundlagen, /fonds-grundlagen mobile 390px no horizontal overflow, no pageerrors. Only the FAQ feature needs retesting once actually implemented; also recheck H1 count.",
+  "rca_of_the_issue": "Root cause: the FAQ JSX was never written to /app/frontend/src/pages/FondsGrundlagen.js (file mtime Aug 23 09:49, 250 lines, ends with CTA + RelatedKnowledge only). Repro: grep -rn 'fonds-faq' /app/frontend/src -> no results; live DOM query for [data-testid='fonds-faq-list'] returns 0 while the page returns HTTP 200 and renders all other sections. Not a bundle/caching problem."
+}

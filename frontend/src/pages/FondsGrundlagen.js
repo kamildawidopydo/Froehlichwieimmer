@@ -211,6 +211,76 @@ const FondsGrundlagen = () => (
       <FondsGrundlagenInfographic />
     </Section>
 
+    {/* FAQ — Häufige Fragen zu Fonds, kompakt beantwortet.
+        Nicht-interaktiv: alle Antworten stehen im DOM (SEO + a11y).
+        H3 pro Frage, konsistent mit sonstiger Karten-Heading-Hierarchie. */}
+    <Section
+      eyebrow="Häufige Fragen"
+      headline="Fonds in Kürze — FAQ"
+      alt
+      id="fonds-faq"
+    >
+      <p className="max-w-3xl text-[14.5px] leading-relaxed text-bank-text-muted">
+        Sechs schnelle Antworten zu Fragen, die Einsteiger uns häufig stellen — ohne
+        Anlage­empfehlung oder individuelle Beratung.
+      </p>
+
+      <dl
+        className="mt-10 divide-y divide-bank-border border-y border-bank-border bg-white"
+        data-testid="fonds-faq-list"
+      >
+        {[
+          {
+            q: 'Was ist der Unterschied zwischen Fonds und ETF?',
+            a: 'Ein ETF ist eine besondere Form des Fonds: Er bildet einen Index regelbasiert nach und wird fortlaufend an der Börse gehandelt. Klassische Investmentfonds sind meist aktiv gemanagt und werden einmal täglich zum Anteilspreis der Fondsgesellschaft (NAV) abgerechnet.',
+          },
+          {
+            q: 'Was bedeutet aktiv oder passiv gemanagt?',
+            a: 'Aktive Fonds wählen einzelne Titel bewusst aus, um eine Benchmark zu übertreffen — sie haben in der Regel höhere laufende Kosten. Passive Fonds (typischerweise ETFs) folgen einem Index regelbasiert und sind meist kostengünstiger. Keine der beiden Varianten ist grundsätzlich besser.',
+          },
+          {
+            q: 'Welche Kosten fallen bei Fonds an?',
+            a: 'Zentral sind die laufenden Kosten (TER — Gesamtkostenquote), die im Anteilspreis bereits abgezogen werden. Hinzu kommen je nach Anbieter Ordergebühren, ein möglicher Ausgabeaufschlag bei klassischen Fonds sowie der Spread beim Handel. Details stehen in Prospekt und wesentlichen Anlegerinformationen (KID).',
+          },
+          {
+            q: 'Wie breit sollte ein Fonds gestreut sein?',
+            a: 'Breite Streuung reduziert titel- und branchenspezifische Risiken, das allgemeine Marktrisiko bleibt jedoch bestehen. Wie breit ein Fonds streuen sollte, hängt von Rolle im Portfolio, Anlagehorizont und Risikotragfähigkeit ab — von globalen Basisbausteinen bis zu fokussierten Themenfonds ist alles denkbar.',
+          },
+          {
+            q: 'Welche Risiken haben Fonds?',
+            a: 'Anteilspreise können fallen — bis hin zu deutlichen Verlusten. Relevante Risiken sind Marktrisiko, Konzentrations- und Sektorrisiko, bei Fremdwährungsfonds Wechselkursrisiken und bei aktiven Fonds das Managementrisiko. Fonds sind rechtlich Sondervermögen und daher vor der Insolvenz der Verwaltungsgesellschaft geschützt.',
+          },
+          {
+            q: 'Für wen eignen sich Fonds?',
+            a: 'Fonds können für Anleger interessant sein, die ihr Kapital breit streuen möchten, ohne einzelne Titel selbst auszuwählen. Welche Fondsart konkret passt, hängt von Zielen, Zeithorizont und Risikoprofil ab — und lässt sich am besten in einem persönlichen Gespräch einordnen.',
+          },
+        ].map((item, i) => (
+          <div
+            key={i}
+            className="grid gap-2 px-5 py-6 sm:grid-cols-[auto_1fr] sm:gap-x-8 sm:px-8 sm:py-8"
+            data-testid={`fonds-faq-item-${i}`}
+          >
+            <span
+              className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold sm:pt-1.5"
+              aria-hidden
+            >
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <div className="min-w-0">
+              <dt>
+                <h3 className="font-serif text-[18px] leading-snug text-bank-text sm:text-[20px]">
+                  {item.q}
+                </h3>
+              </dt>
+              <dd className="mt-3 max-w-3xl text-[14.5px] leading-relaxed text-bank-text-muted">
+                {item.a}
+              </dd>
+            </div>
+          </div>
+        ))}
+      </dl>
+    </Section>
+
     {/* CTA */}
     <section className="bg-white">
       <div className="mx-auto max-w-6xl px-6 py-16 sm:px-10">
