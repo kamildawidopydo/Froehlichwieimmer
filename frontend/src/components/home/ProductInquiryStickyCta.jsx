@@ -227,11 +227,17 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
   const [mounted, setMounted] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  // Sichtbar-Guard: wenn das Newsletter-Formular im Viewport ist, das sticky CTA
-  // auf Mobile temporär höher legen, damit Submit/Consent nicht überdeckt werden.
+  // `nearForm`: Newsletter im Viewport → Position auf Mobile anheben.
+  // `hiddenForTeaser`: Interstitial („Aktien im Fokus" u. a.) sichtbar →
+  //   Sticky-CTA komplett unsichtbar schalten, damit der Teaser-Primary-Link
+  //   nicht blockiert wird (Desktop UND Mobile). Sobald der Teaser
+  //   geschlossen oder unmounted wird, kehrt der CTA in seine normale
+  //   Position zurück. Kein Layout-Sprung (fixed position, nur opacity+
+  //   pointer-events-toggle).
   const [nearForm, setNearForm] = useState(false);
+  const [hiddenForTeaser, setHiddenForTeaser] = useState(false);
   const rootRef = useRef(null);
-  const pulse = useAttentionPulse(mounted && !dismissed && !menuOpen);
+  const pulse = useAttentionPulse(mounted && !dismissed && !menuOpen && !hiddenForTeaser);
 
   useEffect(() => {
     setDismissed(readDismissed());
@@ -240,21 +246,94 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    // IDs, die das Sticky CTA auf Mobile nicht verdecken darf.
-    const AVOID_IDS = ['home-newsletter'];
-    const targets = AVOID_IDS
-      .map((id) => document.getElementById(id))
-      .filter(Boolean);
-    if (!targets.length) return undefined;
+    // Getrennte Behandlung:
+    //   #home-newsletter  → mobile Ausweich-Position (nearForm)
+    //   #invtopic-teaser  → beidseitig VERSTECKEN, um den Teaser-Primary-Link
+    //                       nicht zu blockieren. Der Wrapper bleibt im DOM
+    //                       (Fade-Out via opacity), daher zusätzlich
+    //                       `data-visible !== "false"` prüfen.
+    const NEWSLETTER_SEL = '#home-newsletter';
+    const TEASER_SEL = '#invtopic-teaser';
+    const SELECTORS = [NEWSLETTER_SEL, TEASER_SEL];
+
+    const findTargets = () =>
+      SELECTORS.flatMap((sel) => Array.from(document.querySelectorAll(sel)));
+
+    const isElActive = (el) => el.getAttribute('data-visible') !== 'false';
+    const intersecting = new Set();
+
+    const recompute = () => {
+      let nl = false;
+      let teaser = false;
+      for (const el of intersecting) {
+        if (!el.isConnected || !isElActive(el)) continue;
+        if (el.matches(TEASER_SEL)) teaser = true;
+        else if (el.matches(NEWSLETTER_SEL)) nl = true;
+      }
+      setHiddenForTeaser(teaser);
+      setNearForm(nl);
+    };
+
     const io = new IntersectionObserver(
       (entries) => {
-        const anyVisible = entries.some((e) => e.isIntersecting);
-        setNearForm(anyVisible);
+        entries.forEach((e) => {
+          if (e.isIntersecting) intersecting.add(e.target);
+          else intersecting.delete(e.target);
+        });
+        recompute();
       },
       { threshold: 0.05 },
     );
-    targets.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+
+    const observed = new WeakSet();
+    const observeAll = () => {
+      findTargets().forEach((el) => {
+        if (!observed.has(el)) {
+          io.observe(el);
+          observed.add(el);
+        }
+      });
+    };
+    observeAll();
+
+    // MutationObserver-Debounce via rAF, damit hochfrequente DOM-Updates
+    // (Ticker/Charts) nicht jedes Mal recompute() + querySelectorAll auslösen.
+    let scheduled = false;
+    const scheduleRecompute = () => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        observeAll();
+        for (const el of intersecting) {
+          if (!el.isConnected) intersecting.delete(el);
+        }
+        recompute();
+      });
+    };
+    const mo = new MutationObserver((records) => {
+      for (const r of records) {
+        if (r.type === 'childList' && (r.addedNodes.length || r.removedNodes.length)) {
+          scheduleRecompute();
+          return;
+        }
+        if (r.type === 'attributes') {
+          scheduleRecompute();
+          return;
+        }
+      }
+    });
+    mo.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-visible', 'id'],
+    });
+
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -264,13 +343,19 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
       setMenuOpen(false);
     };
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') setMenuOpen(false);
+      if (e.key === 'Escape') {
+        // stoppen, damit andere globale ESC-Handler (z. B. Investment-
+        // Interstitial) das gleiche Event nicht als eigenen Close werten.
+        e.stopPropagation();
+        setMenuOpen(false);
+      }
     };
+    // capture-phase, damit wir vor globalen Listenern zuschlagen.
     document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keydown', onKeyDown, true);
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keydown', onKeyDown, true);
     };
   }, [menuOpen]);
 
@@ -309,6 +394,12 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
   };
 
   if (!mounted) return null;
+  // Interstitial belegt bereits den CTA-Bereich (bottom-right auf Desktop,
+  // bottom-sheet auf Mobile) → Sticky-CTA komplett unsichtbar schalten,
+  // damit der Teaser-Primary-Link („MEHR ERFAHREN") nicht blockiert wird.
+  // Der CTA kommt zurück, sobald der Teaser data-visible='false' setzt oder
+  // vom DOM entfernt wird. `fixed`-Position, deshalb kein Layout-Reflow.
+  if (hiddenForTeaser) return null;
 
   if (dismissed) {
     return createPortal(

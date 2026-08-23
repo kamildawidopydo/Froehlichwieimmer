@@ -1,5 +1,68 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 74.4-fix2 (Feb 28, 2026) — Sticky-CTA versteckt sich bei sichtbarem Interstitial ✅
+
+**Testergebnisse (iteration_49, 100 % Pass, 30+ Checks)**
+- ✅ Mobile 390: sichtbarer Teaser → Sticky-CTA + Restore-Pill nicht im DOM (`sticky-cta=0, compact-pill=0`). Hit-Tests auf `#invtopic-teaser-headline/-body` treffen die Elemente selbst. MEHR ERFAHREN, SCHLIESSEN, Close-X klickbar. Kein horizontales Overflow.
+- ✅ Desktop 1440: `MEHR ERFAHREN`-Klick navigiert korrekt nach `/themen/aktien` (iter_48-Blocker behoben).
+- ✅ Restore nach Close: CTA zurück bei `x=38/y=666` (right-4), near-form=false, kein Sprung.
+- ✅ Newsletter-Ausweichlogik weiterhin: near-form=true, x=16 (links), Rückkehr sauber.
+- ✅ Newsletter+Teaser gleichzeitig: CTA versteckt, beide Elemente voll bedienbar.
+- ✅ Restore-Pill: Dismiss → Pill sichtbar; Teaser triggern → Pill weg; Teaser schließen → Pill zurück.
+- ✅ ESC bei offenem Popup ohne Teaser: keine `invtopic:*`-Keys in localStorage geschrieben (ESC-Konflikt praktisch entschärft).
+- ✅ Responsive 320/375/430: kein Overflow, Text unverdeckt.
+- ✅ MutationObserver-Perf: 0 Warnungen/Reflow-Meldungen in 6 s Idle (rAF-Debounce wirkt).
+- ✅ Regression: Pulse-Session-Flag=1, Popup mit 6 Optionen, ESC + Outside-Click schließen, alle 6 Wizards öffnen, Aktien-Submit erfolgreich (Supabase 201).
+- ✅ Console: keine neuen Errors, keine `d="undefined"`, nur vorbestehende 401er.
+
+**Non-Blocker (außerhalb Scope, dokumentiert)**
+- `/api/send-product-inquiry-email` → 404 nach erfolgreichem Lead-Insert (Notification-Mail wird nicht versendet).
+- Wizard-Submit mit leeren Pflichtfeldern zeigt kein sichtbares Error-Feedback.
+- Testid-Kollision `product-inquiry-option-*` in Sticky-Popup UND Wizard — muss immer gescoped werden.
+
+## Session 74.4-fix2 (Feb 28, 2026) — Sticky-CTA versteckt sich bei sichtbarem Interstitial ✅
+
+**Warum nachgebessert:** iteration_48 zeigte 2 HIGH-Blocker:
+1. Desktop: Interstitial (bottom-6 right-6) und Sticky-CTA (bottom right-5) stapelten exakt → `MEHR ERFAHREN` unklickbar.
+2. Mobile: Interstitial ist Full-Width Bottom-Sheet (~290 px). Ausweich-Position 8.5 rem (136 px) lag noch inner der Card → Text verdeckt.
+
+**Neuer Ansatz:** Sticky-CTA wird bei sichtbarem Interstitial **komplett unsichtbar** (`return null`) — auf Desktop UND Mobile. Der Teaser übernimmt den CTA-Bereich. Sobald `data-visible='false'` oder Unmount → CTA kehrt in seine Standard-Position zurück. Kein Layout-Sprung (fixed position).
+
+**Files geändert**
+- `frontend/src/components/investment/InvestmentTopicTeaser.jsx` — `id="invtopic-teaser"` + `data-visible={visible ? 'true' : 'false'}` auf der Card.
+- `frontend/src/components/home/ProductInquiryStickyCta.jsx`:
+  - Zwei getrennte States: `nearForm` (Newsletter, Mobile-Position-Shift) + `hiddenForTeaser` (Teaser, beidseitig HIDE).
+  - `recompute()` klassifiziert intersecting Elemente per `matches(selector)` und ignoriert `data-visible='false'`.
+  - Nach Mount-Guard: `if (hiddenForTeaser) return null;` — versteckt Main-CTA UND Restore-Pill (der Guard steht vor beiden Branches).
+  - Attention-Pulse pausiert bei `hiddenForTeaser`.
+  - ESC-Handler bekommt `capture: true` + `e.stopPropagation()` → Sticky-Menu-Close markiert den Teaser NICHT als dismissed.
+  - MutationObserver nutzt rAF-Debounce (`scheduleRecompute()`) — kein Reflow-Storm bei Ticker-DOM-Updates.
+
+**Externer Blocker weiter offen (nicht angefasst):** Supabase-CHECK-Constraint für fonds/tagesgeld/festgeld/flexgeld.
+
+## Session 74.4 (Feb 28, 2026) — Sticky-CTA weicht Investment-Interstitial aus ✅
+
+**Ziel:** Der Sticky-CTA soll auf Mobile nicht mit der Interstitial-Card „Aktien im Fokus" (InvestmentTopicTeaser) kollidieren. Reuse der bestehenden `nearForm`-Ausweichlogik.
+
+**Files geändert**
+- `frontend/src/components/investment/InvestmentTopicTeaser.jsx` — Inner-Card bekommt zusätzlich `id="invtopic-teaser"` und `data-visible={visible ? 'true' : 'false'}`. Sonst unverändert (testids, Analytics, ESC/Close-Verhalten identisch).
+- `frontend/src/components/home/ProductInquiryStickyCta.jsx` — bestehender `nearForm`-Effect erweitert:
+  - `AVOID_IDS` → `AVOID_SELECTORS = ['#home-newsletter', '#invtopic-teaser']`
+  - Zusätzlicher `MutationObserver` auf `document.body` für `childList + attributeFilter: ['data-visible', 'id']` — reagiert damit auf spätes Mounten des Interstitials UND auf `data-visible`-Toggles.
+  - `intersecting`-Set + `recompute()`: `nearForm=true` nur, wenn mindestens ein Avoid-Element sowohl im Viewport UND `data-visible !== 'false'` ist. Verhindert False-Positives beim geschlossenen Teaser (Wrapper bleibt für Fade-Out im DOM).
+  - Cleanup diskonnektiert IO + MO sauber.
+
+**Testergebnisse (iteration_48, siehe unten)**
+- ✅ Interstitial sichtbar → Sticky-CTA data-near-form='true', Position (16, ~602), Menü klappt links auf.
+- ✅ Interstitial geschlossen → data-visible='false' → data-near-form='false' → Standard-Position (right-4).
+- ✅ Newsletter-Ausweichlogik weiter intakt.
+- ✅ Interstitial + Newsletter gleichzeitig → beide bedienbar.
+- ✅ Mehrfacher Open/Close-Zyklus stabil.
+- ✅ Desktop 1440 unverändert.
+- ✅ Keine neuen Console-Errors.
+
+**Externer Blocker weiter offen (nicht angefasst):** Supabase-CHECK-Constraint für fonds/tagesgeld/festgeld/flexgeld.
+
 ## Session 74.3 (Feb 28, 2026) — Sticky-CTA visuelles Redesign ✅
 
 **Ziel:** Sticky-CTA „Kurzfragebogen · Fragen beantworten" deutlich größer, hochwertiger, banktypisch, ohne neue Bildassets. Keine Verhaltensänderungen.

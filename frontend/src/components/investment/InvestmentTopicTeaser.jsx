@@ -211,6 +211,8 @@ const InvestmentTopicTeaser = () => {
         aria-labelledby="invtopic-teaser-headline"
         aria-describedby="invtopic-teaser-body"
         data-testid="invtopic-teaser"
+        id="invtopic-teaser"
+        data-visible={visible ? 'true' : 'false'}
         className={`pointer-events-auto w-full max-w-md border border-bank-border bg-white shadow-[0_18px_38px_-14px_rgba(15,25,45,0.28)] transition-transform duration-300 ease-out ${
           visible ? 'translate-y-0' : 'translate-y-4'
         }`}

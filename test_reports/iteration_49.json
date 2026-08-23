@@ -1,0 +1,44 @@
+{
+  "summary": "Session 74.4-Fix2 (HIDE-FOR-TEASER) frontend-only auf der Preview-URL getestet. Consent-Gate jeweils per select_option(visitor-residence=DE, visitor-role=privatperson) + visitor-accept-btn geschlossen (Hinweis: die Selects sind native <select>, es gibt KEINE visitor-residence-DE/visitor-role-privatperson Testids). Teaser via localStorage.clear+sessionStorage.clear und Scroll auf 30/45/60/70% getriggert. Getestet: Mobile 390 + Desktop 1440 Hide-for-Teaser, Hit-Tests auf Headline/Body/CTA, Klickbarkeit von MEHR ERFAHREN/SCHLIESSEN/Close-X, Restore nach Close, Newsletter-Ausweichlogik hin/zurueck, Newsletter+Teaser gleichzeitig, Restore-Pill + Teaser, Responsive 320/375/430, ESC-Verhalten/localStorage, MutationObserver-Perf (6s idle), Regression Sticky-CTA (Popup 6 Optionen, ESC, Outside-Click, Pulse-Session-Flag, Dismiss/Restore), alle 6 Wizards oeffnen und Aktien-Submit End-to-End. ERGEBNIS: Beide HIGH-Blocker aus iteration_48 sind behoben. Alle 30+ Checks gruen; nur zwei Nebenbefunde (E-Mail-Endpoint 404, Testid-Namenskollision).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/send-product-inquiry-email", "issue": "Nach erfolgreichem Wizard-Submit (Lead-Insert in Supabase = 201) liefert der Aufruf von POST /api/send-product-inquiry-email 404. Die UI zeigt trotzdem den Success-State - die Benachrichtigungs-Mail wird also stillschweigend nicht versendet. Endpoint existiert im Backend nicht oder Pfad falsch."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Wizard-Submit mit leeren Pflichtfeldern (Vorname/Nachname)", "issue": "Beobachtung: Submit mit leeren Namensfeldern erzeugte weder [data-testid=product-inquiry-success] noch [data-testid=product-inquiry-error] - es gab keine sichtbare Rueckmeldung im getesteten Screenshot. Moeglicherweise nur Feld-Level-Validierung ohne aria-live/Fehlerblock. Bitte pruefen, dass der Nutzer bei fehlenden Pflichtfeldern eine sichtbare Meldung erhaelt.", "affected_selectors": ["[data-testid=product-inquiry-submit]", "[data-testid=product-inquiry-error]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/ui_it49c/mobile390_teaser_visible.jpeg",
+    "/app/test_reports/ui_it49c/mobile390_after_close.jpeg",
+    "/app/test_reports/ui_it49c/mobile390_newsletter.jpeg",
+    "/app/test_reports/ui_it49d/desktop1440_no_teaser.jpeg",
+    "/app/test_reports/ui_it49d/desktop1440_teaser_visible.jpeg",
+    "/app/test_reports/ui_it49d/desktop1440_after_close.jpeg",
+    "/app/test_reports/ui_it49e/mobile430_teaser.jpeg",
+    "/app/test_reports/ui_it49k/aktien_submit_result.jpeg"
+  ],
+  "action_items": [
+    "Optional: /api/send-product-inquiry-email implementieren bzw. Pfad korrigieren (aktuell 404 nach erfolgreichem Lead-Insert).",
+    "Optional: sichtbare Validierungsmeldung beim Wizard-Submit mit leeren Pflichtfeldern verifizieren.",
+    "Optional (Code-Hygiene): Testid-Kollision aufloesen - sowohl die Sticky-Popup-Produktoptionen als auch die Wizard-Antwortoptionen nutzen das Praefix data-testid=product-inquiry-option-*; Selektoren muessen daher immer gescoped werden."
+  ],
+  "critical_code_review_comments": [
+    "hiddenForTeaser-Logik ist korrekt platziert (vor dem dismissed-Branch), damit auch die Restore-Pill verschwindet - verifiziert.",
+    "ESC-Konflikt praktisch entschaerft: bei sichtbarem Teaser existiert der Sticky-CTA gar nicht mehr im DOM, das Popup kann also nicht gleichzeitig offen sein. Der zusaetzliche capture-phase stopPropagation-Handler ist trotzdem eine sinnvolle Absicherung; nach ESC bei offenem Popup (ohne Teaser) wurden KEINE invtopic:*-Keys in localStorage geschrieben.",
+    "InvestmentTopicTeaser kann pro Page-Session nur EINMAL erscheinen: nach Close registriert der Trigger-Effect keine Scroll-Listener neu (canShowOnRoute wird bei visible=false erneut geprueft, waehrend dismissed/session-Flags gesetzt sind). Mehrfach-Open/Close ist daher nur ueber Reload + Storage-Clear moeglich - by design, aber fuer Tests dokumentieren.",
+    "MutationObserver observiert document.body mit subtree+attributes; das rAF-Debounce funktioniert (0 Warnungen/Reflow-Meldungen in 6s Idle-Messung auf der Homepage)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend only)", "frontend": "100% der 30+ ausgefuehrten UI-Checks bestanden"},
+  "seed_data_creation": "1 Test-Lead via Aktien-Wizard: qa.tester@example.com (QA Tester, +4915112345678) in Supabase product_inquiry_leads (Status 201).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Detailergebnisse Iteration 49: (1) Mobile 390: baseline sticky-cta=1; bei #invtopic-teaser[data-visible=true] sticky-cta=0 und compact-pill=0; Hit-Tests auf #invtopic-teaser-headline/#invtopic-teaser-body treffen die Elemente selbst; MEHR ERFAHREN, SCHLIESSEN und Close-X alle actionable; horizontal overflow 0. (2) Restore nach Close: data-visible=false, CTA zurueck bei x=38/y=666 (right-4), near-form=false, kein Sprung. (3) Newsletter-Ausweich unveraendert: near-form=true, x=16 (links), nach Weg-Scrollen wieder false/x=38. (4) Newsletter+Teaser gleichzeitig: cta=0 und restore-pill=0, Teaser-Close-X/CTA actionable, Newsletter-E-Mail-Input befuellbar. (5) Restore-Pill: nach Dismiss pill=1, bei sichtbarem Teaser pill=0, nach Teaser-Close pill=1. (6) Desktop 1440: bei Teaser cta=0, Hit-Test auf teaser-cta liefert invtopic-teaser-cta, echter Klick navigiert nach /themen/aktien (iter_48-Blocker behoben); nach Close CTA zurueck bei x=988/y=777 (right-5). (7) Responsive 320/375/430: sticky_elements=0, overflow=0, Text unverdeckt. (8) Regression: Pulse-Session-Flag=1, Popup mit 6 Optionen, ESC + Outside-Click schliessen, Wizard aktien oeffnet/ESC schliesst, Dismiss->Pill->Restore ok, alle 6 Wizards oeffnen, Aktien-Submit success (Supabase 201). (9) Console: nur 401er von externen/Marktdaten-Ressourcen (vorbestehend), keine non-401-Errors, keine d=undefined-Warnung, keine Perf-Warnungen. Test-Setup-Hinweis: Gate ueber select_option auf [data-testid=visitor-residence] / [data-testid=visitor-role] schliessen.",
+  "rca_of_the_issue": "Der Fix (return null bei hiddenForTeaser, gesetzt via IntersectionObserver auf #invtopic-teaser + data-visible-Pruefung) beseitigt beide iteration_48-Blocker vollstaendig, weil der Sticky-CTA bei sichtbarem Interstitial gar nicht mehr im DOM ist und damit keine Pointer-Events abfangen oder Text verdecken kann. Restore erfolgt zuverlaessig ueber die data-visible-Attributmutation (MutationObserver mit attributeFilter data-visible + rAF-Debounce)."
+}
