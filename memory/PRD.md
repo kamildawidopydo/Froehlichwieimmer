@@ -1,5 +1,38 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 50 (Feb 24, 2026) — Fonds-ETFs News Seed
+
+**Ziel**
+Datenlücke aus iteration_14 schließen: KnowledgeCrossLinkBox → `/fonds-grundlagen`-Pfad sichtbar/testbar machen, indem ein echter Artikel mit `category='fonds-etfs'` in der Produktions-Kollektion `news_articles` existiert.
+
+**Neu erstellt (1 Datei)**
+- `backend/scripts/seed_fonds_etfs_news.py` — idempotenter Seed-Script (upsert per slug). Fügt genau einen redaktionell verfassten Artikel ein:
+  - slug: `etf-zufluesse-europa-neues-jahreshoch`
+  - title: „Europäische ETF-Zuflüsse erreichen neues Jahreshoch"
+  - category: `fonds-etfs`, content_type: `news_synthesis`, status: `published`, is_published: True
+  - 2 Quellen (Morningstar + extraETF), ~600 Wörter Volltext mit H2-Sektionen und Bullet-Liste, `investment_topic_slug=None` (damit KnowledgeCrossLinkBox als primärer Cross-Link erscheint)
+- Ausführung: `cd /app/backend && python -m scripts.seed_fonds_etfs_news` (idempotent — mehrfach ausführbar).
+
+**Verifiziert (manuell + Screenshots)**
+- `GET /api/news/nachrichten?category=fonds-etfs` → 1 item
+- `GET /api/news/nachrichten/etf-zufluesse-europa-neues-jahreshoch` → volle Detaildaten inkl. full_text, sources[2], hero_image_url
+- Frontend Detail: KnowledgeCrossLinkBox mit `data-testid=fonds-grundlagen-crosslink` gerendert, Eyebrow „NEU BEI FONDS & ETFS?", CTA-href `/fonds-grundlagen`
+- Idempotenz-Test: zweiter Script-Aufruf → `updated`, Total bleibt 1
+- Desktop + Mobile 390×844 Screenshots bestätigen korrektes Rendering ohne Overflow
+- Regression: bestehende Artikel (dax-beendet-woche…) und andere Endpoints unverändert
+
+**Verifiziert (iteration_15 — 100 % Pass, Backend 8/8 pytest + Frontend E2E)**
+- API-List + Detail + Idempotenz-Upsert + Hero-Bild HTTP 200 + unbekannter Slug → 404
+- Frontend Detail: Back-Link, Hero (naturalWidth 1800), Titel, Untertitel, Volltext (6 h2 / 4 h3 / 2 ul), beide Quellen (Morningstar, extraETF, target=_blank, rel nofollow)
+- KnowledgeCrossLinkBox `fonds-grundlagen-crosslink` sichtbar, Klick + Enter navigieren zu `/fonds-grundlagen` (H1 „Fonds verstehen")
+- Mobile 390×844: scrollWidth == clientWidth, Box 342 px, klickbar
+- Tab/Focus reaches CTA mit sichtbarem Focus-Ring
+- Regression: /handeln, /fonds-grundlagen, /themen/aktien|anleihen|dividenden alle 200, TopicCrossLinkBox auf aktien-News zeigt korrekt Aktien-Topic (nicht Fonds-Cross-Link)
+- Neu erstellter Regression-Test: `/app/backend/tests/test_news_fonds_etfs.py`
+
+**Informationeller Hinweis (kein Defekt, außerhalb DoD)**
+- `/news/kategorie/fonds-etfs` (Legacy-Kategorie-Route) speist sich aus `/api/news-markte/feed` — einer separaten Datenquelle. Der neue Artikel erscheint dort daher nicht. Primärer Pfad `/news/nachrichten/…` funktioniert wie gefordert.
+
 ## Session 49 (Feb 24, 2026) — Investment-Wissensnetzwerk (RelatedKnowledge)
 
 **Ziel**
