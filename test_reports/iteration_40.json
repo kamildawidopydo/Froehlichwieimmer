@@ -1,0 +1,28 @@
+{
+  "summary": "Session 66 retest (frontend only) of the 4 fixes from iteration_39 plus full regression. (1) Image fix VERIFIED: all 12 Unsplash URLs in financialArticles.js return HTTP 200 via curl; in-browser naturalWidth=1600 for both home-financial-article-aktien-fuer-einsteiger (photo-1638913662180) and -anleihen-rendite-und-kurs (photo-1607944024060); 15/15 images in the section render (0 broken); no request for the old 404 id photo-1590283603385-c1c67c40d0d4. (2) Filter fix VERIFIED: etfs-fonds=1 card, aktien=2, zinsen=3, sparen=1, maerkte=1, finanzwissen=4, all=11 — every filter >=1 card and home-financial-articles-empty never rendered. (3) Related fix VERIFIED: finanzwissen-article-related present with exactly 3 related cards (+1 'Alle Artikel' link) on etfs-verstehen-worauf-anleger-achten-sollten, tagesgeld-oder-festgeld, was-anleger-ueber-inflation-wissen-sollten and aktien-fuer-einsteiger; no self-reference in related list. (4) Secondary stack now 3 teasers (secondary-0/1/2) and the teaser column stretches to the same flex height (800px) as the featured card, though content still ends ~140px above the featured card bottom. (5) Regression all green: BankingHero, HomeNewsPreview, HomeInvestmentSpectrum, bonus-cta-section present; 7/7 'Fragen beantworten' wizards open and close; CTA navigates to /wissen; invalid slug /finanzwissen/does-not-exist-xyz redirects to / ; exactly 1 h1 on /, /wissen, /handeln, /fonds-grundlagen and all detail pages; zero pageerrors on any route.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home /#home-financial-articles (desktop 1920)", "issues": ["Improved but not fully resolved: with 3 teasers the right column content still ends roughly 140px above the bottom of the featured card (column box is stretched to 800px, content is not distributed). Optional: justify-between / space-y balance on the teaser column."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/ui_it40/home_section.jpeg", "/app/test_reports/ui_it40b/related.jpeg"],
+  "action_items": [
+    "Optional/minor: an unrelated Unsplash asset 'photo-1610375461369-d613b564c883?w=1200&q=70' returns 4xx on the homepage (not from financialArticles.js — likely Supabase-sourced news/teaser data). Pre-existing, outside Session 66 scope, but worth cleaning up.",
+    "Optional: the 'Alle Artikel' link in the related section points to '/' rather than '/wissen' or the article list anchor."
+  ],
+  "critical_code_review_comments": [
+    "getRelatedFinancialArticles cross-category fallback is correct (excludes self, fills up to limit) — no issues found.",
+    "HomeFinancialArticles filter branch now uses FINANCIAL_ARTICLES for specific categories, so the featured article can appear both in the featured slot and in the grid for its own category (etfs-fonds). This is the intended fix but means duplicate rendering of the same article on one screen; acceptable, just noting the trade-off.",
+    "Filter state is still not reflected in the URL/hash (carried over from iteration_39) — filtered views cannot be shared or restored."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100% (all 5 requested checks + regression passed; 1 residual cosmetic gap)"},
+  "seed_data_creation": "none (static data file)",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Visitor gate bypass: set localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent then reload. Filter baseline after fix: all=11, aktien=2, etfs-fonds=1, zinsen=3, sparen=1, maerkte=1, finanzwissen=4. Related section always renders 3 cards + 1 'Alle Artikel' anchor (so a.count()==4). Supabase 401 console noise and SVG 'd=undefined' warnings remain pre-existing.",
+  "rca_of_the_issue": "N/A — all three defects from iteration_39 (404 image id, strict same-category related filter, featured excluded from category filter) are fixed and verified in the browser."
+}

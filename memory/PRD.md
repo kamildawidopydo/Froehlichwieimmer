@@ -1,5 +1,37 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 66 (Feb 25, 2026) — Home-Bereich „Aktuelles & Finanzwissen" ✅ (iteration_40: 100 %)
+
+**Neuer Evergreen-Artikelbereich am Ende der Homepage**
+- Neue Datei `data/financialArticles.js`: 12 zeitlose Finanzartikel (ETFs, Tagesgeld/Festgeld, Zinsen, Diversifikation, Inflation, Aktien-Einstieg, Sparplan vs. Einmalanlage, Zinseszinseffekt, EZB, Risiko/Rendite, Anleihen-Rendite/Kurs, Vermögensaufbau).
+- Neue Sektion `components/home/HomeFinancialArticles.jsx`: Featured-Card + 3 Secondary-Teaser, 7 Kategoriefilter (Alle, Aktien, ETFs & Fonds, Zinsen, Sparen, Märkte, Finanzwissen), responsives Grid (1/2/3 Spalten), CTA zu `/wissen`.
+- Neue Detailseite `pages/FinanzwissenArtikel.jsx` unter Route `/finanzwissen/:slug`: PageMeta, Zurück-Nav, Hero-Bild, Sections mit Paragraphen/Listen, Related-Section (Cross-Category-Fallback bei Single-Article-Kategorien).
+- Mount: `Home.js` zwischen `HomeInvestmentSpectrum` und Bonus-CTA.
+
+**Testing (Feb 25, 2026)**
+- iteration_39: 17/18 grün, 3 Defekte gefunden → gefixt in gleicher Session:
+  - 2× 404 Unsplash-URL (`photo-1590283603385-c1c67c40d0d4`) ersetzt durch `photo-1638913662180-...` (Aktien) und `photo-1607944024060-...` (Anleihen).
+  - `getRelatedFinancialArticles` hat Cross-Category-Fallback.
+  - Filter-Logik für spezifische Kategorien schließt Featured mit ein (ETFs-Filter nicht mehr leer).
+  - Secondary-Teaser-Stack von 2 auf 3 erweitert.
+- iteration_40: 100 % (5/5 + Regression grün, 0 pageerrors, alle 6 Wizards weiter funktional).
+- Zusätzlicher Kosmetik-Fix nach iteration_40: „Alle Artikel"-Link in Related-Section jetzt → `/wissen`.
+
+**Bekannter externer Blocker weiterhin offen**
+- Supabase-CHECK-Constraint `product_inquiry_leads_product_check` nicht erweitert (siehe Session 65). fonds/tagesgeld/festgeld/flexgeld → weiter 400.
+
+**Files hinzugefügt**
+- `frontend/src/data/financialArticles.js`
+- `frontend/src/components/home/HomeFinancialArticles.jsx`
+- `frontend/src/pages/FinanzwissenArtikel.jsx`
+
+**Files geändert**
+- `frontend/src/App.js` (Route `/finanzwissen/:slug`)
+- `frontend/src/pages/Home.js` (Section-Mount)
+
+**Status: DONE**
+
+
 ## Session 65 (Feb 25, 2026) — Constraint-Fix aus Emergent nicht möglich
 
 **Systematische Selbstprüfung durchgeführt (alle automatisierbaren Optionen)**

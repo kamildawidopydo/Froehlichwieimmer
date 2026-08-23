@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only testing of Session 66 'Aktuelles & Finanzwissen' (HomeFinancialArticles + /finanzwissen/:slug). Verified section render, eyebrow/headline, featured card (image/title/excerpt/'Artikel lesen'), 2 secondary teasers, all 7 filter chips with client-side filtering (all=11, aktien=2, etfs-fonds=0 -> empty state, maerkte=1, finanzwissen=4; featured stays outside grid and always visible), card navigation to detail page, detail page structure (back link, h1 title, 3 content blocks), related-article navigation, invalid slug redirect to / without 404, CTA -> /wissen, responsive column counts (mobile 1 / tablet 2 / desktop 3, no horizontal overflow at any breakpoint, filter chips wrap into 3 rows on 390px), route regression (/, /wissen, /handeln, /fonds-grundlagen, /finanzwissen/tagesgeld-oder-festgeld all HTTP 200, exactly 1 h1 each), homepage regression (BankingHero, HomeNewsPreview, HomeInvestmentSpectrum + 6 wizard 'Fragen beantworten' buttons, bonus-cta-section all present) and zero pageerrors. Two real defects found: one 404 Unsplash image used by two articles, and missing related-articles section for single-article categories (incl. the featured article).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "financialArticles.js images", "issue": "Unsplash URL 'photo-1590283603385-c1c67c40d0d4' returns HTTP 404 -> broken/empty image placeholder for articles 'aktien-fuer-einsteiger' (line 194) and 'anleihen-rendite-und-kurs' (line 334), both on the home grid card and on the article detail hero. Verified 2 broken imgs of 14 in section (naturalWidth=0). Also the same photo id is reused for two different articles (duplicate imagery).", "selector": "[data-testid=\"home-financial-article-aktien-fuer-einsteiger\"] img, [data-testid=\"home-financial-article-anleihen-rendite-und-kurs\"] img", "priority": "HIGH"},
+      {"component": "FinanzwissenArtikel related section", "issue": "getRelatedFinancialArticles() only matches the same category with no fallback. Categories with a single article (etfs-fonds = the FEATURED article, sparen, maerkte) render zero related items, so [data-testid=finanzwissen-article-related] is completely absent on /finanzwissen/etfs-verstehen-worauf-anleger-achten-sollten (the flagship article) — dead end for the most prominent entry point. Suggest filling up to 3 with latest articles from other categories.", "selector": "[data-testid=\"finanzwissen-article-related\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home /#home-financial-articles (desktop 1920)", "issues": ["Right column of the featured row (only 2 secondary teasers) ends far above the tall featured card, leaving a large empty gap (~250px+) next to the featured image; consider a 3rd teaser or vertical distribution.", "Filter 'ETFs & Fonds' always yields the empty state because the only etfs-fonds article is the featured one which is excluded from the grid — looks like a bug to users; either include the featured article in that filter result or add a second etfs-fonds article."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/ui_it39/desktop_section.jpeg", "/app/test_reports/ui_it39b/detail.jpeg", "/app/test_reports/ui_it39c/mobile_section.jpeg"],
+  "action_items": [
+    "Replace the 404 Unsplash image id 'photo-1590283603385-c1c67c40d0d4' with two distinct working images for 'aktien-fuer-einsteiger' and 'anleihen-rendite-und-kurs'.",
+    "Add a cross-category fallback to getRelatedFinancialArticles so every article (especially the featured ETF article) shows a Weiterlesen section.",
+    "Decide behaviour for the 'ETFs & Fonds' filter (currently always empty state) — add an etfs-fonds article or include the featured item in filtered results."
+  ],
+  "critical_code_review_comments": [
+    "financialArticles.js: no runtime validation/dedup of image URLs — a single 404 id silently degrades two cards; consider a shared IMAGES map and unique assets per article.",
+    "HomeFinancialArticles.jsx: article <img> uses alt=\"\" (decorative) for the featured/secondary/grid cards; acceptable since the title link carries the text, but headline-derived alt would be better for SEO.",
+    "Filter state is not reflected in the URL/hash, so a filtered view cannot be shared or restored after navigating to a detail page and back."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "94% (17/18 checks passed; 1 broken image asset + 1 missing related section)"},
+  "seed_data_creation": "none (static data file)",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Visitor gate bypass via localStorage keys kapitalmitte_visitor_profile + kapitalmitte_cookie_consent then reload works. Section data-testids all verified present. Console 401s (Supabase) and SVG 'd=undefined' path warnings are PRE-EXISTING (see iteration_30/32/38), not caused by Session 66. No pageerror on / or /finanzwissen/:slug. Filter counts baseline: all=11, aktien=2, zinsen=3, sparen=1, maerkte=1, finanzwissen=4, etfs-fonds=0.",
+  "rca_of_the_issue": "Broken image: Unsplash asset photo-1590283603385-c1c67c40d0d4 was deleted/never valid (curl -> 404) and is hardcoded twice in /app/frontend/src/data/financialArticles.js. Missing related articles: getRelatedFinancialArticles filters strictly by category with no fallback, and 3 of 6 categories contain only one article."
+}
