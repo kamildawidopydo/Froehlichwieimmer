@@ -164,6 +164,80 @@ const TOPIC_CONTENT = {
     compliance_label: 'Information der Fröhlich Vermögensberatung',
     hero_learn_more_label: 'Mehr über Anleihen erfahren',
   },
+  dividenden: {
+    seo: {
+      title: 'Dividenden & Ausschüttungen | Fröhlich Vermögensberatung',
+      description:
+        'Dividenden verstehen, Ausschüttungsqualität einordnen und gemeinsam mit Ihrem Berater prüfen, welche Rolle dividendenstarke Unternehmen in Ihrer Vermögensstrategie spielen können.',
+    },
+    breadcrumb_label: 'Dividenden',
+    eyebrow: 'Dividenden & Ausschüttungen',
+    h1: 'Dividenden strategisch einordnen',
+    intro: [
+      'Dividenden sind Ausschüttungen, mit denen Unternehmen ihre Aktionäre am Gewinn beteiligen können. Für viele Anleger sind sie ein Baustein einer langfristigen Aktienstrategie.',
+      'Ob und in welcher Höhe eine Dividende gezahlt wird, ist jedoch nicht garantiert. Eine hohe Ausschüttungsrendite allein sagt zudem wenig über die Qualität eines Unternehmens aus.',
+    ],
+    hero_image: 'https://images.unsplash.com/photo-1554224154-26032cdc0b4c?w=1400&q=75',
+    hero_image_alt: 'Zurückhaltendes Bürogebäude in Dämmerung – editorial',
+    why: {
+      headline: 'Warum sich Anleger mit Dividenden beschäftigen',
+      intro:
+        'Regelmäßige Ausschüttungen können unterschiedliche Funktionen innerhalb einer breit aufgestellten Vermögensstruktur übernehmen.',
+      cards: [
+        {
+          title: 'Beteiligung am Unternehmenserfolg',
+          body: 'Über eine Dividende können Aktionäre am wirtschaftlichen Erfolg eines Unternehmens teilhaben – sofern das Unternehmen ausschüttet und die Hauptversammlung eine Dividende beschließt.',
+        },
+        {
+          title: 'Ergänzung im Aktienbaustein',
+          body: 'Dividendenstarke Unternehmen können, je nach Anlageziel und Risikoprofil, ein möglicher Bestandteil einer langfristigen Aktienstrategie sein.',
+        },
+        {
+          title: 'Qualität statt reiner Renditejagd',
+          body: 'Nachhaltig ausschüttende Unternehmen zeichnen sich häufig durch stabile Cashflows und disziplinierte Kapitalallokation aus. Eine hohe Dividendenrendite allein ist kein Qualitätsmerkmal.',
+        },
+      ],
+    },
+    risks: {
+      headline: 'Hohe Ausschüttungsrenditen sind nicht automatisch attraktiv',
+      body: [
+        'Dividenden können jederzeit gekürzt, ausgesetzt oder gestrichen werden – insbesondere in wirtschaftlich schwierigen Phasen oder bei operativen Belastungen des Unternehmens.',
+        'Kursverluste können höher ausfallen als vereinnahmte Ausschüttungen. Eine „Dividende" ersetzt daher keine Betrachtung der Gesamtperformance und der Bilanzqualität.',
+        'Sehr hohe Dividendenrenditen sind oft die Folge eines gefallenen Kurses und können auf grundlegende Probleme des Unternehmens hindeuten. Eine hohe Ausschüttungsquote kann zulasten notwendiger Reinvestitionen gehen.',
+        'Eine Konzentration auf einzelne Branchen oder Regionen mit hoher Ausschüttungskultur kann die Diversifikation eines Portfolios einschränken.',
+      ],
+      note: 'Steuerliche Aspekte von Dividenden hängen von Ihrer individuellen Situation ab und werden nicht über diese Seite behandelt. Individuelle Steuer- und Anlageberatung erfolgt ausschließlich im persönlichen Gespräch.',
+    },
+    einordnung: {
+      eyebrow: 'Persönliche Beratung',
+      headline: 'Nicht die Höhe der Rendite entscheidet, sondern ihre Substanz',
+      body: [
+        'Eine dividendenorientierte Strategie ist mehr als das reine Auswählen der Titel mit den höchsten Ausschüttungsrenditen.',
+        'Unsere Berater betrachten unter anderem Ausschüttungsquote, Free Cashflow, Dividendenhistorie, Bilanzqualität und die Einbindung in Ihre bestehende Vermögensstruktur.',
+        'Bei speziellen Fragestellungen können unsere Berater zusätzlich auf spezialisierte Ansprechpartner zurückgreifen.',
+      ],
+      steps: [
+        { n: '01', title: 'Ausgangssituation betrachten', body: 'Wir berücksichtigen Ihre Ziele, Ihre bestehende Vermögensstruktur, Ihren Anlagehorizont und Ihre Risikotragfähigkeit.' },
+        { n: '02', title: 'Ausschüttungsqualität einordnen', body: 'Gemeinsam betrachten wir Kennzahlen wie Ausschüttungsquote, Cashflow-Deckung und historische Verlässlichkeit – nicht die Rendite allein.' },
+        { n: '03', title: 'Rolle im Portfolio klären', body: 'Wir klären, welche Rolle dividendenstarke Unternehmen in Ihrer individuellen Strategie spielen können – oder eben nicht.' },
+      ],
+    },
+    conversion: {
+      headline: 'Sie möchten über Dividendenstrategien sprechen?',
+      body: [
+        'Wenn Sie bereits von uns betreut werden, sprechen Sie Ihren persönlichen Berater jederzeit auf das Thema Dividenden und Ausschüttungen an.',
+        'Bei Bedarf können spezialisierte Ansprechpartner in das Gespräch einbezogen werden.',
+      ],
+      existing_headline: 'Bereits Kunde bei uns?',
+      existing_body: [
+        'Sprechen Sie Ihren zuständigen Berater einfach auf das Thema Dividenden & Ausschüttungen an.',
+        'Ihr Berater kann Ihre bestehende Situation berücksichtigen und bei Bedarf einen spezialisierten Ansprechpartner hinzuziehen.',
+      ],
+    },
+    form_topic_label: 'Dividenden & Ausschüttungen',
+    compliance_label: 'Information der Fröhlich Vermögensberatung',
+    hero_learn_more_label: 'Mehr über Dividenden erfahren',
+  },
 };
 
 // Fallback-Label für den Breadcrumb — wird verwendet, wenn im Content-Objekt

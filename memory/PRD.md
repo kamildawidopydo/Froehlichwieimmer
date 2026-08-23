@@ -7,6 +7,45 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 43 (Feb 23, 2026) — Dividenden-Thema als drittes Investment-Topic
+
+**Zielbild**: `/themen/dividenden` als drittes Thema neben Aktien und Anleihen — identische Infrastruktur, keine Sonderlogik.
+
+**Geänderte Dateien**
+- `backend/investment_topics.py`: `DEFAULT_TOPICS` um `dividenden` erweitert (priority 8, category „Dividenden & Ausschüttungen", eigene `excluded_routes` inkl. `/themen/dividenden`, `related_news_slugs: []`)
+- `frontend/src/pages/InvestmentTopicPage.jsx`: `TOPIC_CONTENT["dividenden"]` mit SEO, Hero (H1 „Dividenden strategisch einordnen"), Why (3 Cards: Beteiligung/Ergänzung im Aktienbaustein/Qualität statt reiner Renditejagd), Risks (Dividendenkürzungen, hohe Renditen als Warnsignal, Branchen-Konzentration, allgemeiner Steuer-Hinweis), Einordnung (3 Steps: Ausgangssituation/Ausschüttungsqualität/Rolle im Portfolio), Conversion (Formular-Label „Dividenden & Ausschüttungen")
+- `frontend/src/components/investment/TopicCrossLinkBox.jsx`: `COPY["dividenden"]` mit passendem Wording („Dividenden & Ausschüttungen einordnen")
+
+**Bewusst NICHT geändert**
+- `TOPIC_CONTENT["aktien"]` und `TOPIC_CONTENT["anleihen"]`
+- Seeder-Backfill-Logik (überschreibt Admin-Werte nach wie vor **nicht**)
+- Related-Topics-Logik (nutzt bereits dynamisch `/active` — Dividenden erscheint automatisch)
+- `pages/InvestmentTopicsOverviewPage.jsx` (SHORT_TITLES enthielt „dividenden" bereits)
+- `AdminNewsArticles.jsx` (Dropdown lädt dynamisch aus `/admin/investment-topics`)
+
+**Verifikation**
+1. `GET /api/investment-topics/active` → 3 Topics, Reihenfolge aktien (10) · anleihen (9) · dividenden (8) ✓
+2. `GET /api/investment-topics/dividenden` → korrekte Metadaten ✓
+3. `GET /api/admin/investment-topics` (admin) → alle 3 Topics mit enabled/priority/related_news_count sichtbar ✓
+4. Admin-Patch `enabled=false` bei Dividenden → `/active` liefert nur 2 (aktien+anleihen); Re-enable + Priority-Änderung überlebt Seeder-Restart (Backend restart im Test durchgeführt) ✓
+5. `PATCH /admin/news/{slug} investment_topic_slug=dividenden` → 200, public detail liefert Zuordnung ✓
+6. `PATCH ... aktien` (Restore) → CrossLinkBox-Regression grün (unchanged) ✓
+7. Playwright `/themen/dividenden`: H1 „Dividenden strategisch einordnen", Breadcrumbs, alle 4 Sektionen (why/risks/form/related), Related zeigt aktien+anleihen ohne self-reference ✓
+8. Playwright `/themen`: alle 3 Cards (aktien/anleihen/dividenden) sichtbar ✓
+9. Aktien-/Anleihen-Funnels + `/themen`-Grid unverändert (keine Änderung an ihren Codepfaden)
+
+**Getestete URLs**
+- `/themen` (Grid mit 3 Cards)
+- `/themen/dividenden` (komplette Themenseite)
+- `/api/investment-topics/active` (3 Topics, korrekte Reihenfolge)
+- `/api/investment-topics/dividenden` (Detail)
+- `/api/admin/investment-topics` (mit Auth: 3 Topics)
+- `/api/admin/news/{slug}` PATCH mit `investment_topic_slug=dividenden` (200 + Cross-Link auf `/themen/dividenden`)
+
+**Offene Punkte**
+- Eigene Themen-Hero-Motive (Aktien/Anleihen/Dividenden) statt Unsplash — Folge-Session
+- Kuratierte News-Zuordnung für Dividenden (initial leer) — Redaktion via `/admin/investment-topics/dividenden` pflegen
+
 ## Session 42 (Feb 23, 2026) — Investment-Topic-Select im News-Admin
 
 **Zielbild**: News-Artikeln direkt in einer Admin-UI ein Investment-Thema zuordnen können, ohne DB-Zugriff. Cross-Link-Box auf öffentlichen Detailseiten reagiert unmittelbar auf Änderungen.

@@ -77,6 +77,38 @@ DEFAULT_TOPICS = [
             "/dashboard",
         ],
         "compliance_label": "Information der Fröhlich Vermögensberatung",
+        "related_news_slugs": [],
+    },
+    {
+        "slug": "dividenden",
+        "category": "Dividenden & Ausschüttungen",
+        "headline": "Dividenden strategisch einordnen",
+        "teaser": (
+            "Regelmäßige Ausschüttungen können ein Bestandteil einer langfristigen "
+            "Aktienstrategie sein. Erfahren Sie, worauf Anleger bei Dividendenunternehmen "
+            "achten sollten und wo hohe Renditen ein Warnsignal sein können."
+        ),
+        "overview_short": (
+            "Was Dividenden aussagen, welche Kennzahlen wirklich zählen und warum eine hohe "
+            "Ausschüttungsrendite allein noch kein Qualitätsmerkmal ist."
+        ),
+        "target_url": "/themen/dividenden",
+        "image_url": None,
+        "enabled": True,
+        "priority": 8,
+        "display_delay_ms": 35000,
+        "scroll_threshold_pct": 50,
+        "cooldown_days": 7,
+        "allowed_routes": [],
+        "excluded_routes": [
+            "/themen/dividenden",
+            "/login", "/register", "/forgot-password", "/reset-password",
+            "/formular", "/dokumente/vorschau",
+            "/admin",
+            "/dashboard",
+        ],
+        "compliance_label": "Information der Fröhlich Vermögensberatung",
+        "related_news_slugs": [],
     },
 ]
 

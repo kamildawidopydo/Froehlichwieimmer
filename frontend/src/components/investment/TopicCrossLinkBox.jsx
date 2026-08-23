@@ -16,6 +16,12 @@ const COPY = {
     body: 'Erfahren Sie mehr über Funktionsweise, Chancen und Risiken von Anleihen und welche Rolle sie innerhalb einer Vermögensstrategie spielen können.',
     cta: 'Zum Thema Anleihen',
   },
+  dividenden: {
+    eyebrow: 'Mehr zum Thema',
+    headline: 'Dividenden & Ausschüttungen einordnen',
+    body: 'Erfahren Sie, welche Kennzahlen bei Dividendenunternehmen tatsächlich zählen und warum eine hohe Ausschüttungsrendite allein noch kein Qualitätsmerkmal ist.',
+    cta: 'Zum Thema Dividenden',
+  },
 };
 
 /**
