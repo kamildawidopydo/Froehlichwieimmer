@@ -11,7 +11,7 @@ const STORAGE_KEY = 'productInquiryStickyDismissed';
 const PRODUCTS = /** @type {const} */ (['aktien', 'anleihen', 'spargeld']);
 
 const BOTTOM =
-  'bottom-[max(0.875rem,calc(env(safe-area-inset-bottom,0px)+0.5rem+var(--live-ticker-h,0px)))]';
+  'bottom-[max(4.5rem,calc(env(safe-area-inset-bottom,0px)+4rem+var(--live-ticker-h,0px)))] sm:bottom-[max(0.875rem,calc(env(safe-area-inset-bottom,0px)+0.5rem+var(--live-ticker-h,0px)))]';
 
 const readDismissed = () => {
   try {
@@ -78,6 +78,7 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
                 key={key}
                 type="button"
                 role="menuitem"
+                data-testid={`product-inquiry-option-${key}`}
                 onClick={() => onPick(key)}
                 className={cn(
                   'flex w-full flex-col gap-0.5 rounded-md px-3 py-2.5 text-left transition-colors',

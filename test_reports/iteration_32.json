@@ -1,0 +1,27 @@
+{
+  "summary": "Session 59 acceptance (frontend only). STEP 1 on-disk gate PASS: ProductInquiryStickyCta.jsx line 14 contains 'bottom-[max(4.5rem,...)] sm:bottom-[max(0.875rem,...)]'. Mobile offset fix VERIFIED live at 390x844, 375x812, 320x720: sticky pill sits 72px above viewport bottom, NO overlap with [data-testid=home-faq-ask-question] (vertical intersection false at all three widths), pill height 41.5px (>=40 touch target), no horizontal overflow (scrollWidth == viewport width at 320px). Desktop unchanged: 1440x900 and 1920x1080 both pill_from_bottom=14px, pill height 58px, click opens the 3-item product menu. Mobile widget menu opens with aktien/anleihen/spargeld and Escape closes it (role=menu count 0). 'Frage stellen' CTA is tappable on mobile and scrolls to [data-testid=home-savings-inquiry] (scrollY 12875 -> 6745, section in viewport). Full route regression PASS: /handeln (handeln-related container + 3 items), /wissen (4 wissen-card-*), /fonds-grundlagen (h1=1, fonds-faq-list 6 items, fonds-grundlagen-related 3), /themen, /themen/aktien|anleihen|dividenden (2 related each), home-savings-faq contains home-handeln-teaser. No CSS parsing errors on the new responsive bottom class (computed offsets prove Tailwind generated both utilities). No new React errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Mobile 390x844 - product inquiry detail card / section footer", "issues": ["Sticky pill (bottom-right) visually sits over the tail of the 'MEHR ERFAHREN | S...' link row of the open inquiry card; the ask-question CTA no longer overlaps, but small in-card links near the bottom-right can still be partially covered. Cosmetic / low priority."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/ui_it32", "/app/test_reports/ui_it32b", "/app/test_reports/ui_it32c", "/app/test_reports/ui_it32d"],
+  "action_items": [
+    "Optional: investigate pre-existing console error 'Error: <path> attribute d: Expected moveto path command (M or m), \"undefined\".' seen on every page (an icon is rendered with an undefined path/`d` value). Not new to Session 59 but pollutes the console.",
+    "Optional cosmetic: consider raising mobile pill offset slightly or adding bottom padding on inquiry cards so bottom-right in-card links are never covered."
+  ],
+  "critical_code_review_comments": [
+    "Product menu items had no data-testid (only role=menuitem); added data-testid=`product-inquiry-option-${key}` in ProductInquiryStickyCta.jsx for testability. Keep it.",
+    "BOTTOM constant is now a long responsive arbitrary-value Tailwind string; consider moving to a CSS variable (--sticky-cta-bottom) to keep the JSX readable and avoid Tailwind JIT class-name fragility."
+  ],
+  "updated_files": ["/app/frontend/src/components/home/ProductInquiryStickyCta.jsx"],
+  "success_rate": {"backend": "not tested", "frontend": "100% (all 8 Session 59 acceptance steps PASS)"},
+  "seed_data_creation": "none; visitor gate bypassed via localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Session 59 mobile widget offset fix is confirmed on disk AND live. New baseline: pill 72px from viewport bottom on mobile (<640px), 14px on desktop; pill height 41.5px mobile / 58px desktop. Menu items now have data-testid product-inquiry-option-aktien|anleihen|spargeld. Always run the grep on-disk gate before browser assertions (iter 29/30/31 false negatives came from unwritten files). Pre-existing global console error: SVG path d='undefined'.",
+  "rca_of_the_issue": "iteration_30 overlap was caused by a single fixed 0.875rem bottom offset applied at all breakpoints; the responsive class now applies max(4.5rem, safe-area+4rem+ticker) below the sm breakpoint, lifting the pill above the FAQ ask-question CTA while leaving the sm+ (desktop) value at 0.875rem."
+}

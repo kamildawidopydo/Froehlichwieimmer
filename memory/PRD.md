@@ -1,5 +1,27 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 59 (Feb 24, 2026) — Mobile Widget Offset Fix
+
+**Ziel**
+Kollision des Kurzfragebogen-Widgets mit dem CTA „Frage stellen" auf Mobile (≤ 640 px) beheben. Ursache: `BOTTOM`-Konstante in `ProductInquiryStickyCta.jsx` positionierte den Pill auf allen Viewports bei ~14 px über dem unteren Rand — auf schmalen Screens landete er über dem `home-faq-ask-question`-Button.
+
+**Geänderte Datei (1)**
+- `frontend/src/components/home/ProductInquiryStickyCta.jsx` — `BOTTOM`-Konstante responsiv:
+  - **Mobile (< sm)**: `bottom-[max(4.5rem, safe-area+4rem+ticker)]` → Pill sitzt ~72 px vom unteren Rand
+  - **≥ sm**: `sm:bottom-[max(0.875rem, safe-area+0.5rem+ticker)]` → Desktop unverändert
+- Wirkt automatisch auf CompactPill und die mobile Portal-Instanz (beide nutzen dieselbe Konstante).
+- Testing-Agent hat zusätzlich `data-testid="product-inquiry-option-${key}"` an die Menü-Items ergänzt (Test-Coverage-Verbesserung, bleibt).
+
+**Verifiziert (iteration_32: 100 % Pass, 8/8)**
+- Mobile 390/375/320 px: kein Overlap zwischen Pill und `home-faq-ask-question`, Pill 72 px vom Boden, Touch-Target 41.5 px, 320 px ohne Overflow
+- Desktop 1440/1920: Pill unverändert bei 14 px vom Boden, Menü öffnet, 3 Optionen (aktien/anleihen/spargeld)
+- Widget-Funktionalität: Klick öffnet Menü, Escape schließt, `Frage stellen`-CTA scrollt zu `home-savings-inquiry`
+- Regression: `/handeln`, `/wissen`, `/fonds-grundlagen` (H1=1, FAQ 6 Items), `/themen` + alle 3 Themen-Seiten, Home mit integriertem Handeln-Teaser — alles grün
+
+**Bewusst NICHT gemacht**
+- Kein Widget-Ausblenden, keine FAQ-Layout-Verschiebung, kein globaler Padding-Hack
+- Kein separater CSS-Variablen-Refactor (Optional-Vorschlag des Testing-Agents — außer Scope)
+
 ## Session 58 (Feb 24, 2026) — Home-FAQ + Handeln-Teaser zusammengeführt
 
 **Ziel**
