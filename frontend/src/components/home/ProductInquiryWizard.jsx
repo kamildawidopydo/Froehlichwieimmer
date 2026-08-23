@@ -665,6 +665,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                       <Checkbox
                         checked={consentPrivacy}
                         onCheckedChange={(v) => setConsentPrivacy(Boolean(v))}
+                        data-testid="product-inquiry-consent-privacy"
                         className="mt-0.5 border-bank-border data-[state=checked]:border-bank-primary data-[state=checked]:bg-bank-primary data-[state=checked]:text-white"
                       />
                       <span>
@@ -679,6 +680,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                       <Checkbox
                         checked={consentTerms}
                         onCheckedChange={(v) => setConsentTerms(Boolean(v))}
+                        data-testid="product-inquiry-consent-terms"
                         className="mt-0.5 border-bank-border data-[state=checked]:border-bank-primary data-[state=checked]:bg-bank-primary data-[state=checked]:text-white"
                       />
                       <span>
@@ -693,6 +695,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                       <Checkbox
                         checked={consentMarketing}
                         onCheckedChange={(v) => setConsentMarketing(Boolean(v))}
+                        data-testid="product-inquiry-consent-marketing"
                         className="mt-0.5 border-bank-border"
                       />
                       <span>

@@ -1,5 +1,30 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 74.2 (Feb 28, 2026) — Sparkline Guards + Consent Testids + framer-motion Path-Fix ✅
+
+**Ziel:** Zwei kleine risikoarme Follow-ups aus Session 74 + Follow-up-Fix nach Testing Agent RCA.
+
+**Files geändert**
+- `frontend/src/components/watchlist/MiniSparkline.jsx` — komplett neu geschrieben. Filter für finite Numbers, values.length ≥ 2 vor Path-Bau, `d.startsWith('M')`-Guard vor Rendern, stabile Placeholder-Höhe (identisches width/height in loading/valid/placeholder). Neue Testids: `sparkline-<sym>`, `sparkline-<sym>-placeholder`, `sparkline-<sym>-loading`.
+- `frontend/src/components/comparison/InterestRateSparkline.jsx` — `buildPath` filtert non-finite Werte; `buildAreaPath` prüft `linePath.startsWith('M')`; `hasPath`-Guard vor Rendern der 2 `<path>`; area-path konditional.
+- `frontend/src/components/home/ProductInquiryWizard.jsx` — 3 neue data-testids ergänzt: `product-inquiry-consent-privacy`, `product-inquiry-consent-terms`, `product-inquiry-consent-marketing`. Keine Logik-Änderung.
+- `frontend/src/components/dashboard/charts/EditorialDonut.jsx` — **Root-Cause-Fix**: `motion.path animate={{ d: path }}` entfernt (framer-motion kann keine SVG-Path-Data-Strings interpolieren → schrieb `d="undefined"` während des Tweens). `d` bleibt statisches Prop; `animate` reduziert auf `opacity`. `initial={false}` verhindert Initial-Tween.
+
+**Testing (iteration_46, 11/12 vor Fix, +Node-Guard-Test alle 6 Fälle grün nach Fix)**
+- ✅ Alle 3 Consent-Testids sichtbar & funktional, IDs #pi-* unverändert, Labels unverändert.
+- ✅ Submit MIT privacy+terms → `product-inquiry-success`.
+- ✅ Submit OHNE consent (3 negative Cases) → Toast „Bitte Datenschutz und AGB bestätigen.", kein Submit.
+- ✅ Alle 6 Wizards öffnen, Aktien-Full-Flow (6 Fragen), Sticky-CTA-Weg intakt.
+- ✅ MiniSparkline & InterestRateSparkline Guards code-review-safe; Node-Isolated-Test für 6 Edge-Cases (valid / empty / undefined / null / malformed points / API-401) alle `containsUndef=false containsNaN=false`.
+- ✅ EditorialDonut: nach Fix keine `d="undefined"`-Konsolen-Warnung mehr (verifiziert per Playwright-Console-Hook + DOM-Path-Attribut-Check).
+- ✅ Desktop 1440x900 + Mobile 390x844: kein horizontales Scrollen, Sparkline-Card-Höhe stabil, Wizard-Design aus Session 74 unverändert.
+
+**Ursache der d="undefined"-Warnung** (RCA per Testing Agent + setAttribute-Stack-Trace)
+- Framer-motion kann `d` (SVG path data) nicht interpolieren. In `EditorialDonut` wurde `animate={{ d: path }}` gesetzt → während des Tweens schrieb der Renderer `undefined` in das DOM-Attribut → 4x pro Homepage-Load (einmal pro Donut-Arc).
+- Fix: `d` aus `animate` entfernt, nur `opacity` animiert. `d` wird per React-Render bei Hover-Radius-Änderungen automatisch aktualisiert.
+
+**Externer Blocker weiter offen:** Supabase-CHECK-Constraint für fonds/tagesgeld/festgeld/flexgeld — nicht angefasst.
+
 ## Session 74 (Feb 28, 2026) — Product-Inquiry-Wizard Redesign (UI/UX only) ✅
 
 **Ziel:** Wizard-Modal seriös, banktypisch, mit größerer Typografie, hochwertigen Selection-Cards, klarem Trust-Bereich und größerem Weiter-Button. Keine funktionalen Änderungen, keine neuen Bildassets.

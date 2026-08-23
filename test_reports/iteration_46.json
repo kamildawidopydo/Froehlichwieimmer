@@ -1,0 +1,40 @@
+{
+  "summary": "Session 74.2 frontend-only verification. (A) MiniSparkline/InterestRateSparkline guards: code review OK, DAX sparkline renders a valid path (d starts with 'M ...'), height stable at 26px, zero invalid <path d> in the DOM on homepage, /news, /news/watchlist. BUT the reported console error 'Error: <path> attribute d: Expected moveto path command (M or m), \"undefined\"' STILL occurs (4x per homepage load, 8-12x across flows). Root cause traced via a setAttribute hook + stack trace: it is NOT MiniSparkline — it comes from framer-motion animating the SVG 'd' attribute in /app/frontend/src/components/dashboard/charts/EditorialDonut.jsx (motion.path animate={{ d: path }}) inside a visx-group (homepage DashboardShowcase / AssetAllocationDonut). (B) All wizard consent tests PASSED: the 3 new data-testids exist and are visible, ids #pi-first/#pi-last/#pi-phone/#pi-email unchanged, labels unchanged, submit with privacy+terms shows product-inquiry-success, and all 3 negative combinations (none / only privacy / only terms) show the toast 'Bitte Datenschutz und AGB bestätigen.' and do NOT submit. (C) Regression: all 6 wizards (aktien, anleihen, fonds, tagesgeld, festgeld, flexgeld) open with correct title, number badge, icon, 4 answer cards with ArrowRight, progress 1/7, 'Sicher & verschlüsselt' row; sticky CTA popup -> product-inquiry-option-aktien opens the Aktien wizard; no horizontal scrolling at 1440x900 and 390x844.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "EditorialDonut (dashboard/charts/EditorialDonut.jsx:180-192)",
+        "issue": "Console error 'Error: <path> attribute d: Expected moveto path command (M or m), \"undefined\"' still fires 4x per homepage load. Cause: framer-motion cannot interpolate SVG path 'd' strings, so during the animate={{ d: path }} tween it writes d=undefined onto the <path>. MiniSparkline guards (Session 74.2) did NOT fix this because MiniSparkline was never the source (it only mounts for curated symbols on authed watchlist pages). Fix: drop 'd' from the animate object (animate only opacity) or pass initial={false}/use flubber-based path interpolation.",
+        "selector": "svg .visx-group > path (motion.path in EditorialDonut)",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Homepage / Watchlist",
+        "issues": ["No layout/contrast/overflow issues found; sparkline box stays 26px high across loading/valid states"]
+      }
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/seed_watchlist_it46.py"],
+  "action_items": [
+    "Fix the real source of the d=\"undefined\" SVG console error: EditorialDonut.jsx motion.path animate={{ d: path }} — remove 'd' from animate (or add initial={false}) since framer-motion cannot animate path data strings.",
+    "Optional: MiniSparkline placeholder (sparkline-<SYM>-placeholder) is unreachable through the UI because both WatchlistSection.jsx:42 and WatchlistPage.jsx:191 gate rendering on SPARKLINE_SYMBOLS; the 404/placeholder branch can therefore never be exercised in-app (guard itself is correct in code)."
+  ],
+  "critical_code_review_comments": [
+    "MiniSparkline.jsx guards are correct (Array.isArray, finite-number filter, values.length>=2, d.startsWith('M')), placeholder/loading keep identical box size — no layout jump.",
+    "InterestRateSparkline.jsx buildPath/buildAreaPath guards are correct; area path only rendered when non-empty and hasPath gate is applied before rendering the two <path>s.",
+    "ProductInquiryWizard.jsx: consent testids added without logic change; validation (privacy && terms) still enforced client-side before submit.",
+    "framer-motion 'animate' on SVG 'd' is invalid usage and will always emit the undefined-d warning; it is the only remaining source of that console error in the app."
+  ],
+  "updated_files": ["/app/backend/tests/seed_watchlist_it46.py"],
+  "success_rate": { "backend": "not tested (frontend-only request)", "frontend": "92% (11/12 checks passed; d=undefined console error still present from a different component)" },
+  "seed_data_creation": "Temporarily added DAX + TSLA to the admin watchlist via /api/watchlist to render MiniSparkline; both entries were deleted again after testing (watchlist back to empty). One product inquiry (TEST Max / TEST Muster / test.qa.it46@example.com, Aktien) was submitted successfully.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@kapitalmitte.com / admin123 (from /app/memory/test_credentials.md) used to reach /news/watchlist",
+  "context_for_next_testing_agent": "d=undefined console error is produced by EditorialDonut's motion.path animate={{d}} (visx-group, homepage showcase), NOT by MiniSparkline. Verify with an init-script hook on Element.prototype.setAttribute capturing name==='d' && value contains 'undefined' plus new Error().stack. MiniSparkline is only mounted for curated symbols (DAX/SPX/NDX/DJI) on /news/watchlist (auth required) and in WatchlistSection on /news; add symbols via POST /api/watchlist. Note /news-markte is not a route — the page lives at /news. All wizard consent testids and validation flows are green.",
+  "rca_of_the_issue": "Console error stack: renderSVG (framer-motion) -> SVGVisualElement.renderInstance -> setAttribute('d', undefined). EditorialDonut.jsx passes animate={{ d: path || 'M0 0' }} to motion.path; framer-motion has no built-in path-data interpolation, so the value type resolves to undefined during the tween and is written to the DOM attribute, triggering the browser SVG parse error 4x (one per donut arc). Mitigation: animate only opacity/transform and set d as a plain prop, or use a path interpolator (flubber) via a MotionValue."
+}

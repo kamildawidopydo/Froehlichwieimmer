@@ -2,16 +2,22 @@ import React, { memo, useId, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 
 function buildPath(points, width, height, padding = 6) {
-  if (points.length < 2) return '';
-  const min = Math.min(...points);
-  const max = Math.max(...points);
+  // Only build a path from finite numeric values. Anything else (undefined,
+  // null, NaN, Infinity, string) is dropped so we never emit a `d` string
+  // containing `NaN` or the JS `undefined` sentinel.
+  const nums = Array.isArray(points)
+    ? points.filter((v) => typeof v === 'number' && Number.isFinite(v))
+    : [];
+  if (nums.length < 2) return '';
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
   const range = max - min || 0.01;
   const innerW = width - padding * 2;
   const innerH = height - padding * 2;
 
-  return points
+  return nums
     .map((v, i) => {
-      const x = padding + (i / (points.length - 1)) * innerW;
+      const x = padding + (i / (nums.length - 1)) * innerW;
       const y = padding + innerH - ((v - min) / range) * innerH;
       return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
     })
@@ -19,7 +25,7 @@ function buildPath(points, width, height, padding = 6) {
 }
 
 function buildAreaPath(linePath, width, height, padding = 6) {
-  if (!linePath) return '';
+  if (!linePath || typeof linePath !== 'string' || !linePath.startsWith('M')) return '';
   return `${linePath} L${width - padding},${height - padding} L${padding},${height - padding} Z`;
 }
 
@@ -32,15 +38,18 @@ const InterestRateSparkline = memo(function InterestRateSparkline({
   showLabels = false,
 }) {
   const gradId = useId().replace(/:/g, '');
-  const rates = useMemo(
-    () => (history.length ? history.map((h) => h.interest_rate) : []),
-    [history]
-  );
+  const rates = useMemo(() => {
+    if (!Array.isArray(history)) return [];
+    return history
+      .map((h) => (h && typeof h.interest_rate === 'number' && Number.isFinite(h.interest_rate) ? h.interest_rate : null))
+      .filter((v) => v !== null);
+  }, [history]);
 
   const linePath = useMemo(() => buildPath(rates, VIEW_W, VIEW_H), [rates]);
   const areaPath = useMemo(() => buildAreaPath(linePath, VIEW_W, VIEW_H), [linePath]);
+  const hasPath = rates.length >= 2 && typeof linePath === 'string' && linePath.startsWith('M');
 
-  if (rates.length < 2) {
+  if (!hasPath) {
     return (
       <div className={cn('flex h-12 items-center text-[11px] text-[#9ca3af] dark:text-bank-text-muted/80', className)} aria-hidden>
         —
@@ -62,7 +71,7 @@ const InterestRateSparkline = memo(function InterestRateSparkline({
             <stop offset="100%" stopColor="#16a34a" stopOpacity="0.03" />
           </linearGradient>
         </defs>
-        <path d={areaPath} fill={`url(#${gradId})`} />
+        {areaPath ? <path d={areaPath} fill={`url(#${gradId})`} /> : null}
         <path
           d={linePath}
           fill="none"
