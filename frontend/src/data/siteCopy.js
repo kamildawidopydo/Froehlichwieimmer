@@ -206,7 +206,6 @@ export const siteCopy = {
       { to: '/handeln', label: 'Handeln' },
       { to: '/spezial-aif', label: 'Spezial-AIF' },
     ],
-    ],
     company: [
       { to: '/dokumente', label: 'Dokumente', accent: true, desc: 'PDFs zum Download' },
       { to: '/news', label: 'News' },

@@ -6,6 +6,7 @@ import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import NachrichtenRelated from '@/components/news/NachrichtenRelated';
 import TopicCrossLinkBox from '@/components/investment/TopicCrossLinkBox';
+import KnowledgeCrossLinkBox from '@/components/knowledge/KnowledgeCrossLinkBox';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -219,6 +220,18 @@ const NachrichtenDetailPage = () => {
           </div>
 
           {item.investment_topic_slug && <TopicCrossLinkBox topicSlug={item.investment_topic_slug} />}
+          {(item.category === 'fonds-etfs' || item.category === 'fonds' || item.category === 'etf') && (
+            <KnowledgeCrossLinkBox
+              testId="fonds-grundlagen-crosslink"
+              eyebrow={item.investment_topic_slug ? 'Wissen kompakt' : 'Neu bei Fonds & ETFs?'}
+              title={item.investment_topic_slug
+                ? 'Fonds-Grundlagen kurz erklärt'
+                : 'Fonds-Grundlagen verständlich erklärt'}
+              description="Wie funktionieren Fonds, welche Kosten können entstehen und worin unterscheiden sich Fonds, ETFs und Einzelanlagen?"
+              href="/fonds-grundlagen"
+              cta="Fonds-Grundlagen ansehen"
+            />
+          )}
 
           <NachrichtenRelated slug={slug} />
         </article>
