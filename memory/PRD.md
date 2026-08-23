@@ -1,5 +1,37 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 74.6 (Feb 28, 2026) — Mobile Sticky-CTA drastisch kompakter ✅
+
+**Warum nachgebessert:** Session 74.5 landete bei 80 px Höhe / 320 px Breite. User-Feedback: immer noch zu dominant. Neuer Zielbereich: 68–76 px Höhe, 300–330 px Breite, integrierter X mit Divider (statt Floating-Circle).
+
+**File geändert** (nur `frontend/src/components/home/ProductInquiryStickyCta.jsx`)
+- **Mobile-Main-CTA inline restrukturiert:** Outer flex-Container mit `border-2` + `overflow-hidden rounded-2xl`, innen Main-Button + `border-l` Divider + X-Button (matches Desktop-Struktur, aber Mobile-Sizes).
+- **Größe:** `min-h-[4.25rem]` (68 px) + `w-[min(20rem,calc(100vw-1.5rem))]` (~320 px, seitlich 12 px). Padding Main-Button `py-2 pl-3 pr-2`.
+- **Icon-Tile:** 42×42 (`h-[2.625rem] w-[2.625rem]`) mit `rounded-lg` + Innen-Icon 20 px (`h-[1.25rem]`). Desktop `sm:h-16 sm:w-16` unverändert.
+- **Typografie:** Eyebrow 9.5 px tracking-[0.16em], Haupttext 15 px semibold leading-[1.1], Benefit 11 px leading-[1.25]. Alle enger gestapelt (`gap-[1px]`).
+- **Benefit-Copy Mobile:** dauerhaft „In wenigen Minuten zur Empfehlung" + `truncate whitespace-nowrap` gegen Umbruch. Desktop `sm:` weiter „…zur persönlichen Empfehlung".
+- **X-Bereich:** integrierter Button `w-10` (40 px) mit `border-l`, X-Icon `h-4 w-4` (16 px). Kein Floating-Circle mehr. Touch-Target ~68×40 = ausreichend AA.
+- **Hover/Active:** Mobile nur `active:scale-[0.98]` + `hover:bg-bank-primary/[0.04]`. Desktop-`sm:hover:-translate-y-0.5 sm:hover:scale-[1.02]` und `sm:active:scale-[1.045]` bleiben. Kein Scale-Up beim Klick auf Mobile.
+- **Menu-Open-State Mobile:** `data-menu-open="true"` → schwächerer Shadow (`0_10px_24px_-14px…`), `border-bank-primary/20`, kein Pulse. Höhe bleibt gleich (kein Grow).
+- **CompactPill vereinfacht:** wird jetzt NUR für den Restore-Pill genutzt. Mobile-Sizes matchen Main-CTA (68 px, 42-px-Icon, `active:scale-[0.98]`). Desktop unverändert.
+
+**Erhalten:** alle Testids (`sticky-cta`, `sticky-compact`, `sticky-dismiss`, `sticky-restore`, `option-<key>`), Analytics, `openMenu`/`pickProduct`/`dismiss`/`restore`, nearForm, Interstitial-Hide (74.4-fix2), Pulse (74.3), ESC/Outside-Click, sessionStorage/localStorage-Regeln, Produktmenü Layout (nicht angefasst).
+
+**Externer Blocker weiter offen (nicht angefasst):** Supabase-CHECK-Constraint für fonds/tagesgeld/festgeld/flexgeld.
+
+**Testergebnisse (iteration_51, 100 % funktional, 1 kosmetischer Follow-up)**
+- ✅ Mobile 390x844: Container 320×72 px, Main-Button 280×69 (min-h 68 px), Icon-Tile 42.6×42.6, Inner-Icon 20 px, X-Button 40×69 mit border-l 1 px solid, X-Icon 16 px.
+- ✅ DOM-Struktur: 2 direkte Kinder (`sticky-compact` + `sticky-dismiss`), kein Floating-Circle, X position:static.
+- ✅ Menu-Open: `data-menu-open='true'`, Shadow 24 px, `data-pulse='false'`, Höhe bleibt 72 px, `transform none` (kein Grow).
+- ✅ Active: `matrix(0.98,…)` bei mousedown auf main-button.
+- ✅ X-Klick: 0 Menus, cta count 0, Restore-Pill 320×68.
+- ✅ Responsive 320/375/390/430: alle 72 px hoch, kein H-Scroll.
+- ✅ Desktop 1440 unverändert: 384×104, Icon 56×56 (Baseline iter_50).
+- ✅ Regression: 6 Optionen + Wizard, Interstitial-Hide, nearForm, Pulse 1×/Session, ESC + Outside-Click.
+
+**Follow-up-Fix (Session 74.6.1)**
+- Mobile-Benefit-Copy „In wenigen Minuten zur Empfehlung" (32 Zeichen) wurde bei allen Mobile-Breiten ellipsiert (Textspalte nur ~177 px nach Icon+X+Padding). Fix: Copy weiter gekürzt zu „In wenigen Minuten" (17 Zeichen) → passt vollständig, keine Ellipsis, Nutzenkommunikation über „Kurzfragebogen"-Eyebrow + „Fragen beantworten"-Haupttext bleibt klar. Desktop `sm:` weiter „…zur persönlichen Empfehlung".
+
 ## Session 74.5 (Feb 28, 2026) — Mobile Sticky-CTA kompakter ✅
 
 **Ziel:** Sticky-CTA nimmt auf Mobile zu viel Fläche ein und konkurriert mit dem geöffneten Produktmenü. Auf 78–88 px Höhe reduzieren, Icon kleiner, Benefit-Copy kürzen, Menü-Open-State visuell zurücknehmen. Desktop unverändert.

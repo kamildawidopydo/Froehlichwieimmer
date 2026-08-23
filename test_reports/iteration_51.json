@@ -1,0 +1,55 @@
+{
+  "summary": "Session 74.6 (Mobile Sticky-CTA drastisch kompakter, integrierter X mit Divider) frontend-only auf der Preview-URL getestet. Consent-Gate jeweils via visitor-residence=DE + visitor-role=privatperson + visitor-accept-btn geschlossen. Geprueft: Mobile 390x844 Dimensionen (Container 320x72, main min-h 68px, Icon-Tile 42x42, Inner-Icon 20px, X-Button 40px + border-l 1px solid, X-Icon 16px), DOM-Struktur (genau 2 direkte Kinder, kein Floating-Circle, X position:static), Typo (9.5px uppercase tracking 1.52px rgb(76,124,186) / 15px semibold lh 16.5px / 11px muted Kurztext), Klickbarkeit (main oeffnet Popup, X dismissed ohne Popup-Oeffnung), Menu-Open-State (data-menu-open=true, Shadow 24px, data-pulse=false, Hoehe bleibt 72px, transform none), Active-State (matrix scale 0.98 bei mousedown), Restore-Pill (320x68, Icon 42x42, Klick stellt CTA wieder her), Responsive 320/375/390/430 (Hoehe 72-72.5px, Breite min(20rem,100vw-1.5rem), kein H-Scroll, Benefit 1 Zeile), Desktop 1440 Baseline (main 384x104, Icon 56x56, Inner 24, X 44, Typo 10.5/17/12 - identisch zu iter_50, kein CompactPill im Desktop-Branch), Regressionen: 6 Produktoptionen + Wizard-Open (mobil+desktop, spectrum-wizard-aktien), Interstitial-Hide (#invtopic-teaser data-visible=true -> sticky-cta count 0), nearForm Newsletter (data-near-form=true, x=16 links), Attention-Pulse 1x/Session + prefers-reduced-motion, ESC + Outside-Click. ERGEBNIS: Alle geforderten 74.6-Zielwerte erfuellt, Desktop unveraendert, keine funktionalen Regressionen, keine neuen Console-Errors. Ein kosmetischer Befund (Benefit-Zeile wird auf allen Mobile-Breiten per ellipsis abgeschnitten).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Mobile Sticky-CTA Benefit-Zeile (320/375/390/430)",
+        "issues": [
+          "Der Kurztext 'In wenigen Minuten zur Empfehlung' wird auf ALLEN getesteten Mobile-Breiten visuell per text-overflow:ellipsis abgeschnitten ('In wenigen Minuten zur Empfehlu…'), weil die Textspalte nach Icon-Tile (42px) + X (40px) + Paddings nur ~177px breit ist. Kein Umbruch/kein Hoehenzuwachs (Ziel erfuellt), aber der Nutzen ist nie vollstaendig lesbar. Empfehlung: Text weiter kuerzen (z. B. 'In Minuten zur Empfehlung') oder text-[10.5px]."
+        ]
+      },
+      {
+        "screen": "Sticky-CTA Typo-Hierarchie (Mobile + Desktop, vorbestehend)",
+        "issues": [
+          "Haupttext 'Fragen beantworten' rendert in rgb(76,124,186) - identisch zur Eyebrow-Farbe, da --bank-ink im Light-Theme darauf gesetzt ist (index.css). Kontrast 15px semibold auf Weiss ca. 3.3:1 (< WCAG AA 4.5:1). Kein 74.6-Regress."
+        ]
+      },
+      {
+        "screen": "Mobile 320x568 (sehr kurzer Viewport, vorbestehend)",
+        "issues": [
+          "Fixed CTA (y ~402-474) liegt weiterhin ueber dem Hero-Bereich/Link 'Ueber Froehlich Vermoegensberatung'. Durch die neue Hoehe 72px (statt 93.75px in iter_50) deutlich entschaerft, aber nicht vollstaendig weg."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/ui_it51/m390_closed.jpeg",
+    "/app/test_reports/ui_it51/m390_menu.jpeg",
+    "/app/test_reports/ui_it51b/m390_restore.jpeg",
+    "/app/test_reports/ui_it51b/m320x568.jpeg",
+    "/app/test_reports/ui_it51c/m375x667.jpeg",
+    "/app/test_reports/ui_it51c/m390x844.jpeg",
+    "/app/test_reports/ui_it51c/m430x932.jpeg",
+    "/app/test_reports/ui_it51d/m390_nearform.jpeg",
+    "/app/test_reports/ui_it51d/d1440_closed.jpeg",
+    "/app/test_reports/ui_it51d/d1440_menu.jpeg"
+  ],
+  "action_items": [
+    "OPTIONAL/LOW: Benefit-Zeile weiter kuerzen oder Fontsize reduzieren - sie wird auf jeder Mobile-Breite ellipsiert (nie vollstaendig lesbar).",
+    "OPTIONAL/LOW (vorbestehend): --bank-ink im Light-Theme fuer CTA-Haupttext dunkler setzen (Kontrast/Hierarchie)."
+  ],
+  "critical_code_review_comments": [
+    "Kein Blocker. Hinweis: Messungen des Containers innerhalb der ersten ~1.4-3s liefern leicht erhoehte Werte (z. B. Desktop 432x108.3 statt 428x104, Mobile 322x72.5), weil der One-Shot-Attention-Pulse einen Scale-Keyframe faehrt - fuer exakte Baselines erst nach ~4s messen oder sessionStorage-Key productInquiryStickyPulseFired vorsetzen.",
+    "ProductInquiryStickyCta.jsx ist auf 645 Zeilen gewachsen; CompactPill/ProductMenu sollten in eigene Dateien ausgelagert werden (Naehe zur 700-Zeilen-Grenze)."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "not tested (frontend-only request)", "frontend": "100% der funktionalen Checks (1 kosmetischer Befund)" },
+  "seed_data_creation": "keine",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 51 Messwerte (Preview-URL, Consent via native selects visitor-residence=DE / visitor-role=privatperson + visitor-accept-btn): MOBILE 390x844: sticky-cta box 320x72; main-button 280x69, computed min-height 68px; dismiss 40.6x69 (border-left 1px solid, position static); Icon-Tile 42.6x42.6; Inner-Icon 20.3; X-Icon 16.2; Container-Kinder = [product-inquiry-sticky-compact, product-inquiry-sticky-dismiss]; kein Floating-Circle. Menu-Open: data-menu-open=true, data-pulse=false, Shadow '0 10px 24px -14px', Hoehe bleibt 72, transform none. mousedown auf main -> matrix(0.98,...). X-Klick: 0 Menus, cta count 0, Restore-Pill 320x68 (Icon 42x42), Klick restauriert. Responsive: 320->296x72 (Benefit truncated, 1 Zeile), 375->322x72.5, 390->320x72, 430->320x72, kein H-Scroll. DESKTOP 1440x900: main 384x104, Icon 56x56, Inner-Icon 24, X 44, Typo 10.5/17/12 (Baseline iter_50 bestaetigt, Desktop nutzt Inline-Branch, nicht CompactPill). Regressionen ok: 6 Optionen + Wizard (spectrum-wizard-aktien) mobil+desktop, Interstitial-Hide (#invtopic-teaser data-visible=true -> cta count 0), nearForm Newsletter data-near-form=true x=16, Pulse 1x/Session + reduced-motion aus, ESC + Outside-Click schliessen. Console: nur vorbestehende 401er (Auth-Endpoints) und ERR_BLOCKED_BY_RESPONSE.NotSameOrigin auf Desktop - keine neuen Fehler.",
+  "rca_of_the_issue": "Benefit-Ellipsis: Textspalte im kompakten 320px-Layout betraegt nach Icon-Tile 42px + Gap 10px + X 40px + Paddings nur ~177px; 'In wenigen Minuten zur Empfehlung' @11px braucht ~190px -> truncate greift. Beabsichtigt (kein Umbruch), aber Text bleibt unlesbar."
+}
