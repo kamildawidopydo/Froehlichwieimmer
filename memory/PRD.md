@@ -1,5 +1,26 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 73 (Feb 28, 2026) — Sticky-Popup-Refactor + Tracking-Fix + Bonus-Cleanup ✅
+
+**Files geändert**
+- `frontend/src/components/home/ProductInquiryStickyCta.jsx` — doppelte `const PRODUCTS`-Deklaration entfernt (SyntaxError-Blocker), ungenutzter `productInquiryCards`-Import gestrichen. Popup rendert vollständig aus `getProductCatalog()` — keine redundante `PRODUCT_BENEFITS`-Kopie mehr.
+- `frontend/src/components/home/HomeProductWizardSection.jsx` — Impression-Tracking auf `IntersectionObserver` (threshold 0.25–0.4) + `sessionStorage`-Key `product_wizard_inline_open_fired` umgestellt → `product_inquiry_open` feuert genau einmal pro Session beim Scroll in die Section (touch-safe, kein Mouse-Enter mehr).
+- `frontend/src/data/productWizardCatalog.js` — `PRODUCT_BONUS_SOURCE` bereinigt (leeres Objekt). BBVA-Bonus-Copy bezieht sich auf Festgeld und war fälschlich auf Tagesgeld/Flexgeld gemappt → würde produktfremde Kopie rendern. Handoff-Direktive „Only map active, verifiable promos" umgesetzt: kein Badge, bis eine echte produktspezifische Aktion gepflegt ist.
+- `frontend/src/lib/investmentAnalytics.js` — Prop-Whitelist um `source` und `product` erweitert → `product_inquiry_open` und `product_inquiry_select` liefern jetzt Attributions-Payload an dataLayer/gtag/plausible (vorher stumm gedroppt).
+
+**Testing (Playwright, Iteration 44)**
+- IntersectionObserver: `product_inquiry_open` feuert genau 1× pro Session (bestätigt via dataLayer-Count, sessionStorage-Key, reload-persistiert).
+- Sticky-CTA-Popup: 6 Optionen mit korrekten `data-testid`, gefüllt aus zentralem Katalog.
+- Bonus-Badges: keine für aktien/anleihen/fonds/festgeld (spec) – nach Fix auch keine für tagesgeld/flexgeld mehr.
+- Klick auf Card/Option öffnet echten Wizard-Modal.
+- Regression: Desktop 3-Spalten-Grid + Mobile 1-Spalten sauber, keine JS-Errors, kein SyntaxError.
+
+**Externer Blocker weiter offen:** Supabase-CHECK-Constraint `product_inquiry_leads_product_check` blockiert Submit für fonds/tagesgeld/festgeld/flexgeld (manuelle DBA-Aktion nötig — Code-Seite ist korrekt).
+
+**Bekannte Nebenbaustellen (non-blocking, siehe iteration_44)**
+- SVG `d="undefined"`-Warnung in `MiniSparkline.jsx` / `InterestRateSparkline.jsx`, wenn Supabase `/functions/v1/stock-history` 401 zurückgibt → Guard für leere Daten sinnvoll.
+- Mobile Sticky-CTA-`nearForm`-Guard observiert nur `#home-newsletter`; könnte um Interstitial ergänzt werden.
+
 ## Session 72 (Feb 25, 2026) — Große Inline-Produkt-Section + Bonus-Feed + Analytics ✅
 
 **Neue Files**

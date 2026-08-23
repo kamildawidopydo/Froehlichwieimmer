@@ -16,6 +16,7 @@ const TRUST_ICONS = [ShieldCheck, HandCoins, CheckCircle2, Clock];
 const HomeProductWizardSection = ({ onOpenWizard }) => {
   const prefersReduced = useReducedMotion();
   const catalog = getProductCatalog();
+  const sectionRef = React.useRef(null);
 
   const handlePick = (key) => {
     try {
@@ -26,14 +27,42 @@ const HomeProductWizardSection = ({ onOpenWizard }) => {
     onOpenWizard(key);
   };
 
+  // Impression-Tracking via IntersectionObserver (touch-safe, einmal/Session)
+  React.useEffect(() => {
+    const IMPRESSION_KEY = 'product_wizard_inline_open_fired';
+    try {
+      if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return undefined;
+      if (window.sessionStorage.getItem(IMPRESSION_KEY) === '1') return undefined;
+    } catch {
+      return undefined;
+    }
+    const el = sectionRef.current;
+    if (!el) return undefined;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting && e.intersectionRatio >= 0.25) {
+            try {
+              window.sessionStorage.setItem(IMPRESSION_KEY, '1');
+              trackInvestmentEvent('product_inquiry_open', { source: 'inline_home' });
+            } catch { /* stumm */ }
+            io.disconnect();
+            return;
+          }
+        }
+      },
+      { threshold: [0.25, 0.4] },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
     <section
       id="home-product-wizard"
+      ref={sectionRef}
       data-testid="home-product-wizard"
       className="relative border-t border-bank-border bg-[linear-gradient(180deg,#ffffff_0%,#faf9f5_100%)] py-16 sm:py-20 lg:py-24"
-      onMouseEnter={() => {
-        try { trackInvestmentEvent('product_inquiry_open', { source: 'inline_home' }); } catch {}
-      }}
     >
       <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
         {/* Header */}

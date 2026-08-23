@@ -4,12 +4,11 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { MessageCircleQuestion, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
-import { productInquiryCards } from '@/data/productInquiryQuestions';
 import { trackInvestmentEvent } from '@/lib/investmentAnalytics';
+import { getProductCatalog, WIZARD_TRUST_POINTS } from '@/data/productWizardCatalog';
+import { BANK_BONUS_COPY } from '@/data/bankBonusTexts';
 
 const STORAGE_KEY = 'productInquiryStickyDismissed';
-
-const PRODUCTS = /** @type {const} */ (['aktien', 'anleihen', 'fonds', 'tagesgeld', 'festgeld', 'flexgeld']);
 
 const BOTTOM =
   'bottom-[max(4.5rem,calc(env(safe-area-inset-bottom,0px)+4rem+var(--live-ticker-h,0px)))] sm:bottom-[max(0.875rem,calc(env(safe-area-inset-bottom,0px)+0.5rem+var(--live-ticker-h,0px)))]';
@@ -34,20 +33,8 @@ function useIsDesktop() {
   return isDesktop;
 }
 
-const PRODUCT_BENEFITS = {
-  aktien:    'Langfristige Chancen für Ihren Vermögensaufbau.',
-  anleihen:  'Planbare Erträge und Stabilität für Ihr Depot.',
-  fonds:     'Breit gestreut und flexibel investieren.',
-  tagesgeld: 'Flexibel sparen mit täglicher Verfügbarkeit.',
-  festgeld:  'Planbare Laufzeit und attraktive Verzinsung.',
-  flexgeld:  'Zinsen und Flexibilität sinnvoll kombiniert.',
-};
-
-const WIZARD_BENEFITS = [
-  { title: 'Passende Empfehlung',    body: 'Anlage passend zu Zielen und Horizont.' },
-  { title: 'Mögliche Vorteile',      body: 'Passende Konditionen und Aktionen entdecken.' },
-  { title: 'Kostenlos & unverbindlich', body: 'Keine Verpflichtung, keine versteckten Kosten.' },
-];
+const PRODUCT_CATALOG = getProductCatalog();
+const WIZARD_BENEFITS = WIZARD_TRUST_POINTS.slice(0, 3);
 
 function CompactPill({ onClick, className, testId, ariaLabel, fixed = true }) {
   return (
@@ -114,34 +101,35 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
 
             {/* Rich Product Cards */}
             <div className="flex flex-col gap-1.5">
-              {PRODUCTS.map((key) => {
-                const meta = productInquiryCards[key];
-                const benefit = PRODUCT_BENEFITS[key];
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    role="menuitem"
-                    data-testid={`product-inquiry-option-${key}`}
-                    onClick={() => onPick(key)}
-                    className={cn(
-                      'group flex w-full flex-col gap-0.5 rounded-lg border border-transparent px-3 py-2.5 text-left transition-all',
-                      'hover:border-bank-accent/30 hover:bg-bank-surface',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/30',
-                    )}
-                  >
-                    <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.16em] text-bank-primary/80">
-                      {meta.kicker}
+              {PRODUCT_CATALOG.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  role="menuitem"
+                  data-testid={`product-inquiry-option-${p.key}`}
+                  onClick={() => onPick(p.key)}
+                  className={cn(
+                    'group flex w-full flex-col gap-0.5 rounded-lg border border-transparent px-3 py-2.5 text-left transition-all',
+                    'hover:border-bank-accent/30 hover:bg-bank-surface',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/30',
+                  )}
+                >
+                  <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.16em] text-bank-primary/80">
+                    {p.kicker}
+                  </span>
+                  <span className="text-[13.5px] font-semibold leading-snug text-bank-ink transition-colors group-hover:text-bank-primary">
+                    {p.title}
+                  </span>
+                  <span className="text-[11.5px] leading-snug text-bank-text-muted">
+                    {p.benefit}
+                  </span>
+                  {p.bonusSource && BANK_BONUS_COPY[p.bonusSource.bankSlug]?.summary ? (
+                    <span className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.14em] text-bank-primary/80">
+                      {p.bonusSource.label}
                     </span>
-                    <span className="text-[13.5px] font-semibold leading-snug text-bank-ink transition-colors group-hover:text-bank-primary">
-                      {meta.title}
-                    </span>
-                    <span className="text-[11.5px] leading-snug text-bank-text-muted">
-                      {benefit}
-                    </span>
-                  </button>
-                );
-              })}
+                  ) : null}
+                </button>
+              ))}
             </div>
 
             {/* Wizard-Nutzen-Chips */}

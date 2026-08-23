@@ -1,0 +1,60 @@
+{
+  "summary": "Session 73 frontend-only verification on https://finance-platform-v2.preview.emergentagent.com/ (Desktop 1920x800 + Mobile 390x844). Consent gate (Deutschland / Privatperson, US-Checkbox leer) closed successfully. ALL 6 requested refactoring features PASS: (1) IntersectionObserver impression tracking on #home-product-wizard fires product_inquiry_open exactly once per session (dataLayer count = 1 after first scroll, still 1 after scroll-away+back, 0 after same-session reload; sessionStorage 'product_wizard_inline_open_fired' = '1'); (2) Sticky CTA renders bottom-right (desktop x=1662,y=728; mobile x=16,y=698) and its popup renders all 6 catalog products with data-testid product-inquiry-option-<key>, each showing kicker/title/benefit from getProductCatalog() (no hardcoded copy); (3) Bonus badges render ONLY for tagesgeld + flexgeld (home-product-wizard-bonus-*), none for aktien/anleihen/fonds/festgeld; (4) Clicking a popup option and an inline card fires product_inquiry_select and opens the real wizard modal (role=dialog, 1/7 Kurzfragebogen); (5) Regression: 6 cards in grid (desktop 3 cols 352px each, mobile 1 col), no JS/SyntaxError, no 'PRODUCTS has already been declared'; (6) Console clean of app-level JS errors — only pre-existing 401 network errors and SVG-path warnings.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "HomeProductWizardSection bonus badge",
+        "issue": "Bonus badge copy contradicts the product: Tagesgeld and Flexgeld cards render the BBVA summary text 'Willkommenspraemie auf das Festgeld ... garantierter Zinssatz ueber die gesamte Laufzeit' — i.e. Festgeld wording on Tagesgeld/Flexgeld cards. Mapping is technically per spec (bbva-bank-deutschland), but the rendered copy is product-inconsistent and misleading.",
+        "selector": "[data-testid=\"home-product-wizard-bonus-tagesgeld\"], [data-testid=\"home-product-wizard-bonus-flexgeld\"]",
+        "priority": "HIGH"
+      },
+      {
+        "component": "HomeProductWizardSection bonus badge",
+        "issue": "BANK_BONUS_COPY.summary is ~300 chars and rendered untruncated at 11.5px inside a narrow card column -> badge block becomes taller than the whole card content, breaks card height rhythm on desktop 3-col grid (see screenshot: Tagesgeld/Flexgeld cards visually 2x higher). Recommend a short badge line (e.g. bonus.short/headline) or line-clamp-2.",
+        "selector": "[data-testid=\"home-product-wizard-grid\"]",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "ProductInquiryStickyCta (mobile)",
+        "issue": "On 390x844 the sticky pill (and its popup) overlaps the 'Aktien im Fokus' interstitial card body/CTA. The nearForm avoidance guard only observes #home-newsletter, not the interstitial. Interstitial close button stays reachable, so not blocking.",
+        "selector": "[data-testid=\"product-inquiry-sticky-cta\"]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Analytics payload for product_inquiry_open / product_inquiry_select",
+        "issue": "Event NAMES fire correctly, but the props are silently dropped: trackInvestmentEvent() whitelists only ['topic','topic_slug','placement','route','source_page','article_slug','position'], so {source:'inline_home'|'sticky_popup'} and {product:<key>} never reach gtag/dataLayer. Observed dataLayer payloads: {\"event\":\"product_inquiry_open\"} and {\"event\":\"product_inquiry_select\"} with no dimensions -> source/product attribution is impossible.",
+        "affected_selectors": ["[data-testid=\"home-product-wizard\"]", "[data-testid^=\"product-inquiry-option-\"]"]
+      },
+      {
+        "flow": "Live market data (pre-existing, out of scope of session 73)",
+        "issue": "Repeated 401 responses: /api/auth/me (anon, expected) and https://<supabase>/functions/v1/stock-history (401, ~15x per pageload). Consequence: 4x console error 'Error: <path> attribute d: Expected moveto path command (M or m), \"undefined\"' — sparkline components (MiniSparkline.jsx:57 / InterestRateSparkline.jsx:65) render d=\"undefined\" when the history payload is empty. Needs a guard for empty data.",
+        "affected_selectors": ["[data-testid^=\"sparkline-\"]"]
+      }
+    ],
+    "design_issues": [
+      { "screen": "Homepage product wizard section (desktop 1920x800)", "issues": ["Bonus badge text length makes Tagesgeld/Flexgeld cards significantly taller than sibling cards -> uneven grid rows"] },
+      { "screen": "Sticky CTA popup (desktop 1920x800 / mobile)", "issues": ["Popup (max-h 78vh) top area with 'Produktwahl' header sits under/near the fixed site header on short viewports; the 6th option (Flexgeld) requires in-popup scrolling"] }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Add 'source' and 'product' to the allowed props whitelist in /app/frontend/src/lib/investmentAnalytics.js so product_inquiry_open/select carry attribution",
+    "Fix bonus badge copy for tagesgeld/flexgeld — BBVA summary talks about Festgeld; add product-specific short copy or truncate",
+    "Guard sparkline path generation against empty/failed stock-history data (avoid d=\"undefined\" console errors); investigate supabase functions/v1/stock-history 401"
+  ],
+  "critical_code_review_comments": [
+    "investmentAnalytics.trackInvestmentEvent drops any prop not in its hardcoded whitelist — every new event dimension (source/product) silently disappears; make the whitelist per-event or extend it.",
+    "HomeProductWizardSection renders BANK_BONUS_COPY[...].summary (full paragraph) directly into a card badge; add a dedicated short field in bankBonusTexts.js for badge usage.",
+    "ProductInquiryStickyCta calls getProductCatalog() at module scope (line 36) while HomeProductWizardSection calls it per render — fine functionally, but inconsistent; consider memoizing a single frozen catalog export."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "not tested (frontend-only request)", "frontend": "100% of the 6 requested feature checks passed" },
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Consent gate: select_option DE on [data-testid=visitor-residence], 'privatperson' on [data-testid=visitor-role], then click [data-testid=visitor-accept-btn]. Impression tracking is once-per-session via sessionStorage key 'product_wizard_inline_open_fired'; to retest, use a fresh context or clear sessionStorage. Analytics can be asserted by wrapping window.dataLayer.push. Known non-blockers: supabase stock-history 401 + resulting SVG path 'undefined' errors, Supabase constraint for fonds/tagesgeld/festgeld/flexgeld wizard submit (external).",
+  "rca_of_the_issue": "No regression found for the refactoring. Root cause of the missing analytics dimensions: investmentAnalytics.js sanitizes props against a fixed key whitelist that excludes 'source' and 'product', so the events fire without payload. Root cause of the misleading badge: PRODUCT_BONUS_SOURCE maps tagesgeld/flexgeld to bbva-bank-deutschland whose BANK_BONUS_COPY.summary is Festgeld-specific."
+}

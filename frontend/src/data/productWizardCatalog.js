@@ -29,16 +29,17 @@ export const WIZARD_TRUST_POINTS = [
 
 /**
  * Mapping Produkt → aktuelle Beispielaktion einer Partnerbank.
- * Nur Produkte mit tatsächlich aktiver Aktion sind hier gesetzt; für alle
- * anderen Produkte wird KEIN Badge angezeigt.
- * Bonus-Copy stammt aus bankBonusTexts.js (bestehende Quelle) — hier wird nur
- * der Slug gemappt, der eigentliche Text ist dort gepflegt.
+ * WICHTIG: Nur setzen, wenn eine echte Aktion für DIESEN Produkttyp
+ * verifiziert existiert (nicht nur ein Bank-Slug irgendeines Produkts).
+ * BBVA-Bonus bezieht sich auf Festgeld — daher kein Mapping auf
+ * Tagesgeld/Flexgeld (würde produktfremde Kopie rendern).
+ * Neue Slugs erst hinzufügen, wenn eine echte produktkonforme Aktion
+ * existiert UND ein passender, kurzer Badge-Text in bankBonusTexts.js
+ * gepflegt ist.
  */
 export const PRODUCT_BONUS_SOURCE = {
-  tagesgeld: { bankSlug: 'bbva-bank-deutschland', label: 'Aktueller Vorteil' },
-  festgeld:  { bankSlug: 'j-p-morgan-sachsen',    label: 'Mögliche Aktion'  },
-  flexgeld:  { bankSlug: 'bbva-bank-deutschland', label: 'Mögliche Aktion'  },
-  // aktien, anleihen, fonds: keine garantierte Aktion → kein Badge
+  // aktien, anleihen, fonds, tagesgeld, festgeld, flexgeld: keine
+  // verifizierte produktspezifische Aktion → kein Badge (Session 73)
 };
 
 /** Enrichte Card-Metadaten mit kicker/title/benefit. */

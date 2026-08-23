@@ -21,7 +21,7 @@ export function trackInvestmentEvent(name, props = {}) {
   try {
     // Keine PII in Analytics — Payload gezielt einschränken.
     const safe = {};
-    ['topic', 'topic_slug', 'placement', 'route', 'source_page', 'article_slug', 'position'].forEach((k) => {
+    ['topic', 'topic_slug', 'placement', 'route', 'source_page', 'article_slug', 'position', 'source', 'product'].forEach((k) => {
       if (props[k] != null) safe[k] = String(props[k]).slice(0, 120);
     });
     if (typeof window.gtag === 'function') {
