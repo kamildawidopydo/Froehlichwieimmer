@@ -1,0 +1,44 @@
+{
+  "summary": "Frontend-only verification of Session 49 (Investment Knowledge Network / RelatedKnowledge component). Tested /handeln, /fonds-grundlagen and all 3 topic pages (aktien, anleihen, dividenden) for the new curated 'Wissen vertiefen' sections, item order/hrefs/types/CTAs, click navigation, mobile 390x844 stacking, keyboard a11y, terminology consistency, regressions (ABC search/filter, asset cross-links, hub CTAs, TopicWissenBlock, topic form/why/risks sections, news TopicCrossLinkBox), route regression (/, /wissen, /news, /themen) and admin login + /dashboard/handeln. All Session-49 acceptance criteria PASSED. No new console errors, no 404s, no React key/router warnings.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/ui_it14", "/app/test_reports/ui_it14b", "/app/test_reports/ui_it14c", "/app/test_reports/ui_it14f", "/app/test_reports/ui_it14i"],
+  "verified_pass": [
+    "/handeln: data-testid='handeln-related' present between 'Häufige Fehler' section and dark CTA (visually confirmed in screenshot). Eyebrow 'WEITERLESEN' (uppercase via CSS), H2 'Wissen vertiefen'. Exactly 3 items: item-0 /themen/aktien (THEMA), item-1 /fonds-grundlagen (GRUNDLAGEN), item-2 /themen/anleihen (THEMA) — each with type label, title (h3 inside link), description and text-link CTA (no buttons).",
+    "Click navigation from /handeln related items → /themen/aktien, /fonds-grundlagen, /themen/anleihen all OK (desktop + mobile).",
+    "/handeln regression: abc-search-input filters (58 → 6 results for 'Divid'), abc-search-clear resets to 58, abc-letter-all works, 4 hub-asset-link-* present, hub-cta-contact/themen/wissen visible.",
+    "/fonds-grundlagen: 'fonds-grundlagen-related' with 3 items in order /handeln (HUB, ZUM WISSENSHUB), /themen/aktien, /themen/anleihen; navigation on all 3 verified. Existing content (Was ist ein Fonds, Wie funktioniert, Chancen, Risiken) still renders.",
+    "topic-aktien-related: 2 items /handeln (HUB) + /themen/dividenden (THEMA); topic-anleihen-related: /handeln + /fonds-grundlagen; topic-dividenden-related: /themen/aktien + /handeln. Old data-testid='topic-related-section' fully removed on all 3 pages.",
+    "TopicWissenBlock (topic-wissen-block) still rendered on /themen/aktien and positioned ABOVE the RelatedKnowledge section (DOM order verified). topic-form-section, topic-why-section, topic-risks-section intact on all 3 topic pages.",
+    "Terminology uniform: eyebrow 'WEITERLESEN' + H2 'Wissen vertiefen' on all 5 sections; CTAs only 'ZUM WISSENSHUB' / 'GRUNDLAGEN ANSEHEN' / 'THEMA VERSTEHEN'.",
+    "Mobile 390x844 (/handeln, /fonds-grundlagen, /themen/aktien): items stack vertically, no horizontal overflow (scrollWidth 390), no carousel/overflow-x container, all items visible and clickable.",
+    "Accessibility: each item is a real <a> (tagName 'A'), reachable by Tab in order 0→1→2, :focus-visible matches with visible focus ring (outline 2px + ring box-shadow, screenshot confirms), Enter activates navigation, link text includes h3 title (not arrow-only).",
+    "News regression: news article /news/nachrichten/dax-beendet-woche... shows TopicCrossLinkBox (data-testid='news-topic-crosslink', 'Aktien & Kapitalmärkte verstehen').",
+    "Routes /, /wissen, /news, /themen return 200 with correct H1s. Admin login (admin@kapitalmitte.com) works, redirects to /admin, /dashboard/handeln renders Markt view."
+  ],
+  "not_testable": [
+    "KnowledgeCrossLinkBox → /fonds-grundlagen on a fonds/etf news article could NOT be verified: /api/news/nachrichten?category=fonds-etfs returns 0 items and no article in the DB has category fonds-etfs/fonds/etf, so the conditional block in NachrichtenDetailPage.jsx (line 223) never renders. Data gap, not a code defect."
+  ],
+  "pre_existing_observations": [
+    "TopicWissenBlock renders nothing on /themen/anleihen and /themen/dividenden because those topics have no related_news_slugs (data-driven, not caused by this change).",
+    "/dashboard/handeln shows banner 'Einige Dashboard-Daten konnten nicht geladen werden' — legacy Supabase queries fail with 'invalid input syntax for type uuid: 6a82fe...' (FastAPI Mongo ObjectId passed to Supabase uuid columns). Pre-existing, unrelated to Session 49.",
+    "Console on /login, /anmelden, /themen: 'SVG <path> attribute d: Expected moveto path command, \"undefined\"' — an icon receives an undefined path (likely a dynamic lucide icon lookup). Pre-existing, cosmetic.",
+    "Every page logs one 401 from the auth /me probe for anonymous visitors — expected/pre-existing."
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "RelatedKnowledge.jsx is clean: slice(0,3) cap, stable keys (href+index), semantic <ul>/<li>/<Link>, aria-labelledby wired to the generated heading id. No issues found.",
+    "Optional: seed at least one fonds-etfs news article so the KnowledgeCrossLinkBox → /fonds-grundlagen path becomes testable/visible to users."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100% (13/13 requested checks passed; 1 check blocked by missing data)"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Session 49 RelatedKnowledge network fully verified (iteration_14). Visitor gate bypass works ONLY if you register add_init_script and then page.goto() again — the tool's initial navigation happens before init scripts apply. Login route is /login (not /anmelden), testid login-submit-btn, creds admin@kapitalmitte.com/admin123. Untested area remaining: KnowledgeCrossLinkBox on fonds-etfs news articles (no such article in DB).",
+  "rca_of_the_issue": "No defects found in the Session 49 changes."
+}

@@ -41,6 +41,7 @@ const Wissen = lazy(() => import('@/pages/Wissen'));
 const WissenArtikel = lazy(() => import('@/pages/WissenArtikel'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const InvestmentTopicPage = lazy(() => import('@/pages/InvestmentTopicPage'));
+const HandelnHub = lazy(() => import('@/pages/HandelnHub'));
 const InvestmentTopicsOverviewPage = lazy(() => import('@/pages/InvestmentTopicsOverviewPage'));
 const AdminInvestmentTopics = lazy(() => import('@/pages/admin/AdminInvestmentTopics'));
 const AdminInvestmentTopicEdit = lazy(() => import('@/pages/admin/AdminInvestmentTopicEdit'));
@@ -718,14 +719,7 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
-                  <Route
-                    path="/handeln"
-                    element={
-                      <ProtectedRoute>
-                        <Navigate to="/dashboard/handeln" replace />
-                      </ProtectedRoute>
-                    }
-                  />
+                  <Route path="/handeln" element={<HandelnHub />} />
                   <Route
                     path="/aktien/:symbol"
                     element={

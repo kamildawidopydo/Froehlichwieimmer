@@ -1,5 +1,49 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 49 (Feb 24, 2026) — Investment-Wissensnetzwerk (RelatedKnowledge)
+
+**Ziel**
+Bestehende Investment-Inhalte (/handeln, /fonds-grundlagen, /themen/aktien|anleihen|dividenden, News) zu einem konsistenten, redaktionell kuratierten Wissensnetz verbinden — Qualität vor Quantität, max 3 Empfehlungen pro Seite, einheitliche Terminologie.
+
+**Neu erstellt (2 Dateien)**
+- `frontend/src/components/knowledge/RelatedKnowledge.jsx` — wiederverwendbare editorial Komponente. Max 3 Items, Text-Links (keine Sales-Buttons), semantische `<ul><li><Link>`, sichtbarer Focus-State, `aria-labelledby`. Design: kleine Kategoriebezeichnung + H3-Titel + 1-Satz-Beschreibung + dezenter Pfeil.
+- `frontend/src/data/knowledgeGraph.js` — statischer Curator. Keine Recommendation-Engine.
+  - `handeln` → [Aktien, Fonds, Anleihen]
+  - `fonds-grundlagen` → [Hub, Aktien, Anleihen]
+  - `themen/aktien` → [Hub, Dividenden]
+  - `themen/anleihen` → [Hub, Fonds]
+  - `themen/dividenden` → [Aktien, Hub]
+
+**Geänderte Dateien (3)**
+- `frontend/src/pages/HandelnHub.jsx` — RelatedKnowledge zwischen „Häufige Fehler" und finalem CTA eingefügt (3 Items).
+- `frontend/src/pages/FondsGrundlagen.js` — RelatedKnowledge am Ende (3 Items).
+- `frontend/src/pages/InvestmentTopicPage.jsx` — dynamische „Weitere Investmentthemen"-Section durch kuratierte RelatedKnowledge ersetzt (2 Items pro Thema). Unused `InvestmentTopicCard`-Import & `relatedTopics`-State entfernt.
+
+**Bewusst NICHT geändert**
+- Anlageklassen-Cards auf /handeln (inhaltlich reichhaltig, kein Redundanz-Ersatz nötig)
+- TopicWissenBlock (Related News — anderer Domain: Nachrichten, nicht Wissensnav)
+- TopicCrossLinkBox / KnowledgeCrossLinkBox in News-Detailseiten
+- Investment-Funnels, ABC-Daten/Suche, Orderarten, Admin, News-Synthesizer, Visitor-Gate
+- Automatische Keyword-Verlinkung im Fließtext (bewusst nicht implementiert)
+
+**Einheitliche Terminologie**
+- Section-Header: Eyebrow „Weiterlesen" + H2 „Wissen vertiefen"
+- CTAs nur: „Zum Wissenshub →" / „Grundlagen ansehen →" / „Thema verstehen →"
+
+**Verifiziert (iteration_14 — 100 % Pass, 13/13 Checks)**
+- Alle 5 RelatedKnowledge-Sections rendern mit korrekten Items, Reihenfolge & Typ-Labels
+- Klick-Navigation auf allen Items funktioniert
+- TopicWissenBlock bleibt DOM-order oberhalb RelatedKnowledge (auf Themen-Pages)
+- Mobile 390×844: vertikal gestapelt, keine Overflows
+- Accessibility: Tab-Reihenfolge korrekt, echte `<a>`-Tags, Focus-Ring sichtbar
+- Regression: ABC-Suche/Filter/Accordion, Anlageklassen-Cards, Topic-Formulare, News-Cross-Links unverändert
+- Console: keine neuen React-Errors, 404s oder Router-Warnings
+
+**Nicht testbar (Data-Gap, kein Defekt)**
+- KnowledgeCrossLinkBox auf `/news/kategorie/fonds-etfs`-Artikeln → kein Artikel in DB mit dieser Kategorie. Optional: Seed anlegen.
+
+## Session 48 (Feb 24, 2026) — /handeln Investment-Wissenshub + Börsen-ABC
+
 ## Original Problem Statement
 Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und auf FastAPI + MongoDB migrieren. Frontend behalten, Backend (Supabase + Cloudflare Workers) neu aufbauen. Massive Rebranding auf **„Fröhlich Vermögensberatung GmbH"** mit editorial Private-Banking-Design (kein Rounded-SaaS, Playfair Serif, Dunkelblau/Gold), Legal-Domain: `kapital-direkt24.de`.
 
@@ -19,6 +63,17 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - `frontend/src/components/CommandPalette.js`: `Fonds-Grundlagen` von `NAV_ITEMS_PRODUCTS` in `NAV_ITEMS_INFO` verschoben, Keywords um `wissen` und `etf` erweitert für bessere Suche
 - `frontend/src/pages/FondsGrundlagen.js`: Breadcrumb erweitert auf `Home › Wissen › Fonds-Grundlagen` (Wissen-Link zeigt auf existierende Route `/wissen`)
 
+## Session 48 Content (Original Problem Statement + Handeln Hub)
+
+**Umsetzung**
+- Neue Datei `frontend/src/data/boersenAbc.js` — 58 Glossar-Begriffe kategorisiert (Grundlagen, Anlageklassen, Orderarten, Kennzahlen, Kosten, Risiko, Markt).
+- Neue Seite `frontend/src/pages/HandelnHub.jsx` — öffentlicher Wissens-Hub. Hero + Sticky Sub-Nav + 7 Sektionen (Grundlagen, Anlageklassen, Orderarten, Kosten & Steuern, Risiken, Börsen-ABC mit Live-Suche/A-Z-Filter/Accordion, Häufige Fehler) + finaler CTA.
+- `frontend/src/App.js` — `/handeln`-Route entkoppelt vom `ProtectedRoute`-Redirect. `/dashboard/handeln` (authentifizierte Trading-Seite) bleibt unverändert.
+
+**Verifiziert (iteration_13 — 100 % Pass)**
+- Public Access (kein Auth-Redirect), Hero, 7+7 Anker, 4 Anlageklassen-Links, 5 Order-Typen, 5 Cost-Cards, 6 Risk-Points, 6 Mistakes, ABC-Suche (58/58), A-Z-Filter, Accordion, Empty-State, Reset, 3 Bottom-CTAs, Mobile 390×844, Regression aller anderen Routes.
+
+**Original Problem Statement**
 **Verifizierte Tests**
 - **Desktop**: Hover „Wissen" → `data-testid="nav-fonds-grundlagen"` sichtbar; Hover „Angebote" → Eintrag **nicht mehr** vorhanden; Klick öffnet `/fonds-grundlagen` mit H1 „Fonds verstehen — verständlich erklärt"; Breadcrumb-Wissen-Link vorhanden
 - **Mobile (390×844)**: Hamburger-Menü → Wissen-Gruppe → Fonds-Grundlagen sichtbar; Klick öffnet Seite; `data-testid="fonds-grundlagen-page"` gerendert

@@ -3,6 +3,8 @@ import { ArrowUpRight } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import FondsGrundlagenInfographic from '@/components/fondsGrundlagen/FondsGrundlagenInfographic';
+import RelatedKnowledge from '@/components/knowledge/RelatedKnowledge';
+import { getRelatedKnowledge } from '@/data/knowledgeGraph';
 
 const Section = ({ eyebrow, headline, children, alt = false, id }) => (
   <section
@@ -234,6 +236,13 @@ const FondsGrundlagen = () => (
         </p>
       </div>
     </section>
+
+    {/* Wissen vertiefen — kuratiert, max 3 Ziele */}
+    <RelatedKnowledge
+      items={getRelatedKnowledge('fonds-grundlagen')}
+      tone="muted"
+      testId="fonds-grundlagen-related"
+    />
   </div>
 );
 

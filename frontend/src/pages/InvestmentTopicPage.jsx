@@ -9,9 +9,10 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { submitInvestmentLead, fetchActiveInvestmentTopics } from '@/services/investmentTopics';
 import { trackInvestmentEvent, InvestmentEvents } from '@/lib/investmentAnalytics';
-import InvestmentTopicCard from '@/components/investment/InvestmentTopicCard';
 import InvestmentBreadcrumbs from '@/components/investment/InvestmentBreadcrumbs';
 import TopicWissenBlock from '@/components/investment/TopicWissenBlock';
+import RelatedKnowledge from '@/components/knowledge/RelatedKnowledge';
+import { getRelatedKnowledge } from '@/data/knowledgeGraph';
 
 // ---------------------------------------------------------------------------
 // Statische Inhaltsvorlagen — pro Themen-Slug. Backend liefert nur Metadaten
@@ -261,7 +262,6 @@ const InvestmentTopicPage = () => {
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', consent: false });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [relatedTopics, setRelatedTopics] = useState([]);
   const [relatedNewsSlugs, setRelatedNewsSlugs] = useState([]);
   const formRef = useRef(null);
   const learnMoreRef = useRef(null);
@@ -282,10 +282,8 @@ const InvestmentTopicPage = () => {
         if (!alive) return;
         const current = (items || []).find((t) => t.slug === slug);
         setRelatedNewsSlugs(current?.related_news_slugs || []);
-        const others = (items || []).filter((t) => t.slug !== slug).slice(0, 3);
-        setRelatedTopics(others);
       })
-      .catch(() => { if (alive) { setRelatedTopics([]); setRelatedNewsSlugs([]); } });
+      .catch(() => { if (alive) setRelatedNewsSlugs([]); });
     return () => { alive = false; };
   }, [slug]);
 
@@ -666,31 +664,14 @@ const InvestmentTopicPage = () => {
         </div>
       </section>
 
-      {/* RELATED TOPICS — nur, wenn mind. 1 weiteres Thema aktiv */}
-      {relatedTopics.length > 0 && (
-        <section className="border-t border-bank-border bg-bank-bg" data-testid="topic-related-section">
-          <div className="mx-auto max-w-6xl px-6 py-16 sm:px-10">
-            <Eyebrow>Themenbereich</Eyebrow>
-            <h2 className="mt-3 font-serif text-[26px] leading-tight text-bank-text sm:text-[32px]">
-              Weitere Investmentthemen
-            </h2>
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {relatedTopics.map((t, idx) => (
-                <InvestmentTopicCard key={t.slug} topic={{ ...t, short_title: (t.slug || '').charAt(0).toUpperCase() + (t.slug || '').slice(1) }} source="related" index={idx} />
-              ))}
-            </div>
-            <div className="mt-8">
-              <Link
-                to="/themen"
-                className="inline-flex items-center gap-1.5 border-b border-bank-primary pb-0.5 text-[12px] font-medium uppercase tracking-[0.16em] text-bank-primary hover:text-bank-primary/80"
-              >
-                Alle Investmentthemen
-                <ArrowUpRight size={13} strokeWidth={1.7} />
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* RELATED KNOWLEDGE — kuratiert, konsistent, max 3 Ziele.
+          Ersetzt die frühere dynamische "Weitere Investmentthemen"-Section
+          durch ein einheitliches Wissens-Netzwerk (Hub + verwandtes Thema). */}
+      <RelatedKnowledge
+        items={getRelatedKnowledge(`themen/${slug}`)}
+        tone="muted"
+        testId={`topic-${slug}-related`}
+      />
     </div>
   );
 };

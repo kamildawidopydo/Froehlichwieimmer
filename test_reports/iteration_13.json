@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend-only testing of the new public /handeln Investment Knowledge Hub (HandelnHub.jsx) plus route regressions. Verified public access (no auth redirect), hero, 7 sticky sub-nav + 7 hero-jump anchors, 4 asset-class cross-links, 5 order types, 5 cost cards, 6 risk points, 6 mistake cards, Boersen-ABC (58 terms, live search, A-Z filter, accordion, empty state, reset), 3 bottom CTAs, mobile 390x844 responsiveness, and regressions for /dashboard/handeln (auth-protected trading page), /themen/*, /fonds-grundlagen, /wissen, /news, /. Result: all functional acceptance criteria pass; only minor/cosmetic observations.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "/dashboard/handeln (authenticated regression)", "issue": "Page loads and the market table renders (482 von 482 Aktien) but a red banner 'Einige Dashboard-Daten konnten nicht geladen werden' is shown on load - some dashboard aggregate call fails. Pre-existing, unrelated to the new hub, but should be checked.", "affected_selectors": ["table"]}
+    ],
+    "design_issues": [
+      {"screen": "/handeln mobile 390x844", "issues": ["Global sticky info card 'Aktien im Fokus' (bottom right) covers ~40% of the mobile viewport height and stays while scrolling, obscuring ABC accordion content and bottom CTAs until dismissed. Consider a compact/collapsed variant below sm breakpoint."]},
+      {"screen": "/handeln (all viewports)", "issues": ["Sticky sub-nav has no active-section highlighting (no scroll-spy), so on a very long page the user gets no orientation feedback. Cosmetic/nice-to-have."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: investigate the '/dashboard/handeln' dashboard-data error banner (pre-existing).",
+    "Optional: make the global 'Aktien im Fokus' info card compact on mobile so it does not cover 40% of the /handeln viewport.",
+    "Note for spec alignment: searching 'ETF' returns 3 hits (ETF, Index, Xetra) and 'Dividende' returns 5 hits because the search also matches the long definition text. This is reasonable behaviour but differs from the expected '1 hit for ETF' in the test request - decide whether to weight/limit matching to term+short."
+  ],
+  "critical_code_review_comments": [
+    "HandelnHub.jsx is ~750 lines with all content constants inline; consider moving ASSET_CLASSES/ORDER_TYPES/COSTS/RISK_POINTS/COMMON_MISTAKES into /data like boersenAbc.js to keep the page component under ~300 lines.",
+    "The auto-open effect `useEffect(..., [query, filteredTerms])` recomputes openTerms on every filteredTerms identity change; with activeLetter changes while a query is active this re-expands all matches. Works, but gating on query only (and computing matches inside) would avoid redundant state writes.",
+    "scrollToId uses a hard-coded 96px offset for the sticky sub-nav; on mobile the sub-nav height differs slightly - consider measuring the nav element height instead."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested", "frontend": "100% of tested flows (0 functional failures)"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@kapitalmitte.com / admin123 (from /app/memory/test_credentials.md) - login works, redirects to /admin",
+  "context_for_next_testing_agent": "IMPORTANT: The visitor welcome gate (data-testid=visitor-welcome-gate) is a full-screen modal with z-[10000] that blocks ALL clicks and whose 'Akzeptieren' button stays disabled until a role is picked. The localStorage keys are NOT 'visitor_welcome_dismissed'/'cookie_consent' - use kapitalmitte_visitor_profile = {\"residence\":\"DE\",\"role\":\"private\",\"isUsPerson\":false} and kapitalmitte_cookie_consent = {\"necessary\":true,\"analytics\":true,\"marketing\":true}, then reload. Also note: smooth-scroll to the last section (#fehler) needs >2s wait before asserting getBoundingClientRect().top; with 900ms the assertion falsely fails. Verified data: abc-result-count=58, letter A=4 terms, disabled letters = J, Q, U. Screenshots in /app/test_reports/ui_it13b|c|d|e.",
+  "rca_of_the_issue": "No functional defects found. Two earlier apparent failures were test-environment artifacts: (1) blocked clicks caused by the visitor welcome gate (wrong localStorage bypass keys documented in the request), (2) 'fehler' anchor scroll failing due to smooth-scroll duration exceeding the 900ms wait - both resolved with correct bypass keys and longer waits."
+}
