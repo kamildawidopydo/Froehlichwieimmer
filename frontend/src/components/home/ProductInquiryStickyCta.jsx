@@ -68,59 +68,66 @@ const PRODUCT_CATALOG = getProductCatalog();
 const WIZARD_BENEFITS = WIZARD_TRUST_POINTS.slice(0, 3);
 
 /**
- * CompactPill — großes, banktypisches Sticky-CTA-Element.
+ * CompactPill — banktypisches Sticky-CTA-Element.
  * Wird sowohl im Restore-State als auch als Mobile-CTA verwendet.
+ * `menuOpen` (nur mobile relevant): CTA optisch kompakter, Shadow reduziert,
+ *   damit das darüberliegende Produktmenü klar priorisiert wird.
  * Attention-Pulse ist optional (`data-pulse`), respektiert reduced-motion.
  */
-function CompactPill({ onClick, className, testId, ariaLabel, fixed = true, pulse = false }) {
+function CompactPill({ onClick, className, testId, ariaLabel, fixed = true, pulse = false, menuOpen = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        'group relative inline-flex w-[min(21rem,calc(100vw-2rem))] items-center gap-4 rounded-2xl border-2 border-bank-primary/25 bg-white px-4 py-4 text-left',
-        'min-h-[5.5rem] sm:min-h-[6rem] sm:w-[22rem] sm:gap-4 sm:px-5',
-        'shadow-[0_20px_50px_-18px_rgb(9_33_66/0.30)]',
+        'group relative inline-flex w-[min(20rem,calc(100vw-2rem))] items-center gap-3 rounded-2xl border-2 border-bank-primary/25 bg-white px-3.5 py-3 text-left',
+        'min-h-[5rem] sm:min-h-[6rem] sm:w-[22rem] sm:gap-4 sm:px-5 sm:py-4',
+        // Menu-open: kompakter + weniger Schatten, damit Popup dominiert
+        menuOpen
+          ? 'shadow-[0_10px_28px_-14px_rgb(9_33_66/0.22)] border-bank-primary/20 sm:shadow-[0_20px_50px_-18px_rgb(9_33_66/0.30)]'
+          : 'shadow-[0_16px_40px_-16px_rgb(9_33_66/0.26)] sm:shadow-[0_20px_50px_-18px_rgb(9_33_66/0.30)]',
         'transition-all duration-200 ease-out',
         'hover:-translate-y-0.5 hover:scale-[1.02] hover:border-bank-primary/55 hover:bg-bank-primary/[0.04] hover:shadow-[0_28px_64px_-18px_rgb(9_33_66/0.38)]',
         'active:scale-[1.045] active:bg-bank-primary/[0.07] active:border-bank-primary/65',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2',
         'dark:border-bank-border dark:bg-bank-surface-elev',
-        pulse && 'sticky-cta-pulse',
+        pulse && !menuOpen && 'sticky-cta-pulse',
         fixed && ['fixed z-[90]', BOTTOM, 'right-4 sm:right-5'],
         className,
       )}
       data-testid={testId}
-      data-pulse={pulse ? 'true' : 'false'}
+      data-pulse={pulse && !menuOpen ? 'true' : 'false'}
+      data-menu-open={menuOpen ? 'true' : 'false'}
       aria-label={ariaLabel}
     >
       <span
         aria-hidden
         className={cn(
-          'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
           'shadow-[0_6px_18px_-8px_rgb(76_124_186/0.55)] transition-colors',
           'group-hover:bg-[rgb(var(--bank-primary)/0.16)] group-hover:border-bank-primary/35',
           'sm:h-16 sm:w-16',
         )}
       >
-        <MessageCircleQuestion className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={LUCIDE_STROKE} />
+        <MessageCircleQuestion className="h-[1.2rem] w-[1.2rem] sm:h-7 sm:w-7" strokeWidth={LUCIDE_STROKE} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.20em] text-bank-primary sm:text-[11px]">
+        <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.18em] text-bank-primary sm:text-[11px] sm:tracking-[0.20em]">
           Kurzfragebogen
         </span>
-        <span className="text-[16px] font-semibold leading-[1.15] tracking-tight text-bank-ink sm:text-[18px]">
+        <span className="text-[15px] font-semibold leading-[1.15] tracking-tight text-bank-ink sm:text-[18px]">
           Fragen beantworten
         </span>
-        <span className="text-[11.5px] leading-snug text-bank-text-muted sm:text-[12.5px]">
-          In wenigen Minuten zur persönlichen Empfehlung
+        <span className="block w-full truncate whitespace-nowrap text-[11px] leading-snug text-bank-text-muted sm:whitespace-normal sm:text-[12.5px]">
+          <span className="sm:hidden">In wenigen Minuten zur Empfehlung</span>
+          <span className="hidden sm:inline">In wenigen Minuten zur persönlichen Empfehlung</span>
         </span>
       </span>
       <ArrowRight
         aria-hidden
         strokeWidth={LUCIDE_STROKE}
         className={cn(
-          'ml-1 h-4 w-4 shrink-0 text-bank-text-muted/60 transition-all sm:h-[1.05rem] sm:w-[1.05rem]',
+          'ml-0.5 h-4 w-4 shrink-0 text-bank-text-muted/60 transition-all sm:ml-1 sm:h-[1.05rem] sm:w-[1.05rem]',
           'group-hover:translate-x-0.5 group-hover:text-bank-primary',
         )}
       />
@@ -141,24 +148,27 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
           transition={{ duration: prefersReduced ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
           className={className}
         >
-          <div className="max-h-[min(78vh,640px)] overflow-y-auto overscroll-contain px-3.5 py-3.5 [scrollbar-width:thin] sm:px-4 sm:py-4">
+          <div className="max-h-[min(78vh,640px)] overflow-y-auto overscroll-contain px-3 py-3 [scrollbar-width:thin] sm:px-4 sm:py-4">
             {/* Header — klärt Ziel & Nutzen in Sekunden */}
-            <div className="mb-3 border-b border-bank-border pb-3">
+            <div className="mb-2.5 border-b border-bank-border pb-2.5 sm:mb-3 sm:pb-3">
               <p className="font-mono text-[9.5px] font-medium uppercase tracking-[0.22em] text-bank-primary/80">
                 Produktwahl
               </p>
-              <h3 className="mt-1.5 font-display text-[15.5px] font-light leading-snug tracking-tight text-bank-ink sm:text-[16.5px]">
+              <h3 className="mt-1 font-display text-[14.5px] font-light leading-snug tracking-tight text-bank-ink sm:mt-1.5 sm:text-[16.5px]">
                 Finden Sie die passende Geldanlage für Ihre Ziele.
               </h3>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-bank-text-muted">
-                Wählen Sie direkt ein Produkt — oder beantworten Sie wenige Fragen und
-                erhalten Sie eine persönliche Empfehlung mit möglichen Vorteilen und
-                passenden Angeboten.
+              <p className="mt-1 text-[11.5px] leading-snug text-bank-text-muted sm:mt-1.5 sm:text-[12px] sm:leading-relaxed">
+                <span className="sm:hidden">Wählen Sie ein Produkt — oder beantworten Sie wenige Fragen.</span>
+                <span className="hidden sm:inline">
+                  Wählen Sie direkt ein Produkt — oder beantworten Sie wenige Fragen und
+                  erhalten Sie eine persönliche Empfehlung mit möglichen Vorteilen und
+                  passenden Angeboten.
+                </span>
               </p>
             </div>
 
             {/* Rich Product Cards */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1 sm:gap-1.5">
               {PRODUCT_CATALOG.map((p) => (
                 <button
                   key={p.key}
@@ -167,22 +177,22 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
                   data-testid={`product-inquiry-option-${p.key}`}
                   onClick={() => onPick(p.key)}
                   className={cn(
-                    'group flex w-full flex-col gap-0.5 rounded-lg border border-transparent px-3 py-2.5 text-left transition-all',
+                    'group flex w-full flex-col gap-0 rounded-lg border border-transparent px-2.5 py-2 text-left transition-all sm:gap-0.5 sm:px-3 sm:py-2.5',
                     'hover:border-bank-accent/30 hover:bg-bank-surface',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/30',
                   )}
                 >
-                  <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.16em] text-bank-primary/80">
+                  <span className="font-mono text-[9px] font-medium uppercase tracking-[0.16em] text-bank-primary/80 sm:text-[9.5px]">
                     {p.kicker}
                   </span>
-                  <span className="text-[13.5px] font-semibold leading-snug text-bank-ink transition-colors group-hover:text-bank-primary">
+                  <span className="text-[13px] font-semibold leading-snug text-bank-ink transition-colors group-hover:text-bank-primary sm:text-[13.5px]">
                     {p.title}
                   </span>
-                  <span className="text-[11.5px] leading-snug text-bank-text-muted">
+                  <span className="text-[11px] leading-snug text-bank-text-muted sm:text-[11.5px]">
                     {p.benefit}
                   </span>
                   {p.bonusSource && BANK_BONUS_COPY[p.bonusSource.bankSlug]?.summary ? (
-                    <span className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.14em] text-bank-primary/80">
+                    <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-bank-primary/80 sm:mt-1 sm:text-[9.5px]">
                       {p.bonusSource.label}
                     </span>
                   ) : null}
@@ -190,8 +200,8 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
               ))}
             </div>
 
-            {/* Wizard-Nutzen-Chips */}
-            <div className="mt-3.5 rounded-lg border border-bank-border bg-bank-surface/60 px-3 py-3">
+            {/* Wizard-Nutzen-Chips — auf Mobile ausgeblendet, damit mehr Produkte sichtbar sind */}
+            <div className="mt-3 hidden rounded-lg border border-bank-border bg-bank-surface/60 px-3 py-3 sm:mt-3.5 sm:block">
               <p className="font-mono text-[9.5px] font-medium uppercase tracking-[0.2em] text-bank-primary/80">
                 Kurzfragebogen — Ihr Nutzen
               </p>
@@ -465,6 +475,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
             testId="product-inquiry-sticky-compact"
             ariaLabel="Fragen beantworten — Produkt wählen"
             pulse={pulse && !menuOpen}
+            menuOpen={menuOpen}
           />
         </div>
       </>,

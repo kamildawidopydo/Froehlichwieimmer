@@ -1,0 +1,51 @@
+{
+  "summary": "Session 74.5 (nur MOBILE Sticky-CTA kompakter) frontend-only auf der Preview-URL getestet. Consent-Gate jeweils via select_option(visitor-residence=DE, visitor-role=privatperson) + visitor-accept-btn geschlossen. Geprueft: Mobile 390x844 Dimensionen/Typo/Benefit-Kurzversion, Menu-Open-State (Shadow/Pulse) ohne Hover-Kontamination, Produktmenue-Dichte (alle 6 Optionen ohne Scroll sichtbar), Wizard-Nutzen-Section auf Mobile hidden, Dismiss/Restore-Regression, Responsive 320/375/390/430, Desktop-1440-Baseline, Interstitial-Hide-Regression (74.4), Attention-Pulse (74.3), ESC + Outside-Click, Wizard-Oeffnen aus Popup. ERGEBNIS: Alle geforderten Session-74.5-Aenderungen sind korrekt umgesetzt, Desktop unveraendert, keine funktionalen Regressionen. Zwei kosmetische Befunde (Pill-Hoehe 93.75px statt <=88px bei <=320px durch Umbruch der Benefit-Zeile; Overlap ueber hero-comparison-btn bei extrem kurzem Viewport 320x568).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Mobile Sticky-CTA @ 320px Breite",
+        "issues": [
+          "Pill-Hoehe 93.75px statt Zielbereich 78-88px: bei w=288px (min(20rem, 100vw-2rem)) bricht die Benefit-Zeile 'In wenigen Minuten zur Empfehlung' auf 2 Zeilen um. Bei 375/390/430 exakt 80px (korrekt). Optional: Benefit-Zeile bei <360px weiter kuerzen oder text-[10.5px]/truncate."
+        ]
+      },
+      {
+        "screen": "Mobile Sticky-CTA @ 320x568 (sehr kurzer Viewport)",
+        "issues": [
+          "Pill (y 402-496) ueberdeckt den Hero-Primary-CTA [data-testid=hero-comparison-btn] (y 433-477) - elementFromPoint auf Button-Mitte liefert product-inquiry-sticky-compact (blocked=true). Playwright-Klick gelingt nur, weil vorher gescrollt wird; ein realer Nutzer sieht den Button verdeckt. Vorbestehendes Verhalten des fixed CTA, durch die 93.75px-Hoehe leicht verschaerft. Nicht reproduzierbar bei 390x844/375/430."
+        ]
+      },
+      {
+        "screen": "Sticky-CTA Typo-Hierarchie (Mobile + Desktop)",
+        "issues": [
+          "Haupttext 'Fragen beantworten' rendert in rgb(76,124,186) - identisch zur Eyebrow-Farbe, weil --bank-ink im Light-Theme auf 76 124 186 gesetzt ist (index.css:40). Kein 74.5-Regress (theme-weit, Desktop identisch), aber die geforderte 'klarere Text-Hierarchie' entsteht dadurch nur ueber Groesse/Weight, nicht ueber Farbe; Kontrast 15px semibold auf Weiss ca. 3.3:1 (< WCAG AA 4.5:1)."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/s745_m390_closed.jpeg",
+    "/app/test_reports/s745_m390_menu.jpeg",
+    "/app/test_reports/s745_m320.jpeg",
+    "/app/test_reports/s745_m320_568.jpeg",
+    "/app/test_reports/s745_d1440.jpeg",
+    "/app/test_reports/s745_d1440_menu.jpeg"
+  ],
+  "action_items": [
+    "OPTIONAL/LOW: Benefit-Zeile bei <=320px Breite gegen Umbruch absichern (Hoehe 93.75px statt Ziel <=88px).",
+    "OPTIONAL/LOW: Bei sehr kurzen Viewports (<=568px Hoehe) Overlap der Sticky-Pill mit hero-comparison-btn pruefen (Button ist per elementFromPoint verdeckt)."
+  ],
+  "critical_code_review_comments": [
+    "Kein Blocker gefunden. Hinweis fuer kuenftige Tests: Hover-Styles der Pill (shadow 0.38/border 0.55) ueberschreiben den menuOpen-Shadow - Menu-Open-State muss ohne Mauszeiger auf der Pill (mouse.move weg / Keyboard-Enter) verifiziert werden, sonst falsch-negativ.",
+    "ProductInquiryStickyCta.jsx ist mit 599 Zeilen noch ok, naehert sich aber der Aufteilungsgrenze; CompactPill/ProductMenu koennten in eigene Dateien wandern."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "not tested (frontend-only request)", "frontend": "100% der funktionalen Checks (2 kosmetische Abweichungen)" },
+  "seed_data_creation": "keine",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 50 Detailmesswerte (Preview-URL, Consent via native selects visitor-residence/visitor-role + visitor-accept-btn): (1) MOBILE 390x844 geschlossen: pill box 320x80 (min-height 80px), padding 12px 14px, icon 44x44, shadow rgba(9,33,66,0.26) 0 16px 40px -16px, border 0.25, data-pulse=false, kein h-Overflow (sw=cw=390). Dismiss-X 32x32 bei x=346/y=688. (2) Typo: eyebrow 9.5px/600/uppercase/ls 1.71px (=0.18em)/IBM Plex Mono/rgb(76,124,186); Haupttext 15px/600; Benefit 11px/rgb(100,116,139). Kurz-Benefit display:inline & sichtbar, Lang-Benefit display:none (count=1, visible=false). (3) Menu-Open (ohne Hover, per Focus+Enter geoeffnet): data-menu-open=true, data-pulse=false, animationName=none, shadow rgba(9,33,66,0.22) 0 10px 28px -14px, border rgba(76,124,186,0.2), Pill weiterhin sichtbar, min-height 80px. ACHTUNG: bei Maus-Klick bleibt Hover aktiv -> shadow 0.38/border 0.55 (falsch-negativ). (4) Produktmenue Mobile: alle 6 Optionen count=1/visible=true/vollstaendig im Viewport (y 264-671), padding 8px 10px, Scroll-Container scrollHeight=clientHeight=526 -> KEIN Scrollen noetig; 'Kurzfragebogen - Ihr Nutzen' count=1 visible=false (mobil hidden, Desktop visible=true). (5) Regression: ESC schliesst (options=0), Outside-Click schliesst, Option 'fonds' oeffnet Wizard (1/7, 6 kurze Fragen), Dismiss -> restore-pill (min-height 80px, padding 12px 14px, width 320px, icon 44.9px) -> Klick stellt compact-pill wieder her. (6) Pulse (74.3): nach sessionStorage-Reset data-pulse=true beobachtet, sessionFlag=1. (7) Interstitial-Hide (74.4): bei #invtopic-teaser[data-visible=true] (Scroll 60%) sticky-cta=0 und compact=0 - intakt. (8) Responsive: 320 -> box 288x93.75 (Umbruch!), 375/430 -> 320x80, h-Overflow 0, keine geclippten Spans. (9) DESKTOP 1440x900 unveraendert: eigener Branch (nicht CompactPill) - Button 384x104.3, min-height 92px, padding 16/16/16/20, Icon 56x56 (h-14 w-14, NICHT 64px - so im Code seit vorherigen Sessions), eyebrow 10.5px, main 17px, lange Benefit-Zeile sichtbar, Kurzversion im DOM nicht vorhanden; Menue: Option-Padding 10px 12px, Wizard-Nutzen sichtbar. Screenshots unter /app/test_reports/s745_*.jpeg.",
+  "rca_of_the_issue": "Kein Defekt-RCA notwendig. Zur 93.75px-Hoehe bei 320px: Pill-Breite = min(20rem, 100vw-2rem) = 288px; die Kurz-Benefit-Zeile (11px) benoetigt dort 2 Zeilen, wodurch die Content-Hoehe die min-h-[5rem] uebersteigt."
+}

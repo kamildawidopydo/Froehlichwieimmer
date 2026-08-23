@@ -1,8 +1,32 @@
 # Kapitalmitte / Webmain — Migration PRD
 
-## Session 74.4-fix2 (Feb 28, 2026) — Sticky-CTA versteckt sich bei sichtbarem Interstitial ✅
+## Session 74.5 (Feb 28, 2026) — Mobile Sticky-CTA kompakter ✅
 
-**Testergebnisse (iteration_49, 100 % Pass, 30+ Checks)**
+**Ziel:** Sticky-CTA nimmt auf Mobile zu viel Fläche ein und konkurriert mit dem geöffneten Produktmenü. Auf 78–88 px Höhe reduzieren, Icon kleiner, Benefit-Copy kürzen, Menü-Open-State visuell zurücknehmen. Desktop unverändert.
+
+**Files geändert** (nur `frontend/src/components/home/ProductInquiryStickyCta.jsx`)
+- **CompactPill Mobile:** `min-h-[5rem]` (80 px), `w-[min(20rem,calc(100vw-2rem))]`, `px-3.5 py-3`, `gap-3`. Icon-Badge auf `h-11 w-11` (44 px). Eyebrow 9.5 px, Haupttext 15 px, Benefit 11 px. Desktop-`sm:`-Klassen (h-16 icon, min-h-[6rem], text-[18px]) unverändert.
+- **Benefit-Copy responsive:** Mobile „In wenigen Minuten zur Empfehlung" (kürzer), Desktop „In wenigen Minuten zur persönlichen Empfehlung" (unverändert).
+- **Menu-Open-State:** neuer Prop `menuOpen` → `shadow-[0_10px_28px_-14px_...]` (schwächer als default) + `border-bank-primary/20` + Pulse deaktiviert. Desktop-Shadow unverändert. Fügt `data-menu-open="true|false"` fürs Testing hinzu.
+- **ProductMenu Mobile:** Outer `px-3 py-3` (vorher 3.5), Header `mb-2.5 pb-2.5`, Header-Copy zweistufig responsive (kurz auf Mobile, lang auf sm+). Cards `px-2.5 py-2` + `gap-1` (kompakter). Wizard-Nutzen-Chip-Sektion auf Mobile `hidden sm:block` → alle 6 Produktoptionen deutlich früher gleichzeitig sichtbar.
+- **Erhalten:** alle Testids, Analytics, Handler, Session 74.4-fix2 Interstitial-Hide, Session 74.3 Attention-Pulse, nearForm-Ausweich, Desktop-Layout.
+
+**Externer Blocker weiter offen (nicht angefasst):** Supabase-CHECK-Constraint für fonds/tagesgeld/festgeld/flexgeld.
+
+**Testergebnisse (iteration_50, 100 % funktional, 2 kosmetische Notes)**
+- ✅ Mobile 390x844: Pill 320×80 px, Icon 44×44, Padding 12/14, Kurz-Benefit sichtbar, kein h-Overflow.
+- ✅ Menu-Open-State: `data-menu-open='true'`, Shadow reduziert (0.22 vs 0.30), Pulse deaktiviert.
+- ✅ Produktmenü: alle 6 Optionen im Viewport (y 264–671), kein Scroll nötig, Wizard-Nutzen-Section Mobile hidden.
+- ✅ Responsive 375/390/430: alle 320×80, kein Overflow.
+- ✅ Desktop 1440 unverändert: Button 384×104, Icon 56×56, lange Benefit-Copy.
+- ✅ Regression Session 74.3/74.4/74.4-fix2 intakt: Pulse 1×/Session, Interstitial-Hide, ESC/Outside-Click, alle Wizards öffnen.
+
+**Follow-up Fix (Session 74.5.1)**
+- 320 px Breite: Benefit-Zeile brach auf 2 Zeilen → Pill 93.75 px statt ≤88 px. Fix: `truncate whitespace-nowrap sm:whitespace-normal` auf Mobile-Benefit-Span → ellipsiert bei Bedarf, kein Wrap, Pill wieder ≤80 px. Desktop behält `sm:whitespace-normal` (kein Ellipsis).
+
+**Non-Blocker (out-of-scope):** hero-comparison-btn Overlap bei extrem kurzem 320×568 Viewport (vorbestehendes fixed-CTA-Verhalten); Kontrast text-bank-ink theme-weit ~3.3:1 (nicht Session-74.5-spezifisch).
+
+## Session 74.4-fix2 (Feb 28, 2026) — Sticky-CTA versteckt sich bei sichtbarem Interstitial ✅
 - ✅ Mobile 390: sichtbarer Teaser → Sticky-CTA + Restore-Pill nicht im DOM (`sticky-cta=0, compact-pill=0`). Hit-Tests auf `#invtopic-teaser-headline/-body` treffen die Elemente selbst. MEHR ERFAHREN, SCHLIESSEN, Close-X klickbar. Kein horizontales Overflow.
 - ✅ Desktop 1440: `MEHR ERFAHREN`-Klick navigiert korrekt nach `/themen/aktien` (iter_48-Blocker behoben).
 - ✅ Restore nach Close: CTA zurück bei `x=38/y=666` (right-4), near-form=false, kein Sprung.
