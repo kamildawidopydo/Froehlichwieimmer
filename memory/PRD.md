@@ -7,6 +7,32 @@ Bestehendes Repo `gregorbraun36/webmain` 1:1 in dieses Projekt übernehmen und a
 - **DB**: MongoDB · **Marktdaten**: Alpha Vantage · **Auth**: FastAPI JWT (httpOnly Cookies)
 - **LLM**: Emergent Universal Key · **Sprache**: Deutsch primär
 
+## Session 44 (Feb 23, 2026) — Realistische Social-Media-Profilbilder
+
+**Geänderte Datei (1)**
+- `frontend/src/data/social/instagramPostComments.js`: `av()` von statischem Placeholder auf deterministischen Avatar-Mixer umgestellt, `_enrichAvatars()`-Post-Processing für ~15 % Initialen.
+
+**Verwendete Avatar-Typen (Verteilung über 78 Kommentare)**
+- **Personen (~45 %)**: 12 kuratierte Unsplash-Motive mit variierendem Winkel/Ausschnitt (Selfies draußen, Sonnenbrille, seitlich, angeschnitten, von hinten, Wanderung, Skateboard) — bewusst kein Studio-Headshot-Look.
+- **Lifestyle-Motive (~40 %)**: 14 Motive — Auto, Motorrad, Golden Retriever, Katze, Bergsee, Strand, Snowboard, Rennrad, Espresso, Skyline, Sonnenaufgang.
+- **Initialen (~15 %)**: SVG-Data-URLs mit 5er-Farbpalette (Fröhlich-Blau/Gold), deterministisch nach Slug-Hash.
+
+**Fallback**
+- Renderer-onError-Handler blieb unverändert (mappt `.png/.jpg` → `.svg`).
+- `instagramCommentAvatarFallback(slug)` liefert jetzt einen Initialen-SVG statt eines toten Pfads — Broken-Image-State ausgeschlossen.
+- Bei fehlerhaftem Unsplash-Load fällt der Renderer über bestehenden onError auf den Initialen-SVG zurück (rund, `object-cover`, keine Layout Shifts).
+
+**Getestete Ansichten**
+- Runtime Node-Check: 78 Kommentare · 64 Unsplash · 14 Initialen · 0 andere/broken
+- Deterministik verifiziert (gleicher Slug → gleicher Avatar bei jedem Reload)
+- Playwright Home + Instagram-Modal: alle Bilder laden erfolgreich, keine Broken-Images, unique-source-count matches erwarteter Verteilung
+
+**Bewusst NICHT geändert**
+- Kommentar-Texte, Namen, Zeitstempel, Reihenfolge, Layout
+- Company-Reply Avatar (bleibt `frohlich-mark.png`)
+- Rendering-Komponente (Renderer-onError-Chain funktioniert weiter)
+- Post-Bilder / Instagram-Grid-Layout / responsives Verhalten
+
 ## Session 43 (Feb 23, 2026) — Dividenden-Thema als drittes Investment-Topic
 
 **Zielbild**: `/themen/dividenden` als drittes Thema neben Aktien und Anleihen — identische Infrastruktur, keine Sonderlogik.
