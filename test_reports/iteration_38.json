@@ -1,0 +1,42 @@
+{
+  "summary": "Session 64 verification (frontend only). 4/4 review items PASS. (1) Aktien wizard via [data-testid=home-investment-spectrum] card 0: 6 questions (volume, horizon, experience, volatility, liquidity, goal) + contact step (progress 1/7 -> 7/7), submit fired exactly ONE network request: POST https://vitmvkmjjwabfzndynlj.supabase.co/rest/v1/product_inquiry_leads -> 201. ZERO requests and ZERO responses matching '/api/submit-product-inquiry-lead'. [data-testid=product-inquiry-success] visible ('Ihre Aktien-Anfrage ist bei uns'), 0 pageerrors. (2) Fonds wizard (card 2, data-product=fonds): identical flow, again NO /api/submit-product-inquiry-lead request; POST /rest/v1/product_inquiry_leads -> HTTP 400 (known CHECK-constraint blocker 23514). [data-testid=product-inquiry-error] visible with 'Die Anfrage konnte gerade nicht gesendet werden. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.', submit button label flipped to 'Erneut senden' and is NOT disabled (no loading hang), no success element, 0 pageerrors. (3) Regression: /, /handeln, /wissen, /fonds-grundlagen all HTTP 200, exactly 1 <h1>, 0 pageerrors. Console errors limited to known Supabase 401 on public pages plus SVG path 'd=undefined' warnings on / (pre-existing, non-blocking). (4) Grep check on /app/frontend/src/lib/submitProductInquiryLead.js: 'submitProductInquiryLeadViaApi' and 'parseJsonResponse' are gone repo-wide; the only remaining occurrence of 'submit-product-inquiry-lead' in /app/frontend/src is line 116 inside the explanatory comment.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST <REACT_APP_SUPABASE_URL>/rest/v1/product_inquiry_leads",
+        "issue": "UNCHANGED external blocker: product_inquiry_leads_product_check still allows only aktien/anleihen/spargeld-like values; fonds (and tagesgeld/festgeld/flexgeld) get 400/23514. User must run the SQL migration in Supabase Studio.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Home (/)",
+        "issues": ["Console errors: '<path> attribute d: Expected moveto path command (\"M\" or \"m\"), \"undefined\"' repeated 4x - an SVG/icon component renders with an undefined path. Cosmetic/non-blocking but should be traced."]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "DB (user action, unchanged): widen product_inquiry_leads_product_check to include fonds/tagesgeld/festgeld/flexgeld.",
+    "Optional: fix the 4x SVG 'd=undefined' console errors on the home page.",
+    "Optional cleanup (from iteration 37, still open): orphan files HomeSavingsInquirySection.jsx / SpargeldInquiryPromo.jsx.",
+    "Optional: mapProductInquiryInsertError still contains the /API 404|502|503/ branch which is now unreachable after removing the API pre-call - dead code."
+  ],
+  "critical_code_review_comments": [
+    "submitProductInquiryLead is now a thin passthrough to submitProductInquiryLeadDirect; consider merging to avoid an indirection layer.",
+    "notifyProductInquiryLeadEmail posts to a relative '/api/send-product-inquiry-email' - on the preview host this route may also 404 silently (only console.warn). Verify the route exists or remove it to avoid the same dead-call pattern that was just cleaned up."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "4/4 review items PASS (100%)"},
+  "seed_data_creation": "Supabase product_inquiry_leads row inserted via anon key: qa.aktien.session64@example.test (aktien, 201). qa.fonds.session64@example.test rejected (400), no row.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "not needed (no auth flow in scope)",
+  "context_for_next_testing_agent": "Visitor gate bypass via add_init_script (kapitalmitte_visitor_profile + kapitalmitte_cookie_consent) works. Wizard flow: [data-testid=home-investment-spectrum] button:has-text('Fragen beantworten') nth(0)=aktien, nth(2)=fonds; loop click first [data-testid^=product-inquiry-option-] then [data-testid=product-inquiry-next] until next disappears; contact fields #pi-first/#pi-last/#pi-phone/#pi-email; wizard has 3 button[role=checkbox] (first two are mandatory). Submit path is now Supabase-only - no /api/submit-product-inquiry-lead anywhere. Only remaining blocker: Supabase CHECK constraint 23514 for non-aktien/anleihen products.",
+  "rca_of_the_issue": "No new defects. The 400 on fonds is a database CHECK constraint (code 23514), not a frontend bug; the UI surfaces it correctly with an inline error and a retryable button."
+}

@@ -1,5 +1,46 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 64 (Feb 25, 2026) — Submit-Pfad bereinigt, Supabase-Constraint bleibt extern blockiert
+
+**P1 — Supabase-Constraint (BLOCKED, User-Action erforderlich)**
+- Direkter REST-Probe gegen `https://vitmvkmjjwabfzndynlj.supabase.co` mit anon-key:
+  - `aktien` → 201 ✅
+  - `anleihen` → 201 ✅
+  - `fonds` → 400 code 23514 ❌
+  - `tagesgeld` → 400 code 23514 ❌
+  - `festgeld` → 400 code 23514 ❌
+  - `flexgeld` → 400 code 23514 ❌
+- `product_inquiry_leads_product_check` erlaubt WEITERHIN nur `aktien/anleihen/spargeld`.
+- Wir haben KEINEN `SUPABASE_SERVICE_ROLE_KEY` in dieser Umgebung — Constraint kann nicht aus Emergent heraus geändert werden.
+- **User muss folgendes SQL manuell im Supabase-Studio → SQL Editor (Projekt `vitmvkmjjwabfzndynlj`) ausführen:**
+  ```sql
+  ALTER TABLE public.product_inquiry_leads
+    DROP CONSTRAINT IF EXISTS product_inquiry_leads_product_check;
+  ALTER TABLE public.product_inquiry_leads
+    ADD CONSTRAINT product_inquiry_leads_product_check
+    CHECK (product IN ('aktien','anleihen','fonds','tagesgeld','festgeld','flexgeld','spargeld'));
+  -- Verify:
+  SELECT pg_get_constraintdef(oid) FROM pg_constraint
+   WHERE conname = 'product_inquiry_leads_product_check';
+  ```
+- Datei `legacy_source/supabase/migrations/20260225000000_product_inquiry_leads_widen_products.sql` enthält identisches SQL.
+
+**P3 — Dead API-Vorlauf entfernt (DONE)**
+- `/api/submit-product-inquiry-lead` lieferte konstant HTTP 404 (Route existiert weder in FastAPI-Backend noch als Node-Worker in dieser Umgebung).
+- `frontend/src/lib/submitProductInquiryLead.js`:
+  - `submitProductInquiryLeadViaApi` + `parseJsonResponse` entfernt.
+  - `submitProductInquiryLead` ruft jetzt direkt `submitProductInquiryLeadDirect` (Supabase anon insert) auf.
+  - Kein Vorlauf-404 mehr auf Submit.
+- `notifyProductInquiryLeadEmail` (Fire-and-forget an `/api/send-product-inquiry-email`) bleibt unangetastet — nicht Teil dieses Scope, wird beim Session-65 zusammen mit Resend-Playbook adressiert.
+
+**Files geändert**
+- `frontend/src/lib/submitProductInquiryLead.js`
+
+**Status: DONE WITH EXTERNAL DB BLOCKER**
+- Frontend-Pfad ist sauber. Sobald der User die SQL-Migration ausführt, werden alle 6 Produkte 201 liefern und den Success-Screen zeigen — ohne weiteren Code-Change.
+
+
+
 ## Session 63 (Feb 25, 2026) — Frontend-Stabilisierung ProductInquiryWizard ✅
 
 **Ziel:** 5 offene Frontend-Punkte aus Session 62 abschließen (kein Feature-Ausbau).

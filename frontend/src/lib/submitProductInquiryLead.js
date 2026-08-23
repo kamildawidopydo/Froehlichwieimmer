@@ -111,51 +111,11 @@ async function submitProductInquiryLeadDirect(payload) {
   return { data: error ? null : {}, error };
 }
 
-async function parseJsonResponse(res) {
-  const text = await res.text();
-  if (!text.trim()) return {};
-  try {
-    return JSON.parse(text);
-  } catch {
-    return {};
-  }
-}
-
-async function submitProductInquiryLeadViaApi(payload) {
-  const res = await fetch('/api/submit-product-inquiry-lead', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  const body = await parseJsonResponse(res);
-
-  // HTTP 200 = server handled insert; do not fall back to direct (avoids false error + duplicate rows).
-  if (res.ok) {
-    if (!body.emailSent) {
-      notifyProductInquiryLeadEmail(payload, body.id ?? null);
-    }
-    return {
-      data: { id: body.id ?? null },
-      error: null,
-      viaApi: true,
-    };
-  }
-
-  return {
-    data: null,
-    error: {
-      message: body.error || `API ${res.status}`,
-      code: body.code,
-    },
-    viaApi: true,
-    httpFailed: true,
-  };
-}
-
 /**
- * 1) Server API (service role) — preferred when Worker secrets are set.
- * 2) Direct insert when API fails (e.g. missing SUPABASE_SERVICE_ROLE_KEY).
+ * Supabase ist der aktive Persistenz-Layer.
+ * Der frühere Vorlauf-Call auf /api/submit-product-inquiry-lead (Session-64: 404 im
+ * FastAPI-Backend, kein Node-Worker mehr aktiv) wurde entfernt, um unnötige 404-Requests
+ * zu vermeiden. Der direkte Supabase-Insert läuft mit anon-key + RLS + CHECK-Constraint.
  */
 export async function submitProductInquiryLead(rawPayload) {
   if (!isSupabaseConfigured) {
@@ -166,20 +126,5 @@ export async function submitProductInquiryLead(rawPayload) {
   }
 
   const payload = sanitizeLeadPayload(rawPayload);
-
-  try {
-    const api = await submitProductInquiryLeadViaApi(payload);
-    if (!api.error) {
-      return api;
-    }
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[submitProductInquiryLead] API HTTP failed, trying direct insert', api.error);
-    }
-  } catch (apiErr) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[submitProductInquiryLead] API unreachable, trying direct insert', apiErr);
-    }
-  }
-
   return submitProductInquiryLeadDirect(payload);
 }
