@@ -12,7 +12,7 @@ import HomeSavingsOffersSection from '@/components/home/HomeSavingsOffersSection
 import HomeNewsPreview from '@/components/home/HomeNewsPreview';
 import { mapCreditOffersForCarousel } from '@/lib/creditOfferDisplay';
 import HomeInvestmentSpectrum from '@/components/home/HomeInvestmentSpectrum';
-import HomeFinancialArticles from '@/components/home/HomeFinancialArticles';
+import HomeFinanceNews from '@/components/home/HomeFinanceNews';
 import ProductInquiryWizard from '@/components/home/ProductInquiryWizard';
 import ProductInquiryStickyCta from '@/components/home/ProductInquiryStickyCta';
 import SpecialAifOverview from '@/components/home/SpecialAifOverview';
@@ -181,8 +181,8 @@ const Home = () => {
 
       <HomeInvestmentSpectrum onOpenWizard={openProductInquiry} />
 
-      {/* ── Aktuelles & Finanzwissen (Evergreen-Artikelbereich) ───────── */}
-      <HomeFinancialArticles />
+      {/* ── Aktuelle Finanznachrichten (Live-Sync, mindestens stündlich) ─ */}
+      <HomeFinanceNews />
 
       {/* ── Bonus CTA — refined accent on ink ──────────────────────────── */}
       <section

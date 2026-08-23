@@ -1,0 +1,36 @@
+{
+  "summary": "Session 67 frontend-only verification of the new live HomeFinanceNews section on the homepage plus /nachrichten alias routes and homepage regression. 12/12 requested checks executed. Section renders live editorial data from /api/news/nachrichten (11 editorial items, 0 aggregated), featured + 3 secondary teasers + 8 grid cards, dynamic filters, working internal links, detail page with 1276 words, CTAs, responsive 1/2/3-column grid, 0 pageerrors on all 9 routes. Two real defects found: one broken Unsplash image (data) and missing filter chips for the 'politik'/'welt' categories that exist in the feed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "HomeFinanceNews / news data", "issue": "Broken image: article 'merz-kuendigt-nach-sommerpause-zuegige-reformumsetzung-an' has image_url https://images.unsplash.com/photo-1585129777188-9989f61c5f9c?w=1600&q=75 which returns HTTP 404 -> empty grey placeholder box in the homepage grid AND on the /nachrichten listing. Verified via naturalWidth==0 and curl.", "selector": "[data-testid='home-finance-news-card-merz-kuendigt-nach-sommerpause-zuegige-reformumsetzung-an'] img", "priority": "MEDIUM"},
+      {"component": "HomeFinanceNews filters", "issue": "FINANCE_FILTER_ORDER has no entries for 'politik' and 'welt', but the feed currently contains 1 politik + 2 welt editorial articles. Those categories therefore never get a filter chip (rendered chips: Alle, Wirtschaft, Fonds & ETFs, Europa) and their cards are unreachable via filtering, although they appear in the 'all' grid/teasers. Spec point 3 expected dynamic chips per categories present in DB.", "selector": "[data-testid='home-finance-news-filters']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Category filter", "issue": "Minor: when a non-'all' filter is active, `filtered` is derived from `items` (not `rest`), so the featured article is re-rendered as a grid card -> duplicated headline on screen (e.g. filter 'Wirtschaft' shows 7 cards incl. the featured EU-Kommission story).", "affected_selectors": ["[data-testid^='home-finance-news-card-']"]}
+    ],
+    "design_issues": [
+      {"screen": "Homepage mobile 390x844", "issues": ["No layout defect in the news section (1 column, chips wrap over 2 rows, no horizontal overflow). Pre-existing: the ProductInquiryStickyCta panel overlays a large part of the viewport on mobile and covers news cards until dismissed."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/ui_it41/section.jpeg", "/app/test_reports/ui_it41b/detail.jpeg", "/app/test_reports/ui_it41d/mobile.jpeg"],
+  "action_items": [
+    "Add 'politik' and 'welt' (and any other synthesizer categories) to FINANCE_FILTER_ORDER in HomeFinanceNews.jsx, or derive chips fully dynamically with a label fallback.",
+    "Replace/validate the broken Unsplash image_url for the Merz article (404) — consider a fallback image or a HEAD-check in news_synthesizer image assignment.",
+    "Optional: base the filtered list on `rest` (or exclude the featured slug) to avoid the featured article being duplicated in the grid when a category filter is active.",
+    "Note: the slug given in the test request ('europaeische-etf-zufluesse-erreichen-neues-jahreshoch') does not exist; the actual DB slug is 'etf-zufluesse-europa-neues-jahreshoch'. The stale slug renders a 'nicht gefunden' state with 0 <h1> (SPA 200) — acceptable, but update docs/tests."
+  ],
+  "critical_code_review_comments": [
+    "HomeFinanceNews.jsx creates its own axios instance at module scope; fine, but there is no timeout — a hanging /api/news/nachrichten request keeps the skeleton visible indefinitely instead of falling back to the empty state.",
+    "CATEGORY_LABEL falls back to the raw slug for unknown categories (good), but the filter list is hard-coded — see filter gap above.",
+    "Detail-slug 404 path (stale slug) renders no <h1>; consider a proper 404 heading for SEO."
+  ],
+  "updated_files": ["/app/frontend/src/components/home/HomeInvestmentSpectrum.jsx (added data-testid=spectrum-wizard-{key} to the 6 'Fragen beantworten' buttons — none existed before)"],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "10/12 checks fully pass, 2 partial (filters category coverage, broken image)"},
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "not needed; admin creds not used",
+  "context_for_next_testing_agent": "Verified checks: (1) section+eyebrow+h2 'Was Märkte und Anleger jetzt bewegt.'+source mentions EZB/Bundesbank/BaFin OK; featured preview length 412 chars, 'Weiterlesen' + Quelle label present (note: inner_text returns uppercase due to CSS). (2) secondary-0/1/2 present with image+category+title+2-line preview+time+source. (3) filters render all/wirtschaft/fonds-etfs/europa, default all data-active=true, clicking 'wirtschaft' filters to 7 wirtschaft cards, back to 'all' restores 8. (4) grid cards contain image/category/title/line-clamp-4 preview/time/date/Quelle. (5) clicking ETF grid card -> /nachrichten/etf-zufluesse-europa-neues-jahreshoch, h1 correct, 1276 words, no error elements. (6) all 14 anchors inside the section are relative internal paths (/nachrichten/:slug, /nachrichten, /wissen) — no external URLs. (7) /nachrichten alias renders NachrichtenPage with 17 article links. (8) CTAs navigate to /nachrichten and /wissen. (9) banking-hero, home-news-preview, bonus-cta-section present; all 6 spectrum wizards open a dialog. (10) all 9 routes exactly 1 <h1> except the stale ETF slug. (11) grid columns 1/2/3 at 390/768/1920, no horizontal overflow. (12) empty state not triggered (API healthy). 0 pageerrors anywhere.",
+  "rca_of_the_issue": "Broken image: news_synthesizer stores a hard-coded Unsplash photo id that no longer resolves (HTTP 404) — no availability validation and no <img> onError fallback in the card components. Missing filter chips: HomeFinanceNews.jsx uses a static FINANCE_FILTER_ORDER whitelist intersected with categories present in the feed, so synthesizer categories outside the whitelist ('politik', 'welt') can never produce a chip."
+}

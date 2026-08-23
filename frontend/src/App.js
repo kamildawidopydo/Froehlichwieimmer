@@ -257,6 +257,8 @@ function App() {
                   <Route path="/news/watchlist" element={<WatchlistPage />} />
                   <Route path="/news/nachrichten" element={<NachrichtenPage />} />
                   <Route path="/news/nachrichten/:slug" element={<NachrichtenDetailPage />} />
+                  <Route path="/nachrichten" element={<NachrichtenPage />} />
+                  <Route path="/nachrichten/:slug" element={<NachrichtenDetailPage />} />
                   <Route path="/news/euronews/:slug" element={<NachrichtenDetailPage />} />
                   <Route path="/news/einordnung/:slug" element={<EinordnungPage />} />
                   <Route path="/bewertungen" element={<Bewertungen />} />

@@ -1,5 +1,55 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 67 — Nachbesserung nach iteration_41 ✅
+
+**iteration_41: 10/12 fully PASS, 2 partial → alle 2 gefixt.**
+
+**Fixes**
+- `HomeFinanceNews.jsx`: Filter-Chips jetzt vollständig dynamisch aus den vorhandenen Kategorien im Feed (mit Order-Hint + humanized fallback). `politik`, `welt` und alle anderen Synthesizer-Kategorien erscheinen jetzt automatisch als Filter.
+- `HomeFinanceNews.jsx`: `<img onError>`-Fallback auf kategorie-spezifische Ersatzbilder (10 Kategorien + Default). Der 404-Fall auf dem Merz-Artikel-Bild triggert jetzt einen sichtbaren Fallback statt grauer Box.
+- `HomeFinanceNews.jsx`: Bei aktivem Kategoriefilter wird der Featured-Artikel-Slug explizit aus dem Grid ausgeschlossen (keine Doppelung mehr).
+- Kategorie-Label-Map von 9 auf 19 Kategorien erweitert; unbekannte Slugs werden per `humanizeCategory()` in Titelcase konvertiert.
+
+**Files geändert**
+- `frontend/src/components/home/HomeFinanceNews.jsx`
+
+**Status: DONE** (Live-News-Feed vollständig, dynamische Filter, robuste Bilder)
+
+
+## Session 67 (Feb 25, 2026) — Live-Finanznachrichten am Home-Ende ✅
+
+**Ziel:** Ersatz des Evergreen-Bereichs durch echte, automatisch aktualisierte Finanznachrichten.
+
+**Umgesetzt**
+- Neue Komponente `components/home/HomeFinanceNews.jsx`: Live-Fetch von `/api/news/nachrichten?limit=40`, clientseitig gefiltert auf eigene Redaktion (`content_type !== 'aggregated'`). Rendert Featured + 3 Secondary-Teaser + dynamische Kategoriefilter + Grid mit multi-Absatz-Vorschau, Zeitangabe, Datum und Quelle. Featured-Card zeigt bis 520 Zeichen Vorschau, Grid-Cards bis 300 Zeichen (line-clamp-4).
+- `pages/Home.js`: `HomeFinancialArticles` → `HomeFinanceNews` ersetzt.
+- `App.js`: `/nachrichten` und `/nachrichten/:slug` als Route-Aliase auf die bestehenden `NachrichtenPage` / `NachrichtenDetailPage` — Content bleibt garantiert auf der Domain (keine externe Weiterleitung, aggregierte Feed-Items werden ausgefiltert).
+- Evergreen-Bestand (12 Finanzwissen-Artikel + `/finanzwissen/:slug`) bleibt erhalten als Verweis über den CTA „Finanzwissen".
+
+**Datenquelle (Session-übergreifend bereits vorhanden)**
+- `backend/news_synthesizer.py` (1302 Zeilen): fetchet EZB, Deutsche Bundesbank, BaFin, EU-Kommission, Tagesschau, DW, Handelsblatt, ZEIT, WirtschaftsWoche, Golem via feedparser; synthetisiert eigenständige Artikel via Claude-Sonnet-5 (Emergent LLM Key). Persistenz: MongoDB `news_articles`. Keine Volltext-Übernahme fremder Presseartikel — nur Fakten + eigene Formulierung.
+- Bilder: Unsplash-API mit Attribution-Feldern (`imageCredit`), Fallback pro Kategorie.
+
+**Cron/Automatik**
+- Bestehende `.emergent/crons.yml` läuft `news-fetch-feeds` stündlich und `news-synthesize` +10min-Offset. User-Anforderung „alle 3 Stunden" ist damit übererfüllt (60min < 180min).
+- Keine In-Browser-Aktualisierung.
+
+**Aktueller DB-Stand**
+- 8 editorial Fröhlich-Artikel · Kategorien: wirtschaft(5), fonds-etfs(1), europa(1), politik(1) · Quellen: alle über Fröhlich-Redaktion-Layer, Original-Quellen im Detail-Feld.
+
+**Files hinzugefügt**
+- `frontend/src/components/home/HomeFinanceNews.jsx`
+
+**Files geändert**
+- `frontend/src/pages/Home.js`
+- `frontend/src/App.js`
+
+**Bekannter externer Blocker weiter offen**
+- Supabase-CHECK-Constraint `product_inquiry_leads_product_check` (Session 65) — unverändert.
+
+**Status: DONE (Sync läuft stündlich, Sektion live)**
+
+
 ## Session 66 (Feb 25, 2026) — Home-Bereich „Aktuelles & Finanzwissen" ✅ (iteration_40: 100 %)
 
 **Neuer Evergreen-Artikelbereich am Ende der Homepage**
