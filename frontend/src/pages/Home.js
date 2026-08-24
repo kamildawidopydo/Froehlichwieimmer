@@ -11,7 +11,7 @@ import HomeCreditOffersSection from '@/components/home/HomeCreditOffersSection';
 import HomeSavingsOffersSection from '@/components/home/HomeSavingsOffersSection';
 import HomeNewsPreview from '@/components/home/HomeNewsPreview';
 import { mapCreditOffersForCarousel } from '@/lib/creditOfferDisplay';
-import HomeInvestmentSpectrum from '@/components/home/HomeInvestmentSpectrum';
+import StockResearchSection from '@/components/home/StockResearchSection';
 import HomeProductWizardSection from '@/components/home/HomeProductWizardSection';
 import HomeFinanceNews from '@/components/home/HomeFinanceNews';
 import NewsletterSignup from '@/components/home/NewsletterSignup';
@@ -181,7 +181,8 @@ const Home = () => {
 
       <SpecialAifOverview />
 
-      <HomeInvestmentSpectrum onOpenWizard={openProductInquiry} />
+      {/* ── Aktien mit Potenzial — Editorial Research-Bereich (Session 78.2) ── */}
+      <StockResearchSection />
 
       {/* ── Große Inline-Produkt-Section (Session 72) ─────────────────── */}
       <HomeProductWizardSection onOpenWizard={openProductInquiry} />

@@ -8,6 +8,12 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 - 76.5–77.9 — Palette rebuild, Footer/Contact/Hero light, News-Hero Editorial, News-lock fix, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Fresh Article Toast.
+- 78.2 (Feb 24 2026) — **Homepage „Aktien mit Potenzial" — Stock Research Section (Empty-State)**:
+  - Neue Datei `/app/frontend/src/components/home/StockResearchSection.jsx` (~330 LOC): Editorial Research-Bereich mit Eyebrow „EXKLUSIVE ANALYSEN", H2 „Aktien mit Potenzial", Empty-State (`Aktuell liegen keine verifizierten Analysteneinschätzungen vor.`), Table-Header-Vorschau, 3 Info-Karten (Fundamentale Stärke / Experten-Know-How / Risikobewusst Investieren), Disclaimer.
+  - `Home.js`: Import + JSX von `HomeInvestmentSpectrum` durch `StockResearchSection` ersetzt (an gleicher Stelle).
+  - Komponente akzeptiert bereits `rows` Prop mit Feldern (company, ticker, currentPrice, priceTarget, upsidePct, analyst, asOfDate, source, currency) — sobald echte Daten anliegen, rendert automatisch die vollständige `ResearchTable` (Desktop-Table + Mobile-Cards, `Intl.NumberFormat` für EUR + Datum) anstelle des Empty-States.
+  - STRIKT keine Fake-Daten. Empty-State ist bewusst editorial gestaltet (Mint-Icon-Kreis, dezente Skelett-Andeutung, keine Warnfarben).
+  - QA: Webpack 0 neue Warnings; `home-investment-spectrum` DOM-abwesend; `home-stock-research`, `stock-research-empty-state`, `stock-research-info-cards` DOM-präsent; kein horizontaler Scroll @390px.
 - 78.0 (Feb 28 2026) — **Server.py Modularisierung Wave 2 — Auth extrahiert**:
   - Neue Datei `/app/backend/routes/auth.py` (175 LOC) mit `APIRouter(prefix="/api", tags=["auth"])` und den 8 Auth-Endpoints. Alle Helper (`db`, `hash_password`, `verify_password`, `create_access_token`, `create_refresh_token`, `set_auth_cookies`, `clear_auth_cookies`, `public_user`, `get_current_user`, `check_lockout`, `record_failed_login`, `clear_login_attempts`, `_as_aware`, `JWT_SECRET`, `JWT_ALGORITHM`, `ACCESS_TOKEN_MINUTES`) sowie Pydantic-Modelle (`RegisterInput`, `LoginInput`, `UpdateMeInput`, `ForgotInput`, `ResetInput`) top-level aus `server` importiert — safe weil `from routes import auth` am Ende von server.py steht.
   - `server.py`: 8 alte `@api.post/get/patch(...)`-Decorators im Auth-Block (früher Z. 334–455) entfernt und durch Kommentar-Anchor ersetzt. `app.include_router(_auth_routes.router)` am Ende registriert.
