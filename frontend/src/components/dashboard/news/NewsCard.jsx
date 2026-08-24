@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { categoryLabel } from '@/lib/news/euronewsFeeds';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
 
 const dateFormatter = new Intl.DateTimeFormat('de-DE', {
   day: '2-digit',
@@ -18,9 +19,9 @@ const formatDate = (iso) => {
 };
 
 const NewsCard = ({ article }) => {
-  const [imgError, setImgError] = useState(false);
+  const [imgHidden, setImgHidden] = useState(false);
   if (!article) return null;
-  const showImage = Boolean(article.image_url) && !imgError;
+  const showImage = Boolean(article.image_url) && !imgHidden;
 
   return (
     <Link
@@ -30,12 +31,12 @@ const NewsCard = ({ article }) => {
       <span aria-hidden className="absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-bank-gold/55 via-bank-gold/35 to-transparent opacity-70 transition-opacity duration-300 group-hover:opacity-100" />
       {showImage && (
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-bank-bg/60">
-          <img
+          <SafeNewsImage
             src={article.image_url}
-            alt={article.title}
-            loading="lazy"
-            onError={() => setImgError(true)}
+            category={article.category}
+            alt={article.title || ''}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+            onFinalError={() => setImgHidden(true)}
           />
           <span className="absolute left-3 top-3 border border-bank-border bg-white/95 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.18em] text-bank-text shadow-sm backdrop-blur">
             {categoryLabel(article.category)}

@@ -5,6 +5,7 @@ import axios from 'axios';
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import NachrichtenRelated from '@/components/news/NachrichtenRelated';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
 import TopicCrossLinkBox from '@/components/investment/TopicCrossLinkBox';
 import KnowledgeCrossLinkBox from '@/components/knowledge/KnowledgeCrossLinkBox';
 
@@ -78,6 +79,10 @@ const NachrichtenDetailPage = () => {
 
   const hasLicensedFulltext = !!item?.license_allows_fulltext && !!item?.full_text;
   const heroImage = item?.hero_image_url || item?.image_url;
+  // Wenn ein Bild final scheitert (alle 3 Fallback-Stufen), lassen wir den
+  // ganzen Bild-Container komplett entfallen — der Artikeltext rückt automatisch nach.
+  const [heroHidden, setHeroHidden] = useState(false);
+  useEffect(() => { setHeroHidden(false); }, [item?.slug]);
 
   return (
     <div className="bg-white" data-testid="news-detail-page">
@@ -127,10 +132,18 @@ const NachrichtenDetailPage = () => {
 
       {item && (
         <article className="mx-auto max-w-4xl px-6 pb-20 pt-10 sm:px-10">
-          {heroImage && (
+          {heroImage && !heroHidden && (
             <>
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
-                <img src={heroImage} alt="" className="h-full w-full object-cover" />
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100" data-testid="news-detail-hero-image">
+                <SafeNewsImage
+                  src={heroImage}
+                  category={item.category}
+                  alt={item.title || ''}
+                  loading="eager"
+                  className="h-full w-full object-cover"
+                  onFinalError={() => setHeroHidden(true)}
+                  testId="news-detail-hero-img"
+                />
                 {item.content_type === 'video' && !item.video_embed_url && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/25 text-center text-white">
                     <div>

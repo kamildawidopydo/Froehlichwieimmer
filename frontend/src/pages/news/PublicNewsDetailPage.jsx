@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, LayoutDashboard, Newspaper } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
@@ -15,6 +15,7 @@ import {
 import PublicNewsLayout from '@/components/news/PublicNewsLayout';
 import PublicNewsErrorState from '@/components/news/PublicNewsErrorState';
 import RelatedNewsArticles from '@/components/news/RelatedNewsArticles';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
 import EuronewsVideoPlayer from '@/components/dashboard/news/EuronewsVideoPlayer';
 
 const ArticleSkeleton = () => (
@@ -38,6 +39,9 @@ const PublicNewsDetailPage = () => {
   const { user } = useAuth();
   const { article, loading, error } = useNewsArticle(slug);
   const readTime = formatReadTime(article?.read_time_minutes);
+  // Wenn alle 3 Bild-Fallback-Stufen fehlschlagen, blenden wir den Hero-Container
+  // komplett aus → Artikeltext rückt automatisch nach.
+  const [heroHidden, setHeroHidden] = useState(false);
 
   const paragraphs = useMemo(
     () =>
@@ -124,12 +128,16 @@ const PublicNewsDetailPage = () => {
               title={article.title}
               sourceUrl={article.video_source_url ?? article.source_url}
             />
-          ) : article.image_url ? (
-            <div className="overflow-hidden rounded-2xl border border-bank-border/60 bg-bank-bg/40 shadow-sm">
-              <img
+          ) : article.image_url && !heroHidden ? (
+            <div className="overflow-hidden rounded-2xl border border-bank-border/60 bg-bank-bg/40 shadow-sm" data-testid="news-detail-hero-image">
+              <SafeNewsImage
                 src={article.image_url}
-                alt={article.title}
+                category={article.category}
+                alt={article.title || ''}
+                loading="eager"
                 className="aspect-[16/9] w-full object-cover"
+                onFinalError={() => setHeroHidden(true)}
+                testId="news-detail-hero-img"
               />
             </div>
           ) : null}

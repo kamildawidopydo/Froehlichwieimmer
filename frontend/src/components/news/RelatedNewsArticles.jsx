@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { listRelatedArticles } from '@/services/newsService';
 import { categoryLabel } from '@/lib/news/euronewsFeeds';
 import { formatNewsDate, formatReadTime } from '@/lib/news/formatNews';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
 
 const RelatedCardSkeleton = () => (
   <div className="overflow-hidden rounded-xl border border-bank-border/60 bg-bank-surface shadow-sm dark:bg-bank-ink/20">
@@ -17,9 +18,9 @@ const RelatedCardSkeleton = () => (
 );
 
 const RelatedNewsCard = ({ article }) => {
-  const [imgError, setImgError] = useState(false);
+  const [imgHidden, setImgHidden] = useState(false);
   const readTime = formatReadTime(article.read_time_minutes);
-  const showImage = Boolean(article.image_url) && !imgError;
+  const showImage = Boolean(article.image_url) && !imgHidden;
 
   return (
     <Link
@@ -28,12 +29,12 @@ const RelatedNewsCard = ({ article }) => {
     >
       {showImage && (
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-bank-bg/50">
-          <img
+          <SafeNewsImage
             src={article.image_url}
-            alt={article.title}
-            loading="lazy"
-            onError={() => setImgError(true)}
+            category={article.category}
+            alt={article.title || ''}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
+            onFinalError={() => setImgHidden(true)}
           />
           <span className="absolute left-2.5 top-2.5 rounded-full border border-bank-border/60 bg-bank-surface/95 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.14em] text-bank-text-muted backdrop-blur-sm">
             {categoryLabel(article.category)}

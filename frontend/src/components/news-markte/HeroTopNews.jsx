@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { formatRelative } from '@/services/newsMarkteApi';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
 
 const CategoryTag = ({ label }) => (
   <span className="inline-flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.28em] text-bank-accent-strong">
@@ -18,21 +19,25 @@ const CATEGORY_LABEL = {
   international: 'International',
 };
 
-const cardImage = (src, alt) => (
-  <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
-    {src ? (
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-      />
-    ) : (
-      <div className="absolute inset-0 bg-gradient-to-br from-neutral-200 via-neutral-100 to-white" />
-    )}
-    <div className="pointer-events-none absolute inset-0 border-b border-bank-border" />
-  </div>
-);
+const CardImage = ({ src, alt, category }) => {
+  const [hidden, setHidden] = useState(false);
+  return (
+    <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
+      {src && !hidden ? (
+        <SafeNewsImage
+          src={src}
+          category={category}
+          alt={alt || ''}
+          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+          onFinalError={() => setHidden(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-neutral-200 via-neutral-100 to-white" />
+      )}
+      <div className="pointer-events-none absolute inset-0 border-b border-bank-border" />
+    </div>
+  );
+};
 
 const FeaturedCard = ({ article }) => (
   <a
@@ -42,7 +47,7 @@ const FeaturedCard = ({ article }) => (
     className="group block bg-white border border-bank-border transition-shadow duration-300 hover:shadow-[0_20px_60px_-30px_rgba(0,0,0,0.25)]"
     data-testid="hero-featured-card"
   >
-    {cardImage(article.image_url, article.title)}
+    <CardImage src={article.image_url} alt={article.title} category={article.category} />
     <div className="flex flex-col gap-4 px-6 py-7 sm:px-8 sm:py-8">
       <CategoryTag label={CATEGORY_LABEL[article.category] || article.category} />
       <h3 className="font-serif text-2xl leading-tight text-bank-text sm:text-[28px] lg:text-[32px]">
@@ -68,7 +73,7 @@ const SecondaryCard = ({ article }) => (
     className="group flex flex-col bg-white border border-bank-border transition-shadow duration-300 hover:shadow-[0_16px_40px_-24px_rgba(0,0,0,0.22)]"
     data-testid="hero-secondary-card"
   >
-    {cardImage(article.image_url, article.title)}
+    <CardImage src={article.image_url} alt={article.title} category={article.category} />
     <div className="flex flex-1 flex-col gap-3 px-5 py-6">
       <CategoryTag label={CATEGORY_LABEL[article.category] || article.category} />
       <h3 className="font-serif text-lg leading-snug text-bank-text sm:text-xl">{article.title}</h3>

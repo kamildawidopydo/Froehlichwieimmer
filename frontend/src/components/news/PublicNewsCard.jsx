@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { categoryLabel } from '@/lib/news/euronewsFeeds';
 import { formatNewsDate, formatReadTime } from '@/lib/news/formatNews';
 import HighlightText from '@/components/news/HighlightText';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
 import { cn } from '@/lib/utils';
 
 const PublicNewsCard = ({ article, compact = false, highlightQuery = '' }) => {
-  const [imgError, setImgError] = useState(false);
+  const [imgHidden, setImgHidden] = useState(false);
   if (!article) return null;
   const readTime = formatReadTime(article.read_time_minutes);
-  const showImage = Boolean(article.image_url) && !imgError && !compact;
+  const showImage = Boolean(article.image_url) && !imgHidden && !compact;
 
   return (
     <Link
@@ -21,12 +22,12 @@ const PublicNewsCard = ({ article, compact = false, highlightQuery = '' }) => {
     >
       {showImage && (
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-bank-bg/50">
-          <img
+          <SafeNewsImage
             src={article.image_url}
-            alt={article.title}
-            loading="lazy"
-            onError={() => setImgError(true)}
+            category={article.category}
+            alt={article.title || ''}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
+            onFinalError={() => setImgHidden(true)}
           />
           <span className="absolute left-3 top-3 rounded-full border border-bank-border/60 bg-bank-surface/95 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-bank-text-muted backdrop-blur-sm">
             {categoryLabel(article.category)}

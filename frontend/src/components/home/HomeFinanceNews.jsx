@@ -74,32 +74,29 @@ const humanizeCategory = (raw) => {
     .join(' ');
 };
 
-/** Fallback-Bild pro Kategorie (nur wenn image_url fehlt oder 404). */
-const CATEGORY_FALLBACK_IMAGE = {
-  wirtschaft: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1600&q=70',
-  maerkte: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=1600&q=70',
-  unternehmen: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?auto=format&fit=crop&w=1600&q=70',
-  zinsen: 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=1600&q=70',
-  'fonds-etfs': 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1600&q=70',
-  europa: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=1600&q=70',
-  welt: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=70',
-  politik: 'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?auto=format&fit=crop&w=1600&q=70',
-  rohstoffe: 'https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=format&fit=crop&w=1600&q=70',
-  technologie: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=70',
+/** Fallback-Bild pro Kategorie — zentral in @/lib/news/newsImage (lokale SVG). */
+import { getNewsFallbackImage } from '@/lib/news/newsImage';
+
+const onNewsImgError = (event, category) => {
+  const t = event.currentTarget;
+  if (!t) return;
+  if (!t.dataset.fb) { t.dataset.fb = '1'; t.src = getNewsFallbackImage(category); return; }
+  t.style.display = 'none';
 };
 
-const DEFAULT_FALLBACK_IMAGE =
-  'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1600&q=70';
-
-const fallbackImageFor = (category) =>
-  CATEGORY_FALLBACK_IMAGE[category] || DEFAULT_FALLBACK_IMAGE;
+const fallbackImageFor = (category) => getNewsFallbackImage(category);
 
 const handleImgError = (e, category) => {
   const target = e.currentTarget;
-  const fb = fallbackImageFor(category);
-  if (target.src !== fb) {
-    target.src = fb;
+  if (!target) return;
+  if (!target.dataset.fbStage) {
+    target.dataset.fbStage = '1';
+    target.src = fallbackImageFor(category);
+    return;
   }
+  // Auch der lokale Kategorie-Fallback ist gescheitert (nie erwartet, da SVG-DataURL)
+  target.dataset.fbStage = 'final';
+  target.style.display = 'none';
 };
 
 const timeAgo = (iso) => {

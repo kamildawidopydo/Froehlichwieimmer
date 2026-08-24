@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { categoryLabel } from '@/lib/news/euronewsFeeds';
 import { formatNewsDate, formatReadTime } from '@/lib/news/formatNews';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
 
 const NewsHeroFeatured = ({ article }) => {
-  const [imgError, setImgError] = useState(false);
+  const [imgHidden, setImgHidden] = useState(false);
   if (!article) return null;
   const readTime = formatReadTime(article.read_time_minutes);
-  const showImage = Boolean(article.image_url) && !imgError;
+  const showImage = Boolean(article.image_url) && !imgHidden;
 
   return (
     <Link
@@ -18,11 +19,12 @@ const NewsHeroFeatured = ({ article }) => {
       <div className={showImage ? 'grid lg:grid-cols-2' : ''}>
         {showImage && (
           <div className="relative aspect-[16/9] overflow-hidden bg-bank-bg/50 lg:aspect-auto lg:min-h-[22rem]">
-            <img
+            <SafeNewsImage
               src={article.image_url}
-              alt={article.title}
-              onError={() => setImgError(true)}
+              category={article.category}
+              alt={article.title || ''}
               className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.02]"
+              onFinalError={() => setImgHidden(true)}
             />
           </div>
         )}

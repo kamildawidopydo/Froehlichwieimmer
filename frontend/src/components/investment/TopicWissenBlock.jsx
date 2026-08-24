@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowUpRight } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
 import { trackInvestmentEvent, InvestmentEvents } from '@/lib/investmentAnalytics';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
@@ -23,8 +24,8 @@ const CAT_LABEL = {
 };
 
 const NewsCard = ({ article, index, topicSlug }) => {
-  const [imgErr, setImgErr] = useState(false);
-  const showImage = !!article.image_url && !imgErr;
+  const [imgHidden, setImgHidden] = useState(false);
+  const showImage = !!article.image_url && !imgHidden;
   const handleClick = () => {
     trackInvestmentEvent(InvestmentEvents.RELATED_NEWS_CLICK, {
       topic_slug: topicSlug,
@@ -42,9 +43,13 @@ const NewsCard = ({ article, index, topicSlug }) => {
     >
       {showImage && (
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
-          <img src={article.image_url} alt="" loading="lazy"
-               onError={() => setImgErr(true)}
-               className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]" />
+          <SafeNewsImage
+            src={article.image_url}
+            category={article.category}
+            alt={article.title || ''}
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
+            onFinalError={() => setImgHidden(true)}
+          />
         </div>
       )}
       <div className="flex flex-1 flex-col gap-2 p-5">

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -22,8 +23,8 @@ const fmtDate = (iso) => {
 };
 
 const RelatedCard = ({ article }) => {
-  const [imgErr, setImgErr] = useState(false);
-  const showImage = !!article.image_url && !imgErr;
+  const [imgHidden, setImgHidden] = useState(false);
+  const showImage = !!article.image_url && !imgHidden;
   return (
     <Link
       to={`/news/nachrichten/${encodeURIComponent(article.slug)}`}
@@ -32,12 +33,12 @@ const RelatedCard = ({ article }) => {
     >
       {showImage && (
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
-          <img
+          <SafeNewsImage
             src={article.image_url}
-            alt=""
-            loading="lazy"
-            onError={() => setImgErr(true)}
+            category={article.category}
+            alt={article.title || ''}
             className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
+            onFinalError={() => setImgHidden(true)}
           />
         </div>
       )}

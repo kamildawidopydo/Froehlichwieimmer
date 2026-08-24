@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, ArrowUpRight, Clock } from 'lucide-react';
+import Eyebrow from '@/components/editorial/Eyebrow';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
 import { einordnungApi, EINORDNUNG_CATEGORY_LABEL } from '@/services/einordnungApi';
 
 const dateFmt = (iso) => {
@@ -29,7 +31,7 @@ const FeatureCard = ({ post }) => (
   >
     <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100 lg:aspect-auto">
       {post.image_url && (
-        <img src={post.image_url} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
+        <SafeNewsImage src={post.image_url} category={post.category} alt={post.title || ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
       )}
     </div>
     <div className="flex flex-col justify-between gap-5 p-6 sm:p-8">
@@ -60,7 +62,7 @@ const StandardCard = ({ post }) => (
   >
     {post.image_url && (
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
-        <img src={post.image_url} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
+        <SafeNewsImage src={post.image_url} category={post.category} alt={post.title || ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
       </div>
     )}
     <div className="flex flex-1 flex-col gap-2 px-4 py-4">

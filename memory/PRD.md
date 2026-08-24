@@ -1,5 +1,86 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 75.2 (Feb 28, 2026) — P0 Broken News Images endgültig behoben ✅
+
+### Reproduktion & Root Cause
+Der vom User berichtete Artikel „Gold im Fokus" existiert nicht in der DB (kein Match bei `title ~= /Gold/i`). Der EXAKT reproduzierbare Broken-Image-Fall wurde stattdessen im Artikel identifiziert:
+
+- **Konkrete kaputte image_url**: `https://images.unsplash.com/photo-1585129777188-9989f61c5f9c?w=1600&q=70`
+- **HTTP-Status**: `404 Not Found` (Content-Type `text/html` statt `image/*`)
+- **MongoDB-Datensatz**: `_id=ObjectId('6a8b089db4db13ef55ce5c3c')` — „Merz kündigt nach Sommerpause zügige Reformumsetzung an"
+- **Betroffene React-Komponente**: `NachrichtenDetailPage.jsx` (Zeile 130-142) sowie `PublicNewsDetailPage.jsx` (Zeile 127-135) — **beide ohne jeglichen `onError`-Handler**
+
+**Root Cause (drei Ebenen):**
+1. **Detail-Seiten hatten KEINE Bild-Fallback-Logik** → nacktes `<img src={heroImage}>` liefert das Browser-Broken-Image-Icon bei jedem 404
+2. Das Unsplash-Foto war zum Publikations­zeitpunkt (`_validate_image_url` hatte HTTP 200 gesehen) valide, wurde aber **später vom Fotografen gelöscht** — Backend-Validator prüft nur bei Insert, nicht kontinuierlich
+3. `HomeFinanceNews`-Fallback nutzte selbst **externe Unsplash-URLs** → könnten identisch brechen
+
+### Umsetzung
+**Neuer zentraler Helper (nie 404, nie CORS):**
+- `/app/frontend/src/lib/news/newsImage.js` — `getNewsFallbackImage(category)` liefert kategoriespezifische SVG-DataURI (inline gerendert, keine HTTP-Request)
+- `/app/frontend/src/components/news/SafeNewsImage.jsx` — Komponente mit 3-stufigem Fallback:
+  1. Original `src`
+  2. Kategorie-SVG (lokal, deterministisch)
+  3. Finaler Editorial-Placeholder (Navy + Gold)
+  4. Bei allen Fehlern: `onFinalError`-Callback → Parent entfernt den Bildcontainer komplett
+- Endlosschleife via `dataset.fbStage`-Statemachine ausgeschlossen
+
+**Detail-Seiten: hero-Bild komplett verschwinden lassen** wenn alle Stufen fehlschlagen:
+```jsx
+const [heroHidden, setHeroHidden] = useState(false);
+{heroImage && !heroHidden && <SafeNewsImage ... onFinalError={() => setHeroHidden(true)} />}
+```
+→ Kein leerer 16:9-Grau-Container, Artikeltext rückt automatisch nach oben.
+
+**DB-Bereinigung:**
+- Alle publizierten Artikel per HTTP HEAD nachvalidiert → 1 defekt (Merz)
+- `image_url=null`, `hero_image_url=null`, `image_broken=true` gesetzt (Frontend rendert dann automatisch den lokalen Fallback)
+
+### Geänderte Dateien (12)
+| Datei | Änderung |
+|-------|----------|
+| **NEU** `lib/news/newsImage.js` | Zentraler Fallback-Helper + SVG-Generator |
+| **NEU** `components/news/SafeNewsImage.jsx` | 3-stufiger Fallback als React-Komponente |
+| `pages/news/NachrichtenDetailPage.jsx` | Hero → SafeNewsImage + hide-on-final |
+| `pages/news/PublicNewsDetailPage.jsx` | Hero → SafeNewsImage + hide-on-final |
+| `components/news/PublicNewsCard.jsx` | SafeNewsImage |
+| `components/news/RelatedNewsArticles.jsx` | SafeNewsImage |
+| `components/news/NachrichtenRelated.jsx` | SafeNewsImage |
+| `components/news/NewsHeroFeatured.jsx` | SafeNewsImage |
+| `components/dashboard/news/NewsCard.jsx` | SafeNewsImage |
+| `components/news-markte/HeroTopNews.jsx` | CardImage → SafeNewsImage |
+| `components/investment/TopicWissenBlock.jsx` | SafeNewsImage |
+| `components/nachrichten/EinordnungSection.jsx` | SafeNewsImage (2 Stellen) |
+| `components/home/HomeNewsPreview.jsx` | 4 Stellen migriert |
+| `components/home/HomeFinanceNews.jsx` | Externer Fallback-Pool → zentraler lokaler Helper |
+| **DB-Update** `news_articles` | 1 defekter Datensatz bereinigt |
+
+### Verifikation (visuell)
+| Case | Ergebnis |
+|------|----------|
+| **12 Artikel geprüft** | 11 valide, 1 defekt (Merz), 0 nach Cleanup |
+| **DB-Sweep post-fix** | `total=12 broken=0` |
+| Detail Merz (image_url=null) 1440px | ✅ Kein grauer Container, Text rückt nach oben |
+| Detail Merz 768px | ✅ Kein grauer Container |
+| Detail Merz 390px | ✅ Kein grauer Container |
+| Detail DAX (valide Unsplash-URL) 1440px | ✅ Bild lädt (natWidth=1600, complete=true) |
+| Kein Broken-Image-Icon sichtbar | ✅ auf allen Viewports |
+| Console-Errors | keine neuen |
+| Webpack | Compiled clean (nur 3rd-party mediapipe warning) |
+
+### Nicht angefasst (wie gefordert)
+- Artikeltexte / Kategorien / Quellenangaben / URL-Slugs
+- Newsletter / Wizard / PDF-Report / Supabase / Analytics
+- Backend `_validate_image_url()` (funktioniert korrekt, wird nur nicht kontinuierlich ausgeführt)
+
+### Verbleibende externe Blocker (unverändert)
+- Supabase `product_inquiry_leads_product_check` → DBA-Migration
+- Alpha Vantage + Unsplash API-Keys → warten auf User
+- **Backlog**: Periodischer DB-Sweep-Job der alle image_urls monatlich revalidiert (Roadmap Phase 4)
+
+---
+
+
 ## Session 75.1 (Feb 28, 2026) — Frontend Download-Button für PDF-Report ✅
 
 ### Ziel & Umsetzung
