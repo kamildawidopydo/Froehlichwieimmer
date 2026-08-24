@@ -935,9 +935,25 @@ async def fetch_feeds(db, *, trigger_source: str = "manual") -> dict:
             stats["new"] += 1
     stats["duration_s"] = round((datetime.now(timezone.utc) - started).total_seconds(), 2)
     logger.info("fetch_feeds_summary %s", stats)
-    # Lock immer freigeben — auch bei Exception via finally-Wrapper unten.
+    # Summary persistieren für /admin/status & Startup-Guard
     try:
-        await db.job_locks.delete_one({"_id": LOCK_ID, "acquired_at": started})
+        await db.job_summaries.update_one(
+            {"_id": "fetch_feeds"},
+            {"$set": {
+                "last_started_at": started,
+                "last_success_at": datetime.now(timezone.utc),
+                "last_summary": {k: v for k, v in stats.items() if k != "errors"} | {
+                    "errors": len(stats.get("errors") or []),
+                },
+                "last_trigger_source": trigger_source,
+            }},
+            upsert=True,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("news_fetch_summary_persist_failed")
+    # Lock immer freigeben — Vergleich via owner_token (robust gegen BSON-ms).
+    try:
+        await db.job_locks.delete_one({"_id": LOCK_ID, "owner_token": own_token})
     except Exception:  # noqa: BLE001
         logger.exception("news_fetch_lock_release_failed")
     return stats
@@ -1215,6 +1231,7 @@ async def synthesize_pending(db, max_articles: int = 25) -> dict:
     entity-overlap + Zeitfenster), führt dann pro Gruppe genau EINEN LLM-Call
     aus und speichert einen konsolidierten Artikel mit allen Quellen.
     """
+    started_synth = datetime.now(timezone.utc)
     stats = {"groups_total": 0, "processed": 0, "published": 0, "needs_review": 0,
              "skipped_duplicate": 0, "updated_existing": 0, "llm_failed": 0}
     # Roh-Items der letzten 48h (mehr Kontext für Gruppierung)
@@ -1344,6 +1361,19 @@ async def synthesize_pending(db, max_articles: int = 25) -> dict:
             stats["needs_review"] += 1
             logger.info("article_needs_review slug=%s reason=%s", slug, reason)
     logger.info("synthesize_pending_summary %s", stats)
+    # Summary persistieren für /admin/status
+    try:
+        await db.job_summaries.update_one(
+            {"_id": "synthesize_pending"},
+            {"$set": {
+                "last_started_at": started_synth,
+                "last_success_at": datetime.now(timezone.utc),
+                "last_summary": dict(stats),
+            }},
+            upsert=True,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("news_synth_summary_persist_failed")
     return stats
 
 

@@ -3488,10 +3488,22 @@ async def _news_purge_startup() -> None:
 async def _news_post_deploy_fetch() -> None:
     """Post-Deploy: einmalig RSS-Feeds ziehen (30s nach Start), damit nicht bis
     zum nächsten Cron gewartet werden muss. Läuft im Hintergrund, blockiert
-    den Server-Startup nicht."""
+    den Server-Startup nicht. Guard: wenn letzter erfolgreicher Fetch <30 Min
+    her ist, überspringen — vermeidet doppelte Läufe bei WatchFiles-Reloads."""
     async def _run():
         try:
             await asyncio.sleep(30)  # kurz warten, damit alles initialisiert ist
+            # 30-Min-Guard: wenn letzter erfolgreicher Fetch <30 Min zurückliegt,
+            # überspringen. Reduziert unnötige Trigger bei häufigen Backend-Reloads.
+            summary = await db.job_summaries.find_one({"_id": "fetch_feeds"})
+            last_ok = summary.get("last_success_at") if summary else None
+            if isinstance(last_ok, datetime):
+                age_min = (datetime.now(timezone.utc) - last_ok).total_seconds() / 60.0
+                if age_min < 30:
+                    logger.info(
+                        "startup fetch skipped: recent successful fetch (%.1f min ago)", age_min,
+                    )
+                    return
             logger.info("news_post_deploy_fetch: starting one-shot fetch")
             stats = await _news_fetch_feeds(db, trigger_source="post_deploy")
             logger.info("news_post_deploy_fetch: done — %s", stats)
@@ -3504,6 +3516,74 @@ async def _news_post_deploy_fetch() -> None:
 async def _admin_purge_demo(_user: dict = Depends(require_admin)):
     removed = await _news_purge_demo(db)
     return {"removed": removed}
+
+
+@api.get("/news/admin/status", summary="Admin: News-Pipeline Freshness & Health")
+async def _admin_news_status(_user: dict = Depends(require_admin)):
+    """Read-only Health-Report für die News-Pipeline. Enthält keine Secrets,
+    keine Raw-Feed-Payloads und keine internen Tokens."""
+    now = datetime.now(timezone.utc)
+
+    fetch_summary = await db.job_summaries.find_one({"_id": "fetch_feeds"}) or {}
+    synth_summary = await db.job_summaries.find_one({"_id": "synthesize_pending"}) or {}
+    lock_doc = await db.job_locks.find_one({"_id": "fetch_feeds"})
+    lock_active = False
+    if lock_doc:
+        exp = lock_doc.get("expires_at")
+        lock_active = isinstance(exp, datetime) and exp > now
+
+    def _iso(v):
+        return v.isoformat() if isinstance(v, datetime) else None
+
+    last_success_at = fetch_summary.get("last_success_at") if fetch_summary else None
+    fetch_summary_data = fetch_summary.get("last_summary") if fetch_summary else None
+    freshness = "error"
+    if isinstance(last_success_at, datetime):
+        age_min = (now - last_success_at).total_seconds() / 60.0
+        errors_count = 0
+        if isinstance(fetch_summary_data, dict):
+            errors_count = int(fetch_summary_data.get("errors") or 0)
+        if errors_count > 0 and age_min > 60:
+            freshness = "error"
+        elif age_min <= 120:
+            freshness = "fresh"
+        else:
+            freshness = "stale"
+
+    newest = await db.news_articles.find_one(
+        {"status": "published"}, sort=[("published_at", -1)],
+        projection={"published_at": 1, "_id": 0},
+    )
+    newest_at = newest.get("published_at") if newest else None
+    articles_24h = await db.news_articles.count_documents(
+        {"status": "published", "published_at": {"$gte": now - timedelta(days=1)}}
+    )
+    articles_7d = await db.news_articles.count_documents(
+        {"status": "published", "published_at": {"$gte": now - timedelta(days=7)}}
+    )
+
+    return {
+        "status": "ok",
+        "freshness": freshness,
+        "fetch": {
+            "last_started_at": _iso(fetch_summary.get("last_started_at")),
+            "last_success_at": _iso(last_success_at),
+            "last_trigger_source": fetch_summary.get("last_trigger_source"),
+            "last_summary": fetch_summary_data,
+            "lock_active": bool(lock_active),
+        },
+        "synthesize": {
+            "last_started_at": _iso(synth_summary.get("last_started_at")),
+            "last_success_at": _iso(synth_summary.get("last_success_at")),
+            "last_summary": synth_summary.get("last_summary"),
+        },
+        "content": {
+            "newest_published_at": _iso(newest_at),
+            "articles_last_24h": int(articles_24h),
+            "articles_last_7d": int(articles_7d),
+        },
+        "server_time": _iso(now),
+    }
 
 
 # --- Newsletter-Digest (wöchentlich, Mongo-persistiert) --------------------
