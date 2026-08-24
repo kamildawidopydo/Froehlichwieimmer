@@ -78,8 +78,8 @@ function CompactPill({ onClick, className, testId, ariaLabel, fixed = true, puls
       type="button"
       onClick={onClick}
       className={cn(
-        'group relative inline-flex w-[min(17.5rem,calc(100vw-1.5rem))] items-center gap-2.5 rounded-2xl border-2 border-bank-primary/25 bg-white px-2.5 py-1.5 text-left',
-        'min-h-[3.5rem] sm:min-h-[6rem] sm:w-[22rem] sm:gap-4 sm:px-5 sm:py-4',
+        'group relative inline-flex w-[clamp(15.5rem,78vw,22rem)] max-w-[calc(100vw-1rem)] items-center gap-2.5 rounded-2xl border-2 border-bank-primary/25 bg-white px-2.5 py-1.5 text-left',
+        'min-h-[3.5rem] sm:min-h-[6rem] sm:gap-4 sm:px-5 sm:py-4',
         'shadow-[0_12px_28px_-12px_rgb(9_33_66/0.22)] sm:shadow-[0_20px_50px_-18px_rgb(9_33_66/0.30)]',
         'transition-all duration-200 ease-out',
         'sm:hover:-translate-y-0.5 sm:hover:scale-[1.02] hover:border-bank-primary/55 hover:bg-bank-primary/[0.04] sm:hover:shadow-[0_28px_64px_-18px_rgb(9_33_66/0.38)]',
@@ -141,27 +141,22 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
           transition={{ duration: prefersReduced ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
           className={className}
         >
-          <div className="max-h-[min(78vh,640px)] overflow-y-auto overscroll-contain px-3 py-3 [scrollbar-width:thin] sm:px-4 sm:py-4">
-            {/* Header — klärt Ziel & Nutzen in Sekunden */}
-            <div className="mb-2.5 border-b border-bank-border pb-2.5 sm:mb-3 sm:pb-3">
-              <p className="font-mono text-[9.5px] font-medium uppercase tracking-[0.22em] text-bank-primary/80">
-                Produktwahl
+          <div className="flex max-h-[min(calc(100dvh-9rem),38rem)] max-w-[calc(100vw-1rem)] flex-col overflow-hidden [scrollbar-width:thin]">
+            {/* Header — kompakt, 3 Zeilen max */}
+            <div className="shrink-0 border-b border-bank-border px-3 py-2.5 sm:px-4 sm:py-3">
+              <p className="font-mono text-[9.5px] font-medium uppercase tracking-[0.20em] text-bank-primary/80">
+                Kurzfragebogen
               </p>
-              <h3 className="mt-1 font-display text-[14.5px] font-light leading-snug tracking-tight text-bank-ink sm:mt-1.5 sm:text-[16.5px]">
-                Finden Sie die passende Geldanlage für Ihre Ziele.
+              <h3 className="mt-0.5 font-display text-[clamp(0.95rem,3.2vw,1.05rem)] font-light leading-snug tracking-tight text-bank-ink">
+                Finden Sie die passende Geldanlage
               </h3>
-              <p className="mt-1 text-[11.5px] leading-snug text-bank-text-muted sm:mt-1.5 sm:text-[12px] sm:leading-relaxed">
-                <span className="sm:hidden">Wählen Sie ein Produkt — oder beantworten Sie wenige Fragen.</span>
-                <span className="hidden sm:inline">
-                  Wählen Sie direkt ein Produkt — oder beantworten Sie wenige Fragen und
-                  erhalten Sie eine persönliche Empfehlung mit möglichen Vorteilen und
-                  passenden Angeboten.
-                </span>
+              <p className="mt-1 text-[clamp(0.72rem,2.6vw,0.8rem)] leading-snug text-bank-text-muted">
+                Wählen Sie ein Produkt oder beantworten Sie wenige Fragen.
               </p>
             </div>
 
-            {/* Rich Product Cards */}
-            <div className="flex flex-col gap-1 sm:gap-1.5">
+            {/* Produkt-Grid: 1 Spalte mobile, 2 Spalten ab sm — reduziert Höhe massiv auf Desktop */}
+            <div className="grid min-h-0 shrink grow grid-cols-1 gap-1 overflow-y-auto overscroll-contain p-2 sm:grid-cols-2 sm:gap-1.5 sm:p-3">
               {PRODUCT_CATALOG.map((p) => (
                 <button
                   key={p.key}
@@ -170,48 +165,32 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
                   data-testid={`product-inquiry-menu-option-${p.key}`}
                   onClick={() => onPick(p.key)}
                   className={cn(
-                    'group flex w-full flex-col gap-0 rounded-lg border border-transparent px-2.5 py-2 text-left transition-all sm:gap-0.5 sm:px-3 sm:py-2.5',
+                    'group flex min-h-[2.75rem] w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-left transition-all',
                     'hover:border-bank-accent/30 hover:bg-bank-surface',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/30',
                   )}
                 >
-                  <span className="font-mono text-[9px] font-medium uppercase tracking-[0.16em] text-bank-primary/80 sm:text-[9.5px]">
-                    {p.kicker}
+                  <span
+                    aria-hidden
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-bank-primary/15 bg-[rgb(var(--bank-primary)/0.08)] text-bank-primary"
+                  >
+                    <MessageCircleQuestion className="h-4 w-4" strokeWidth={LUCIDE_STROKE} />
                   </span>
-                  <span className="text-[13px] font-semibold leading-snug text-bank-ink transition-colors group-hover:text-bank-primary sm:text-[13.5px]">
-                    {p.title}
-                  </span>
-                  <span className="text-[11px] leading-snug text-bank-text-muted sm:text-[11.5px]">
-                    {p.benefit}
-                  </span>
-                  {p.bonusSource && BANK_BONUS_COPY[p.bonusSource.bankSlug]?.summary ? (
-                    <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-bank-primary/80 sm:mt-1 sm:text-[9.5px]">
-                      {p.bonusSource.label}
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-[13px] font-semibold leading-tight text-bank-ink transition-colors group-hover:text-bank-primary">
+                      {p.title}
                     </span>
-                  ) : null}
+                    <span className="truncate text-[11px] leading-tight text-bank-text-muted">
+                      {p.benefit}
+                    </span>
+                  </span>
+                  <ArrowRight
+                    aria-hidden
+                    strokeWidth={LUCIDE_STROKE}
+                    className="h-3.5 w-3.5 shrink-0 text-bank-text-muted/60 transition-transform group-hover:translate-x-0.5 group-hover:text-bank-primary"
+                  />
                 </button>
               ))}
-            </div>
-
-            {/* Wizard-Nutzen-Chips — auf Mobile ausgeblendet, damit mehr Produkte sichtbar sind */}
-            <div className="mt-3 hidden rounded-lg border border-bank-border bg-bank-surface/60 px-3 py-3 sm:mt-3.5 sm:block">
-              <p className="font-mono text-[9.5px] font-medium uppercase tracking-[0.2em] text-bank-primary/80">
-                Kurzfragebogen — Ihr Nutzen
-              </p>
-              <ul className="mt-2 flex flex-col gap-1.5">
-                {WIZARD_BENEFITS.map((b) => (
-                  <li key={b.title} className="flex items-start gap-2">
-                    <span aria-hidden className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-bank-primary/60" />
-                    <span className="min-w-0">
-                      <span className="text-[12px] font-medium text-bank-ink">{b.title}</span>
-                      <span className="ml-1 text-[11.5px] leading-snug text-bank-text-muted">— {b.body}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bank-text-muted">
-                In wenigen Minuten · kostenlos &amp; unverbindlich
-              </p>
             </div>
           </div>
         </motion.div>
@@ -443,14 +422,14 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
             prefersReduced={prefersReduced}
             onPick={pickProduct}
             className={cn(
-              'absolute bottom-full mb-2 w-[min(17.5rem,calc(100vw-1.5rem))] rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev',
+              'absolute bottom-full mb-2 w-[min(calc(100vw-1rem),34rem)] max-h-[min(calc(100dvh-8rem),38rem)] overflow-hidden rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev',
               nearForm ? 'left-0' : 'right-0',
             )}
           />
           {/* Kompakter Mobile-Main-CTA — Single-Line 56 px mit integriertem Divider + X. */}
           <div
             className={cn(
-              'flex w-[min(17.5rem,calc(100vw-1.5rem))] items-stretch overflow-hidden rounded-2xl border-2 border-bank-primary/25 bg-white',
+              'flex w-[clamp(15.5rem,78vw,22rem)] max-w-[calc(100vw-1rem)] items-stretch overflow-hidden rounded-2xl border-2 border-bank-primary/25 bg-white',
               'transition-shadow duration-200 ease-out',
               menuOpen
                 ? 'shadow-[0_8px_20px_-12px_rgb(9_33_66/0.22)] border-bank-primary/20'
@@ -531,7 +510,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
             menuOpen={menuOpen}
             prefersReduced={prefersReduced}
             onPick={pickProduct}
-            className="absolute bottom-full right-0 mb-2 w-[22rem] max-w-[calc(100vw-2rem)] rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev"
+            className="absolute bottom-full right-0 mb-2 w-[clamp(28rem,46vw,42rem)] max-w-[calc(100vw-1rem)] max-h-[min(calc(100dvh-10rem),38rem)] overflow-hidden rounded-xl border border-bank-border bg-white shadow-[0_24px_60px_-24px_rgb(9_33_66/0.36)] dark:bg-bank-surface-elev"
           />
 
           <div
@@ -555,7 +534,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
               onClick={openMenu}
               className={cn(
                 'group flex min-w-0 flex-1 items-center gap-4 py-4 pl-5 pr-4 text-left transition-colors duration-200',
-                'w-[24rem] min-h-[5.75rem]',
+                'w-[clamp(20rem,42vw,26rem)] max-w-[calc(100vw-2rem)] min-h-[5.75rem]',
                 'hover:bg-bank-primary/[0.04]',
                 'active:scale-[1.02] active:bg-bank-primary/[0.07]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bank-primary/40',

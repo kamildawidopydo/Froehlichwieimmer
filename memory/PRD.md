@@ -1,5 +1,45 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 74.10 (Feb 28, 2026) — Sticky-CTA & Produktmenü vollständig fluid/responsive ✅
+
+**Kernproblem behoben:** Bisher wurden konkrete Pixel-Breiten verwendet (`w-[17.5rem]`, `w-[22rem]`), was auf einem Viewport passte, auf dem nächsten aber zu groß/klein war. Session 74.10 macht die Komponente vollständig fluid.
+
+**CompactPill (geschlossener CTA)**
+- Breite `w-[clamp(15.5rem,78vw,22rem)] max-w-[calc(100vw-1rem)]` → skaliert automatisch von 248 px (Min) bis 352 px (Max) je nach Viewport.
+- Höhe: `min-h-[3.5rem] sm:min-h-[6rem]` — Mobile Single-Line, Desktop 3-zeilig.
+- Mobile Main-CTA-Wrapper spiegelt diese Breite; damit sind CTA und Menu ENTKOPPELT (Menu darf breiter werden).
+
+**ProductMenu (geöffnetes Panel) — komplett neu dimensioniert**
+- **Mobile**: `w-[min(calc(100vw-1rem),34rem)]`, max-h `min(72dvh,38rem)`.
+- **Desktop**: `w-[clamp(28rem,46vw,42rem)]` — bei 1440 px etwa 662 px, deutlich niedriger, breiter, besser bedienbar.
+- **max-w**: `calc(100vw-1rem)` — Menü kann nie aus dem Viewport ragen.
+- **max-h**: `min(72dvh,38rem)` — respektiert vertikalen Platz (Landscape-Smartphones, Split-Screen, kurze Laptops).
+- **Layout**: `grid-cols-1 sm:grid-cols-2` — auf Desktop 2 Spalten (Aktien|Anleihen / Fonds|Tagesgeld / Festgeld|Flexgeld), massive Höhenreduktion.
+- **Header vereinfacht**: nur Eyebrow „Kurzfragebogen" + H3 „Finden Sie die passende Geldanlage" + 1 Kurzsatz. Kein langer Marketing-Text mehr.
+- **Produktzeilen kompakt**: `min-h-[2.75rem]`, Icon 32×32 + Title (13 px semibold) + Benefit (11 px, truncate) + ArrowRight. Kicker/Bonus-Badge entfernt (Vereinfachung — Bonus-Info bleibt in Homepage-Section).
+- **Fluide Fonts**: Header via `clamp(0.95rem,3.2vw,1.05rem)` — skaliert mit Viewport.
+- **Interner Scroll** nur bei Bedarf via `overflow-y-auto` auf Grid; Header bleibt sichtbar.
+
+**Entfernte Duplikate**
+- Alte ProductMenu-Body (die noch als „dangling return" nach dem `function`-Statement stand) komplett gelöscht — dadurch keine doppelten testids/Zeilen mehr.
+
+**Erhalten (nicht angefasst):** alle 6 Wizards, Produkt-Mapping, Analytics, testids, ESC, Outside-Click, Dismiss/Restore, Attention-Pulse, nearForm, Newsletter-Avoid, Interstitial-Avoid, Lead-Logik, Bonuslogik. **Backend-Session-74.9 unverändert.**
+
+**Verbleibende externe Blocker (kein Code-Fix möglich):**
+1. Supabase-DDL: `20260228120000_product_inquiry_leads_all_products.sql` muss von DBA in Supabase Studio ausgeführt werden.
+2. `PRODUCT_INQUIRY_TO` Env-Variable auf verifizierte Empfänger-Adresse setzen.
+
+**Verifikation (iteration_56, 92 % → nach Fix 100 %)**
+- ✅ Mobile CTA fluid: 320→432 px clamp(15.5rem,78vw,22rem) sauber, kein h-Scroll.
+- ✅ Mobile Menü 390: 374×392, alle 6 Options sichtbar ohne Scroll.
+- ✅ Desktop Menü: 640→448, 1440→662, 1920→672 clamp(28rem,46vw,42rem), Höhe 262 px, 2-col Grid.
+- ✅ Zoom 80/100/125/150/200 % @1440: Menü immer im Viewport, keine Text-Cliffs.
+- ✅ Regression: alle 6 Wizards, Analytics, ESC/Outside-Click, Dismiss/Restore, Interstitial-Hide, Wizard Full-Flow inkl. Validation-UX + Success.
+
+**Follow-up-Fixes (Session 74.10.1)**
+- **Desktop-Main-CTA jetzt fluid:** `w-[clamp(20rem,42vw,26rem)] max-w-[calc(100vw-2rem)]` (vorher fix `w-[24rem]`).
+- **Short-Landscape-Clipping behoben:** `max-h` verwendet jetzt `min(calc(100dvh-8rem/9rem/10rem),38rem)` statt reines `min(72dvh,38rem)` → CTA-Anker-Höhe wird subtrahiert. Bei 812×375/667×375 rutscht das Menü nicht mehr über den oberen Viewport-Rand.
+
 ## Session 74.9 (Feb 28, 2026) — Supabase-Migration + Persistente Idempotenz ✅
 
 **1) Supabase CHECK-Constraint-Migration (extern-BLOCKED, SQL geliefert)**

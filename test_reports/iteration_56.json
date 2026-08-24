@@ -1,0 +1,43 @@
+{
+  "summary": "Session 74.10 frontend-only validation of the fully fluid Sticky-CTA + ProductMenu on https://finance-platform-v2.preview.emergentagent.com/. Verified CTA bounding boxes across 11 viewports (320→1920), mobile menu fluid width/height, desktop clamp widths, 2-col grid, unique testids, compact header, compact product rows, browser zoom 80/100/125/150/200 %, position safety at 320 px, ESC + outside-click, dismiss → restore-pill → restore, analytics events, all 6 wizards opening and the full aktien wizard flow incl. validation-UX up to the Success screen. 1 real defect found: at short landscape viewports (>=640 px wide, ~375 px high) the ProductMenu overshoots the TOP of the viewport by ~17 px, so the menu header (eyebrow/H3) is clipped — max-h min(72dvh,38rem) does not account for the CTA height + offsets.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ProductInquiryStickyCta / ProductMenu (desktop branch)", "issue": "Position safety violated at short landscape viewports: 812x375 and 667x375 → menu bounding box y = -17 (top clipped, eyebrow 'KURZFRAGEBOGEN' and part of H3 cut off). Natural menu height 262px is below max-h min(72dvh,38rem)=270px at h=375, but available space above the CTA is only ~239px (375 - 20 bottom - 108 CTA - 8 mb), so no clamping kicks in. 896x414 and 1366x600 are fine.", "selector": "[role=menu] inside [data-testid=product-inquiry-sticky-cta]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Desktop main sticky CTA (>=640px)", "issues": ["Main CTA button is still fixed width w-[24rem] (measured 432x108 at 768→1920) and is NOT fluid via clamp(15.5rem,78vw,22rem) as stated in the request. Only the mobile CTA and the restore pill follow the clamp. Confirm this is intentional; on 768px width the 432px CTA is the widest element at bottom-right (no overflow, no h-scroll)."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix menu top-clipping on short landscape viewports (e.g. max-h-[min(72dvh-8rem,38rem)] or max-h-[calc(100dvh-10rem)] for the desktop branch, so the menu never exceeds the space above the CTA).",
+    "Clarify/align desktop main-CTA width: request asks for clamp(15.5rem,78vw,22rem) but desktop uses fixed w-[24rem]."
+  ],
+  "critical_code_review_comments": [
+    "ProductInquiryStickyCta.jsx (612 lines) is close to the 700-line limit and now contains 3 render branches (dismissed / mobile / desktop) with duplicated wrapper class strings — consider extracting the sticky container into a shared subcomponent.",
+    "Only ONE ProductMenu definition remains and only one sticky root renders per viewport — the duplicate-definition issue from the previous session is resolved (verified: exactly 1 [data-testid=product-inquiry-sticky-cta] and exactly 6 unique menu-option testids on every viewport tested).",
+    "max-h protection should be derived from available space above the anchor, not from dvh alone."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "92% (11/12 feature areas green; 1 layout defect at short landscape)"},
+  "seed_data_creation": "One aktien product inquiry submitted through the public wizard (Vorname TestVorname, Nachname TestNachname, qa.tester@example.com, +4915112345678) — Success screen 'Ihre Aktien-Anfrage ist bei uns' shown, no product-inquiry-error.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "detailed_results": {
+    "fluid_cta_bounding_boxes": "320:249.6x60, 360:280.8x60, 375:292.5x60, 390:304.2x60, 430:335.4x60 — exactly clamp(248,78vw,352) capped by calc(100vw-1rem); height 60px >= 3.5rem. 768→1920: 432x108 (desktop branch, fixed w-24rem). No horizontal scroll on any viewport.",
+    "mobile_menu_390x844": "w=374 (min(100vw-1rem,34rem)) ✓, h=392 (<=72dvh=607) ✓, grid-template-columns=356px (1 col) ✓, 6/6 options fully visible without scrolling ✓, row height 46px (min-h 2.75rem) ✓, header shows exactly Kurzfragebogen / 'Finden Sie die passende Geldanlage' / 'Wählen Sie ein Produkt oder beantworten Sie wenige Fragen.' ✓, no kicker/bonus badge in rows ✓, ESC closes ✓.",
+    "desktop_menu_widths": "640→448 (min) ✓, 768→448 ✓, 1024→471 ✓, 1440→662 ✓, 1920→672 (max) ✓ — all exactly clamp(28rem,46vw,42rem); height 262px (<400 target) ✓; grid 2 columns ✓; fully inside viewport ✓.",
+    "zoom_1440x900": "zoom 0.8/1/1.25/1.5/2 → menu 530/662/828/994/1325 px wide, always inside viewport, 6 options present, dismiss X visible and inside viewport at every zoom level; no text clipped at 200 %.",
+    "position_safety_320": "menu box x=0 w=304 → right edge 304 <= 320-16 ✓, no h-scroll.",
+    "short_viewports": "1366x600 OK (y=208). 812x375 and 667x375 FAIL (y=-17, header clipped). 896x414 OK (y=22).",
+    "regressions_74_9": "All 6 wizards open via menu-option selector (aktien/anleihen/fonds/tagesgeld/festgeld/flexgeld) ✓. Analytics dataLayer events product_inquiry_open{source:sticky_cta} and product_inquiry_select{product,source:sticky_popup} fired for every product ✓. ESC ✓, outside click ✓. Dismiss → [data-testid=product-inquiry-sticky-restore] pill (mobile 304x56, desktop 352 content width; measured 359 incl. 1.02 hover scale) → click restores CTA ✓. Interstitial-Hide works: while #invtopic-teaser is visible the sticky CTA is removed from DOM and returns after closing ✓.",
+    "wizard_flow_and_validation": "aktien 7-step flow completed (steps 1-6 choice questions, step 7 contact). Empty submit → data-testid=pi-first-error 'Bitte geben Sie Ihren Vornamen ein.' and pi-last-error 'Bitte geben Sie Ihren Nachnamen ein.', 2 elements with aria-invalid=true, red border rgb(239,68,68), focus moved to #pi-first, error disappears on change ✓. Full submit → [data-testid=product-inquiry-success] shown ✓.",
+    "console": "Only repeated 'Failed to load resource: 401' (pre-existing unauthenticated API probe, present on every page load, unrelated to 74.10). No JS exceptions, no React warnings about duplicate keys/definitions.",
+    "not_verified": "nearForm mobile reposition could not be observed: whenever #home-newsletter is centered in the viewport the #invtopic-teaser interstitial is visible, which (by design) removes the sticky CTA entirely — so data-near-form='true' was never measurable. Attention-pulse could not be caught in the act (data-pulse=false on all polls); the pulse window is only 1.4s→2.9s after mount and the consent-gate handling consumes that window in automation. Both are timing/environment limitations, not observed defects."
+  },
+  "test_credentials": "not required (public flows only); /app/memory/test_credentials.md not used",
+  "context_for_next_testing_agent": "Preview site shows a blocking [data-testid=visitor-welcome-gate] modal on every fresh load: select the first non-empty option in BOTH selects, then click 'Akzeptieren'. A second blocker is the #invtopic-teaser interstitial ('Aktien im Fokus') which hides the sticky CTA entirely — close it before any CTA test, especially when scrolling to the newsletter. Restore pill testid is product-inquiry-sticky-restore (NOT ...-compact). Menu widths/positions all match the 74.10 clamp spec; only the short-landscape top clipping (812x375 / 667x375) is open.",
+  "rca_of_the_issue": "The desktop ProductMenu is anchored with 'absolute bottom-full mb-2' above a ~108px tall CTA that sits at bottom-5. Its height cap is max-h-[min(72dvh,38rem)], which ignores the space consumed by the CTA and its offsets. At viewport height 375 the cap resolves to 270px while only ~239px are available above the CTA, so the 262px menu renders with y=-17 and the header is clipped. Fix: subtract the anchor height, e.g. max-h-[min(calc(72dvh-8rem),38rem)] or max-h-[calc(100dvh-10rem)], keeping the internal grid scroll."
+}
