@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowRight, Newspaper, Clock } from 'lucide-react';
@@ -210,6 +210,67 @@ const RightList = ({ items }) => (
   </div>
 );
 
+/* ── Category Ribbon: hottest categories of last 24h ────────────────────── */
+const CategoryRibbon = ({ items }) => {
+  const chips = useMemo(() => {
+    const now = Date.now();
+    const CUTOFF = 24 * 60 * 60 * 1000;
+    const stats = new Map(); // key → {count, newest}
+    for (const it of items) {
+      const key = it.category;
+      if (!key || !CATEGORY_LABEL[key]) continue;
+      const t = it.published_at ? new Date(it.published_at).getTime() : 0;
+      if (!Number.isFinite(t) || now - t > CUTOFF) continue;
+      const cur = stats.get(key) || { count: 0, newest: 0 };
+      cur.count += 1;
+      if (t > cur.newest) cur.newest = t;
+      stats.set(key, cur);
+    }
+    return [...stats.entries()]
+      .sort((a, b) => (b[1].count - a[1].count) || (b[1].newest - a[1].newest))
+      .slice(0, 5)
+      .map(([key, s]) => ({ key, label: CATEGORY_LABEL[key], count: s.count }));
+  }, [items]);
+
+  if (!chips.length) return null;
+
+  const handleClick = (category) => {
+    try {
+      trackInvestmentEvent('news_category_click', {
+        category,
+        source: 'home_hero_ribbon',
+      });
+    } catch { /* silent */ }
+  };
+
+  return (
+    <nav
+      aria-label="Aktuelle Themen"
+      data-testid="hero-news-ribbon"
+      className="mb-5 flex items-center gap-3 border-b border-bank-border pb-3"
+    >
+      <span className="hidden shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-bank-text-muted sm:inline">
+        Themen
+      </span>
+      <ul className="-mx-1 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        {chips.map(({ key, label }) => (
+          <li key={key} className="shrink-0">
+            <Link
+              to={categoryHref(key)}
+              onClick={() => handleClick(key)}
+              data-testid={`hero-news-ribbon-chip-${key}`}
+              aria-label={`Kategorie ${label} anzeigen`}
+              className="inline-flex min-h-[32px] items-center rounded-full border border-bank-border bg-white px-3 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-bank-primary-strong transition-colors hover:border-bank-primary/40 hover:bg-bank-mint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
+            >
+              {label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+};
+
 const SkeletonBar = ({ className }) => (
   <div className={cn('animate-pulse rounded-md bg-bank-mint/60', className)} aria-hidden />
 );
@@ -236,7 +297,7 @@ const HomeHeroNewsPreview = () => {
         if (seen.has(it.slug)) continue;
         seen.add(it.slug);
         deduped.push(it);
-        if (deduped.length >= 5) break;
+        if (deduped.length >= 12) break;
       }
       lastFetchRef.current = Date.now();
       setItems((prev) => {
@@ -295,6 +356,7 @@ const HomeHeroNewsPreview = () => {
 
       {state === 'ready' && items.length > 0 && (
         <>
+          <CategoryRibbon items={items} />
           {(() => {
             const top = items[0];
             const left = items[1] || null;
