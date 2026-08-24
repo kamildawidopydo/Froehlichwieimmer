@@ -48,6 +48,7 @@ const InvestmentTopicsOverviewPage = lazy(() => import('@/pages/InvestmentTopics
 const AdminInvestmentTopics = lazy(() => import('@/pages/admin/AdminInvestmentTopics'));
 const AdminInvestmentTopicEdit = lazy(() => import('@/pages/admin/AdminInvestmentTopicEdit'));
 const AdminNewsArticles = lazy(() => import('@/pages/admin/AdminNewsArticles'));
+const AdminStockResearch = lazy(() => import('@/pages/admin/AdminStockResearch'));
 const CreditLeadPage = lazy(() => import('@/pages/CreditLeadPage'));
 const Bewertungen = lazy(() => import('@/pages/Bewertungen'));
 const Kundenstimmen = lazy(() => import('@/pages/Kundenstimmen'));
@@ -825,6 +826,7 @@ function App() {
                   <Route path="investment-topics" element={<AdminInvestmentTopics />} />
                   <Route path="investment-topics/:slug" element={<AdminInvestmentTopicEdit />} />
                   <Route path="news-articles" element={<AdminNewsArticles />} />
+                  <Route path="stock-research" element={<AdminStockResearch />} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import axios from 'axios';
 import { BarChart3, LineChart, ShieldCheck } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
 
 const EASE = [0.22, 1, 0.36, 1];
+const API_BASE = process.env.REACT_APP_BACKEND_URL;
 
 /**
  * @typedef {Object} StockResearchRow
@@ -281,14 +283,55 @@ const EmptyState = () => (
 
 /**
  * Homepage stock research section.
- * Renders an editorial empty-state when no verified analyst data exists;
- * automatically shows the research table once real rows are supplied.
+ * Fetches verified analyst rows from `/api/stock-research`. If none are
+ * published, the editorial empty-state is rendered instead. Consumers may
+ * still pass `rows` explicitly to bypass the fetch (e.g. in Storybook).
  *
  * @param {{ rows?: StockResearchRow[] }} props
  */
-const StockResearchSection = ({ rows = [] }) => {
+const StockResearchSection = ({ rows: rowsProp }) => {
   const prefersReduced = useReducedMotion();
-  const hasData = Array.isArray(rows) && rows.length > 0;
+  const [fetched, setFetched] = useState(null); // null while loading
+  const [asOf, setAsOf] = useState(null);
+
+  useEffect(() => {
+    if (rowsProp !== undefined) {
+      setFetched(rowsProp);
+      return () => {};
+    }
+    let alive = true;
+    const controller = new AbortController();
+    axios
+      .get(`${API_BASE}/api/stock-research`, { signal: controller.signal, params: { limit: 12 } })
+      .then(({ data }) => {
+        if (!alive) return;
+        const items = Array.isArray(data?.items) ? data.items : [];
+        // Map API shape → row shape used by ResearchTable
+        setFetched(items.map((it) => ({
+          company: it.company_name,
+          ticker: it.ticker,
+          currentPrice: Number(it.current_price),
+          priceTarget: Number(it.target_price),
+          upsidePct: Number(it.upside_pct),
+          analyst: it.analyst || it.research_house || '—',
+          asOfDate: it.research_date,
+          source: it.source_name,
+          sourceUrl: it.source_url,
+          currency: it.currency || 'EUR',
+        })));
+        setAsOf(data?.as_of || null);
+      })
+      .catch((err) => {
+        if (axios.isCancel?.(err) || err?.name === 'CanceledError') return;
+        if (!alive) return;
+        setFetched([]); // fall back to empty state on error
+      });
+    return () => { alive = false; controller.abort(); };
+  }, [rowsProp]);
+
+  const rows = fetched || [];
+  const isLoading = fetched === null;
+  const hasData = !isLoading && rows.length > 0;
 
   const reveal = (i = 0) => ({
     initial: { opacity: 0, y: 18 },
@@ -325,9 +368,17 @@ const StockResearchSection = ({ rows = [] }) => {
         </motion.header>
 
         {/* Research table or empty state */}
-        <motion.div {...reveal(1)} className="mt-14 sm:mt-16">
+        <motion.div {...reveal(1)} className="mt-14 sm:mt-16" data-testid="stock-research-container">
           {hasData ? <ResearchTable rows={rows} /> : <EmptyState />}
         </motion.div>
+
+        {/* Data provenance line (only with real data) */}
+        {hasData ? (
+          <p className="mt-5 text-center font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted" data-testid="stock-research-as-of">
+            {asOf ? `Datenstand: ${new Date(asOf).toLocaleString('de-DE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ` : ''}
+            Quellen: Analysten-/Research-Angaben der jeweils genannten Anbieter
+          </p>
+        ) : null}
 
         {/* Info cards */}
         <motion.ul

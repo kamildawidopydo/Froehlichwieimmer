@@ -3708,6 +3708,10 @@ app.include_router(_reports_routes.router)
 from routes import auth as _auth_routes  # noqa: E402
 app.include_router(_auth_routes.router)
 
+# Stock-Research (Session 78.3 — Admin CRUD + CSV import + public endpoint)
+from routes import stock_research as _stock_research_routes  # noqa: E402
+app.include_router(_stock_research_routes.router)
+
 app.include_router(api)
 
 allowed = [o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()]

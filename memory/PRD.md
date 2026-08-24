@@ -8,6 +8,18 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 - 76.5–77.9 — Palette rebuild, Footer/Contact/Hero light, News-Hero Editorial, News-lock fix, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Fresh Article Toast.
+- 78.3 (Feb 24 2026) — **Analyst Data Feed — Admin CRUD + CSV Import + Public API**:
+  - Backend: neuer Router `/app/backend/routes/stock_research.py` (~520 LOC) mit MongoDB-Collection `stock_research`. Endpoints: `GET /api/admin/stock-research`, `POST`, `PATCH /:id`, `DELETE /:id`, `POST /:id/publish`, `POST /:id/unpublish`, `POST /bulk`, `POST /import/preview` (multipart CSV), `POST /import/confirm`, sowie **public** `GET /api/stock-research` (nur `published=true`, limit ≤12, sortiert `research_date DESC`).
+  - Admin-Endpoints via `require_admin`. Public-Endpoint filtert interne Felder (`notes`, `created_by`, `created_at`, `updated_at`, `dedupe_key`) heraus.
+  - Upside-Prozentwert wird zentral serverseitig serialisiert: `((target - current) / current) * 100` (Division-by-zero-safe, auf 2 Dezimalstellen).
+  - Publish-Guard: Ohne `source_name`, `research_date`, valide Kurse → 400 „Für die Veröffentlichung ist eine nachvollziehbare Research-Quelle erforderlich."
+  - Duplicate-Key: SHA256 aus `ticker + research_house + analyst + research_date + target_price` → 409 bei manueller Anlage / CSV.
+  - CSV: `_sniff_reader` (Komma/Semikolon/Tab), UTF-8/Latin-1, Max 512 KB, Max 500 Zeilen. Formula-Injection-Guard (`=`, `+`, `-`, `@` werden mit `'` neutralisiert). Preview → Confirm-Zwei-Schritt-Workflow. CSV-`published=true` wird **ignoriert** (Draft-First-Regel §10) und als Warnung ausgegeben.
+  - Bulk-Aktionen (`publish`|`unpublish`|`delete`) mit Revalidierung bei Bulk-Publish (§11).
+  - Frontend: neue Admin-Seite `/app/frontend/src/pages/admin/AdminStockResearch.jsx` (~600 LOC) mit Liste, Manuellem Anlage-/Bearbeitungs-Modal (mit inline Upside-Vorschau), CSV-Import-Wizard (Upload → Preview mit Fehler-/Warn-/Gültig-Zählern → Bestätigung), Bulk-Toolbar, Row-Actions (Bearbeiten/Publish/Unpublish/Löschen mit Confirm), Statusfilter „veröffentlicht/Entwurf".
+  - Route in `App.js`: `/admin/stock-research`. Nav-Eintrag „Aktienanalysen" in `AdminDashboardLayout.jsx` unter „Produkte & Inhalte".
+  - `StockResearchSection.jsx`: fetcht `/api/stock-research` bei Mount. Wenn `items>0` → `ResearchTable`; sonst weiterhin bestehender Empty-State. Datenstand-Zeile („Datenstand: … · Quellen: Analysten-/Research-Angaben der jeweils genannten Anbieter") nur bei echten Daten sichtbar. Rendert `source_url` als klickbaren Link. Disclaimer unverändert.
+  - E2E-QA (curl): Login → Draft-Create (nicht public) → Publish (public sichtbar) → Unpublish (public leer) → 401 ohne Auth → Delete OK. CSV mit 6 Zeilen (2 valide, 4 Fehler: Ticker/Quelle/Datum/Kurs, 1 Warnung published=true) → 2 als Drafts importiert, Duplicate-Preview → 0 importable. Bulk-Delete Cleanup. Preview endet mit leerer Collection + Empty-State auf der Homepage. Kein horizontaler Scroll @390px. Webpack 0 neue Warnings.
 - 78.2 (Feb 24 2026) — **Homepage „Aktien mit Potenzial" — Stock Research Section (Empty-State)**:
   - Neue Datei `/app/frontend/src/components/home/StockResearchSection.jsx` (~330 LOC): Editorial Research-Bereich mit Eyebrow „EXKLUSIVE ANALYSEN", H2 „Aktien mit Potenzial", Empty-State (`Aktuell liegen keine verifizierten Analysteneinschätzungen vor.`), Table-Header-Vorschau, 3 Info-Karten (Fundamentale Stärke / Experten-Know-How / Risikobewusst Investieren), Disclaimer.
   - `Home.js`: Import + JSX von `HomeInvestmentSpectrum` durch `StockResearchSection` ersetzt (an gleicher Stelle).
