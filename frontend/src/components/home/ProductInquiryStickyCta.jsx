@@ -326,7 +326,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
                 aria-hidden
                 className={cn(
                   'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
-                  'shadow-[0_4px_12px_-6px_rgb(76_124_186/0.55)] transition-colors',
+                  'shadow-[0_4px_12px_-6px_rgb(127_175_170/0.55)] transition-colors',
                   'group-hover:bg-[rgb(var(--bank-primary)/0.16)] group-hover:border-bank-primary/35',
                 )}
               >
@@ -410,7 +410,7 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
                 aria-hidden
                 className={cn(
                   'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
-                  'shadow-[0_6px_18px_-8px_rgb(76_124_186/0.55)] transition-colors duration-200',
+                  'shadow-[0_6px_18px_-8px_rgb(127_175_170/0.55)] transition-colors duration-200',
                   'group-hover:bg-[rgb(var(--bank-primary)/0.16)] group-hover:border-bank-primary/35',
                 )}
               >

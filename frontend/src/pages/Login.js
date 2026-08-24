@@ -179,11 +179,11 @@ const Login = () => {
     >
       {/* Status banners */}
       {blockedStatus === 'pending' && (
-        <div className="mb-7 border-l-2 border-bank-gold/55 bg-bank-gold-soft/15 p-5">
+        <div className="mb-7 border-l-2 border-bank-primary/55 bg-bank-primary/[0.06] p-5">
           <div className="flex gap-4">
-            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-bank-gold" strokeWidth={1.5} />
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-bank-primary" strokeWidth={1.5} />
             <div>
-              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-gold">Konto wird geprüft</p>
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">Konto wird geprüft</p>
               <p className="mt-2 text-[13.5px] leading-[1.75] text-bank-text">
                 Freischaltung durch einen Administrator. Sie erhalten eine E-Mail, sobald das Konto aktiv ist.
               </p>
@@ -223,7 +223,7 @@ const Login = () => {
               required
               data-testid="login-email-input"
               autoComplete="email"
-              className="h-12 rounded-none border-bank-border focus-visible:border-bank-gold/55 focus-visible:ring-2 focus-visible:ring-bank-accent/30"
+              className="h-12 rounded-none border-bank-border focus-visible:border-bank-primary focus-visible:ring-2 focus-visible:ring-bank-primary/25"
             />
           </label>
 
@@ -234,7 +234,7 @@ const Login = () => {
               </AuthShell.Label>
               <Link
                 to="/forgot-password"
-                className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-gold underline-offset-4 hover:underline"
+                className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary underline-offset-4 hover:underline"
               >
                 Vergessen?
               </Link>
@@ -246,7 +246,7 @@ const Login = () => {
               required
               data-testid="login-password-input"
               autoComplete="current-password"
-              className="h-12 rounded-none border-bank-border focus-visible:border-bank-gold/55 focus-visible:ring-2 focus-visible:ring-bank-accent/30"
+              className="h-12 rounded-none border-bank-border focus-visible:border-bank-primary focus-visible:ring-2 focus-visible:ring-bank-primary/25"
             />
           </label>
 
@@ -272,10 +272,10 @@ const Login = () => {
         <form onSubmit={handleVerifyOtp} className="space-y-7">
           <div>
             <div className="mb-4 flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center border border-bank-gold/55 bg-bank-gold-soft/15 text-bank-gold">
+              <span className="flex h-10 w-10 items-center justify-center border border-bank-primary/40 bg-bank-primary/[0.08] text-bank-primary">
                 <KeyRound className="h-4 w-4" strokeWidth={1.5} />
               </span>
-              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-gold">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">
                 <span className="text-bank-text">06</span> · stelliger Code
               </p>
             </div>

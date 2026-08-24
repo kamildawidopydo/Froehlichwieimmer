@@ -47,8 +47,8 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
                   onClick={() => onPick(p.key)}
                   className={cn(
                     'group flex min-h-[2.75rem] w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-left transition-all',
-                    'hover:border-bank-accent/30 hover:bg-bank-surface',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/30',
+                    'hover:border-bank-primary/30 hover:bg-bank-surface',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/30',
                   )}
                 >
                   <span

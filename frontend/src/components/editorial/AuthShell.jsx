@@ -199,7 +199,7 @@ const AuthShell = ({
                   {formTitle}
                 </h1>
               )}
-              <div className="mt-4 h-px w-14 bg-bank-gold/55" aria-hidden />
+              <div className="mt-4 h-px w-14 bg-bank-primary/55" aria-hidden />
               {formLede && (
                 <p
                   className={cn(
@@ -235,7 +235,7 @@ const Label = ({ num, children, className, htmlFor }) => (
       className
     )}
   >
-    {num && <span className="text-bank-gold">{num}</span>}
+    {num && <span className="text-bank-primary">{num}</span>}
     <span>{children}</span>
   </label>
 );

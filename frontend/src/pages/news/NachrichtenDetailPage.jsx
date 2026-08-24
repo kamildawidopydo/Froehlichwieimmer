@@ -38,7 +38,7 @@ const renderBody = (body) => {
       out.push(
         <ul key={idx} className="mt-4 space-y-2 pl-5">
           {lines.map((l, i) => (
-            <li key={i} className="list-disc text-[15.5px] leading-relaxed text-bank-text marker:text-bank-gold">
+            <li key={i} className="list-disc text-[15.5px] leading-relaxed text-bank-text marker:text-bank-primary/70">
               {l.replace(/^-\s+/, '')}
             </li>
           ))}
@@ -183,7 +183,7 @@ const NachrichtenDetailPage = () => {
             </div>
           ) : (
             <div className="mt-6" data-testid="news-detail-summary">
-              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-accent-strong">Eigene Zusammenfassung</p>
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">Eigene Zusammenfassung</p>
               <p className="mt-3 text-[15.5px] leading-relaxed text-bank-text">
                 {item.article_content ||
                   'Der Volltext dieser Meldung ist nicht Teil unserer Lizenz. Wir zeigen daher keinen fremden Text an. Sobald eine redaktionelle Einordnung veröffentlicht wird, erscheint sie an dieser Stelle.'}
@@ -197,7 +197,7 @@ const NachrichtenDetailPage = () => {
           {/* Verwendete Faktenquellen — dezent am Ende, klickbar */}
           {(item.sources && item.sources.length > 0) && (
             <div className="mt-12 border-t border-bank-border pt-6" data-testid="news-detail-sources">
-              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-accent-strong">Quellen</p>
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">Quellen</p>
               <p className="mt-2 text-[13px] leading-relaxed text-bank-text-muted">
                 Dieser Artikel wurde von der Redaktion der Fröhlich Vermögensberatung eigenständig
                 verfasst. Grundlage sind die folgenden offiziellen Faktenquellen:
@@ -224,7 +224,7 @@ const NachrichtenDetailPage = () => {
           )}
 
           <div className="mt-10 border-t border-bank-border pt-6 text-[13px] leading-relaxed text-bank-text-muted">
-            <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-accent-strong">Hinweis</p>
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted">Hinweis</p>
             <p className="mt-2">
               Diese Meldung wird zu Ihrer Information dargestellt und ist keine redaktionelle Einschätzung
               der Fröhlich Vermögensberatung GmbH. Sie stellt keine Anlageempfehlung dar. Unsere eigene

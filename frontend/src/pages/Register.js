@@ -106,8 +106,8 @@ const Register = () => {
       <div className="min-h-screen bg-bank-bg px-5 py-16 sm:px-8">
         <div className="mx-auto max-w-lg">
           <div className="relative overflow-hidden border border-bank-border bg-white p-10 text-center sm:p-14">
-            <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bank-gold/65 to-transparent" />
-            <div className="mx-auto flex h-16 w-16 items-center justify-center border border-bank-gold/55 bg-bank-gold-soft/15 text-bank-gold">
+            <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bank-primary/65 to-transparent" />
+            <div className="mx-auto flex h-16 w-16 items-center justify-center border border-bank-primary/40 bg-bank-primary/[0.08] text-bank-primary">
               <Clock className="h-7 w-7" strokeWidth={1.25} />
             </div>
             <Eyebrow tone="gold" className="mt-8 justify-center">
@@ -119,13 +119,13 @@ const Register = () => {
             >
               Vielen Dank — <em className="italic text-bank-text-muted">Fröhlich Vermögensberatung.</em>
             </h1>
-            <div className="mx-auto mt-6 h-px w-16 bg-bank-gold/55" aria-hidden />
+            <div className="mx-auto mt-6 h-px w-16 bg-bank-primary/55" aria-hidden />
 
             <div className="mt-10 border border-bank-border bg-bank-bg p-6 text-left">
               <div className="flex gap-4">
-                <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-bank-gold" strokeWidth={1.5} />
+                <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-bank-primary" strokeWidth={1.5} />
                 <div>
-                  <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-gold">
+                  <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">
                     Prüfung durch unser Team
                   </p>
                   <p className="mt-2 text-[13.5px] leading-[1.7] text-bank-text-muted">
@@ -189,7 +189,7 @@ const Register = () => {
           <li key={s.n} className="flex min-w-0 flex-1 items-start">
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                <span className={`font-mono text-[10px] uppercase tracking-[0.18em] sm:text-[10.5px] sm:tracking-[0.22em] ${i === 0 ? 'text-bank-gold' : 'text-bank-text-muted'}`}>
+                <span className={`font-mono text-[10px] uppercase tracking-[0.18em] sm:text-[10.5px] sm:tracking-[0.22em] ${i === 0 ? 'text-bank-primary' : 'text-bank-text-muted'}`}>
                   {s.n}
                 </span>
                 <span className={`font-display text-[0.875rem] font-light italic leading-tight sm:text-[1rem] ${i === 0 ? 'text-bank-text' : 'text-bank-text-muted'}`}>
@@ -219,7 +219,7 @@ const Register = () => {
               required
               data-testid="register-first-name"
               autoComplete="given-name"
-              className="h-11 rounded-none border-bank-border focus-visible:border-bank-gold/55 focus-visible:ring-2 focus-visible:ring-bank-accent/30"
+              className="h-11 rounded-none border-bank-border focus-visible:border-bank-primary focus-visible:ring-2 focus-visible:ring-bank-primary/25"
             />
           </label>
           <label className="block">
@@ -231,7 +231,7 @@ const Register = () => {
               required
               data-testid="register-last-name"
               autoComplete="family-name"
-              className="h-11 rounded-none border-bank-border focus-visible:border-bank-gold/55 focus-visible:ring-2 focus-visible:ring-bank-accent/30"
+              className="h-11 rounded-none border-bank-border focus-visible:border-bank-primary focus-visible:ring-2 focus-visible:ring-bank-primary/25"
             />
           </label>
         </div>
@@ -247,7 +247,7 @@ const Register = () => {
             required
             data-testid="register-email"
             autoComplete="email"
-            className="h-11 rounded-none border-bank-border focus-visible:border-bank-gold/55 focus-visible:ring-2 focus-visible:ring-bank-accent/30"
+            className="h-11 rounded-none border-bank-border focus-visible:border-bank-primary focus-visible:ring-2 focus-visible:ring-bank-primary/25"
           />
         </label>
 
@@ -257,14 +257,14 @@ const Register = () => {
             <AuthShell.Label num="04">Land</AuthShell.Label>
             <div className="relative">
               <Compass
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bank-gold"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bank-primary"
                 strokeWidth={1.5}
               />
               <select
                 value={form.country}
                 onChange={handleCountryChange}
                 required
-                className="h-11 w-full appearance-none rounded-none border border-bank-border bg-white pl-9 pr-8 text-sm text-bank-text focus:border-bank-gold/55 focus:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/30"
+                className="h-11 w-full appearance-none rounded-none border border-bank-border bg-white pl-9 pr-8 text-sm text-bank-text focus:border-bank-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/25"
                 data-testid="register-country"
               >
                 <option value="">Land wählen…</option>
@@ -308,7 +308,7 @@ const Register = () => {
               minLength={PASSWORD_MIN_LENGTH}
               data-testid="register-password"
               autoComplete="new-password"
-              className="h-11 rounded-none border-bank-border focus-visible:border-bank-gold/55 focus-visible:ring-2 focus-visible:ring-bank-accent/30"
+              className="h-11 rounded-none border-bank-border focus-visible:border-bank-primary focus-visible:ring-2 focus-visible:ring-bank-primary/25"
             />
           </label>
           <label className="block">
@@ -320,7 +320,7 @@ const Register = () => {
               required
               data-testid="register-confirm-password"
               autoComplete="new-password"
-              className="h-11 rounded-none border-bank-border focus-visible:border-bank-gold/55 focus-visible:ring-2 focus-visible:ring-bank-accent/30"
+              className="h-11 rounded-none border-bank-border focus-visible:border-bank-primary focus-visible:ring-2 focus-visible:ring-bank-primary/25"
             />
           </label>
         </div>

@@ -701,7 +701,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                           aria-invalid={contactErrors.firstName ? 'true' : undefined}
                           aria-describedby={contactErrors.firstName ? 'pi-first-error' : undefined}
                           className={cn(
-                            'h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-accent/50 focus-visible:ring-bank-accent/25',
+                            'h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-primary/60 focus-visible:ring-bank-primary/25',
                             contactErrors.firstName && 'border-red-400 focus-visible:border-red-500 focus-visible:ring-red-500/25',
                           )}
                           autoComplete="given-name"
@@ -737,7 +737,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                           aria-invalid={contactErrors.lastName ? 'true' : undefined}
                           aria-describedby={contactErrors.lastName ? 'pi-last-error' : undefined}
                           className={cn(
-                            'h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-accent/50 focus-visible:ring-bank-accent/25',
+                            'h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-primary/60 focus-visible:ring-bank-primary/25',
                             contactErrors.lastName && 'border-red-400 focus-visible:border-red-500 focus-visible:ring-red-500/25',
                           )}
                           autoComplete="family-name"
@@ -768,7 +768,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                         onChange={(e) =>
                           setContact((c) => ({ ...c, phone: sanitizeFormField('phone', e.target.value) }))
                         }
-                        className="h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-accent/50 focus-visible:ring-bank-accent/25"
+                        className="h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-primary/60 focus-visible:ring-bank-primary/25"
                         autoComplete="tel"
                         placeholder="+49 …"
                       />
@@ -789,7 +789,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                         type="email"
                         value={contact.email}
                         onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))}
-                        className="h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-accent/50 focus-visible:ring-bank-accent/25"
+                        className="h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-primary/60 focus-visible:ring-bank-primary/25"
                         autoComplete="email"
                         placeholder="name@beispiel.de"
                       />
@@ -809,7 +809,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                         id="pi-cust"
                         value={contact.customerNumber}
                         onChange={(e) => setContact((c) => ({ ...c, customerNumber: e.target.value }))}
-                        className="h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-accent/50 focus-visible:ring-bank-accent/25"
+                        className="h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-primary/60 focus-visible:ring-bank-primary/25"
                         placeholder="falls vorhanden"
                       />
                     </div>
