@@ -1,5 +1,87 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 75.5 (Feb 28, 2026) — Investment-PDF Redesign (Branding + Hochwertigkeit) ✅
+
+### Ziel
+Der PDF-Report wirkt jetzt sichtbar wie ein hochwertiger Vermögensverwaltungs-Report und passt visuell zum Portal — bei identischer Report-Logik, Content-Struktur und `/api/reports/pdf` Response-Semantik.
+
+### Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `/app/backend/services/report_pdf.py` (Überarbeitung) | `_brand_name()` aus `EMAIL_FROM_NAME` env (single source of truth) · `_logo_data_uri()` lädt lokales PNG einmalig, base64-encodet, `lru_cache`. 800 KB Sanity-Cap. Alles inline → WeasyPrint `base_url=None` bleibt sicher (keine externen Fetches). |
+| `/app/backend/templates/investment_report.html` (Redesign) | Report-Header mit Logo + Gold-Rule, überarbeitete Report-Titel-Hierarchie, 5 klar abgegrenzte Sektionen, dezenter Cream-Callout, seriöse Navy-CTA-Karte, verbesserte `@page` Header/Footer (top-left brand · top-right Titel · bottom-left Datum · bottom-center brand · bottom-right Seitenzahl), Ende-Marke |
+| Wiederverwendet: WeasyPrint-Engine, Jinja2-Autoescape, Produkt-Katalog | **Kein zweiter Renderer, keine neue Engine** |
+
+### Verwendete Assets (alle lokal)
+- Logo: `/app/frontend/public/assets/logo/frohlich-logo-transparent.png` — als `data:image/png;base64,…` inline eingebettet
+- Fallback: rein textuelles Wortlogo, wenn PNG fehlt/zu groß
+- Fonts: nur System-Serifen (Georgia) + Monospace (Courier New) — deterministisch
+- Keine externen URLs, keine Unsplash, kein CDN, kein `@font-face`
+
+### Farbwelt (aus Portal `index.css`)
+| Rolle | Hex | Anwendung |
+|-------|-----|-----------|
+| Navy / Deep-Ink | `#0f1d34` | Headlines, Section-Rules, CTA-Karte |
+| Bank-Primary Blue | `#4C7CBA` | Report-Headline-Akzent (kursiv) |
+| Bank-Gold | `#C9A961` | 46pt Gold-Rule, Kicker, Callout-Border, dezent |
+| Gold-Cream | `#FAF4E2` | Callout-Hintergrund (sparsam) |
+| Body Ink | `#1f2937` | Body-Text |
+| Mute | `#6b7280` | Meta-Labels |
+| Rule | `#e5e7eb` | feine Trennlinien |
+
+Kein großes Gold-Feld, keine Werbe-Optik.
+
+### Typografie-Hierarchie
+- `Persönlicher Investment-Report` — Courier Uppercase 8.5pt, Gold, `letter-spacing: 0.30em` (Report-Kicker)
+- `Ihre Orientierung zu <em>{{ product }}</em>` — Georgia 26pt light, Navy + Blue-italic-Akzent
+- Section-Headlines: 14pt Navy + 2pt-Border-Rule + monospace-Nummerierung `01`/`02`/... in Gold
+- Body: Georgia 10.5pt, `line-height: 1.6`
+- Disclaimer: 9pt Grau, klar lesbar
+
+### Sektionen (klar abgegrenzt, viel Weißraum)
+1. **Hero** — Logo · Gold-Rule · Titel · Meta-Grid (2×3 Zellen)
+2. **01 Ihre Produktausrichtung** — Server-Copy aus `PRODUCT_CATALOG` + Cream-Callout „Worauf es ankommt"
+3. **02 Ihre Angaben** — Fragebogen-Antworten als Tabelle (nur wenn vorhanden)
+4. **03 Persönliche Zusammenfassung** — neutraler Fließtext, keine Renditeversprechen
+5. **04 Chancen und Hinweise** — Chancen + Risiken, keine erfundenen Vorteile
+6. **05 Wie geht es für Sie weiter?** — Navy-CTA-Karte mit brand_name + Kontaktzeile
+7. **Disclaimer** + `— Ende des Reports —` End-Mark
+
+### Bonuslogik (keine erfundenen Vorteile)
+Kein Abschnitt „Mögliche Vorteile" mehr im Template — statt garantierten Boni haben wir „Chancen und Hinweise" mit neutraler Formulierung. Nur echte, belegbare Aussagen aus dem Server-side `PRODUCT_CATALOG`.
+
+### Test-Ergebnisse (alle 6 Produkte)
+| Produkt | Größe | Seiten | Brand | CTA | Disclaimer | Umlaute |
+|---------|------:|:------:|:-----:|:---:|:----------:|:-------:|
+| aktien | 643 KB | 2 | ✅ | ✅ | ✅ | ✅ |
+| anleihen | 643 KB | 2 | ✅ | ✅ | ✅ | ✅ |
+| fonds | 645 KB | 2 | ✅ | ✅ | ✅ | ✅ |
+| tagesgeld | 644 KB | 2 | ✅ | ✅ | ✅ | ✅ |
+| festgeld | 644 KB | 2 | ✅ | ✅ | ✅ | ✅ |
+| flexgeld | 644 KB | 2 | ✅ | ✅ | ✅ | ✅ |
+
+Vorher (Session 75.0): ~22 KB / 2 Seiten. Nachher: ~644 KB / 2 Seiten (der Zuwachs ist ausschließlich das eingebettete PNG-Logo — 617 KB base64-encoded → 823 KB in-payload, kompensiert durch WeasyPrint-Kompression auf ~625 KB im PDF).
+
+### Regressionstest
+- HTTP `/api/reports/pdf` liefert weiterhin 200 + `application/pdf` (3 Produkte gecurled) ✅
+- Content-Disposition, Filename-Schema, Response-Semantik unverändert ✅
+- Frontend-Download-Button (Session 75.1) funktioniert weiterhin — nutzt derselben Endpoint ✅
+- Mail-Attachment-Flow (Session 75.4) funktioniert weiterhin — nutzt dieselbe `render_pdf()` Funktion ✅
+- Backend-Logs sauber (keine neuen Exceptions, WeasyPrint 7-Schritte-Pipeline grün) ✅
+- Visuell verifiziert (aktien-p1, tagesgeld-p1, festgeld-p1 als PNG-Screenshots gerendert) ✅
+
+### Nicht angefasst
+Wizard, Sticky CTA, Lead-Persistenz, Mail-Idempotenz, News, Image-Sweep, Supabase, Alpha Vantage, Newsletter — alles unverändert.
+
+### Verbleibende externe Blocker (unverändert)
+- Supabase `product_inquiry_leads_product_check` → DBA
+- Alpha Vantage + Unsplash Keys → warten auf User
+- Provider-side `PRODUCT_INQUIRY_TO=kundenservice@kapital-direkt24.de` unverifiziert → Resend 422
+- Cron-Slot-Limit erreicht (5/5)
+
+---
+
+
 ## Session 75.4 (Feb 28, 2026) — Product-Inquiry Mail: PDF-Report als Attachment ✅
 
 ### Ziel

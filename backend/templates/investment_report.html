@@ -2,35 +2,54 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<title>Anlage-Report · {{ product.title }}</title>
+<title>Investment-Report · {{ product.title }} · {{ brand_name }}</title>
 <style>
+  /* ------------------------------------------------------------------ */
+  /* Portal-Farben (aus tailwind.config / index.css):
+     Navy  #0f1d34   — Deep-Ink / Dunkelblau (Cards, CTAs)
+     Blue  #4C7CBA   — Bank-Primary (Bright Cobalt, Akzentlinien)
+     Gold  #C9A961   — Bank-Gold (sparsam, nur Kicker & feine Rules)
+     Cream #FAF4E2   — Gold-Soft (dezente Flächen)
+     Ink   #1f2937   — Body-Text
+     Mute  #6b7280   — Meta-Text
+     Rule  #e5e7eb   — Feine Trennlinien                                */
+  /* ------------------------------------------------------------------ */
+
   @page {
     size: A4;
-    margin: 22mm 18mm 24mm 18mm;
+    margin: 24mm 18mm 22mm 18mm;
     @top-left {
-      content: "Fröhlich Vermögensberatung";
+      content: "{{ brand_name }}";
       font-family: Georgia, "Times New Roman", serif;
-      font-size: 9pt;
+      font-size: 8.5pt;
       color: #6b7280;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.14em;
     }
     @top-right {
-      content: "Anlage-Report · {{ product.title }}";
+      content: "Investment-Report · {{ product.title }}";
       font-family: Georgia, "Times New Roman", serif;
-      font-size: 9pt;
+      font-size: 8.5pt;
       color: #6b7280;
     }
     @bottom-left {
-      content: "Erstellt am {{ generated_at }}";
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 8.5pt;
+      content: "{{ generated_at }}";
+      font-family: "Courier New", monospace;
+      font-size: 8pt;
+      color: #9ca3af;
+      letter-spacing: 0.10em;
+    }
+    @bottom-center {
+      content: "{{ brand_name }}";
+      font-family: Georgia, serif;
+      font-size: 8pt;
       color: #9ca3af;
     }
     @bottom-right {
-      content: "Seite " counter(page) " von " counter(pages);
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 8.5pt;
+      content: "Seite " counter(page) " / " counter(pages);
+      font-family: "Courier New", monospace;
+      font-size: 8pt;
       color: #9ca3af;
+      letter-spacing: 0.10em;
     }
   }
 
@@ -40,112 +59,154 @@
     margin: 0; padding: 0;
     font-family: Georgia, "Times New Roman", serif;
     font-size: 10.5pt;
-    line-height: 1.55;
+    line-height: 1.6;
     color: #1f2937;
   }
 
-  .kicker {
+  /* ---------- Report-Kopf (Deckblatt-Streifen) ---------- */
+  .hero {
+    padding-bottom: 18pt;
+    border-bottom: 1px solid #0f1d34;
+    margin-bottom: 20pt;
+  }
+  .hero-brand {
+    display: table;
+    width: 100%;
+    padding-bottom: 14pt;
+  }
+  .hero-brand .col {
+    display: table-cell;
+    vertical-align: middle;
+  }
+  .hero-brand .col.right {
+    text-align: right;
+  }
+  .hero-brand img.logo {
+    height: 32pt;
+    width: auto;
+    display: inline-block;
+  }
+  .hero-brand .wordmark {
+    font-family: Georgia, serif;
+    font-size: 12pt;
+    color: #0f1d34;
+    letter-spacing: 0.02em;
+  }
+  .hero-brand .ref {
+    font-family: "Courier New", monospace;
+    font-size: 8pt;
+    color: #6b7280;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .hero-brand .ref strong { color: #0f1d34; letter-spacing: 0.06em; }
+
+  /* dünne Gold-Akzent-Linie unter dem Logo-Streifen */
+  .gold-rule {
+    height: 1.5pt;
+    background: #C9A961;
+    width: 46pt;
+    margin: 2pt 0 12pt 0;
+  }
+
+  h1.report-title {
     font-family: "Courier New", monospace;
     font-size: 8.5pt;
-    letter-spacing: 0.28em;
+    color: #C9A961;
+    letter-spacing: 0.30em;
     text-transform: uppercase;
-    color: #c9a961;
+    margin: 0 0 4pt 0;
+    font-weight: normal;
   }
 
-  h1.title {
+  h2.report-headline {
     font-size: 26pt;
     font-weight: 300;
-    line-height: 1.05;
+    line-height: 1.06;
     letter-spacing: -0.01em;
     color: #0f1d34;
-    margin: 8pt 0 4pt 0;
+    margin: 4pt 0 4pt 0;
   }
-
-  h1.title em {
+  h2.report-headline em {
     font-style: italic;
-    color: #c9a961;
+    color: #4C7CBA;
+    font-weight: 400;
   }
 
-  .lead {
+  .hero-lead {
     font-size: 11pt;
     color: #374151;
     max-width: 155mm;
-    margin: 6pt 0 22pt 0;
+    margin: 8pt 0 0 0;
   }
 
+  /* ---------- Meta-Grid ---------- */
   .meta-grid {
     display: table;
     width: 100%;
     border-collapse: collapse;
-    margin: 0 0 24pt 0;
-    border-top: 1px solid #0f1d34;
+    margin: 22pt 0 0 0;
+    border-top: 1px solid #e5e7eb;
     border-bottom: 1px solid #e5e7eb;
   }
   .meta-row { display: table-row; }
   .meta-cell {
     display: table-cell;
-    padding: 8pt 10pt 8pt 0;
+    padding: 9pt 12pt 9pt 0;
     vertical-align: top;
-    width: 33%;
+    width: 33.33%;
     border-bottom: 1px solid #eef1f6;
   }
+  .meta-row:last-child .meta-cell { border-bottom: 0; }
   .meta-label {
     font-family: "Courier New", monospace;
-    font-size: 7.8pt;
-    letter-spacing: 0.20em;
+    font-size: 7.5pt;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
     color: #6b7280;
     display: block;
-    margin-bottom: 2pt;
+    margin-bottom: 3pt;
   }
   .meta-value {
     font-size: 10.5pt;
     color: #0f1d34;
   }
 
-  h2.section {
-    font-size: 15pt;
+  /* ---------- Section-Design ---------- */
+  h3.section {
+    font-size: 14pt;
     font-weight: 400;
     color: #0f1d34;
-    margin: 28pt 0 8pt 0;
-    padding-bottom: 4pt;
+    margin: 26pt 0 8pt 0;
+    padding-bottom: 5pt;
     border-bottom: 2px solid #0f1d34;
     page-break-after: avoid;
   }
-
-  h2.section .num {
-    color: #c9a961;
+  h3.section .num {
+    color: #C9A961;
     font-family: "Courier New", monospace;
-    font-size: 10pt;
+    font-size: 9.5pt;
     letter-spacing: 0.2em;
-    margin-right: 8pt;
+    margin-right: 10pt;
     vertical-align: 2pt;
   }
 
-  p.body {
-    margin: 0 0 10pt 0;
-    color: #1f2937;
-  }
+  p.body { margin: 0 0 10pt 0; color: #1f2937; }
+  p.body:last-child { margin-bottom: 0; }
 
-  ul.bullets {
-    margin: 6pt 0 12pt 0;
-    padding-left: 16pt;
-  }
-  ul.bullets li {
-    margin-bottom: 4pt;
-    color: #1f2937;
-  }
+  ul.bullets { margin: 6pt 0 12pt 0; padding-left: 16pt; }
+  ul.bullets li { margin-bottom: 5pt; color: #1f2937; }
 
+  /* ---------- Answer-Tabelle ---------- */
   .answer-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 6pt;
+    border-top: 1px solid #eef1f6;
   }
-  .answer-table tr {
-    page-break-inside: avoid;
-  }
+  .answer-table tr { page-break-inside: avoid; }
   .answer-table td {
-    padding: 8pt 10pt;
+    padding: 9pt 10pt;
     border-bottom: 1px solid #eef1f6;
     vertical-align: top;
   }
@@ -153,8 +214,8 @@
     width: 40%;
     color: #6b7280;
     font-family: "Courier New", monospace;
-    font-size: 8.2pt;
-    letter-spacing: 0.14em;
+    font-size: 7.8pt;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
   }
   .answer-table td.a {
@@ -162,113 +223,165 @@
     font-size: 10.5pt;
   }
 
+  /* ---------- Callout (dezent Cream + Gold-Left-Border) ---------- */
   .callout {
-    margin: 14pt 0 0 0;
+    margin: 12pt 0 0 0;
     padding: 12pt 14pt;
-    background: #fbfaf6;
-    border-left: 3px solid #c9a961;
+    background: #FAF4E2;
+    border-left: 2.5pt solid #C9A961;
     color: #1f2937;
     page-break-inside: avoid;
   }
-  .callout .callout-eyebrow {
+  .callout-eyebrow {
     font-family: "Courier New", monospace;
-    font-size: 7.8pt;
-    letter-spacing: 0.22em;
+    font-size: 7.5pt;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
-    color: #c9a961;
-    margin: 0 0 4pt 0;
+    color: #C9A961;
+    margin: 0 0 5pt 0;
     display: block;
   }
+  .callout ul.bullets { margin: 4pt 0 0 0; }
 
+  /* ---------- Next-Steps ---------- */
+  .next-steps {
+    margin: 12pt 0 0 0;
+    padding: 16pt 18pt;
+    background: #0f1d34;
+    color: #ffffff;
+    page-break-inside: avoid;
+  }
+  .next-steps .eyebrow {
+    font-family: "Courier New", monospace;
+    font-size: 7.5pt;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: #C9A961;
+    margin: 0 0 6pt 0;
+  }
+  .next-steps h4 {
+    margin: 0 0 6pt 0;
+    font-size: 14pt;
+    font-weight: 400;
+    color: #ffffff;
+    line-height: 1.2;
+  }
+  .next-steps p {
+    margin: 0 0 4pt 0;
+    font-size: 10pt;
+    color: #d1d5db;
+    line-height: 1.55;
+  }
+  .next-steps .contact {
+    margin-top: 10pt;
+    padding-top: 9pt;
+    border-top: 1px solid rgba(201,169,97,0.4);
+    font-size: 9.5pt;
+    color: #f4efe3;
+  }
+  .next-steps .contact strong { color: #C9A961; font-weight: normal; letter-spacing: 0.02em; }
+
+  /* ---------- Disclaimer ---------- */
   .disclaimer {
-    margin-top: 20pt;
+    margin-top: 22pt;
     padding: 12pt 14pt;
-    background: #f5f7fa;
+    background: #f9fafb;
     border: 1px solid #e5e7eb;
     font-size: 9pt;
     line-height: 1.55;
     color: #4b5563;
     page-break-inside: avoid;
   }
+  .disclaimer strong { color: #0f1d34; }
 
-  .cta {
-    margin: 24pt 0 0 0;
-    padding: 16pt 18pt;
-    background: #0f1d34;
-    color: #ffffff;
-    page-break-inside: avoid;
-  }
-  .cta h3 {
-    margin: 0 0 6pt 0;
-    font-size: 13pt;
-    font-weight: 400;
-    color: #ffffff;
-  }
-  .cta p { margin: 0 0 4pt 0; font-size: 10pt; color: #d1d5db; }
-  .cta a { color: #c9a961; text-decoration: none; }
-
-  .footer-line {
-    margin-top: 20pt;
-    padding-top: 8pt;
-    border-top: 1px solid #e5e7eb;
-    font-size: 8.5pt;
-    color: #9ca3af;
+  /* ---------- Ende der Report-Marke ---------- */
+  .end-mark {
+    margin-top: 16pt;
     text-align: center;
-    letter-spacing: 0.08em;
+    font-family: "Courier New", monospace;
+    font-size: 8pt;
+    color: #9ca3af;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
   }
-
-  .page-break { page-break-before: always; }
+  .end-mark::before,
+  .end-mark::after {
+    content: "";
+    display: inline-block;
+    vertical-align: middle;
+    width: 30pt;
+    height: 1px;
+    background: #e5e7eb;
+    margin: 0 10pt;
+  }
 </style>
 </head>
 <body>
 
-  <p class="kicker">Anlage-Report · {{ product.kicker }}</p>
-  <h1 class="title">Ihr persönlicher <em>{{ product.title }}</em>-Report</h1>
-
-  <p class="lead">
-    Für <strong>{{ full_name }}</strong> — eine erste, unverbindliche Orientierung
-    auf Basis Ihrer Antworten im Kurzfragebogen. Alle Inhalte dieses Reports
-    dienen ausschließlich Ihrer persönlichen Information.
-  </p>
-
-  <div class="meta-grid">
-    <div class="meta-row">
-      <div class="meta-cell">
-        <span class="meta-label">Produkt</span>
-        <span class="meta-value">{{ product.title }}</span>
+  <!-- ================ HEADER / DECKBLATT ================ -->
+  <section class="hero">
+    <div class="hero-brand">
+      <div class="col">
+        {% if logo_data_uri %}
+          <img class="logo" src="{{ logo_data_uri }}" alt="{{ brand_name }}">
+        {% else %}
+          <span class="wordmark">{{ brand_name }}</span>
+        {% endif %}
       </div>
-      <div class="meta-cell">
-        <span class="meta-label">Erstellt am</span>
-        <span class="meta-value">{{ generated_at }}</span>
-      </div>
-      <div class="meta-cell">
-        <span class="meta-label">Referenz</span>
-        <span class="meta-value">{{ lead_id or 'ohne Referenz' }}</span>
+      <div class="col right">
+        <span class="ref">
+          {% if lead_id %}Referenz&nbsp;<strong>{{ lead_id }}</strong>{% else %}{{ generated_at }}{% endif %}
+        </span>
       </div>
     </div>
-    <div class="meta-row">
-      <div class="meta-cell">
-        <span class="meta-label">Kontakt</span>
-        <span class="meta-value">{{ email or '—' }}</span>
+
+    <div class="gold-rule"></div>
+
+    <h1 class="report-title">Persönlicher Investment-Report</h1>
+    <h2 class="report-headline">
+      Ihre Orientierung zu <em>{{ product.title }}</em>
+    </h2>
+
+    <p class="hero-lead">
+      Für <strong>{{ full_name }}</strong> — eine erste, unverbindliche Einordnung
+      auf Basis Ihrer Angaben aus dem Kurzfragebogen zum Bereich
+      <em>{{ product.kicker }}</em>.
+    </p>
+
+    <div class="meta-grid">
+      <div class="meta-row">
+        <div class="meta-cell">
+          <span class="meta-label">Produkt</span>
+          <span class="meta-value">{{ product.title }}</span>
+        </div>
+        <div class="meta-cell">
+          <span class="meta-label">Erstellt am</span>
+          <span class="meta-value">{{ generated_at }}</span>
+        </div>
+        <div class="meta-cell">
+          <span class="meta-label">Referenz</span>
+          <span class="meta-value">{{ lead_id or 'ohne Referenz' }}</span>
+        </div>
       </div>
-      <div class="meta-cell">
-        <span class="meta-label">Telefon</span>
-        <span class="meta-value">{{ phone or '—' }}</span>
-      </div>
-      <div class="meta-cell">
-        <span class="meta-label">Kundennr.</span>
-        <span class="meta-value">{{ customer_number or '—' }}</span>
+      <div class="meta-row">
+        <div class="meta-cell">
+          <span class="meta-label">Kontakt</span>
+          <span class="meta-value">{{ email or '—' }}</span>
+        </div>
+        <div class="meta-cell">
+          <span class="meta-label">Telefon</span>
+          <span class="meta-value">{{ phone or '—' }}</span>
+        </div>
+        <div class="meta-cell">
+          <span class="meta-label">Kundennr.</span>
+          <span class="meta-value">{{ customer_number or '—' }}</span>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
 
-  <h2 class="section"><span class="num">01</span>Ihre persönliche Orientierung</h2>
-  <p class="body">
-    Auf Basis Ihrer Angaben im Kurzfragebogen haben wir Ihre Ausgangslage zum
-    Produktbereich <strong>{{ product.title }}</strong> zusammengefasst. Die
-    folgenden Absätze fassen zentrale Merkmale dieses Produktbereichs neutral
-    zusammen — ohne Renditeversprechen und ohne konkrete Kauf­empfehlung.
-  </p>
+  <!-- ================ 01 · Ihre Produktausrichtung ================ -->
+  <h3 class="section"><span class="num">01</span>Ihre Produktausrichtung</h3>
   <p class="body">{{ product.orientation }}</p>
 
   {% if product.focus_points %}
@@ -282,11 +395,12 @@
   </div>
   {% endif %}
 
+  <!-- ================ 02 · Ihre Angaben ================ -->
   {% if answers %}
-  <h2 class="section"><span class="num">02</span>Ihre Angaben im Überblick</h2>
+  <h3 class="section"><span class="num">02</span>Ihre Angaben aus dem Kurzfragebogen</h3>
   <p class="body">
-    Nachstehend Ihre Antworten aus dem Kurzfragebogen — die Grundlage der
-    weiteren Gespräche mit unseren Ansprechpartner:innen.
+    Nachstehend Ihre Antworten aus dem Kurzfragebogen — die Grundlage für ein
+    vertiefendes persönliches Gespräch mit unseren Ansprechpartner:innen.
   </p>
   <table class="answer-table">
     {% for row in answers %}
@@ -298,27 +412,50 @@
   </table>
   {% endif %}
 
-  <h2 class="section"><span class="num">{{ '03' if answers else '02' }}</span>Nächste Schritte</h2>
+  <!-- ================ 03 · Persönliche Zusammenfassung ================ -->
+  <h3 class="section"><span class="num">{{ '03' if answers else '02' }}</span>Persönliche Zusammenfassung</h3>
   <p class="body">
-    Wir empfehlen ein vertiefendes Gespräch, in dem Ihre Ziele, Ihr Zeit­horizont
-    und Ihre persönliche Risiko­toleranz strukturiert erhoben werden. Dabei
-    prüfen wir gemeinsam, ob und in welcher Ausgestaltung
-    <strong>{{ product.title }}</strong> zu Ihrem Gesamt­portfolio passen könnte.
+    Auf Basis Ihrer Angaben haben wir für Sie zusammengefasst, welche
+    grundlegenden Merkmale des Produktbereichs <strong>{{ product.title }}</strong>
+    für Sie relevant sind. Der Report ersetzt keine individuelle Beratung —
+    er bereitet das gemeinsame Gespräch vor, in dem wir Ihre Ziele, Ihren
+    Zeit­horizont und Ihre persönliche Risiko­toleranz strukturiert einordnen.
   </p>
 
-  <div class="cta">
-    <h3>Persönliches Beratungsgespräch anfordern</h3>
-    <p>Antwort auf Ihre Anfrage typischerweise innerhalb von 1–2 Werktagen.</p>
-    <p>Fröhlich Vermögensberatung GmbH · <a href="mailto:beratung@froehlich-vb.de">beratung@froehlich-vb.de</a></p>
+  <!-- ================ 04 · Chancen & Hinweise ================ -->
+  <h3 class="section"><span class="num">{{ '04' if answers else '03' }}</span>Chancen und Hinweise</h3>
+  <p class="body">
+    Kapitalanlagen bieten Chancen auf Wertzuwachs, sind aber grundsätzlich mit
+    Risiken verbunden — je nach Produkt­typ von schwankenden Kursen bis zu einem
+    möglichen Verlust des eingesetzten Kapitals. Wir legen offen, welche Faktoren
+    die Rendite treiben und welche das Risiko erhöhen, damit Sie eine informierte
+    Entscheidung treffen können.
+  </p>
+
+  <!-- ================ 05 · Nächste Schritte ================ -->
+  <h3 class="section"><span class="num">{{ '05' if answers else '04' }}</span>Wie geht es für Sie weiter?</h3>
+  <div class="next-steps">
+    <p class="eyebrow">Nächste Schritte</p>
+    <h4>Gerne besprechen wir Ihre Angaben persönlich mit Ihnen.</h4>
+    <p>
+      In einem unverbindlichen Gespräch ordnen wir Ihre Antworten ein und
+      erläutern, ob und in welcher Ausgestaltung <strong>{{ product.title }}</strong>
+      zu Ihrem persönlichen Portfolio passen könnte. Antwort typischerweise
+      innerhalb von 1–2 Werktagen.
+    </p>
+    <p class="contact">
+      <strong>{{ brand_name }} GmbH</strong>
+      &nbsp;·&nbsp; kundenservice@kapitalmitte.com
+      &nbsp;·&nbsp; kapitalmitte.com
+    </p>
   </div>
 
+  <!-- ================ Disclaimer ================ -->
   <div class="disclaimer">
     <strong>Wichtiger Hinweis.</strong> {{ risk_disclaimer }}
   </div>
 
-  <div class="footer-line">
-    Report-ID {{ lead_id or '—' }} · erzeugt {{ generated_at }} · Fröhlich Vermögensberatung GmbH
-  </div>
+  <div class="end-mark">Ende des Reports</div>
 
 </body>
 </html>

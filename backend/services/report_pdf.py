@@ -2,27 +2,29 @@
 Report-PDF Service — HTML→PDF via WeasyPrint.
 
 Design-Prinzipien:
-- Pure Python, keine Browser-Subprozesse → keine Zombie-Prozesse, keine
-  Memory-Leaks durch fehlgeschlagenes Chromium-Shutdown.
-- Jinja2 mit Auto-Escape → keinerlei HTML-Injection über User-Input.
-- Rendering ist deterministisch und synchron; für nicht-blockierendes
-  Verhalten im Endpoint via asyncio.to_thread aufgerufen.
-- Print-CSS (A4, Seiten-Header/Footer via @page) direkt im Template.
-- Keine externen Assets/URLs geladen (assets Base-URL bewusst leer).
+- Pure Python, keine Browser-Subprozesse.
+- Jinja2 mit Auto-Escape → keine HTML-Injection.
+- Rendering deterministisch; im Endpoint via asyncio.to_thread aufgerufen.
+- Print-CSS (A4) direkt im Template.
+- **KEINE externen Assets** — Logo als base64-DataURI beim Boot geladen, alle
+  Fonts sind System-Fonts, `base_url=None` → WeasyPrint macht keinen HTTP-Fetch.
 """
 
 from __future__ import annotations
 
+import base64
+import logging
+import os
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-# --- Produkt-Katalog (SERVER-SIDE Source of Truth für Report-Inhalte) -----
-# Wichtig: NICHT client-provided Copy verwenden. Nur Werte, die der Katalog
-# hier definiert, dürfen im Report auftauchen. Frontend-Payload liefert
-# lediglich `product`-Key + Antworten; alles andere wird hier bestimmt.
+logger = logging.getLogger(__name__)
+
+# --- Produkt-Katalog (SERVER-SIDE Source of Truth) -------------------------
 PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
     "aktien": {
         "title": "Aktien",
@@ -95,8 +97,8 @@ PRODUCT_CATALOG: Dict[str, Dict[str, Any]] = {
             "Festgeld bindet Ihr Kapital für eine feste Laufzeit zu einem fixen "
             "Zinssatz. Der Zinssatz steht damit für die gesamte Laufzeit fest; "
             "eine vorzeitige Verfügung ist meist nicht oder nur mit Nachteilen "
-            "möglich. Die Wahl von Laufzeit und Anbieter sollte zu Ihrem Liquiditäts-"
-            "profil passen."
+            "möglich. Die Wahl von Laufzeit und Anbieter sollte zu Ihrem "
+            "Liquiditätsprofil passen."
         ),
         "focus_points": [
             "Zinsniveau vs. Bindungsdauer abwägen",
@@ -130,8 +132,39 @@ RISK_DISCLAIMER = (
     "Ergebnisse."
 )
 
-# --- Jinja2 Setup ----------------------------------------------------------
+# --- Portal-Name aus Env (single source of truth) -------------------------
+def _brand_name() -> str:
+    return (os.environ.get("EMAIL_FROM_NAME") or "Fröhlich Vermögensberatung").strip()
 
+
+# --- Logo als Data-URI (lokal, kein HTTP-Fetch) ----------------------------
+# Suchreihenfolge: transparent → normal → keine (dann rein textuelles Wortlogo).
+_LOGO_CANDIDATES = (
+    "/app/frontend/public/assets/logo/frohlich-logo-transparent.png",
+    "/app/frontend/public/assets/logo/frohlich-logo.png",
+)
+
+
+@lru_cache(maxsize=1)
+def _logo_data_uri() -> Optional[str]:
+    for path in _LOGO_CANDIDATES:
+        p = Path(path)
+        if not p.exists():
+            continue
+        try:
+            data = p.read_bytes()
+            if len(data) > 800_000:  # sanity — keine Riesenlogos einbetten
+                logger.warning("report logo skipped, too large: %d B (%s)", len(data), path)
+                continue
+            b64 = base64.b64encode(data).decode("ascii")
+            mime = "image/png" if p.suffix.lower() == ".png" else "image/svg+xml"
+            return f"data:{mime};base64,{b64}"
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("report logo read failed for %s: %s", path, exc)
+    return None
+
+
+# --- Jinja2 Setup ----------------------------------------------------------
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 _env = Environment(
     loader=FileSystemLoader(str(_TEMPLATE_DIR)),
@@ -142,7 +175,6 @@ _env = Environment(
 
 
 def _sanitize_str(value: Any, *, max_len: int = 200) -> str:
-    """Enge Sanitize-Schicht: coerce → str, strip, cut. Jinja escaped ohnehin."""
     if value is None:
         return ""
     s = str(value).strip()
@@ -150,7 +182,6 @@ def _sanitize_str(value: Any, *, max_len: int = 200) -> str:
 
 
 def _normalize_answers(answers: Any) -> List[Dict[str, str]]:
-    """Wandelt {qid: {label,value}} oder {qid: "label"} in eine Liste um."""
     if not isinstance(answers, dict):
         return []
     out: List[Dict[str, str]] = []
@@ -185,6 +216,8 @@ def _build_context(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     now = datetime.now(timezone.utc)
     return {
+        "brand_name": _brand_name(),
+        "logo_data_uri": _logo_data_uri(),
         "product_key": product_key,
         "product": product,
         "full_name": full_name,
@@ -200,27 +233,20 @@ def _build_context(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def build_filename(product_key: str) -> str:
-    """Sinnvoller Dateiname: anlage-report-{produkt}-YYYY-MM-DD.pdf."""
     safe_key = "".join(c for c in product_key if c.isalnum()) or "report"
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return f"anlage-report-{safe_key}-{date_str}.pdf"
 
 
 def render_pdf(payload: Dict[str, Any]) -> bytes:
-    """
-    Rendert den Report als PDF-Bytes.
-    - Wirft ValueError('invalid_product') bei unbekanntem Produkt.
-    - WeasyPrint importiert wird lazy, damit Import-Fehler nicht das
-      Backend beim Start blockieren.
-    """
     context = _build_context(payload)
     template = _env.get_template("investment_report.html")
     html_str = template.render(**context)
 
     from weasyprint import HTML  # lazy import
 
-    # base_url=None → WeasyPrint versucht KEINE relativen Ressourcen zu laden.
-    # Alle Styles/Assets sind inline im Template → keinerlei externe Fetches.
+    # base_url=None → WeasyPrint versucht KEINE relativen/externen Fetches.
+    # Alle Assets (Logo als data-URI, System-Fonts) sind inline.
     pdf_bytes = HTML(string=html_str, base_url=None).write_pdf()
     return pdf_bytes
 
