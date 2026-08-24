@@ -278,7 +278,29 @@ const SkeletonBar = ({ className }) => (
 const HomeHeroNewsPreview = () => {
   const [items, setItems] = useState([]);
   const [state, setState] = useState('loading');
+  const [toast, setToast] = useState(null); // { slug, title }
   const lastFetchRef = useRef(0);
+  const prevTopSlugRef = useRef(null);
+  const prevTopTimeRef = useRef(0);
+  const toastTimerRef = useRef(null);
+  const initialLoadRef = useRef(true);
+
+  // Reduced Motion respektieren
+  const prefersReduced = typeof window !== 'undefined'
+    && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const dismissToast = useCallback(() => {
+    setToast(null);
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleAutoClose = useCallback(() => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 9000);
+  }, []);
 
   const loadNews = useCallback(async (silent = false) => {
     try {
@@ -300,6 +322,42 @@ const HomeHeroNewsPreview = () => {
         if (deduped.length >= 12) break;
       }
       lastFetchRef.current = Date.now();
+
+      // Fresh-Article-Toast: nur bei Background-Refresh (silent=true),
+      // wenn wirklich neue Featured-Story (Slug anders UND neuer UND initial vorhanden).
+      const nextTop = deduped[0];
+      const nextTopTime = nextTop?.published_at ? new Date(nextTop.published_at).getTime() : 0;
+      if (
+        silent
+        && !initialLoadRef.current
+        && nextTop
+        && prevTopSlugRef.current
+        && nextTop.slug !== prevTopSlugRef.current
+        && nextTopTime > prevTopTimeRef.current
+      ) {
+        let alreadyShown = false;
+        try {
+          const key = 'heroNewsLastToastSlug';
+          const prev = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(key) : null;
+          if (prev === nextTop.slug) alreadyShown = true;
+          else if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(key, nextTop.slug);
+        } catch { /* sessionStorage blocked → best-effort */ }
+        if (!alreadyShown) {
+          setToast({ slug: nextTop.slug, title: nextTop.title || 'Neue Meldung' });
+          scheduleAutoClose();
+          try {
+            trackInvestmentEvent('news_fresh_toast_show', {
+              slug: nextTop.slug, source: 'home_hero',
+            });
+          } catch { /* silent */ }
+        }
+      }
+      if (nextTop) {
+        prevTopSlugRef.current = nextTop.slug;
+        prevTopTimeRef.current = nextTopTime;
+      }
+      initialLoadRef.current = false;
+
       setItems((prev) => {
         if (prev.length === deduped.length && prev.every((p, i) => p.slug === deduped[i].slug)) return prev;
         return deduped;
@@ -310,7 +368,7 @@ const HomeHeroNewsPreview = () => {
       // eslint-disable-next-line no-console
       else console.warn('[HomeHeroNewsPreview] background refresh failed', err?.message || err);
     }
-  }, []);
+  }, [scheduleAutoClose]);
 
   useEffect(() => {
     let alive = true;
@@ -336,6 +394,55 @@ const HomeHeroNewsPreview = () => {
 
   return (
     <div className="w-full min-w-0" data-testid="hero-news-preview">
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="hero-news-fresh-toast"
+          className={cn(
+            'pointer-events-auto mb-4 flex items-start gap-3 rounded-lg border border-bank-border bg-white px-4 py-3 shadow-[0_18px_40px_-24px_rgb(30_41_43/0.22)]',
+            prefersReduced ? '' : 'transition-all duration-200 ease-out',
+          )}
+          style={{ maxWidth: '640px' }}
+        >
+          <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-bank-mint text-bank-primary-strong" aria-hidden>
+            <Newspaper className="h-3.5 w-3.5" strokeWidth={LUCIDE_STROKE} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-bank-primary-strong">
+              Neue Meldung
+            </p>
+            <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-bank-text">
+              {toast.title}
+            </p>
+          </div>
+          <Link
+            to={`/nachrichten/${toast.slug}`}
+            data-testid="hero-news-fresh-toast-cta"
+            onClick={() => {
+              try {
+                trackInvestmentEvent('news_fresh_toast_click', {
+                  slug: toast.slug, source: 'home_hero',
+                });
+              } catch { /* silent */ }
+              dismissToast();
+            }}
+            className="shrink-0 self-center inline-flex items-center gap-1 rounded-md border border-bank-border bg-white px-2.5 py-1 text-[11.5px] font-semibold text-bank-primary-strong transition-colors hover:border-bank-primary/40 hover:bg-bank-mint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
+          >
+            Ansehen
+            <ArrowRight size={11} strokeWidth={LUCIDE_STROKE} aria-hidden />
+          </Link>
+          <button
+            type="button"
+            onClick={dismissToast}
+            data-testid="hero-news-fresh-toast-close"
+            aria-label="Neue Meldung ausblenden"
+            className="shrink-0 self-start rounded p-1 text-bank-text-muted transition-colors hover:text-bank-text-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
+          >
+            <span aria-hidden className="block h-3 w-3">×</span>
+          </button>
+        </div>
+      )}
       {state === 'loading' && (
         <div className="grid gap-6 lg:grid-cols-12" data-testid="hero-news-loading">
           <SkeletonBar className="h-[420px] lg:col-span-3" />

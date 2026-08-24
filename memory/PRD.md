@@ -7,18 +7,19 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
-- 76.5–77.7 — Palette, Footer light, News preview, Deep-link, Auto-refresh, News-lock fix, Post-deploy guard, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Editorial 3-Column Hero.
-- 77.8 (Feb 28 2026) — **Category Ribbon on Editorial Hero**:
-  - `HomeHeroNewsPreview.jsx`: Dedup-Limit von 5 auf 12 erhöht (nur die 5 Top-Artikel werden angezeigt, aber alle 12 fließen in die Ribbon-Aggregation).
-  - Neuer `CategoryRibbon`-Component (nur intern in derselben Datei) oberhalb des Grids: aggregiert Kategorien der letzten 24 h aus geladenen Items via `Map<key,{count,newest}>`, sortiert nach Count DESC + Tie-Break newest DESC, `slice(0,5)`. Rendert bis zu 5 Chips als echte `<Link to="/nachrichten#kategorie=<key>">`.
-  - Kein zusätzlicher API-Request. Bestehende `/api/news/nachrichten?limit=12` Response wiederverwendet.
-  - Chip-Styling: `rounded-full bg-white border-bank-border`, hover `bg-bank-mint`, text `bank-primary-strong`, mono uppercase, min-h-[32px]. Kein Coral.
-  - Mobile: horizontal scrollbare Zeile ohne sichtbare Scrollbar, `THEMEN`-Label nur ≥sm.
-  - Analytics: `trackInvestmentEvent('news_category_click', {category, source:'home_hero_ribbon'})`.
+- 76.5–77.8 — Palette rebuild, Footer/Contact/Hero light, Editorial 3-column Hero, Category Ribbon, News-lock fix, Admin Freshness Tile, Two-Strike Email Alarm.
+- 77.9 (Feb 28 2026) — **Fresh Article Toast im Editorial-Hero**:
+  - `HomeHeroNewsPreview.jsx` erweitert um Toast-State + Refs (`prevTopSlugRef`, `prevTopTimeRef`, `toastTimerRef`, `initialLoadRef`) und Toast-Komponente über dem 3-Spalten-Grid.
+  - Erkennungslogik: `silent && !initialLoad && nextTop && prevSlug && nextSlug!==prevSlug && nextTime>prevTime && sessionStorage-Guard`.
+  - Anti-Spam via `sessionStorage.heroNewsLastToastSlug` — gleicher Slug in Session → kein zweiter Toast; zusätzlich Timestamp-Guard gegen Reordering ohne echte Neuigkeit.
+  - Auto-Close nach 9 s (setTimeout, cleanup on dismiss/unmount).
+  - Design: heller Editorial-Kasten `bg-white border-bank-border shadow-editorial`, News-Icon in Mint-Kreis, "NEUE MELDUNG"-Kicker Teal-Strong, Headline `line-clamp-2`, "Ansehen →" Link + X-Close. Kein Coral. `prefers-reduced-motion` respektiert.
+  - A11y: `role="status" aria-live="polite"`, Close-Button `aria-label`, Focus-Ring teal.
+  - Analytics: `trackInvestmentEvent('news_fresh_toast_show'/'news_fresh_toast_click', {slug, source:'home_hero'})` in try/catch.
+  - Position: über der Category Ribbon, `max-w-[640px]` — deckt keine News-Karten und keinen Sticky-CTA.
 
 ## Files of Reference
-- `/app/frontend/src/components/home/HomeHeroNewsPreview.jsx` — Ribbon + Editorial-Hero
-- `/app/frontend/src/components/BankingHero.js`
+- `/app/frontend/src/components/home/HomeHeroNewsPreview.jsx` — Hero + Ribbon + Toast
 
 ## Blockers
 - P1: Supabase `product_inquiry_leads_product_check` (DBA)
@@ -26,6 +27,7 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Backlog
 - Server.py modularization Wave 2
-- Fresh Article Toast on Hero background refresh
 - News Retention Archive (>90 Tage)
+- Ribbon Fade-Edges Mobile
+- Alert Escalation Ladder (6h Reminder)
 - Phase 4/5
