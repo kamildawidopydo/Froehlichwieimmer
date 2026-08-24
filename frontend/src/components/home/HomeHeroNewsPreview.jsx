@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowRight, Newspaper } from 'lucide-react';
+import { ArrowRight, Newspaper, Clock } from 'lucide-react';
 import SafeNewsImage from '@/components/news/SafeNewsImage';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
+import { trackInvestmentEvent } from '@/lib/investmentAnalytics';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -36,82 +37,173 @@ const dateFmt = (iso) => {
   } catch { return ''; }
 };
 
+/** Deutsch, defensive gegen ungültige Werte. */
+const relTime = (iso) => {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return null;
+  const diffSec = Math.max(0, (Date.now() - t) / 1000);
+  if (diffSec < 60) return 'gerade eben';
+  if (diffSec < 3600) {
+    const m = Math.floor(diffSec / 60);
+    return `vor ${m} Min.`;
+  }
+  if (diffSec < 86400) {
+    const h = Math.floor(diffSec / 3600);
+    return `vor ${h} Std.`;
+  }
+  const d = Math.floor(diffSec / 86400);
+  return `vor ${d} ${d === 1 ? 'Tag' : 'Tagen'}`;
+};
+
+/** Alle 60s neu berechnen. Timer sauber aufräumen. */
+const useRelativeTime = (iso) => {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!iso) return undefined;
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [iso]);
+  // now dient nur als Rerender-Trigger; relTime nutzt Date.now() intern
+  void now;
+  return relTime(iso);
+};
+
 const isOwnEditorial = (item) =>
   item?.content_type !== 'aggregated' && !!item?.slug;
 
-const MetaRow = ({ item, className }) => (
-  <div className={cn('flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10.5px] font-medium uppercase tracking-[0.18em]', className)}>
-    <span className="text-bank-primary-strong">{humanizeCategory(item.category)}</span>
-    {item.published_at ? (
-      <>
-        <span className="text-bank-border" aria-hidden>·</span>
-        <span className="text-bank-text-muted tabular-nums">{dateFmt(item.published_at)}</span>
-      </>
-    ) : null}
-  </div>
-);
+const categoryHref = (category) => {
+  if (!category || !CATEGORY_LABEL[category]) return '/nachrichten';
+  return `/nachrichten#kategorie=${encodeURIComponent(category)}`;
+};
 
-const FeaturedCard = ({ item }) => (
-  <Link
-    to={`/nachrichten/${item.slug}`}
-    data-testid="hero-news-featured"
-    className="group flex flex-col overflow-hidden rounded-lg border border-bank-border bg-white transition-all duration-200 hover:border-bank-primary/40 hover:shadow-[0_18px_40px_-24px_rgb(30_41_43/0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 sm:flex-row"
-  >
-    <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-bank-mint sm:aspect-auto sm:w-[42%] sm:min-h-[10rem]">
-      <SafeNewsImage
-        src={item.image_url}
-        category={item.category}
-        alt={item.title || ''}
-        loading="eager"
-        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-        testId="hero-news-featured-img"
-      />
-    </div>
-    <div className="flex flex-1 flex-col gap-2.5 p-4 sm:p-5">
-      <MetaRow item={item} />
-      <h3 className="font-display text-[1.15rem] font-medium leading-[1.2] tracking-tight text-bank-text [overflow-wrap:anywhere] sm:text-[1.35rem]">
-        {item.title}
-      </h3>
-      {item.summary ? (
-        <p className="line-clamp-2 text-[13px] leading-snug text-bank-text-muted">
-          {item.summary}
-        </p>
-      ) : null}
-      <span className="mt-auto inline-flex items-center gap-1.5 text-[12px] font-semibold text-bank-primary-strong transition-colors group-hover:text-bank-primary">
-        Mehr erfahren
-        <ArrowRight size={13} strokeWidth={LUCIDE_STROKE} aria-hidden />
-      </span>
-    </div>
-  </Link>
-);
+const FeaturedCard = ({ item }) => {
+  const rel = useRelativeTime(item.published_at);
+  return (
+    <Link
+      to={`/nachrichten/${item.slug}`}
+      data-testid="hero-news-featured"
+      className="group flex flex-col overflow-hidden rounded-lg border border-bank-border bg-white transition-all duration-200 hover:border-bank-primary/40 hover:shadow-[0_18px_40px_-24px_rgb(30_41_43/0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 sm:flex-row"
+    >
+      <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-bank-mint sm:aspect-auto sm:w-[42%] sm:min-h-[10rem]">
+        <SafeNewsImage
+          src={item.image_url}
+          category={item.category}
+          alt={item.title || ''}
+          loading="eager"
+          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+          testId="hero-news-featured-img"
+        />
+      </div>
+      <div className="flex flex-1 flex-col gap-2.5 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10.5px] font-medium uppercase tracking-[0.18em]">
+          <span className="text-bank-primary-strong">{humanizeCategory(item.category)}</span>
+          {item.published_at ? (
+            <>
+              <span className="text-bank-border" aria-hidden>·</span>
+              <span className="text-bank-text-muted tabular-nums">{dateFmt(item.published_at)}</span>
+            </>
+          ) : null}
+          {rel ? (
+            <span
+              data-testid="hero-news-featured-relative"
+              className="inline-flex items-center gap-1 rounded-full bg-bank-mint px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-bank-primary-strong"
+            >
+              <Clock size={10} strokeWidth={LUCIDE_STROKE} aria-hidden />
+              {rel}
+            </span>
+          ) : null}
+        </div>
+        <h3 className="font-display text-[1.15rem] font-medium leading-[1.2] tracking-tight text-bank-text [overflow-wrap:anywhere] sm:text-[1.35rem]">
+          {item.title}
+        </h3>
+        {item.summary ? (
+          <p className="line-clamp-2 text-[13px] leading-snug text-bank-text-muted">
+            {item.summary}
+          </p>
+        ) : null}
+        <span className="mt-auto inline-flex items-center gap-1.5 text-[12px] font-semibold text-bank-primary-strong transition-colors group-hover:text-bank-primary">
+          Mehr erfahren
+          <ArrowRight size={13} strokeWidth={LUCIDE_STROKE} aria-hidden />
+        </span>
+      </div>
+    </Link>
+  );
+};
 
-const SmallCard = ({ item, testId }) => (
-  <Link
-    to={`/nachrichten/${item.slug}`}
-    data-testid={testId}
-    className="group flex h-full flex-col overflow-hidden rounded-lg border border-bank-border bg-bank-panel transition-all duration-200 hover:border-bank-primary/40 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
-  >
-    <div className="relative aspect-[16/10] w-full overflow-hidden bg-bank-mint">
-      <SafeNewsImage
-        src={item.image_url}
-        category={item.category}
-        alt={item.title || ''}
-        loading="lazy"
-        className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-      />
+const SmallCard = ({ item, testId }) => {
+  const label = humanizeCategory(item.category);
+  const handleChipClick = (e) => {
+    // preventDefault + stopPropagation, damit die umgebende Karte nicht die
+    // Detailseite öffnet — nur der Chip navigiert in die Übersicht.
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      trackInvestmentEvent('news_category_click', {
+        category: item.category || null,
+        source: 'home_hero',
+      });
+    } catch { /* silent */ }
+    if (typeof window !== 'undefined') {
+      window.location.assign(categoryHref(item.category));
+    }
+  };
+
+  return (
+    <div
+      className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-bank-border bg-bank-panel transition-all duration-200 hover:border-bank-primary/40 hover:bg-white focus-within:border-bank-primary/40"
+    >
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-bank-mint">
+        <SafeNewsImage
+          src={item.image_url}
+          category={item.category}
+          alt={item.title || ''}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+        />
+      </div>
+      <div className="flex flex-1 flex-col gap-2 p-3 sm:p-3.5">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10.5px] font-medium uppercase tracking-[0.18em]">
+          <a
+            href={categoryHref(item.category)}
+            onClick={handleChipClick}
+            data-testid={`hero-news-small-chip-${item.category || 'none'}`}
+            aria-label={`Kategorie ${label} anzeigen`}
+            className={cn(
+              'relative z-10 -mx-1 inline-flex min-h-[24px] items-center rounded px-1 py-0.5 text-bank-primary-strong',
+              'transition-colors hover:text-bank-primary hover:underline underline-offset-4',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/50 focus-visible:ring-offset-1',
+            )}
+          >
+            {label}
+          </a>
+          {item.published_at ? (
+            <>
+              <span className="text-bank-border" aria-hidden>·</span>
+              <span className="text-bank-text-muted tabular-nums">{dateFmt(item.published_at)}</span>
+            </>
+          ) : null}
+        </div>
+        <h4 className="line-clamp-3 font-display text-[0.9rem] font-medium leading-[1.25] tracking-tight text-bank-text [overflow-wrap:anywhere] sm:text-[0.95rem]">
+          {item.title}
+        </h4>
+        <span className="mt-auto inline-flex items-center gap-1 text-[11px] font-semibold text-bank-primary-strong transition-colors group-hover:text-bank-primary">
+          Mehr erfahren
+          <ArrowRight size={11} strokeWidth={LUCIDE_STROKE} aria-hidden />
+        </span>
+      </div>
+      {/* Stretched Link — deckt die gesamte Karte ab, unter dem Chip (z-0). */}
+      <Link
+        to={`/nachrichten/${item.slug}`}
+        data-testid={testId}
+        aria-label={item.title || 'Nachricht öffnen'}
+        className="absolute inset-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
+      >
+        <span className="sr-only">{item.title}</span>
+      </Link>
     </div>
-    <div className="flex flex-1 flex-col gap-2 p-3 sm:p-3.5">
-      <MetaRow item={item} />
-      <h4 className="line-clamp-3 font-display text-[0.9rem] font-medium leading-[1.25] tracking-tight text-bank-text [overflow-wrap:anywhere] sm:text-[0.95rem]">
-        {item.title}
-      </h4>
-      <span className="mt-auto inline-flex items-center gap-1 text-[11px] font-semibold text-bank-primary-strong transition-colors group-hover:text-bank-primary">
-        Mehr erfahren
-        <ArrowRight size={11} strokeWidth={LUCIDE_STROKE} aria-hidden />
-      </span>
-    </div>
-  </Link>
-);
+  );
+};
 
 const SkeletonBar = ({ className }) => (
   <div className={cn('animate-pulse rounded-md bg-bank-mint/60', className)} aria-hidden />
@@ -134,7 +226,6 @@ const HomeHeroNewsPreview = () => {
             const db = b.published_at ? new Date(b.published_at).getTime() : 0;
             return db - da;
           });
-        // Dedupe by slug just in case
         const seen = new Set();
         const deduped = [];
         for (const it of list) {

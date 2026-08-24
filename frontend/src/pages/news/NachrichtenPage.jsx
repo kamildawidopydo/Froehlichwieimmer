@@ -163,7 +163,17 @@ const RedaktionSlot = () => (
 
 const NachrichtenPage = () => {
   const [items, setItems] = useState([]);
-  const [category, setCategory] = useState('alle');
+  // Deep-Link: Kategorie aus URL-Hash `#kategorie=<key>` initial übernehmen,
+  // Format kompatibel zu HomeFinanceNews & HomeHeroNewsPreview.
+  const readCategoryHash = () => {
+    if (typeof window === 'undefined') return 'alle';
+    const raw = (window.location.hash || '').toLowerCase();
+    const prefix = '#kategorie=';
+    if (!raw.startsWith(prefix)) return 'alle';
+    const key = decodeURIComponent(raw.slice(prefix.length));
+    return CAT_LABEL[key] ? key : 'alle';
+  };
+  const [category, setCategory] = useState(readCategoryHash);
   const [publisher, setPublisher] = useState('alle');
   const [publishers, setPublishers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -174,6 +184,14 @@ const NachrichtenPage = () => {
 
   const PAGE = 24;
   const MORE = 18;
+
+  // Hash-Änderungen (Back/Forward, externe Deep-Links) live spiegeln.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const sync = () => setCategory(readCategoryHash());
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
 
   // Publisher-Auswahl serverseitig laden (distinct Publisher aus /news/publishers).
   useEffect(() => {
