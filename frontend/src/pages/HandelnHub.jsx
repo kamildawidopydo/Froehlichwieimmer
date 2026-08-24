@@ -168,18 +168,114 @@ const COMMON_MISTAKES = [
   },
 ];
 
+// Höhe des globalen Site-Headers (Navigation.js, sticky top-0 z-[100]):
+// ~106px auf Mobile / ~114px auf Desktop. Damit die /handeln-Sub-Nav nicht
+// unter dem Header verschwindet, muss sie darunter positioniert werden.
+// NAV_OFFSET = Header + Sub-Nav-Band (~44px) für scrollToId, damit die
+// Section-Überschrift nicht unter beiden verschwindet.
+const NAV_OFFSET = 160;
+
 const scrollToId = (id) => {
   const el = document.getElementById(id);
   if (!el) return;
-  const top = el.getBoundingClientRect().top + window.scrollY - 96;
+  const top = el.getBoundingClientRect().top + window.scrollY - NAV_OFFSET;
   window.scrollTo({ top, behavior: 'smooth' });
 };
+
+/**
+ * Scroll-Spy für die Sub-Navigation.
+ * - Beobachtet alle Sections per IntersectionObserver
+ * - `rootMargin` so gewählt, dass der Aktivierungs-Streifen direkt unter
+ *   der Sticky-SubNav liegt (120px oben, 65% unten)
+ * - Für den "am Seitenende"-Fall wird bei Erreichen des Dokument-Endes
+ *   automatisch die letzte Section aktiv
+ * - Kein permanenter Scroll-Listener → günstig für die Performance
+ */
+function useScrollSpy(ids) {
+  const [activeId, setActiveId] = useState(null);
+  const visibleRef = useRef(new Map()); // id -> intersectionRatio (approx.)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !ids?.length) return undefined;
+    const targets = ids
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+    if (targets.length === 0) return undefined;
+
+    // Kopie der Ref lokal halten, damit Cleanup denselben Wert referenziert
+    const visibleMap = visibleRef.current;
+
+    const pickActive = () => {
+      // Wähle die sichtbare Section, deren Oberkante am weitesten oben
+      // (aber noch unter der Sub-Nav) liegt.
+      let best = null;
+      let bestTop = Infinity;
+      visibleMap.forEach((_, id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const top = el.getBoundingClientRect().top;
+        const dist = Math.abs(top - NAV_OFFSET);
+        if (dist < bestTop) {
+          bestTop = dist;
+          best = id;
+        }
+      });
+      if (best) setActiveId(best);
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) visibleMap.set(e.target.id, e.intersectionRatio);
+          else visibleMap.delete(e.target.id);
+        });
+        pickActive();
+      },
+      { rootMargin: `-${NAV_OFFSET + 24}px 0px -65% 0px`, threshold: [0, 0.01, 0.25, 0.5] },
+    );
+    targets.forEach((t) => io.observe(t));
+
+    // Edge-Case Seiten-Ende: wenn ganz unten gescrollt, letzte Section aktiv.
+    const onScroll = () => {
+      const doc = document.documentElement;
+      const atBottom = window.innerHeight + window.scrollY >= doc.scrollHeight - 4;
+      if (atBottom) setActiveId(ids[ids.length - 1]);
+      // Edge-Case ganz oben: erste Section
+      if (window.scrollY < 80) setActiveId(ids[0]);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    return () => {
+      io.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      visibleMap.clear();
+    };
+  }, [ids]);
+
+  return activeId;
+}
+
+const SECTION_IDS = SECTIONS.map((s) => s.id);
 
 const HandelnHub = () => {
   const [query, setQuery] = useState('');
   const [activeLetter, setActiveLetter] = useState('all');
   const [openTerms, setOpenTerms] = useState(new Set());
   const searchRef = useRef(null);
+  const activeSection = useScrollSpy(SECTION_IDS);
+
+  // Deep-Link mit #section beim Laden: einmalig zur Section scrollen
+  // (nach Paint, damit die Sticky-Nav-Höhe bereits berücksichtigt ist).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash?.replace('#', '');
+    if (!hash || !SECTION_IDS.includes(hash)) return;
+    // Zwei rAFs, damit Layout inkl. Sticky-Nav stabil ist
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToId(hash));
+    });
+  }, []);
 
   const filteredTerms = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -281,24 +377,35 @@ const HandelnHub = () => {
         </div>
       </section>
 
-      {/* STICKY SUB-NAV */}
-      <div className="sticky top-0 z-30 border-b border-bank-border bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75">
+      {/* STICKY SUB-NAV — unter globalem Header positioniert (Header ~106px mobile / 114px desktop, z-[100]) */}
+      <div className="sticky top-[106px] z-[95] border-b border-bank-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 sm:top-[114px]">
         <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
           <nav
             aria-label="Sektionen"
             className="no-scrollbar -mx-2 flex items-center gap-1 overflow-x-auto py-2.5"
           >
-            {SECTIONS.map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => scrollToId(id)}
-                data-testid={`hub-subnav-${id}`}
-                className="shrink-0 whitespace-nowrap px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-text-muted transition-colors hover:text-bank-primary focus-visible:outline-none focus-visible:text-bank-primary"
-              >
-                {label}
-              </button>
-            ))}
+            {SECTIONS.map(({ id, label }) => {
+              const isActive = activeSection === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => scrollToId(id)}
+                  data-testid={`hub-subnav-${id}`}
+                  data-active={isActive ? 'true' : 'false'}
+                  aria-current={isActive ? 'true' : undefined}
+                  className={cn(
+                    'shrink-0 whitespace-nowrap border-b-2 px-3 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.18em] transition-colors',
+                    'focus-visible:outline-none focus-visible:text-bank-primary',
+                    isActive
+                      ? 'border-bank-primary text-bank-primary'
+                      : 'border-transparent text-bank-text-muted hover:text-bank-primary',
+                  )}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </nav>
         </div>
       </div>

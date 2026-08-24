@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 import { MessageCircleQuestion, X, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { trackInvestmentEvent } from '@/lib/investmentAnalytics';
-import { getProductCatalog, WIZARD_TRUST_POINTS } from '@/data/productWizardCatalog';
-import { BANK_BONUS_COPY } from '@/data/bankBonusTexts';
+import CompactPill from './stickyCta/CompactPill';
+import ProductMenu from './stickyCta/ProductMenu';
+import PulseStyle from './stickyCta/PulseStyle';
 
 const STORAGE_KEY = 'productInquiryStickyDismissed';
 const PULSE_SESSION_KEY = 'productInquiryStickyPulseFired';
@@ -62,141 +63,6 @@ function useAttentionPulse(active) {
     };
   }, [active, prefersReduced]);
   return pulse;
-}
-
-const PRODUCT_CATALOG = getProductCatalog();
-const WIZARD_BENEFITS = WIZARD_TRUST_POINTS.slice(0, 3);
-
-/**
- * CompactPill — kompakter Restore-Pill für den Sticky-CTA.
- * Wird nur im Restore-State verwendet (nach Dismiss).
- * Mobile Single-Line ~56 px hoch mit nur Haupttext, Desktop-3-Zeilen unverändert.
- */
-function CompactPill({ onClick, className, testId, ariaLabel, fixed = true, pulse = false }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'group relative inline-flex w-[clamp(15.5rem,78vw,22rem)] max-w-[calc(100vw-1rem)] items-center gap-2.5 rounded-2xl border-2 border-bank-primary/25 bg-white px-2.5 py-1.5 text-left',
-        'min-h-[3.5rem] sm:min-h-[6rem] sm:gap-4 sm:px-5 sm:py-4',
-        'shadow-[0_12px_28px_-12px_rgb(9_33_66/0.22)] sm:shadow-[0_20px_50px_-18px_rgb(9_33_66/0.30)]',
-        'transition-all duration-200 ease-out',
-        'sm:hover:-translate-y-0.5 sm:hover:scale-[1.02] hover:border-bank-primary/55 hover:bg-bank-primary/[0.04] sm:hover:shadow-[0_28px_64px_-18px_rgb(9_33_66/0.38)]',
-        'active:scale-[0.98] sm:active:scale-[1.045] active:bg-bank-primary/[0.07] active:border-bank-primary/65',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2',
-        'dark:border-bank-border dark:bg-bank-surface-elev',
-        pulse && 'sticky-cta-pulse',
-        fixed && ['fixed z-[90]', BOTTOM, 'right-4 sm:right-5'],
-        className,
-      )}
-      data-testid={testId}
-      data-pulse={pulse ? 'true' : 'false'}
-      aria-label={ariaLabel}
-    >
-      <span
-        aria-hidden
-        className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
-          'shadow-[0_4px_12px_-6px_rgb(76_124_186/0.55)] transition-colors',
-          'group-hover:bg-[rgb(var(--bank-primary)/0.16)] group-hover:border-bank-primary/35',
-          'sm:h-16 sm:w-16 sm:rounded-xl',
-        )}
-      >
-        <MessageCircleQuestion className="h-[1.05rem] w-[1.05rem] sm:h-7 sm:w-7" strokeWidth={LUCIDE_STROKE} />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col sm:gap-0.5">
-        <span className="hidden font-mono text-[11px] font-semibold uppercase tracking-[0.20em] text-bank-primary sm:inline">
-          Kurzfragebogen
-        </span>
-        <span className="truncate text-[14px] font-semibold leading-[1.15] tracking-tight text-bank-ink sm:text-[18px]">
-          Fragen beantworten
-        </span>
-        <span className="hidden text-[12.5px] leading-snug text-bank-text-muted sm:block">
-          In wenigen Minuten zur persönlichen Empfehlung
-        </span>
-      </span>
-      <ArrowRight
-        aria-hidden
-        strokeWidth={LUCIDE_STROKE}
-        className={cn(
-          'ml-0.5 h-[0.9rem] w-[0.9rem] shrink-0 text-bank-text-muted/60 transition-all sm:ml-1 sm:h-[1.05rem] sm:w-[1.05rem]',
-          'group-hover:translate-x-0.5 group-hover:text-bank-primary',
-        )}
-      />
-    </button>
-  );
-}
-
-function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
-  return (
-    <AnimatePresence>
-      {menuOpen ? (
-        <motion.div
-          role="menu"
-          aria-label="Passende Geldanlage wählen"
-          initial={prefersReduced ? false : { opacity: 0, y: 6, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={prefersReduced ? undefined : { opacity: 0, y: 4, scale: 0.98 }}
-          transition={{ duration: prefersReduced ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className={className}
-        >
-          <div className="flex max-h-[min(calc(100dvh-9rem),38rem)] max-w-[calc(100vw-1rem)] flex-col overflow-hidden [scrollbar-width:thin]">
-            {/* Header — kompakt, 3 Zeilen max */}
-            <div className="shrink-0 border-b border-bank-border px-3 py-2.5 sm:px-4 sm:py-3">
-              <p className="font-mono text-[9.5px] font-medium uppercase tracking-[0.20em] text-bank-primary/80">
-                Kurzfragebogen
-              </p>
-              <h3 className="mt-0.5 font-display text-[clamp(0.95rem,3.2vw,1.05rem)] font-light leading-snug tracking-tight text-bank-ink">
-                Finden Sie die passende Geldanlage
-              </h3>
-              <p className="mt-1 text-[clamp(0.72rem,2.6vw,0.8rem)] leading-snug text-bank-text-muted">
-                Wählen Sie ein Produkt oder beantworten Sie wenige Fragen.
-              </p>
-            </div>
-
-            {/* Produkt-Grid: 1 Spalte mobile, 2 Spalten ab sm — reduziert Höhe massiv auf Desktop */}
-            <div className="grid min-h-0 shrink grow grid-cols-1 gap-1 overflow-y-auto overscroll-contain p-2 sm:grid-cols-2 sm:gap-1.5 sm:p-3">
-              {PRODUCT_CATALOG.map((p) => (
-                <button
-                  key={p.key}
-                  type="button"
-                  role="menuitem"
-                  data-testid={`product-inquiry-menu-option-${p.key}`}
-                  onClick={() => onPick(p.key)}
-                  className={cn(
-                    'group flex min-h-[2.75rem] w-full items-center gap-2.5 rounded-lg border border-transparent px-2.5 py-1.5 text-left transition-all',
-                    'hover:border-bank-accent/30 hover:bg-bank-surface',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/30',
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-bank-primary/15 bg-[rgb(var(--bank-primary)/0.08)] text-bank-primary"
-                  >
-                    <MessageCircleQuestion className="h-4 w-4" strokeWidth={LUCIDE_STROKE} />
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-[13px] font-semibold leading-tight text-bank-ink transition-colors group-hover:text-bank-primary">
-                      {p.title}
-                    </span>
-                    <span className="truncate text-[11px] leading-tight text-bank-text-muted">
-                      {p.benefit}
-                    </span>
-                  </span>
-                  <ArrowRight
-                    aria-hidden
-                    strokeWidth={LUCIDE_STROKE}
-                    className="h-3.5 w-3.5 shrink-0 text-bank-text-muted/60 transition-transform group-hover:translate-x-0.5 group-hover:text-bank-primary"
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
-  );
 }
 
 /**
@@ -591,22 +457,5 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
     document.body,
   );
 };
-
-/**
- * Einmalige CSS-Keyframes für den dezenten Attention-Pulse.
- * Wird via `.sticky-cta-pulse` conditional aktiviert. Respektiert
- * automatisch prefers-reduced-motion via Hook-Guard in useAttentionPulse.
- */
-const PulseStyle = () => (
-  <style>{`
-    @keyframes sticky-cta-pulse-kf {
-      0%   { box-shadow: 0 20px 50px -18px rgba(9,33,66,0.30), 0 0 0 0 rgba(76,124,186,0.30); transform: translateY(0) scale(1); }
-      40%  { box-shadow: 0 26px 60px -18px rgba(9,33,66,0.34), 0 0 0 10px rgba(76,124,186,0.12); transform: translateY(-2px) scale(1.015); }
-      100% { box-shadow: 0 20px 50px -18px rgba(9,33,66,0.30), 0 0 0 0 rgba(76,124,186,0.0); transform: translateY(0) scale(1); }
-    }
-    .sticky-cta-pulse { animation: sticky-cta-pulse-kf 1500ms ease-in-out 1; }
-    @media (prefers-reduced-motion: reduce) { .sticky-cta-pulse { animation: none !important; } }
-  `}</style>
-);
 
 export default ProductInquiryStickyCta;

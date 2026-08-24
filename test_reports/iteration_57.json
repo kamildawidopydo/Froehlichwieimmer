@@ -1,0 +1,44 @@
+{
+  "summary": "Frontend-only regression + feature testing of Session 74.11. (P0) ProductInquiryStickyCta refactor (CompactPill/ProductMenu/PulseStyle) verified on Home at 320/390/768/1440/1920px: sticky CTA render, menu with 6 product options, ESC close, click-outside close, dismiss + localStorage, restore pill, pulse sessionStorage, analytics events, nearForm reposition, interstitial hide. (P1) Scroll-Spy on /handeln verified: initial state, scroll activation for all 7 sections, top/bottom edge cases, deep-link #kosten, click-to-scroll, active styling, no jitter, mobile 390px. All functional assertions passed. ONE HIGH UI bug found: the sticky sub-nav (sticky top-0, z-30) is completely hidden behind the site header (sticky, z-100, 114px desktop / 106px mobile) as soon as the user scrolls — so the new scroll-spy highlight is never visible to a real user and the sub-nav buttons are not clickable while scrolled.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "HandelnHub sticky sub-nav", "issue": "Sub-nav wrapper is 'sticky top-0 z-30' while the global site header is sticky with z-index 100 and height 114px (desktop) / 106px (mobile). While scrolled, the sub-nav sits at viewport top 0..51px, i.e. fully behind the header: document.elementFromPoint() on the sub-nav buttons returns header elements (coveredByHeader=true at 1440px and 390px). The scroll-spy active highlight is therefore invisible and the buttons are unclickable during scrolling (they only work when the page is at the top, in the sub-nav's non-stuck position). Fix: offset the sub-nav (e.g. top-[106px]/top-[114px] or CSS var for header height) or raise z-index above the header, and align NAV_OFFSET (currently 96) with header height + sub-nav height (~165px).", "selector": "div.sticky.top-0.z-30 / [data-testid='hub-subnav-*']", "priority": "HIGH"},
+      {"component": "ProductInquiryStickyCta (desktop root)", "issue": "data-near-form attribute is only set on the mobile branch; desktop root has no data-near-form attribute (returns null). Functionally correct (desktop must not reposition) but inconsistent for automated assertions — consider always emitting data-near-form='false' on desktop.", "selector": "[data-testid='product-inquiry-sticky-cta']", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "nearForm reposition vs. #invtopic-teaser interstitial", "issue": "The #invtopic-teaser interstitial (data-visible='true') is displayed around the same scroll depth as #home-newsletter. Because the sticky CTA returns null while the teaser intersects, the nearForm reposition path is unreachable until the teaser is dismissed. Verified nearForm only after closing the teaser (invtopic-teaser-close). Behaviour matches spec priority (hide wins), but worth confirming this is the intended UX.", "affected_selectors": ["[data-testid='product-inquiry-sticky-cta']", "#invtopic-teaser"]}
+    ],
+    "design_issues": [
+      {"screen": "/handeln sub-nav (mobile 390px)", "issues": ["Font size 10.5px uppercase with 0.18em tracking is at the lower bound of legibility on mobile; active color rgb(76,124,186) on white is acceptable contrast, inactive rgb(100,116,139) is borderline for small caps text."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "FIX (HIGH): offset/raise the /handeln sticky sub-nav so it is not covered by the global sticky header (top-0 z-30 vs header z-100, 114px/106px tall). Without this the new scroll-spy highlight is invisible to users.",
+    "Align NAV_OFFSET (96) with actual header (114px desktop / 106px mobile) + sub-nav height after the sticky fix, so section headings are not scrolled under the header.",
+    "Optional: emit data-near-form on the desktop CTA root for test parity."
+  ],
+  "critical_code_review_comments": [
+    "HandelnHub.jsx is 866 lines — exceeds the 700-line guideline; SECTIONS/BOERSEN_ABC data and useScrollSpy should be extracted into separate modules.",
+    "useScrollSpy: IntersectionObserver + one passive lightweight scroll handler only (verified) — performance is fine; pickActive() re-queries getBoundingClientRect per intersecting section only, acceptable.",
+    "useScrollSpy deps: [ids] with SECTION_IDS as a module-level constant — stable, no re-subscribe loop (verified)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (per request)", "frontend": "95% (all functional assertions pass; 1 HIGH visibility/clickability defect on the sticky sub-nav)"},
+  "seed_data_creation": "None. Visitor gate bypassed for tests by seeding localStorage keys kapitalmitte_visitor_profile and kapitalmitte_cookie_consent, then reloading.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "not needed - public pages",
+  "detailed_results": {
+    "P0_sticky_cta_desktop_1920": "CTA rendered at bottom-right (x1436..1900, 464x96). Menu opened via main CTA button with all 6 options visible (aktien, anleihen, fonds, tagesgeld, festgeld, flexgeld). ESC closes, click-outside closes, re-open works. Product select opened the Kurzfragebogen wizard (Fonds/ETFs). Dismiss (X) hid CTA and set localStorage productInquiryStickyDismissed=1; restore pill rendered and restored CTA + cleared the key. sessionStorage productInquiryStickyPulseFired=1 after first render.",
+    "P0_analytics": "gtag/dataLayer hooks captured: product_inquiry_open {source:'sticky_cta'} on open and product_inquiry_select {product:'fonds', source:'sticky_popup'} on pick. PASS.",
+    "P0_responsive": "320px: pill 250x60, compact height exactly 56px, menu grid 1 column (286px), panel 0..304 within viewport. 390px: 304 wide, compact 56px, menu 1 column (356px). 768px: desktop CTA 371x108, menu 2 columns (208px 208px). 1440px: CTA 464x96, menu 2 columns (315px 315px), panel 758..1420. 1920px: CTA 464x96. document.scrollWidth - innerWidth = 0 at every viewport (no horizontal overflow); width always <= viewport - 1rem. PASS.",
+    "P0_nearForm": "Mobile 390px at #home-newsletter (teaser dismissed): data-near-form='true', repositioned to left (left=16, bottom=708). Scrolled away: data-near-form='false', back to right (left=70). Desktop 1440px: no repositioning (position unchanged, no near-form attribute). PASS.",
+    "P0_interstitial_hide": "With #invtopic-teaser data-visible='true' intersecting, [data-testid='product-inquiry-sticky-cta'] count = 0 on both desktop and mobile. PASS.",
+    "P1_scroll_spy": "7 sub-nav buttons present with correct data-testids. Initial load: grundlagen active. Scrolling to orderarten/kosten/risiken/abc/fehler → exactly the matching button data-active='true'. Bottom of page → fehler; top → grundlagen. Click on kosten/abc/grundlagen/risiken/fehler scrolls and activates. Deep-link /handeln#kosten scrolls to exact target (delta 0.06px) and kosten active. Active styling: color/border rgb(76,124,186) + aria-current='true' vs inactive rgb(100,116,139)/transparent. Rapid scroll (15 samples): never more than 1 active. Mobile 390px: sub-nav container overflow-x auto, scrollWidth 903 vs clientWidth 366 (scrollable), activation logic works, no doc overflow at 390 or 320px. PASS (but see HIGH visibility bug).",
+    "network": "Only expected failures: 401 /api/auth/me (anonymous), Cloudflare cdn-cgi/rum + challenge scripts, one transient webpack chunk/font fetch failure. No app API errors."
+  },
+  "context_for_next_testing_agent": "Bypass the visitor gate by evaluating localStorage.setItem('kapitalmitte_visitor_profile', ...) and localStorage.setItem('kapitalmitte_cookie_consent', {preferences:{...}}) then page.reload() — the 'Akzeptieren' button is disabled until a role is chosen. To test the sticky-CTA nearForm behaviour you must first close the #invtopic-teaser interstitial ([data-testid='invtopic-teaser-close']), otherwise the CTA is intentionally not rendered. Note: the automation tool errors with 'str() takes at most 3 arguments' if the screenshot path is built via string concatenation — use literal paths. Re-verify the /handeln sticky sub-nav offset fix (must be visible below the 106-114px header while scrolled).",
+  "rca_of_the_issue": "Root cause of the HIGH bug: the /handeln sub-nav container uses 'sticky top-0 z-30' while the global site header is itself sticky at top 0 with z-index 100 and a height of 114px (desktop) / 106px (mobile). When the sub-nav sticks, it renders in the 0-51px band already occupied by the higher-stacked header, so it is painted underneath and hit-testing on its buttons returns header nodes (verified via elementsFromPoint at 1440px and 390px after window.scrollTo(0,3000)). Scroll-spy state itself is correct (data-active flips as expected); only the presentation/interaction layer is broken. Mitigation: set the sub-nav sticky offset to the header height (CSS var / top-[114px] with a mobile variant) and update NAV_OFFSET accordingly."
+}

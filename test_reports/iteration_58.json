@@ -1,0 +1,38 @@
+{
+  "summary": "Frontend-only verification of the HIGH sticky sub-nav fix on /handeln (iteration_57 defect) plus scroll-spy regression and the P0 ProductInquiryStickyCta regression on Home. HIGH FIX CONFIRMED: at 1440px the global header measures top 0..114 (sticky, z-index 100) and the sub-nav wrapper now renders at top 114..164.75 with computed top=114px, z-index=95; at 390px header 0..106 and sub-nav 106..156.75 (top=106px). After window.scrollTo(0,3000) document.elementsFromPoint() on every hub-subnav-* button center returns that same button as the topmost element (no header nodes) — 0 covered buttons on desktop; on mobile the 3 buttons inside the viewport are topmost and the remaining 4 simply lie outside the 390px viewport inside the horizontally scrollable nav (expected, not a defect). Normal (non-forced) Playwright clicks on hub-subnav-orderarten while scrolled succeed at both viewports, page scrolls so section top = ~160px and the H2 headline is the topmost element at its center (fully visible below header+sub-nav), with data-active='true'. Scroll-spy still activates exactly one matching button for all 7 sections (grundlagen, anlageklassen, orderarten, kosten, risiken, abc, fehler). Click-to-scroll for kosten/risiken/abc/fehler/grundlagen all land headline top at 280px, visible, correct active state. Deep links /handeln#kosten, #risiken, #abc (full document loads with seeded localStorage) all land with sectionTop=160, headline visible and matching button active — desktop and mobile. P0 CTA regression: all clean.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ProductInquiryStickyCta (desktop root)", "issue": "Carry-over LOW from iter 57 (intentionally not fixed): data-near-form attribute is only emitted on the mobile branch; desktop root returns null. Cosmetic/test-parity only.", "selector": "[data-testid='product-inquiry-sticky-cta']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/handeln sub-nav (mobile 390px)", "issues": ["Carry-over LOW: 10.5px uppercase with 0.18em tracking is at the lower bound of legibility; inactive rgb(100,116,139) small-caps text is borderline contrast."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "HandelnHub.jsx is 869 lines — still above the 700-line guideline; extract SECTIONS/ASSET_CLASSES/ORDER_TYPES/COSTS/RISK_POINTS/COMMON_MISTAKES data and useScrollSpy into separate modules.",
+    "Sub-nav sticky offset (top-[106px]/sm:top-[114px]) and NAV_OFFSET=160 are hard-coded duplicates of the header height defined in Navigation.js. If the header height changes, both break silently — consider a single CSS custom property (e.g. --header-h) consumed by both the sticky offset and NAV_OFFSET.",
+    "Client-side hash changes within the same document (e.g. link from /handeln#kosten to /handeln#risiken without a remount) do not re-trigger the deep-link effect (deps []), so the offset scroll is skipped and the section can land at viewport top 0 (behind the header). Only reproducible via in-document hash navigation, not on fresh loads; consider a hashchange listener if in-page hash links are added later."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (per request)", "frontend": "100% of requested assertions passed (HIGH fix verified at 1440px and 390px; scroll-spy + deep-link + P0 sticky CTA regressions all pass)"},
+  "seed_data_creation": "None. Visitor gate bypassed by seeding localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent, then reload.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "not needed - public pages",
+  "detailed_results": {
+    "HIGH_fix_desktop_1440": "header {top:0,bottom:114,h:114,z:100,sticky}; sub-nav wrapper {top:114,bottom:164.75,h:50.75,z:95,css top:114px}; all 7 buttons rect top 124/bottom 153.75, topmost element == the button itself, inViewport true. COVERED=NONE. PASS",
+    "HIGH_fix_mobile_390": "header {0..106,z:100}; sub-nav wrapper {106..156.75, css top:106px, z:95}; grundlagen/anlageklassen/orderarten topmost == themselves; kosten/risiken/abc/fehler have left 389..915 i.e. horizontally off-screen inside the scrollable nav (elementsFromPoint null) — not header coverage. PASS",
+    "click_after_scroll": "Desktop: normal click on hub-subnav-orderarten at scrollY 3000 succeeded; result sectionTop 159.8, headlineTop 279.8, headline topmost H2, active=true. Mobile: sectionTop 160.4, headlineTop 264.4, headline visible, active=true. PASS",
+    "scroll_spy_7_sections": "grundlagen/anlageklassen/orderarten/kosten/risiken/abc/fehler each yield exactly one active button matching the section. PASS",
+    "click_to_scroll_visibility": "kosten/risiken/abc/fehler/grundlagen: headline top 280px, topmost H2 (visible), active=true. PASS",
+    "deep_links": "Full loads (seeded localStorage, reload): #kosten scrollY 3071 sectionTop 160 headline visible active=true; #risiken scrollY 4039 sectionTop 160; #abc scrollY 4805 sectionTop 160; mobile #kosten scrollY 4611 sectionTop 160 headlineTop 264 visible. PASS",
+    "P0_sticky_cta": "Desktop 1440: CTA rendered 464x96 at (956,790); menu opens from CTA button; all 6 options (product-inquiry-menu-option-aktien/anleihen/fonds/tagesgeld/festgeld/flexgeld) visible and clickable, each opens the Kurzfragebogen dialog with the matching product title (Aktien / Anleihen / Fonds-ETFs / Tagesgeld / Festgeld / Flexgeld), ESC closes. Dismiss (product-inquiry-sticky-dismiss) hides CTA and sets localStorage productInquiryStickyDismissed=1; product-inquiry-sticky-restore restores CTA and clears the key. Mobile 390: identical results, CTA 304x60 compact variant (product-inquiry-sticky-compact). PASS",
+    "notes": "Correct testids are product-inquiry-menu-option-* / product-inquiry-sticky-dismiss / product-inquiry-sticky-restore (not product-inquiry-option-*)."
+  },
+  "context_for_next_testing_agent": "Bypass the visitor gate by setting localStorage kapitalmitte_visitor_profile and kapitalmitte_cookie_consent then page.reload(); a fresh browser context WILL show [data-testid='visitor-welcome-gate'] overlay and make elementFromPoint checks return the gate. For deep-link tests always do a real document load (goto /handeln, seed, goto /handeln#<id>, reload) — in-document hash changes do not re-run the deep-link effect and give a false sectionTop=0. Sticky sub-nav fix verified good: header 114px desktop / 106px mobile, sub-nav top-[106px]/sm:top-[114px] z-[95], NAV_OFFSET=160 places section tops exactly at the sub-nav bottom edge.",
+  "rca_of_the_issue": "Iteration_57 HIGH bug (sub-nav painted under the z-100 sticky header) is resolved: the wrapper now sticks at the measured header height (114px desktop / 106px mobile) with z-95, so it sits directly below the header instead of inside its band; hit-testing returns the sub-nav buttons. NAV_OFFSET=160 (=114 header + ~46 sub-nav) keeps section headlines below both bars after scrollToId and keeps the IntersectionObserver activation band aligned."
+}

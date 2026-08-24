@@ -1,5 +1,64 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 74.11 (Feb 28, 2026) — Sticky-CTA Refactor sauber abgeschlossen + Scroll-Spy /handeln ✅
+
+### P0 — ProductInquiryStickyCta Refactor abgeschlossen
+**Kernproblem behoben (Fork-Blocker):** Der vorherige Job hatte die Kindkomponenten `CompactPill`, `ProductMenu`, `PulseStyle` bereits nach `/app/frontend/src/components/home/stickyCta/` extrahiert, aber die alten inline-Definitionen im Parent nicht gelöscht → `SyntaxError: Identifier 'ProductMenu' has already been declared`.
+
+**Bereinigt:**
+- `ProductInquiryStickyCta.jsx`: 606 → 461 Zeilen
+- Entfernt: `_CompactPill_LEGACY_REMOVED` (Zeilen 68–123, toter Code)
+- Entfernt: inline `ProductMenu` (Zeilen 125–194, doppelte Deklaration)
+- Entfernt: inline `PulseStyle` (Zeilen 594–604, doppelte Deklaration)
+- Alle Verwendungen nutzen jetzt ausschließlich die Imports aus `./stickyCta/`
+
+**Erhalten (bestätigt via testing_agent iteration_57 & 58):**
+- Alle 6 Wizard-Einstiege
+- Fluid-Responsive-Verhalten (clamp/min/dvh/vw) aus Session 74.10
+- Mobile 1-col / Desktop 2-col Menü
+- Alle data-testids
+- Analytics (`product_inquiry_open` mit source `sticky_cta`, `product_inquiry_select` mit source `sticky_popup`)
+- ESC-Close, Outside-Click-Close, Dismiss/Restore (localStorage), Attention-Pulse (sessionStorage)
+- `nearForm`-Reposition (Mobile), Interstitial-Hide (`#invtopic-teaser`)
+- Testresultate: 320/390/768/1440/1920px — keine horizontal Overflow, alle Aktionen funktional
+
+### P1 — Scroll-Spy für /handeln Sub-Navigation ✅
+**Umsetzung:**
+- Neuer Hook `useScrollSpy(ids)` in `HandelnHub.jsx` (Zeilen 191–254)
+- IntersectionObserver mit `rootMargin: -184px 0px -65% 0px` — Aktivierungsband direkt unter Header + Sub-Nav
+- Zusätzlich passiver lightweight-Scroll-Handler nur für Edge-Cases (ganz oben → erste Section, ganz unten → letzte Section, verhindert „hängender" Highlight am Seitenrand)
+- `pickActive()` wählt die sichtbare Section mit Oberkante am nächsten zu NAV_OFFSET
+- Deep-Link-Support: `useEffect` prüft `location.hash` gegen `SECTION_IDS` und ruft `scrollToId(hash)` in 2× `requestAnimationFrame`
+
+**Sub-Nav-Aktualisierung:**
+- Wrapper repositioniert: `sticky top-[106px] sm:top-[114px] z-[95]` (unter globalem Header, `sticky top-0 z-[100]`, 106/114px hoch)
+- Aktiver Button: `border-b-2 border-bank-primary text-bank-primary` + `aria-current='true'` + `data-active='true'`
+- Inaktiv: `border-transparent text-bank-text-muted`
+- `NAV_OFFSET = 160` für scrollToId (Header ~114 + Sub-Nav ~44px + Puffer)
+
+**Section-IDs (bereits im DOM):** `grundlagen`, `anlageklassen`, `orderarten`, `kosten`, `risiken`, `abc`, `fehler`
+
+**Verifikation (iteration_58, 100 %):**
+- HIGH-Fix bestätigt: Sub-Nav sichtbar bei 1440px (top 114–164.75px) und 390px (top 106–156.75px), keine Header-Überlappung mehr
+- Buttons klickbar während Scroll (elementsFromPoint gibt Sub-Nav-Button als topmost zurück)
+- Scroll-Spy aktiviert exakt eine Section (kein Jitter, 7/7 Sections korrekt)
+- Deep-Link `/handeln#kosten` scrollt korrekt (delta 0.06 px)
+- Klick-scroll: Section-H2 sichtbar unter Header+Sub-Nav
+- Mobile 390px: Sub-Nav horizontal scrollbar (903 vs 366px), Aktivierung funktioniert
+
+**Getestete Viewports:** 320, 390, 768, 1440, 1920 (px) — inkl. Zoom-Cases über Playwright
+
+### Verbleibende externe Blocker
+1. Supabase-Constraint (`product_inquiry_leads_product_check`) → DBA-Migration manuell in Supabase Studio
+2. Alpha-Vantage + Unsplash API-Keys → warten auf User
+
+### LOW-Findings aus iteration_58 (bewusst nicht gefixt)
+- Desktop-CTA-Root emittiert kein `data-near-form='false'` (nur Mobile) — kosmetisch/Test-Parität
+- Sub-Nav-Font 10.5px uppercase Kontrast am unteren Rand (Design-Choice, konsistent mit anderen Sektionen)
+
+---
+
+
 ## Session 74.10 (Feb 28, 2026) — Sticky-CTA & Produktmenü vollständig fluid/responsive ✅
 
 **Kernproblem behoben:** Bisher wurden konkrete Pixel-Breiten verwendet (`w-[17.5rem]`, `w-[22rem]`), was auf einem Viewport passte, auf dem nächsten aber zu groß/klein war. Session 74.10 macht die Komponente vollständig fluid.
