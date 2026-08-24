@@ -554,7 +554,20 @@ def _assert_safe_email(subject: str, html: str) -> None:
             raise ValueError(f"Unsafe email link: {url}")
 
 
-async def _send_email_via_emergent(to: str, subject: str, html: str) -> Optional[str]:
+async def _send_email_via_emergent(
+    to: str,
+    subject: str,
+    html: str,
+    *,
+    attachments: Optional[List[Dict[str, Any]]] = None,
+) -> Optional[str]:
+    """Sends transactional email via Emergent's managed proxy.
+
+    Optional `attachments` (Session 75.4): forwarded to Resend's native
+    `attachments` field. Each dict must be shaped:
+        {"filename": "...", "content": "<base64>", "content_type": "application/pdf"}
+    A single message must stay under ~10 MB total base64 payload.
+    """
     if not EMERGENT_EMAIL_KEY:
         logger.warning("EMERGENT_EMAIL_KEY missing — email not sent (dry-run).")
         return None
@@ -562,8 +575,23 @@ async def _send_email_via_emergent(to: str, subject: str, html: str) -> Optional
     payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}
     if EMAIL_REPLY_TO:
         payload["contact_email"] = EMAIL_REPLY_TO
+    if attachments:
+        # Whitelist only known-safe keys; drop everything else to avoid leaking
+        # accidentally-attached fields (e.g. secrets) into the outbound payload.
+        clean: List[Dict[str, Any]] = []
+        for att in attachments:
+            if not isinstance(att, dict):
+                continue
+            fn = att.get("filename") or "report.pdf"
+            ct = att.get("content_type") or att.get("type") or "application/octet-stream"
+            content = att.get("content")
+            if not content or not isinstance(content, str):
+                continue
+            clean.append({"filename": str(fn)[:180], "content": content, "content_type": str(ct)[:80]})
+        if clean:
+            payload["attachments"] = clean
     try:
-        async with httpx.AsyncClient(timeout=15) as client_http:
+        async with httpx.AsyncClient(timeout=30) as client_http:
             r = await client_http.post(
                 f"{EMAIL_BASE_URL}/api/v1/email/send",
                 headers={"X-Email-Key": EMERGENT_EMAIL_KEY},
@@ -768,30 +796,89 @@ async def send_product_inquiry_email(payload: ProductInquiryEmailPayload):
 
     subject_name = f"{payload.first_name} {payload.last_name}".strip() or email
     subject = f"Neue Produktanfrage · {product.capitalize()} · {subject_name}"
+
+    # Session 75.4 — Report-PDF serverseitig erzeugen und als Attachment anhängen.
+    # Fehler bei PDF-Erzeugung → Mail geht OHNE Anhang raus (Lead bleibt gespeichert).
+    # Fehler bei Mail-Provider mit Attachment → ein Retry ohne Attachment als Fallback.
+    from services.report_pdf import render_pdf as _render_pi_pdf, build_filename as _pi_pdf_filename  # noqa: E402
+    import base64 as _b64
+
+    attachments_payload: Optional[List[Dict[str, Any]]] = None
+    pdf_attached = False
+    pdf_error: Optional[str] = None
     try:
-        email_id = await _send_email_via_emergent(PRODUCT_INQUIRY_TO, subject, _pi_email_html(payload))
-    except HTTPException as e:
-        logger.warning("product-inquiry email failed: %s", e.detail)
-        # Fehler markieren — späterer Retry mit gleicher leadId ist erlaubt.
-        await db[PI_EMAIL_IDEMPOTENCY].update_one(
-            {"lead_id": lead_id},
-            {"$set": {"status": "failed", "error": str(e.detail)[:200], "failed_at": datetime.now(timezone.utc)}},
+        pdf_data = {
+            "product": product,
+            "first_name": payload.first_name,
+            "last_name": payload.last_name,
+            "email": payload.email,
+            "phone": payload.phone,
+            "customer_number": payload.customer_number,
+            "answers": payload.answers,
+            "leadId": payload.leadId,
+        }
+        pdf_bytes: bytes = await asyncio.to_thread(_render_pi_pdf, pdf_data)
+        if pdf_bytes and pdf_bytes.startswith(b"%PDF"):
+            attachments_payload = [{
+                "filename": _pi_pdf_filename(product),
+                "content": _b64.b64encode(pdf_bytes).decode("ascii"),
+                "content_type": "application/pdf",
+            }]
+            pdf_attached = True
+        else:
+            pdf_error = "invalid_pdf_output"
+    except Exception as e:  # noqa: BLE001 — Report darf Mailversand nie killen
+        pdf_error = str(e)[:120]
+        logger.warning("product-inquiry pdf gen failed (mail will be sent without attachment): %s", pdf_error)
+
+    try:
+        email_id = await _send_email_via_emergent(
+            PRODUCT_INQUIRY_TO, subject, _pi_email_html(payload),
+            attachments=attachments_payload,
         )
-        return {"ok": False, "error": "email_provider_failed"}
+    except HTTPException as e:
+        # Wenn Provider das Attachment abgelehnt haben könnte, retry OHNE Attachment.
+        # `502` ist provider-side; wir versuchen einen sauberen Retry mit einfachem Body.
+        retry_ok = False
+        retry_id: Optional[str] = None
+        if pdf_attached:
+            try:
+                logger.warning("product-inquiry email with attachment failed (%s) — retrying without PDF", e.detail)
+                retry_id = await _send_email_via_emergent(PRODUCT_INQUIRY_TO, subject, _pi_email_html(payload))
+                retry_ok = True
+            except Exception as e2:  # noqa: BLE001
+                logger.warning("product-inquiry retry (no attachment) also failed: %s", e2)
+        if retry_ok:
+            email_id = retry_id
+            pdf_attached = False
+            pdf_error = f"provider_rejected_attachment:{e.detail}"[:200]
+        else:
+            logger.warning("product-inquiry email failed: %s", e.detail)
+            await db[PI_EMAIL_IDEMPOTENCY].update_one(
+                {"lead_id": lead_id},
+                {"$set": {"status": "failed", "error": str(e.detail)[:200], "failed_at": datetime.now(timezone.utc), "pdf_attached": False}},
+            )
+            return {"ok": False, "error": "email_provider_failed"}
     except Exception as e:  # noqa: BLE001
         logger.exception("product-inquiry email crashed: %s", e)
         await db[PI_EMAIL_IDEMPOTENCY].update_one(
             {"lead_id": lead_id},
-            {"$set": {"status": "failed", "error": str(e)[:200], "failed_at": datetime.now(timezone.utc)}},
+            {"$set": {"status": "failed", "error": str(e)[:200], "failed_at": datetime.now(timezone.utc), "pdf_attached": False}},
         )
         return {"ok": False, "error": "email_crash"}
 
     # Erfolgreich versendet → Status finalisieren.
     await db[PI_EMAIL_IDEMPOTENCY].update_one(
         {"lead_id": lead_id},
-        {"$set": {"status": "sent", "sent_at": datetime.now(timezone.utc), "email_id": email_id}},
+        {"$set": {
+            "status": "sent",
+            "sent_at": datetime.now(timezone.utc),
+            "email_id": email_id,
+            "pdf_attached": pdf_attached,
+            "pdf_error": pdf_error,
+        }},
     )
-    return {"ok": True, "email_id": email_id, "dry_run": email_id is None, "lead_id": lead_id}
+    return {"ok": True, "email_id": email_id, "dry_run": email_id is None, "lead_id": lead_id, "pdf_attached": pdf_attached}
 
 
 # ---------------------------------------------------------------------------

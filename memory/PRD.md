@@ -1,5 +1,66 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 75.4 (Feb 28, 2026) — Product-Inquiry Mail: PDF-Report als Attachment ✅
+
+### Ziel
+Berater erhalten mit der Product-Inquiry-Notification-Mail automatisch den identischen PDF-Report, den der User im Success-Step des Wizards herunterladen kann.
+
+### Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| `/app/backend/server.py` (`_send_email_via_emergent`) | Signatur um optional `attachments: List[Dict]` erweitert (whitelist filename/content/content_type, forwarded an Resend/Emergent-Proxy) — timeout 15s→30s wegen größerer Payloads |
+| `/app/backend/server.py` (`send_product_inquiry_email`) | PDF-Generation via `services.report_pdf.render_pdf` in `asyncio.to_thread` (non-blocking) → base64 → `attachments=[{filename, content, content_type}]`; 2-stufiges Fehler-Fallback |
+| Wiederverwendet: `services/report_pdf.py` + `templates/investment_report.html` | **Kein zweiter PDF-Renderer** |
+
+### Attachment-Flow
+1. Idempotenz-Reservierung (unverändert, `product_inquiry_email_idempotency` UNIQUE-Index auf `lead_id`)
+2. PDF serverseitig rendern (`asyncio.to_thread`, ~20-23 KB, ~200-400 ms)
+3. Base64-Encode → `attachments=[{filename: anlage-report-{product}-YYYY-MM-DD.pdf, content: <b64>, content_type: application/pdf}]`
+4. `_send_email_via_emergent(..., attachments=...)` → Emergent-Proxy → Resend
+5. Auf Erfolg: `pdf_attached=True` in Idempotency-Doc, Response `{ok:true, email_id, lead_id, pdf_attached:true}`
+
+### Fehler-Fallback (kein Silent-Loss)
+- **PDF-Gen scheitert**: Mail wird OHNE Attachment versendet, `pdf_error` im DB-Doc geloggt, Lead unverändert (Lead ist bereits vorher in Supabase persistiert)
+- **Provider lehnt Mail mit Attachment ab** (HTTPException 502): Automatischer **Ein-Retry ohne Attachment**. Bei Erfolg: `pdf_attached=False`, `pdf_error="provider_rejected_attachment:…"`. Bei erneutem Fehler: `status=failed`, Retry mit derselben `leadId` erlaubt
+- **Mail-Crash allgemein**: `status=failed`, `pdf_attached=False`, Retry möglich
+
+### Idempotenz-Verhalten
+- `insert_one({lead_id, status:'reserved'})` mit UNIQUE-Index → 5 parallele Requests mit gleicher `leadId` → nur 1 Send-Versuch, 4 `{ok:true, duplicate:true}`
+- `status=failed` darf via `find_one_and_update` erneut reserviert werden → geordneter Retry mit PDF-Neugenerierung möglich
+- `status=sent` blockiert weitere Versuche
+
+### PII / Security
+- Kein PDF-Inhalt geloggt, keine E-Mail-Adresse im Klartext (nur `email_hash`)
+- Content-Whitelist im Attachment-Wrapper: nur `filename/content/content_type` durchreichen
+- Keine temporären Dateien — PDF in-memory, kein Filesystem-Touch
+- Server-seitige Copy aus `PRODUCT_CATALOG` (aus Session 75.0) — keine Client-Copy im Report
+
+### Test-Ergebnisse
+| Test | Ergebnis |
+|------|----------|
+| **🎯 END-TO-END mit Provider** (`delivered@resend.dev`) | ✅ **status=202 mit realem PDF-Anhang** — email_id `21cdab66-6e5f-4bf4-8c86-50b368e4ae20` (Baseline ohne Attach: `e24bd099-…`). Beweist: der komplette Flow PDF-Gen → base64 → Emergent-Proxy → Resend funktioniert vollständig. |
+| **In-Process Mock-Test** | ✅ Outbound-Payload: `attachments`-Key present, filename `anlage-report-aktien-2026-08-24.pdf`, content_type `application/pdf`, base64→decode→`%PDF-` magic, size 21937 B, X-Email-Key header present |
+| T1 Aktien Lead | ✅ PDF rendered, attachment payload konstruiert, DB `pdf_attached` gesetzt |
+| T2 Anleihen Lead | ✅ dito |
+| T3 Duplicate (same leadId) | ✅ `{ok:true, duplicate:true, already_sent:false}` — kein zweiter Send |
+| T4 5 parallele Requests | ✅ 1 Verarbeitung + 4 `duplicate:true` — race-safe via UNIQUE-Index |
+| T5 Retry nach `status=failed` | ✅ `find_one_and_update` reserviert erneut; PDF neu generiert |
+| T6 Provider-422-Body inspiziert | ✅ `{"error":"Undeliverable recipient","code":"undeliverable_recipient"}` — Recipient `kundenservice@kapital-direkt24.de` provider-side unverified. **Zeigt: 422 ist NICHT attachment-bezogen** (Retry ohne Attachment liefert dieselbe 422) |
+| T7 Direkter Provider-Test mit Attachment | ✅ Payload technisch akzeptiert (Attachment-Feld wird korrekt an Resend geforwarded) |
+| Keine Temp-File-Leaks | ✅ PDF nur in-memory (bytes) |
+| Keine neuen Backend-Exceptions | ✅ Backend-Logs sauber (nur die erwarteten „Email provider 422"-Warnings) |
+
+### Verbleibender Provider-Blocker (extern)
+- **PRODUCT_INQUIRY_TO** = `kundenservice@kapital-direkt24.de` ist beim Resend-Konto nicht verifiziert → Provider gibt 422 für ALLE Sends an diese Adresse (mit oder ohne Attachment). Lösung: entweder die Empfänger-Domain bei Resend verifizieren lassen oder `PRODUCT_INQUIRY_TO` auf eine bereits verifizierte Adresse setzen. Der Attachment-Payload ist unabhängig davon technisch verifiziert.
+
+### Andere externe Blocker (unverändert)
+- Supabase `product_inquiry_leads_product_check` → DBA
+- Alpha Vantage + Unsplash Keys → warten auf User
+- Cron-Slot-Limit erreicht (5/5)
+
+---
+
+
 ## Session 75.3 (Feb 28, 2026) — Periodischer News-Image-Sweep ✅
 
 ### Ziel & Umsetzung
