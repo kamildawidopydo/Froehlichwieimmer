@@ -624,11 +624,10 @@ def _pi_email_html(payload: "ProductInquiryEmailPayload") -> str:
 
 @api.post("/send-product-inquiry-email")
 async def send_product_inquiry_email(payload: ProductInquiryEmailPayload):
-    # Session 76.4 — Logic wurde nach routes/product_inquiry.py extrahiert.
-    # Stub bleibt hier NUR damit die Payload-Model-Signatur/OpenAPI stabil bleibt
-    # falls jemand direkt gegen `api`-Router POSTet. Der eigentliche Handler
-    # wird durch den separaten Router überschrieben (siehe include_router
-    # `product_inquiry.router` am Ende der Datei).
+    # Session 78.6 — Stub entfernt. Route wird durch include_router auf
+    # `routes.product_inquiry.router` überschrieben (siehe unten). Dieser
+    # Fallback bleibt nur, falls jemand vor dem include-Router-Aufruf direkt
+    # gegen `api` postet; im Regelbetrieb wird er nie erreicht.
     from routes.product_inquiry import send_product_inquiry_email as _handler
     return await _handler(payload)
 
@@ -3682,6 +3681,10 @@ app.include_router(_stock_research_routes.router)
 # News-Routen (Session 78.4 — extrahiert aus server.py; 33 Endpoints via Shim-Pattern)
 from routes import news as _news_routes  # noqa: E402
 app.include_router(_news_routes.router)
+
+# Product-Inquiry-Router (Session 78.6 — Stub entfernt, direkt registriert)
+from routes import product_inquiry as _product_inquiry_routes  # noqa: E402
+app.include_router(_product_inquiry_routes.router)
 
 app.include_router(api)
 

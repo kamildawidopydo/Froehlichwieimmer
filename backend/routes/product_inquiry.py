@@ -1,7 +1,11 @@
 """Product-Inquiry E-Mail-Route — extrahiert aus server.py (Session 76.4).
 
-Behavior 1:1 identisch. Shared state (db, mail-helper, models) wird aus
-server.py via lazy import bezogen; keine Logik-Duplikate.
+Session 78.6: Router jetzt **direkt** via `app.include_router` in server.py
+registriert. Der bisherige Stub in server.py entfällt. Pydantic-Modell
+`ProductInquiryEmailPayload` wird top-level aus server importiert — sicher,
+weil `from routes import product_inquiry` erst am Ende von server.py läuft
+(zu diesem Zeitpunkt ist das Modell definiert; identisches Muster wie in
+`routes/auth.py`).
 """
 from __future__ import annotations
 
@@ -14,16 +18,22 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
 
+# Pydantic-Modell aus server.py — Import ist safe (siehe Modul-Docstring).
+from server import ProductInquiryEmailPayload
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["product-inquiry"])
 
 
 @router.post("/send-product-inquiry-email")
-async def send_product_inquiry_email(payload: Any):
-    """Wird vom Stub in server.py aufgerufen (nicht direkt via include_router).
-    Deshalb ist `payload` untyped — die Pydantic-Validierung passiert bereits
-    in der Stub-Route in server.py.
+async def send_product_inquiry_email(payload: ProductInquiryEmailPayload):
+    """Advisor-Mail + PDF-Anhang mit Idempotenz-Schutz.
+
+    Bereits vollständig extrahiert in Session 76.4. Session 78.6 tauscht nur
+    den bisherigen server.py-Stub gegen eine direkte Router-Registrierung —
+    Verhalten, Payload-Model, Response-Shape und Idempotenz-Semantik bleiben
+    exakt gleich.
     """
     from server import (  # lazy import to avoid circular
         db,
