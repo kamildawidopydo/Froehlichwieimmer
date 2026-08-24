@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone } from 'lucide-react';
+import { Phone, Mail } from 'lucide-react';
 import { siteContact } from '@/data/siteContact';
 import { cn } from '@/lib/utils';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
@@ -17,23 +17,23 @@ const NavCustomerServiceContact = ({ variant = 'light', className }) => {
       <a
         href={`tel:${siteContact.phoneTel}`}
         className={cn(
-          'group inline-flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-90',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-bank-ink',
+          'group inline-flex min-w-0 items-center gap-2.5 transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-bank-panel',
           className,
         )}
         aria-label={`Kundenservice anrufen: ${siteContact.phoneDisplay}`}
       >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-400/35 bg-white/[0.06] text-slate-300 transition-colors group-hover:border-slate-300/50 group-hover:bg-white/[0.1] group-hover:text-slate-200">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-bank-border bg-white text-bank-primary-strong transition-colors group-hover:bg-bank-mint group-hover:border-bank-primary/30">
           <Phone className="h-3.5 w-3.5" strokeWidth={LUCIDE_STROKE} aria-hidden />
         </span>
         <span className="flex min-w-0 flex-col sm:flex-row sm:items-baseline sm:gap-2.5">
-          <span className="hidden text-[10px] font-medium uppercase tracking-[0.14em] text-white/45 sm:inline">
+          <span className="hidden text-[10px] font-semibold uppercase tracking-[0.16em] text-bank-primary-strong sm:inline">
             Persönliche Beratung
           </span>
-          <span className="font-display text-[13px] font-medium tabular-nums leading-none tracking-tight text-white sm:text-[14px]">
+          <span className="font-display text-[13px] font-medium tabular-nums leading-none tracking-tight text-bank-text transition-colors group-hover:text-bank-primary-strong sm:text-[14px]">
             {siteContact.phoneDisplay}
           </span>
-          <span className="mt-0.5 text-[10px] leading-none text-white/45 sm:mt-0 sm:border-l sm:border-white/15 sm:pl-2.5">
+          <span className="mt-0.5 text-[10px] leading-none text-bank-text-muted sm:mt-0 sm:border-l sm:border-bank-border sm:pl-2.5">
             {siteContact.businessHoursLine}
           </span>
         </span>
@@ -93,17 +93,20 @@ export const CustomerServiceTopBar = ({ className }) => {
     <div
       aria-label="Kundenservice"
       className={cn(
-        'relative z-[101] border-b border-white/[0.08] bg-bank-ink print:hidden',
+        'relative z-[101] border-b border-bank-border bg-bank-panel print:hidden',
         className,
       )}
     >
-      <div className="mx-auto flex h-9 max-w-[1600px] items-center justify-between gap-4 px-5 sm:h-10 lg:px-12 xl:px-16">
+      <div className="mx-auto flex h-11 max-w-[1600px] items-center justify-between gap-4 px-5 sm:h-12 lg:px-12 xl:px-16">
         <NavCustomerServiceContact variant="topbar" />
         <a
           href={`mailto:${siteContact.email}`}
-          className="hidden truncate text-[11px] text-white/45 transition-colors hover:text-white/80 sm:inline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/40"
+          className="group hidden min-w-0 shrink items-center gap-2 truncate text-[11px] text-bank-text-muted transition-colors hover:text-bank-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-bank-panel sm:inline-flex"
         >
-          {siteContact.email}
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-bank-border bg-white text-bank-primary-strong transition-colors group-hover:bg-bank-mint group-hover:border-bank-primary/30">
+            <Mail className="h-3.5 w-3.5" strokeWidth={LUCIDE_STROKE} aria-hidden />
+          </span>
+          <span className="truncate">{siteContact.email}</span>
         </a>
       </div>
     </div>
