@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Anlage-Report · {{ product.title }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 18mm 24mm 18mm;
+    @top-left {
+      content: "Fröhlich Vermögensberatung";
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 9pt;
+      color: #6b7280;
+      letter-spacing: 0.08em;
+    }
+    @top-right {
+      content: "Anlage-Report · {{ product.title }}";
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 9pt;
+      color: #6b7280;
+    }
+    @bottom-left {
+      content: "Erstellt am {{ generated_at }}";
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 8.5pt;
+      color: #9ca3af;
+    }
+    @bottom-right {
+      content: "Seite " counter(page) " von " counter(pages);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 8.5pt;
+      color: #9ca3af;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #1f2937;
+  }
+
+  .kicker {
+    font-family: "Courier New", monospace;
+    font-size: 8.5pt;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: #c9a961;
+  }
+
+  h1.title {
+    font-size: 26pt;
+    font-weight: 300;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: #0f1d34;
+    margin: 8pt 0 4pt 0;
+  }
+
+  h1.title em {
+    font-style: italic;
+    color: #c9a961;
+  }
+
+  .lead {
+    font-size: 11pt;
+    color: #374151;
+    max-width: 155mm;
+    margin: 6pt 0 22pt 0;
+  }
+
+  .meta-grid {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 24pt 0;
+    border-top: 1px solid #0f1d34;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .meta-row { display: table-row; }
+  .meta-cell {
+    display: table-cell;
+    padding: 8pt 10pt 8pt 0;
+    vertical-align: top;
+    width: 33%;
+    border-bottom: 1px solid #eef1f6;
+  }
+  .meta-label {
+    font-family: "Courier New", monospace;
+    font-size: 7.8pt;
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    color: #6b7280;
+    display: block;
+    margin-bottom: 2pt;
+  }
+  .meta-value {
+    font-size: 10.5pt;
+    color: #0f1d34;
+  }
+
+  h2.section {
+    font-size: 15pt;
+    font-weight: 400;
+    color: #0f1d34;
+    margin: 28pt 0 8pt 0;
+    padding-bottom: 4pt;
+    border-bottom: 2px solid #0f1d34;
+    page-break-after: avoid;
+  }
+
+  h2.section .num {
+    color: #c9a961;
+    font-family: "Courier New", monospace;
+    font-size: 10pt;
+    letter-spacing: 0.2em;
+    margin-right: 8pt;
+    vertical-align: 2pt;
+  }
+
+  p.body {
+    margin: 0 0 10pt 0;
+    color: #1f2937;
+  }
+
+  ul.bullets {
+    margin: 6pt 0 12pt 0;
+    padding-left: 16pt;
+  }
+  ul.bullets li {
+    margin-bottom: 4pt;
+    color: #1f2937;
+  }
+
+  .answer-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 6pt;
+  }
+  .answer-table tr {
+    page-break-inside: avoid;
+  }
+  .answer-table td {
+    padding: 8pt 10pt;
+    border-bottom: 1px solid #eef1f6;
+    vertical-align: top;
+  }
+  .answer-table td.q {
+    width: 40%;
+    color: #6b7280;
+    font-family: "Courier New", monospace;
+    font-size: 8.2pt;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .answer-table td.a {
+    color: #0f1d34;
+    font-size: 10.5pt;
+  }
+
+  .callout {
+    margin: 14pt 0 0 0;
+    padding: 12pt 14pt;
+    background: #fbfaf6;
+    border-left: 3px solid #c9a961;
+    color: #1f2937;
+    page-break-inside: avoid;
+  }
+  .callout .callout-eyebrow {
+    font-family: "Courier New", monospace;
+    font-size: 7.8pt;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #c9a961;
+    margin: 0 0 4pt 0;
+    display: block;
+  }
+
+  .disclaimer {
+    margin-top: 20pt;
+    padding: 12pt 14pt;
+    background: #f5f7fa;
+    border: 1px solid #e5e7eb;
+    font-size: 9pt;
+    line-height: 1.55;
+    color: #4b5563;
+    page-break-inside: avoid;
+  }
+
+  .cta {
+    margin: 24pt 0 0 0;
+    padding: 16pt 18pt;
+    background: #0f1d34;
+    color: #ffffff;
+    page-break-inside: avoid;
+  }
+  .cta h3 {
+    margin: 0 0 6pt 0;
+    font-size: 13pt;
+    font-weight: 400;
+    color: #ffffff;
+  }
+  .cta p { margin: 0 0 4pt 0; font-size: 10pt; color: #d1d5db; }
+  .cta a { color: #c9a961; text-decoration: none; }
+
+  .footer-line {
+    margin-top: 20pt;
+    padding-top: 8pt;
+    border-top: 1px solid #e5e7eb;
+    font-size: 8.5pt;
+    color: #9ca3af;
+    text-align: center;
+    letter-spacing: 0.08em;
+  }
+
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+  <p class="kicker">Anlage-Report · {{ product.kicker }}</p>
+  <h1 class="title">Ihr persönlicher <em>{{ product.title }}</em>-Report</h1>
+
+  <p class="lead">
+    Für <strong>{{ full_name }}</strong> — eine erste, unverbindliche Orientierung
+    auf Basis Ihrer Antworten im Kurzfragebogen. Alle Inhalte dieses Reports
+    dienen ausschließlich Ihrer persönlichen Information.
+  </p>
+
+  <div class="meta-grid">
+    <div class="meta-row">
+      <div class="meta-cell">
+        <span class="meta-label">Produkt</span>
+        <span class="meta-value">{{ product.title }}</span>
+      </div>
+      <div class="meta-cell">
+        <span class="meta-label">Erstellt am</span>
+        <span class="meta-value">{{ generated_at }}</span>
+      </div>
+      <div class="meta-cell">
+        <span class="meta-label">Referenz</span>
+        <span class="meta-value">{{ lead_id or 'ohne Referenz' }}</span>
+      </div>
+    </div>
+    <div class="meta-row">
+      <div class="meta-cell">
+        <span class="meta-label">Kontakt</span>
+        <span class="meta-value">{{ email or '—' }}</span>
+      </div>
+      <div class="meta-cell">
+        <span class="meta-label">Telefon</span>
+        <span class="meta-value">{{ phone or '—' }}</span>
+      </div>
+      <div class="meta-cell">
+        <span class="meta-label">Kundennr.</span>
+        <span class="meta-value">{{ customer_number or '—' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section"><span class="num">01</span>Ihre persönliche Orientierung</h2>
+  <p class="body">
+    Auf Basis Ihrer Angaben im Kurzfragebogen haben wir Ihre Ausgangslage zum
+    Produktbereich <strong>{{ product.title }}</strong> zusammengefasst. Die
+    folgenden Absätze fassen zentrale Merkmale dieses Produktbereichs neutral
+    zusammen — ohne Renditeversprechen und ohne konkrete Kauf­empfehlung.
+  </p>
+  <p class="body">{{ product.orientation }}</p>
+
+  {% if product.focus_points %}
+  <div class="callout">
+    <span class="callout-eyebrow">Worauf es ankommt</span>
+    <ul class="bullets">
+      {% for point in product.focus_points %}
+      <li>{{ point }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if answers %}
+  <h2 class="section"><span class="num">02</span>Ihre Angaben im Überblick</h2>
+  <p class="body">
+    Nachstehend Ihre Antworten aus dem Kurzfragebogen — die Grundlage der
+    weiteren Gespräche mit unseren Ansprechpartner:innen.
+  </p>
+  <table class="answer-table">
+    {% for row in answers %}
+    <tr>
+      <td class="q">{{ row.question }}</td>
+      <td class="a">{{ row.answer }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <h2 class="section"><span class="num">{{ '03' if answers else '02' }}</span>Nächste Schritte</h2>
+  <p class="body">
+    Wir empfehlen ein vertiefendes Gespräch, in dem Ihre Ziele, Ihr Zeit­horizont
+    und Ihre persönliche Risiko­toleranz strukturiert erhoben werden. Dabei
+    prüfen wir gemeinsam, ob und in welcher Ausgestaltung
+    <strong>{{ product.title }}</strong> zu Ihrem Gesamt­portfolio passen könnte.
+  </p>
+
+  <div class="cta">
+    <h3>Persönliches Beratungsgespräch anfordern</h3>
+    <p>Antwort auf Ihre Anfrage typischerweise innerhalb von 1–2 Werktagen.</p>
+    <p>Fröhlich Vermögensberatung GmbH · <a href="mailto:beratung@froehlich-vb.de">beratung@froehlich-vb.de</a></p>
+  </div>
+
+  <div class="disclaimer">
+    <strong>Wichtiger Hinweis.</strong> {{ risk_disclaimer }}
+  </div>
+
+  <div class="footer-line">
+    Report-ID {{ lead_id or '—' }} · erzeugt {{ generated_at }} · Fröhlich Vermögensberatung GmbH
+  </div>
+
+</body>
+</html>

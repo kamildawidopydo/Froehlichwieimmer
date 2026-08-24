@@ -1,5 +1,120 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 75.0 (Feb 28, 2026) — PDF-Report-Endpoint `/api/reports/pdf` ✅
+
+### Ziel & Umsetzung
+Erste modulare Route unter `/app/backend/routes/` als produktiver PDF-Report-Endpoint. Ersetzt den in der Roadmap geplanten Puppeteer-Microservice.
+
+**Technologie-Wahl:** WeasyPrint 69.0 (pure Python, HTML+CSS→PDF).
+Bewusst NICHT Puppeteer/Chromium gewählt:
+- Deterministisch, keine Zombie-Prozesse
+- Kein Browser-Pool, keine RAM-Leaks
+- Kein Chromium-Startup-Overhead pro Request
+- WeasyPrint-System-Libs (Cairo, Pango, GObject) sind bereits im Pod vorhanden
+
+### Neue Modulstruktur
+```
+/app/backend/
+├── routes/
+│   ├── __init__.py               # Modular routers package
+│   └── reports.py                # POST /api/reports/pdf, GET /api/reports/products
+├── services/
+│   ├── __init__.py               # Business-Logic-Layer
+│   └── report_pdf.py             # WeasyPrint HTML→PDF + Produkt-Katalog + Sanitize
+└── templates/
+    └── investment_report.html    # Jinja2 Print-Template (A4, @page-Header/Footer)
+```
+Registrierung in `server.py` (unmittelbar vor `app.include_router(api)`):
+```python
+from routes import reports as _reports_routes
+app.include_router(_reports_routes.router)
+```
+
+### Endpoint-Schema
+**POST `/api/reports/pdf`** — Body:
+```json
+{
+  "product": "aktien|anleihen|fonds|tagesgeld|festgeld|flexgeld",
+  "first_name": "…", "last_name": "…",
+  "email": "…", "phone": "…", "customer_number": "…",
+  "answers": {"qid": {"label": "…", "value": "…"}, ...},
+  "leadId": "optional-uuid"
+}
+```
+
+**Response 200 (application/pdf):**
+```
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="anlage-report-{produkt}-YYYY-MM-DD.pdf"; filename*=UTF-8''…
+Cache-Control: no-store, no-cache, must-revalidate
+X-Content-Type-Options: nosniff
+```
+
+**Response 400/422 (application/json):**
+- `400 {"ok":false,"error":"invalid_product","detail":"…"}` — unbekanntes/leeres Produkt
+- `422` Pydantic-Validation für fehlendes `product`
+- `500 {"ok":false,"error":"render_failed"}` — Rendering-Exception (nie kaputtes PDF)
+- `504 {"ok":false,"error":"render_timeout"}` — Rendering > 20 s
+
+**GET `/api/reports/products`** — Liste der validen Produkt-Keys mit Titel/Kicker (Debug/UI).
+
+### PDF-Inhalt (bankprofessionell, 2 Seiten A4)
+1. Titel + Kicker („Anlage-Report · {Produkt-Kategorie}")
+2. Meta-Grid (Produkt · Datum · Referenz · Kontakt · Telefon · Kundennr.)
+3. **01 Ihre persönliche Orientierung** — server-seitige neutrale Produkt-Kopie (aus `PRODUCT_CATALOG`), keine Renditeversprechen
+4. Callout „Worauf es ankommt" — 3 produktspezifische Focus-Points
+5. **02 Ihre Angaben im Überblick** — Fragebogen-Antworten als Tabelle (nur wenn vorhanden)
+6. **03 Nächste Schritte** — CTA-Karte für Beratungsgespräch
+7. Disclaimer „keine Anlageberatung, Kapitalanlagen mit Risiken bis Totalverlust"
+8. Footer-Line mit Report-ID + Datum
+Seiten-Header/Footer via `@page`: „Fröhlich Vermögensberatung" links · Titel rechts · Datum unten links · Seitenzahl unten rechts.
+
+### Sicherheit
+- **Input-Validation via Pydantic** (max_length, required fields)
+- **Produkt-Whitelist** — nur die 6 bekannten Wizard-Keys werden akzeptiert
+- **Server-seitige Produkt-Copy** — `orientation`/`focus_points` kommen aus `PRODUCT_CATALOG` in `services/report_pdf.py`, nicht vom Client
+- **Jinja2 autoescape** (verifiziert: `<script>x</script>` → `&lt;script&gt;x&lt;/script&gt;`, rendert als literaler Text)
+- **WeasyPrint `base_url=None`** → keine externen Ressourcen-Fetches, keine SSRF
+- **String-Sanitize** — coerce/strip/cut auf max_len pro Feld
+- **Kein Filesystem-Zugriff** — Template über `FileSystemLoader` fix im Backend-Verzeichnis
+- **`X-Content-Type-Options: nosniff`** + **`Cache-Control: no-store`** headers
+
+### Performance
+- `asyncio.to_thread` — WeasyPrint blockiert nicht den Event Loop
+- 20 s Deadman-Timeout via `asyncio.wait_for`
+- Rendering < 500 ms/Report (2-Seiten-PDF ~21–23 KB)
+- 5 parallele Requests: alle HTTP 200, keine Zombie-Prozesse (`ps aux | grep chromium` leer)
+
+### Tests durchgeführt (alle grün)
+| Case | Ergebnis |
+|------|----------|
+| `product=aktien` mit vollem Payload | HTTP 200 · 22927 B PDF · 2 Seiten · Disclaimer + CTA vorhanden |
+| `product=anleihen` | HTTP 200 · 21736 B PDF |
+| `product=tagesgeld` minimal (nur product) | HTTP 200 · 21239 B PDF |
+| `product=unknown_xy` | HTTP 400 · `{"error":"invalid_product"}` |
+| `product` weggelassen | HTTP 422 · Pydantic-Detail |
+| `product="   "` whitespace | HTTP 400 · `invalid_product` |
+| HTML-Injection `<script>alert(1)</script>` in Name + Answers | HTTP 200 · Jinja escaped → PDF rendert literalen Text (sicher) |
+| 5× parallele Requests (Festgeld) | Alle HTTP 200, keine Zombies |
+| Content-Disposition | RFC 5987, UTF-8 Umlaute korrekt |
+| Visuelle PDF-Verifikation (pymupdf → PNG) | Layout sauber, Seitenumbrüche korrekt, keine abgeschnittenen Cards |
+
+### Requirements-Update
+`weasyprint==69.0` in `/app/backend/requirements.txt` ergänzt (via `pip freeze`).
+`pymupdf` NICHT in requirements.txt — ist nur Verifikations-Tooling.
+
+### Nicht angefasst (wie gefordert)
+- Sticky CTA, Scroll-Spy, Wizard-UI, Lead-Persistenz (Supabase), Newsletter, Bonuslogik, Alpha Vantage, Unsplash
+- Bestehender `/api/send-product-inquiry-email`-Endpoint unverändert
+
+### Limits & Roadmap
+- Kein Lead-Loading aus Supabase (server-seitig) — `leadId` wird nur als Referenz im PDF angezeigt. Wenn später die Lead-Persistenz nach MongoDB migriert wird, kann der Endpoint zusätzlich `leadId → Lookup` unterstützen (aktuell: Payload ist source of truth)
+- Keine Auth-Guard auf `/api/reports/pdf` — Endpoint ist bewusst öffentlich (Lead-Follow-up-Download). Wenn interne Nutzung erforderlich: `Depends(require_admin)` ergänzen
+- Fonts: nur System-Serif/Mono — keine Custom-Fonts eingebunden (könnten via `@font-face` mit inline Base64 später ergänzt werden)
+
+---
+
+
 ## Session 74.11 (Feb 28, 2026) — Sticky-CTA Refactor sauber abgeschlossen + Scroll-Spy /handeln ✅
 
 ### P0 — ProductInquiryStickyCta Refactor abgeschlossen
