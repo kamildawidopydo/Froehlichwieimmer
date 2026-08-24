@@ -1,5 +1,70 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 76.3 (Feb 28, 2026) — PDF Anthrazit+Pink Branding + Resend Prod-Ready ✅
+
+### Teil 1 — PDF Report Rebrand
+| | Vorher (75.5/76.1) | Nachher (76.3) |
+|---|---|---|
+| Hero-Fläche | weißer Streifen mit Gold-Rule | **Anthrazit #302A2C** hochwertige Fläche mit weißem Logo (per CSS-Filter invertiert) |
+| Section-Nummern | Gold #C9A961 | **Pink #FF1678** |
+| CTA-Karte | Navy #0f1d34 | **Anthrazit #302A2C** mit Pink-Eyebrow + Pink-Divider |
+| Callout | Cream+Gold-Border | **Cream #FAF9FA + Pink-Border #FF1678** |
+| End-Marke Rules | grau | **Pink** |
+| Body/Meta | grau #6b7280 | **#575457 (portal-mute)** |
+| Logo-Größe | 32pt | **36pt** (per Session 76.2 Vorgabe) |
+| Pink-Rule unter Hero | fehlt | **46pt Pink-Akzentlinie** hinzugefügt |
+| PDF-Größe | ~40 KB | **~40 KB** (unverändert, Slim-Rezept erhalten) |
+
+**Alle 6 Produkte gerendert & getestet:**
+| Produkt | HTTP | CT | Größe | Seiten |
+|---------|:----:|:--:|------:|:------:|
+| aktien | 200 | application/pdf | 39.976 B | 2 |
+| anleihen | 200 | application/pdf | 39.554 B | 2 |
+| fonds | 200 | application/pdf | 41.250 B | 2 |
+| tagesgeld | 200 | application/pdf | 40.433 B | 2 |
+| festgeld | 200 | application/pdf | 40.210 B | 2 |
+| flexgeld | 200 | application/pdf | 40.360 B | 2 |
+
+Visuell verifiziert: Anthrazit-Hero mit weißem „2020 · Fröhlich · VERMÖGENSBERATUNG"-Wortlogo, Pink-Kicker „PERSÖNLICHER INVESTMENT-REPORT", pink-italic „Aktien" in Headline. Pink erscheint sparsam als Akzent auf Nummern (01–05), Rules, Callout-Border und CTA-Eyebrow. Keine großen pinken Flächen, seriöser Banking-Look.
+
+### Teil 2 — Resend Production Ready 🎯
+**Diagnose des externen Blockers via direktem Provider-Test (3 Adressen):**
+| Empfänger | Provider-Response |
+|-----------|:-----------------:|
+| `delivered@resend.dev` | **202 accepted** (Sandbox, verwirft Mail) |
+| `kundenservice@kapital-direkt24.de` | **422 undeliverable_recipient** (Domain unverifiziert) |
+| `test@kapitalmitte.com` | **202 accepted** ⟶ Domain `kapitalmitte.com` bereits verifiziert |
+
+**Fix** (kein Code-Workaround): `PRODUCT_INQUIRY_TO` + `EMAIL_REPLY_TO` in `/app/backend/.env` von `kundenservice@kapital-direkt24.de` → **`kundenservice@kapitalmitte.com`** umgestellt (Domain ist beim Resend-Konto bereits produktiv verifiziert). Backend-Restart.
+
+**🎯 End-to-End-Test (echte Mail via Emergent-Proxy):**
+```json
+Send #1: {"ok":true, "email_id":"077b7c06-24d2-4ff9-8502-1b24e65bdb0e",
+          "dry_run":false, "lead_id":"s76_3_prod_final_1", "pdf_attached":true}
+Send #2: {"ok":true, "already_sent":true, "duplicate":true}
+DB doc:  status=sent, pdf_attached=True, pdf_error=None, email_id=077b7c06-...
+```
+Provider hat die Mail **verbindlich angenommen** (200 mit `email_id`), das PDF war als Attachment enthalten (`pdf_attached=True`), Duplicate-Guard hat den zweiten Send blockiert.
+
+### Geänderte Dateien (3)
+| Datei | Änderung |
+|-------|----------|
+| `templates/investment_report.html` | Komplettes Rebrand (Farben, Hero-Anthrazit, Pink-Akzente), Logo 32pt→36pt, Filter `brightness(0) invert(1)` fürs Logo auf dunklem Grund |
+| `.env` | `EMAIL_REPLY_TO` von `kapital-direkt24.de` → `kapitalmitte.com`, `PRODUCT_INQUIRY_TO` **neu** = verifizierter Empfänger |
+| — | Kein Code-Change am Mail-Sende-Flow (Session 74.9/75.4 bleibt intakt) |
+
+### Nicht angefasst
+Supabase, Wizard-Fragen, Lead-Formular, Newsletter, News-System, Sticky CTA, Analytics, Routing, Image-Sweep, Cron-Konfiguration, Frontend-Download-Flow — alles unverändert.
+
+### Verbleibende externe Blocker
+- **Supabase** `product_inquiry_leads_product_check` → DBA-Migration
+- **Alpha Vantage + Unsplash Keys** → warten auf User
+- **Cron-Slot-Limit 5/5**
+- ~~Resend recipient unverifiziert~~ **GELÖST via Umstellung auf verifizierte Domain**
+
+---
+
+
 ## Session 76.2 (Feb 28, 2026) — Logo-Größen zentralisiert & konsistent ✅
 
 ### Ergebnis

@@ -5,14 +5,13 @@
 <title>Investment-Report · {{ product.title }} · {{ brand_name }}</title>
 <style>
   /* ------------------------------------------------------------------ */
-  /* Portal-Farben (aus tailwind.config / index.css):
-     Navy  #0f1d34   — Deep-Ink / Dunkelblau (Cards, CTAs)
-     Blue  #4C7CBA   — Bank-Primary (Bright Cobalt, Akzentlinien)
-     Gold  #C9A961   — Bank-Gold (sparsam, nur Kicker & feine Rules)
-     Cream #FAF4E2   — Gold-Soft (dezente Flächen)
-     Ink   #1f2937   — Body-Text
-     Mute  #6b7280   — Meta-Text
-     Rule  #e5e7eb   — Feine Trennlinien                                */
+  /* Fröhlich-Portal-Farben (Session 76.3 — Anthrazit + Pink):
+     Anthracite #302A2C — Header/Footer, Headlines, Kontrastflächen
+     Pink      #FF1678 — nur Akzente (Nummern, Rules, kleine Icons)
+     Ink       #111114 — Body-Text near-black
+     Cream     #FAF9FA — dezente Section-Hintergründe
+     Mute      #575457 — Meta/Sekundärtext
+     Rule      #E7E4E6 — feine warme Trennlinien                        */
   /* ------------------------------------------------------------------ */
 
   @page {
@@ -22,33 +21,33 @@
       content: "{{ brand_name }}";
       font-family: Georgia, "Times New Roman", serif;
       font-size: 8.5pt;
-      color: #6b7280;
+      color: #575457;
       letter-spacing: 0.14em;
     }
     @top-right {
       content: "Investment-Report · {{ product.title }}";
       font-family: Georgia, "Times New Roman", serif;
       font-size: 8.5pt;
-      color: #6b7280;
+      color: #575457;
     }
     @bottom-left {
       content: "{{ generated_at }}";
       font-family: "Courier New", monospace;
       font-size: 8pt;
-      color: #9ca3af;
+      color: #575457;
       letter-spacing: 0.10em;
     }
     @bottom-center {
       content: "{{ brand_name }}";
       font-family: Georgia, serif;
       font-size: 8pt;
-      color: #9ca3af;
+      color: #575457;
     }
     @bottom-right {
       content: "Seite " counter(page) " / " counter(pages);
       font-family: "Courier New", monospace;
       font-size: 8pt;
-      color: #9ca3af;
+      color: #575457;
       letter-spacing: 0.10em;
     }
   }
@@ -60,59 +59,63 @@
     font-family: Georgia, "Times New Roman", serif;
     font-size: 10.5pt;
     line-height: 1.6;
-    color: #1f2937;
+    color: #111114;
   }
 
-  /* ---------- Report-Kopf (Deckblatt-Streifen) ---------- */
+  /* ---------- Anthrazit Hero-Header (hochwertige Fläche) ---------- */
   .hero {
-    padding-bottom: 18pt;
-    border-bottom: 1px solid #0f1d34;
-    margin-bottom: 20pt;
+    background: #302A2C;
+    color: #FAF9FA;
+    padding: 18pt 20pt 18pt 20pt;
+    margin: 0 0 20pt 0;
+    border-radius: 4pt;
   }
   .hero-brand {
     display: table;
     width: 100%;
-    padding-bottom: 14pt;
+    padding-bottom: 10pt;
   }
   .hero-brand .col {
     display: table-cell;
     vertical-align: middle;
   }
-  .hero-brand .col.right {
-    text-align: right;
-  }
+  .hero-brand .col.right { text-align: right; }
   .hero-brand img.logo {
     height: 36pt;
     width: auto;
     display: inline-block;
+    /* Wortlogo ist Original navy — auf Anthrazit-Header per Filter zu Off-White */
+    filter: brightness(0) invert(1);
   }
   .hero-brand .wordmark {
     font-family: Georgia, serif;
-    font-size: 12pt;
-    color: #0f1d34;
+    font-size: 13pt;
+    color: #FAF9FA;
     letter-spacing: 0.02em;
   }
   .hero-brand .ref {
     font-family: "Courier New", monospace;
     font-size: 8pt;
-    color: #6b7280;
+    color: #FAF9FA;
     letter-spacing: 0.14em;
     text-transform: uppercase;
   }
-  .hero-brand .ref strong { color: #0f1d34; letter-spacing: 0.06em; }
+  .hero-brand .ref strong { color: #FF1678; letter-spacing: 0.06em; font-weight: normal; }
 
-  /* dünne Gold-Akzent-Linie unter dem Logo-Streifen */
-  .gold-rule {
+  /* Dünne Pink-Akzentlinie direkt UNTER dem Header */
+  .pink-rule {
     height: 1.5pt;
-    background: #C9A961;
+    background: #FF1678;
     width: 46pt;
-    margin: 2pt 0 12pt 0;
+    margin: -14pt 0 18pt 20pt;
+    position: relative;
+    z-index: 1;
   }
 
   h1.report-title {
     font-family: "Courier New", monospace;
     font-size: 8.5pt;
-    color: #C9A961;
+    color: #FF1678;
     letter-spacing: 0.30em;
     text-transform: uppercase;
     margin: 0 0 4pt 0;
@@ -120,34 +123,36 @@
   }
 
   h2.report-headline {
-    font-size: 26pt;
+    font-size: 24pt;
     font-weight: 300;
-    line-height: 1.06;
+    line-height: 1.08;
     letter-spacing: -0.01em;
-    color: #0f1d34;
+    color: #FAF9FA;
     margin: 4pt 0 4pt 0;
   }
   h2.report-headline em {
     font-style: italic;
-    color: #4C7CBA;
+    color: #FF1678;
     font-weight: 400;
   }
 
   .hero-lead {
-    font-size: 11pt;
-    color: #374151;
+    font-size: 10.5pt;
+    color: #E7E4E6;
     max-width: 155mm;
     margin: 8pt 0 0 0;
   }
+  .hero-lead strong { color: #FAF9FA; }
+  .hero-lead em { color: #FF1678; font-style: italic; }
 
-  /* ---------- Meta-Grid ---------- */
+  /* ---------- Meta-Grid (auf weißem Grund unter dem Hero) ---------- */
   .meta-grid {
     display: table;
     width: 100%;
     border-collapse: collapse;
-    margin: 22pt 0 0 0;
-    border-top: 1px solid #e5e7eb;
-    border-bottom: 1px solid #e5e7eb;
+    margin: 4pt 0 0 0;
+    border-top: 1px solid #E7E4E6;
+    border-bottom: 1px solid #E7E4E6;
   }
   .meta-row { display: table-row; }
   .meta-cell {
@@ -155,7 +160,7 @@
     padding: 9pt 12pt 9pt 0;
     vertical-align: top;
     width: 33.33%;
-    border-bottom: 1px solid #eef1f6;
+    border-bottom: 1px solid #EEECEE;
   }
   .meta-row:last-child .meta-cell { border-bottom: 0; }
   .meta-label {
@@ -163,27 +168,27 @@
     font-size: 7.5pt;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: #6b7280;
+    color: #575457;
     display: block;
     margin-bottom: 3pt;
   }
   .meta-value {
     font-size: 10.5pt;
-    color: #0f1d34;
+    color: #302A2C;
   }
 
-  /* ---------- Section-Design ---------- */
+  /* ---------- Section-Design (Anthrazit-Headlines, Pink-Nummern) ---------- */
   h3.section {
     font-size: 14pt;
     font-weight: 400;
-    color: #0f1d34;
+    color: #302A2C;
     margin: 26pt 0 8pt 0;
     padding-bottom: 5pt;
-    border-bottom: 2px solid #0f1d34;
+    border-bottom: 2px solid #302A2C;
     page-break-after: avoid;
   }
   h3.section .num {
-    color: #C9A961;
+    color: #FF1678;
     font-family: "Courier New", monospace;
     font-size: 9.5pt;
     letter-spacing: 0.2em;
@@ -191,45 +196,46 @@
     vertical-align: 2pt;
   }
 
-  p.body { margin: 0 0 10pt 0; color: #1f2937; }
+  p.body { margin: 0 0 10pt 0; color: #111114; }
   p.body:last-child { margin-bottom: 0; }
 
   ul.bullets { margin: 6pt 0 12pt 0; padding-left: 16pt; }
-  ul.bullets li { margin-bottom: 5pt; color: #1f2937; }
+  ul.bullets li { margin-bottom: 5pt; color: #111114; }
+  ul.bullets li::marker { color: #FF1678; }
 
   /* ---------- Answer-Tabelle ---------- */
   .answer-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 6pt;
-    border-top: 1px solid #eef1f6;
+    border-top: 1px solid #E7E4E6;
   }
   .answer-table tr { page-break-inside: avoid; }
   .answer-table td {
     padding: 9pt 10pt;
-    border-bottom: 1px solid #eef1f6;
+    border-bottom: 1px solid #EEECEE;
     vertical-align: top;
   }
   .answer-table td.q {
     width: 40%;
-    color: #6b7280;
+    color: #575457;
     font-family: "Courier New", monospace;
     font-size: 7.8pt;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
   .answer-table td.a {
-    color: #0f1d34;
+    color: #302A2C;
     font-size: 10.5pt;
   }
 
-  /* ---------- Callout (dezent Cream + Gold-Left-Border) ---------- */
+  /* ---------- Callout (dezent Cream + Pink-Left-Border) ---------- */
   .callout {
     margin: 12pt 0 0 0;
     padding: 12pt 14pt;
-    background: #FAF4E2;
-    border-left: 2.5pt solid #C9A961;
-    color: #1f2937;
+    background: #FAF9FA;
+    border-left: 2.5pt solid #FF1678;
+    color: #111114;
     page-break-inside: avoid;
   }
   .callout-eyebrow {
@@ -237,62 +243,63 @@
     font-size: 7.5pt;
     letter-spacing: 0.24em;
     text-transform: uppercase;
-    color: #C9A961;
+    color: #FF1678;
     margin: 0 0 5pt 0;
     display: block;
   }
   .callout ul.bullets { margin: 4pt 0 0 0; }
 
-  /* ---------- Next-Steps ---------- */
+  /* ---------- Next-Steps (Anthrazit-CTA-Karte mit Pink-Eyebrow) ---------- */
   .next-steps {
     margin: 12pt 0 0 0;
     padding: 16pt 18pt;
-    background: #0f1d34;
-    color: #ffffff;
+    background: #302A2C;
+    color: #FAF9FA;
     page-break-inside: avoid;
+    border-radius: 4pt;
   }
   .next-steps .eyebrow {
     font-family: "Courier New", monospace;
     font-size: 7.5pt;
     letter-spacing: 0.28em;
     text-transform: uppercase;
-    color: #C9A961;
+    color: #FF1678;
     margin: 0 0 6pt 0;
   }
   .next-steps h4 {
     margin: 0 0 6pt 0;
     font-size: 14pt;
     font-weight: 400;
-    color: #ffffff;
+    color: #FAF9FA;
     line-height: 1.2;
   }
   .next-steps p {
     margin: 0 0 4pt 0;
     font-size: 10pt;
-    color: #d1d5db;
+    color: #E7E4E6;
     line-height: 1.55;
   }
   .next-steps .contact {
     margin-top: 10pt;
     padding-top: 9pt;
-    border-top: 1px solid rgba(201,169,97,0.4);
+    border-top: 1px solid rgba(255,22,120,0.4);
     font-size: 9.5pt;
-    color: #f4efe3;
+    color: #FAF9FA;
   }
-  .next-steps .contact strong { color: #C9A961; font-weight: normal; letter-spacing: 0.02em; }
+  .next-steps .contact strong { color: #FF1678; font-weight: normal; letter-spacing: 0.02em; }
 
   /* ---------- Disclaimer ---------- */
   .disclaimer {
     margin-top: 22pt;
     padding: 12pt 14pt;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background: #FAF9FA;
+    border: 1px solid #E7E4E6;
     font-size: 9pt;
     line-height: 1.55;
-    color: #4b5563;
+    color: #575457;
     page-break-inside: avoid;
   }
-  .disclaimer strong { color: #0f1d34; }
+  .disclaimer strong { color: #302A2C; }
 
   /* ---------- Ende der Report-Marke ---------- */
   .end-mark {
@@ -300,7 +307,7 @@
     text-align: center;
     font-family: "Courier New", monospace;
     font-size: 8pt;
-    color: #9ca3af;
+    color: #575457;
     letter-spacing: 0.28em;
     text-transform: uppercase;
   }
@@ -311,14 +318,14 @@
     vertical-align: middle;
     width: 30pt;
     height: 1px;
-    background: #e5e7eb;
+    background: #FF1678;
     margin: 0 10pt;
   }
 </style>
 </head>
 <body>
 
-  <!-- ================ HEADER / DECKBLATT ================ -->
+  <!-- ================ HEADER (ANTHRACITE) ================ -->
   <section class="hero">
     <div class="hero-brand">
       <div class="col">
@@ -335,8 +342,6 @@
       </div>
     </div>
 
-    <div class="gold-rule"></div>
-
     <h1 class="report-title">Persönlicher Investment-Report</h1>
     <h2 class="report-headline">
       Ihre Orientierung zu <em>{{ product.title }}</em>
@@ -347,38 +352,39 @@
       auf Basis Ihrer Angaben aus dem Kurzfragebogen zum Bereich
       <em>{{ product.kicker }}</em>.
     </p>
+  </section>
 
-    <div class="meta-grid">
-      <div class="meta-row">
-        <div class="meta-cell">
-          <span class="meta-label">Produkt</span>
-          <span class="meta-value">{{ product.title }}</span>
-        </div>
-        <div class="meta-cell">
-          <span class="meta-label">Erstellt am</span>
-          <span class="meta-value">{{ generated_at }}</span>
-        </div>
-        <div class="meta-cell">
-          <span class="meta-label">Referenz</span>
-          <span class="meta-value">{{ lead_id or 'ohne Referenz' }}</span>
-        </div>
+  <div class="pink-rule"></div>
+  <div class="meta-grid">
+    <div class="meta-row">
+      <div class="meta-cell">
+        <span class="meta-label">Produkt</span>
+        <span class="meta-value">{{ product.title }}</span>
       </div>
-      <div class="meta-row">
-        <div class="meta-cell">
-          <span class="meta-label">Kontakt</span>
-          <span class="meta-value">{{ email or '—' }}</span>
-        </div>
-        <div class="meta-cell">
-          <span class="meta-label">Telefon</span>
-          <span class="meta-value">{{ phone or '—' }}</span>
-        </div>
-        <div class="meta-cell">
-          <span class="meta-label">Kundennr.</span>
-          <span class="meta-value">{{ customer_number or '—' }}</span>
-        </div>
+      <div class="meta-cell">
+        <span class="meta-label">Erstellt am</span>
+        <span class="meta-value">{{ generated_at }}</span>
+      </div>
+      <div class="meta-cell">
+        <span class="meta-label">Referenz</span>
+        <span class="meta-value">{{ lead_id or 'ohne Referenz' }}</span>
       </div>
     </div>
-  </section>
+    <div class="meta-row">
+      <div class="meta-cell">
+        <span class="meta-label">Kontakt</span>
+        <span class="meta-value">{{ email or '—' }}</span>
+      </div>
+      <div class="meta-cell">
+        <span class="meta-label">Telefon</span>
+        <span class="meta-value">{{ phone or '—' }}</span>
+      </div>
+      <div class="meta-cell">
+        <span class="meta-label">Kundennr.</span>
+        <span class="meta-value">{{ customer_number or '—' }}</span>
+      </div>
+    </div>
+  </div>
 
   <!-- ================ 01 · Ihre Produktausrichtung ================ -->
   <h3 class="section"><span class="num">01</span>Ihre Produktausrichtung</h3>
