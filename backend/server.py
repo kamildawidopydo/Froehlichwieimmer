@@ -3388,6 +3388,7 @@ from news_synthesizer import (
     _extract_entities as _news_extract_entities,
     _title_similarity as _news_title_similarity,
 )  # noqa: E402
+from news_alert import evaluate_and_alert as _news_evaluate_alert  # noqa: E402
 from weekly_digest import register as _register_weekly_digest  # noqa: E402
 _register_weekly_digest(api, db, _send_email_via_emergent, require_admin)
 from alerts import register as _register_alerts, ensure_indexes as _alerts_ensure_indexes  # noqa: E402
@@ -3401,12 +3402,23 @@ _MongoNewsProvider.set_db(db)
 async def _admin_fetch_feeds(trigger: Optional[str] = None, _user: dict = Depends(require_admin)):
     valid = {"15min_cron", "hourly_cron", "post_deploy", "manual"}
     src = trigger if trigger in valid else "manual"
-    return await _news_fetch_feeds(db, trigger_source=src)
+    stats = await _news_fetch_feeds(db, trigger_source=src)
+    # Two-Strike-Freshness-Alarm auswerten — DARF Pipeline nicht blockieren.
+    try:
+        await _news_evaluate_alert(db, _send_email_via_emergent)
+    except Exception:  # noqa: BLE001
+        logger.exception("news_alert evaluate failed (fetch)")
+    return stats
 
 
 @api.post("/news/admin/synthesize", summary="Admin: neue Artikel synthetisieren")
 async def _admin_synthesize(_user: dict = Depends(require_admin), max_articles: int = 25):
-    return await _news_synthesize(db, max_articles=max(1, min(50, max_articles)))
+    stats = await _news_synthesize(db, max_articles=max(1, min(50, max_articles)))
+    try:
+        await _news_evaluate_alert(db, _send_email_via_emergent)
+    except Exception:  # noqa: BLE001
+        logger.exception("news_alert evaluate failed (synthesize)")
+    return stats
 
 
 @api.get("/news/admin/list", summary="Admin: alle Artikel inkl. needs_review")

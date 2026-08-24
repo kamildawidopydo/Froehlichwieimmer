@@ -1,35 +1,31 @@
 # Fröhlich Vermögensberatung — PRD
 
 ## Original Problem Statement
-FastAPI + MongoDB news/finance portal for Fröhlich Vermögensberatung GmbH.
-Light editorial private-banking aesthetic. Migrated from Supabase+React.
+FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic.
 
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
-- 76.5–77.4 — Palette, Footer light, News preview, Deep-link, Auto-refresh, News lock bug fix, Post-deploy guard + `/api/news/admin/status`.
-- 77.5 (Feb 28 2026) — **Admin Freshness Tile**:
-  - New `frontend/src/components/admin/NewsFreshnessTile.jsx` — kompakte Kachel unter `/admin`, direkt unter dem Hero-Header, über der KPI-Strip.
-  - Fetch-Auth: `axios` mit `withCredentials: true` (nutzt bestehende Admin-Cookie-Auth).
-  - Refresh: 60s Interval + `visibilitychange`-Handler + manueller Refresh-Button.
-  - Status-Mapping: `fresh` → Teal/Mint + CheckCircle "Aktuell" · `stale` → Amber + AlertTriangle "Veraltet" · `error` → Rot + XCircle "Fehler" (Farbe **und** Icon **und** Text).
-  - Zeitanzeige: absolut (`24.08.2026, 12:18`) + relativ (`· vor 6 Min.`) — keine externe Date-Lib.
-  - 3 Spalten: News-Fetch, Synthese, Inhalte — jede mit `border-l-2 border-bank-primary/30` Editorial-Rail.
-  - Details-Toggle (default eingeklappt): Fetch-Start, Trigger, Synthese-Start, Server-Zeit.
-  - Fetch-Lock-Status als eigene Zeile mit Lock-Icon (idle/aktiv).
-  - Fehlerzustand: kleine Meldung + "Erneut versuchen"-Button, Rest der Admin-Seite bleibt intakt.
-  - No secrets rendered (keine Tokens, keine API-Keys, keine Raw-Payloads).
-  - AdminDashboard.js: 2-Zeilen-Insert (Import + `<NewsFreshnessTile />`).
+- 76.5–77.5 — Palette rebuild, Footer light, News preview, Deep-link chips, Auto-refresh, News-lock fix, Post-deploy 30-min guard, `/api/news/admin/status`, Admin Freshness Tile.
+- 77.6 (Feb 28 2026) — **News-Pipeline Two-Strike Email Alarm**:
+  - New `backend/news_alert.py::evaluate_and_alert(db, send_email)` — reads `job_summaries`, computes freshness (same rules as `/api/news/admin/status`), applies two-strike + anti-spam, optional recovery mail.
+  - State schema `job_summaries._id="alert_state"`: `consecutive_problem_count`, `alert_active`, `last_alert_at`, `last_recovery_at`, `last_status`, `updated_at`.
+  - Rule: `PROBLEM_STATES = {"stale", "error"}` — count++ jedes Auftreten; auf zweiter aufeinanderfolgender problematischer Bewertung UND `alert_active=False` → Warnmail versenden + `alert_active=True`. Bei `fresh` → count=0; falls `alert_active` vorher True → Recovery-Mail + `alert_active=False`.
+  - Recipient: `NEWS_ALERT_TO` env, Fallback `PRODUCT_INQUIRY_TO` (`kundenservice@kapitalmitte.com`, verifizierte kapitalmitte.com-Resend-Domain).
+  - Integration in `server.py::_admin_fetch_feeds` und `_admin_synthesize` — nach jedem Job-Return, immer in try/except → Pipeline blockiert NIE bei Alert-Fehler.
+  - No secrets, keine Tokens, keine Raw-Payloads in Mail.
+  - Regressionstests `backend/tests/test_news_alert.py` — 7 Fälle: fresh, stale×1, stale×2 (mail), stale×3 (no mail), recovery, error×2, provider-crash. Alle grün.
 
 ## Files of Reference
-- `/app/frontend/src/components/admin/NewsFreshnessTile.jsx` (neu)
-- `/app/frontend/src/pages/AdminDashboard.js` (Insert)
-- `/app/backend/server.py` — `/api/news/admin/status`
-- `/app/backend/news_synthesizer.py` — job_summaries persistence
+- `/app/backend/news_alert.py` (neu)
+- `/app/backend/server.py` — Alert-Wiring in Admin-Endpoints
+- `/app/backend/tests/test_news_alert.py` (neu)
+- `/app/backend/news_synthesizer.py`
+- `/app/frontend/src/components/admin/NewsFreshnessTile.jsx`
 
 ## Blockers
-- P1: Supabase `product_inquiry_leads_product_check` (DBA)
+- P1: Supabase `product_inquiry_leads_product_check` (DBA-Fix)
 - P2: Alpha Vantage + Unsplash API-Keys (User)
 
 ## Backlog
