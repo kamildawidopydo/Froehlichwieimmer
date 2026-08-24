@@ -6,7 +6,7 @@ export default function FooterBenefitsBand({ className }) {
 
   return (
     <section
-      className={cn('border-b border-bank-border bg-bank-gold-soft text-bank-text', className)}
+      className={cn('border-b border-bank-border bg-bank-panel text-bank-text', className)}
       aria-label={footer.benefitsAriaLabel}
     >
       <div className="mx-auto max-w-[1440px] px-5 py-12 sm:px-8 sm:py-14 lg:px-12">

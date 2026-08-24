@@ -18,13 +18,18 @@
     --bank-bg:             255 255 255;  /* #FFFFFF */
     --bank-surface:        255 255 255;  /* #FFFFFF */
     --bank-surface-elev:   250 249 247;  /* #FAF9F7 warm off-white */
-    --bank-border:         226 229 231;  /* #E2E5E7 cool neutral */
+    --bank-panel:          247 250 249;  /* #F7FAF9 alternative section */
+    --bank-mint:           234 243 242;  /* #EAF3F2 very light teal/mint */
+    --bank-border:         221 231 229;  /* #DDE7E5 cool mint neutral */
 
-    --bank-text:           30 30 34;     /* #1E1E22 anthracite body */
-    --bank-text-muted:     107 114 128;  /* #6B7280 secondary */
+    --bank-text:           30 41 43;     /* #1E292B anthracite body */
+    --bank-text-muted:     102 118 117;  /* #667675 secondary */
+    --bank-text-soft:      122 135 134;  /* #7A8786 tertiary / copyright */
+    --bank-text-strong:    52 68 67;     /* #344443 primary links (light bg) */
 
     --bank-primary:        127 175 170;  /* #7FAFAA muted teal (65%+20%+10% budget) */
     --bank-primary-hover:  109 157 152;  /* #6D9D98 */
+    --bank-primary-strong: 82 127 123;   /* #527F7B darker teal (contrast/hover) */
     --bank-secondary:      127 175 170;  /* teal */
     /* Accent (Koralle) — nur für Conversion-CTAs, max ~5% Fläche */
     --bank-accent:         229 106 115;  /* #E56A73 muted coral */

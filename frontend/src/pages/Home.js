@@ -192,12 +192,11 @@ const Home = () => {
       {/* ── Newsletter-Digest ──────────────────────────────────────────── */}
       <NewsletterSignup />
 
-      {/* ── Bonus CTA — refined accent on ink ──────────────────────────── */}
+      {/* ── Bonus CTA — light private-banking accent ─────────────────────── */}
       <section
-        className="relative overflow-hidden border-t border-bank-border bg-bank-ink py-20 sm:py-24"
+        className="relative overflow-hidden border-t border-bank-border bg-bank-mint py-20 sm:py-24"
         data-testid="bonus-cta-section"
       >
-        <div aria-hidden className="absolute inset-0 -z-10 topo-pattern opacity-20 mix-blend-screen" />
         <img
           src={siteImages.home.ctaBonusStrip}
           alt={siteImages.home.ctaBonusAlt}
@@ -205,35 +204,35 @@ const Home = () => {
           decoding="async"
           width={1000}
           height={667}
-          className="pointer-events-none absolute inset-y-0 right-0 -z-10 hidden w-[min(52%,640px)] object-cover object-left opacity-[0.22] lg:block"
+          className="pointer-events-none absolute inset-y-0 right-0 -z-10 hidden w-[min(52%,640px)] object-cover object-left opacity-[0.14] lg:block"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 -z-10 hidden w-[min(52%,640px)] bg-gradient-to-r from-bank-ink via-bank-ink/92 to-transparent lg:block"
+          className="pointer-events-none absolute inset-y-0 right-0 -z-10 hidden w-[min(52%,640px)] bg-gradient-to-r from-bank-mint via-bank-mint/94 to-transparent lg:block"
         />
         <div className="mx-auto flex max-w-[1440px] flex-col items-start gap-10 px-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-12">
           <div className="flex max-w-2xl items-center gap-5 sm:gap-7">
-            <div className="hidden h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center border border-white/40 bg-white/[0.07] p-1.5 sm:flex lg:h-[6.25rem] lg:w-[6.25rem]">
+            <div className="hidden h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center border border-bank-border bg-white p-1.5 shadow-sm sm:flex lg:h-[6.25rem] lg:w-[6.25rem]">
               <img
                 src={siteImages.icons.bonusGift}
                 alt=""
                 width={96}
                 height={96}
-                className="h-full w-full object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
+                className="h-full w-full object-contain"
                 decoding="async"
               />
             </div>
             <div>
-              <Eyebrow tone="light" className="text-white/90">
+              <Eyebrow>
                 {ctaCopy.bonus.eyebrow}
               </Eyebrow>
-              <h2 className="mt-3 text-display-sm font-semibold text-white">
+              <h2 className="mt-3 text-display-sm font-semibold text-bank-text">
                 {ctaCopy.bonus.title}
               </h2>
-              <p className="mt-3 text-base leading-relaxed text-white/90">
+              <p className="mt-3 text-base leading-relaxed text-bank-text-muted">
                 {ctaCopy.bonus.lede}{' '}
                 Bis zu{' '}
-                <span className="rate-figure text-white font-semibold" data-numeric>
+                <span className="rate-figure text-bank-primary-strong font-semibold" data-numeric>
                   300&nbsp;€
                 </span>
                 &nbsp;Neukundenbonus.
@@ -244,7 +243,7 @@ const Home = () => {
             type="button"
             variant="primary"
             size="xl"
-            className="shrink-0 focus-visible:ring-offset-bank-ink"
+            className="shrink-0 focus-visible:ring-offset-bank-mint"
             data-testid="bonus-cta-compare-btn"
             onClick={() => openProductInquiry('tagesgeld')}
           >
