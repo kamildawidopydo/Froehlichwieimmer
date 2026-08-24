@@ -7,27 +7,37 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
-- 76.5–77.8 — Palette rebuild, Footer/Contact/Hero light, Editorial 3-column Hero, Category Ribbon, News-lock fix, Admin Freshness Tile, Two-Strike Email Alarm.
-- 77.9 (Feb 28 2026) — **Fresh Article Toast im Editorial-Hero**:
-  - `HomeHeroNewsPreview.jsx` erweitert um Toast-State + Refs (`prevTopSlugRef`, `prevTopTimeRef`, `toastTimerRef`, `initialLoadRef`) und Toast-Komponente über dem 3-Spalten-Grid.
-  - Erkennungslogik: `silent && !initialLoad && nextTop && prevSlug && nextSlug!==prevSlug && nextTime>prevTime && sessionStorage-Guard`.
-  - Anti-Spam via `sessionStorage.heroNewsLastToastSlug` — gleicher Slug in Session → kein zweiter Toast; zusätzlich Timestamp-Guard gegen Reordering ohne echte Neuigkeit.
-  - Auto-Close nach 9 s (setTimeout, cleanup on dismiss/unmount).
-  - Design: heller Editorial-Kasten `bg-white border-bank-border shadow-editorial`, News-Icon in Mint-Kreis, "NEUE MELDUNG"-Kicker Teal-Strong, Headline `line-clamp-2`, "Ansehen →" Link + X-Close. Kein Coral. `prefers-reduced-motion` respektiert.
-  - A11y: `role="status" aria-live="polite"`, Close-Button `aria-label`, Focus-Ring teal.
-  - Analytics: `trackInvestmentEvent('news_fresh_toast_show'/'news_fresh_toast_click', {slug, source:'home_hero'})` in try/catch.
-  - Position: über der Category Ribbon, `max-w-[640px]` — deckt keine News-Karten und keinen Sticky-CTA.
+- 76.5–77.9 — Palette rebuild, Footer/Contact/Hero light, News-Hero Editorial, News-lock fix, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Fresh Article Toast.
+- 78.0 (Feb 28 2026) — **Server.py Modularisierung Wave 2 — Auth extrahiert**:
+  - Neue Datei `/app/backend/routes/auth.py` (175 LOC) mit `APIRouter(prefix="/api", tags=["auth"])` und den 8 Auth-Endpoints. Alle Helper (`db`, `hash_password`, `verify_password`, `create_access_token`, `create_refresh_token`, `set_auth_cookies`, `clear_auth_cookies`, `public_user`, `get_current_user`, `check_lockout`, `record_failed_login`, `clear_login_attempts`, `_as_aware`, `JWT_SECRET`, `JWT_ALGORITHM`, `ACCESS_TOKEN_MINUTES`) sowie Pydantic-Modelle (`RegisterInput`, `LoginInput`, `UpdateMeInput`, `ForgotInput`, `ResetInput`) top-level aus `server` importiert — safe weil `from routes import auth` am Ende von server.py steht.
+  - `server.py`: 8 alte `@api.post/get/patch(...)`-Decorators im Auth-Block (früher Z. 334–455) entfernt und durch Kommentar-Anchor ersetzt. `app.include_router(_auth_routes.router)` am Ende registriert.
+  - Server-LOC: 3840 → 3724 (-116 Zeilen). Routes/auth.py: 175 Zeilen.
 
-## Files of Reference
-- `/app/frontend/src/components/home/HomeHeroNewsPreview.jsx` — Hero + Ribbon + Toast
+## Auth-Endpoints (alle exakt gleiche URL, Methode und Response-Shape wie vorher)
+1. POST /api/auth/register — 200 + cookies / 409 duplicate
+2. POST /api/auth/login — 200 + cookies / 401 invalid
+3. POST /api/auth/logout — 200 (require_user via get_current_user)
+4. GET /api/auth/me — 200 / 401
+5. PATCH /api/auth/me — 200 (update name/avatar_url)
+6. POST /api/auth/refresh — 200 / 401
+7. POST /api/auth/forgot-password — always 200 (anti-enumeration)
+8. POST /api/auth/reset-password — 200 / 400 (invalid/used/expired token)
+
+## Cookie-Regression (verified via Set-Cookie header)
+`HttpOnly; Max-Age=86400 (access) / 2592000 (refresh); Path=/; Secure; SameSite=None; Partitioned` — identisch zu vorher.
 
 ## Blockers
 - P1: Supabase `product_inquiry_leads_product_check` (DBA)
 - P2: Alpha Vantage + Unsplash API-Keys (User)
 
+## Files of Reference
+- `/app/backend/server.py` — Auth-Block entfernt, Router-Include am Ende
+- `/app/backend/routes/auth.py` (NEU) — 8 Endpoints per APIRouter
+- `/app/backend/routes/product_inquiry.py` (bestehend)
+- `/app/backend/routes/reports.py` (bestehend)
+
 ## Backlog
-- Server.py modularization Wave 2
+- News-Routen extrahieren (~28 Endpoints)
+- Investments-Routen extrahieren
 - News Retention Archive (>90 Tage)
-- Ribbon Fade-Edges Mobile
-- Alert Escalation Ladder (6h Reminder)
 - Phase 4/5

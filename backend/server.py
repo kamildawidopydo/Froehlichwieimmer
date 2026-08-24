@@ -331,128 +331,8 @@ async def health():
 # Auth endpoints
 # ---------------------------------------------------------------------------
 
-@api.post("/auth/register")
-async def register(payload: RegisterInput, response: Response):
-    email = payload.email.lower().strip()
-    existing = await db.users.find_one({"email": email})
-    if existing:
-        raise HTTPException(status_code=409, detail="E-Mail ist bereits registriert.")
-    doc = {
-        "email": email,
-        "password_hash": hash_password(payload.password),
-        "name": payload.name or "",
-        "role": "user",
-        "avatar_url": None,
-        "created_at": datetime.now(timezone.utc),
-    }
-    result = await db.users.insert_one(doc)
-    doc["_id"] = result.inserted_id
-    access = create_access_token(str(result.inserted_id), email)
-    refresh = create_refresh_token(str(result.inserted_id))
-    set_auth_cookies(response, access, refresh)
-    return public_user(doc)
-
-
-@api.post("/auth/login")
-async def login(payload: LoginInput, request: Request, response: Response):
-    email = payload.email.lower().strip()
-    # Lock by email only. Internal ingress proxies rotate client IPs across
-    # requests, which would split brute-force counters and disable protection.
-    identifier = f"email:{email}"
-    await check_lockout(identifier)
-    user = await db.users.find_one({"email": email})
-    if not user or not verify_password(payload.password, user["password_hash"]):
-        await record_failed_login(identifier)
-        raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten.")
-    await clear_login_attempts(identifier)
-    access = create_access_token(str(user["_id"]), email)
-    refresh = create_refresh_token(str(user["_id"]))
-    set_auth_cookies(response, access, refresh)
-    return public_user(user)
-
-
-@api.post("/auth/logout")
-async def logout(response: Response, _user: dict = Depends(get_current_user)):
-    clear_auth_cookies(response)
-    return {"status": "ok"}
-
-
-@api.get("/auth/me")
-async def me(user: dict = Depends(get_current_user)):
-    return user
-
-
-@api.patch("/auth/me")
-async def update_me(payload: UpdateMeInput, user: dict = Depends(get_current_user)):
-    update = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
-    if not update:
-        return user
-    await db.users.update_one({"_id": ObjectId(user["id"])}, {"$set": update})
-    doc = await db.users.find_one({"_id": ObjectId(user["id"])})
-    return public_user(doc)
-
-
-@api.post("/auth/refresh")
-async def refresh_token(request: Request, response: Response):
-    token = request.cookies.get("refresh_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="No refresh token")
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        if payload.get("type") != "refresh":
-            raise HTTPException(status_code=401, detail="Invalid token type")
-        sub = payload.get("sub")
-        if not sub or not ObjectId.is_valid(sub):
-            raise HTTPException(status_code=401, detail="Invalid token subject")
-        user = await db.users.find_one({"_id": ObjectId(sub)})
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-        access = create_access_token(str(user["_id"]), user["email"])
-        response.set_cookie(
-            "access_token", access,
-            httponly=True, secure=True, samesite="none",
-            max_age=ACCESS_TOKEN_MINUTES * 60, path="/",
-        )
-        return {"status": "ok"}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Refresh expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
-
-
-@api.post("/auth/forgot-password")
-async def forgot_password(payload: ForgotInput):
-    email = payload.email.lower().strip()
-    user = await db.users.find_one({"email": email})
-    # Always return 200 to prevent user enumeration.
-    if user:
-        token = secrets.token_urlsafe(32)
-        await db.password_reset_tokens.insert_one({
-            "token": token,
-            "user_id": user["_id"],
-            "used": False,
-            "expires_at": datetime.now(timezone.utc) + timedelta(hours=1),
-            "created_at": datetime.now(timezone.utc),
-        })
-        # Don't log the full token — it is a live credential. In production
-        # this is dispatched through the Resend integration instead.
-        logger.info("Password reset requested for %s (token issued, expires 1h)", email)
-    return {"status": "ok"}
-
-
-@api.post("/auth/reset-password")
-async def reset_password(payload: ResetInput):
-    rec = await db.password_reset_tokens.find_one({"token": payload.token})
-    if not rec:
-        raise HTTPException(status_code=400, detail="Ungültiger Token.")
-    if rec.get("used"):
-        raise HTTPException(status_code=400, detail="Token bereits verwendet.")
-    if _as_aware(rec["expires_at"]) < datetime.now(timezone.utc):
-        raise HTTPException(status_code=400, detail="Token abgelaufen.")
-    new_hash = hash_password(payload.password)
-    await db.users.update_one({"_id": rec["user_id"]}, {"$set": {"password_hash": new_hash}})
-    await db.password_reset_tokens.update_one({"_id": rec["_id"]}, {"$set": {"used": True}})
-    return {"status": "ok"}
+# Auth-Routen wurden in /app/backend/routes/auth.py extrahiert (Session 78.0).
+# Registrierung erfolgt am Ende dieser Datei via `app.include_router`.
 
 
 # ---------------------------------------------------------------------------
@@ -3823,6 +3703,10 @@ async def news_nachrichten_related(slug: str, limit: int = 3):
 # Modular routers — neue Features werden hier registriert statt in server.py inline.
 from routes import reports as _reports_routes  # noqa: E402
 app.include_router(_reports_routes.router)
+
+# Auth-Routen (Session 78.0 — extrahiert aus server.py)
+from routes import auth as _auth_routes  # noqa: E402
+app.include_router(_auth_routes.router)
 
 app.include_router(api)
 
