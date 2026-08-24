@@ -174,6 +174,17 @@ const NachrichtenPage = () => {
     return CAT_LABEL[key] ? key : 'alle';
   };
   const [category, setCategory] = useState(readCategoryHash);
+  // Chip-Klick oder Hero-Deep-Link: State ↔ URL-Hash synchron halten.
+  // pushState statt replaceState → Back/Forward navigiert zwischen Filtern.
+  // hashchange-Listener (unten) übernimmt umgekehrten Weg.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const current = window.location.hash || '';
+    const next = category === 'alle' ? '' : `#kategorie=${encodeURIComponent(category)}`;
+    if (current === next) return;
+    const url = window.location.pathname + window.location.search + next;
+    window.history.pushState(null, '', url);
+  }, [category]);
   const [publisher, setPublisher] = useState('alle');
   const [publishers, setPublishers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -294,21 +305,26 @@ const NachrichtenPage = () => {
 
         {/* Category nav */}
         <nav className="mt-12 flex gap-2 overflow-x-auto border-b border-bank-border pb-3 [scrollbar-width:thin]" data-testid="news-category-nav">
-          {categories.map(([slug, label]) => (
-            <button
-              key={slug}
-              type="button"
-              onClick={() => setCategory(slug)}
-              data-testid={`news-cat-${slug}`}
-              className={`whitespace-nowrap border px-4 py-1.5 text-[11.5px] font-medium uppercase tracking-[0.18em] transition-colors ${
-                category === slug
-                  ? 'border-bank-primary bg-bank-primary text-white'
-                  : 'border-bank-border text-bank-text-muted hover:border-bank-primary/50 hover:text-bank-primary'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+          {categories.map(([slug, label]) => {
+            const active = category === slug;
+            return (
+              <button
+                key={slug}
+                type="button"
+                onClick={() => setCategory(slug)}
+                data-testid={`news-cat-${slug}`}
+                data-active={active ? 'true' : 'false'}
+                aria-current={active ? 'true' : undefined}
+                className={`whitespace-nowrap rounded-md border px-4 py-1.5 text-[11.5px] uppercase tracking-[0.18em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-1 ${
+                  active
+                    ? 'border-bank-primary bg-bank-mint font-semibold text-bank-primary-strong'
+                    : 'border-bank-border bg-white font-medium text-bank-text-muted hover:border-bank-primary/50 hover:bg-bank-mint/50 hover:text-bank-primary-strong'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </nav>
 
         {/* Publisher filter */}

@@ -212,34 +212,84 @@ const SkeletonBar = ({ className }) => (
 const HomeHeroNewsPreview = () => {
   const [items, setItems] = useState([]);
   const [state, setState] = useState('loading'); // loading | ready | error
+  const lastFetchRef = React.useRef(0);
+
+  // Fetch-Logik: initial (mit Loading-State) UND still im Hintergrund.
+  // Bei Background-Refresh bleibt das UI stabil — nur wenn neue Daten
+  // vorliegen, wird der State ersetzt. Fehler beim Refresh sind still.
+  const loadNews = React.useCallback(async (silent = false) => {
+    try {
+      const res = await api.get('/news/nachrichten', { params: { limit: 12 } });
+      const list = (res?.data?.items || [])
+        .filter(isOwnEditorial)
+        .slice()
+        .sort((a, b) => {
+          const da = a.published_at ? new Date(a.published_at).getTime() : 0;
+          const db = b.published_at ? new Date(b.published_at).getTime() : 0;
+          return db - da;
+        });
+      const seen = new Set();
+      const deduped = [];
+      for (const it of list) {
+        if (seen.has(it.slug)) continue;
+        seen.add(it.slug);
+        deduped.push(it);
+        if (deduped.length >= 4) break;
+      }
+      lastFetchRef.current = Date.now();
+      setItems((prev) => {
+        // Kein Rerender, wenn Slug-Reihenfolge identisch → verhindert Flackern.
+        if (
+          prev.length === deduped.length &&
+          prev.every((p, i) => p.slug === deduped[i].slug)
+        ) {
+          return prev;
+        }
+        return deduped;
+      });
+      setState('ready');
+    } catch (err) {
+      if (!silent) {
+        setState('error');
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn('[HomeHeroNewsPreview] background refresh failed', err?.message || err);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     let alive = true;
-    api.get('/news/nachrichten', { params: { limit: 12 } })
-      .then((res) => {
-        if (!alive) return;
-        const list = (res?.data?.items || [])
-          .filter(isOwnEditorial)
-          .slice()
-          .sort((a, b) => {
-            const da = a.published_at ? new Date(a.published_at).getTime() : 0;
-            const db = b.published_at ? new Date(b.published_at).getTime() : 0;
-            return db - da;
-          });
-        const seen = new Set();
-        const deduped = [];
-        for (const it of list) {
-          if (seen.has(it.slug)) continue;
-          seen.add(it.slug);
-          deduped.push(it);
-          if (deduped.length >= 4) break;
-        }
-        setItems(deduped);
-        setState('ready');
-      })
-      .catch(() => { if (alive) setState('error'); });
-    return () => { alive = false; };
-  }, []);
+    loadNews(false).then(() => { if (!alive) return; });
+
+    const REFRESH_MS = 5 * 60 * 1000; // 5 Minuten
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (Date.now() - lastFetchRef.current < REFRESH_MS - 5_000) return;
+      loadNews(true);
+    };
+    const refreshId = setInterval(tick, REFRESH_MS);
+
+    // Tab wieder sichtbar → einmal aktualisieren, falls letzter Fetch alt.
+    const onVisible = () => {
+      if (typeof document === 'undefined') return;
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastFetchRef.current >= REFRESH_MS) {
+        loadNews(true);
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisible);
+    }
+
+    return () => {
+      alive = false;
+      clearInterval(refreshId);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisible);
+      }
+    };
+  }, [loadNews]);
 
   const featured = items[0] || null;
   const small = items.slice(1, 4);
