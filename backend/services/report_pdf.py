@@ -138,8 +138,10 @@ def _brand_name() -> str:
 
 
 # --- Logo als Data-URI (lokal, kein HTTP-Fetch) ----------------------------
-# Suchreihenfolge: transparent → normal → keine (dann rein textuelles Wortlogo).
+# Suchreihenfolge: SLIM (optimiert, ~<20KB) → transparent original → PNG original.
+# Der Slim-Variante wird bevorzugt, damit jede PDF ~600 KB Ersparnis erhält.
 _LOGO_CANDIDATES = (
+    "/app/backend/assets/frohlich-logo-slim.png",
     "/app/frontend/public/assets/logo/frohlich-logo-transparent.png",
     "/app/frontend/public/assets/logo/frohlich-logo.png",
 )

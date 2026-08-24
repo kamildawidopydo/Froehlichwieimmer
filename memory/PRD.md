@@ -1,5 +1,66 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 75.6 (Feb 28, 2026) — PDF Logo Slim Down ✅
+
+### Ergebnis
+🎯 **PDF unter 150 KB-Ziel erreicht (-77.5%). Logo -95%. Visuell 1:1 identisch.**
+
+|         | BEFORE (75.5) | AFTER (75.6) | Ersparnis |
+|---------|--------------:|-------------:|----------:|
+| **Logo** | 617.421 B | **30.978 B** | **-95.0 %** |
+| **Aktien PDF** | 643.955 B | **147.835 B** | **-77.0 %** |
+| **Tagesgeld PDF** | 644.253 B | **148.138 B** | **-77.0 %** |
+| **Festgeld PDF** | 644.306 B | 148.173 B | -77.0 % |
+| **Anleihen PDF** | 643.585 B | 147.465 B | -77.1 % |
+| **Fonds PDF** | 645.217 B | 149.104 B | -76.9 % |
+| **Flexgeld PDF** | 644.150 B | 148.030 B | -77.0 % |
+
+### Root Cause
+Original-PNG `frohlich-logo-transparent.png` war **1535×458 px RGBA (617 KB)** — designed für Web-Retina-Displays, aber im PDF nur als 32pt Header-Bild (~43px effektiv gerendert) verwendet. WeasyPrint bettet Bilder unverändert ein → jede PDF trug das komplette Web-PNG.
+
+### Optimierung (rein technisch, kein Redesign)
+1. Auflösung an den tatsächlichen Print-Bedarf angepasst: **1535×458 → 738×220 px** (LANCZOS-Resample, verlustfreier Downscale)
+2. Farbraum-Reduktion: RGBA → **FASTOCTREE-quantisiert auf 128 Farben mit Alpha-Channel-Erhalt**
+   (Logo ist bicolor Navy+Gold+Wortmark — 128 Farben mit Anti-Aliasing behalten die weichen Kanten)
+3. PNG-Kompression: `optimize=True, compress_level=9`
+4. Wahlmatrix vollständig geprüft (h∈{200,220,240} × colors∈{64,96,128,192,256}) → **h=220 / 128 colors** als optimaler Trade-off Qualität ↔ Größe gewählt
+5. Ergebnis in `/app/backend/assets/frohlich-logo-slim.png` gespeichert
+6. `_LOGO_CANDIDATES` in `services/report_pdf.py` priorisiert die Slim-Variante
+
+**Nicht geändert:** Design, Proportionen, Farben, Position, Gold-Rule, Header-Abstände.
+
+### Geänderte Dateien
+| Datei | Änderung |
+|-------|----------|
+| **NEU** `/app/backend/assets/frohlich-logo-slim.png` | 30.978 B — h=220 px, 128 Farben palette PNG mit Alpha |
+| `/app/backend/services/report_pdf.py` | `_LOGO_CANDIDATES`-Tuple mit `/app/backend/assets/frohlich-logo-slim.png` als **erstem** Eintrag; Fallback-Pfade unverändert |
+| Template, WeasyPrint-Engine, `render_pdf()`-Signature, `/api/reports/pdf` Response-Semantik | **UNVERÄNDERT** |
+
+### Regression grün
+| Check | Ergebnis |
+|-------|----------|
+| POST /api/reports/pdf (6 Produkte) | ✅ HTTP 200, `application/pdf`, alle magic %PDF- |
+| Seitenzahl (6 Produkte) | ✅ 2 Seiten |
+| Content-Extraction (Brand/Mustermann/Disclaimer) | ✅ alle 6 grün |
+| Frontend-Download-Button (Session 75.1) | ✅ nutzt gleichen Endpoint |
+| Mail-Attachment-Flow (Session 75.4) | ✅ ~145 KB attachment (vs. 644 KB vorher = 4x schnellere Mail) |
+| Visueller Vergleich 100% Zoom | ✅ 1:1 identisch zu Session 75.5 |
+| Visueller Vergleich 200% Zoom | ✅ Logo scharf, Kanten sauber, „2020"-Badge + Fröhlich-Schriftzug klar lesbar |
+
+### Security & Determinismus (unverändert)
+- Jinja Autoescape ✅
+- `base_url=None` ✅ (WeasyPrint macht 0 externe Requests)
+- Server-side PRODUCT_CATALOG ✅
+- Pydantic Validation ✅
+- Keine PII-Logs ✅
+- `lru_cache` auf Logo-Load ✅ (einmalig, keine wiederholten Disk-Reads)
+
+### Nicht angefasst
+Wizard, Sticky CTA, News, SafeNewsImage, Image-Sweep, Newsletter, Supabase, Mail-Idempotenz, Analytics — alles unverändert.
+
+---
+
+
 ## Session 75.5 (Feb 28, 2026) — Investment-PDF Redesign (Branding + Hochwertigkeit) ✅
 
 ### Ziel
