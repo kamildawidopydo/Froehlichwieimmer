@@ -1,5 +1,59 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 76.0 (Feb 28, 2026) — Farbwelt-Überarbeitung Anthrazit + Weiß + Pink ✅
+
+### Umsetzung — zentral über Design-Tokens (kein Component-Patchen)
+Alle 623 Verwendungsstellen von `bank-primary`/`bank-ink`/`bank-gold`/`bank-accent` in JSX werden **automatisch** mit der neuen Palette aktualisiert, weil in `/app/frontend/src/index.css` die CSS-Variablen unter `:root` (light) + `.dark` remappt wurden. Nur EINE Datei geändert.
+
+### Neue Palette
+| Token | Alt (Cobalt-Blue) | Neu (Anthrazit/Pink) | Verwendung |
+|-------|------------------|----------------------|------------|
+| `--bank-bg` | 255 255 255 | 255 255 255 (unchanged) | Body |
+| `--bank-surface-elev` | #ECF3FA | **#FAF9FA** | leichte Card-Elevation |
+| `--bank-border` | #E2E8F0 | **#E7E4E6** | warm-neutrale Trennlinien |
+| `--bank-text` | #1E293B | **#111114** | Body-Text near-black |
+| `--bank-text-muted` | #64748B | **#575457** | Sekundärtext |
+| `--bank-primary` | #4C7CBA cobalt | **#FF1678 magenta** | Primäre Akzente |
+| `--bank-primary-hover` | #3A6499 | **#E60068** | Hover-State |
+| `--bank-accent` / `--bank-signature` | cobalt | **#FF1678** | CTAs, Focus-Ring |
+| `--bank-gold` | #C9A961 | **#FF1678** (remapped) | Kicker, Highlights (kein echtes Gold mehr) |
+| `--bank-gold-soft` | #FAF4E2 | **#FFF0F6** | dezenter Pink-Hintergrund |
+| `--bank-ink` | #4C7CBA (was fälschlich cobalt) | **#302A2C anthracite** | Header, Footer, dunkle Kontrast-Bänder |
+| `--bank-ink-hover/soft/elev` | cobalt | **#3C3437 / #48403E / #5C524E** | leichte Anthrazit-Abstufungen |
+| shadcn `--primary` | 213 44% 51% | **333 100% 54%** (magenta HSL) | Buttons, Ring |
+| shadcn `--accent` | 210 63% 95% | **333 100% 96%** (very light pink) | soft-Accent Flächen |
+| shadcn `--border` | 214 32% 91% | **320 5% 90%** (warm neutral) | inputs, cards |
+
+### Visuelle Wirkung (via Screenshots verifiziert)
+- **Homepage** (1440/390) — „Ihre Investments. Alle Banken." bleibt dark-anthrazit, „**Eine Plattform.**" ist der markante Pink-Akzent. „Konto eröffnen" + „Formular"-CTA in Signaturpink, Text bleibt weiß, WCAG-lesbar. Sticky-CTA-Icon Pink-Badge auf hellem Pink-Hintergrund (`--bank-gold-soft`).
+- **/handeln** — „Investieren, **verständlich.**" (italic in Pink), aktive Sub-Nav Grundlagen mit Pink-Underline (`data-active`-Token bleibt unverändert, Farbe kommt aus `--bank-primary`), Kicker + Dot-Marker Pink. Grundlagen/Anlageklassen/Orderarten-Tabs anthrazit auf weiß.
+- **/nachrichten** — Alle Kategorien-Labels (`WIRTSCHAFT`, `FONDS-ETFS`, `WELT`) Pink-monospace, Sidebar-Links Pink, News-Cards weiß mit dezent-neutraler Border, Editorial-Ton erhalten.
+- **Merkspruch-Blockquote** (Wissenshub) — Border-Dot Pink, Fließtext dark anthrazit.
+
+### Verhalten
+- Kein Layout, keine Größen, keine Responsive-Breakpoints geändert
+- Fokus-Ringe automatisch Pink (`--ring: 333 100% 54%`)
+- Validation-Errors bleiben rot (`--destructive: 0 72% 51%`) — nicht durch Pink ersetzt
+- Newsletter-Success bleibt grün (`--bank-success` unverändert)
+- Wizard-Progress, Sticky-CTA, Scroll-Spy, News-Fallback — funktional unverändert; visuell in Pink
+- Dark-Theme mitgezogen: Pink #FF5298 (heller für Kontrast) + Anthrazit-Body #111114
+
+### Nicht angefasst
+- PDF-Report-Branding (Session 75.5 unverändert)
+- Wizard-Logik, News-Logik, SafeNewsImage, Newsletter, Supabase, Analytics, Sticky-CTA-Verhalten, Scroll-Spy, Mail-Idempotenz, Image-Sweep
+
+### Geänderte Dateien
+- `/app/frontend/src/index.css` — 16 CSS-Variablen im `:root` + 15 in `.dark`
+
+### Verbleibende externe Blocker (unverändert)
+- Supabase `product_inquiry_leads_product_check` → DBA
+- Alpha Vantage + Unsplash Keys → warten auf User
+- Resend recipient `kundenservice@kapital-direkt24.de` unverifiziert → 422
+- Cron-Slot-Limit erreicht (5/5)
+
+---
+
+
 ## Session 75.6 (Feb 28, 2026) — PDF Logo Slim Down ✅
 
 ### Ergebnis
