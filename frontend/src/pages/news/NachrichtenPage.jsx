@@ -215,21 +215,73 @@ const NachrichtenPage = () => {
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    setItems([]);
-    const params = { category, limit: PAGE, skip: 0 };
-    if (publisher !== 'alle') params.source = publisher;
-    api.get('/news/nachrichten', { params })
-      .then(({ data }) => {
+    let firstLoad = true;
+    const lastFetchRef = { current: 0 };
+
+    const load = async (silent) => {
+      if (!alive) return;
+      if (!silent) setLoading(true);
+      if (!silent) setItems([]);
+      const params = { category, limit: PAGE, skip: 0 };
+      if (publisher !== 'alle') params.source = publisher;
+      try {
+        const { data } = await api.get('/news/nachrichten', { params });
         if (!alive) return;
-        setItems(data.items || []);
+        const nextItems = data.items || [];
+        if (silent) {
+          // Kein Rerender, wenn Reihenfolge identisch → kein Flackern.
+          setItems((prev) => {
+            if (prev.length === nextItems.length && prev.every((p, i) => p.slug === nextItems[i]?.slug)) {
+              return prev;
+            }
+            return nextItems;
+          });
+        } else {
+          setItems(nextItems);
+        }
         setHasMore(!!data.has_more);
-        setTotal(data.total || (data.items || []).length);
+        setTotal(data.total || nextItems.length);
         setMeta({ provider: data.provider, is_demo: !!data.is_demo, last_updated: data.last_updated });
-      })
-      .catch(() => { if (alive) setItems([]); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
+        lastFetchRef.current = Date.now();
+      } catch (err) {
+        if (!alive) return;
+        if (!silent) setItems([]);
+        // silent errors: bestehende Inhalte bleiben stehen
+        // eslint-disable-next-line no-console
+        if (silent) console.warn('[NachrichtenPage] background refresh failed', err?.message || err);
+      } finally {
+        if (alive && !silent) setLoading(false);
+      }
+    };
+
+    load(false).then(() => { firstLoad = false; });
+
+    const REFRESH_MS = 5 * 60 * 1000; // 5 Min still im Hintergrund
+    const tick = () => {
+      if (firstLoad) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (Date.now() - lastFetchRef.current < REFRESH_MS - 5_000) return;
+      load(true);
+    };
+    const refreshId = setInterval(tick, REFRESH_MS);
+
+    const onVisible = () => {
+      if (typeof document === 'undefined') return;
+      if (document.visibilityState !== 'visible') return;
+      if (firstLoad) return;
+      if (Date.now() - lastFetchRef.current >= REFRESH_MS) load(true);
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisible);
+    }
+
+    return () => {
+      alive = false;
+      clearInterval(refreshId);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisible);
+      }
+    };
   }, [category, publisher]);
 
   const loadMore = async () => {

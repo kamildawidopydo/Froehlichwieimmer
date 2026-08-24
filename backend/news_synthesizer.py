@@ -32,6 +32,7 @@ import json
 import logging
 import os
 import re
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
@@ -774,6 +775,9 @@ async def fetch_feeds(db, *, trigger_source: str = "manual") -> dict:
     LOCK_ID = "fetch_feeds"
     LOCK_TTL_S = 600  # 10 Min — großzügig, aber verhindert Dead-Locks bei Crash
     expires = started + timedelta(seconds=LOCK_TTL_S)
+    # Eindeutiges Owner-Token — robust gegen BSON-Millisekunden-Truncation
+    # (datetime-Equality funktioniert nach Mongo-Roundtrip unzuverlässig).
+    own_token = uuid.uuid4().hex
 
     # ---- Atomic lock acquire (findOneAndUpdate mit expiry-Filter) ------------
     from pymongo import ReturnDocument
@@ -786,7 +790,8 @@ async def fetch_feeds(db, *, trigger_source: str = "manual") -> dict:
                 {"expires_at": {"$exists": False}},
             ]},
             {"$set": {"acquired_at": started, "expires_at": expires,
-                        "trigger_source": trigger_source}},
+                        "trigger_source": trigger_source,
+                        "owner_token": own_token}},
             upsert=True,
             return_document=ReturnDocument.AFTER,
         )
@@ -794,8 +799,8 @@ async def fetch_feeds(db, *, trigger_source: str = "manual") -> dict:
         # Lock war belegt & noch nicht abgelaufen → Filter matchte nicht, upsert
         # kollidiert mit existierendem _id. Genau der Skip-Case.
         lock_doc = None
-    # Prüfen: gehört der Lock jetzt uns? (acquired_at == started identifiziert uns)
-    if not lock_doc or lock_doc.get("acquired_at") != started:
+    # Prüfen: gehört der Lock jetzt uns? (owner_token identifiziert uns)
+    if not lock_doc or lock_doc.get("owner_token") != own_token:
         # Ein anderer Prozess hält den Lock noch — sauber überspringen.
         existing = await db.job_locks.find_one({"_id": LOCK_ID}) or {}
         holder = existing.get("trigger_source") or "unknown"
