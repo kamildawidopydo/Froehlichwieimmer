@@ -1,35 +1,39 @@
 # Fröhlich Vermögensberatung — PRD
 
 ## Original Problem Statement
-Import Supabase+React → FastAPI + MongoDB on Emergent. Rebrand "Fröhlich Vermögensberatung GmbH", editorial private-banking aesthetic. Self-sufficient news/finance portal.
+FastAPI + MongoDB news/finance portal for Fröhlich Vermögensberatung GmbH.
+Light editorial private-banking aesthetic. Migrated from Supabase+React.
 
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
-- 76.5–77.3 — Palette rebuild, Footer/Contact/Hero light, News preview, Deep-link chips, Active-chip + Hero auto-refresh, News lock bug fix.
-- 77.4 (Feb 28 2026) — **News pipeline stability**:
-  - `news_synthesizer.py`: fixed lock RELEASE to use `owner_token` (BSON-ms truncation bug fix); persist fetch_feeds_summary + synthesize_pending_summary to new `job_summaries` collection with `_id ∈ {fetch_feeds, synthesize_pending}`.
-  - `server.py::_news_post_deploy_fetch`: 30-min guard reads `job_summaries.fetch_feeds.last_success_at` — skips startup fetch if <30 min ago. Verified: `startup fetch skipped: recent successful fetch (1.0 min ago)`.
-  - `server.py`: new `GET /api/news/admin/status` (require_admin) returns `freshness`, fetch/synthesize summaries, content counts (24h/7d), lock_active. Read-only. No secrets/tokens/raw payloads.
-  - Freshness rules: `fresh` = <=120 min since last success; `stale` = older; `error` = errors present + >60 min old.
+- 76.5–77.4 — Palette, Footer light, News preview, Deep-link, Auto-refresh, News lock bug fix, Post-deploy guard + `/api/news/admin/status`.
+- 77.5 (Feb 28 2026) — **Admin Freshness Tile**:
+  - New `frontend/src/components/admin/NewsFreshnessTile.jsx` — kompakte Kachel unter `/admin`, direkt unter dem Hero-Header, über der KPI-Strip.
+  - Fetch-Auth: `axios` mit `withCredentials: true` (nutzt bestehende Admin-Cookie-Auth).
+  - Refresh: 60s Interval + `visibilitychange`-Handler + manueller Refresh-Button.
+  - Status-Mapping: `fresh` → Teal/Mint + CheckCircle "Aktuell" · `stale` → Amber + AlertTriangle "Veraltet" · `error` → Rot + XCircle "Fehler" (Farbe **und** Icon **und** Text).
+  - Zeitanzeige: absolut (`24.08.2026, 12:18`) + relativ (`· vor 6 Min.`) — keine externe Date-Lib.
+  - 3 Spalten: News-Fetch, Synthese, Inhalte — jede mit `border-l-2 border-bank-primary/30` Editorial-Rail.
+  - Details-Toggle (default eingeklappt): Fetch-Start, Trigger, Synthese-Start, Server-Zeit.
+  - Fetch-Lock-Status als eigene Zeile mit Lock-Icon (idle/aktiv).
+  - Fehlerzustand: kleine Meldung + "Erneut versuchen"-Button, Rest der Admin-Seite bleibt intakt.
+  - No secrets rendered (keine Tokens, keine API-Keys, keine Raw-Payloads).
+  - AdminDashboard.js: 2-Zeilen-Insert (Import + `<NewsFreshnessTile />`).
 
 ## Files of Reference
-- `/app/backend/news_synthesizer.py` — lock owner_token + summary persistence
-- `/app/backend/server.py` — 30-min guard on startup + `/api/news/admin/status`
-- `/app/frontend/src/components/home/HomeHeroNewsPreview.jsx`
-- `/app/frontend/src/pages/news/NachrichtenPage.jsx`
-- `/app/.emergent/crons.yml` — 5/5 slots unchanged
-
-## Cron Configuration (5/5 slots — unchanged)
-news-fetch-feeds `0 * * * *` · news-synthesize `10 * * * *` · price-alerts-check `*/15 * * * *` · newsletter-weekly-digest `0 8 * * 5` · news-image-sweep `30 2 * * *`
+- `/app/frontend/src/components/admin/NewsFreshnessTile.jsx` (neu)
+- `/app/frontend/src/pages/AdminDashboard.js` (Insert)
+- `/app/backend/server.py` — `/api/news/admin/status`
+- `/app/backend/news_synthesizer.py` — job_summaries persistence
 
 ## Blockers
-- P1: Supabase constraint `product_inquiry_leads_product_check` (DBA)
-- P2: Alpha Vantage + Unsplash API keys (User)
+- P1: Supabase `product_inquiry_leads_product_check` (DBA)
+- P2: Alpha Vantage + Unsplash API-Keys (User)
 
 ## Backlog
-- Server.py modularization Wave 2 (Auth 8 endpoints, News ~28, Investments)
-- Phase 4: Content Automation (Social)
-- Phase 5: Sentry, Rate limiting, Deploy
+- Server.py modularization Wave 2
 - Fresh Article Toast on Hero background refresh
+- News Retention Archive (>90 Tage)
+- Phase 4/5
