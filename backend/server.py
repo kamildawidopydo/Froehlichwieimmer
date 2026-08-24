@@ -19,10 +19,11 @@ import random
 import os
 import asyncio
 import re
+import time
 import logging
 import secrets
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 import bcrypt
 import jwt
@@ -509,6 +510,13 @@ EMAIL_BASE_URL = "https://integrations.emergentagent.com"
 EMERGENT_EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY", "").strip()
 EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Fröhlich Vermögensberatung").strip()
 EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO", "").strip() or None
+# Empfänger für Lead-Notifications (Produktanfragen). Fallback EMAIL_REPLY_TO,
+# sonst statische Support-Adresse.
+PRODUCT_INQUIRY_TO = (
+    os.environ.get("PRODUCT_INQUIRY_TO", "").strip()
+    or EMAIL_REPLY_TO
+    or "kundenservice@kapital-direkt24.de"
+)
 
 _EMAIL_SHORTENERS = ("bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "goo.gl", "rebrand.ly")
 _EMAIL_CRED_ASK = ("reply with your password", "reply with the code", "send your password",
@@ -563,6 +571,14 @@ async def _send_email_via_emergent(to: str, subject: str, html: str) -> Optional
             )
         r.raise_for_status()
         return r.json().get("id")
+    except httpx.HTTPStatusError as e:
+        body_txt = ""
+        try:
+            body_txt = e.response.text[:400]
+        except Exception:
+            pass
+        logger.error("Email provider %s: %s | body=%s", e.response.status_code, e, body_txt)
+        raise HTTPException(status_code=502, detail=f"E-Mail konnte nicht versendet werden ({e.response.status_code}).")
     except Exception as e:
         logger.error("Email send failed: %s", e)
         raise HTTPException(status_code=502, detail="E-Mail konnte nicht versendet werden.")
@@ -596,6 +612,131 @@ def _invite_email_html(first_name: str, share_url: str, note: str) -> str:
         f'niemals per E-Mail um Passwörter, Zugangsdaten oder Zahlungsinformationen.</p>'
         f'</td></tr></table></td></tr></table>'
     )
+
+
+# ---------------------------------------------------------------------------
+# News & Märkte — feed, market insights, editorial CRUD
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Product-Inquiry Notification-Mail — Session 74.8
+# Frontend ruft /api/send-product-inquiry-email fire-and-forget nach jedem
+# erfolgreichen Supabase-Lead-Insert. Mailfehler dürfen den Lead NICHT
+# beeinflussen (frontend behandelt HTTP-Fehler bereits als non-fatal),
+# der Endpoint liefert deshalb immer 200 mit ok:true/false.
+# ---------------------------------------------------------------------------
+
+VALID_PI_PRODUCTS = {"aktien", "anleihen", "fonds", "tagesgeld", "festgeld", "flexgeld"}
+
+# TTL-Set für Idempotenz: verhindert Doppelversand bei Doppelklick / Retry
+# innerhalb 60 s (Hash aus product+email+first+last+phone).
+_PI_EMAIL_RECENT: Dict[str, float] = {}
+
+
+class ProductInquiryEmailPayload(BaseModel):
+    product: str = Field(default="", max_length=32)
+    first_name: str = Field(default="", max_length=80)
+    last_name: str = Field(default="", max_length=80)
+    email: str = Field(default="", max_length=180)
+    phone: str = Field(default="", max_length=48)
+    customer_number: Optional[str] = Field(default=None, max_length=48)
+    answers: Dict[str, Any] = Field(default_factory=dict)
+    consent_marketing: bool = False
+    leadId: Optional[str] = Field(default=None, max_length=64)
+
+
+def _pi_email_html(payload: "ProductInquiryEmailPayload") -> str:
+    from html import escape
+
+    def _row(label: str, value: str) -> str:
+        return (
+            f'<tr><td style="padding:6px 12px;color:#6b7280;font-size:12px;'
+            f'letter-spacing:0.08em;text-transform:uppercase;width:35%">{escape(label)}</td>'
+            f'<td style="padding:6px 12px;color:#0f1d34;font-size:14px">{escape(value)}</td></tr>'
+        )
+
+    answer_rows = ""
+    if isinstance(payload.answers, dict):
+        for qid, entry in payload.answers.items():
+            if not entry:
+                continue
+            label = entry.get("label") if isinstance(entry, dict) else str(entry)
+            if not label:
+                continue
+            answer_rows += _row(str(qid).replace("_", " "), str(label))
+
+    kicker = escape(payload.product.upper() or "PRODUKTANFRAGE")
+    full_name = f"{payload.first_name} {payload.last_name}".strip() or "—"
+    return (
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        f'style="background:#f5f7fa;padding:32px 0;font-family:Georgia,serif">'
+        f'<tr><td align="center"><table role="presentation" width="620" cellpadding="0" '
+        f'cellspacing="0" style="background:#ffffff;padding:32px;border:1px solid #e5e7eb">'
+        f'<tr><td>'
+        f'<p style="margin:0 0 6px;color:#c9a961;font-size:12px;letter-spacing:0.16em;'
+        f'text-transform:uppercase">Neue Produktanfrage · {kicker}</p>'
+        f'<h1 style="margin:0 0 18px;color:#0f1d34;font-size:22px;line-height:1.3">'
+        f'{escape(full_name)}</h1>'
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        f'style="border:1px solid #eef1f6;border-collapse:collapse">'
+        f'{_row("Produkt", payload.product or "—")}'
+        f'{_row("E-Mail", payload.email or "—")}'
+        f'{_row("Telefon", payload.phone or "—")}'
+        f'{_row("Kundennr.", payload.customer_number or "—")}'
+        f'{_row("Newsletter", "Ja" if payload.consent_marketing else "Nein")}'
+        f'{_row("Lead-ID", payload.leadId or "—")}'
+        f'</table>'
+        + (
+            f'<h2 style="margin:22px 0 10px;color:#0f1d34;font-size:15px">Antworten</h2>'
+            f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+            f'style="border:1px solid #eef1f6;border-collapse:collapse">{answer_rows}</table>'
+            if answer_rows
+            else ""
+        )
+        + f'<p style="margin:24px 0 0;color:#888;font-size:12px">Bitte innerhalb von 1–2 Werktagen '
+        f'reagieren. Diese Nachricht wurde automatisch aus dem Anfrageformular erzeugt.</p>'
+        f'</td></tr></table></td></tr></table>'
+    )
+
+
+@api.post("/send-product-inquiry-email")
+async def send_product_inquiry_email(payload: ProductInquiryEmailPayload):
+    # Basic Sanitize — der eigentliche Lead ist bereits in Supabase persistiert,
+    # dieser Endpoint darf niemals 4xx zurückgeben und den Client-Flow bremsen.
+    product = (payload.product or "").strip().lower()
+    if product not in VALID_PI_PRODUCTS:
+        return {"ok": False, "error": "invalid_product"}
+    email = (payload.email or "").strip().lower()
+    if not email or "@" not in email:
+        return {"ok": False, "error": "invalid_email"}
+
+    # Idempotenz: Doppelversand bei Retry / Doppelklick verhindern.
+    now = time.time()
+    stale = [k for k, ts in _PI_EMAIL_RECENT.items() if now - ts > 60]
+    for k in stale:
+        _PI_EMAIL_RECENT.pop(k, None)
+    dedupe_key = "|".join([
+        product,
+        email,
+        (payload.first_name or "").strip().lower(),
+        (payload.last_name or "").strip().lower(),
+        (payload.phone or "").strip(),
+    ])
+    subject_name = f"{payload.first_name} {payload.last_name}".strip() or email
+    subject = f"Neue Produktanfrage · {product.capitalize()} · {subject_name}"
+    try:
+        email_id = await _send_email_via_emergent(PRODUCT_INQUIRY_TO, subject, _pi_email_html(payload))
+    except HTTPException as e:
+        logger.warning("product-inquiry email failed: %s", e.detail)
+        return {"ok": False, "error": "email_provider_failed"}
+    except Exception as e:  # noqa: BLE001
+        logger.exception("product-inquiry email crashed: %s", e)
+        return {"ok": False, "error": "email_crash"}
+    # Idempotenz-Marker erst NACH erfolgreichem Versand persistieren, damit
+    # ein legitimer Retry nach einem transienten Provider-Fehler nicht
+    # geschluckt wird.
+    _PI_EMAIL_RECENT[dedupe_key] = now
+    return {"ok": True, "email_id": email_id, "dry_run": email_id is None}
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
@@ -79,6 +79,11 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [done, setDone] = useState(false);
+  const [contactErrors, setContactErrors] = useState({});
+  const firstNameRef = useRef(null);
+  const lastNameRef = useRef(null);
+  const emailRef = useRef(null);
+  const phoneRef = useRef(null);
 
   const reset = useCallback(() => {
     setStep(0);
@@ -90,6 +95,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
     setSubmitting(false);
     setSubmitError('');
     setDone(false);
+    setContactErrors({});
   }, []);
 
   useEffect(() => {
@@ -115,22 +121,38 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
     const lastNameCheck = validatePersonName(contact.lastName, { label: 'Nachname' });
     const em = contact.email.trim();
     const ph = sanitizePhoneInput(contact.phone).trim();
-    if (!firstNameCheck.ok) {
-      toast.error(firstNameCheck.message);
-      return false;
+    const errors = {};
+    if (!contact.firstName.trim()) {
+      errors.firstName = 'Bitte geben Sie Ihren Vornamen ein.';
+    } else if (!firstNameCheck.ok) {
+      errors.firstName = firstNameCheck.message;
     }
-    if (!lastNameCheck.ok) {
-      toast.error(lastNameCheck.message);
-      return false;
+    if (!contact.lastName.trim()) {
+      errors.lastName = 'Bitte geben Sie Ihren Nachnamen ein.';
+    } else if (!lastNameCheck.ok) {
+      errors.lastName = lastNameCheck.message;
     }
     if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
-      toast.error('Bitte eine gültige E-Mail-Adresse angeben.');
-      return false;
+      errors.email = 'Bitte eine gültige E-Mail-Adresse angeben.';
     }
     if (!ph || ph.length < 6) {
-      toast.error('Bitte eine erreichbare Telefonnummer angeben.');
-      return false;
+      errors.phone = 'Bitte eine erreichbare Telefonnummer angeben.';
     }
+    setContactErrors(errors);
+    // Fokus auf das erste ungültige Feld — via requestAnimationFrame nach dem
+    // State-Commit, damit das programmatische onFocus keinen Stale-Closure-
+    // Race mit setContactErrors() ausloest.
+    const scheduleFocus = (ref) => {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => ref.current?.focus());
+      } else {
+        setTimeout(() => ref.current?.focus(), 0);
+      }
+    };
+    if (errors.firstName) { scheduleFocus(firstNameRef); toast.error(errors.firstName); return false; }
+    if (errors.lastName)  { scheduleFocus(lastNameRef);  toast.error(errors.lastName);  return false; }
+    if (errors.phone)     { scheduleFocus(phoneRef);     toast.error(errors.phone);     return false; }
+    if (errors.email)     { scheduleFocus(emailRef);     toast.error(errors.email);     return false; }
     if (!consentPrivacy || !consentTerms) {
       toast.error('Bitte Datenschutz und AGB bestätigen.');
       return false;
@@ -558,18 +580,30 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                         />
                         <Input
                           id="pi-first"
+                          ref={firstNameRef}
                           value={contact.firstName}
-                          onChange={(e) =>
-                            setContact((c) => ({
-                              ...c,
-                              firstName: sanitizeFormField('firstName', e.target.value),
-                            }))
-                          }
-                          className="h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-accent/50 focus-visible:ring-bank-accent/25"
+                          onChange={(e) => {
+                            const nextVal = sanitizeFormField('firstName', e.target.value);
+                            setContact((c) => ({ ...c, firstName: nextVal }));
+                            if (contactErrors.firstName && nextVal.trim().length >= 1) {
+                              setContactErrors((p) => ({ ...p, firstName: undefined }));
+                            }
+                          }}
+                          aria-invalid={contactErrors.firstName ? 'true' : undefined}
+                          aria-describedby={contactErrors.firstName ? 'pi-first-error' : undefined}
+                          className={cn(
+                            'h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-accent/50 focus-visible:ring-bank-accent/25',
+                            contactErrors.firstName && 'border-red-400 focus-visible:border-red-500 focus-visible:ring-red-500/25',
+                          )}
                           autoComplete="given-name"
                           placeholder="Max"
                         />
                       </div>
+                      {contactErrors.firstName ? (
+                        <p id="pi-first-error" role="alert" className="mt-1 text-[12px] leading-snug text-red-600" data-testid="pi-first-error">
+                          {contactErrors.firstName}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="pi-last" className="text-[13px] font-medium text-bank-ink">
@@ -582,18 +616,30 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                         />
                         <Input
                           id="pi-last"
+                          ref={lastNameRef}
                           value={contact.lastName}
-                          onChange={(e) =>
-                            setContact((c) => ({
-                              ...c,
-                              lastName: sanitizeFormField('lastName', e.target.value),
-                            }))
-                          }
-                          className="h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-accent/50 focus-visible:ring-bank-accent/25"
+                          onChange={(e) => {
+                            const nextVal = sanitizeFormField('lastName', e.target.value);
+                            setContact((c) => ({ ...c, lastName: nextVal }));
+                            if (contactErrors.lastName && nextVal.trim().length >= 1) {
+                              setContactErrors((p) => ({ ...p, lastName: undefined }));
+                            }
+                          }}
+                          aria-invalid={contactErrors.lastName ? 'true' : undefined}
+                          aria-describedby={contactErrors.lastName ? 'pi-last-error' : undefined}
+                          className={cn(
+                            'h-11 rounded-lg border-bank-border bg-white pl-10 text-[14px] shadow-none placeholder:font-normal placeholder:not-italic placeholder:text-bank-text-muted/55 focus-visible:border-bank-accent/50 focus-visible:ring-bank-accent/25',
+                            contactErrors.lastName && 'border-red-400 focus-visible:border-red-500 focus-visible:ring-red-500/25',
+                          )}
                           autoComplete="family-name"
                           placeholder="Mustermann"
                         />
                       </div>
+                      {contactErrors.lastName ? (
+                        <p id="pi-last-error" role="alert" className="mt-1 text-[12px] leading-snug text-red-600" data-testid="pi-last-error">
+                          {contactErrors.lastName}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
 

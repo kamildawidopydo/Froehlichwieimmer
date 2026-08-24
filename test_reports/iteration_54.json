@@ -1,0 +1,43 @@
+{
+  "summary": "Session 74.8 Follow-up (Fixes aus iteration_53) verifiziert. VALIDATION-RACE IST GEFIXT: Fonds-Wizard, 6 Fragen, Kontakt-Step mit leeren Namen -> pi-first-error 'Bitte geben Sie Ihren Vornamen ein.', aria-invalid=true, roter Border, Fokus auf #pi-first. 4x hintereinander Submit ohne Aenderung -> Meldung/aria-invalid/Border bleiben JEDES Mal sichtbar (kein Flackern mehr). Tippen eines einzigen Zeichens in #pi-first bzw. #pi-last raeumt Fehler SOFORT (ohne Blur). Nachname-Fall: pi-last-error korrekt, Fokus auf #pi-last. Beide leer -> Fokus zuerst #pi-first. Consent-Fehler: Toast 'Bitte Datenschutz und AGB bestaetigen.', kein Submit. DEDUPE-RACE IST GEFIXT: 2 identische rapid-fire POSTs an /api/send-product-inquiry-email liefern beide {ok:false,error:'email_provider_failed'} (kein dedupe:true -> kein silent mail loss); Provider-Response-Body wird jetzt geloggt ('Email provider 422: ... | body={\"error\":\"Undeliverable recipient\"...}'). pytest test_product_inquiry_email.py: 12 passed / 1 xfail (Provider-Empfaenger, Env-operational). Regression Testids: genau 6x product-inquiry-menu-option-*, Wizard-Antworten product-inquiry-option-*, alle Wizards oeffnen. Sticky-CTA-Design 74.7 unveraendert: Mobile 280x60, Desktop 1440 Main-Button 384x104 (Wrapper 432x108), Pulse-Keyframes vorhanden, ESC + Outside-Click schliessen das Popup, Interstitial verdeckt/versteckt CTA wie vorgesehen. NEUER HIGH-BUG GEFUNDEN: Lead-Insert scheitert fuer 4 von 6 Produkten (Supabase CHECK-Constraint).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "Supabase table product_inquiry_leads (insert via /src/lib/submitProductInquiryLead.js)", "issue": "NEU: Insert schlaegt fuer product in {fonds, tagesgeld, festgeld, flexgeld} mit Postgres 23514 fehl: 'new row for relation product_inquiry_leads violates check constraint product_inquiry_leads_product_check'. Nur aktien und anleihen werden akzeptiert. Folge: 4 von 6 Wizards zeigen product-inquiry-error ('Die Anfrage konnte gerade nicht gesendet werden.'), Lead geht komplett verloren. CHECK-Constraint/Migration auf alle 6 Produktwerte erweitern.", "priority": "CRITICAL"},
+      {"endpoint": "POST /api/send-product-inquiry-email", "issue": "Bestehend (Env-operational): Provider antwortet 422 undeliverable_recipient fuer PRODUCT_INQUIRY_TO=kundenservice@kapital-direkt24.de -> es wird nie eine Lead-Mail versandt. Jetzt wenigstens im Log nachvollziehbar (body=...). Verifizierte Empfaengeradresse setzen.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/send-product-inquiry-email", "issue": "_PI_EMAIL_RECENT bleibt In-Memory (nicht worker-/reload-sicher). Dedupe-Pfad ok:true+dedupe:true konnte wegen des Provider-422 nicht end-to-end verifiziert werden (Test deckt beide Zweige konditional ab)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Wizard-Submit -> Supabase-Lead", "issue": "fonds/tagesgeld/festgeld/flexgeld: 400 von /rest/v1/product_inquiry_leads (CHECK-Constraint 23514), Wizard zeigt product-inquiry-error statt product-inquiry-success. aktien/anleihen funktionieren (product-inquiry-success).", "affected_selectors": ["[data-testid=\"product-inquiry-submit\"]", "[data-testid=\"product-inquiry-error\"]", "[data-testid=\"product-inquiry-success\"]"]}
+    ],
+    "design_issues": [
+      {"screen": "Homepage (Gast)", "issues": ["Vorbestehende Console-Errors unveraendert: 401 von Supabase Edge Function /functions/v1/stock-history (Sparklines) und 401 von /api/auth/me. Keine NEUEN Console-Errors durch Session 74.8-Fixes."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_product_inquiry_email.py",
+    "/app/test_reports/pytest/pi_email_74_8b.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Supabase CHECK-Constraint product_inquiry_leads_product_check um fonds, tagesgeld, festgeld, flexgeld erweitern (Migration) - aktuell verlieren 4 von 6 Wizards jeden Lead.",
+    "PRODUCT_INQUIRY_TO auf eine vom Provider verifizierte Adresse setzen (422 undeliverable_recipient).",
+    "Optional: Dedupe-Idempotenz auf leadId + MongoDB/TTL umstellen (In-Memory nicht worker-sicher)."
+  ],
+  "critical_code_review_comments": [
+    "submitProductInquiryLead(): Postgres-Fehler 23514 wird nur generisch als 'Anfrage konnte nicht gesendet werden' behandelt; Produktwert-Whitelist im Frontend (6 Produkte) und DB-CHECK sind auseinandergelaufen - Contract-Test/Migration noetig.",
+    "validateContact(): rAF-Fokus + onChange-Clear ist korrekt und race-frei; keine weiteren Anmerkungen.",
+    "send_product_inquiry_email(): Idempotenz-Marker nach erfolgreichem Send ist korrekt umgesetzt."
+  ],
+  "updated_files": ["/app/backend/tests/test_product_inquiry_email.py"],
+  "success_rate": {"backend": "92% (12 passed / 1 xfail)", "frontend": "Validation/Regression 100%, Lead-Submit 2 von 6 Produkten (33%)"},
+  "seed_data_creation": "Transiente Test-Payloads (@example.com) gegen den Mail-Endpoint; erfolgreiche Wizard-Submits fuer aktien-748@example.com und anleihen-748b@example.com erzeugen Supabase-Leads.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "keine benoetigt (Gast-Flow)",
+  "context_for_next_testing_agent": "Gate: select_option [data-testid=visitor-residence]=DE, [data-testid=visitor-role]=privatperson, [data-testid=visitor-accept-btn]. Sticky: '[data-testid=product-inquiry-sticky-cta] button' klicken -> product-inquiry-menu-option-<key>. Wizard: pro Frage erste [data-testid^=product-inquiry-option-] + [data-testid=product-inquiry-next] (6x), dann Kontakt-Step (#pi-first/#pi-last/#pi-email/#pi-phone, consent-privacy/terms). Nach der Constraint-Migration muessen fonds/tagesgeld/festgeld/flexgeld product-inquiry-success zeigen. Backend-Regression: pytest /app/backend/tests/test_product_inquiry_email.py (test_valid_aktien_payload xfailt bis PRODUCT_INQUIRY_TO lieferbar ist).",
+  "rca_of_the_issue": "Lead-Bug: Die Supabase-Tabelle product_inquiry_leads hat einen CHECK-Constraint, der nur die urspruenglichen Produktwerte (aktien, anleihen) erlaubt; die in 74.x erweiterte Frontend-Produktliste (fonds, tagesgeld, festgeld, flexgeld) wurde nicht per Migration nachgezogen -> 400/23514 beim Insert, Wizard faellt in den Error-State. Validation- und Dedupe-Race aus iteration_53 sind durch rAF-Fokus/onChange-Clear bzw. Marker-nach-Send verifiziert behoben."
+}

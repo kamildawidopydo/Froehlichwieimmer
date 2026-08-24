@@ -1,0 +1,48 @@
+{
+  "summary": "Session 74.8 (Email-Endpoint, Wizard-Inline-Validation, Testid-Umbenennung) auf der Preview-URL getestet. Backend: neues pytest-File /app/backend/tests/test_product_inquiry_email.py (13 Tests: valide Payload, Dedupe, rapid-fire, alle 6 Produkte, invalid_product, invalid_email x3, leerer Body, malformed answers, XSS, minimal Payload) -> 12 passed / 1 xfail. Der Endpoint liefert IMMER HTTP 200 (kein 4xx/5xx), Validierung (invalid_product / invalid_email) und Dedupe (60s TTL, zweiter identischer Call -> {ok:true,dedupe:true}) funktionieren. ABER: der eigentliche Mailversand schlaegt reproduzierbar fehl -> {ok:false,error:'email_provider_failed'}; Ursache ist der Provider-422 'Undeliverable recipient' fuer PRODUCT_INQUIRY_TO=kundenservice@kapital-direkt24.de (direkt gegen integrations.emergentagent.com verifiziert). Frontend E2E (1920x1080 + 1440x900 + 390x844, Gate DE/privatperson/accept): Aktien- und Anleihen-Flow komplett durchgeklickt (6 Fragen -> Kontakt -> Consents -> product-inquiry-success sichtbar), alle 6 Wizards oeffnen ueber [data-testid=product-inquiry-menu-option-*], Testid-Kollision aufgeloest (je genau 1x, 0 Legacy product-inquiry-option-* im Sticky-Menue), ESC/Outside-Click, Sticky-Design 74.7 unveraendert (Mobile 280x60, Desktop 1440 Wrapper 432x108 = Baseline iter_52, Main-Button 384x104). Inline-Validation grundsaetzlich vorhanden und a11y-korrekt (pi-first-error/pi-last-error, role=alert, aria-invalid=true, aria-describedby, roter Border, Fokus auf #pi-first zuerst, Toast). GEFUNDENER BUG: die Inline-Fehlermeldung flackert - bei wiederholtem Submit ohne Aenderung verschwindet die Meldung inkl. aria-invalid/roter Border (nur Toast bleibt), und Tippen raeumt den Fehler erst beim Blur.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/send-product-inquiry-email", "issue": "Mailversand schlaegt IMMER fehl: Provider antwortet 422 {code:'undeliverable_recipient'} fuer Empfaenger kundenservice@kapital-direkt24.de (PRODUCT_INQUIRY_TO-Fallback). Response ist 200 {ok:false,error:'email_provider_failed'} -> Frontend-Flow ok, aber es kommt NIE eine Lead-Benachrichtigung an. PRODUCT_INQUIRY_TO auf eine verifizierte/lieferbare Adresse setzen (Resend-Domain verifizieren) bzw. Env setzen.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/send-product-inquiry-email", "issue": "Dedupe-Key wird VOR dem Sendeversuch in _PI_EMAIL_RECENT geschrieben. Nach einem fehlgeschlagenen Versand liefert ein legitimer Retry innerhalb 60s {ok:true,dedupe:true} und es wird nie eine Mail gesendet (silent loss). Key erst nach erfolgreichem Send setzen oder bei Fehler wieder entfernen."},
+      {"endpoint": "POST /api/send-product-inquiry-email", "issue": "_PI_EMAIL_RECENT ist In-Memory (pro Worker/Prozess) -> Dedupe greift bei mehreren Uvicorn-Workern bzw. nach Reload nicht. Fuer Idempotenz besser leadId + Mongo/TTL-Index."},
+      {"endpoint": "_send_email_via_emergent", "issue": "Bei Provider-Fehler wird nur str(exception) geloggt, nicht r.text. Der eigentliche Grund (422 undeliverable_recipient) war nur durch manuelles Nachstellen sichtbar. Response-Body ins Log aufnehmen."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ProductInquiryWizard (Kontakt-Step)", "issue": "Inline-Fehler flackert / verschwindet bei wiederholtem Submit. Deterministisch reproduziert (Fonds-Wizard, Vorname+Nachname leer): Submit#1 first_err=1/last_err=1 -> Submit#2 first_err=0 (Meldung, aria-invalid und roter Border weg, nur Toast) -> Submit#3 wieder 1 -> Submit#4 wieder 0. Ursache: validateContact() ruft direkt nach setContactErrors() ref.focus(); der programmatische Focus feuert onFocus, das mit dem STALE contactErrors des vorherigen Renders den gerade gesetzten Fehler wieder loescht.", "selector": "[data-testid=\"pi-first-error\"], [data-testid=\"pi-last-error\"]", "priority": "HIGH"},
+      {"component": "ProductInquiryWizard (Kontakt-Step)", "issue": "Spec 'Fehler verschwindet nach Fokus + Eingabe >=1 Zeichen' nicht erfuellt: onChange raeumt contactErrors nicht; die Meldung bleibt beim Tippen stehen und verschwindet erst beim Blur/Feldwechsel. Zusaetzlich feuert onFocus nicht, wenn das Feld nach dem Submit-Fokus bereits fokussiert ist (Klick ins selbe Feld erzeugt kein Focus-Event).", "selector": "#pi-first, #pi-last", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Wizard-Submit -> Lead-Mail", "issue": "POST /api/send-product-inquiry-email wird korrekt fire-and-forget aufgerufen (Backend-Log: 200 OK + 'product-inquiry email failed'), Frontend behandelt ok:false non-fatal und zeigt product-inquiry-success. Es wird jedoch faktisch keine Mail versandt (siehe backend_issues.critical).", "affected_selectors": ["[data-testid=\"product-inquiry-submit\"]", "[data-testid=\"product-inquiry-success\"]"]}
+    ],
+    "design_issues": [
+      {"screen": "Homepage (Gast, alle Viewports)", "issues": ["Vorbestehende Console-Errors: 14x 401 von Supabase Edge Function /functions/v1/stock-history (Sparklines) und 2x 401 von /api/auth/me. Keine NEUEN Errors durch Session 74.8."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_product_inquiry_email.py",
+    "/app/test_reports/pytest/pi_email_74_8.xml"
+  ],
+  "action_items": [
+    "PRODUCT_INQUIRY_TO auf eine vom Provider akzeptierte/verifizierte Empfaengeradresse setzen (aktuell 422 undeliverable_recipient) - sonst gehen alle Lead-Mails verloren.",
+    "Dedupe-Key erst nach erfolgreichem Versand setzen (bzw. bei Fehler entfernen), damit Retries nicht als dedupe:true geschluckt werden.",
+    "Inline-Validation-Race fixen: Fehler nicht im onFocus loeschen (Stale-State) - stattdessen im onChange bei value.trim().length>=1 raeumen und/oder Fokus erst nach dem State-Commit (useEffect/rAF) setzen bzw. mit einem skipNextFocusClear-Ref schuetzen.",
+    "Provider-Response-Body in _send_email_via_emergent loggen."
+  ],
+  "critical_code_review_comments": [
+    "ProductInquiryWizard.validateContact(): setContactErrors() + ref.focus() im gleichen Tick fuehrt zum Stale-Closure-Race im onFocus-Handler -> Fehleranzeige toggelt bei jedem zweiten Submit.",
+    "send_product_inquiry_email(): Idempotenz-Marker wird vor dem Sendeversuch persistiert -> Fehlversand ist nicht wiederholbar (silent mail loss).",
+    "In-Memory-Dedupe (_PI_EMAIL_RECENT) ist nicht worker-/reload-sicher; leadId als Idempotenz-Key in MongoDB waere robuster."
+  ],
+  "updated_files": ["/app/backend/tests/test_product_inquiry_email.py"],
+  "success_rate": {"backend": "92% (12/13 pytest, 1 xfail wegen Provider-Empfaenger)", "frontend": "85% (alle Flows/Testids/Regressionen gruen, 2 Validation-UX-Bugs)"},
+  "seed_data_creation": "Nur transiente Test-Payloads (TEST_/example.com-Adressen) gegen den Mail-Endpoint; 3 echte Wizard-Submits (aktien-e2e@example.com, anleihen-e2e@example.com, race-test@example.com) erzeugen Supabase-Leads.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "keine benoetigt (Gast-Flow); /app/memory/test_credentials.md nicht verwendet",
+  "context_for_next_testing_agent": "Backend-Regression: pytest /app/backend/tests/test_product_inquiry_email.py (der Test test_valid_aktien_payload xfailt absichtlich, solange der Provider PRODUCT_INQUIRY_TO ablehnt - nach dem Env-Fix muss er PASSEN und dry_run/email_id liefern). Frontend: Gate via visitor-residence=DE, visitor-role=privatperson, visitor-accept-btn; Sticky-CTA -> product-inquiry-menu-option-<key>; Wizard-Antworten weiterhin product-inquiry-option-<value>. Validation-Bug reproduzierbar durch 2x Klick auf product-inquiry-submit mit leeren Namen (Fehler verschwindet beim 2. Submit).",
+  "rca_of_the_issue": "1) Mail: PRODUCT_INQUIRY_TO-Default kundenservice@kapital-direkt24.de wird von integrations.emergentagent.com mit HTTP 422 {code:'undeliverable_recipient'} abgelehnt (manuell verifiziert); Endpoint faengt das korrekt ab und antwortet 200 ok:false, es kommt aber keine Mail an. 2) Inline-Validation: validateContact() setzt contactErrors und ruft im selben Tick ref.focus(); React verarbeitet das Focus-Event mit dem alten Render-Closure, in dem contactErrors[field] noch den Wert des VORHERIGEN fehlerhaften Submits hat -> der onFocus-Cleanup loescht den gerade gesetzten Fehler, daher abwechselnd sichtbar/unsichtbar."
+}

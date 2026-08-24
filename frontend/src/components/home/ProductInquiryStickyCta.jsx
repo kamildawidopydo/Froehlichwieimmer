@@ -167,7 +167,7 @@ function ProductMenu({ menuOpen, prefersReduced, onPick, className }) {
                   key={p.key}
                   type="button"
                   role="menuitem"
-                  data-testid={`product-inquiry-option-${p.key}`}
+                  data-testid={`product-inquiry-menu-option-${p.key}`}
                   onClick={() => onPick(p.key)}
                   className={cn(
                     'group flex w-full flex-col gap-0 rounded-lg border border-transparent px-2.5 py-2 text-left transition-all sm:gap-0.5 sm:px-3 sm:py-2.5',

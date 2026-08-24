@@ -1,5 +1,53 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 74.8 (Feb 28, 2026) — Email-Endpoint + Wizard-Validation + Testid-Kollision ✅
+
+**P0 – Email-Endpoint 404 behoben**
+- **Ursache:** Frontend `notifyProductInquiryLeadEmail` in `submitProductInquiryLead.js` ruft `POST /api/send-product-inquiry-email`, aber im FastAPI-Backend war dieser Route nie registriert. Der frühere Legacy-Node-Worker (`/legacy_source/server/lib/apiRoutes.js`) lieferte den Endpoint, ist aber nicht mehr aktiv.
+- **Fix:** Neuer Endpoint in `backend/server.py` mit `_send_email_via_emergent` (bestehende Mail-Utility, kein zweiter Layer). Nach Payload-Sanitize sendet er via Emergent-managed Provider an `PRODUCT_INQUIRY_TO` (Env, Fallback `EMAIL_REPLY_TO`, sonst `kundenservice@kapital-direkt24.de`).
+- **Verhalten:**
+  - Endpoint gibt **immer** HTTP 200 zurück (`{ok:true|false, ...}`), damit ein Mailfehler den Frontend-Success-Flow nicht verwirft. Lead in Supabase bleibt unabhängig persistiert.
+  - **Idempotenz:** In-Memory-Set `_PI_EMAIL_RECENT` mit 60 s TTL, dedupe-Key = `product|email|first|last|phone`. Doppelversand bei Doppelklick/Retry ausgeschlossen (`{ok:true, dedupe:true}`).
+  - Ohne `EMERGENT_EMAIL_KEY` läuft der Endpoint als Dry-Run (`{ok:true, dry_run:true}`).
+  - Provider-Failure (HTTP 502 vom Emergent-API) → `{ok:false, error:"email_provider_failed"}`, geloggt, kein Rollback.
+- **Frontend-Caller** (unverändert): `notifyProductInquiryLeadEmail` prüft `res.ok`, loggt Warnung bei !ok, verwirft niemals den Lead.
+
+**Wizard-Validation-UX (Vorname/Nachname)**
+- Neuer State `contactErrors` + Refs `firstNameRef/lastNameRef/emailRef/phoneRef`.
+- `validateContact` sammelt Fehler pro Feld (leerer Vorname → „Bitte geben Sie Ihren Vornamen ein.", leerer Nachname → „Bitte geben Sie Ihren Nachnamen ein.", plus Format-Checks); Reihenfolge Vorname → Nachname → Telefon → E-Mail, Fokus auf erstes ungültiges Feld via `ref.focus()`.
+- Inline-Fehlermeldung unter Feld (`text-red-600`, `role="alert"`, `id="pi-first-error"/"pi-last-error"`).
+- `Input` bekommt `aria-invalid="true"` + `aria-describedby="pi-*-error"` bei Fehler; roter Border via cn().
+- Fehler verschwindet bei Fokus/Blur mit ≥1 Zeichen. Consent-Prüfung + Submit-Payload unverändert.
+
+**Testid-Kollision behoben**
+- Nur `ProductInquiryStickyCta.jsx` Popup-Menü: `data-testid={`product-inquiry-menu-option-${p.key}`}` (Wizard-Answer-Options bleiben `product-inquiry-option-<value>`).
+- Konflikt aufgelöst; Selektoren jetzt eindeutig zwischen Sticky-Menü und Wizard-Antworten.
+
+**Erhalten (nicht angefasst):** Sticky-CTA-Design 74.7, Mobile 280×60, Attention-Pulse, nearForm, Interstitial-Hide, Analytics-Payloads (`product_inquiry_open`/`product_inquiry_select`), Produktkatalog, Bonus-Mapping, Newsletter, Consent-Logik, Wizard-Schritte, Bonuslogik, Produkt-Mapping.
+
+**Externer Blocker weiter offen:** Supabase-CHECK-Constraint `product_inquiry_leads_product_check` für fonds/tagesgeld/festgeld/flexgeld — nicht angefasst.
+
+**Follow-up-Fixes (nach iteration_53)**
+- **Validation-Race:** `onFocus`-Cleanup entfernt (verursachte Stale-Closure-Race, Fehler verschwand bei jedem 2. Submit). Fehler wird jetzt in `onChange` beim ersten Character-Change geräumt (spec-konform „nach Eingabe"). Fokus auf ungültiges Feld via `requestAnimationFrame` nach State-Commit.
+- **Dedupe-Race:** `_PI_EMAIL_RECENT[dedupe_key] = now` wurde vor dem Sendeversuch persistiert → legitimer Retry nach transientem Provider-Fehler wurde als `dedupe:true` geschluckt (Silent-Mail-Loss). Marker jetzt erst nach erfolgreichem `_send_email_via_emergent`-Call gesetzt.
+- **Provider-Response-Logging:** `_send_email_via_emergent` fängt `httpx.HTTPStatusError` separat und loggt `response.text[:400]` — 422 „undeliverable_recipient" (verifiziert bei kundenservice@kapital-direkt24.de) ist jetzt im Log direkt sichtbar.
+
+**Bekannter operationaler Punkt** (nicht Code-fixbar)
+- `PRODUCT_INQUIRY_TO` muss auf eine vom Emergent-Provider verifizierte/deliverable Empfänger-Adresse gesetzt werden (aktueller Default kundenservice@kapital-direkt24.de wird mit 422 abgelehnt). Der Endpoint ist voll funktionsfähig, sobald die Env-Variable gesetzt ist.
+
+**Verifikation (iteration_54)**
+- ✅ Validation-Race gefixt: 4× Submit ohne Änderung → Meldung/aria-invalid/Border bleiben jedes Mal sichtbar (kein Flackern mehr).
+- ✅ onChange-Clear: 1. Character-Change räumt Fehler sofort (ohne Blur), spec-konform.
+- ✅ Dedupe-Race gefixt: rapid-fire Retry nach Provider-Fehler liefert erneut `email_provider_failed` (kein Silent-Loss durch `dedupe:true`).
+- ✅ Provider-Response-Logging: `Email provider 422: … | body={"error":"Undeliverable recipient"…}` im Backend-Log.
+- ✅ pytest 12/12 + 1 xfail (Provider-Empfänger, env-operational).
+- ✅ Regression: 6× `product-inquiry-menu-option-*`, Wizard-Antworten `product-inquiry-option-<value>`, alle Wizards öffnen, Sticky-Design 74.7 unverändert, ESC/Outside-Click, Interstitial-Hide, Pulse.
+- ✅ Keine neuen Console-Errors.
+
+**Bekannter operationaler Punkt** (nicht Code-fixbar in dieser Session):
+- **Supabase-CHECK-Constraint** `product_inquiry_leads_product_check` (explizit als externer Blocker markiert): erlaubt nur aktien+anleihen. 4 von 6 Wizards (fonds/tagesgeld/festgeld/flexgeld) bleiben blockiert bis manuelle DBA-Migration durchgeführt wird.
+- `PRODUCT_INQUIRY_TO` Env muss auf verifizierte Empfänger-Adresse gesetzt werden — Provider antwortet aktuell 422 undeliverable_recipient.
+
 ## Session 74.7 (Feb 28, 2026) — Mobile Sticky-CTA Single-Line ~56 px ✅
 
 **Warum nachgebessert:** User-Feedback: iter_51 (72 px) immer noch zu groß. Neuer Zielbereich: 56 px Höhe, ~280 px Breite, Single-Line-Layout mit nur Icon + Haupttext + Pfeil + X.
