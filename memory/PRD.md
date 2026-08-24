@@ -1,5 +1,26 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 76.1 (Feb 28, 2026) — Neues Fröhlich-Logo integriert ✅
+
+### Ergebnis
+- **Frontend-Header** (`/app/frontend/public/assets/logo/frohlich-logo-transparent.png` + `frohlich-logo.png`) → 1.828×860 px, 1.190 KB, textbasiertes Wortlogo „2020 · Fröhlich · VERMÖGENSBERATUNG" (ersetzt das runde Kreis-Logo)
+- **Backend-PDF-Slim** (`/app/backend/assets/frohlich-logo-slim.png`) → automatisch aus neuer Quelle regeneriert mit dem Session-75.6-Rezept (h=220 px, FASTOCTREE 128 colors)
+- **Neue Slim-Größe: 3.997 B** (vs. 30.978 B vorher = **-87 %**) — das textbasierte Logo komprimiert extrem effizient
+- **Neue PDF-Größe: 40.031 B** (vs. 147.835 B vorher = **-73 %**)
+- Kumulativ seit Session 75.5: 644 KB → 40 KB = **-94 %**
+- Backend restart (LRU-Cache-Bust), HTTP-Regression grün (`HTTP=200 CT=application/pdf`)
+- Frontend-Screenshot verifiziert (Homepage, Header rendert das neue Wortlogo klar sichtbar)
+
+### Geänderte Dateien
+- `/app/frontend/public/assets/logo/frohlich-logo-transparent.png` (überschrieben)
+- `/app/frontend/public/assets/logo/frohlich-logo.png` (überschrieben)
+- `/app/backend/assets/frohlich-logo-slim.png` (regeneriert)
+
+Kein Code-Änderungen, kein Layout-Bruch — die bestehenden `_LOGO_CANDIDATES` und `<img src>`-Verweise picken die neuen Assets automatisch auf.
+
+---
+
+
 ## Session 76.0 (Feb 28, 2026) — Farbwelt-Überarbeitung Anthrazit + Weiß + Pink ✅
 
 ### Umsetzung — zentral über Design-Tokens (kein Component-Patchen)
