@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   AlertCircle,
+  Search,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -81,11 +82,13 @@ const StockResearchForm = ({ open, initial, onClose, onSaved, api }) => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [errs, setErrs] = useState({});
+  const [lookup, setLookup] = useState({ loading: false, error: null, info: null });
 
   useEffect(() => {
     if (open) {
       setForm(initial ? { ...EMPTY_FORM, ...initial } : EMPTY_FORM);
       setErrs({});
+      setLookup({ loading: false, error: null, info: null });
     }
   }, [open, initial]);
 
@@ -95,6 +98,63 @@ const StockResearchForm = ({ open, initial, onClose, onSaved, api }) => {
 
   const patch = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const patchBool = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }));
+
+  // Ticker-Normalisierung: trim, uppercase, nur A-Z, 0-9, . und -.
+  const normaliseTicker = (raw) => (raw || '').trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, '').slice(0, 12);
+
+  const runLookup = async () => {
+    const t = normaliseTicker(form.ticker);
+    if (!t) {
+      setLookup({ loading: false, error: 'Bitte einen Ticker eingeben.', info: null });
+      return;
+    }
+    setForm((f) => ({ ...f, ticker: t }));
+    setLookup({ loading: true, error: null, info: null });
+    try {
+      const { data } = await api.get(`/news-markte/market/quote/${encodeURIComponent(t)}`);
+      // NUR echte Felder aus der Response verwenden — nichts erfinden.
+      const price = typeof data?.display_price === 'number' ? data.display_price
+                   : typeof data?.price === 'number' ? data.price : null;
+      const currency = data?.display_currency || data?.currency || null;
+      const name = data?.name || null;
+      const lastUpdated = data?.last_updated || null;
+      const marketStatus = data?.market_status || null;   // "live" | "delayed" | ...
+      const dataSource = data?.data_source || null;       // "provider" | "fallback" | ...
+      const isDelayed = data?.is_delayed === true;
+
+      setForm((f) => ({
+        ...f,
+        ticker: (data?.symbol || t).toUpperCase(),
+        // Company-Name nur, wenn tatsächlich geliefert. Bestehenden Wert nie überschreiben,
+        // wenn Admin bereits etwas eingetragen hat und die API nichts liefert.
+        company_name: name || f.company_name,
+        current_price: price !== null ? String(price) : f.current_price,
+        currency: currency || f.currency,
+      }));
+      setLookup({
+        loading: false,
+        error: null,
+        info: {
+          symbol: (data?.symbol || t).toUpperCase(),
+          name,
+          price,
+          currency,
+          lastUpdated,
+          marketStatus,
+          dataSource,
+          isDelayed,
+          hasName: !!name,
+          hasTimestamp: !!lastUpdated,
+        },
+      });
+    } catch (err) {
+      const status = err?.response?.status;
+      const msg = status === 404
+        ? 'Für dieses Symbol konnten keine Marktdaten gefunden werden.'
+        : 'Marktdaten konnten momentan nicht geladen werden. Sie können die Analyse weiterhin manuell erfassen.';
+      setLookup({ loading: false, error: msg, info: null });
+    }
+  };
 
   const validate = () => {
     const e = {};
@@ -176,14 +236,71 @@ const StockResearchForm = ({ open, initial, onClose, onSaved, api }) => {
           </FormField>
 
           <FormField label="Ticker *" error={errs.ticker}>
-            <input
-              type="text"
-              value={form.ticker}
-              onChange={patch('ticker')}
-              className={`${inputCls} uppercase`}
-              data-testid="sr-input-ticker"
-              maxLength={20}
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={form.ticker}
+                onChange={patch('ticker')}
+                onBlur={(e) => setForm((f) => ({ ...f, ticker: normaliseTicker(e.target.value) }))}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); runLookup(); } }}
+                className={`${inputCls} uppercase`}
+                data-testid="sr-input-ticker"
+                maxLength={20}
+                placeholder="z. B. AAPL"
+              />
+              <button
+                type="button"
+                onClick={runLookup}
+                disabled={lookup.loading || !form.ticker.trim()}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded border border-bank-primary bg-white px-3 py-2 text-[12px] font-medium text-bank-primary-strong hover:bg-bank-mint/50 disabled:opacity-50"
+                data-testid="sr-ticker-lookup-btn"
+                title="Aktuelle Marktdaten aus dem hauseigenen Quote-Endpoint übernehmen"
+              >
+                {lookup.loading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                <span className="hidden sm:inline">Marktdaten laden</span>
+                <span className="sm:hidden">Prüfen</span>
+              </button>
+            </div>
+            {lookup.loading ? (
+              <p className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-bank-text-muted" data-testid="sr-lookup-loading">
+                <Loader2 size={11} className="animate-spin" /> Marktdaten werden geladen …
+              </p>
+            ) : lookup.error ? (
+              <p className="mt-1.5 flex items-start gap-1.5 text-[11.5px] text-bank-accent-strong" data-testid="sr-lookup-error">
+                <AlertCircle size={11} className="mt-0.5 shrink-0" />
+                <span>{lookup.error}</span>
+              </p>
+            ) : lookup.info ? (
+              <div className="mt-1.5 rounded border border-bank-primary/25 bg-bank-mint/30 px-2.5 py-2 text-[11.5px] text-bank-text" data-testid="sr-lookup-info">
+                <p className="flex items-center gap-1.5 font-medium text-bank-primary-strong">
+                  <CheckCircle2 size={11} /> Marktdaten geladen
+                </p>
+                <ul className="mt-1 space-y-0.5 text-bank-text-muted">
+                  <li>
+                    <span className="font-mono uppercase tracking-[0.14em]">{lookup.info.symbol}</span>
+                    {lookup.info.hasName ? <> · {lookup.info.name}</> : <> · <em>Kein Unternehmensname geliefert — bitte manuell prüfen</em></>}
+                  </li>
+                  {lookup.info.price !== null && lookup.info.currency ? (
+                    <li>
+                      Kurs: <span className="tabular-nums">{fmtPrice(lookup.info.price, lookup.info.currency)}</span>
+                      {lookup.info.isDelayed || lookup.info.dataSource === 'fallback' ? (
+                        <span className="ml-1.5 rounded-sm border border-amber-300 bg-amber-50 px-1.5 py-px font-mono text-[9.5px] uppercase tracking-[0.12em] text-amber-800">
+                          {lookup.info.dataSource === 'fallback' ? 'Fallback' : 'Verzögert'}
+                        </span>
+                      ) : null}
+                    </li>
+                  ) : null}
+                  {lookup.info.hasTimestamp ? (
+                    <li>Kursstand: <span className="font-mono">{new Date(lookup.info.lastUpdated).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></li>
+                  ) : (
+                    <li><em>Kein Datenstand geliefert</em></li>
+                  )}
+                </ul>
+                <p className="mt-1.5 text-[10.5px] text-bank-text-muted">
+                  Nur Kurs, Währung und Name wurden übernommen. Kursziel, Analyst und Quelle bitte manuell aus verifizierter Research-Quelle eintragen.
+                </p>
+              </div>
+            ) : null}
           </FormField>
 
           <FormField label="Aktueller Kurs *" error={errs.current_price}>

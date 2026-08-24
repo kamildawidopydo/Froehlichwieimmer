@@ -8,6 +8,17 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 - 76.5–77.9 — Palette rebuild, Footer/Contact/Hero light, News-Hero Editorial, News-lock fix, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Fresh Article Toast.
+- 78.5 (Feb 24 2026) — **Analyst Ticker Lookup (Admin-Form → bestehender Quote-Endpoint)**:
+  - `AdminStockResearch.jsx`: Neben dem Ticker-Feld ein „Marktdaten laden"-Button. Auf Klick (oder Enter) → normalisiert Input (trim, uppercase, whitelist `A-Z0-9.-`, max 12) und ruft den **bestehenden** internen Endpoint `GET /api/news-markte/market/quote/{symbol}` (aus Session 78.4).
+  - **Nur reale Response-Felder** werden verwendet: `symbol`, `name`, `display_price`|`price`, `display_currency`|`currency`, `last_updated`, `market_status`, `data_source`, `is_delayed`. Kein Feld wird erfunden.
+  - Prefill-Regeln: `ticker` (aus `symbol`), `current_price` (aus `display_price`), `currency`, `company_name` (aus `name`, nur wenn geliefert). **Kursziel, Analyst, Research-Haus, Quelle bleiben strikt manuell** — spec §14.
+  - Dezentes Info-Panel unter dem Ticker: „Marktdaten geladen" mit Symbol + Name (oder Hinweis „Kein Unternehmensname geliefert"), Kurs mit Währung, `Fallback`/`Verzögert`-Badge wenn `data_source==='fallback'` oder `is_delayed`, echter Kursstand aus `last_updated` (kein Fake-Timestamp). Kein „LIVE"-Label.
+  - Fehler: 404 → „Für dieses Symbol konnten keine Marktdaten gefunden werden." · Andere Fehler → „Marktdaten konnten momentan nicht geladen werden. Sie können die Analyse weiterhin manuell erfassen." Formular bleibt in beiden Fällen voll bedienbar.
+  - Loading: Button disabled + Spinner + Statuszeile „Marktdaten werden geladen …". Kein Fullscreen-Loader, kein Doppel-Request (Button disabled während `lookup.loading`).
+  - Upside-Vorschau nutzt weiterhin die zentrale Formel `((target-current)/current)*100` (keine zweite Berechnungslogik).
+  - **Kein neuer Endpoint**, kein neuer Cron, keine Provider-Secrets im Frontend. Admin CRUD unverändert `require_admin`.
+  - E2E-Verifikation: `aapl` (lowercase) → normalisiert zu `AAPL`, Prefill: ticker=AAPL, company=Apple, price=208.08, currency=EUR; Info-Panel zeigt Kursstand `24.08.2026, …` + `Fallback`-Badge (data_source=fallback, is_delayed=true, note=no_api_key). Kursziel manuell 250 → Upside +20.1 % korrekt. Unknown Ticker `NOTREAL` → Error-State ohne Formular-Blockade. Mobile 390px: kein horizontaler Scroll.
+  - **Regression-safe**: Stock-Research Public API, CSV-Import, Duplicate-Key, Publish-Guard, Homepage-Empty-State, News-Hero, News-Pipeline unverändert.
 - 78.4 (Feb 24 2026) — **server.py Wave 3 — News-Routen extrahiert (33 Endpoints)**:
   - Neuer Router `/app/backend/routes/news.py` (134 LOC) mit `APIRouter(prefix="/api", tags=["news"])`. Shim-Pattern: Funktions-Bodies bleiben unverändert in `server.py`, nur die `@api.<verb>(...)`-Decorators wurden dort entfernt und via `router.add_api_route(path, callable, methods=[…], response_model=…, summary=…)` gegen den neuen Router registriert. Garantiert 100 % API-Vertragserhalt (URLs, Methoden, Query-Params, Response-Shapes, Auth-Guards, Statuscodes, Error-Bodies).
   - Extrahierte Endpoints (33): 13 `/news-markte/*` (feed, markets, editorial CRUD, anlagetrends, investment-radar, market-voices, preferences GET+PUT, for-you) · 10 `/news-markte/market/*` + `/symbol[s]/news` · 6 `/news/admin/*` (fetch-feeds, synthesize, list, image-sweep, purge-demo, status) · 4 public `/news/nachrichten*` + `/news/publishers`.
