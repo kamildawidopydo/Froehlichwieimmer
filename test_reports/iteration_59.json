@@ -1,0 +1,33 @@
+{
+  "summary": "Session 75.1 frontend-only test of the 'Report herunterladen' button on the ProductInquiryWizard success step. Tested all 6 products end-to-end (aktien/anleihen with the real Supabase lead insert; fonds/tagesgeld/festgeld/flexgeld required mocking the lead insert because the DB rejects those products), error handling (400/500/wrong content-type/network abort), double-click prevention, payload shape, filename extraction, accessibility, responsive layout at 320/390/768/1440 and state reset. The Session 75.1 download feature itself is fully green; the only defect found is a pre-existing lead-insert DB constraint that blocks 4 of 6 products from ever reaching the success step in real usage.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "Supabase POST /rest/v1/product_inquiry_leads (via submitProductInquiryLead)", "issue": "Lead insert returns 400 for products fonds, tagesgeld, festgeld, flexgeld: 'new row for relation \"product_inquiry_leads\" violates check constraint \"product_inquiry_leads_product_check\"' (code 23514). Only aktien and anleihen are accepted. Consequence: the wizard never reaches data-testid='product-inquiry-success' for 4 of 6 products, so the new Report-Download button is unreachable for those users. Fix the DB CHECK constraint to allow all 6 product values.", "priority": "CRITICAL"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Wizard success step (desktop 1920)", "issues": ["Large empty vertical gap (~120px) between the wavy header divider and the success check icon — success card content sits low and looks unbalanced on wide viewports (cosmetic only)."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Extend/replace the product_inquiry_leads_product_check DB constraint so fonds, tagesgeld, festgeld and flexgeld leads can be inserted — otherwise the success step (and thus the new PDF download) is unreachable for those products.",
+    "Optional cosmetic: tighten top spacing of the success step on desktop."
+  ],
+  "critical_code_review_comments": [
+    "handleDownloadReport awaits logEvent() inside the try block before the finally that clears downloadingReport — a slow/hanging activity-log call would keep the button disabled. Measured re-enable delay was only 0.33s today, but consider moving logEvent outside the guarded path (fire-and-forget).",
+    "Content-Disposition parsing and the local fallback filename are both correct; verified filename anlage-report-{product}-2026-08-24.pdf for all 6 products."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100% of Session 75.1 download scenarios passed (24/24 checks); wizard submission blocked for 4/6 products by the DB constraint above"},
+  "seed_data_creation": "Seeded localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent to bypass the visitor gate. Real leads created for aktien/anleihen with Test User / t@u.de. Non-whitelisted products used a mocked lead insert (no DB writes).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "not needed (public page)",
+  "context_for_next_testing_agent": "Verified in detail: (1) all 6 products download a valid PDF (%PDF header, 22.2-22.8 KB) with filename anlage-report-{product}-YYYY-MM-DD.pdf; extracted PDF text confirms matching product title ('Aktien'/'Anleihen' etc., contact fields, date). (2) POST /api/reports/pdf payload = {product, first_name, last_name, email, phone, customer_number:null, answers:{qid:{label,value}}} and product always matches the current wizard (no stale product after switching). (3) Loading state: aria-busy='true', button disabled, spinner (.animate-spin) present, visible text 'Report wird erstellt…'. (4) Double-click prevention: 5 rapid clicks during a 2s-delayed request = exactly 1 network request. (5) Error scenarios 400 json / 500 json / 200 text/html / network abort: success step stays visible, button re-enables, error paragraph data-testid='product-inquiry-download-error' with role='alert' shows the exact German message; retry with the working endpoint succeeds and clears the error. (6) A11y: button focusable, Enter triggers download. (7) Responsive: no horizontal overflow at 320/390/768/1440 (scrollWidth == clientWidth), button width 273px@320 and 320px otherwise. (8) State reset: after forcing an error and closing, reopening another product starts at step 1 with no leftover error/loading state. Note: the sticky CTA is hidden while the 'Aktien im Fokus' interstitial teaser is visible — dismiss it (text 'SCHLIESSEN') before clicking the CTA in future scripts.",
+  "rca_of_the_issue": "The 4 failing products fail at the lead-insert step (Supabase Postgres CHECK constraint product_inquiry_leads_product_check only permits aktien/anleihen), not in the Session 75.1 download code. With the insert mocked, the wizard success step and PDF download work identically for all 6 products."
+}

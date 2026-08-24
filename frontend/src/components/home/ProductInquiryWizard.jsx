@@ -8,7 +8,9 @@ import {
   BarChart3,
   Check,
   Clock3,
+  Download,
   Euro,
+  Loader2,
   Lock,
   Mail,
   Phone,
@@ -80,6 +82,9 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
   const [submitError, setSubmitError] = useState('');
   const [done, setDone] = useState(false);
   const [contactErrors, setContactErrors] = useState({});
+  // Report-PDF-Download (Session 75.1)
+  const [downloadingReport, setDownloadingReport] = useState(false);
+  const [reportError, setReportError] = useState('');
   const firstNameRef = useRef(null);
   const lastNameRef = useRef(null);
   const emailRef = useRef(null);
@@ -96,7 +101,74 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
     setSubmitError('');
     setDone(false);
     setContactErrors({});
+    setDownloadingReport(false);
+    setReportError('');
   }, []);
+
+  /**
+   * Lädt den personalisierten PDF-Report von POST /api/reports/pdf.
+   * Nutzt ausschließlich bestehenden Wizard-State (Produkt + Antworten +
+   * Kontaktdaten). Kein Wizard-Reset bei Fehlern — Success-Step bleibt
+   * bestehen. Verhindert Mehrfachklicks über `downloadingReport`-Guard.
+   */
+  const handleDownloadReport = useCallback(async () => {
+    if (downloadingReport || !product) return;
+    setDownloadingReport(true);
+    setReportError('');
+    let blobUrl = null;
+    try {
+      const payload = {
+        product,
+        first_name: contact.firstName.trim(),
+        last_name: contact.lastName.trim(),
+        email: contact.email.trim(),
+        phone: sanitizePhoneInput(contact.phone).trim(),
+        customer_number: contact.customerNumber.trim() || null,
+        answers,
+      };
+      const res = await fetch('/api/reports/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' },
+        body: JSON.stringify(payload),
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || !contentType.includes('application/pdf')) {
+        throw new Error(`report_failed:${res.status}`);
+      }
+      const blob = await res.blob();
+      if (blob.size === 0 || !blob.type.includes('pdf')) {
+        throw new Error('report_empty');
+      }
+      // Dateiname aus Content-Disposition extrahieren (RFC 5987 + fallback)
+      const disp = res.headers.get('content-disposition') || '';
+      let filename = `anlage-report-${product}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      const utf8Match = disp.match(/filename\*=UTF-8''([^;]+)/i);
+      const asciiMatch = disp.match(/filename="?([^";]+)"?/i);
+      if (utf8Match) {
+        try { filename = decodeURIComponent(utf8Match[1]); } catch { /* keep fallback */ }
+      } else if (asciiMatch) {
+        filename = asciiMatch[1];
+      }
+      blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      try {
+        await logEvent(EVENTS.PRODUCT_INQUIRY_SUBMIT, { product, action: 'report_download' }, { userId: user?.id ?? null });
+      } catch (logErr) { /* non-fatal */ }
+    } catch (err) {
+      console.warn('[product-inquiry-wizard] report download failed:', err);
+      setReportError('Der Report konnte gerade nicht erstellt werden. Bitte versuchen Sie es erneut.');
+    } finally {
+      // Kurze Verzögerung, damit der Browser den Download-Klick abschließen kann,
+      // bevor die Object-URL freigegeben wird.
+      if (blobUrl) setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      setDownloadingReport(false);
+    }
+  }, [downloadingReport, product, contact, answers, user]);
 
   useEffect(() => {
     if (!open) reset();
@@ -530,17 +602,54 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
               </motion.p>
 
               <motion.div
-                className="mt-8 w-full max-w-[280px]"
+                className="mt-8 flex w-full max-w-[320px] flex-col gap-3"
                 variants={{
                   hidden: { opacity: 0, y: reduceMotion ? 0 : 8 },
                   visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
                 }}
               >
+                {/* Sekundärer CTA — Report herunterladen (Session 75.1) */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDownloadReport}
+                  disabled={downloadingReport}
+                  aria-busy={downloadingReport ? 'true' : 'false'}
+                  aria-live="polite"
+                  data-testid="product-inquiry-download-report"
+                  className="group h-12 w-full rounded-xl border-bank-primary/30 bg-white px-6 text-[14px] font-semibold tracking-wide text-bank-primary transition-all hover:border-bank-primary/60 hover:bg-bank-primary/[0.05] focus-visible:ring-2 focus-visible:ring-bank-primary/40 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {downloadingReport ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden strokeWidth={LUCIDE_STROKE} />
+                      <span>Report wird erstellt…</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Download className="h-4 w-4" aria-hidden strokeWidth={LUCIDE_STROKE} />
+                      <span>Report herunterladen</span>
+                    </span>
+                  )}
+                </Button>
+                <p className="text-[11.5px] leading-snug text-bank-text-muted" data-testid="product-inquiry-download-hint">
+                  Ihre persönliche Zusammenfassung als PDF.
+                </p>
+                {reportError ? (
+                  <p
+                    role="alert"
+                    className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12px] leading-snug text-red-700"
+                    data-testid="product-inquiry-download-error"
+                  >
+                    {reportError}
+                  </p>
+                ) : null}
+
                 <Button
                   type="button"
                   variant="primary"
-                  className="h-12 w-full rounded-xl px-8 text-[15px] font-semibold tracking-wide shadow-[0_10px_28px_-12px_rgb(9_33_66/0.45)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_14px_36px_-14px_rgb(9_33_66/0.5)] active:translate-y-0 active:scale-[0.98]"
+                  className="mt-1 h-12 w-full rounded-xl px-8 text-[15px] font-semibold tracking-wide shadow-[0_10px_28px_-12px_rgb(9_33_66/0.45)] transition-transform hover:-translate-y-0.5 hover:shadow-[0_14px_36px_-14px_rgb(9_33_66/0.5)] active:translate-y-0 active:scale-[0.98]"
                   onClick={() => onOpenChange(false)}
+                  data-testid="product-inquiry-success-close"
                 >
                   Schließen
                 </Button>

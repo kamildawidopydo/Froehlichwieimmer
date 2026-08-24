@@ -1,5 +1,92 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 75.1 (Feb 28, 2026) — Frontend Download-Button für PDF-Report ✅
+
+### Ziel & Umsetzung
+Im Success-Step des ProductInquiryWizard ein sekundärer CTA **„Report herunterladen"** ergänzt, der POST `/api/reports/pdf` (Session 75.0) aufruft, das PDF als Blob empfängt und im Browser als Datei-Download ausliefert.
+
+### Geänderte Dateien
+- `/app/frontend/src/components/home/ProductInquiryWizard.jsx` (nur diese Datei)
+  - Neue Imports: `Download`, `Loader2` aus lucide-react
+  - Neuer State: `downloadingReport`, `reportError`
+  - Neue Funktion: `handleDownloadReport` (~70 Zeilen)
+  - Success-Block erweitert: Download-CTA + Subline + Error-Banner + bestehender Schließen-Button
+  - `reset()` erweitert um `downloadingReport`/`reportError` Cleanup
+
+### Payload-Struktur (an POST /api/reports/pdf)
+```json
+{
+  "product": "<wizard-product>",
+  "first_name": "<contact.firstName>",
+  "last_name":  "<contact.lastName>",
+  "email":      "<contact.email>",
+  "phone":      "<sanitized>",
+  "customer_number": "<optional>",
+  "answers":    { "<qid>": {"label": "…", "value": "…"} }
+}
+```
+Nutzt ausschließlich bestehende Wizard-State-Werte. Keine zusätzliche Nutzer­eingabe.
+
+### Download-Flow
+1. Guard: früh Abbrechen wenn `downloadingReport || !product`
+2. `setDownloadingReport(true)` + `setReportError('')`
+3. `fetch('/api/reports/pdf', {method:'POST', headers:{Accept:'application/pdf'}})`
+4. Prüfung: `res.ok && content-type ~= application/pdf`
+5. `blob = await res.blob()` + Prüfung `size > 0 && type ~= pdf`
+6. Content-Disposition parsen: `filename*=UTF-8''…` (bevorzugt, decodeURIComponent) → sonst `filename="…"` → sonst Fallback `anlage-report-{product}-YYYY-MM-DD.pdf`
+7. `URL.createObjectURL(blob)` → `<a>` mit `download`-Attribut → `click()` → `remove()`
+8. `logEvent(PRODUCT_INQUIRY_SUBMIT, {product, action:'report_download'})` (best-effort)
+9. Cleanup: `setTimeout(revokeObjectURL, 2000)` (damit Download-Trigger abgeschlossen ist)
+
+### Error-State
+- Ruhiger Banner mit `role="alert"` + `data-testid='product-inquiry-download-error'`
+- Fixer deutscher Text: *„Der Report konnte gerade nicht erstellt werden. Bitte versuchen Sie es erneut."*
+- Success-Step bleibt bestehen, Lead bleibt erfolgreich persistiert
+- Button reaktiviert sich → Retry möglich
+
+### Mehrfachklick-Schutz & A11y
+- `downloadingReport` Guard-Return zu Beginn
+- Button `disabled={downloadingReport}` + `aria-busy` + `aria-live="polite"`
+- Loading-Label „Report wird erstellt…" ist SR-lesbar (nicht nur Spinner)
+- Fokus-Ring über `focus-visible:ring-2 focus-visible:ring-bank-primary/40`
+
+### Filename-Handling
+| Server-Response | Frontend-Wahl |
+|-----------------|---------------|
+| `filename*=UTF-8''anlage-report-aktien-2026-08-24.pdf` | decoded → verwendet |
+| `filename="anlage-report-…"` (fallback) | ASCII-Wert |
+| leere/keine Disposition | Fallback `anlage-report-{product}-{ISO-Datum}.pdf` |
+
+### Test-Ergebnisse (iteration_59, 24/24 Checks grün)
+| Testfall | Ergebnis |
+|----------|----------|
+| Aktien Wizard → Success → Download | ✅ PDF geöffnet, magic %PDF, korrekter Filename |
+| Anleihen Wizard → Success → Download | ✅ |
+| Fonds Wizard (Lead-Insert gemockt wg. DB-Constraint) → Download | ✅ |
+| Tagesgeld Wizard (gemockt) → Download | ✅ |
+| Festgeld Wizard (gemockt) → Download | ✅ |
+| Flexgeld Wizard (gemockt) → Download | ✅ |
+| Error 400 vom Backend | ✅ Fehler-Banner, Success bleibt, Retry funktioniert |
+| Error 500 vom Backend | ✅ |
+| Falscher Content-Type (text/html + 200) | ✅ Abgefangen |
+| Network abort | ✅ Fehler-Banner, kein Crash |
+| Double-Click (5× während 2s Delay) | ✅ nur 1 Request |
+| Payload-Shape korrekt | ✅ `answers`={qid:{label,value}}, product stimmt |
+| Content-Disposition-Parsing (UTF-8 + ASCII fallback) | ✅ |
+| Responsive 320/390/768/1440 | ✅ kein horizontal overflow |
+| A11y — Tab/Enter fokussierbar, aria-busy, role=alert | ✅ |
+| State-Reset beim Wizard-Wechsel | ✅ |
+
+### Verbleibende externe Blocker (unverändert, "nicht anfassen")
+- Supabase-Constraint `product_inquiry_leads_product_check` — verhindert Insert für 4 der 6 Produkte in echter Umgebung → Success-Step + Download für fonds/tagesgeld/festgeld/flexgeld nur nach DBA-Migration erreichbar (SQL bereits in `/app/legacy_source/supabase/migrations/…`)
+- Alpha Vantage + Unsplash API-Keys — warten auf User
+
+### Optional / Backlog (bewusst nicht umgesetzt)
+- Kosmetisch: großer vertikaler Gap zwischen Wave-Divider und Check-Icon auf Desktop 1920px (design nice-to-have, kein Blocker)
+
+---
+
+
 ## Session 75.0 (Feb 28, 2026) — PDF-Report-Endpoint `/api/reports/pdf` ✅
 
 ### Ziel & Umsetzung
