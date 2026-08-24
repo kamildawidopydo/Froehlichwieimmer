@@ -9,96 +9,97 @@
     color-scheme: light;
 
     /* Fröhlich Vermögensberatung — Corporate Design Tokens
-       (Session 76.0 — Farbwelt: Anthrazit + Weiß + Pink-Akzent) */
-    --color-primary:        #FF1678;
-    --color-primary-hover:  #E60068;
-    --color-secondary:      #FFF0F6;
+       (Session 76.5 — Refined Teal + Coral, ruhiger Private-Banking-Look) */
+    --color-primary:        #7FAFAA;
+    --color-primary-hover:  #6D9D98;
+    --color-secondary:      #EDF5F4;
 
-    /* Fröhlich Vermögensberatung — Corporate light (open, airy) */
+    /* Corporate light (open, airy, warm neutral) */
     --bank-bg:             255 255 255;  /* #FFFFFF */
     --bank-surface:        255 255 255;  /* #FFFFFF */
-    --bank-surface-elev:   250 249 250;  /* #FAF9FA very light neutral */
-    --bank-border:         231 228 230;  /* #E7E4E6 warm neutral */
+    --bank-surface-elev:   250 249 247;  /* #FAF9F7 warm off-white */
+    --bank-border:         226 229 231;  /* #E2E5E7 cool neutral */
 
-    --bank-text:           17 17 20;     /* #111114 near-black body */
-    --bank-text-muted:     87 84 87;     /* #575457 secondary text */
+    --bank-text:           30 30 34;     /* #1E1E22 anthracite body */
+    --bank-text-muted:     107 114 128;  /* #6B7280 secondary */
 
-    --bank-primary:        255 22 120;   /* #FF1678 signature magenta */
-    --bank-primary-hover:  230 0 104;    /* #E60068 hover state */
-    --bank-secondary:      255 22 120;   /* #FF1678 */
-    --bank-accent:         255 22 120;   /* #FF1678 CTA */
-    --bank-accent-strong:  230 0 104;    /* #E60068 stronger accent */
-    /* „Gold"-Token wird als weicher Pink-Highlight umgedeutet; sparsam einsetzen */
-    --bank-gold:           255 22 120;   /* #FF1678 (mapped to pink) */
-    --bank-gold-soft:      255 240 246;  /* #FFF0F6 very light pink surface */
+    --bank-primary:        127 175 170;  /* #7FAFAA muted teal (65%+20%+10% budget) */
+    --bank-primary-hover:  109 157 152;  /* #6D9D98 */
+    --bank-secondary:      127 175 170;  /* teal */
+    /* Accent (Koralle) — nur für Conversion-CTAs, max ~5% Fläche */
+    --bank-accent:         229 106 115;  /* #E56A73 muted coral */
+    --bank-accent-strong:  216 91 101;   /* #D85B65 coral hover */
+    /* Legacy „gold"-Slot als Koralle-Highlight umgedeutet (sparsam) */
+    --bank-gold:           229 106 115;  /* #E56A73 */
+    --bank-gold-soft:      252 237 239;  /* #FCEDEF very light coral surface */
     --bank-success:        16 185 129;   /* #10B981 */
-    --bank-signature:        255 22 120; /* #FF1678 primary action */
-    --bank-signature-hover:  230 0 104;  /* #E60068 */
+    --bank-signature:        127 175 170; /* #7FAFAA primary CTA */
+    --bank-signature-hover:  109 157 152; /* #6D9D98 */
     --bank-error:          220 38 38;
 
-    /* Dark contrast bands — anthracite (nicht mehr Cobalt-Blau) */
-    --bank-ink:            48 42 44;     /* #302A2C anthracite */
-    --bank-ink-hover:      60 52 55;     /* leicht heller für Hover */
+    /* Dark contrast bands — anthracite footers */
+    --bank-ink:            48 42 44;     /* #302A2C footer/dark bands */
+    --bank-ink-hover:      60 52 55;
     --bank-ink-soft:       72 62 66;
     --bank-ink-elev:       92 82 86;
     --bank-on-ink:         255 255 255;
 
-    /* shadcn — Fröhlich Palette light (H=333° magenta) */
+    /* shadcn — Teal-primary + neutral cool border */
     --background: 0 0% 100%;
-    --foreground: 240 8% 7%;
+    --foreground: 240 8% 13%;
     --card: 0 0% 100%;
-    --card-foreground: 240 8% 7%;
+    --card-foreground: 240 8% 13%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 8% 7%;
-    --primary: 333 100% 54%;
+    --popover-foreground: 240 8% 13%;
+    --primary: 175 22% 59%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 300 20% 98%;
-    --secondary-foreground: 240 8% 7%;
-    --muted: 300 20% 98%;
-    --muted-foreground: 300 3% 41%;
-    --accent: 333 100% 96%;
-    --accent-foreground: 333 100% 40%;
+    --secondary: 175 22% 96%;
+    --secondary-foreground: 240 8% 13%;
+    --muted: 175 22% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 175 22% 94%;
+    --accent-foreground: 177 15% 32%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 320 5% 90%;
-    --input: 320 5% 90%;
-    --ring: 333 100% 54%;
+    --border: 200 5% 90%;
+    --input: 200 5% 90%;
+    --ring: 175 22% 59%;
     --radius: 0.5rem;
-    --chart-1: 333 100% 54%;
-    --chart-2: 300 6% 18%;
-    --chart-3: 333 90% 45%;
-    --chart-4: 340 60% 65%;
-    --chart-5: 300 3% 41%;
+    --chart-1: 175 22% 59%;
+    --chart-2: 240 8% 13%;
+    --chart-3: 355 68% 66%;
+    --chart-4: 175 15% 42%;
+    --chart-5: 220 9% 46%;
   }
 
   .dark {
     color-scheme: dark;
 
-    /* Fröhlich Palette — dark (Anthrazit + Pink Session 76.0) */
-    --bank-bg:             17 17 20;     /* #111114 body dark */
-    --bank-surface:        26 24 26;     /* slightly elevated */
-    --bank-surface-elev:   36 32 36;
-    --bank-border:         62 56 60;
+    /* Fröhlich Palette — dark (Session 76.5 Teal+Coral) */
+    --bank-bg:             30 30 34;     /* #1E1E22 body dark */
+    --bank-surface:        40 40 44;
+    --bank-surface-elev:   52 52 56;
+    --bank-border:         74 74 78;
 
-    --bank-text:           250 249 250;  /* #FAF9FA */
-    --bank-text-muted:     165 158 165;
+    --bank-text:           245 246 247;
+    --bank-text-muted:     170 174 180;
 
-    --bank-primary:        255 82 152;   /* pink — leicht heller für Dark-Kontrast */
-    --bank-primary-hover:  255 22 120;
-    --bank-secondary:      255 82 152;
-    --bank-accent:         255 82 152;
-    --bank-accent-strong:  255 22 120;
-    --bank-gold:           255 82 152;
-    --bank-gold-soft:      54 24 40;
+    --bank-primary:        149 195 190;  /* teal helled für Dark-Kontrast */
+    --bank-primary-hover:  127 175 170;
+    --bank-secondary:      149 195 190;
+    --bank-accent:         240 130 138;  /* coral helled */
+    --bank-accent-strong:  229 106 115;
+    --bank-gold:           240 130 138;
+    --bank-gold-soft:      54 24 26;
     --bank-success:        52 211 153;
-    --bank-signature:        255 22 120;
-    --bank-signature-hover:  230 0 104;
+    --bank-signature:        127 175 170;
+    --bank-signature-hover:  109 157 152;
     --bank-error:          239 68 68;
 
-    --bank-ink:            48 42 44;     /* #302A2C */
-    --bank-ink-hover:      60 52 55;
-    --bank-ink-soft:       72 62 66;
-    --bank-ink-elev:       92 82 86;
+    --bank-ink:            30 30 34;
+    --bank-ink-hover:      48 42 44;
+    --bank-ink-soft:       60 52 55;
+    --bank-ink-elev:       74 74 78;
     --bank-on-ink:         255 255 255;
 
     --background: 214 50% 8%;

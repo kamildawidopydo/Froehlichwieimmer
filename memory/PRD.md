@@ -1,5 +1,59 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 76.5 (Feb 28, 2026) — Ruhige Teal + Coral Palette (Private-Banking-Refinement) ✅
+
+### Umsetzung — 2 Dateien (index.css + PDF-Template), 0 Component-Änderungen
+Palette-Refinement über zentrale Design-Tokens im `:root` und `.dark` — alle 623+ Verwendungsstellen ziehen automatisch mit.
+
+**Neue Palette (gedeckt, professionell):**
+| Rolle | Wert | Anwendung |
+|-------|------|-----------|
+| `--bank-primary` #FF1678 → **#7FAFAA** | muted teal | Primary CTAs, aktive Nav, Hover-Border |
+| `--bank-primary-hover` → **#6D9D98** | dunkler teal | Hover-State |
+| `--bank-accent` → **#E56A73** | muted coral | Nur Conversion-CTAs, max ~5% Fläche |
+| `--bank-accent-strong` → **#D85B65** | | Coral Hover |
+| `--bank-gold` (repurposed) → **#E56A73** | | Coral-Highlights (Kicker, Rules) |
+| `--bank-gold-soft` → **#FCEDEF** | very light coral | dezente Callout-Hintergründe |
+| `--bank-text` #111114 → **#1E1E22** | | Anthracite body text |
+| `--bank-text-muted` → **#6B7280** | | Sekundärtext |
+| `--bank-border` → **#E2E5E7** | | Cool neutral Border |
+| `--bank-surface-elev` → **#FAF9F7** | | Warm off-white Cards |
+| `--bank-ink` #302A2C | | Footer / dark contrast bands (unchanged) |
+| shadcn `--primary` → **175 22% 59%** (teal HSL) | | Buttons, Ring |
+| shadcn `--accent` → **175 22% 94%** | | Soft-Accent |
+
+### 65/20/10/5-Budget respektiert
+- 65% Weiß / warmes Off-White (`--bank-surface`, `--bank-surface-elev`)
+- 20% Anthrazit-Text (`--bank-text` #1E1E22)
+- 10% Teal (`--bank-primary` #7FAFAA — Primary CTA, aktive Nav-Underline, Icon-Badges)
+- ~5% Coral (`--bank-accent` #E56A73 — nur „Konto eröffnen"-Button + kleine Kicker/Rules)
+
+### Visuell verifiziert (Screenshots)
+- **Homepage 1440**: „Eine Plattform." Teal-Italic-Akzent (statt lautem Pink), „Zum Vergleich" Teal-Primary-CTA, „Konto eröffnen" Coral-Conversion-CTA, Sticky-CTA weiß mit Teal-Badge — ruhiger, seriös
+- **/handeln 1440**: „verständlich." kleiner Coral-Akzent, aktive Sub-Nav Teal-Underline, Merkspruch-Dot + Kicker Coral — 65/20/10/5-Balance klar erreicht
+- **Homepage 390 mobile**: identisch, kein horizontaler Scroll
+
+### PDF-Report (konsistente Marke)
+- Template `investment_report.html`: 13 Pink-Vorkommen `#FF1678`/`rgba(255,22,120,…)` → `#E56A73`/`rgba(229,106,115,…)` (Coral) via `sed`. Anthrazit-Hero + weißes Wortlogo bleiben; jetzt Coral (statt Pink) als sparsames Akzent auf Nummern 01–05, Rules, Callout-Border, CTA-Eyebrow.
+- HTTP 200, application/pdf, 40 KB unverändert (Session-75.6-Slim-Rezept bleibt effektiv)
+
+### Nicht angefasst
+Layout, Bilder, Logo, Texte, Routing, Wizard-Logik, News-Logik, Newsletter, Supabase, Analytics, Sticky-CTA-Verhalten, Scroll-Spy, Mail-Idempotenz, Image-Sweep. Kein Component-File geändert.
+
+### Geänderte Dateien (2)
+| Datei | Änderung |
+|-------|----------|
+| `/app/frontend/src/index.css` | 16 CSS-Vars in `:root` + 15 in `.dark` remappt (Teal + Coral + gedeckter Anthrazit) |
+| `/app/backend/templates/investment_report.html` | Pink-Hex → Coral-Hex (13 Vorkommen via sed) |
+
+### Verbleibende externe Blocker (unverändert)
+- Supabase `product_inquiry_leads_product_check` → DBA
+- Alpha Vantage + Unsplash Keys → warten auf User
+- Cron-Slot-Limit 5/5
+
+---
+
+
 ## Session 76.4 (Feb 28, 2026) — Server.py Modularisierung Wave 2 (Start) ✅
 
 Vorsichtige, verhaltens-erhaltende Extraktion — kein Big-Bang.
