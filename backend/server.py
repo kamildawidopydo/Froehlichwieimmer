@@ -749,7 +749,6 @@ async def _fetch_market_snapshots() -> List[dict]:
     return fallback
 
 
-@api.get("/news-markte/feed")
 async def news_markte_feed(category: Optional[str] = None, limit: int = 30):
     q: dict = {}
     if category and category != "alle":
@@ -778,7 +777,6 @@ async def news_markte_feed(category: Optional[str] = None, limit: int = 30):
     }
 
 
-@api.get("/news-markte/markets", response_model=List[MarketInsight])
 async def news_markte_markets(display_currency: Optional[str] = None):
     """Serves the /news top strip. Uses the Phase 2 Alpha-Vantage market module
     with in-memory + Mongo cache, falling back to deterministic stubs when no
@@ -811,19 +809,16 @@ async def news_markte_markets(display_currency: Optional[str] = None):
     return out
 
 
-@api.get("/news-markte/editorial", response_model=List[EditorialOut])
 async def list_editorial():
     docs = await db.editorial_posts.find({"published": True}).sort("published_at", -1).to_list(50)
     return [_editorial_to_out(d) for d in docs]
 
 
-@api.get("/news-markte/editorial/admin", response_model=List[EditorialOut])
 async def list_editorial_admin(_user: dict = Depends(require_admin)):
     docs = await db.editorial_posts.find({}).sort("published_at", -1).to_list(200)
     return [_editorial_to_out(d) for d in docs]
 
 
-@api.post("/news-markte/editorial", response_model=EditorialOut)
 async def create_editorial(payload: EditorialInput, _user: dict = Depends(require_admin)):
     now = datetime.now(timezone.utc)
     doc = {
@@ -841,7 +836,6 @@ async def create_editorial(payload: EditorialInput, _user: dict = Depends(requir
     return _editorial_to_out(doc)
 
 
-@api.put("/news-markte/editorial/{post_id}", response_model=EditorialOut)
 async def update_editorial(post_id: str, payload: EditorialInput, _user: dict = Depends(require_admin)):
     if not ObjectId.is_valid(post_id):
         raise HTTPException(status_code=400, detail="Invalid id")
@@ -855,7 +849,6 @@ async def update_editorial(post_id: str, payload: EditorialInput, _user: dict = 
     return _editorial_to_out(doc)
 
 
-@api.delete("/news-markte/editorial/{post_id}")
 async def delete_editorial(post_id: str, _user: dict = Depends(require_admin)):
     if not ObjectId.is_valid(post_id):
         raise HTTPException(status_code=400, detail="Invalid id")
@@ -867,7 +860,6 @@ async def delete_editorial(post_id: str, _user: dict = Depends(require_admin)):
 
 # --- Anlagetrends / Investment-Radar / Stimmen zum Markt --------------------
 
-@api.get("/news-markte/anlagetrends")
 async def list_anlagetrends():
     docs = await db.anlagetrends.find({}).sort("order", 1).to_list(50)
     return [{
@@ -881,7 +873,6 @@ async def list_anlagetrends():
     } for d in docs]
 
 
-@api.get("/news-markte/investment-radar")
 async def list_investment_radar():
     docs = await db.investment_radar.find({}).sort("order", 1).to_list(50)
     return [{
@@ -895,7 +886,6 @@ async def list_investment_radar():
     } for d in docs]
 
 
-@api.get("/news-markte/market-voices")
 async def list_market_voices():
     docs = await db.market_voices.find({}).sort("published_at", -1).to_list(50)
     return [{
@@ -915,7 +905,6 @@ class PreferencesInput(BaseModel):
     watchlist: List[str] = Field(default_factory=list)
 
 
-@api.get("/news-markte/preferences")
 async def get_preferences(user: dict = Depends(get_current_user)):
     doc = await db.user_preferences.find_one({"user_id": ObjectId(user["id"])})
     return {
@@ -924,7 +913,6 @@ async def get_preferences(user: dict = Depends(get_current_user)):
     }
 
 
-@api.put("/news-markte/preferences")
 async def update_preferences(payload: PreferencesInput, user: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc)
     interests = [i.strip().lower() for i in payload.interests if i and i.strip()][:20]
@@ -938,7 +926,6 @@ async def update_preferences(payload: PreferencesInput, user: dict = Depends(get
     return {"interests": interests, "watchlist": watchlist}
 
 
-@api.get("/news-markte/for-you")
 async def news_for_you(user: dict = Depends(get_current_user), limit: int = 12):
     doc = await db.user_preferences.find_one({"user_id": ObjectId(user["id"])})
     interests = (doc or {}).get("interests", []) if doc else []
@@ -2624,7 +2611,6 @@ def _find_cfg(symbol: str) -> Optional[dict]:
     return None
 
 
-@api.get("/news-markte/market/overview")
 async def market_overview(display_currency: Optional[str] = None):
     """Overview: DAX, S&P 500, Nasdaq, Dow, Gold, Silver, Oil, EUR/USD.
 
@@ -2651,7 +2637,6 @@ async def market_overview(display_currency: Optional[str] = None):
     }
 
 
-@api.get("/news-markte/market/stocks")
 async def market_stocks(display_currency: Optional[str] = None):
     target = _normalise_target_currency(display_currency)
     quotes, fx_info = await _fetch_many_display(MARKET_STOCK_SYMBOLS, target=target)
@@ -2666,28 +2651,24 @@ async def market_stocks(display_currency: Optional[str] = None):
     }
 
 
-@api.get("/news-markte/market/indices")
 async def market_indices(display_currency: Optional[str] = None):
     target = _normalise_target_currency(display_currency)
     quotes, _ = await _fetch_many_display(MARKET_INDEX_SYMBOLS, target=target)
     return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True}
 
 
-@api.get("/news-markte/market/commodities")
 async def market_commodities(display_currency: Optional[str] = None):
     target = _normalise_target_currency(display_currency)
     quotes, fx_info = await _fetch_many_display(MARKET_COMMODITY_SYMBOLS, target=target)
     return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True, "fx_usd_to_eur": fx_info}
 
 
-@api.get("/news-markte/market/fx")
 async def market_fx(display_currency: Optional[str] = None):
     target = _normalise_target_currency(display_currency)
     quotes, _ = await _fetch_many_display(MARKET_FX_SYMBOLS, target=target)
     return {"items": quotes, "last_updated": max((q["last_updated"] for q in quotes), default=_now_utc().isoformat()), "is_delayed": True}
 
 
-@api.get("/news-markte/market/quote/{symbol}")
 async def market_quote(symbol: str, display_currency: Optional[str] = None):
     cfg = _find_cfg(symbol)
     if not cfg:
@@ -2703,7 +2684,6 @@ async def market_quote(symbol: str, display_currency: Optional[str] = None):
     return q
 
 
-@api.get("/news-markte/market/quotes")
 async def market_quotes(symbols: str, display_currency: Optional[str] = None):
     """Batch quote fetch. `symbols` is a comma-separated list of internal symbols."""
     wanted = [s.strip().upper() for s in symbols.split(",") if s.strip()]
@@ -3000,7 +2980,6 @@ def _parse_intraday(data: dict) -> Optional[List[dict]]:
     return pts if len(pts) >= 2 else None
 
 
-@api.get("/news-markte/market/sparkline/{symbol}")
 async def market_sparkline(symbol: str):
     sym = _clean_symbol(symbol)
     if sym not in _SPARKLINE_SUPPORTED:
@@ -3177,7 +3156,6 @@ async def _fetch_symbol_news(sym: str) -> dict:
     }
 
 
-@api.get("/news-markte/symbol/{symbol}/news")
 async def symbol_news(symbol: str):
     sym = _clean_symbol(symbol)
     if not sym:
@@ -3190,7 +3168,6 @@ async def symbol_news(symbol: str):
     return result
 
 
-@api.get("/news-markte/symbols/news")
 async def symbol_news_batch(symbols: str):
     """Batch endpoint used by WatchlistPage. Symbols are fetched sequentially
     from cache first; provider calls only fire for cache-misses. This keeps
@@ -3278,7 +3255,6 @@ from investment_topics import register as _register_investment_topics, seed_inve
 _MongoNewsProvider.set_db(db)
 
 
-@api.post("/news/admin/fetch-feeds", summary="Admin: RSS-Feeds sofort abrufen")
 async def _admin_fetch_feeds(trigger: Optional[str] = None, _user: dict = Depends(require_admin)):
     valid = {"15min_cron", "hourly_cron", "post_deploy", "manual"}
     src = trigger if trigger in valid else "manual"
@@ -3291,7 +3267,6 @@ async def _admin_fetch_feeds(trigger: Optional[str] = None, _user: dict = Depend
     return stats
 
 
-@api.post("/news/admin/synthesize", summary="Admin: neue Artikel synthetisieren")
 async def _admin_synthesize(_user: dict = Depends(require_admin), max_articles: int = 25):
     stats = await _news_synthesize(db, max_articles=max(1, min(50, max_articles)))
     try:
@@ -3301,7 +3276,6 @@ async def _admin_synthesize(_user: dict = Depends(require_admin), max_articles: 
     return stats
 
 
-@api.get("/news/admin/list", summary="Admin: alle Artikel inkl. needs_review")
 async def _admin_news_list(_user: dict = Depends(require_admin), status: Optional[str] = None, limit: int = 50):
     query = {}
     if status:
@@ -3316,7 +3290,6 @@ async def _admin_news_list(_user: dict = Depends(require_admin), status: Optiona
 from news_image_sweep import validate_published_news_images as _news_image_sweep_run  # noqa: E402
 
 
-@api.post("/news/admin/image-sweep", summary="Admin: alle publizierten Bild-URLs revalidieren")
 async def _admin_news_image_sweep(_user: dict = Depends(require_admin), limit: Optional[int] = None):
     return await _news_image_sweep_run(db, limit=limit)
 
@@ -3404,13 +3377,11 @@ async def _news_post_deploy_fetch() -> None:
     asyncio.create_task(_run())
 
 
-@api.post("/news/admin/purge-demo", summary="Admin: DEMO-Nachrichten aus DB entfernen")
 async def _admin_purge_demo(_user: dict = Depends(require_admin)):
     removed = await _news_purge_demo(db)
     return {"removed": removed}
 
 
-@api.get("/news/admin/status", summary="Admin: News-Pipeline Freshness & Health")
 async def _admin_news_status(_user: dict = Depends(require_admin)):
     """Read-only Health-Report für die News-Pipeline. Enthält keine Secrets,
     keine Raw-Feed-Payloads und keine internen Tokens."""
@@ -3537,7 +3508,6 @@ async def _newsletter_indexes_startup() -> None:
 
 
 
-@api.get("/news/nachrichten")
 async def news_nachrichten_list(category: Optional[str] = None, source: Optional[str] = None,
                                  limit: int = 24, skip: int = 0):
     """Public news feed. Serves synthesized editorial articles + RSS-aggregator items
@@ -3566,7 +3536,6 @@ async def news_nachrichten_list(category: Optional[str] = None, source: Optional
     }
 
 
-@api.get("/news/publishers")
 async def news_publishers_list():
     """Liefert alle distinct Publisher-Namen für das Frontend-Dropdown."""
     try:
@@ -3576,7 +3545,6 @@ async def news_publishers_list():
     return {"publishers": publishers, "count": len(publishers)}
 
 
-@api.get("/news/nachrichten/{slug}")
 async def news_nachrichten_detail(slug: str):
     item = await _news_provider.get_item(slug)
     if not item:
@@ -3584,7 +3552,6 @@ async def news_nachrichten_detail(slug: str):
     return item
 
 
-@api.get("/news/nachrichten/{slug}/related")
 async def news_nachrichten_related(slug: str, limit: int = 3):
     """Thematisch verwandte Artikel für die Detailseite.
 
@@ -3711,6 +3678,10 @@ app.include_router(_auth_routes.router)
 # Stock-Research (Session 78.3 — Admin CRUD + CSV import + public endpoint)
 from routes import stock_research as _stock_research_routes  # noqa: E402
 app.include_router(_stock_research_routes.router)
+
+# News-Routen (Session 78.4 — extrahiert aus server.py; 33 Endpoints via Shim-Pattern)
+from routes import news as _news_routes  # noqa: E402
+app.include_router(_news_routes.router)
 
 app.include_router(api)
 
