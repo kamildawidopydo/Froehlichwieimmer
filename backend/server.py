@@ -628,9 +628,24 @@ def _invite_email_html(first_name: str, share_url: str, note: str) -> str:
 
 VALID_PI_PRODUCTS = {"aktien", "anleihen", "fonds", "tagesgeld", "festgeld", "flexgeld"}
 
-# TTL-Set für Idempotenz: verhindert Doppelversand bei Doppelklick / Retry
-# innerhalb 60 s (Hash aus product+email+first+last+phone).
-_PI_EMAIL_RECENT: Dict[str, float] = {}
+# Persistente Idempotenz-Collection — atomarer Insert mit UNIQUE-Index auf
+# lead_id verhindert Doppelversand über Worker/Restart hinweg. Fallback-Key
+# (wenn Frontend keine leadId liefert) ist ein deterministischer Hash über
+# product|email|first|last|phone, damit ein Doppelklick trotzdem geschluckt
+# wird. Eintrag mit status="failed" darf legitim erneut versendet werden.
+PI_EMAIL_IDEMPOTENCY = "product_inquiry_email_idempotency"
+
+
+def _pi_dedupe_key(payload: "ProductInquiryEmailPayload", product: str, email: str) -> str:
+    """Fallback-Key wenn kein leadId übergeben wurde — enthält keine PII im Klartext."""
+    raw = "|".join([
+        product,
+        email,
+        (payload.first_name or "").strip().lower(),
+        (payload.last_name or "").strip().lower(),
+        (payload.phone or "").strip(),
+    ])
+    return "hash:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
 
 
 class ProductInquiryEmailPayload(BaseModel):
@@ -710,33 +725,73 @@ async def send_product_inquiry_email(payload: ProductInquiryEmailPayload):
     if not email or "@" not in email:
         return {"ok": False, "error": "invalid_email"}
 
-    # Idempotenz: Doppelversand bei Retry / Doppelklick verhindern.
-    now = time.time()
-    stale = [k for k, ts in _PI_EMAIL_RECENT.items() if now - ts > 60]
-    for k in stale:
-        _PI_EMAIL_RECENT.pop(k, None)
-    dedupe_key = "|".join([
-        product,
-        email,
-        (payload.first_name or "").strip().lower(),
-        (payload.last_name or "").strip().lower(),
-        (payload.phone or "").strip(),
-    ])
+    # Idempotenz-Key: bevorzugt leadId (persistent, from Supabase-Insert-Response).
+    # Fallback: deterministischer Hash über product+email+first+last+phone, damit
+    # Doppelklick ohne Lead-ID geschluckt wird.
+    lead_id = (payload.leadId or "").strip() or _pi_dedupe_key(payload, product, email)
+    now_utc = datetime.now(timezone.utc)
+
+    # Atomare Reservierung: `insert_one` schlägt mit DuplicateKeyError fehl,
+    # wenn `lead_id` bereits existiert (UNIQUE-Index). So können parallele
+    # Requests nicht beide senden. Bei fehlgeschlagenem vorherigen Versand
+    # (status=failed) reservieren wir das Dokument neu und dürfen es
+    # erneut versuchen.
+    try:
+        await db[PI_EMAIL_IDEMPOTENCY].insert_one({
+            "lead_id": lead_id,
+            "product": product,
+            "email_hash": hashlib.sha256(email.encode("utf-8")).hexdigest()[:32],
+            "status": "reserved",
+            "created_at": now_utc,
+            "sent_at": None,
+            "error": None,
+        })
+        reserved = True
+    except Exception as e:
+        # DuplicateKeyError — Dokument existiert. Wenn der letzte Versuch
+        # gescheitert ist, dürfen wir per atomarem findOneAndUpdate erneut
+        # reservieren; sonst ist bereits ein Send angelaufen/durch.
+        if "duplicate key" not in str(e).lower():
+            logger.exception("idempotency reserve failed: %s", e)
+            return {"ok": False, "error": "idempotency_store_failed"}
+        # Retry-Pfad: nur "failed" darf zurückgesetzt werden.
+        upgraded = await db[PI_EMAIL_IDEMPOTENCY].find_one_and_update(
+            {"lead_id": lead_id, "status": "failed"},
+            {"$set": {"status": "reserved", "reserved_at": now_utc, "error": None}},
+        )
+        reserved = bool(upgraded)
+        if not reserved:
+            # Bereits reserved oder sent → Duplicate zurückmelden.
+            existing = await db[PI_EMAIL_IDEMPOTENCY].find_one({"lead_id": lead_id})
+            already_sent = bool(existing and existing.get("status") == "sent")
+            return {"ok": True, "already_sent": already_sent, "duplicate": True}
+
     subject_name = f"{payload.first_name} {payload.last_name}".strip() or email
     subject = f"Neue Produktanfrage · {product.capitalize()} · {subject_name}"
     try:
         email_id = await _send_email_via_emergent(PRODUCT_INQUIRY_TO, subject, _pi_email_html(payload))
     except HTTPException as e:
         logger.warning("product-inquiry email failed: %s", e.detail)
+        # Fehler markieren — späterer Retry mit gleicher leadId ist erlaubt.
+        await db[PI_EMAIL_IDEMPOTENCY].update_one(
+            {"lead_id": lead_id},
+            {"$set": {"status": "failed", "error": str(e.detail)[:200], "failed_at": datetime.now(timezone.utc)}},
+        )
         return {"ok": False, "error": "email_provider_failed"}
     except Exception as e:  # noqa: BLE001
         logger.exception("product-inquiry email crashed: %s", e)
+        await db[PI_EMAIL_IDEMPOTENCY].update_one(
+            {"lead_id": lead_id},
+            {"$set": {"status": "failed", "error": str(e)[:200], "failed_at": datetime.now(timezone.utc)}},
+        )
         return {"ok": False, "error": "email_crash"}
-    # Idempotenz-Marker erst NACH erfolgreichem Versand persistieren, damit
-    # ein legitimer Retry nach einem transienten Provider-Fehler nicht
-    # geschluckt wird.
-    _PI_EMAIL_RECENT[dedupe_key] = now
-    return {"ok": True, "email_id": email_id, "dry_run": email_id is None}
+
+    # Erfolgreich versendet → Status finalisieren.
+    await db[PI_EMAIL_IDEMPOTENCY].update_one(
+        {"lead_id": lead_id},
+        {"$set": {"status": "sent", "sent_at": datetime.now(timezone.utc), "email_id": email_id}},
+    )
+    return {"ok": True, "email_id": email_id, "dry_run": email_id is None, "lead_id": lead_id}
 
 
 # ---------------------------------------------------------------------------
@@ -3321,6 +3376,10 @@ async def on_startup():
     await db.savings_offers.create_index([("bank_slug", 1), ("product_type", 1)])
     await db.news.create_index("slug", unique=True)
     await db.news.create_index([("published_at", -1)])
+    # Product-Inquiry-E-Mail-Idempotenz (Session 74.9): atomare Reservierung
+    # via UNIQUE-Index auf lead_id + TTL nach 30 Tagen (Auto-Cleanup).
+    await db[PI_EMAIL_IDEMPOTENCY].create_index("lead_id", unique=True)
+    await db[PI_EMAIL_IDEMPOTENCY].create_index("created_at", expireAfterSeconds=60 * 60 * 24 * 30)
     await db.news_markte_articles.create_index("slug", unique=True)
     await db.news_markte_articles.create_index([("published_at", -1)])
     await db.news_markte_articles.create_index([("category", 1), ("published_at", -1)])

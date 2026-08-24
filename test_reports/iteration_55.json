@@ -1,0 +1,38 @@
+{
+  "summary": "Session 74.9 verifiziert: MongoDB-Idempotenz fuer POST /api/send-product-inquiry-email. Backend: 18 pytest-Tests (test_product_inquiry_email.py komplett refactored auf neue duplicate-Semantik) — 17 passed, 1 xfail (Provider-422, bekannt extern), 1 Restart-Test skipped-by-default (seriell gruen verifiziert). Verifiziert: UNIQUE-Index lead_id + TTL 30d auf created_at; Doc-Persistenz mit status reserved->failed/sent; Retry nach failed erlaubt (kein reserved-forever Lock, reserved_at gesetzt); {ok:true, already_sent:true, duplicate:true} bei status=sent; 2 parallele Requests -> genau 1 Send-Attempt + 1 duplicate (race-safe); Hash-Fallback ohne leadId dedupliziert, abweichender Payload erzeugt separates Doc; Persistenz ueber supervisorctl restart backend inkl. Indexe. Alle 6 Produkte HTTP 200, kein 4xx/5xx, keine neuen Backend-Tracebacks (nur bekannte Provider-422-Logzeilen). Frontend E2E (Desktop 1920): aktien + anleihen Wizard je 6 Fragen -> Kontakt-Step -> Submit -> product-inquiry-success; /api/send-product-inquiry-email 200; Mongo-Doc mit status=failed (Provider-422) angelegt. Validation-Race 4x rapid submit -> pi-first-error/pi-last-error bleiben stabil, verschwinden nach Eingabe. Alle 6 product-inquiry-menu-option-* vorhanden. Sticky-CTA Desktop Wrapper 432x108 (unveraendert zu 74.7-Baseline), Mobile Compact-Button 240x56 in 280er-Wrapper, ESC + Dismiss funktionieren, data-pulse-Attribut vorhanden.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/send-product-inquiry-email", "issue": "Bekannt/extern: Provider antwortet 422 undeliverable_recipient fuer PRODUCT_INQUIRY_TO=kundenservice@kapital-direkt24.de -> jeder Lead landet als status='failed'. Der sent-Pfad (duplicate:true) konnte nur durch manuelles Setzen von status='sent' in Mongo verifiziert werden."},
+      {"endpoint": "POST /api/send-product-inquiry-email", "issue": "Browser-Flow liefert NIE eine leadId (submitProductInquiryLead.js insert ohne RETURNING wegen RLS) -> Idempotenz laeuft real immer ueber den Hash-Key. Folge: eine legitime Zweitanfrage derselben Person zum selben Produkt mit identischem Namen/Telefon innerhalb der 30-Tage-TTL wuerde nach einem erfolgreichen Versand still als duplicate geschluckt. Ggf. Hash-Key um einen Zeitfenster-Bucket (z.B. Tag/Stunde) erweitern."},
+      {"endpoint": "POST /api/send-product-inquiry-email", "issue": "Duplicate-Response enthaelt kein lead_id-Feld (Erfolgs-Response schon) — inkonsistente Response-Shape, erschwert Client-Logging."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_product_inquiry_email.py",
+    "/app/backend/tests/check_pi_docs.py",
+    "/app/test_reports/pytest/pi_74_9.xml"
+  ],
+  "action_items": [
+    "Extern (BLOCKED, nicht Code): verifizierte PRODUCT_INQUIRY_TO setzen und Supabase-Migration 20260228120000 ausfuehren, damit fonds/tagesgeld/festgeld/flexgeld-Leads inserten.",
+    "Optional: Hash-Fallback-Key um Zeit-Bucket erweitern, damit spaetere Wiederanfragen nicht dauerhaft dedupliziert werden.",
+    "Optional: lead_id auch in der duplicate-Response zurueckgeben."
+  ],
+  "critical_code_review_comments": [
+    "find_one_and_update({'status':'failed'}) ohne return_document=AFTER liefert das Pre-Image — die Truthiness-Pruefung ist korrekt, ein Kommentar dazu waere aber hilfreich.",
+    "Exception-Handling erkennt DuplicateKey per String-Match ('duplicate key'); robuster waere except pymongo.errors.DuplicateKeyError.",
+    "Frontend ruft '/api/send-product-inquiry-email' relativ statt ueber process.env.REACT_APP_BACKEND_URL — funktioniert nur, weil Frontend/Backend dieselbe Origin teilen."
+  ],
+  "updated_files": ["/app/backend/tests/test_product_inquiry_email.py", "/app/backend/tests/check_pi_docs.py"],
+  "success_rate": {"backend": "100% (17 passed, 1 xfail extern, 1 skipped-by-default)", "frontend": "100% der getesteten Flows"},
+  "seed_data_creation": "Nur temporaere Idempotenz-Docs (TEST-/hash:/lead- Prefix) — nach dem Lauf aus product_inquiry_email_idempotency geloescht.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "test_product_inquiry_email.py deckt Basics + TestIdempotency + TestRestartPersistence ab. Der Restart-Test ist per default geskippt (xdist wuerde das Backend mitten im Parallel-Lauf killen -> 502 in anderen Tests); Ausfuehrung: PI_RESTART_TEST=1 pytest tests/test_product_inquiry_email.py -n0. Der sent-Pfad wird durch manuelles Setzen von status='sent' in Mongo simuliert, weil der Provider im Preview-Env 422 liefert. Consent-Gate schliessen: role-Select (2. select in [data-testid=visitor-welcome-gate]) auf 'privatperson' setzen, dann visitor-accept-btn.",
+  "rca_of_the_issue": "Kein Defekt in 74.9 gefunden. Die einzigen offenen Punkte sind die dokumentierten externen Blocker (Supabase-CHECK-Constraint, unverifizierte PRODUCT_INQUIRY_TO)."
+}

@@ -1,5 +1,61 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 74.9 (Feb 28, 2026) — Supabase-Migration + Persistente Idempotenz ✅
+
+**1) Supabase CHECK-Constraint-Migration (extern-BLOCKED, SQL geliefert)**
+- File `legacy_source/supabase/migrations/20260228120000_product_inquiry_leads_all_products.sql` — droppt `product_inquiry_leads_product_check` und erlaubt jetzt `aktien, anleihen, fonds, tagesgeld, festgeld, flexgeld`. Idempotent (safe re-run). Bestehende Zeilen bleiben unverändert.
+- Verifikations-Query: `SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = 'product_inquiry_leads_product_check';` + Smoke-Insert-in-Rollback-Block.
+- **Emergent hat KEINE DDL-Rechte auf der Supabase-Instanz** → SQL muss manuell in Supabase Studio ausgeführt werden. Bis dahin bleiben 4/6 Wizards (fonds/tagesgeld/festgeld/flexgeld) durch Postgres 23514 blockiert.
+
+**2) PRODUCT_INQUIRY_TO (extern-BLOCKED, Env-Anforderung dokumentiert)**
+- Aktuelle Backend-Env: `EMAIL_REPLY_TO=kundenservice@kapital-direkt24.de` → wird vom Emergent-Provider mit `422 undeliverable_recipient` abgelehnt. `SENDER_EMAIL=Kapitalmitte <kundenservice@kapitalmitte.com>` ist ebenfalls unverifiziert.
+- **Keine verifizierte Adresse im aktuellen Provider-Konto**. Es wird **nichts geraten oder gefaked**.
+- Erforderliche Env-Variable in `backend/.env`:
+  ```
+  PRODUCT_INQUIRY_TO=<verifizierte_empfaengeradresse>
+  ```
+- Sobald gesetzt, funktioniert der End-to-End-Mailversand automatisch. Der Endpoint fällt bis dahin sauber in `{ok:false, error:"email_provider_failed"}` zurück und persistiert `status:"failed"` in der Idempotenz-Collection, was einen späteren Retry mit gleicher `leadId` erlaubt (siehe #3).
+
+**3) In-Memory-Dedupe → MongoDB-Idempotenz**
+- Neue Collection `product_inquiry_email_idempotency`.
+- **Indexe** (in `startup_index_setup`): `UNIQUE(lead_id)` + TTL 30 Tage auf `created_at`.
+- **Dokumentstruktur:** `{ lead_id, product, email_hash (SHA-256 32-char, keine PII im Klartext), status: reserved|sent|failed, created_at, sent_at, failed_at, reserved_at, error, email_id }`.
+- **Idempotenz-Key:** bevorzugt `payload.leadId` (Frontend sollte die Supabase-Lead-ID mitschicken). Fallback: SHA-256-Hash aus `product|email|first|last|phone` als `"hash:…"`-Prefix.
+- **Atomare Reservierung** via `insert_one` (schlägt bei parallelem Zugriff mit DuplicateKey fehl) → parallele Requests können nicht beide senden.
+- **Retry-Semantik:** `find_one_and_update({lead_id, status:"failed"}, {$set:{status:"reserved"}})` erlaubt legitimen Retry nach Provider-Fehler. Bei `reserved`/`sent` → `{ok:true, already_sent:true, duplicate:true}` ohne zweiten Send.
+- **Fehlerpfad:** Provider-Fehler → `status:"failed"` + `error` (max 200 Chars) → nicht „reserved forever".
+- **Erfolg:** `status:"sent"`, `email_id`, `sent_at`.
+- **Multi-Worker-safe & Server-Restart-persistent.**
+
+**Verifikation (Curl-Manual + Testing Agent iteration folgt)**
+- ✅ Endpoint 1. Call → Reservation ok, Provider-Fehler → `status:"failed"`.
+- ✅ Gleicher leadId → `find_one_and_update` upgraded von failed → 2. Call reserviert + versucht erneut.
+- ✅ Parallele Doppelklick-POSTs mit gleichem leadId → Race-safe (DuplicateKey abgefangen).
+- ✅ Kein leadId → SHA-Hash-Fallback funktioniert.
+- ✅ TTL-Index läuft (30 Tage), UNIQUE-Index auf lead_id angelegt.
+
+**Erhalten (nicht angefasst):** Wizard-UI, Sticky-CTA, Validation-UX, Testids, Bonuslogik, Analytics, Newsletter, /handeln, Scroll-Spy-Backlog.
+
+**Verbleibende externe Blocker:**
+1. Supabase-DDL: SQL-File bereitgestellt, muss von DBA in Supabase Studio ausgeführt werden.
+2. PRODUCT_INQUIRY_TO: Env-Variable auf verifizierte Provider-Empfänger-Adresse setzen.
+
+**Verifikation (iteration_55, 100 % Pass)**
+- ✅ 18 pytest-Tests (17 passed, 1 xfail extern Provider-422, 1 restart-safe skipped-by-default).
+- ✅ Indexe verifiziert: `lead_id_1` UNIQUE + `created_at_1` TTL(30d).
+- ✅ Parallele Requests: 1× Send-Attempt + 1× `duplicate:true` (race-safe).
+- ✅ Retry nach `failed` erlaubt (kein reserved-forever-Lock).
+- ✅ `already_sent:true` bei `status='sent'` (verifiziert via Mongo-Manual-Set).
+- ✅ Hash-Fallback ohne leadId dedupliziert; abweichende Payload → separater Doc.
+- ✅ Server-Restart-Persistenz inkl. Indexe.
+- ✅ Frontend E2E: aktien + anleihen Submit → success, Idempotenz-Doc angelegt.
+- ✅ Regression: alle 6 menu-options, Validation-Race stabil, Sticky-CTA 74.7 unverändert.
+
+**Optionale Nachbesserungen (aus Code-Review, nicht Blocker):**
+- Duplicate-Response um `lead_id` erweitern (Konsistenz mit Success-Shape).
+- Hash-Fallback um Zeit-Bucket (Tag/Woche) erweitern für legitime Zweitanfragen.
+- `except pymongo.errors.DuplicateKeyError` statt String-Match.
+
 ## Session 74.8 (Feb 28, 2026) — Email-Endpoint + Wizard-Validation + Testid-Kollision ✅
 
 **P0 – Email-Endpoint 404 behoben**
