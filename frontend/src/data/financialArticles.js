@@ -303,7 +303,7 @@ export const FINANCIAL_ARTICLES = [
     excerpt:
       'Höhere Rendite ohne höheres Risiko gibt es nicht. Aber Risiko lässt sich strukturieren, messen und einer Anlagestrategie zuordnen.',
     image:
-      'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?auto=format&fit=crop&w=1600&q=70',
+      'https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1600&q=70',
     publishedAt: '2025-10-28',
     readingTime: 5,
     featured: false,
