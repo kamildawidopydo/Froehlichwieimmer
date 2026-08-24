@@ -3459,6 +3459,16 @@ async def _admin_news_list(_user: dict = Depends(require_admin), status: Optiona
     return {"total": await db.news_articles.count_documents(query),
             "items": [{**{k: v for k, v in d.items() if k != "_id"}, "id": str(d.get("_id"))} for d in docs]}
 
+
+# Session 75.3 — periodischer Image-Sweep (revalidiert publizierte image_urls,
+# markiert defekte Links, damit der SafeNewsImage-Fallback greift).
+from news_image_sweep import validate_published_news_images as _news_image_sweep_run  # noqa: E402
+
+
+@api.post("/news/admin/image-sweep", summary="Admin: alle publizierten Bild-URLs revalidieren")
+async def _admin_news_image_sweep(_user: dict = Depends(require_admin), limit: Optional[int] = None):
+    return await _news_image_sweep_run(db, limit=limit)
+
 _register_einordnung(api, db)
 
 # --- Investment-Topic-Funnel (Themen-Teaser + Lead-Aufnahme) --------------

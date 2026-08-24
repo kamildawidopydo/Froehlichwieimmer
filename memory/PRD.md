@@ -1,5 +1,77 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 75.3 (Feb 28, 2026) — Periodischer News-Image-Sweep ✅
+
+### Ziel & Umsetzung
+Externe Bild-Hosts können Fotos **nach der Publikation** löschen (Session 75.2 Root Cause). Der neue Sweep revalidiert täglich alle publizierten `image_url`s und markiert defekte Links, damit der SafeNewsImage-Fallback greift, bevor der User sie überhaupt sieht.
+
+### Geänderte / neue Dateien
+| Datei | Änderung |
+|-------|----------|
+| **NEU** `/app/backend/news_image_sweep.py` | Sweep-Modul: `validate_published_news_images(db, limit=?)` |
+| `/app/backend/server.py` | Admin-Route `POST /api/news/admin/image-sweep` |
+| `/app/.emergent/crons.yml` | Neuer Cron `news-image-sweep` — `schedule: "30 2 * * *"` (02:30 UTC, kollisionsfrei mit Fetch=00 und Synthesize=10) |
+
+### Sweep-Funktion Design
+- **Wiederverwendet `_validate_image_url`** aus `news_synthesizer.py` (keine parallele HTTP-Logik)
+- **Scan-Query**: `{ image_url: {$type:"string", $ne:""}, status:"published" }` für `news_articles`; `editorial_posts` wird bei Existenz mitgeprüft (kein `status`-Filter da anderes Schema)
+- **Concurrency**: Semaphore(6) — schnell, aber nicht aggressiv gegen einen Host
+- **Timeout**: 6 s pro URL
+- **Bei broken** → `$set: {image_url:null, hero_image_url:null, image_broken:true, image_broken_at:UTC, image_broken_url:<original>}`
+- **Idempotenz**: bereinigte Docs (`image_url=null`) matchen den Query-Filter nicht mehr → 0 unnötige Writes
+- **Isolation**: try/except pro Doc; kein Abbruch bei einzelner Ausnahme
+- **Kein „auto-heal"** wenn eine URL sich später wieder erholt (bewusst — URL hat sich als unzuverlässig erwiesen)
+
+### Endpoint-Schema
+`POST /api/news/admin/image-sweep` (Depends require_admin)
+Query-Param `limit=<int>` optional (nur Testläufe).
+Response:
+```json
+{
+  "ok": true,
+  "started_at": "2026-08-24T09:26:11.123Z",
+  "finished_at": "2026-08-24T09:26:14.456Z",
+  "duration_seconds": 3.33,
+  "totals": {"checked": 11, "valid": 11, "broken": 0, "errors": 0, "skipped": 0},
+  "per_collection": {
+    "news_articles":    {"checked": 11, "valid": 11, "broken": 0, ...},
+    "editorial_posts":  {"checked": 0,  "valid": 0,  "broken": 0, ...}
+  }
+}
+```
+
+### Cron-Konfiguration
+```yaml
+- name: news-image-sweep
+  schedule: "30 2 * * *"    # 02:30 UTC täglich
+  endpoint: "/api/news/admin/image-sweep"
+  method: POST
+  auth: admin
+```
+Bestehende 4 Crons (fetch-feeds, synthesize, price-alerts, weekly-digest) unverändert. Insgesamt 5 Crons (Platform-Limit erreicht).
+
+### Test-Ergebnisse (alle grün)
+| Szenario | Erwartung | Ergebnis |
+|----------|-----------|----------|
+| SWEEP 1: Baseline (alle 11 valide) | checked=11, broken=0 | ✅ |
+| SWEEP 2: injizierte 404-Unsplash-URL | broken=1, image_url=null, image_broken=true, image_broken_url=orig | ✅ |
+| SWEEP 3: Idempotenz | checked=11 (nicht 12), broken=0, keine Writes | ✅ |
+| SWEEP 4: injizierte 403-URL | broken=1, URL genullt | ✅ |
+| SWEEP 5: Skip-Path (image_url=None) | Doc überspringen, kein DB-Write | ✅ |
+| SWEEP 6: Restore original valide URL | broken=0 | ✅ |
+| HTTP unauth | 401 `{"detail":"Not authenticated"}` | ✅ |
+| HTTP mit Admin-Cookie | 200 JSON-Summary | ✅ |
+| crons.yml YAML-Syntax | 5 Einträge, `news-image-sweep` present | ✅ |
+| Regression `/news/nachrichten` / `/nachrichten/:slug` | unverändert (SafeNewsImage-Fallback funktioniert) | ✅ |
+
+### Verbleibende externe Blocker (unverändert)
+- Supabase `product_inquiry_leads_product_check` → DBA
+- Alpha Vantage + Unsplash API-Keys → warten auf User
+- **Cron-Slot-Limit erreicht** (5/5) — falls weitere Jobs benötigt werden, muss vorher konsolidiert werden
+
+---
+
+
 ## Session 75.2 (Feb 28, 2026) — P0 Broken News Images endgültig behoben ✅
 
 ### Reproduktion & Root Cause

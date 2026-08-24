@@ -32,3 +32,15 @@ crons:
     method: POST
     auth: admin
     description: "Freitag 08:00 UTC: Wochen-Digest mit den 6 wichtigsten Fröhlich-Artikeln der letzten 7 Tage."
+
+  # Session 75.3 — täglich 02:30 UTC: alle publizierten image_urls neu prüfen
+  # (Sync und Synthese laufen zur vollen bzw. :10 Stunde → keine Kollision).
+  # Externe Bild-Hosts können Fotos nach der Publikation löschen; dieser Sweep
+  # markiert defekte URLs, damit das Frontend-SafeNewsImage sofort auf den
+  # lokalen SVG-Fallback wechselt.
+  - name: news-image-sweep
+    schedule: "30 2 * * *"
+    endpoint: "/api/news/admin/image-sweep"
+    method: POST
+    auth: admin
+    description: "Täglich 02:30 UTC alle publizierten image_urls revalidieren; defekte Links werden auf null gesetzt und markiert."
