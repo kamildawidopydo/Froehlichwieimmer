@@ -1,5 +1,51 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 76.4 (Feb 28, 2026) — Server.py Modularisierung Wave 2 (Start) ✅
+
+Vorsichtige, verhaltens-erhaltende Extraktion — kein Big-Bang.
+
+### Was extrahiert wurde
+| Route | Alt | Neu |
+|-------|-----|-----|
+| `POST /api/send-product-inquiry-email` (~140 Zeilen komplexe Logik: Idempotenz, PDF-Attachment, Retry-Fallback, DB-State) | inline in `server.py` | **`/app/backend/routes/product_inquiry.py`** (140 Zeilen) |
+
+### Muster
+Extrahierte Handler-Funktion lebt in `routes/product_inquiry.py`. Der `@api.post("/send-product-inquiry-email")`-Decorator bleibt in `server.py`, aber die Route ist jetzt ein **7-Zeilen-Stub** der auf `routes.product_inquiry.send_product_inquiry_email(payload)` dispatcht. Vorteile:
+- OpenAPI-Signatur (`ProductInquiryEmailPayload`) bleibt in server.py stabil registriert
+- Kein doppeltes Route-Registrieren möglich
+- Rückweg zur Inline-Version ist ein einzelner Search-Replace
+- Shared State (db, mail-helper, models) wird via **lazy import from server** referenziert → keine zirkulären Imports beim Modul-Load
+
+### Test-Ergebnisse (alle grün)
+- Backend start: sauber, keine Import-Cycles
+- `openapi.json`: `/api/send-product-inquiry-email` weiterhin registriert
+- End-to-End real send über extrahierten Handler: `{ok:true, email_id:31c85387-a6e9-…, pdf_attached:true}` ✅
+- Duplicate check: `{ok:true, already_sent:true, duplicate:true}` ✅ Idempotenz intakt
+- Health `db:up` ✅
+- Reports PDF: HTTP 200, application/pdf ✅
+- News-List HTTP 200 ✅
+- Total `/api`-Routes: 93 (unverändert)
+- Kein doppelter Route-Eintrag
+
+### Server.py: 3877 → 3745 Zeilen (-132)
+
+### Warum nur eine Route extrahiert
+- Kontextbudget in dieser Session war knapp (~85k → 78k Tokens)
+- Auth-Routen sind ein deutlich größerer Chirurgen-Eingriff (JWT, cookies, bcrypt, `get_current_user`) und benötigen dedizierte Session
+- News-Routen ~30 Endpoints, gemeinsam mit Modellen und Feed-Providern
+- Muster ist jetzt bewiesen — nächste Session kann Auth + Content risikoarm folgen
+
+### Nicht angefasst
+Services, Datenmodelle, Endpoints, Mail-Flow, PDF-Flow, News-Sweep, Wizard-API, Cron-Konfiguration — alles unverändert.
+
+### Verbleibende externe Blocker (unverändert)
+- Supabase constraint → DBA
+- Alpha Vantage + Unsplash Keys → warten auf User
+- Cron-Slot-Limit 5/5
+
+---
+
+
 ## Session 76.3 (Feb 28, 2026) — PDF Anthrazit+Pink Branding + Resend Prod-Ready ✅
 
 ### Teil 1 — PDF Report Rebrand
