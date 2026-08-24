@@ -67,7 +67,7 @@ const Footer = () => {
               <Link to="/" className="inline-block max-w-full">
                 <BrandLogo
                   variant="onDark"
-                  imgClassName="h-10 w-auto max-w-[min(100%,420px)] object-contain object-left sm:h-12"
+                  imgClassName="h-11 w-auto max-w-[min(100%,26rem)] object-contain object-left sm:h-14 sm:max-w-[min(100%,30rem)]"
                 />
               </Link>
               <p className="mt-6 max-w-lg text-xl font-semibold leading-snug text-white sm:text-2xl">

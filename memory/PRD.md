@@ -1,5 +1,49 @@
 # Kapitalmitte / Webmain — Migration PRD
 
+## Session 76.2 (Feb 28, 2026) — Logo-Größen zentralisiert & konsistent ✅
+
+### Ergebnis
+Logo-Rendering im Header sichtbar größer, klar lesbar, responsiv über 5 Breakpoints. Zentrale Quelle: `BrandLogo` → `BRAND_LOGO_PNG_SRC` → `/assets/logo/frohlich-logo.png?v=3` (Session 76.1 überschrieb PNG). PDF-Header ebenfalls angehoben.
+
+### Geänderte Dateien (3)
+| Datei | Änderung |
+|-------|----------|
+| `Navigation.js` | Header-Container `min-h-[4.25rem]/4.5rem` → `min-h-[4.75rem]/5rem` (76→80 px), Logo-Klassen `h-10 sm:h-11 lg:h-12 xl:h-14 max-w-[15rem→22rem]` → **`h-9 sm:h-10 md:h-11 lg:h-12 xl:h-[3.25rem] max-w-[min(70vw,18rem)→26rem]`** (36/40/44/48/52 px) |
+| `Footer.js` | onDark-Logo `h-10 sm:h-12 max-w-[420px]` → **`h-11 sm:h-14 max-w-[min(100%,26rem)/30rem]`** (44/56 px) |
+| `templates/investment_report.html` | PDF `.hero-brand img.logo { height: 32pt }` → **36pt** |
+
+### Finale Größen
+| Kontext | Mobile | Tablet | Laptop | Desktop | XL |
+|---------|:------:|:------:|:------:|:-------:|:--:|
+| Header | 36 px | 40 px | 44 px | 48 px | **52 px** |
+| Footer | 44 px | — | — | — | **56 px** |
+| PDF Header | **36 pt** (≈ 48 px @96 DPI) | — | — | — | — |
+
+### Zentrale Logo-Quelle (unverändert seit 76.1)
+- `/app/frontend/src/lib/brand.js` → `BRAND_LOGO_PNG_SRC = '/assets/logo/frohlich-logo.png?v=3'`
+- `/app/frontend/src/components/BrandLogo.jsx` — einzige Rendering-Schicht (auto/light/onDark Varianten via CSS-Filter, kein zweites PNG)
+- Alle Nav-, Footer-, AuthShell-, Statement-, SpezialAifPib-, LinkedInPreview-Instanzen laufen bereits über `BrandLogo`
+- PDF-Backend `/app/backend/assets/frohlich-logo-slim.png` — 3.997 B slim, per `_LOGO_CANDIDATES` priorisiert
+
+### Verifikation
+- Screenshot Desktop 1440: Logo `h=52 w=111` px (evaluate via `getBoundingClientRect`) — „2020 · Fröhlich · VERMÖGENSBERATUNG" klar lesbar
+- Header-Layout: Navigation vertikal zentriert, keine Überlagerung, kein horizontaler Scroll
+- Mobile Breakpoint: `h-9` (36 px) — Hamburger-Menü nicht verdeckt
+- PDF (`/api/reports/pdf` Aktien): HTTP 200, `application/pdf`, 40.152 B (unverändert klein — Session-75.6-Slim-Rezept bleibt effektiv)
+- Cache-Bust: PNG wird via `?v=3` Query-Param vom Browser neu geladen
+
+### Nicht angefasst
+Layout-Grids, Farben, Texte, Routing, Wizard, News, Analytics, Lead-Flow, Newsletter, Sticky-CTA — kein Layout-Bruch, kein Content-Change.
+
+### Verbleibende externe Blocker (unverändert)
+- Supabase `product_inquiry_leads_product_check` → DBA
+- Alpha Vantage + Unsplash Keys → warten auf User
+- Resend recipient unverifiziert → 422
+- Cron-Slot-Limit erreicht (5/5)
+
+---
+
+
 ## Session 76.1 (Feb 28, 2026) — Neues Fröhlich-Logo integriert ✅
 
 ### Ergebnis
