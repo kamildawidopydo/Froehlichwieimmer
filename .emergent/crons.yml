@@ -54,3 +54,12 @@ crons:
     method: POST
     auth: admin
     description: "Alle 45 Min Marktpreise für alle publizierten Research-Ticker aktualisieren."
+
+  # Analystendaten seltener als Preise, um Finnhub-Rate-Limits zu schonen
+  # (Free Tier: 60 rpm). Zweimal täglich reicht für Consensus-Änderungen.
+  - name: stock-research-analyst-sync
+    schedule: "0 4,16 * * *"
+    endpoint: "/api/admin/stock-research/sync?auto_publish=true"
+    method: POST
+    auth: admin
+    description: "2×täglich Finnhub-Analystendaten holen und automatisch veröffentlichen (nur wenn FINNHUB_API_KEY gesetzt)."

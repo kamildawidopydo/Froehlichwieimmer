@@ -96,6 +96,11 @@ def _price_provider() -> MarketPriceProvider:
 
 
 def _analyst_provider() -> AnalystResearchProvider:
+    # Session 78.8: When FINNHUB_API_KEY is present, use the aggregated
+    # provider; otherwise stay on the honest NullAnalystProvider.
+    from providers.analyst_finnhub import FinnhubAnalystProvider, _finnhub_available
+    if _finnhub_available():
+        return FinnhubAnalystProvider()
     return NullAnalystProvider()
 
 
@@ -105,7 +110,16 @@ def _analyst_provider() -> AnalystResearchProvider:
 
 
 def _validate_analyst(row: AnalystRow, now: datetime) -> Optional[str]:
-    """Return a rejection reason string, or None if the row is valid."""
+    """Return a rejection reason string, or None if the row is valid.
+
+    Session 78.8 — Provider-consensus rows (aggregated data without a named
+    analyst) skip the "analyst OR research_house required" rule because the
+    source is the provider itself; the row is transparently modelled with
+    ``record_type="provider_consensus"``.
+    """
+    meta = getattr(row, "_provider_meta", None) or {}
+    is_provider_consensus = meta.get("record_type") == "provider_consensus"
+
     if not row.ticker:
         return "ticker fehlt"
     if not isinstance(row.target_price, (int, float)) or row.target_price <= 0:
@@ -118,7 +132,7 @@ def _validate_analyst(row: AnalystRow, now: datetime) -> Optional[str]:
         return "research_date liegt in der Zukunft"
     if not (row.source_name or "").strip():
         return "source_name fehlt"
-    if not (row.analyst or row.research_house):
+    if not is_provider_consensus and not (row.analyst or row.research_house):
         return "weder analyst noch research_house angegeben"
     return None
 
@@ -187,8 +201,13 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
 
     now = datetime.now(timezone.utc)
     inserted = updated = rejected = 0
+    consensus_rows = 0
     for row in rows:
         reason = _validate_analyst(row, now)
+        meta = getattr(row, "_provider_meta", None) or {}
+        record_type = meta.get("record_type") or "analyst_research"
+        if record_type == "provider_consensus":
+            consensus_rows += 1
         stored = {
             "ticker": row.ticker.upper(),
             "company_name": row.company_name or None,
@@ -202,6 +221,9 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
             "research_date": row.research_date,
             "fetched_at": row.fetched_at,
             "ingestion_source": provider.name,
+            "record_type": record_type,
+            # Provider metadata — indexed for transparency but stored flat.
+            "provider_meta": {k: v for k, v in meta.items() if k != "record_type"},
         }
         if reason:
             rejected += 1
@@ -231,7 +253,7 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
             stored["created_at"] = now
             await db.stock_research.insert_one(stored)
             inserted += 1
-    return {"provider": provider.name, "available": True, "inserted": inserted, "updated": updated, "rejected": rejected}
+    return {"provider": provider.name, "available": True, "inserted": inserted, "updated": updated, "rejected": rejected, "consensus_rows": consensus_rows}
 
 
 # ---------------------------------------------------------------------------

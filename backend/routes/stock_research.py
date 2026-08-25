@@ -232,6 +232,8 @@ def serialize_public(doc: Dict[str, Any]) -> Dict[str, Any]:
         "price_is_delayed": bool(doc.get("price_is_delayed", False)),
         "is_stale": _is_stale(doc.get("research_date")),
         "ingestion_source": doc.get("ingestion_source") or "manual",
+        # Session 78.8 — distinguish provider-consensus rows from named-analyst rows.
+        "record_type": doc.get("record_type") or "analyst_research",
     }
 
 
@@ -382,11 +384,23 @@ async def public_consensus():
     Wird nur zurückgegeben, wenn pro Ticker mindestens 3 valide, aktuelle
     (nicht stale) Analystenrows vorhanden sind. Median statt Mittelwert, damit
     einzelne Ausreißer den Wert nicht verzerren.
+
+    Session 78.8: Provider-Consensus-Rows (Finnhub etc.) werden aus der
+    internen Median-Berechnung ausgeschlossen, um Doppelzählung zu
+    vermeiden — diese Rows tragen bereits einen aggregierten Wert.
     """
     await _ensure_indexes_once()
     cutoff = datetime.now(timezone.utc) - timedelta(days=90)
     pipeline = [
-        {"$match": {"published": True, "research_date": {"$gte": cutoff}}},
+        {"$match": {
+            "published": True,
+            "research_date": {"$gte": cutoff},
+            # Exclude provider-consensus rows to prevent double-counting.
+            "$or": [
+                {"record_type": {"$exists": False}},
+                {"record_type": {"$ne": "provider_consensus"}},
+            ],
+        }},
         {"$group": {
             "_id": "$ticker",
             "company_name": {"$last": "$company_name"},

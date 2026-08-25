@@ -8,6 +8,25 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 - 76.5–77.9 — Palette rebuild, Footer/Contact/Hero light, News-Hero Editorial, News-lock fix, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Fresh Article Toast.
+- 78.8 (Feb 25 2026) — **Finnhub-Analystenprovider + Provider-Consensus-Modellierung**:
+  - Neu: `/app/backend/providers/analyst_finnhub.py` (~180 LOC). Implementiert `AnalystResearchProvider` gegen `/stock/price-target` und `/stock/recommendation`. Auth via `FINNHUB_API_KEY`. Timeout via `FINNHUB_TIMEOUT_S`. Throttle 1.1 s zwischen Ticker-Requests (Free-Tier 60 rpm sicher).
+  - **Kritischer Realitäts-Check**: Finnhub liefert **keine** Einzelanalysten und **keine** Research-Häuser — nur aggregierte Werte (`targetHigh/Low/Mean/Median`, `numberAnalysts`, `lastUpdated`) und gebündelte Rating-Buckets (`buy/hold/sell/strongBuy/strongSell`). Der Provider **erfindet keine Namen**: `analyst=None`, `research_house=None`, `source_url=None`.
+  - **Datenmodell erweitert (rückwärtskompatibel)**: neues Feld `record_type ∈ {"analyst_research", "provider_consensus"}` auf allen Rows. Manuelle/CSV-Rows und namentliche Rows sind `analyst_research` (Default beim Serialize). Finnhub-Rows sind `provider_consensus`. Zusätzlich `provider_meta` mit `target_mean/median/high/low`, `number_analysts`, `notes`, `provider_endpoint`.
+  - **Validierung angepasst**: „analyst ODER research_house"-Regel wird für `record_type=provider_consensus` **legitim** übersprungen (Quelle = Provider selbst). Alle anderen Validierungsregeln (target>0, currency, date-not-future, source_name) bleiben aktiv.
+  - **Consensus-Doppelzählung ausgeschlossen**: `/api/stock-research/consensus` Aggregation-Pipeline `$match` schließt Rows mit `record_type=provider_consensus` aus. Der interne Median wird ausschließlich aus namentlichen Einzelanalysten-Rows berechnet — Finnhubs eigener Median wird separat auf der `provider_consensus`-Row als `target_price` gespeichert und angezeigt.
+  - **Provider-Auswahl**: `_analyst_provider()` gibt `FinnhubAnalystProvider` zurück wenn `FINNHUB_API_KEY` gesetzt, sonst `NullAnalystProvider`. Backend startet in beiden Fällen sauber.
+  - **Rate-Limit-Strategie**: Sequentielle Requests mit 1.1 s Delay + Hard-Cap 40 Ticker → max. 80 Requests/Sync × 45 min Preis-Cron = kein Rate-Limit-Risiko. Zusätzlicher Analyst-Cron `stock-research-analyst-sync` schedule `0 4,16 * * *` (2×täglich).
+  - **Fehlerbehandlung**: 401/403 → PermissionError → Sync bricht ab, DB unangetastet. 429 → RuntimeError → Sync bricht früh ab mit bereits gesammelten Rows. Timeout → einzelner Ticker übersprungen. Leere Response → Ticker übersprungen. Unbekannter Ticker → keine Row emittiert.
+  - **Deduplication**: identischer Key wie manuell (`ticker+house+analyst+date+target`). Consensus-Rows haben `research_house=None, analyst=None` → Key ist stabil `AAPL||{date}|{target}`, wird bei jedem Sync als Upsert erkannt (kein Doubletten-Insert).
+  - **QA (grün):**
+    - Structural: Mock-Test mit realer Finnhub-Response-Shape → 1 Row für AAPL, `analyst/research_house=None`, `rating="Kaufen (24/8/2)"` aus recommendation-Buckets, `record_type=provider_consensus`, `provider_meta` vollständig. 401/429 → 0 Rows, kein Crash.
+    - Doppelzählung: 3 namentliche Rows + 1 provider_consensus Row für AAPL → `/consensus` zeigt `analyst_count=3` (nicht 4). ✓
+    - Public API: 4 Rows sichtbar, `record_type` korrekt unterschieden, `source_name` transparent.
+    - Backend Start ohne Key: OK. Backend Start mit Key (env-Injection): OK. Provider-Selection korrekt.
+    - Auth-Regression: `/sync` ohne Auth → 401.
+    - OpenAPI: 107 unique / 107 total operation IDs, 0 duplicates.
+  - **Externer Blocker (bewusst benannt):** Für Live-E2E muss `FINNHUB_API_KEY` im Environment gesetzt werden (kostenlose Registrierung auf finnhub.io, 60 rpm Free Tier). Danach übernimmt der bestehende Cron automatisch. Kein weiterer Code nötig.
+  - Bewusst NICHT verändert: Frontend `StockResearchSection.jsx` (Empty-State bleibt korrekt bei 0 Rows; die neue `record_type`-Info wird noch nicht visuell differenziert — Spec §9 „Frontend nur minimal anpassen, falls erforderlich. Kein Redesign."), Admin-UI/CSV-Import, News-Pipeline, PDF-/Mail-/Auth-Routen.
 - 78.7 (Feb 25 2026) — **Stock-Research: Auto-Sync-Pipeline (Provider-Architektur + Consensus)**:
   - **Provider-Layer** neu unter `/app/backend/providers/`:
     - `base.py` — abstrakte `MarketPriceProvider` + `AnalystResearchProvider` mit strengem Vertrag (keine Fake-Daten, keine erfundenen Analysten).
