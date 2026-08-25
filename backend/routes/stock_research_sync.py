@@ -181,7 +181,8 @@ async def _sync_prices(tickers: List[str]) -> Dict[str, int]:
             continue
         set_doc: Dict[str, Any] = {
             "current_price": float(q.price),
-            "currency": q.currency,
+            "currency": q.currency,                    # legacy alias — bleibt gefüllt für Rückwärtskompat
+            "current_price_currency": q.currency,     # neu 78.11 — explizite Preiswährung
             "price_updated_at": q.price_updated_at or now,
             "price_source": q.price_source or provider.name,
             "price_is_delayed": bool(q.is_delayed),
@@ -220,9 +221,19 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
         logger.warning("analyst provider crash — keeping existing data: %s", exc)
         return {"provider": provider.name, "available": True, "inserted": 0, "updated": 0, "rejected": 0, "provider_error": str(exc)[:200]}
 
+    # Session 78.11 — precompute FX rates for target→price currency conversion.
+    from providers.fx_yfinance import get_fx_rate
+    price_ccy_by_ticker: Dict[str, str] = {}
+    async for pdoc in db.stock_research.find({"ticker": {"$in": [r.ticker.upper() for r in rows]}}, {"ticker": 1, "current_price_currency": 1, "currency": 1}):
+        t = pdoc.get("ticker")
+        c = (pdoc.get("current_price_currency") or pdoc.get("currency") or "").upper()
+        if t and c and t not in price_ccy_by_ticker:
+            price_ccy_by_ticker[t] = c
+
     now = datetime.now(timezone.utc)
     inserted = updated = rejected = 0
     consensus_rows = 0
+    fx_hits = 0
     for row in rows:
         reason = _validate_analyst(row, now)
         meta = getattr(row, "_provider_meta", None) or {}
@@ -236,7 +247,8 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
             "research_house": row.research_house or None,
             "rating": row.rating or None,
             "target_price": float(row.target_price) if row.target_price else 0.0,
-            "currency": row.currency,
+            "currency": row.currency,                        # legacy — bleibt für Rückwärtskompat
+            "target_price_currency": row.currency,          # neu 78.11 — explizite Targetwährung
             "source_name": row.source_name or "",
             "source_url": row.source_url or None,
             "research_date": row.research_date,
@@ -246,6 +258,16 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
             # Provider metadata — indexed for transparency but stored flat.
             "provider_meta": {k: v for k, v in meta.items() if k != "record_type"},
         }
+        # Session 78.11 — precompute FX rate (target→price currency) so the
+        # serializer needs no async at read time.
+        price_ccy = price_ccy_by_ticker.get(stored["ticker"], "")
+        if price_ccy and row.currency and price_ccy != row.currency.upper():
+            fx = await get_fx_rate(row.currency, price_ccy)
+            if isinstance(fx, (int, float)) and fx > 0:
+                stored["fx_rate"] = float(fx)
+                stored["fx_source"] = "yahoo-finance"
+                stored["fx_updated_at"] = now
+                fx_hits += 1
         if reason:
             rejected += 1
             # Store rejection audit trail — but never published.
@@ -274,7 +296,7 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
             stored["created_at"] = now
             await db.stock_research.insert_one(stored)
             inserted += 1
-    return {"provider": provider.name, "available": True, "inserted": inserted, "updated": updated, "rejected": rejected, "consensus_rows": consensus_rows}
+    return {"provider": provider.name, "available": True, "inserted": inserted, "updated": updated, "rejected": rejected, "consensus_rows": consensus_rows, "fx_hits": fx_hits}
 
 
 # ---------------------------------------------------------------------------

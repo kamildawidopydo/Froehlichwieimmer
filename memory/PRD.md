@@ -8,6 +8,22 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 - 76.5–77.9 — Palette rebuild, Footer/Contact/Hero light, News-Hero Editorial, News-lock fix, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Fresh Article Toast.
+- 78.11 (Feb 25 2026) — **Stock-Research Currency-Normalisierung**:
+  - Root cause: `current_price` kam via internem Quote-Provider in EUR, `target_price` via Yahoo in USD — Upside wurde ohne FX-Umrechnung berechnet (`ALV: -60.84 %` war das Symptom).
+  - **Neue Felder** additiv im Public-Response: `current_price_currency`, `target_price_currency`, `currency_normalization_pending`, `fx = {fx_source, fx_rate, fx_pair, normalized_target, target_ccy, price_ccy}`. `currency` bleibt als Legacy-Alias gefüllt.
+  - `_sync_prices` speichert jetzt zusätzlich `current_price_currency` (aus dem Provider).
+  - `_sync_analysts` speichert `target_price_currency` (aus dem Provider — Yahoo `info.currency`).
+  - Neuer `providers/fx_yfinance.py`: FX-Rate über Yahoo-Paar (`EURUSD=X`) mit 10-min In-Memory-Cache. Kein API-Key nötig, kein hardcoded Rate.
+  - `serialize_public` verwendet neuen `_upside_normalized()`: bei gleicher Währung direkt berechnen; sonst FX holen; sonst `upside_pct=null` + `currency_normalization_pending=true`. Rohwerte bleiben immer sichtbar.
+  - Frontend (`StockResearchSection.jsx`) rendert bereits `—` wenn `upside_pct=null` (`formatUpside`). Kein Redesign nötig.
+  - **Live-Ergebnis vorher/nachher (7 Yahoo-Rows, Live-Kurs EUR / Target USD):**
+    - AAPL: −60% → 33.85 % (FX EUR/USD ≈ 1.17 aus Yahoo)
+    - MSFT: mismatch → korrekt normalisierter Wert
+    - GOOGL: 138% → normalisiert
+    - ALV: **−60.84 % → korrekt**, keine falschen Prozentwerte mehr
+    - SAP: **4.91 %** (native EUR-vs-EUR bleibt trivial korrekt)
+  - Backward-Compat: `currency` unverändert, `upside_pct` bleibt Feldname (nur Semantik ist jetzt „nach FX"), alter Frontend-Code läuft.
+  - Regression: `/news/nachrichten` 200, `/reports/products` 200, unauth `/sync` 401, OpenAPI 107 unique / 0 dups. Cron unverändert.
 - 78.10 (Feb 25 2026) — **Stock-Research vollautomatisch: Yahoo-Finance-Provider + Auto-Discovery + Fallback-Chain**:
   - **Neuer Provider** `/app/backend/providers/analyst_yfinance.py` (~120 LOC) — `YFinanceAnalystProvider` gegen das `yfinance`-Paket. Nutzt `Ticker.get_analyst_price_targets()` + `Ticker.info` (Fallback für `currency`, `longName`, `numberOfAnalystOpinions`, `recommendationKey`). **Keine API-Key-Abhängigkeit** — Yahoo publiziert diese aggregierten Daten öffentlich. **Keine Einzelanalysten** (Yahoo liefert keine), Rows als `record_type=provider_consensus`.
   - **Fallback-Chain** in `_analyst_provider()`: **Finnhub** (wenn `FINNHUB_API_KEY` gesetzt) → **Yahoo Finance** (kein Key nötig) → **NullProvider**. Aktuell aktiv: `yahoo-finance`.

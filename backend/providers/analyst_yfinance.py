@@ -94,6 +94,8 @@ class YFinanceAnalystProvider(AnalystResearchProvider):
                 current = current or info.get("currentPrice")
                 num_analysts = info.get("numberOfAnalystOpinions")
                 company_name = info.get("longName") or info.get("shortName")
+                # Yahoo `currency` = Handelswährung (matches current + targets).
+                # `financialCurrency` = Reporting-Währung (Bilanz) — NICHT für Kursziele.
                 currency = (info.get("currency") or "USD").upper()
                 rec = info.get("recommendationKey")
                 if isinstance(rec, str) and rec:

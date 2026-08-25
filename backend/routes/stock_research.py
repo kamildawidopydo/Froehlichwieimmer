@@ -163,6 +163,37 @@ def _upside(current: float, target: float) -> Optional[float]:
         return None
 
 
+def _upside_normalized(doc: Dict[str, Any]) -> tuple[Optional[float], Optional[Dict[str, Any]]]:
+    """Session 78.11 — return (upside_pct, fx_meta) or (None, None) if currency
+    normalisation is not possible. Reads a **precomputed** fx_rate stored on
+    the row by `_sync_analysts` (see routes/stock_research_sync.py). No async
+    call at serialize time — avoids event-loop deadlocks.
+    """
+    cur = doc.get("current_price")
+    tgt = doc.get("target_price")
+    if not isinstance(cur, (int, float)) or cur <= 0 or not isinstance(tgt, (int, float)) or tgt <= 0:
+        return None, None
+    price_ccy = (doc.get("current_price_currency") or doc.get("currency") or "").upper()
+    target_ccy = (doc.get("target_price_currency") or doc.get("currency") or "").upper()
+    if not price_ccy or not target_ccy:
+        return None, None
+    if price_ccy == target_ccy:
+        return round(((tgt - cur) / cur) * 100.0, 2), None
+    fx_rate = doc.get("fx_rate")
+    if isinstance(fx_rate, (int, float)) and fx_rate > 0:
+        tgt_norm = tgt * fx_rate
+        return round(((tgt_norm - cur) / cur) * 100.0, 2), {
+            "fx_source": doc.get("fx_source") or "yahoo-finance",
+            "fx_rate": fx_rate,
+            "fx_pair": f"{target_ccy}{price_ccy}",
+            "normalized_target": round(tgt_norm, 4),
+            "target_ccy": target_ccy,
+            "price_ccy": price_ccy,
+            "fx_updated_at": _iso(doc.get("fx_updated_at")),
+        }
+    return None, {"fx_status": "unavailable", "target_ccy": target_ccy, "price_ccy": price_ccy}
+
+
 def _iso(dt: Any) -> Optional[str]:
     if isinstance(dt, datetime):
         if dt.tzinfo is None:
@@ -211,15 +242,23 @@ def serialize_public(doc: Dict[str, Any]) -> Dict[str, Any]:
     Session 78.7 adds additive fields only (`price_updated_at`,
     `research_updated_at`, `price_is_delayed`, `is_stale`, `ingestion_source`)
     without altering existing keys — response is backward-compatible.
+    Session 78.11: `upside_pct` wird nur zurückgegeben, wenn `current_price`
+    und `target_price` in derselben Währung sind ODER ein FX-Kurs verfügbar
+    ist. Sonst `null` + `currency_normalization_pending=true`.
     """
+    upside, fx = _upside_normalized(doc)
     return {
         "id": str(doc.get("_id")),
         "company_name": doc.get("company_name") or "",
         "ticker": doc.get("ticker") or "",
         "current_price": doc.get("current_price"),
+        "current_price_currency": doc.get("current_price_currency") or doc.get("currency") or "",
         "target_price": doc.get("target_price"),
-        "currency": doc.get("currency") or "EUR",
-        "upside_pct": _upside(doc.get("current_price"), doc.get("target_price")),
+        "target_price_currency": doc.get("target_price_currency") or doc.get("currency") or "",
+        "currency": doc.get("currency") or "EUR",  # legacy alias
+        "upside_pct": upside,
+        "currency_normalization_pending": upside is None and isinstance(doc.get("current_price"), (int, float)) and isinstance(doc.get("target_price"), (int, float)),
+        "fx": fx,
         "analyst": doc.get("analyst") or "",
         "research_house": doc.get("research_house") or "",
         "rating": doc.get("rating") or "",
