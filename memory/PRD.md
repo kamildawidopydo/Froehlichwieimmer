@@ -7,6 +7,17 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 79.5 (Feb 25 2026) — **News-Detail „Aus dem Archiv"-Badge**:
+  - **Backend, additiv** (kein Breaking):
+    - `news_retention.py::find_article_by_slug` und `find_articles_by_slugs` setzen jetzt einen internen Marker `_from_archive: bool` auf jedem gefundenen Doc. Live-Docs bekommen `False`, Archiv-Docs `True`. Semantik sonst unverändert.
+    - `news_provider.py::MongoNewsProvider._to_public` leitet daraus 3 neue Public-Felder ab: `is_archived: bool`, `archived_at: iso | null`, `archive_reason: str | null`. Der interne Marker `_from_archive` wird **nicht** durchgereicht. Live-Docs liefern `is_archived=false`, `archived_at=null`.
+    - `investment_topics.py::/news/by-slugs` liefert die beiden Felder ebenfalls additiv mit, damit der Wissen-Block bereits weiß, dass verlinkte Detailseiten den Badge tragen werden.
+  - **Frontend**: `NachrichtenDetailPage.jsx` zeigt bei `item.is_archived === true` eine dezente Badge-Box unter dem Meta-Bereich („Aus dem Archiv. Dieser Beitrag ist älter als 90 Tage — der Link bleibt bewusst gültig." + optional „Archiviert am …"). Kein Warn-Stil, `role="note"` + `aria-label` für Screen-Reader, `data-testid="news-detail-archived-badge"`.
+  - **Feed-Design unverändert**: Feed-Listings bleiben strikt live-only; der Badge kann daher nur auf Detailseiten und in `/news/by-slugs`-Antworten auftauchen. Related-Endpoint (Pool live-only) bleibt unangetastet — falls der aktuell aufgerufene Slug archiviert ist, wird trotzdem das Badge auf der Detailseite gerendert.
+  - **SEO unverändert**: keine Änderung an canonical/slug/title/meta description/OG-URL. `PageMeta.noIndex` bleibt an `is_demo` gekoppelt, nicht an `is_archived`.
+  - **Tests** `tests/test_news_archive_badge.py` — 5 grün: (1) Live-Doc → `_from_archive=false`; (2) Archiv-Doc → `_from_archive=true` + `archived_at`; (3) `include_archive=false` überspringt Archiv; (4) Batch markiert nur Archiv-Docs; (5) `_to_public` liefert Badge-Felder korrekt inkl. Fehlen-des-Datums-Fall (Badge trotzdem True, `archived_at=null`).
+  - **Live-E2E** (kontrollierter Test gegen Prod-DB, danach restored): 1 Artikel auf −100d backdatiert → Retention-Archive → Detail-Endpoint lieferte `is_archived=true`, `archived_at="…"`, `archive_reason="retention_90d"`, Title + Fulltext weiterhin verfügbar → Feed-Ausschluss verifiziert → `/news/by-slugs` liefert `is_archived=true` mit Archiv-Datum → Restore auf live=30/archive=0.
+  - **Regression grün**: `tests/test_news_retention.py` weiterhin 8/8, OpenAPI 111 endpoints / 0 duplicate operation IDs, News-Feed, Publishers, Related, Retention-Endpoints, Rehearsal-Endpoint, Auth, Health alle unverändert.
 - 79.4 (Feb 25 2026) — **Escalation Rehearsal (Test-Mail-Workflow)**:
   - Neue Funktion `news_alert.py::send_escalation_test_mail(db, send_email, admin_email=None)` — nutzt exakt denselben Resend-Sender wie die echte Eskalation, denselben Empfängerkreis (`NEWS_ALERT_ESCALATION_TO`), aber:
     - Betreff/Body eindeutig als `[TEST] Fröhlich News-Pipeline · Eskalations-Rehearsal` gekennzeichnet.

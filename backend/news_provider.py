@@ -345,6 +345,13 @@ class MongoNewsProvider(NewsProvider):
 
     def _to_public(self, doc: dict) -> dict:
         content_type = doc.get("content_type") or "news_synthesis"
+        # Session 79.5 — Archiv-Herkunft additiv aufsurfacen. Marker wird von
+        # `news_retention.find_article_by_slug` gesetzt; falls das Feld direkt
+        # aus einem Retention-Move stammt (Archiv-Doc), enthält es zusätzlich
+        # `archived_at`/`archive_reason`.
+        is_archived = bool(doc.get("_from_archive"))
+        archived_at = doc.get("archived_at") if is_archived else None
+        archive_reason = doc.get("archive_reason") if is_archived else None
         return {
             "id": str(doc.get("_id") or doc.get("slug")),
             "slug": doc["slug"],
@@ -378,6 +385,10 @@ class MongoNewsProvider(NewsProvider):
             "relevance_score": int(doc.get("relevance_score", 0)),
             "investment_topic_slug": doc.get("investment_topic_slug") or None,
             "is_demo": False,
+            # Additiv (79.5) — Aus-dem-Archiv-Badge auf Detailseite.
+            "is_archived": is_archived,
+            "archived_at": archived_at.isoformat() if hasattr(archived_at, "isoformat") else archived_at,
+            "archive_reason": archive_reason,
         }
 
     def _to_raw_public(self, doc: dict) -> dict:

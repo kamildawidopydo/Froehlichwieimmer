@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowUpRight, PlayCircle } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, PlayCircle, Archive } from 'lucide-react';
 import axios from 'axios';
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
@@ -125,6 +125,30 @@ const NachrichtenDetailPage = () => {
                 {publishedFmt}
                 <span> · Redaktion: <span className="text-bank-text">Fröhlich Vermögensberatung</span></span>
               </p>
+
+              {/* Session 79.5 — dezenter „Aus dem Archiv"-Hinweis für Artikel,
+                  die über den Live→Archiv-Fallback ausgeliefert wurden. */}
+              {item.is_archived && (
+                <div
+                  role="note"
+                  aria-label="Dieser Artikel wurde archiviert"
+                  data-testid="news-detail-archived-badge"
+                  className="mt-5 inline-flex items-start gap-2 rounded border border-bank-border bg-bank-panel px-3 py-2 text-[12px] text-bank-text-muted"
+                >
+                  <Archive size={13} strokeWidth={1.7} className="mt-[1px] shrink-0" aria-hidden="true" />
+                  <span>
+                    <span className="font-medium text-bank-text">Aus dem Archiv.</span>{' '}
+                    Dieser Beitrag ist älter als 90 Tage — der Link bleibt bewusst gültig.
+                    {item.archived_at && (
+                      <span className="ml-1 block text-[11px] tracking-[0.02em] text-bank-text-muted sm:inline sm:ml-2">
+                        Archiviert am {new Date(item.archived_at).toLocaleDateString('de-DE', {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                        })}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
             </>
           )}
         </div>

@@ -219,17 +219,27 @@ async def find_article_by_slug(db, slug: str, *, include_archive: bool = True):
     Rückgabe: das Mongo-Dokument oder `None`. Keine Public-Shape-Umformung —
     das erledigt weiterhin der jeweilige Caller (`MongoNewsProvider._to_public`,
     `news_nachrichten_related`, `/news/by-slugs`).
+
+    Session 79.5: Wenn das Dokument aus dem Archiv stammt, wird der zusätzliche
+    Marker ``_from_archive=True`` gesetzt. Callers/Serializers können daraus
+    additive Public-Felder (``is_archived``, ``archived_at``, ``archive_reason``)
+    ableiten. Die Semantik bleibt sonst unverändert — bestehende Callers, die
+    den Marker ignorieren, sehen keine Veränderung.
     """
     if not slug:
         return None
     live_doc = await db[LIVE_COLLECTION].find_one({"slug": slug, "is_published": True})
     if live_doc:
+        live_doc["_from_archive"] = False
         return live_doc
     if not include_archive:
         return None
     # Archiv: `is_published` wurde beim Verschieben mitkopiert. Wir erlauben
     # nur ehemals veröffentlichte Artikel als Fallback (nie Drafts freigeben).
-    return await db[ARCHIVE_COLLECTION].find_one({"slug": slug, "is_published": True})
+    arch_doc = await db[ARCHIVE_COLLECTION].find_one({"slug": slug, "is_published": True})
+    if arch_doc:
+        arch_doc["_from_archive"] = True
+    return arch_doc
 
 
 async def find_articles_by_slugs(db, slugs: Iterable[str], *, include_archive: bool = True) -> dict:
@@ -237,6 +247,8 @@ async def find_articles_by_slugs(db, slugs: Iterable[str], *, include_archive: b
     wird nicht garantiert (Callers sortieren selbst).
 
     Rückgabe: Dict `{slug: doc}` — nur gefundene Slugs sind enthalten.
+    Docs aus dem Archiv erhalten den Marker ``_from_archive=True`` (siehe
+    ``find_article_by_slug`` für Details).
     """
     slug_list = [s for s in (slugs or []) if s]
     if not slug_list:
@@ -247,6 +259,7 @@ async def find_articles_by_slugs(db, slugs: Iterable[str], *, include_archive: b
         "is_published": True,
     })
     async for d in live_cursor:
+        d["_from_archive"] = False
         out[d["slug"]] = d
     if include_archive:
         remaining = [s for s in slug_list if s not in out]
@@ -256,6 +269,7 @@ async def find_articles_by_slugs(db, slugs: Iterable[str], *, include_archive: b
                 "is_published": True,
             })
             async for d in arch_cursor:
+                d["_from_archive"] = True
                 out[d["slug"]] = d
     return out
 

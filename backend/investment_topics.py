@@ -329,6 +329,10 @@ def register(api: APIRouter, db, send_email_fn, require_admin=None):
             if status is not None and status != "published":
                 continue
             pub = d.get("published_at")
+            # Session 79.5 — Archiv-Herkunft additiv mitliefern, damit auch
+            # Wissen-Block-Karten den Badge auf der verlinkten Detailseite
+            # nicht überraschen (dort erneut gerendert).
+            arch = d.get("archived_at") if d.get("_from_archive") else None
             by_slug[s] = {
                 "id": str(d.get("_id") or d["slug"]),
                 "slug": d["slug"],
@@ -337,6 +341,8 @@ def register(api: APIRouter, db, send_email_fn, require_admin=None):
                 "category": d.get("category"),
                 "image_url": d.get("image_url"),
                 "published_at": pub.isoformat() if hasattr(pub, "isoformat") else pub,
+                "is_archived": bool(d.get("_from_archive")),
+                "archived_at": arch.isoformat() if hasattr(arch, "isoformat") else arch,
             }
         # Reihenfolge der Anfrage bewahren, unbekannte Slugs überspringen (kein Error).
         items = [by_slug[s] for s in raw if s in by_slug]
