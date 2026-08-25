@@ -6,7 +6,7 @@ import CompactReviewCard from '@/components/reviews/CompactReviewCard';
 import ReviewSubmitForm from '@/components/reviews/ReviewSubmitForm';
 import { reviewsApi } from '@/services/reviewsApi';
 
-const PAGE_SIZE   = 6;       // 3×2 Grid pro Seite (Desktop)
+const PAGE_SIZE   = 10;      // 10 Karten pro Seite (Session 80.5)
 const POOL_SIZE   = 60;      // clientseitige Pagination auf einem gecachten Pool
 
 const SORT_OPTIONS = [
