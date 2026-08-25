@@ -7,6 +7,18 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 79.2 (Feb 25 2026) — **Stock-Research Publish-State Regression Fix**:
+  - **Symptom**: Homepage-Sektion „Aktien mit Potenzial" zeigte Empty State, obwohl 11 Rows im `stock_research` Collection lagen. `GET /api/stock-research` filtert korrekt auf `{"published": True}` → 0 Items.
+  - **Root Cause** (`routes/stock_research_sync.py::_sync_analysts`): Bei `auto_publish=False` wurde `stored["published"] = False` unconditionally in den `$set`-Payload geschrieben. Jeder manuelle `sync_type=both` (oder `sync_type=analyst` ohne `auto_publish=true`) hat dadurch bereits publizierte Rows ungewollt zurück auf Draft geschaltet. Beispiel-Ablauf: 04:00 UTC Cron publiziert korrekt → 10:49 UTC manueller Test-Sync ohne `auto_publish` setzt alle 11 Rows auf `published=False` → Homepage leer.
+  - **Fix**: chirurgische Änderung des Publish-State-Handlings.
+    - `auto_publish=True` → unverändert: `_publish_guard` entscheidet über `published=True/False`.
+    - `auto_publish=False` **auf UPDATES** → `published` wird per `stored.pop("published", None)` explizit aus dem `$set`-Payload entfernt; bestehender Publish-State bleibt exakt erhalten.
+    - `auto_publish=False` **auf INSERTS** → `stored.setdefault("published", False)` — Draft-First-Semantik für neue Rows bleibt.
+  - **Regressionstests**: `tests/test_stock_research_publish_state.py` — 5 grün: (1) bestehende `published=True` Row + `auto_publish=False` → bleibt True; (2) bestehende Draft-Row + `auto_publish=False` → bleibt False; (3) neue Provider-Row + `auto_publish=False` → `published=False`; (4) valide Row + `auto_publish=True` → `published=True`; (5) invalide Row + `auto_publish=True` → nicht publiziert (rejected oder guard-blocked).
+  - **Live-Verifikation**: 11 Rows in DB, alle `published=True`. Manueller `POST /api/admin/stock-research/sync?sync_type=both` (ohne `auto_publish`) → `updated=11, inserted=0`, `published` bleibt `True` bei allen 11 Rows. `GET /api/stock-research?limit=12` → `count=11`. Homepage-Sektion rendert wieder.
+  - **Cron unverändert**: `stock-research-sync` alle 45 Min (`sync_type=prices`), `stock-research-analyst-sync` 04:00 & 16:00 UTC (`sync_type=analyst&auto_publish=true`). Keine Änderung an `.emergent/crons.yml`.
+  - **Regression grün**: OpenAPI 109 endpoints / 0 duplicate operation IDs. Backend clean start. News / Retention / Product-Inquiry / Investment-Topics / PDF-Mail / Alerts unverändert.
+  - **Backward-Compat**: Keine API-Vertrags-Änderung. Keine Response-Shape-Änderung. Nur interne DB-Update-Semantik.
 - 79.1 (Feb 25 2026) — **Alert Escalation Ladder (P1)**:
   - `news_alert.py` erweitert (kein Umbau, additiv): neue State-Felder `incident_started_at`, `escalation_sent_at`, `last_escalation_error` in `job_summaries._id="alert_state"`. Beim WARN-Erst-Versand wird `incident_started_at=now` gesetzt und die Eskalations-Felder gecleart. Bei Recovery werden alle Incident-Felder auf `null` zurückgesetzt — neuer Incident wieder eskalierbar.
   - Neue Funktion `_maybe_escalate()` prüft nach jedem Freshness-Check, ob `now - incident_started_at ≥ ESCALATION_AGE_HOURS` (Default 6h, env `NEWS_ALERT_ESCALATION_HOURS`) und `escalation_sent_at` noch `null` ist. Wenn ja: 2. Mail an `NEWS_ALERT_ESCALATION_TO` (kommagetrennt, mehrere Empfänger). `escalation_sent_at` wird NUR gesetzt, wenn ≥ 1 Empfänger bestätigt ist — sonst Retry im nächsten Check. Fehler landen in `last_escalation_error`.
