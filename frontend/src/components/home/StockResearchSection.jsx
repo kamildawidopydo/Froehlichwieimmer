@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import axios from 'axios';
-import { BarChart3, LineChart, ShieldCheck } from 'lucide-react';
+import { LineChart } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
@@ -36,19 +36,7 @@ const INFO_CARDS = [
     key: 'fundamental',
     kicker: 'Fundamentale Stärke',
     body: 'Wir betrachten Geschäftsmodell, Bilanzqualität, Ertragskraft und langfristige Perspektiven.',
-    Icon: BarChart3,
-  },
-  {
-    key: 'experten',
-    kicker: 'Experten-Know-How',
-    body: 'Analysteneinschätzungen werden transparent mit Quelle und Datenstand dargestellt.',
     Icon: LineChart,
-  },
-  {
-    key: 'risiko',
-    kicker: 'Risikobewusst Investieren',
-    body: 'Kursziele sind Einschätzungen und keine Garantie für zukünftige Wertentwicklungen.',
-    Icon: ShieldCheck,
   },
 ];
 
@@ -379,34 +367,6 @@ const StockResearchSection = ({ rows: rowsProp }) => {
             Quellen: Analysten-/Research-Angaben der jeweils genannten Anbieter
           </p>
         ) : null}
-
-        {/* Info cards */}
-        <motion.ul
-          {...reveal(2)}
-          className="mt-14 grid grid-cols-1 gap-6 sm:mt-16 md:grid-cols-3 md:gap-7"
-          data-testid="stock-research-info-cards"
-        >
-          {INFO_CARDS.map(({ key, kicker, body, Icon }) => (
-            <li
-              key={key}
-              className="group relative flex flex-col rounded-2xl border border-bank-border bg-white p-7 transition-colors hover:border-bank-primary/30 sm:p-8"
-              data-testid={`stock-research-info-card-${key}`}
-            >
-              <span
-                aria-hidden
-                className="mb-6 inline-flex h-11 w-11 items-center justify-center rounded-full border border-bank-primary/25 bg-bank-mint/60 text-bank-primary-strong"
-              >
-                <Icon size={18} strokeWidth={LUCIDE_STROKE} />
-              </span>
-              <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.24em] text-bank-primary-strong/85">
-                {kicker}
-              </p>
-              <p className="mt-3 text-[14.5px] leading-relaxed text-bank-text-muted">
-                {body}
-              </p>
-            </li>
-          ))}
-        </motion.ul>
 
         {/* Disclaimer */}
         <p className="mx-auto mt-14 max-w-[54rem] text-center text-[12px] leading-relaxed text-bank-text-muted sm:mt-16 sm:text-[12.5px]">
