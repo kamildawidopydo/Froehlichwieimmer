@@ -367,13 +367,6 @@ const StockResearchSection = ({ rows: rowsProp }) => {
             Quellen: Analysten-/Research-Angaben der jeweils genannten Anbieter
           </p>
         ) : null}
-
-        {/* Disclaimer */}
-        <p className="mx-auto mt-14 max-w-[54rem] text-center text-[12px] leading-relaxed text-bank-text-muted sm:mt-16 sm:text-[12.5px]">
-          Analysteneinschätzungen und Kursziele stellen keine Anlageberatung oder Empfehlung zum
-          Kauf oder Verkauf von Wertpapieren dar. Einschätzungen und Kursziele können sich jederzeit
-          ändern.
-        </p>
       </div>
     </section>
   );
