@@ -289,8 +289,14 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
             continue
         stored["dedupe_key"] = _duplicate_key(stored)
         stored["updated_at"] = now
+        # Session 79.2 — publish-Semantik fix: manuelle Syncs ohne auto_publish
+        # dürfen NICHT den `published`-Status bereits publizierter Rows
+        # zurücksetzen. Sonst schaltet jeder Debug-Sync die Homepage-Sektion
+        # auf Empty State.
+        #   • auto_publish=True  → probe→guard→published True/False
+        #   • auto_publish=False → auf UPDATES `published` unangetastet lassen,
+        #                          auf INSERTS Draft-First (published=False)
         if auto_publish:
-            # Only publish rows that also pass the manual publish guard.
             probe = dict(stored)
             probe["current_price"] = 1.0  # publish_guard only checks presence
             try:
@@ -298,14 +304,16 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
                 stored["published"] = True
             except HTTPException:
                 stored["published"] = False
-        else:
-            stored["published"] = False
         exists = await db.stock_research.find_one({"dedupe_key": stored["dedupe_key"]}, {"_id": 1})
         if exists:
+            if not auto_publish:
+                # `published` intentionally NOT overwritten on update.
+                stored.pop("published", None)
             await db.stock_research.update_one({"_id": exists["_id"]}, {"$set": stored})
             updated += 1
         else:
             stored["created_at"] = now
+            stored.setdefault("published", False)  # Draft-First für neue Rows
             await db.stock_research.insert_one(stored)
             inserted += 1
     return {"provider": provider.name, "available": True, "inserted": inserted, "updated": updated, "rejected": rejected, "consensus_rows": consensus_rows, "fx_hits": fx_hits}
