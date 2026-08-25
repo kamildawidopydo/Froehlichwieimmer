@@ -8,6 +8,23 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 - 76.5–77.9 — Palette rebuild, Footer/Contact/Hero light, News-Hero Editorial, News-lock fix, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Fresh Article Toast.
+- 78.9 (Feb 25 2026) — **Cron-Trennung Stock-Research: `sync_type=prices|analyst|both`**:
+  - `POST /api/admin/stock-research/sync` neuer Query-Param `sync_type` (default `both`, regex-validiert `^(prices|analyst|both)$`).
+  - `_run_sync()` in `routes/stock_research_sync.py` verzweigt: `prices` → nur `_sync_prices`, `analyst` → nur `_sync_analysts`, `both` → beide (legacy). Übersprungene Sub-Syncs liefern `None` in der Response-Struktur (`{"price": None, "analyst": {...}}`) — beobachtbar in Audit-Log und Response.
+  - `.emergent/crons.yml` aktualisiert:
+    - `stock-research-sync` `*/45 * * * *` ruft jetzt `…?sync_type=prices` — **kein Finnhub-Call** mehr in diesem Job.
+    - `stock-research-analyst-sync` `0 4,16 * * *` ruft `…?sync_type=analyst&auto_publish=true` — 2×täglich, schont Finnhub Free-Tier-Limit.
+  - **QA (grün):**
+    - `sync_type=prices` → `analyst=None` ✓ (Trennung intakt, keine unnötigen Finnhub-Requests)
+    - `sync_type=analyst` → `price=None` ✓
+    - `sync_type=both` → beide Sub-Summaries gefüllt ✓ (Backward-Compat für manuelle Admin-Trigger)
+    - `sync_type=fantasy` → 422 (Pydantic-Regex-Validierung)
+    - Ohne Auth beide Varianten → 401 ✓
+    - Public `/stock-research` und `/consensus` unverändert (rückwärtskompatibel) ✓
+    - OpenAPI: 107 unique / 107 total operation IDs, 0 duplicates ✓
+    - Backend clean start, keine ImportErrors ✓
+  - **Externer Blocker (unverändert klar):** `FINNHUB_API_KEY` ist **nicht** in `.env` gesetzt (`os.environ.get('FINNHUB_API_KEY','')=''`). Aktiver Analyst-Provider = `NullAnalystProvider` (No-Op). Live-E2E gegen `AAPL`/`MSFT` **blockiert ausschließlich durch fehlenden Key**. Kein Code-Fix nötig — sobald `FINNHUB_API_KEY=xxx` im Environment gesetzt wird, aktiviert der 2×täglich-Cron automatisch `FinnhubAnalystProvider` (Provider-Selection prüft den Key jedes Mal beim Instanziieren).
+  - Bewusst NICHT verändert: FinnhubAnalystProvider-Implementierung (78.8), Consensus-Endpoint (excludes provider_consensus), Validierungsregeln, Deduplication, StockResearchSection.jsx, Admin-UI, News-/PDF-/Mail-/Auth-Routen.
 - 78.8 (Feb 25 2026) — **Finnhub-Analystenprovider + Provider-Consensus-Modellierung**:
   - Neu: `/app/backend/providers/analyst_finnhub.py` (~180 LOC). Implementiert `AnalystResearchProvider` gegen `/stock/price-target` und `/stock/recommendation`. Auth via `FINNHUB_API_KEY`. Timeout via `FINNHUB_TIMEOUT_S`. Throttle 1.1 s zwischen Ticker-Requests (Free-Tier 60 rpm sicher).
   - **Kritischer Realitäts-Check**: Finnhub liefert **keine** Einzelanalysten und **keine** Research-Häuser — nur aggregierte Werte (`targetHigh/Low/Mean/Median`, `numberAnalysts`, `lastUpdated`) und gebündelte Rating-Buckets (`buy/hold/sell/strongBuy/strongSell`). Der Provider **erfindet keine Namen**: `analyst=None`, `research_house=None`, `source_url=None`.

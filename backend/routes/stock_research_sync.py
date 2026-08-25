@@ -261,14 +261,37 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
 # ---------------------------------------------------------------------------
 
 
-async def _run_sync(*, auto_publish_analysts: bool = False, tickers: Optional[List[str]] = None) -> Dict[str, Any]:
+_VALID_SYNC_TYPES = {"prices", "analyst", "both"}
+
+
+async def _run_sync(
+    *,
+    auto_publish_analysts: bool = False,
+    tickers: Optional[List[str]] = None,
+    sync_type: str = "both",
+) -> Dict[str, Any]:
+    """Run one or both halves of the sync pipeline.
+
+    Session 78.9 — cron separation:
+      * `sync_type="prices"`   → only market-price provider (fast, /45 min cron)
+      * `sync_type="analyst"`  → only analyst provider (2×daily cron, protects
+                                 Finnhub rate limits)
+      * `sync_type="both"`     → legacy behaviour (manual admin trigger)
+    """
+    if sync_type not in _VALID_SYNC_TYPES:
+        raise HTTPException(status_code=400, detail=f"sync_type muss in {sorted(_VALID_SYNC_TYPES)} sein")
+
     await _ensure_indexes_once()
     started = datetime.now(timezone.utc)
     t0 = time.perf_counter()
     universe = [t.upper() for t in tickers] if tickers else await _discover_universe()
 
-    price_summary = await _sync_prices(universe)
-    analyst_summary = await _sync_analysts(universe, auto_publish=auto_publish_analysts)
+    price_summary: Optional[Dict[str, Any]] = None
+    analyst_summary: Optional[Dict[str, Any]] = None
+    if sync_type in ("prices", "both"):
+        price_summary = await _sync_prices(universe)
+    if sync_type in ("analyst", "both"):
+        analyst_summary = await _sync_analysts(universe, auto_publish=auto_publish_analysts)
 
     duration_ms = int((time.perf_counter() - t0) * 1000)
     audit = {
@@ -276,7 +299,8 @@ async def _run_sync(*, auto_publish_analysts: bool = False, tickers: Optional[Li
         "duration_ms": duration_ms,
         "universe_size": len(universe),
         "tickers": universe,
-        "price": price_summary,
+        "sync_type": sync_type,
+        "price": price_summary,          # None when skipped (transparent to observers)
         "analyst": analyst_summary,
     }
     try:
@@ -292,14 +316,15 @@ async def _run_sync(*, auto_publish_analysts: bool = False, tickers: Optional[Li
 # ---------------------------------------------------------------------------
 
 
-@router.post("/admin/stock-research/sync", summary="Automatischer Marktpreis- + Analystensync")
+@router.post("/admin/stock-research/sync", summary="Automatischer Marktpreis- und/oder Analystensync")
 async def admin_sync(
     _user: dict = Depends(require_admin),
     auto_publish: bool = Query(default=False, description="Analystenrows nach Validierung automatisch veröffentlichen"),
     ticker: Optional[str] = Query(default=None, description="Optional: nur einen Ticker syncen (z. B. AAPL)"),
+    sync_type: str = Query(default="both", regex="^(prices|analyst|both)$", description="prices=nur Marktpreise, analyst=nur Analystendaten, both=beides"),
 ):
     tickers = [t.strip().upper() for t in (ticker or "").split(",") if t.strip()] or None
-    result = await _run_sync(auto_publish_analysts=auto_publish, tickers=tickers)
+    result = await _run_sync(auto_publish_analysts=auto_publish, tickers=tickers, sync_type=sync_type)
     return result
 
 

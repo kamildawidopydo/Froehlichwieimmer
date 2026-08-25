@@ -45,21 +45,21 @@ crons:
     auth: admin
     description: "Täglich 02:30 UTC alle publizierten image_urls revalidieren; defekte Links werden auf null gesetzt und markiert."
 
-  # Stock-Research Marktpreis-/Analystensync (Session 78.7)
-  # Preise werden auf existierenden Rows aktualisiert; ohne
-  # Analystenprovider-Key (FINNHUB/FMP) läuft nur der Preis-Sync.
+  # Stock-Research Marktpreise (Session 78.9 — strikt getrennt vom Analystensync).
+  # Ruft ausschließlich den internen Quote-Provider auf; Finnhub wird hier nie
+  # angefasst — schont Free-Tier-Limits.
   - name: stock-research-sync
     schedule: "*/45 * * * *"
-    endpoint: "/api/admin/stock-research/sync"
+    endpoint: "/api/admin/stock-research/sync?sync_type=prices"
     method: POST
     auth: admin
-    description: "Alle 45 Min Marktpreise für alle publizierten Research-Ticker aktualisieren."
+    description: "Alle 45 Min: nur Marktpreise auf publizierten Research-Rows aktualisieren."
 
-  # Analystendaten seltener als Preise, um Finnhub-Rate-Limits zu schonen
-  # (Free Tier: 60 rpm). Zweimal täglich reicht für Consensus-Änderungen.
+  # Analystendaten 2×täglich. Ruft nur den Analystenprovider (Finnhub, wenn
+  # FINNHUB_API_KEY gesetzt; sonst NullAnalystProvider = No-Op).
   - name: stock-research-analyst-sync
     schedule: "0 4,16 * * *"
-    endpoint: "/api/admin/stock-research/sync?auto_publish=true"
+    endpoint: "/api/admin/stock-research/sync?sync_type=analyst&auto_publish=true"
     method: POST
     auth: admin
-    description: "2×täglich Finnhub-Analystendaten holen und automatisch veröffentlichen (nur wenn FINNHUB_API_KEY gesetzt)."
+    description: "2×täglich: nur Finnhub-Analystendaten holen und (nach Validierung) automatisch veröffentlichen."
