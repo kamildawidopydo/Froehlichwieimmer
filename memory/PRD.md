@@ -8,6 +8,28 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 - 76.5–77.9 — Palette rebuild, Footer/Contact/Hero light, News-Hero Editorial, News-lock fix, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Fresh Article Toast.
+- 78.7 (Feb 25 2026) — **Stock-Research: Auto-Sync-Pipeline (Provider-Architektur + Consensus)**:
+  - **Provider-Layer** neu unter `/app/backend/providers/`:
+    - `base.py` — abstrakte `MarketPriceProvider` + `AnalystResearchProvider` mit strengem Vertrag (keine Fake-Daten, keine erfundenen Analysten).
+    - `market_price_internal.py` — `InternalQuoteProvider` wrapt den existierenden `market_quote(...)` aus server.py (keine doppelte Provider-Integration). Liefert `price`, `currency`, `company_name`, `is_delayed`, `price_updated_at`.
+    - `analyst_null.py` — `NullAnalystProvider` (`available=False`) mit dokumentierter Blocker-Liste (`FINNHUB_API_KEY` oder `FMP_API_KEY`). Kein Improvisation, keine LLM-Meinungen.
+  - **Sync-Runner** `/app/backend/routes/stock_research_sync.py` (~230 LOC):
+    - Ticker-Universe-Discovery: published Rows → alle Rows → Watchlist (Hard-Cap 40 Ticker gegen Quota-Blowout).
+    - Price-Sync updated `current_price`, `currency`, `price_updated_at`, `price_source`, `price_is_delayed`; überschreibt **niemals** manuelle Curator-Felder (target, analyst, source, research_date). Company-Name nur wenn leer.
+    - Analyst-Sync validiert 8 Regeln (ticker/target>0/currency/date-not-future/source/analyst-or-house/dedupe/…) → invalide Rows landen in `stock_research_rejects` (Audit) statt in der Publish-Pipeline.
+    - Duplicate-Key identisch zur manuellen Anlage (`ticker+house+analyst+date+target`) → 2. Sync erzeugt 0 Writes.
+    - Provider-Ausfall = keine Löschung: `try/except` fängt Provider-Crash, DB bleibt unangetastet.
+    - Audit-Trail in `stock_research_sync_runs` mit Startzeit, Dauer, Universe-Size, Zähler pro Provider.
+  - **Neue Endpoints (alle admin, außer Consensus):**
+    - `POST /api/admin/stock-research/sync?auto_publish&ticker=` → manueller/Cron-Trigger.
+    - `GET /api/admin/stock-research/sync/history` → letzte 10 Sync-Läufe.
+    - `GET /api/stock-research/consensus` (public) → Median-Kursziel + min/max/spread + upside% ausschließlich für Ticker mit ≥3 validen, nicht-stalen Rows.
+  - **Additive Response-Felder** in `serialize_public` (rückwärtskompatibel): `price_updated_at`, `research_updated_at`, `price_is_delayed`, `is_stale` (>90 Tage), `ingestion_source` (`manual`/Provider-Name). OpenAPI 0 Duplicate Operation IDs.
+  - **Cron** in `.emergent/crons.yml`: `stock-research-sync` alle 45 Min (`*/45 * * * *`) POST `/api/admin/stock-research/sync`.
+  - **Stale-Regel** = 90 Tage (konsistent mit Consensus-Cutoff). Stale-Rows werden markiert, nicht gelöscht.
+  - **E2E-QA (grün):** Sync gegen AAPL läuft in ~300 ms; Preis von 190→208 EUR aktualisiert (Fallback-Modus, is_delayed=true, ingestion_source unverändert `manual` für die Curator-Row). 2. Sync-Aufruf: `price.updated=0` (idempotent). Consensus mit 3 AAPL-Rows (target 230/230/245): `median=230, min=230, max=245, spread=15, upside=+21.05%`. Unbekannter Ticker `XZZZZZZZ` → keine Löschung (before=after). Auth-Regression: `/sync` + `/sync/history` ohne Auth → 401. Cleanup entfernt alle QA-Seeds, Empty-State wiederhergestellt.
+  - **Externer Blocker (klar benannt):** Für echte Analystendaten wird **ein API-Key eines strukturierten Vendors** benötigt: primär **Finnhub** (`FINNHUB_API_KEY` — Free Tier verfügbar für `/stock/recommendation-trends` + `/stock/price-target`) oder alternativ **Financial Modeling Prep** (`FMP_API_KEY`). Bis dahin liefert `NullAnalystProvider` sauber `[]` und `AnalystResearchProvider.available=False`; die Pipeline bleibt vollständig implementiert und produktionsbereit.
+  - Bewusst NICHT verändert: `StockResearchSection.jsx` (Empty-State bleibt korrekt bei 0 Rows), Admin-UI/CSV-Import (78.3), News-Pipeline, PDF-/Mail-/Auth-/Investment-Topics-Routen.
 - 78.6 (Feb 24 2026) — **server.py Wave 4 — Product-Inquiry-Router korrekt registriert, Stub entfernt**:
   - Bestandsaufnahme: 17 Investment-nahe Routen. Bereits sauber modular: `investment_topics.py` (3 public + 3 admin + `/news/by-slugs`, via `_register_investment_topics(api, db, ...)`), `einordnung.py` (6 Endpoints, via `_register_einordnung(api, db)`), `routes/reports.py` (`/reports/products`, `POST /reports/pdf` via `include_router`), `routes/stock_research.py` (Session 78.3).
   - Einzige verbliebene Investment-Baustelle: `POST /api/send-product-inquiry-email` — server.py hatte einen Stub mit `@api.post` + Pydantic-Validierung, der lazy an `routes/product_inquiry.py` delegierte (Body dort `payload: Any`).

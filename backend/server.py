@@ -3686,6 +3686,10 @@ app.include_router(_news_routes.router)
 from routes import product_inquiry as _product_inquiry_routes  # noqa: E402
 app.include_router(_product_inquiry_routes.router)
 
+# Stock-Research Sync-Router (Session 78.7 — Provider-Pipeline)
+from routes import stock_research_sync as _sr_sync_routes  # noqa: E402
+app.include_router(_sr_sync_routes.router)
+
 app.include_router(api)
 
 allowed = [o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()]

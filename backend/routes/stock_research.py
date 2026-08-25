@@ -14,7 +14,7 @@ import hashlib
 import io
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from bson import ObjectId
@@ -196,8 +196,22 @@ def serialize_admin(doc: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _is_stale(research_date: Any, days: int = 90) -> bool:
+    """Analyst rows older than `days` are surfaced as stale (not deleted)."""
+    if not isinstance(research_date, datetime):
+        return False
+    if research_date.tzinfo is None:
+        research_date = research_date.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - research_date) > timedelta(days=days)
+
+
 def serialize_public(doc: Dict[str, Any]) -> Dict[str, Any]:
-    """Public shape — no internal fields."""
+    """Public shape — no internal fields.
+
+    Session 78.7 adds additive fields only (`price_updated_at`,
+    `research_updated_at`, `price_is_delayed`, `is_stale`, `ingestion_source`)
+    without altering existing keys — response is backward-compatible.
+    """
     return {
         "id": str(doc.get("_id")),
         "company_name": doc.get("company_name") or "",
@@ -212,6 +226,12 @@ def serialize_public(doc: Dict[str, Any]) -> Dict[str, Any]:
         "source_name": doc.get("source_name") or "",
         "source_url": doc.get("source_url"),
         "research_date": _iso(doc.get("research_date")),
+        # Additive (Session 78.7) — safe to add, all consumers ignore unknown keys.
+        "price_updated_at": _iso(doc.get("price_updated_at")),
+        "research_updated_at": _iso(doc.get("updated_at")),
+        "price_is_delayed": bool(doc.get("price_is_delayed", False)),
+        "is_stale": _is_stale(doc.get("research_date")),
+        "ingestion_source": doc.get("ingestion_source") or "manual",
     }
 
 
@@ -353,6 +373,59 @@ async def public_stock_research(limit: int = Query(default=8, ge=1, le=PUBLIC_LI
         "count": len(items),
         "as_of": _iso(latest_updated),
     }
+
+
+@router.get("/stock-research/consensus", summary="Analyst-Consensus je Ticker (≥3 validierte Rows)")
+async def public_consensus():
+    """Aggregiert publizierte Analystenrows zu Median-Kurszielen.
+
+    Wird nur zurückgegeben, wenn pro Ticker mindestens 3 valide, aktuelle
+    (nicht stale) Analystenrows vorhanden sind. Median statt Mittelwert, damit
+    einzelne Ausreißer den Wert nicht verzerren.
+    """
+    await _ensure_indexes_once()
+    cutoff = datetime.now(timezone.utc) - timedelta(days=90)
+    pipeline = [
+        {"$match": {"published": True, "research_date": {"$gte": cutoff}}},
+        {"$group": {
+            "_id": "$ticker",
+            "company_name": {"$last": "$company_name"},
+            "currency": {"$last": "$currency"},
+            "current_price": {"$last": "$current_price"},
+            "price_updated_at": {"$last": "$price_updated_at"},
+            "targets": {"$push": "$target_price"},
+            "analyst_count": {"$sum": 1},
+            "as_of": {"$max": "$updated_at"},
+        }},
+        {"$match": {"analyst_count": {"$gte": 3}}},
+        {"$sort": {"analyst_count": -1, "_id": 1}},
+    ]
+    items: List[Dict[str, Any]] = []
+    async for g in db.stock_research.aggregate(pipeline):
+        targets = sorted(t for t in (g.get("targets") or []) if isinstance(t, (int, float)) and t > 0)
+        if len(targets) < 3:
+            continue
+        n = len(targets)
+        median = targets[n // 2] if n % 2 else round((targets[n // 2 - 1] + targets[n // 2]) / 2, 4)
+        current = g.get("current_price")
+        upside_median = None
+        if isinstance(current, (int, float)) and current > 0:
+            upside_median = round(((median - current) / current) * 100.0, 2)
+        items.append({
+            "ticker": g.get("_id"),
+            "company_name": g.get("company_name") or "",
+            "currency": g.get("currency") or "EUR",
+            "current_price": current,
+            "price_updated_at": _iso(g.get("price_updated_at")),
+            "analyst_count": g.get("analyst_count"),
+            "median_target": median,
+            "target_min": targets[0],
+            "target_max": targets[-1],
+            "spread": round(targets[-1] - targets[0], 4),
+            "upside_percent": upside_median,
+            "as_of": _iso(g.get("as_of")),
+        })
+    return {"items": items, "count": len(items)}
 
 
 # ---------------------------------------------------------------------------

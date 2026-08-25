@@ -44,3 +44,13 @@ crons:
     method: POST
     auth: admin
     description: "Täglich 02:30 UTC alle publizierten image_urls revalidieren; defekte Links werden auf null gesetzt und markiert."
+
+  # Stock-Research Marktpreis-/Analystensync (Session 78.7)
+  # Preise werden auf existierenden Rows aktualisiert; ohne
+  # Analystenprovider-Key (FINNHUB/FMP) läuft nur der Preis-Sync.
+  - name: stock-research-sync
+    schedule: "*/45 * * * *"
+    endpoint: "/api/admin/stock-research/sync"
+    method: POST
+    auth: admin
+    description: "Alle 45 Min Marktpreise für alle publizierten Research-Ticker aktualisieren."
