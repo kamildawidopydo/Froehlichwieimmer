@@ -277,4 +277,199 @@ def serialize(doc: dict) -> dict:
         "generation_source": doc.get("generation_source"),
         "generation_model": doc.get("generation_model"),
         "source_article_updated_at": _iso(doc.get("source_article_updated_at")),
+        # Session 80.1 — Publisher-Felder additiv (kein Breaking).
+        "publish_attempts": int(doc.get("publish_attempts") or 0),
+        "last_publish_attempt_at": _iso(doc.get("last_publish_attempt_at")),
+        "publish_error": doc.get("publish_error"),
+        "published_at": _iso(doc.get("published_at")),
+        "external_post_id": doc.get("external_post_id"),
+        "external_post_url": doc.get("external_post_url"),
     }
+
+
+# ---------------------------------------------------------------------------
+# Session 80.1 — LinkedIn Publisher-Integration
+# ---------------------------------------------------------------------------
+# State-Machine: draft → approved → scheduled → publishing → published
+# Fehlerfall: publish_failed. At-most-once via atomarem find_one_and_update.
+
+PUBLISH_ELIGIBLE_STATES = {"scheduled"}
+
+
+def _extract_commentary(doc: dict) -> str:
+    """LinkedIn `commentary` = der final erzeugte Draft-Text.
+
+    Wir posten NUR den kuratierten `draft_text` — kein zusätzlicher AI-Wrapper.
+    """
+    return (doc.get("draft_text") or "").strip()
+
+
+async def build_dry_run_result(db, doc: dict) -> dict:
+    """Sammelt alle Prä-Publish-Checks ohne externen API-Call."""
+    from providers.social import linkedin as _li
+
+    issues: list[str] = []
+    if doc.get("status") not in PUBLISH_ELIGIBLE_STATES:
+        issues.append(f"status_not_publishable:{doc.get('status')}")
+    if doc.get("external_post_id"):
+        issues.append("already_published")
+    if not doc.get("approved_by"):
+        issues.append("missing_approved_by")
+    sched = doc.get("scheduled_at")
+    if not sched:
+        issues.append("missing_scheduled_at")
+    commentary = _extract_commentary(doc)
+    if not commentary or len(commentary) < 20:
+        issues.append("commentary_too_short")
+    if len(commentary) > 3000:
+        issues.append("commentary_too_long")
+    if not doc.get("canonical_url"):
+        issues.append("missing_canonical_url")
+    provider = _li.public_config_summary()
+    if not provider["configured"]:
+        issues.append("provider_not_configured")
+
+    payload = None
+    payload_error = None
+    if not issues:
+        try:
+            payload = _li.build_payload(commentary=commentary)
+        except Exception as exc:  # noqa: BLE001
+            payload_error = f"{type(exc).__name__}: {exc}"
+            issues.append("payload_build_failed")
+
+    return {
+        "ok": len(issues) == 0,
+        "issues": issues,
+        "provider": provider,
+        "commentary_chars": len(commentary),
+        "scheduled_at": sched.isoformat() if hasattr(sched, "isoformat") else sched,
+        "canonical_url": doc.get("canonical_url"),
+        # Payload absichtlich OHNE Author-URN im Log (könnte Rückschlüsse zulassen).
+        "payload_preview": {"commentary_preview": commentary[:120], "visibility": "PUBLIC"} if payload else None,
+        "payload_error": payload_error,
+    }
+
+
+async def try_publish(db, item_id, *, trigger: str = "cron") -> dict:
+    """Idempotenter Publish-Versuch für **einen** Draft.
+
+    At-most-once-Kontrakt:
+      1. Atomarer Übergang `scheduled → publishing` via
+         ``find_one_and_update({_id, status:"scheduled", external_post_id: None})``.
+         Nur der Gewinner dieses Compare-and-Set führt den externen POST aus.
+      2. Auf jeden Erfolgs- ODER Timeout/Ambigu-Pfad wird ``publishing`` NICHT
+         still zurückgesetzt — bei Timeout bleibt der Doc als ``publish_failed``
+         mit ``publish_error="timeout — manual review required"`` markiert. Ein
+         automatischer Retry würde riskieren, dass LinkedIn den ersten Request
+         bereits verarbeitet hat.
+    """
+    from providers.social import linkedin as _li
+    from bson import ObjectId
+    from bson.errors import InvalidId
+
+    now = datetime.now(timezone.utc)
+    # ObjectId nur konvertieren, wenn der String tatsächlich einer ist —
+    # sonst könnten Tests mit Fake-IDs (nicht-hex) legitim durchlaufen.
+    if isinstance(item_id, str):
+        try:
+            lookup_id = ObjectId(item_id)
+        except InvalidId:
+            lookup_id = item_id
+    else:
+        lookup_id = item_id
+    filt = {"_id": lookup_id, "status": "scheduled", "external_post_id": None}
+    upd = {"$set": {"status": "publishing", "last_publish_attempt_at": now,
+                    "updated_at": now}, "$inc": {"publish_attempts": 1}}
+    locked = await db[COLLECTION].find_one_and_update(filt, upd, return_document=True)
+    if not locked:
+        # Entweder schon verarbeitet, oder nicht in State scheduled.
+        current = await db[COLLECTION].find_one({"_id": filt["_id"]})
+        return {"ok": False, "action": "not_locked",
+                "reason": "already_processed_or_wrong_state",
+                "current_status": (current or {}).get("status")}
+
+    commentary = _extract_commentary(locked)
+    # Sicherheitscheck: Provider verfügbar?
+    if not _li.is_configured():
+        await db[COLLECTION].update_one(
+            {"_id": locked["_id"]},
+            {"$set": {"status": "publish_failed", "publish_error": "provider_not_configured",
+                      "updated_at": datetime.now(timezone.utc)}},
+        )
+        return {"ok": False, "action": "provider_not_configured"}
+
+    try:
+        pub = await _li.publish(commentary)
+    except _li.LinkedInPublishError as exc:
+        # Timeout: bewusst NICHT zurück auf scheduled — manueller Review.
+        error_state = "publish_failed"
+        await db[COLLECTION].update_one(
+            {"_id": locked["_id"]},
+            {"$set": {"status": error_state, "publish_error": f"{exc.kind}:{exc.message}",
+                      "updated_at": datetime.now(timezone.utc)}},
+        )
+        return {"ok": False, "action": "publish_failed", "error_kind": exc.kind,
+                "error": exc.message, "http_status": exc.http_status}
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("try_publish: unexpected error")
+        await db[COLLECTION].update_one(
+            {"_id": locked["_id"]},
+            {"$set": {"status": "publish_failed", "publish_error": f"unexpected:{type(exc).__name__}",
+                      "updated_at": datetime.now(timezone.utc)}},
+        )
+        return {"ok": False, "action": "publish_failed", "error_kind": "unexpected"}
+
+    finished = datetime.now(timezone.utc)
+    await db[COLLECTION].update_one(
+        {"_id": locked["_id"]},
+        {"$set": {
+            "status": "published",
+            "published_at": finished,
+            "external_post_id": pub["external_post_id"],
+            "external_post_url": pub["external_post_url"],
+            "publish_error": None,
+            "updated_at": finished,
+        }},
+    )
+    return {"ok": True, "action": "published",
+            "external_post_id": pub["external_post_id"],
+            "external_post_url": pub["external_post_url"], "trigger": trigger}
+
+
+async def run_publisher_cron(db, *, limit: int = 3) -> dict:
+    """Cron: verarbeitet `status=scheduled AND scheduled_at<=now`.
+
+    ENV-Gate: nur ausführen, wenn `LINKEDIN_AUTO_PUBLISH_ENABLED=true`.
+    Kleiner Batch — verhindert Rate-Limit-Bursts bei erstem Rollout.
+    """
+    enabled = (os.environ.get("LINKEDIN_AUTO_PUBLISH_ENABLED", "false").lower() == "true")
+    started = datetime.now(timezone.utc)
+    result = {"enabled": enabled, "processed": 0, "published": 0, "failed": 0, "skipped": 0}
+    if not enabled:
+        result["reason"] = "LINKEDIN_AUTO_PUBLISH_ENABLED=false"
+        return result
+
+    cursor = db[COLLECTION].find({
+        "status": "scheduled",
+        "scheduled_at": {"$lte": started},
+        "external_post_id": None,
+    }).sort("scheduled_at", 1).limit(limit)
+    async for doc in cursor:
+        result["processed"] += 1
+        r = await try_publish(db, doc["_id"], trigger="cron")
+        if r.get("ok"):
+            result["published"] += 1
+        elif r.get("action") in ("not_locked",):
+            result["skipped"] += 1
+        else:
+            result["failed"] += 1
+
+    result["duration_ms"] = int((datetime.now(timezone.utc) - started).total_seconds() * 1000)
+    await db.job_summaries.update_one(
+        {"_id": "social_content_publisher"},
+        {"$set": {"last_started_at": started, "last_success_at": datetime.now(timezone.utc),
+                  "last_summary": result}},
+        upsert=True,
+    )
+    return result

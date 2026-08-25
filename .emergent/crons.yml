@@ -64,6 +64,15 @@ crons:
     auth: admin
     description: "2×täglich: nur Finnhub-Analystendaten holen und (nach Validierung) automatisch veröffentlichen."
 
+  # Social Content Publisher (Session 80.1). ENV-Gate `LINKEDIN_AUTO_PUBLISH_ENABLED`
+  # muss auf `true` gesetzt sein, sonst No-Op. Kleiner Batch, alle 15 Min.
+  - name: social-content-publish
+    schedule: "*/15 * * * *"
+    endpoint: "/api/admin/social-content/publisher/run?limit=3"
+    method: POST
+    auth: admin
+    description: "Alle 15 Min bis zu 3 approved+scheduled LinkedIn-Drafts veröffentlichen (nur wenn LINKEDIN_AUTO_PUBLISH_ENABLED=true)."
+
   # Social Content Automation (Session 80.0) — LinkedIn-Drafts. Läuft 20 Min
   # nach der News-Synthese (Synthese: 10 * * * *), damit neue Artikel sofort
   # als Draft in der Editorial-Queue erscheinen. `auto_publish` gibt es nicht —

@@ -12,10 +12,14 @@ from server import db, require_admin
 from social_content import (
     COLLECTION,
     PLATFORM,
+    build_dry_run_result,
     generate_draft_for_article,
     run_generation_cron,
+    run_publisher_cron,
     serialize,
+    try_publish,
 )
+from providers.social import linkedin as _linkedin
 
 router = APIRouter(prefix="/api", tags=["social-content"])
 
@@ -140,3 +144,37 @@ async def _schedule(item_id: str, payload: DraftSchedule, _u: dict = Depends(req
                   "updated_at": datetime.now(timezone.utc)}},
     )
     return serialize(await db[COLLECTION].find_one({"_id": d["_id"]}))
+
+
+# ---------------------------------------------------------------------------
+# Session 80.1 — LinkedIn Publisher
+# ---------------------------------------------------------------------------
+
+@router.get("/admin/social-content/provider/status", summary="Admin: LinkedIn Provider-Konfig + Live-Permission-Probe")
+async def _provider_status(probe: bool = Query(False, description="Führt eine read-only Permission-Probe gegen LinkedIn durch."),
+                            _u: dict = Depends(require_admin)):
+    cfg = _linkedin.public_config_summary()
+    if not probe:
+        return {"config": cfg, "probe": None}
+    live = await _linkedin.validate_credentials()
+    return {"config": cfg, "probe": live}
+
+
+@router.post("/admin/social-content/{item_id}/publish", summary="Admin: manueller Publish oder Dry-Run")
+async def _publish(item_id: str, dry_run: bool = Query(True, description="Default TRUE — kein externer POST."),
+                    _u: dict = Depends(require_admin)):
+    d = await db[COLLECTION].find_one({"_id": _oid(item_id)})
+    if not d:
+        raise HTTPException(404)
+    if dry_run:
+        return {"dry_run": True, **await build_dry_run_result(db, d)}
+    # Realer Publish nur, wenn Dry-Run OK wäre — Guardrail.
+    dry = await build_dry_run_result(db, d)
+    if not dry["ok"]:
+        raise HTTPException(409, detail={"reason": "dry_run_would_fail", "issues": dry["issues"]})
+    return await try_publish(db, d["_id"], trigger="admin_manual")
+
+
+@router.post("/admin/social-content/publisher/run", summary="Admin: Publisher-Cron manuell auslösen")
+async def _run_publisher(limit: int = Query(3, ge=1, le=10), _u: dict = Depends(require_admin)):
+    return await run_publisher_cron(db, limit=limit)
