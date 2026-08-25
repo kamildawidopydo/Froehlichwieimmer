@@ -7,6 +7,15 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 79.1 (Feb 25 2026) — **Alert Escalation Ladder (P1)**:
+  - `news_alert.py` erweitert (kein Umbau, additiv): neue State-Felder `incident_started_at`, `escalation_sent_at`, `last_escalation_error` in `job_summaries._id="alert_state"`. Beim WARN-Erst-Versand wird `incident_started_at=now` gesetzt und die Eskalations-Felder gecleart. Bei Recovery werden alle Incident-Felder auf `null` zurückgesetzt — neuer Incident wieder eskalierbar.
+  - Neue Funktion `_maybe_escalate()` prüft nach jedem Freshness-Check, ob `now - incident_started_at ≥ ESCALATION_AGE_HOURS` (Default 6h, env `NEWS_ALERT_ESCALATION_HOURS`) und `escalation_sent_at` noch `null` ist. Wenn ja: 2. Mail an `NEWS_ALERT_ESCALATION_TO` (kommagetrennt, mehrere Empfänger). `escalation_sent_at` wird NUR gesetzt, wenn ≥ 1 Empfänger bestätigt ist — sonst Retry im nächsten Check. Fehler landen in `last_escalation_error`.
+  - Cron unverändert (kein neuer Timer): Escalation-Check läuft nach jedem `news-fetch-feeds` (0 * * *) und `news-synthesize` (10 * * *) → 2×/h Redundanz.
+  - Escalation-Body ist deutlich als „ESKALATION" markiert, enthält Incident-Start, Dauer in h, ersten Alarm-Zeitpunkt, aktueller Status, letzter erfolgreicher Fetch/Synthesize, neuester Artikel — keine Secrets.
+  - `/api/news/admin/status` liefert additiv den `alert`-Block: `active`, `incident_started_at`, `incident_age_minutes`, `first_alert_sent_at`, `escalation_sent_at`, `escalation_due`, `escalation_threshold_hours`, `last_escalation_error`.
+  - Tests: `tests/test_news_alert_escalation.py` — 7 grün: (1) Erst-Alarm in gleicher Runde eskaliert NICHT (age 0h); (2) 5h59 ununterbrochener Alarm → keine Eskalation; (3) 6h → genau eine Eskalation, danach 7h/12h → keine weitere (Idempotenz); (4) Provider-Fehler → `escalation_sent_at` bleibt null → Retry beim nächsten Check erfolgt; (5) Fehlendes `NEWS_ALERT_ESCALATION_TO` → kein Crash, sauberes Log, keine Mail; (6) Recovery reseted alles, neuer Incident wieder eskalierbar; (7) Fresh-State löst keine Mail aus.
+  - Regression: bestehende `tests/test_news_alert.py` (7 Fälle) weiterhin grün — kein Bruch der Two-Strike-Semantik.
+  - OpenAPI: 109 endpoints, 0 duplicate operation IDs. Alle News-/Retention-/Product-Inquiry-Routen unverändert.
 - 79.0 (Feb 25 2026) — **News Retention Archive (P1)**:
   - Neu: `backend/news_retention.py` (Kern-Logik) + `backend/routes/news_retention.py` (2 Admin-Endpoints). Verschiebt Artikel > 90 Tage (env-konfigurierbar via `NEWS_RETENTION_DAYS`) aus `news_articles` in `news_articles_archive`.
   - Safe-Move: Replace-Upsert nach `_id` → Verifikations-Read → erst dann `delete_one` in Live. Bei jedem Fehlerpfad bleibt der Live-Doc unangetastet. Idempotent (Wiederholungen ändern nichts).

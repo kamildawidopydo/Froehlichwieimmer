@@ -3424,6 +3424,20 @@ async def _admin_news_status(_user: dict = Depends(require_admin)):
         {"status": "published", "published_at": {"$gte": now - timedelta(days=7)}}
     )
 
+    # Session 79.1 — Incident-/Eskalations-State additiv aufsurfacen.
+    from news_alert import STATE_ID as _ALERT_STATE_ID, ESCALATION_AGE_HOURS as _ESC_HOURS  # noqa: E402
+    alert_state = await db.job_summaries.find_one({"_id": _ALERT_STATE_ID}) or {}
+    incident_started = alert_state.get("incident_started_at")
+    incident_age_min = None
+    escalation_due = False
+    if isinstance(incident_started, datetime):
+        incident_age_min = int((now - incident_started).total_seconds() / 60)
+        escalation_due = (
+            bool(alert_state.get("alert_active"))
+            and incident_age_min >= (_ESC_HOURS * 60)
+            and alert_state.get("escalation_sent_at") is None
+        )
+
     return {
         "status": "ok",
         "freshness": freshness,
@@ -3443,6 +3457,17 @@ async def _admin_news_status(_user: dict = Depends(require_admin)):
             "newest_published_at": _iso(newest_at),
             "articles_last_24h": int(articles_24h),
             "articles_last_7d": int(articles_7d),
+        },
+        "alert": {
+            "active": bool(alert_state.get("alert_active", False)),
+            "last_status": alert_state.get("last_status"),
+            "incident_started_at": _iso(incident_started),
+            "incident_age_minutes": incident_age_min,
+            "first_alert_sent_at": _iso(alert_state.get("last_alert_at")),
+            "escalation_sent_at": _iso(alert_state.get("escalation_sent_at")),
+            "escalation_due": escalation_due,
+            "escalation_threshold_hours": _ESC_HOURS,
+            "last_escalation_error": alert_state.get("last_escalation_error"),
         },
         "server_time": _iso(now),
     }
