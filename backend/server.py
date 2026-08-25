@@ -3735,6 +3735,21 @@ async def _news_retention_startup() -> None:
         logger.exception("news_retention index creation failed")
 
 
+# Social Content Automation (Session 80.0 — LinkedIn Editorial Pipeline)
+from routes import social_content as _social_content_routes  # noqa: E402
+app.include_router(_social_content_routes.router)
+from social_content import ensure_indexes as _social_content_ensure_indexes  # noqa: E402
+
+
+@app.on_event("startup")
+async def _social_content_startup() -> None:
+    try:
+        await _social_content_ensure_indexes(db)
+        logger.info("social_content: indexes ensured")
+    except Exception:  # noqa: BLE001
+        logger.exception("social_content index creation failed")
+
+
 app.include_router(api)
 
 allowed = [o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()]

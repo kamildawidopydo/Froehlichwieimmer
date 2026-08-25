@@ -64,6 +64,17 @@ crons:
     auth: admin
     description: "2×täglich: nur Finnhub-Analystendaten holen und (nach Validierung) automatisch veröffentlichen."
 
+  # Social Content Automation (Session 80.0) — LinkedIn-Drafts. Läuft 20 Min
+  # nach der News-Synthese (Synthese: 10 * * * *), damit neue Artikel sofort
+  # als Draft in der Editorial-Queue erscheinen. `auto_publish` gibt es nicht —
+  # Drafts bleiben immer `status="draft"` bis Admin sie freigibt.
+  - name: social-content-generate
+    schedule: "30 * * * *"
+    endpoint: "/api/admin/social-content/generate?limit=5"
+    method: POST
+    auth: admin
+    description: "Stündlich :30 UTC bis zu 5 LinkedIn-Draft-Kandidaten erzeugen."
+
   # News Retention Archive (P1). Täglich 03:15 UTC — außerhalb der Hauptlast:
   # Fetch (0:00/stdl.), Synthese (0:10/stdl.), Image-Sweep (02:30), Stock-Analyst
   # (04:00). Verschiebt Artikel > 90 Tage in `news_articles_archive`, damit die
