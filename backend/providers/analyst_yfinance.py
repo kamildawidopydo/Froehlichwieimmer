@@ -50,19 +50,19 @@ class YFinanceAnalystProvider(AnalystResearchProvider):
         def _fetch_one(symbol: str):
             try:
                 t = yf.Ticker(symbol)
-                # Modern API path
                 atp = None
                 if hasattr(t, "get_analyst_price_targets"):
                     try:
                         atp = t.get_analyst_price_targets()
                     except Exception:  # noqa: BLE001
                         atp = None
+                # Session 78.12 — ALWAYS load info (currency, longName, etc.),
+                # not only as fallback for atp.
                 info = None
-                if not atp:
-                    try:
-                        info = t.info
-                    except Exception:  # noqa: BLE001
-                        info = None
+                try:
+                    info = t.info
+                except Exception:  # noqa: BLE001
+                    info = None
                 return atp, info
             except Exception as exc:  # noqa: BLE001
                 logger.info("yfinance %s: %s", symbol, str(exc)[:120])
@@ -72,7 +72,12 @@ class YFinanceAnalystProvider(AnalystResearchProvider):
             symbol = (raw or "").strip().upper()
             if not symbol:
                 continue
-            atp, info = await asyncio.to_thread(_fetch_one, symbol)
+            # Session 78.12 — resolve canonical → Yahoo-listing to avoid ADR mismatch.
+            from .symbol_map import resolve
+            mapped = resolve(symbol, "yahoo-finance")
+            fetch_symbol = mapped[0] if mapped else symbol
+            exchange = mapped[1] if mapped else None
+            atp, info = await asyncio.to_thread(_fetch_one, fetch_symbol)
 
             target_median = target_mean = target_high = target_low = current = None
             num_analysts = None
@@ -111,7 +116,7 @@ class YFinanceAnalystProvider(AnalystResearchProvider):
                 f"Mean={target_mean} Low={target_low} · #Analysten={num_analysts}"
             )
             row = AnalystRow(
-                ticker=symbol,
+                ticker=symbol,                     # canonical ticker (unchanged public value)
                 company_name=company_name,
                 analyst=None,           # Yahoo liefert keine Einzelanalysten
                 research_house=None,    # Yahoo liefert keine Research-Häuser
@@ -120,7 +125,7 @@ class YFinanceAnalystProvider(AnalystResearchProvider):
                 currency=currency,
                 research_date=now,      # Yahoo bündelt fortlaufend — Sync-Zeitpunkt = as-of
                 source_name="Yahoo Finance",
-                source_url=f"https://finance.yahoo.com/quote/{symbol}/analysis",
+                source_url=f"https://finance.yahoo.com/quote/{fetch_symbol}/analysis",
                 fetched_at=now,
             )
             setattr(row, "_provider_meta", {
@@ -133,6 +138,9 @@ class YFinanceAnalystProvider(AnalystResearchProvider):
                 "current_price_provider": current,
                 "notes": notes,
                 "provider_endpoint": "yfinance.get_analyst_price_targets",
+                # Session 78.12
+                "provider_symbol": fetch_symbol,
+                "exchange": exchange,
             })
             out.append(row)
         logger.info("yfinance emitted %d provider-consensus row(s) for %d ticker(s)", len(out), len(tickers))

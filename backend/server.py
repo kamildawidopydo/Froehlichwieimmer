@@ -3565,7 +3565,11 @@ async def news_nachrichten_related(slug: str, limit: int = 3):
     werden berücksichtigt.
     """
     limit = max(1, min(int(limit or 3), 6))
-    current = await db.news_articles.find_one({"slug": slug, "is_published": True})
+    # Slug-Lookup mit Archiv-Fallback (P1: News Retention). Der Related-Pool
+    # unten bleibt bewusst Live-only — archivierte Artikel tauchen nie in
+    # „ähnlichen Artikeln" auf.
+    from news_retention import find_article_by_slug as _find_article
+    current = await _find_article(db, slug, include_archive=True)
     if not current:
         return {"items": []}
 
@@ -3689,6 +3693,22 @@ app.include_router(_product_inquiry_routes.router)
 # Stock-Research Sync-Router (Session 78.7 — Provider-Pipeline)
 from routes import stock_research_sync as _sr_sync_routes  # noqa: E402
 app.include_router(_sr_sync_routes.router)
+
+# News Retention Archive (P1 — 90-Tage-Retention mit Slug-Fallback auf Archiv).
+from routes import news_retention as _news_retention_routes  # noqa: E402
+app.include_router(_news_retention_routes.router)
+
+from news_retention import ensure_indexes as _news_retention_ensure_indexes  # noqa: E402
+
+
+@app.on_event("startup")
+async def _news_retention_startup() -> None:
+    try:
+        info = await _news_retention_ensure_indexes(db)
+        logger.info("news_retention: indexes ensured — %s", info)
+    except Exception:  # noqa: BLE001
+        logger.exception("news_retention index creation failed")
+
 
 app.include_router(api)
 

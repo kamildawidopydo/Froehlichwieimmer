@@ -268,6 +268,18 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
                 stored["fx_source"] = "yahoo-finance"
                 stored["fx_updated_at"] = now
                 fx_hits += 1
+        else:
+            # Same-currency case — clear any stale FX artefacts from previous
+            # ADR-mismatch runs so the serializer treats the row as native.
+            stored["fx_rate"] = None
+            stored["fx_source"] = None
+            stored["fx_updated_at"] = None
+        # Session 78.12 — persist provider symbol + exchange (additive).
+        pmeta = stored.get("provider_meta") or {}
+        if pmeta.get("provider_symbol"):
+            stored["provider_symbol"] = pmeta["provider_symbol"]
+        if pmeta.get("exchange"):
+            stored["exchange"] = pmeta["exchange"]
         if reason:
             rejected += 1
             # Store rejection audit trail — but never published.
@@ -331,10 +343,12 @@ async def _run_sync(
 
     price_summary: Optional[Dict[str, Any]] = None
     analyst_summary: Optional[Dict[str, Any]] = None
-    if sync_type in ("prices", "both"):
-        price_summary = await _sync_prices(universe)
+    # Session 78.12 — analyst first (may create new rows), then prices
+    # (fills current_price on those new rows).
     if sync_type in ("analyst", "both"):
         analyst_summary = await _sync_analysts(universe, auto_publish=auto_publish_analysts)
+    if sync_type in ("prices", "both"):
+        price_summary = await _sync_prices(universe)
 
     duration_ms = int((time.perf_counter() - t0) * 1000)
     audit = {

@@ -316,15 +316,20 @@ def register(api: APIRouter, db, send_email_fn, require_admin=None):
         raw = raw[:10]
         if not raw:
             return {"items": []}
-        cursor = db.news_articles.find({
-            "slug": {"$in": raw},
-            "is_published": True,
-            "status": "published",
-        })
-        by_slug = {}
-        async for d in cursor:
+        # Slug-Lookup mit Archiv-Fallback (P1: News Retention) — alte Referenzen
+        # in Investment-Topics bleiben nach 90 Tagen auflösbar.
+        from news_retention import find_articles_by_slugs as _find_by_slugs
+        found = await _find_by_slugs(db, raw, include_archive=True)
+        by_slug: dict[str, dict] = {}
+        for s, d in found.items():
+            # `/news/by-slugs` verlangte historisch `status: published`; im
+            # Archiv-Doc bleibt dieses Feld beim Umzug erhalten, daher hier
+            # zusätzlich prüfen (statusfreie Legacy-Docs weiterhin akzeptieren).
+            status = d.get("status")
+            if status is not None and status != "published":
+                continue
             pub = d.get("published_at")
-            by_slug[d["slug"]] = {
+            by_slug[s] = {
                 "id": str(d.get("_id") or d["slug"]),
                 "slug": d["slug"],
                 "title": d.get("title", ""),
@@ -393,15 +398,12 @@ def register(api: APIRouter, db, send_email_fn, require_admin=None):
         if not existing:
             raise HTTPException(404, detail="Thema nicht gefunden.")
         update = payload.model_dump(exclude_unset=True)
-        # News-Slugs validieren: nur veröffentlichte Artikel akzeptieren
+        # News-Slugs validieren: veröffentlichte Artikel — Live + Archiv
+        # (P1 News Retention: archivierte Referenzen bleiben gültig).
         if "related_news_slugs" in update and update["related_news_slugs"]:
-            valid = []
-            async for d in db.news_articles.find(
-                {"slug": {"$in": update["related_news_slugs"]}, "is_published": True, "status": "published"},
-                {"slug": 1},
-            ):
-                valid.append(d["slug"])
-            invalid = [s for s in update["related_news_slugs"] if s not in valid]
+            from news_retention import find_articles_by_slugs as _find_by_slugs
+            found = await _find_by_slugs(db, update["related_news_slugs"], include_archive=True)
+            invalid = [s for s in update["related_news_slugs"] if s not in found]
             if invalid:
                 raise HTTPException(400, detail=f"Unbekannte oder unveröffentlichte News-Slugs: {invalid}")
         update["updated_at"] = datetime.now(timezone.utc)

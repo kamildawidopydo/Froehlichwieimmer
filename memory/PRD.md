@@ -7,7 +7,38 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 79.0 (Feb 25 2026) — **News Retention Archive (P1)**:
+  - Neu: `backend/news_retention.py` (Kern-Logik) + `backend/routes/news_retention.py` (2 Admin-Endpoints). Verschiebt Artikel > 90 Tage (env-konfigurierbar via `NEWS_RETENTION_DAYS`) aus `news_articles` in `news_articles_archive`.
+  - Safe-Move: Replace-Upsert nach `_id` → Verifikations-Read → erst dann `delete_one` in Live. Bei jedem Fehlerpfad bleibt der Live-Doc unangetastet. Idempotent (Wiederholungen ändern nichts).
+  - Datumsregel: `published_at < now-90d`. Docs ohne `published_at` werden separat gezählt und NIE gelöscht.
+  - Auditfelder im Archiv: `archived_at` (UTC), `archive_reason="retention_90d"`. Ursprüngliche `_id` bleibt erhalten, redaktionelle Felder unverändert.
+  - Batching: `batch_size` konfigurierbar (Default 200, Cron 500). Rückgabe-Statistik: `candidates / archived / already_archived / skipped_missing_published_at / errors / deleted_from_live / duration_ms`. Persistiert nach `job_summaries._id=news_retention`.
+  - Indizes (idempotent bei Startup): live `published_at_desc`, archiv `published_at_desc` + `slug_idx`.
+  - Slug-/ID-Fallback (kein 404 nach 90 Tagen): `MongoNewsProvider.get_item` (Detailseite), `news_nachrichten_related` (current-Lookup), `/news/by-slugs` (Wissen-Block), `PATCH /admin/investment-topics/{slug}` (related_news_slugs-Validierung). Feed-Listings bleiben strikt live-only.
+  - Cron: `.emergent/crons.yml` → `news-retention-archive` täglich 03:15 UTC (Batch=500), kollisionsfrei zu fetch/synth/image-sweep/stock-analyst.
+  - Endpoints: `POST /api/news/admin/retention/archive?dry_run=true|false&retention_days=&batch_size=` und `GET /api/news/admin/retention/status`.
+  - Tests: `backend/tests/test_news_retention.py` — 8 grün (89d bleibt live · 91d wird archiviert · missing `published_at` bleibt · 2. Lauf idempotent · Dry-Run ändert nichts · Archiv-Write-Fehler → Live bleibt · Slug-Fallback · Batch-Slug-Fallback).
+  - Live-E2E (kontrollierter Test gegen Prod-DB, danach restored):
+    - Dry-Run vorher: `candidates=0` (alle 30 Prod-Artikel < 5 Tage alt) — dokumentiert.
+    - 1 Artikel künstlich auf −100d backdatiert → Dry-Run: 1 Kandidat, echter Run: `archived=1, deleted_from_live=1, errors=0` → live_before=30/archive_before=0 → live_after=29/archive_after=1 → 2. Run idempotent (`candidates=0`) → Slug-Detail via Archiv-Fallback lieferte den Artikel weiter aus → Feed `?limit=50` enthielt archivierten Slug NICHT → sauber restored: live=30/archive=0.
+    - Regression: `/news/nachrichten`, `/news/publishers`, `/news-markte/investment-radar`, `/news/by-slugs`, `related`, `/health` alle 200. OpenAPI: 109 endpoints, 0 duplicate operation IDs.
+  - Backward-compat: nur additive Endpoints, keine Änderung an bestehenden Response-Shapes oder Feed-Queries.
 - 76.5–77.9 — Palette rebuild, Footer/Contact/Hero light, News-Hero Editorial, News-lock fix, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Fresh Article Toast.
+- 78.12 (Feb 25 2026) — **Provider-Symbol-Mapping (Home Listing statt ADR) + Sync-Reihenfolge**:
+  - Neu: `providers/symbol_map.py` — `canonical → provider → (provider_symbol, exchange, trading_currency)`. Deutsche Blue-Chips → Yahoo `.DE` (SAP→SAP.DE, ALV→ALV.DE, SIE→SIE.DE, DBK→DBK.DE, IFX→IFX.DE, RHM→RHM.DE). US-Titel unverändert.
+  - `YFinanceAnalystProvider` resolved beim Fetch das Provider-Symbol; kanonischer `ticker` bleibt öffentlich unverändert. `source_url` zeigt aufs Home-Listing.
+  - Bugfix: `info` wird jetzt IMMER geladen (nicht nur wenn atp fehlt) — sonst blieb `currency` bei Default `USD`, obwohl Yahoo für `.DE`-Symbole `EUR` liefert.
+  - `_sync_analysts` löscht bei Same-Currency stale `fx_rate` aus früheren ADR-Runs.
+  - **Sync-Reihenfolge invertiert**: bei `sync_type=both` läuft jetzt Analyst-Sync ZUERST (kann neue Rows anlegen), dann Preis-Sync (füllt `current_price` auf den neuen Rows). Verhindert leere Preise auf frisch inserted German rows.
+  - Zusätzliche persistierte Felder: `provider_symbol`, `exchange`.
+  - **Ergebnis vorher/nachher** (Live, EUR/USD-Rate 0.8572):
+    - **SAP**: −10.07 % (USD-ADR 243.5, fx-normalisiert) → **+11.15 %** (EUR 200 vs 179.90 EUR native, keine FX-Umrechnung mehr nötig, Home-Listing)
+    - **ALV**: −66.43 % → **native EUR** (Yahoo ALV.DE Target 420, XETRA-Preis via internem Fallback)
+    - **SIE**: neu → native EUR (Target 303)
+    - **AAPL** Kontrollfall: +38.01 % (unverändert; FX bleibt aktiv, weil `AAPL` weiter USD-Target vs EUR-Preis)
+  - **MongoDB-Bereinigung**: 8 legacy USD-Rows für deutsche Titel purged, dann 6 native EUR-Rows inserted. Total = 11 Yahoo-Rows, keine Doubletten. Idempotenz: 2. Sync → inserted=0.
+  - Backward-compat: alle Public-API-Felder additiv, `ticker` bleibt kanonisch, `provider_symbol`/`exchange` sind neu und optional.
+  - **Verbleibende Data-Quality-Limitierung**: `current_price` für deutsche Titel kommt weiterhin aus dem internen Fallback-Preisverzeichnis (nicht live), weil `InternalQuoteProvider` nicht mit `.DE`-Symbolen mappt. Follow-up: entweder deutsche Kurse ans Home-Listing binden oder XETRA-Live-Provider anbinden — bewusst nicht Teil dieser Session.
 - 78.11 (Feb 25 2026) — **Stock-Research Currency-Normalisierung**:
   - Root cause: `current_price` kam via internem Quote-Provider in EUR, `target_price` via Yahoo in USD — Upside wurde ohne FX-Umrechnung berechnet (`ALV: -60.84 %` war das Symptom).
   - **Neue Felder** additiv im Public-Response: `current_price_currency`, `target_price_currency`, `currency_normalization_pending`, `fx = {fx_source, fx_rate, fx_pair, normalized_target, target_ccy, price_ccy}`. `currency` bleibt als Legacy-Alias gefüllt.

@@ -510,7 +510,10 @@ class MongoNewsProvider(NewsProvider):
         if self._db is None:
             return None
         # Nur synthetisierte Artikel — alle News laufen jetzt durch das LLM.
-        doc = await self._db.news_articles.find_one({"slug": slug, "is_published": True})
+        # Fallback über Archiv, damit alte Bookmark-/Suchmaschinen-Links nach 90 Tagen
+        # nicht auf 404 laufen (News Retention Archive, P1).
+        from news_retention import find_article_by_slug  # lazy import — vermeidet Zyklen
+        doc = await find_article_by_slug(self._db, slug, include_archive=True)
         if doc:
             return self._to_public(doc)
         return None

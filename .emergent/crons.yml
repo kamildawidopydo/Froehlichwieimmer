@@ -63,3 +63,15 @@ crons:
     method: POST
     auth: admin
     description: "2×täglich: nur Finnhub-Analystendaten holen und (nach Validierung) automatisch veröffentlichen."
+
+  # News Retention Archive (P1). Täglich 03:15 UTC — außerhalb der Hauptlast:
+  # Fetch (0:00/stdl.), Synthese (0:10/stdl.), Image-Sweep (02:30), Stock-Analyst
+  # (04:00). Verschiebt Artikel > 90 Tage in `news_articles_archive`, damit die
+  # Live-Collection performant bleibt. Slug-Detail-Lookups fallen auf das Archiv
+  # zurück, damit alte Google-/Social-/Bookmark-Links nicht auf 404 laufen.
+  - name: news-retention-archive
+    schedule: "15 3 * * *"
+    endpoint: "/api/news/admin/retention/archive?batch_size=500"
+    method: POST
+    auth: admin
+    description: "Täglich 03:15 UTC: Artikel > 90 Tage in news_articles_archive verschieben (idempotent, Batch=500)."
