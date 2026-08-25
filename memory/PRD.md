@@ -8,6 +8,23 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 - 76.5–77.9 — Palette rebuild, Footer/Contact/Hero light, News-Hero Editorial, News-lock fix, `/api/news/admin/status`, Admin Freshness Tile, Two-Strike Email Alarm, Fresh Article Toast.
+- 78.10 (Feb 25 2026) — **Stock-Research vollautomatisch: Yahoo-Finance-Provider + Auto-Discovery + Fallback-Chain**:
+  - **Neuer Provider** `/app/backend/providers/analyst_yfinance.py` (~120 LOC) — `YFinanceAnalystProvider` gegen das `yfinance`-Paket. Nutzt `Ticker.get_analyst_price_targets()` + `Ticker.info` (Fallback für `currency`, `longName`, `numberOfAnalystOpinions`, `recommendationKey`). **Keine API-Key-Abhängigkeit** — Yahoo publiziert diese aggregierten Daten öffentlich. **Keine Einzelanalysten** (Yahoo liefert keine), Rows als `record_type=provider_consensus`.
+  - **Fallback-Chain** in `_analyst_provider()`: **Finnhub** (wenn `FINNHUB_API_KEY` gesetzt) → **Yahoo Finance** (kein Key nötig) → **NullProvider**. Aktuell aktiv: `yahoo-finance`.
+  - **Automatische Ticker-Discovery** in `_discover_universe()` erweitert: seedet zusätzlich aus dem projekteigenen `MARKET_STOCK_SYMBOLS`-Universum in server.py (11 kuratierte deutsche + US-Blue-Chips). Die Pipeline läuft jetzt **ohne** dass manuelle Rows vorhanden sein müssen.
+  - `yfinance==1.6.0` in `requirements.txt` gepinnt (via `pip freeze`).
+  - **Live-E2E-Ergebnis (echte Yahoo-Daten):**
+    - Automatisch entdeckt: `['SAP','SIE','ALV','DBK','IFX','RHM','NVDA','AAPL','MSFT','GOOGL','AMZN']` (11 Ticker)
+    - Analyst-Sync 1: 7 provider_consensus Rows inserted, 0 rejected, `duration_ms=4452` (Yahoo hat für DBK/IFX/RHM/SIE keine ausreichenden Analystendaten → korrekterweise übersprungen)
+    - Analyst-Sync 2 (Idempotenz): `inserted=0, updated=7` — Dedupe-Key funktioniert, nur Timestamp-Bump.
+    - Public API zeigt echte Kursziele: AAPL 335 USD, MSFT 550 USD, GOOGL 429 USD, AMZN 325 USD, NVDA 300 USD, ALV 134 USD, SAP 243.5 USD (Yahoo lieferte alle Targets in USD).
+    - `record_type=provider_consensus`, `source_name="Yahoo Finance"`, `source_url=https://finance.yahoo.com/quote/{sym}/analysis`, `analyst=None`, `research_house=None` — kein einziger erfundener Name.
+    - Auto-Publish aktiv: alle 7 Rows landen `published=true`, weil Publish-Guard erfüllt (Source, Datum, Target > 0).
+    - **Frontend Live**: `empty_state=False, research_table=True, row_count=7`. Homepage zeigt echte Konsens-Tabelle mit Datenstand-Zeile. Kein Console-Error.
+    - Preise: Nach `sync_type=prices` wurden `current_price` + `price_updated_at` auf allen 7 Rows via `InternalQuoteProvider` gefüllt → Upside jetzt berechnet.
+  - **Consensus-Doppelzählungsschutz** verifiziert: `/consensus` liefert weiterhin `count=0`, weil Yahoo-Rows als `provider_consensus` in der `$match`-Klausel ausgeschlossen werden.
+  - **Regression grün**: `/news/nachrichten` 200, `/reports/products` 200, `/investment-topics/active` 200, `POST /sync` unauth → 401, OpenAPI 107 unique / 0 dups. Cron unverändert (`*/45` prices, `0 4,16` analyst).
+  - **Kein externer Blocker mehr für den Basisbetrieb.** Finnhub-Key würde primary werden und zusätzlich `numberAnalysts` + explizite Rating-Buckets liefern — bleibt als Upgrade-Pfad optional.
 - 78.9 (Feb 25 2026) — **Cron-Trennung Stock-Research: `sync_type=prices|analyst|both`**:
   - `POST /api/admin/stock-research/sync` neuer Query-Param `sync_type` (default `both`, regex-validiert `^(prices|analyst|both)$`).
   - `_run_sync()` in `routes/stock_research_sync.py` verzweigt: `prices` → nur `_sync_prices`, `analyst` → nur `_sync_analysts`, `both` → beide (legacy). Übersprungene Sub-Syncs liefern `None` in der Response-Struktur (`{"price": None, "analyst": {...}}`) — beobachtbar in Audit-Log und Response.

@@ -64,12 +64,18 @@ JOB_COLLECTION = "stock_research_sync_runs"
 
 
 async def _discover_universe() -> List[str]:
-    """Tickers we want fresh data for. Priority order per Phase 6."""
+    """Tickers we want fresh data for. Priority order per Phase 6.
+
+    Session 78.10: Seedet zusätzlich aus dem projekteigenen
+    ``MARKET_STOCK_SYMBOLS``-Universum in server.py, damit die Analystenpipeline
+    auch dann läuft, wenn noch keine manuellen ``stock_research``-Rows
+    angelegt wurden.
+    """
     seen: List[str] = []
 
     async def _add(cursor):
         async for doc in cursor:
-            t = (doc.get("ticker") or "").upper().strip()
+            t = (doc.get("ticker") or doc.get("symbol") or "").upper().strip()
             if t and t not in seen and len(seen) < UNIVERSE_HARD_CAP:
                 seen.append(t)
 
@@ -77,7 +83,16 @@ async def _discover_universe() -> List[str]:
     await _add(db.stock_research.find({"published": True}, {"ticker": 1}))
     # 2) Any research rows (drafts included) so autopublish candidates get prices.
     await _add(db.stock_research.find({}, {"ticker": 1}))
-    # 3) Fall back to the built-in watchlist collection if present.
+    # 3) Built-in project stock universe from server.py — used as automatic seed.
+    try:
+        from server import MARKET_STOCK_SYMBOLS  # curated in-house list
+        for entry in MARKET_STOCK_SYMBOLS or []:
+            t = (entry.get("symbol") or "").upper().strip()
+            if t and t not in seen and len(seen) < UNIVERSE_HARD_CAP:
+                seen.append(t)
+    except Exception as exc:  # noqa: BLE001
+        logger.info("universe seed from MARKET_STOCK_SYMBOLS skipped: %s", exc)
+    # 4) Fall back to the built-in watchlist collection if present.
     try:
         await _add(db.watchlist.find({}, {"symbol": 1}).limit(UNIVERSE_HARD_CAP))
     except Exception:  # noqa: BLE001
@@ -96,11 +111,17 @@ def _price_provider() -> MarketPriceProvider:
 
 
 def _analyst_provider() -> AnalystResearchProvider:
-    # Session 78.8: When FINNHUB_API_KEY is present, use the aggregated
-    # provider; otherwise stay on the honest NullAnalystProvider.
+    """Fallback chain (Session 78.10):
+      1. Finnhub, wenn `FINNHUB_API_KEY` gesetzt
+      2. Yahoo Finance (yfinance) — kein Key nötig, aggregierte Konsensdaten
+      3. NullAnalystProvider — ehrliches No-Op
+    """
     from providers.analyst_finnhub import FinnhubAnalystProvider, _finnhub_available
     if _finnhub_available():
         return FinnhubAnalystProvider()
+    from providers.analyst_yfinance import YFinanceAnalystProvider, _yfinance_available
+    if _yfinance_available():
+        return YFinanceAnalystProvider()
     return NullAnalystProvider()
 
 
