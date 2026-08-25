@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NewsFreshnessTile from '@/components/admin/NewsFreshnessTile';
+import NewsOpsTile from '@/components/admin/NewsOpsTile';
 
 const EMPTY_FORM = {
   bank_id: '',
@@ -306,6 +307,9 @@ const AdminDashboard = () => {
 
         {/* News pipeline freshness (Session 77.5) */}
         <NewsFreshnessTile />
+
+        {/* News Operations: Retention + Incident/Escalation (Session 79.3) */}
+        <NewsOpsTile />
 
         {/* KPI strip */}
         <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

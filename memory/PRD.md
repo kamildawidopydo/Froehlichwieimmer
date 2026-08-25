@@ -7,6 +7,23 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 79.3 (Feb 25 2026) — **Admin: News-Ops Tile (Retention + Incident)**:
+  - Neue Frontend-Komponente `frontend/src/components/admin/NewsOpsTile.jsx` — kompakte Statuskachel direkt unter `NewsFreshnessTile` im `AdminDashboard`. Kein neues Backend-Feature, keine Duplizierung von Retention-/Alert-Logik.
+  - **Datenquellen** (nur bestehende Endpoints): `GET /api/news/admin/retention/status` und `GET /api/news/admin/status`. Ein zusätzlicher `POST /api/news/admin/retention/archive?dry_run=true` wird nur durch expliziten Klick des Admin-Buttons ausgelöst.
+  - **Angezeigte Felder** (2-Spalten-Layout):
+    - Retention: Live-Artikel, Archiv, Beim letzten Lauf archiviert, Status (OK / Fehler(x) / noch kein Lauf), Letzter Lauf (abs + rel), Nächster Cron (03:15 UTC, aus `.emergent/crons.yml` deriviert).
+    - Incident: „Läuft seit" (menschenlesbar: `2 Std. 14 Min.`, `3 Tage 1 Std.`), aktueller Status, Incident-Start, Erstalarm-Zeitpunkt, Eskalation gesendet (Zeitpunkt / „fällig · noch nicht" / „nein"), Eskalation fällig (mit ≥6h-Schwelle aus Backend), letzter Escalation-Versandfehler falls vorhanden.
+  - **Header-Farbcodierung**: Healthy (Mint) / Alarm aktiv (Amber) / Alarm · Eskalation (Rot) / API-Fehler (Rot).
+  - **Refresh**: Initial-Load + Auto-Refresh alle 60s mit `document.visibilityState`-Guard. `clearInterval` + `removeEventListener` beim Unmount. Manueller Refresh-Button.
+  - **Dry-Run**: Kleiner Button in der Retention-Spalte — löst ausschließlich `dry_run=true` aus, zeigt Kandidatenzahl + ältesten Kandidaten als Inline-Ergebnis. Kein echter Archive-Run per Button (bewusst).
+  - **Neutraler Fehlerzustand**: bei API-Fehler kein Crash, sondern rot markierte Meldung + „Erneut versuchen"-Button.
+  - **Design**: Übernimmt vollständig die Konvention von `NewsFreshnessTile` (gleiche Karten-Struktur, Farbklassen `bank-mint`, `bank-primary`, `bank-border`, `font-mono`-Labels).
+  - **Verifikation** (Live gegen Prod-Backend):
+    - Login als admin, `/admin`-Route lädt: Tile rendert unterhalb der Freshness-Tile mit den 30 Live-Artikeln, 0 Archiv, letzter Lauf 25.08. 10:59, nächster Cron 26.08. 03:15, Incident „Keine offenen Incidents" (Freshness=FRESH), Eskalation „nein".
+    - Dry-Run-Button ausgelöst → API antwortete mit `candidates=0`, DB unverändert (live=30/archive=0 vorher/nachher).
+    - Mobile-Viewport (390×800) → 1-Spalten-Layout automatisch (Tailwind `lg:grid-cols-2`), Tile bleibt lesbar.
+    - Console 0 errors während Load + Dry-Run + Mobile-Umschaltung.
+  - **Regression**: OpenAPI 109 endpoints / 0 duplicate operation IDs. Alle bestehenden Admin-Funktionen, `NewsFreshnessTile`, News, Retention, Product-Inquiry, Investment-Topics, Stock-Research, Auth unverändert. Nur additive Frontend-Änderungen (1 neue Datei, 2 Einbindungs-Zeilen in `AdminDashboard.js`).
 - 79.2 (Feb 25 2026) — **Stock-Research Publish-State Regression Fix**:
   - **Symptom**: Homepage-Sektion „Aktien mit Potenzial" zeigte Empty State, obwohl 11 Rows im `stock_research` Collection lagen. `GET /api/stock-research` filtert korrekt auf `{"published": True}` → 0 Items.
   - **Root Cause** (`routes/stock_research_sync.py::_sync_analysts`): Bei `auto_publish=False` wurde `stored["published"] = False` unconditionally in den `$set`-Payload geschrieben. Jeder manuelle `sync_type=both` (oder `sync_type=analyst` ohne `auto_publish=true`) hat dadurch bereits publizierte Rows ungewollt zurück auf Draft geschaltet. Beispiel-Ablauf: 04:00 UTC Cron publiziert korrekt → 10:49 UTC manueller Test-Sync ohne `auto_publish` setzt alle 11 Rows auf `published=False` → Homepage leer.
