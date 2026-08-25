@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import {
-  Archive, ShieldCheck, ShieldAlert, RefreshCw, PlayCircle, AlertCircle,
+  Archive, ShieldCheck, ShieldAlert, RefreshCw, PlayCircle, AlertCircle, Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -97,6 +97,10 @@ const NewsOpsTile = () => {
   const [errorText, setErrorText] = useState('');
   const [dryRunResult, setDryRunResult] = useState(null);
   const [dryRunBusy, setDryRunBusy] = useState(false);
+  // Session 79.4 — Escalation-Rehearsal
+  const [rehearsalConfirming, setRehearsalConfirming] = useState(false);
+  const [rehearsalBusy, setRehearsalBusy] = useState(false);
+  const [rehearsalResult, setRehearsalResult] = useState(null);
   const lastFetchRef = useRef(0);
 
   const load = useCallback(async (silent = false) => {
@@ -157,6 +161,27 @@ const NewsOpsTile = () => {
       });
     } finally {
       setDryRunBusy(false);
+    }
+  };
+
+  const runRehearsal = async () => {
+    if (rehearsalBusy) return;
+    setRehearsalBusy(true);
+    setRehearsalResult(null);
+    try {
+      const res = await api.post('/news/admin/alerts/escalation/test');
+      setRehearsalResult(res.data);
+    } catch (err) {
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      setRehearsalResult({
+        ok: false,
+        action: 'send_failed',
+        error: detail || (status ? `Status ${status}` : (err?.message || 'unbekannter Fehler')),
+      });
+    } finally {
+      setRehearsalBusy(false);
+      setRehearsalConfirming(false);
     }
   };
 
@@ -372,6 +397,86 @@ const NewsOpsTile = () => {
                   Letzter Escalation-Versandfehler: {alert.last_escalation_error}
                 </div>
               ) : null}
+
+              {/* Session 79.4 — Rehearsal: Test-Eskalationsmail */}
+              <div className="mt-2 border-t border-bank-border pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">
+                    Rehearsal
+                  </p>
+                  {!rehearsalConfirming && !rehearsalBusy && (
+                    <button
+                      type="button"
+                      onClick={() => { setRehearsalConfirming(true); setRehearsalResult(null); }}
+                      data-testid="admin-news-ops-rehearsal-btn"
+                      className="inline-flex items-center gap-1.5 rounded border border-bank-border bg-white px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-bank-text transition-colors hover:border-bank-primary"
+                      title="Testmail an NEWS_ALERT_ESCALATION_TO — verändert keinen Incident-State"
+                    >
+                      <Send size={11} strokeWidth={1.75} />
+                      Test-Eskalationsmail
+                    </button>
+                  )}
+                </div>
+
+                {rehearsalConfirming && (
+                  <div
+                    data-testid="admin-news-ops-rehearsal-confirm"
+                    className="mt-2 rounded border border-bank-border bg-bank-panel px-3 py-2 text-[12px] text-bank-text"
+                  >
+                    <p className="mb-2">
+                      Es wird eine <b>[TEST]</b>-Mail an den konfigurierten Eskalations­verteiler
+                      versendet. Kein Incident-State wird verändert.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={runRehearsal}
+                        disabled={rehearsalBusy}
+                        data-testid="admin-news-ops-rehearsal-confirm-yes"
+                        className="inline-flex items-center gap-1.5 rounded border border-bank-primary bg-bank-primary px-3 py-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-white transition-colors hover:bg-bank-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Send size={11} strokeWidth={1.75} className={rehearsalBusy ? 'animate-pulse' : ''} />
+                        {rehearsalBusy ? 'Sende…' : 'Ja, Testmail senden'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRehearsalConfirming(false)}
+                        disabled={rehearsalBusy}
+                        data-testid="admin-news-ops-rehearsal-cancel"
+                        className="inline-flex items-center gap-1.5 rounded border border-bank-border bg-white px-3 py-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-text hover:border-bank-primary disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {rehearsalResult && (
+                  <div
+                    data-testid="admin-news-ops-rehearsal-result"
+                    className={cn(
+                      'mt-2 rounded border px-3 py-2 text-[12px]',
+                      rehearsalResult.ok
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-red-200 bg-red-50 text-red-800',
+                    )}
+                  >
+                    {rehearsalResult.ok ? (
+                      <span>
+                        Rehearsal versendet — {rehearsalResult.delivered} von {rehearsalResult.attempted} Empfänger(n) bestätigt.
+                      </span>
+                    ) : rehearsalResult.action === 'no_recipients' ? (
+                      <span>
+                        Kein Eskalations-Verteiler konfiguriert. Setze <code>NEWS_ALERT_ESCALATION_TO</code>, um die Zustell-Pipeline zu testen.
+                      </span>
+                    ) : (
+                      <span>
+                        Rehearsal fehlgeschlagen: {rehearsalResult.error || 'unbekannter Fehler'}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}

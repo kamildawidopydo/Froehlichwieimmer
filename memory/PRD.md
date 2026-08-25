@@ -7,6 +7,24 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 79.4 (Feb 25 2026) — **Escalation Rehearsal (Test-Mail-Workflow)**:
+  - Neue Funktion `news_alert.py::send_escalation_test_mail(db, send_email, admin_email=None)` — nutzt exakt denselben Resend-Sender wie die echte Eskalation, denselben Empfängerkreis (`NEWS_ALERT_ESCALATION_TO`), aber:
+    - Betreff/Body eindeutig als `[TEST] Fröhlich News-Pipeline · Eskalations-Rehearsal` gekennzeichnet.
+    - Verändert **keinen** produktiven `alert_state` (kein `incident_started_at`, kein `escalation_sent_at`, kein `last_escalation_error`).
+    - Audit-Trail separat in `job_summaries._id="news_alert_escalation_rehearsal"` (`last_attempt_at`, `last_admin`, `last_summary`).
+    - Bei fehlendem `NEWS_ALERT_ESCALATION_TO` → sauberes `action=no_recipients`, keine Mail, kein Crash.
+  - Neuer Endpoint `POST /api/news/admin/alerts/escalation/test` (admin-only) in `routes/news_retention.py`. Server-seitiger 60s-Cooldown via bestehendem `job_summaries.last_attempt_at` — kein neues Rate-Limit-System.
+  - Read-only Endpoint `GET /api/news/admin/alerts/escalation/rehearsal-status` liefert `last_attempt_at`, `last_admin`, `last_summary` für Admin-Beobachtbarkeit.
+  - `admin_email` wird aus `require_admin`-Dependency übernommen (Auditor-Info im Payload und in der Mail).
+  - **Frontend**: `NewsOpsTile.jsx` erweitert um Button „Test-Eskalationsmail" mit Inline-Confirmation-Dialog. Anti-Doubleclick via `rehearsalBusy`. Erfolg (grün) / Fehler / no_recipients (rot) als klar getrenntes Feedback. Bestehende Ops-Tile-Karten und Refresh-Loop unverändert.
+  - **Regressionstests** `tests/test_news_alert_rehearsal.py` — 4 grün: (1) kein Verteiler → clean no_recipients + Audit + `alert_state` unangetastet; (2) 2 Empfänger → 2 Mails, alle `[TEST]`, `alert_state` byte-genau identisch pre/post; (3) Send-Fehler → `send_failed`, `alert_state` unangetastet; (4) Rehearsal ohne bestehenden `alert_state` legt **keinen** an.
+  - **Live-Verifikation** (gegen Prod-Backend, `NEWS_ALERT_ESCALATION_TO` nicht gesetzt):
+    - Unauth: `POST` → 401 ✓
+    - Auth: `POST` → `action=no_recipients`, `attempted=0`, `delivered=0`, verständliche Admin-Meldung ✓
+    - Sofortiger 2. Aufruf: 429 (Cooldown 60s) ✓
+    - `alert_state` pre = post byte-identisch ✓
+    - `GET rehearsal-status` liefert Audit-Doc mit Admin-Mail und Ergebnis ✓
+  - **Regression**: OpenAPI 111 endpoints / 0 duplicate operation IDs. Alle News-, Retention-, Product-Inquiry-, Stock-Research-, Investment-Topics-, Auth-, PDF-Mail-Endpoints unverändert. Cron unverändert. Backend clean start (kein Neustart nötig, Hot-Reload). Frontend kompiliert, keine Console-Errors durch die neue Tile.
 - 79.3 (Feb 25 2026) — **Admin: News-Ops Tile (Retention + Incident)**:
   - Neue Frontend-Komponente `frontend/src/components/admin/NewsOpsTile.jsx` — kompakte Statuskachel direkt unter `NewsFreshnessTile` im `AdminDashboard`. Kein neues Backend-Feature, keine Duplizierung von Retention-/Alert-Logik.
   - **Datenquellen** (nur bestehende Endpoints): `GET /api/news/admin/retention/status` und `GET /api/news/admin/status`. Ein zusätzlicher `POST /api/news/admin/retention/archive?dry_run=true` wird nur durch expliziten Klick des Admin-Buttons ausgelöst.

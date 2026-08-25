@@ -189,6 +189,142 @@ def _escalation_recipients() -> list[str]:
     return [a.strip() for a in raw.split(",") if a.strip()]
 
 
+async def send_escalation_test_mail(db, send_email, *, admin_email: Optional[str] = None) -> dict:
+    """Session 79.4 — Rehearsal-Versand der Eskalations-Mail.
+
+    Nutzt exakt dieselbe Mail-Infrastruktur wie ``_maybe_escalate`` (Resend via
+    Emergent), verwendet denselben Empfängerkreis (``NEWS_ALERT_ESCALATION_TO``)
+    und ähnelt inhaltlich der Produktions-Mail — ist aber eindeutig als **TEST**
+    gekennzeichnet und verändert **keinen** produktiven Zustand:
+
+    - ``alert_state`` wird NICHT angefasst (kein ``escalation_sent_at``, kein
+      ``incident_started_at``, kein ``last_escalation_error``).
+    - Der Rehearsal-Versand wird separat in
+      ``job_summaries._id="news_alert_escalation_rehearsal"`` protokolliert.
+
+    Rückgabe (JSON-serialisierbar):
+        {
+          "ok": bool,
+          "action": "sent" | "no_recipients" | "send_failed",
+          "recipients": [...],
+          "email_ids": [...],
+          "attempted": int,
+          "delivered": int,
+          "failed": int,
+          "sent_at": iso,
+          "admin_email": ...,
+          "error": Optional[str],
+        }
+    """
+    now = datetime.now(timezone.utc)
+    recipients = _escalation_recipients()
+    result: dict = {
+        "ok": False,
+        "action": "no_recipients",
+        "recipients": [],
+        "email_ids": [],
+        "attempted": 0,
+        "delivered": 0,
+        "failed": 0,
+        "sent_at": _iso(now),
+        "admin_email": admin_email,
+        "error": None,
+    }
+
+    if not recipients:
+        result["error"] = "NEWS_ALERT_ESCALATION_TO ist nicht gesetzt — kein Rehearsal möglich."
+        logger.warning("news_alert: escalation rehearsal skipped — no recipients configured")
+        # Audit-Trail: auch ein „skipped" wird protokolliert, damit Ops
+        # nachvollziehen können, dass jemand getestet hat.
+        await db.job_summaries.update_one(
+            {"_id": "news_alert_escalation_rehearsal"},
+            {"$set": {
+                "last_attempt_at": now,
+                "last_summary": result,
+                "last_admin": admin_email,
+            }},
+            upsert=True,
+        )
+        return result
+
+    env_hint = os.environ.get("EMERGENT_ENVIRONMENT") or os.environ.get("APP_ENV") or "preview"
+    subject = "[TEST] Fröhlich News-Pipeline · Eskalations-Rehearsal"
+    html = _test_escalation_html(
+        now=now, recipients=recipients, admin_email=admin_email, environment=env_hint,
+    )
+
+    delivered: list[dict] = []
+    last_error: Optional[str] = None
+    for to in recipients:
+        result["attempted"] += 1
+        try:
+            email_id = await send_email(to, subject, html)
+            delivered.append({"to": to, "email_id": email_id})
+            logger.info("news_alert: REHEARSAL mail sent to=%s email_id=%s admin=%s",
+                        to, email_id, admin_email)
+        except Exception as e:  # noqa: BLE001
+            last_error = f"{type(e).__name__}: {e}"
+            result["failed"] += 1
+            logger.warning("news_alert: REHEARSAL mail send failed to=%s err=%s", to, e)
+
+    result["recipients"] = [d["to"] for d in delivered]
+    result["email_ids"] = [d["email_id"] for d in delivered]
+    result["delivered"] = len(delivered)
+
+    if delivered:
+        result["ok"] = True
+        result["action"] = "sent"
+    else:
+        result["ok"] = False
+        result["action"] = "send_failed"
+        result["error"] = last_error
+
+    # Separate Rehearsal-Kollektion — NICHT in `alert_state`, damit
+    # Incident-Metriken unangetastet bleiben.
+    await db.job_summaries.update_one(
+        {"_id": "news_alert_escalation_rehearsal"},
+        {"$set": {
+            "last_attempt_at": now,
+            "last_summary": result,
+            "last_admin": admin_email,
+        }},
+        upsert=True,
+    )
+    return result
+
+
+def _test_escalation_html(*, now: datetime, recipients: list[str],
+                          admin_email: Optional[str], environment: str) -> str:
+    return f"""
+    <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; color:#1E292B; line-height:1.5;">
+      <div style="background:#527F7B; color:#fff; padding:12px 16px; border-radius:8px; margin-bottom:16px;">
+        <h2 style="margin:0; font-size:18px;">[TEST] News-Pipeline · Eskalations-Rehearsal</h2>
+      </div>
+      <p style="margin:0 0 12px; color:#1E292B;">
+        <b>Testmail — kein echter Incident.</b> Diese E-Mail dient ausschließlich
+        der Prüfung der Zustell-Pipeline für die News-Pipeline-Eskalation. Es liegt
+        aktuell <b>kein</b> Alarmzustand vor, und es wurde <b>kein</b>
+        produktiver Incident- oder Eskalations-State verändert.
+      </p>
+      <table style="border-collapse:collapse; font-size:13px; margin:12px 0;">
+        <tr><td style="padding:4px 12px 4px 0; color:#667675;">Testzeitpunkt:</td>
+            <td><b>{_iso(now)}</b></td></tr>
+        <tr><td style="padding:4px 12px 4px 0; color:#667675;">Umgebung:</td>
+            <td><b>{environment}</b></td></tr>
+        <tr><td style="padding:4px 12px 4px 0; color:#667675;">Empfängergruppe:</td>
+            <td><b>NEWS_ALERT_ESCALATION_TO ({len(recipients)} Empfänger)</b></td></tr>
+        <tr><td style="padding:4px 12px 4px 0; color:#667675;">Ausgelöst von:</td>
+            <td><b>{admin_email or '—'}</b></td></tr>
+      </table>
+      <p style="margin:16px 0 0; font-size:12px; color:#667675;">
+        Bei einer echten Eskalation würdest du hier die Incident-Dauer, Startzeit
+        und den aktuellen Freshness-Status finden. Details im Admin:
+        <a href="/admin" style="color:#527F7B;">/admin</a>
+      </p>
+    </div>
+    """
+
+
 async def _maybe_escalate(db, send_email, *, state: dict, fetch: dict, synth: dict,
                           freshness: str, now: datetime) -> dict:
     """Session 79.1 — Prüft, ob eine Eskalations-Mail fällig ist, und versendet
