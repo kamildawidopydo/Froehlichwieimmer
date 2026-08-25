@@ -108,7 +108,7 @@ async def main() -> None:
         doc = {
             **r,
             "status": "approved",
-            "is_demo": True,          # intern als Demo/Template markiert
+            "is_demo": False,         # Session 80.4 — öffentlich sichtbar, aber nicht verifiziert
             "is_verified": False,     # NIEMALS künstlich verifiziert
             "invited": False,
             "admin_note": "session 80.3 template",
