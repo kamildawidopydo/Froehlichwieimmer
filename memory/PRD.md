@@ -8,6 +8,13 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.21b (Feb 26 2026) — **Trust-Points-Zeile im Home-Product-Wizard entfernt**:
+  - `HomeProductWizardSection.jsx`: 4-Spalten-Trust-Strip („Passende Empfehlung / Mögliche Vorteile / Kostenlos & unverbindlich / In wenigen Minuten") gelöscht.
+  - Ungenutzte Imports entfernt (`CheckCircle2`, `Clock`, `HandCoins`, `ShieldCheck`, `WIZARD_TRUST_POINTS`, `TRUST_ICONS`).
+  - `WIZARD_TRUST_POINTS` in `productWizardCatalog.js` bleibt bestehen (Dead Data, kein Import mehr).
+  - Verifiziert per Screenshot: H2 „Finden Sie die passende Geldanlage …" wird jetzt direkt von den Produktkarten gefolgt.
+
+
 - 80.21 pre (Feb 26 2026) — **Handoff-Vorbereitung für Session 80.21a (nicht implementiert)**:
   - Kein Deploy erfolgt. Kein Code aus 80.21a in Repo (git working tree geprüft, keine halbfertigen Dateien).
   - Bestehende 12 Detailseiten bleiben auf **Session-80.19-Stand** (data-driven via `strategieContent.js` `sections`+`faqs`).

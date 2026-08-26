@@ -1,17 +1,12 @@
 import React from 'react';
-import { ArrowRight, CheckCircle2, Clock, HandCoins, ShieldCheck } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { trackInvestmentEvent } from '@/lib/investmentAnalytics';
-import {
-  getProductCatalog,
-  WIZARD_TRUST_POINTS,
-} from '@/data/productWizardCatalog';
+import { getProductCatalog } from '@/data/productWizardCatalog';
 import { BANK_BONUS_COPY } from '@/data/bankBonusTexts';
-
-const TRUST_ICONS = [ShieldCheck, HandCoins, CheckCircle2, Clock];
 
 const HomeProductWizardSection = ({ onOpenWizard }) => {
   const prefersReduced = useReducedMotion();
@@ -80,24 +75,6 @@ const HomeProductWizardSection = ({ onOpenWizard }) => {
             unverbindlich.
           </p>
         </div>
-
-        {/* Trust points */}
-        <ul className="mt-10 grid grid-cols-2 gap-4 border-y border-bank-border py-6 sm:mt-12 lg:grid-cols-4 lg:gap-8">
-          {WIZARD_TRUST_POINTS.map((p, i) => {
-            const Icon = TRUST_ICONS[i % TRUST_ICONS.length];
-            return (
-              <li key={p.title} className="flex items-start gap-3">
-                <span aria-hidden className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-bank-primary/15 bg-white text-bank-primary">
-                  <Icon size={15} strokeWidth={LUCIDE_STROKE} />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[13.5px] font-semibold leading-tight text-bank-ink">{p.title}</p>
-                  <p className="mt-0.5 text-[12px] leading-snug text-bank-text-muted">{p.body}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
 
         {/* Product cards */}
         <div
