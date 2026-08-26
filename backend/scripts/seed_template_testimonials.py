@@ -71,7 +71,7 @@ DEMO_TESTIMONIALS = [
         "text": "Meine Fragen wurden ausführlich beantwortet und ich hatte jederzeit das Gefühl, selbst entscheiden zu können. Genau diese Art der Beratung hatte ich gesucht.",
     },
     {
-        "first_name": "Thomas", "last_name": "R.", "display_name": "Thomas R.",
+        "first_name": "Rainer", "last_name": "T.", "display_name": "Rainer T.",
         "email": "demo.thomas.r@froehlich-templates.local", "rating": 5,
         "topics": ["service", "beratung"],
         "text": "Die Vorbereitung auf das Gespräch war unkompliziert und der Termin selbst sehr strukturiert. Meine persönliche Situation stand dabei tatsächlich im Mittelpunkt.",

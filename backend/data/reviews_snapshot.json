@@ -42,6 +42,29 @@
     ]
   },
   {
+    "first_name": "Achim",
+    "last_name": "T.",
+    "display_name": "Achim T.",
+    "email": "demo.achim.t@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "beratung"
+    ],
+    "text": "Zwei Termine, ein klarer Plan. Ich hatte vorher das Gefühl, mich zwischen zu vielen Optionen entscheiden zu müssen — am Ende blieb ein Weg übrig, der zu mir passt.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.13 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-25T11:05:13.889000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-25T11:05:13.889000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3"
+  },
+  {
     "first_name": "Antje",
     "last_name": "R.",
     "display_name": "Antje R.",
@@ -132,6 +155,29 @@
     "customer_since": "1_bis_3"
   },
   {
+    "first_name": "Christian",
+    "last_name": "V.",
+    "display_name": "Christian V.",
+    "email": "demo.christian.v@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "vertrauen"
+    ],
+    "text": "Ehrlich beraten statt verkauft. Bei Themen, die ich nicht gebraucht hätte, wurde mir das offen gesagt — genau das erwarte ich.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.13 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-24T08:05:13.889000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-24T08:05:13.889000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3"
+  },
+  {
     "first_name": "Carsten",
     "last_name": "M.",
     "display_name": "Carsten M.",
@@ -196,6 +242,29 @@
     "moderated_at": "2026-08-23T13:06:49.981000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-23T13:06:49.981000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3"
+  },
+  {
+    "first_name": "Ella",
+    "last_name": "S.",
+    "display_name": "Ella S.",
+    "email": "demo.ella.s@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "persoenliche-betreuung"
+    ],
+    "text": "Man merkt, dass zugehört wird. Meine Situation ist nicht Standard und trotzdem hatte ich nie den Eindruck, in eine Schublade gesteckt zu werden.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.13 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-23T05:05:13.889000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-23T05:05:13.889000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3"
@@ -266,6 +335,29 @@
     "moderated_at": "2026-08-22T02:08:20.397000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-22T02:08:20.397000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3"
+  },
+  {
+    "first_name": "Ferdinand",
+    "last_name": "K.",
+    "display_name": "Ferdinand K.",
+    "email": "demo.ferdinand.k@froehlich-templates.local",
+    "rating": 4,
+    "topics": [
+      "service"
+    ],
+    "text": "Läuft im Hintergrund reibungslos. Ich muss selten nachhaken; das meiste passiert von allein und rechtzeitig.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.13 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-22T02:05:13.889000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-22T02:05:13.889000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3"
@@ -384,6 +476,29 @@
     "is_featured": false
   },
   {
+    "first_name": "Gerlinde",
+    "last_name": "M.",
+    "display_name": "Gerlinde M.",
+    "email": "demo.gerlinde.m@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "langfristigkeit"
+    ],
+    "text": "Über die Jahre verlässlich. Was in einem Jahr besprochen wird, ist im nächsten nicht vergessen — das ist mir wichtig geworden.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.13 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-20T23:05:13.889000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-20T23:05:13.889000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3"
+  },
+  {
     "first_name": "Franziska",
     "last_name": "H.",
     "display_name": "Franziska H.",
@@ -425,6 +540,29 @@
     "moderated_at": "2026-08-20T13:29:43.909000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-20T13:29:43.909000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3"
+  },
+  {
+    "first_name": "Heinz-Otto",
+    "last_name": "B.",
+    "display_name": "Heinz-Otto B.",
+    "email": "demo.heinzotto.b@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "erreichbarkeit"
+    ],
+    "text": "Auch bei Kleinigkeiten erreichbar. Kurze Frage, kurze Antwort — und ich weiß, dass sie ankommt.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.13 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-19T20:05:13.889000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-19T20:05:13.889000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3"
@@ -546,6 +684,29 @@
     "created_at": "2026-08-18T18:06:54.902000+00:00"
   },
   {
+    "first_name": "Josef",
+    "last_name": "R.",
+    "display_name": "Josef R.",
+    "email": "demo.josef.r@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "investmentuebersicht"
+    ],
+    "text": "Endlich Ordnung im Portfolio. Ich hatte über Jahre einiges parallel aufgebaut; die Zusammenschau war für mich der eigentliche Mehrwert.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.13 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-18T17:05:13.889000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-18T17:05:13.889000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3"
+  },
+  {
     "first_name": "Hannah",
     "last_name": "P.",
     "display_name": "Hannah P.",
@@ -591,6 +752,29 @@
     "is_featured": false
   },
   {
+    "first_name": "Ludger",
+    "last_name": "D.",
+    "display_name": "Ludger D.",
+    "email": "demo.ludger.d@froehlich-templates.local",
+    "rating": 4,
+    "topics": [
+      "transparenz"
+    ],
+    "text": "Nichts wird verklausuliert. Ich bin skeptisch, wenn Zahlen im Kleingedruckten verschwinden — hier war das nicht der Fall.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.13 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-17T14:05:13.889000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-17T14:05:13.889000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3"
+  },
+  {
     "first_name": "Jonas",
     "last_name": "W.",
     "display_name": "Jonas W.",
@@ -632,6 +816,30 @@
     "moderated_at": "2026-08-17T12:08:20.397000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-17T12:08:20.397000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3"
+  },
+  {
+    "first_name": "Mia",
+    "last_name": "P.",
+    "display_name": "Mia P.",
+    "email": "demo.mia.p@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "beratung",
+      "vertrauen"
+    ],
+    "text": "Ich habe Fragen gestellt, die mir eigentlich unangenehm waren. Wurden ruhig und ohne Wertung beantwortet.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.13 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-17T11:05:13.889000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-17T11:05:13.889000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3"
@@ -704,6 +912,30 @@
     "moderated_at": "2026-08-16T22:06:49.981000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-16T22:06:49.981000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3"
+  },
+  {
+    "first_name": "Otto",
+    "last_name": "L.",
+    "display_name": "Otto L.",
+    "email": "demo.otto.l@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "vertrauen",
+      "langfristigkeit"
+    ],
+    "text": "Ohne großes Marketing, dafür verlässlich. Genau die Art Zusammenarbeit, die ich mir wünsche.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.13 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-16T08:05:13.889000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-16T08:05:13.889000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3"
@@ -1313,9 +1545,9 @@
     "customer_since": "1_bis_3"
   },
   {
-    "first_name": "Thomas",
-    "last_name": "R.",
-    "display_name": "Thomas R.",
+    "first_name": "Rainer",
+    "last_name": "T.",
+    "display_name": "Rainer T.",
     "email": "demo.thomas.r@froehlich-templates.local",
     "rating": 5,
     "topics": [
