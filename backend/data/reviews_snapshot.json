@@ -42,6 +42,30 @@
     ]
   },
   {
+    "first_name": "Xaver",
+    "last_name": "M.",
+    "display_name": "Xaver M.",
+    "email": "demo.xaver.m@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "persoenliche-betreuung"
+    ],
+    "text": "Vor dem ersten Termin war ich unsicher, wie viel ich überhaupt preisgeben will. Niemand hat mich gedrängt, ins Detail zu gehen. Wir sind zunächst bei den Grundlagen geblieben und haben Schritt für Schritt geschaut, was für meine Situation überhaupt sinnvoll ist. Ein paar Tage später ist mir noch ein Punkt eingefallen; auf eine kurze Nachricht kam noch am selben Tag eine klare Antwort. Beim zweiten Gespräch war das Thema dann schon vorbereitet. Was ich rückblickend am meisten schätze: die Ruhe im Umgang mit einem Thema, das mich vorher nervös gemacht hat. Zeit war nie knapp.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.17 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-25T11:25:46.214000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-25T11:25:46.214000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3",
+    "length_class": "L"
+  },
+  {
     "first_name": "Adam",
     "last_name": "T.",
     "display_name": "Adam T.",
@@ -316,6 +340,31 @@
     "customer_since": "1_bis_3"
   },
   {
+    "first_name": "Nele",
+    "last_name": "K.",
+    "display_name": "Nele K.",
+    "email": "demo.nele.k@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "beratung",
+      "transparenz"
+    ],
+    "text": "Der erste Kontakt lief per E-Mail, und schon da hatte ich das Gefühl: hier wird gelesen, nicht überflogen. Beim Termin selbst wurden meine Fragen der Reihe nach durchgesprochen. Wo ich unsicher war, wurde ohne Umweg noch einmal anders erklärt. Vor- und Nachteile lagen offen auf dem Tisch — auch dort, wo die Nachteile eher unbequem waren. Am Ende habe ich mich für einen Weg entschieden, der nicht der bequemste war, aber der zu mir passt. Zwischen den beiden Terminen hatte ich noch Unterlagen geschickt. Beim zweiten Gespräch wurde direkt darauf eingegangen, sodass wir nicht wieder von vorne anfangen mussten. Für mich stimmt hier der Rahmen.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.17 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-24T06:25:46.214000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-24T06:25:46.214000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3",
+    "length_class": "L"
+  },
+  {
     "first_name": "Björg",
     "last_name": "L.",
     "display_name": "Björg L.",
@@ -475,6 +524,30 @@
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3"
+  },
+  {
+    "first_name": "Waldemar",
+    "last_name": "F.",
+    "display_name": "Waldemar F.",
+    "email": "demo.waldemar.f@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "langfristigkeit"
+    ],
+    "text": "Wir kennen uns inzwischen acht Jahre. In dieser Zeit haben sich mein Job, mein Wohnort und einige Rahmenbedingungen verändert — aber ich musste nie neu bei Null anfangen. Wenn ich anrufe, weiß mein Ansprechpartner, wovon ich rede. Zwischen zwei größeren Terminen liegen manchmal Monate, aber die Wiederaufnahme ist immer punktgenau. Manchmal kommt auch von der anderen Seite ein Hinweis, wenn etwas anliegen könnte. Genau darauf verlasse ich mich.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.17 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-23T01:25:46.214000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-23T01:25:46.214000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3",
+    "length_class": "L"
   },
   {
     "first_name": "Corinna",
@@ -637,6 +710,30 @@
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3"
+  },
+  {
+    "first_name": "Yvonne",
+    "last_name": "R.",
+    "display_name": "Yvonne R.",
+    "email": "demo.yvonne.r@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "erreichbarkeit"
+    ],
+    "text": "Nach unserem Gespräch hatte ich noch zwei Fragen und habe am nächsten Morgen geschrieben. Die Rückmeldung kam schnell und vor allem so, dass ich sie verstanden habe. Kein neuer Termin nötig, kein Rückruf-Pingpong. Das ist mir im Alltag mehr wert als vieles andere.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.17 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-21T20:25:46.214000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-21T20:25:46.214000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3",
+    "length_class": "M"
   },
   {
     "first_name": "Enrico",
@@ -844,6 +941,30 @@
     "customer_since": "1_bis_3"
   },
   {
+    "first_name": "Konrad",
+    "last_name": "D.",
+    "display_name": "Konrad D.",
+    "email": "demo.konrad.d@froehlich-templates.local",
+    "rating": 4,
+    "topics": [
+      "vertrauen"
+    ],
+    "text": "Ehrlich gesagt war ich vorher skeptisch, weil ich zwei andere Beratungen im Rücken hatte, die mir nicht so gefallen haben. Der Ton hier war ein anderer, ruhiger. Nach dem ersten Termin habe ich nicht sofort unterschrieben — genau das war offenbar auch die Erwartung.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.17 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-20T15:25:46.214000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-20T15:25:46.214000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3",
+    "length_class": "M"
+  },
+  {
     "first_name": "Frederik",
     "last_name": "M.",
     "display_name": "Frederik M.",
@@ -888,6 +1009,30 @@
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3"
+  },
+  {
+    "first_name": "Merle",
+    "last_name": "L.",
+    "display_name": "Merle L.",
+    "email": "demo.merle.l@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "transparenz"
+    ],
+    "text": "Wichtig war mir, dass Kosten und Grenzen offen benannt werden, bevor ich etwas unterschreibe. Genau das ist passiert. Zwei Punkte, die für mich weniger geeignet sind, wurden gleich am Anfang ausgesprochen. Das hat mir viel Zeit gespart, weil ich gar nicht erst in die Richtung nachdenken musste. Danach war der Rest der Beratung deutlich fokussierter.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.17 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-20T10:25:46.214000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-20T10:25:46.214000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3",
+    "length_class": "M"
   },
   {
     "first_name": "Gudrun",
@@ -1075,6 +1220,30 @@
     "customer_since": "1_bis_3"
   },
   {
+    "first_name": "Steffen",
+    "last_name": "T.",
+    "display_name": "Steffen T.",
+    "email": "demo.steffen.t@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "beratung"
+    ],
+    "text": "Vorher hatte ich das Bild eines klassischen Verkaufsgesprächs im Kopf. Stattdessen bekam ich eher eine Einordnung meiner Situation. Kein Baustein wurde erwähnt, bevor die Grundlage stand. Für mich der bessere Weg.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.17 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-19T05:25:46.214000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-19T05:25:46.214000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3",
+    "length_class": "M"
+  },
+  {
     "first_name": "Helmut",
     "last_name": "O.",
     "display_name": "Helmut O.",
@@ -1256,6 +1425,30 @@
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-18T02:55:55.106000+00:00",
     "is_featured": false
+  },
+  {
+    "first_name": "Rosa",
+    "last_name": "V.",
+    "display_name": "Rosa V.",
+    "email": "demo.rosa.v@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "investmentuebersicht"
+    ],
+    "text": "Über die Jahre hatte sich einiges parallel aufgebaut, ohne dass ich noch den Überblick behielt. Beim Termin wurden meine Positionen einmal zusammen aufgeschrieben. Doppelte Kosten und Lücken sind mir dabei aufgefallen, ohne dass ich vorher gewusst hätte, wonach ich suchen soll. Verändert habe ich nicht sofort etwas, aber ich weiß jetzt, wo ich stehe.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.17 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-18T00:25:46.214000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-18T00:25:46.214000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3",
+    "length_class": "M"
   },
   {
     "first_name": "Ilona",
@@ -1515,6 +1708,30 @@
     "customer_since": "1_bis_3"
   },
   {
+    "first_name": "Gerald",
+    "last_name": "B.",
+    "display_name": "Gerald B.",
+    "email": "demo.gerald.b@froehlich-templates.local",
+    "rating": 5,
+    "topics": [
+      "service"
+    ],
+    "text": "Läuft. Ohne viel Aufhebens.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.17 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-16T19:25:46.214000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-16T19:25:46.214000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3",
+    "length_class": "S"
+  },
+  {
     "first_name": "Karsten",
     "last_name": "E.",
     "display_name": "Karsten E.",
@@ -1653,6 +1870,30 @@
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3"
+  },
+  {
+    "first_name": "Selma",
+    "last_name": "P.",
+    "display_name": "Selma P.",
+    "email": "demo.selma.p@froehlich-templates.local",
+    "rating": 4,
+    "topics": [
+      "service"
+    ],
+    "text": "Ohne viel Aufhebens, dafür pünktlich.",
+    "status": "approved",
+    "is_demo": false,
+    "is_verified": false,
+    "invited": false,
+    "admin_note": "session 80.17 template",
+    "admin_response": null,
+    "moderated_at": "2026-08-15T14:25:46.214000+00:00",
+    "moderated_by": "system-seed-templates",
+    "created_at": "2026-08-15T14:25:46.214000+00:00",
+    "is_featured": false,
+    "content_origin": "template_generated",
+    "customer_since": "1_bis_3",
+    "length_class": "S"
   },
   {
     "first_name": "Verena",
