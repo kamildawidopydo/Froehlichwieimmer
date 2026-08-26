@@ -56,14 +56,16 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.17 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank für Ihre ausführlichen Worte. Es freut uns zu lesen, dass Sie die Ruhe im Gespräch und die schnelle Rückmeldung auf Ihre Nachricht als hilfreich empfunden haben.",
     "moderated_at": "2026-08-25T11:25:46.214000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-25T11:25:46.214000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3",
-    "length_class": "L"
+    "length_class": "L",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Adam",
@@ -103,13 +105,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.15 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank für Ihre Rückmeldung. Zusammenhänge in eigenen Worten zu erklären, ist manchmal die schwerere Übung — schön, dass es bei Ihnen angekommen ist.",
     "moderated_at": "2026-08-25T11:17:44.428000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-25T11:17:44.428000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Peggy",
@@ -126,13 +130,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.14 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank. Ein Berg Papier verliert seinen Schrecken, sobald man ihn einmal in Ruhe sortiert hat — freut uns, dass wir dabei helfen konnten.",
     "moderated_at": "2026-08-25T11:15:15.309000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-25T11:15:15.309000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Achim",
@@ -172,13 +178,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.9 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank für Ihre Worte. Dass die Sortierung nach dem Gespräch für Sie leichter geworden ist, ist genau das Ziel.",
     "moderated_at": "2026-08-25T09:53:21.215000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-25T09:53:21.215000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Holger",
@@ -239,13 +247,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.7 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank. Ordnung in die eigenen Themen zu bekommen — genau darum geht es uns.",
     "moderated_at": "2026-08-24T09:08:20.397000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-24T09:08:20.397000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Berta",
@@ -262,13 +272,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.16 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank. Über drei Termine ein Vertrauensgefühl aufzubauen ist Zeit gut investiert.",
     "moderated_at": "2026-08-24T08:20:55.363000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-24T08:20:55.363000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Christian",
@@ -285,13 +297,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.13 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank. Wenn ein Thema nicht passt, sagen wir das lieber offen — freut uns, dass Sie das so einordnen.",
     "moderated_at": "2026-08-24T08:05:13.889000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-24T08:05:13.889000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Rolf",
@@ -308,13 +322,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.14 template",
-    "admin_response": null,
+    "admin_response": "Vier Jahre — herzlichen Dank für Ihr Vertrauen. Wir freuen uns, wenn die damaligen Empfehlungen für Sie weiterhin tragen.",
     "moderated_at": "2026-08-24T07:15:15.309000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-24T07:15:15.309000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Carsten",
@@ -355,14 +371,16 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.17 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank für Ihre offene Rückmeldung. Genau darauf legen wir Wert: Fragen der Reihe nach durchgehen, Vor- und Nachteile offen benennen und beim nächsten Termin nicht wieder von vorne beginnen.",
     "moderated_at": "2026-08-24T06:25:46.214000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-24T06:25:46.214000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3",
-    "length_class": "L"
+    "length_class": "L",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Björg",
@@ -402,13 +420,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.8 template",
-    "admin_response": null,
+    "admin_response": "Danke für Ihre offenen Worte. Ein Gespräch ohne Druck ist uns wichtig — schön, dass Sie das so wahrgenommen haben.",
     "moderated_at": "2026-08-24T04:29:43.909000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-24T04:29:43.909000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Jens",
@@ -471,13 +491,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.13 template",
-    "admin_response": null,
+    "admin_response": "Danke für Ihre Rückmeldung. Zuhören vor dem Vorschlagen — das ist für uns kein Bekenntnis, sondern Arbeitsweise.",
     "moderated_at": "2026-08-23T05:05:13.889000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-23T05:05:13.889000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Doreen",
@@ -540,14 +562,16 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.17 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank für die vielen gemeinsamen Jahre und Ihr Vertrauen. Dass die Wiederaufnahme auch nach längeren Pausen für Sie punktgenau ist, freut uns besonders.",
     "moderated_at": "2026-08-23T01:25:46.214000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-23T01:25:46.214000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3",
-    "length_class": "L"
+    "length_class": "L",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Corinna",
@@ -587,13 +611,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.8 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank. Schön zu hören, dass auch Ihre Rückfragen nach dem Termin zügig und verständlich beantwortet wurden.",
     "moderated_at": "2026-08-22T23:29:43.909000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-22T23:29:43.909000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Denise",
@@ -610,13 +636,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.16 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank für die klaren Worte. Mensch vor Zahl — das versuchen wir jeden Tag.",
     "moderated_at": "2026-08-22T02:20:55.363000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-22T02:20:55.363000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Rüdiger",
@@ -773,13 +801,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.8 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank für Ihr Feedback. Dass Sie den Erklärungen gut folgen konnten, ist uns wichtig — für Nachfragen sind wir jederzeit erreichbar.",
     "moderated_at": "2026-08-21T18:29:43.909000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-21T18:29:43.909000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Sarah",
@@ -932,13 +962,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.14 template",
-    "admin_response": null,
+    "admin_response": "Danke für die freundlichen Worte. Wenn eine kurze Frage abends noch beantwortet werden kann, ist unser Tag rund.",
     "moderated_at": "2026-08-20T19:15:15.309000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-20T19:15:15.309000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Konrad",
@@ -1049,13 +1081,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.15 template",
-    "admin_response": null,
+    "admin_response": "Danke für Ihre offenen Worte. Wenn Kosten nicht schöngerechnet werden, ist das die einfachere Basis für alles Weitere.",
     "moderated_at": "2026-08-20T10:17:44.428000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-20T10:17:44.428000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Egon",
@@ -1164,13 +1198,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.14 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank. Auch unbequeme Antworten gehören für uns dazu — schön, dass Sie das schätzen.",
     "moderated_at": "2026-08-19T15:15:15.309000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-19T15:15:15.309000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "David",
@@ -1258,13 +1294,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.15 template",
-    "admin_response": null,
+    "admin_response": "Sieben Jahre — herzlichen Dank. Dass sich die Ansprache über die Zeit gleich anfühlt, ist uns wichtig.",
     "moderated_at": "2026-08-19T05:17:44.428000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-19T05:17:44.428000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Oliver",
@@ -1350,13 +1388,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.13 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank. Die Zusammenschau der bestehenden Positionen bringt oft mehr Klarheit als jede einzelne Empfehlung — schön, dass es auch bei Ihnen so war.",
     "moderated_at": "2026-08-18T17:05:13.889000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-18T17:05:13.889000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Hannah",
@@ -1373,13 +1413,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.9 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank für Ihre Rückmeldung. Schön, dass auch die kurzen Nachrichten am selben Tag ihren Weg zu einer Antwort finden.",
     "moderated_at": "2026-08-18T15:53:21.215000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-18T15:53:21.215000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Falk",
@@ -1534,13 +1576,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.9 template",
-    "admin_response": null,
+    "admin_response": "Danke, dass Sie sich die Zweitmeinung bei uns geholt haben. Wenn am Ende Ihr eigener Plan bestätigt wird, ist das für uns ein ebenso gutes Ergebnis wie ein Kurswechsel.",
     "moderated_at": "2026-08-17T12:53:21.215000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-17T12:53:21.215000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Fabian",
@@ -1722,14 +1766,16 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.17 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank für die kurze und klare Rückmeldung.",
     "moderated_at": "2026-08-16T19:25:46.214000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-16T19:25:46.214000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3",
-    "length_class": "S"
+    "length_class": "S",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Karsten",
@@ -1886,14 +1932,16 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.17 template",
-    "admin_response": null,
+    "admin_response": "Danke, dass Sie sich die Zeit für die Rückmeldung nehmen — Pünktlichkeit ist uns ein echtes Anliegen.",
     "moderated_at": "2026-08-15T14:25:46.214000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-15T14:25:46.214000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
     "customer_since": "1_bis_3",
-    "length_class": "S"
+    "length_class": "S",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Verena",
@@ -2026,13 +2074,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.16 template",
-    "admin_response": null,
+    "admin_response": "Danke. Eine saubere Zusammenfassung nach dem Termin ist Standard bei uns — schön, dass es sich für Sie so anfühlt.",
     "moderated_at": "2026-08-14T02:20:55.363000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-14T02:20:55.363000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Iris",
@@ -2443,13 +2493,15 @@
     "is_verified": false,
     "invited": false,
     "admin_note": "session 80.16 template",
-    "admin_response": null,
+    "admin_response": "Vielen Dank für Ihren Vergleich mit anderen Beratungen. Ein anderer Ton — daran arbeiten wir bewusst.",
     "moderated_at": "2026-08-08T08:20:55.363000+00:00",
     "moderated_by": "system-seed-templates",
     "created_at": "2026-08-08T08:20:55.363000+00:00",
     "is_featured": false,
     "content_origin": "template_generated",
-    "customer_since": "1_bis_3"
+    "customer_since": "1_bis_3",
+    "responded_at": "2026-08-26T11:37:00.615000+00:00",
+    "responded_by": "Fröhlich Vermögensberatung GmbH"
   },
   {
     "first_name": "Klaus",

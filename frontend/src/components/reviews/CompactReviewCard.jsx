@@ -94,6 +94,19 @@ const CompactReviewCard = ({ review }) => {
           {expanded ? 'weniger anzeigen' : '… mehr lesen'}
         </button>
       )}
+      {review.admin_response && (
+        <div
+          className="mt-4 border-l-2 border-bank-primary/50 bg-bank-primary/[0.03] px-3 py-2.5"
+          data-testid="compact-review-reply"
+        >
+          <p className="text-[10.5px] uppercase tracking-[0.14em] text-bank-primary">
+            Antwort von Fröhlich Vermögensberatung
+          </p>
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-bank-text">
+            {review.admin_response}
+          </p>
+        </div>
+      )}
       <div className="mt-auto pt-4">
         <p className="text-[13px] font-medium text-bank-text">{name}</p>
         {seit && <p className="text-[11.5px] uppercase tracking-[0.14em] text-bank-text-muted">{seit}</p>}
