@@ -7,6 +7,18 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 80.12 (Feb 26 2026) — **Load-More-Button für Kundenstimmen (statt versteckter Pagination)**:
+  - Symptom: Nutzer sah immer nur 10 der 77 Reviews — Root Cause war, dass die früher entfernten Pagination-Steuerungen (ChevronLeft/Right Buttons) nie wieder eingebaut wurden, während der Slice `items.slice((page-1)*10, page*10)` fest auf Seite 1 stand.
+  - Fix in `frontend/src/pages/Kundenstimmen.jsx`:
+    - State `page` → `visibleCount` (Start: 10).
+    - Filter-Wechsel resettet `visibleCount` auf 10.
+    - Neuer Button „Weitere N Kundenstimmen anzeigen" (mit ChevronDown) — pro Klick +10 Karten.
+    - Sichtbarkeits-Text „X von 77 Kundenstimmen angezeigt".
+    - Endzustand „Alle 77 Kundenstimmen sind geladen" wenn nichts mehr übrig.
+    - Aufgeräumt: unused `ChevronLeft`/`ChevronRight`-Imports entfernt, `goPage`/`totalPages`/`pageItems` gelöscht.
+  - Data-Testids: `kundenstimmen-loadmore-btn`, `kundenstimmen-loadmore-wrap`, `kundenstimmen-visible-count`, `kundenstimmen-all-loaded`.
+  - DB-Duplikat-Check: `total_public=77, unique_emails=77, unique_texts=77` → **0 Duplikate**.
+
 - 80.11 (Feb 26 2026) — **Bugfix: Production-DB leer, 0 Kundenstimmen sichtbar → Auto-Seed via Startup-Snapshot**:
   - Root Cause: Nach dem ersten Deploy zu kapital-direkt24.de bekommt die Production ihre eigene, frische MongoDB. Alle 77 Kundenstimmen existierten nur in der Preview-DB (`kapitalmitte`). `GET https://kapital-direkt24.de/api/reviews/public` lieferte `total=0`.
   - Fix: **JSON-Snapshot der Preview-DB** in `backend/data/reviews_snapshot.json` (77 Reviews, 60 KB, ins Repo eingecheckt). Neuer Loader `backend/reviews_seed_loader.py` mit idempotentem Insert per E-Mail. Wired in `server.py` `on_startup` nach `seed_content()`.

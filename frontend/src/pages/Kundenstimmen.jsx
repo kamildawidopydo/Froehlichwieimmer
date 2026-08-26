@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, X, ChevronDown, ChevronLeft, ChevronRight, Beaker } from 'lucide-react';
+import { Search, X, ChevronDown, Beaker } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import PageMeta from '@/components/PageMeta';
 import CompactReviewCard from '@/components/reviews/CompactReviewCard';
 import ReviewSubmitForm from '@/components/reviews/ReviewSubmitForm';
 import { reviewsApi } from '@/services/reviewsApi';
 
-const PAGE_SIZE   = 10;      // 10 Karten pro Seite (Session 80.5)
-const POOL_SIZE   = 200;     // clientseitige Pagination auf einem gecachten Pool (Session 80.10: >60 Kundenstimmen)
+const PAGE_SIZE   = 10;      // 10 Karten pro Load-Batch (Session 80.12: Load-More Pattern)
+const POOL_SIZE   = 200;     // clientseitiger Cache aller freigegebenen Reviews
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Neueste zuerst' },
@@ -34,8 +34,8 @@ const Kundenstimmen = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [page, setPage] = useState(1);
-  const [fadeKey, setFadeKey] = useState(0); // triggert Fade-Animation beim Seitenwechsel
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE); // Session 80.12: Load-More
+  const [fadeKey, setFadeKey] = useState(0);
 
   const [topic, setTopic] = useState('');
   const [rating, setRating] = useState(0);
@@ -66,7 +66,7 @@ const Kundenstimmen = () => {
     let cancelled = false;
     setLoading(true);
     setError(false);
-    setPage(1);
+    setVisibleCount(PAGE_SIZE); // Filterwechsel → wieder mit den ersten 10 starten
     reviewsApi.list({ ...filterParams, offset: 0 })
       .then((data) => {
         if (cancelled) return;
@@ -86,19 +86,12 @@ const Kundenstimmen = () => {
     setSearchInput('');
   };
 
-  // Client-seitige Pagination auf dem Cache-Pool.
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-  const pageItems  = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const rangeFrom  = items.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const rangeTo    = Math.min(page * PAGE_SIZE, items.length);
-  const goPage = (p) => {
-    const target = Math.min(Math.max(1, p), totalPages);
-    if (target !== page) {
-      setPage(target);
-      setFadeKey((k) => k + 1);
-      // Sanft nach oben scrollen, damit die neuen Karten sichtbar sind.
-      try { document.getElementById('kundenstimmen-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* noop */ }
-    }
+  // Session 80.12: Load-More Pattern statt Seiten-Pagination.
+  const visibleItems = items.slice(0, visibleCount);
+  const remaining    = Math.max(0, items.length - visibleCount);
+  const loadMore = () => {
+    setVisibleCount((c) => Math.min(c + PAGE_SIZE, items.length));
+    setFadeKey((k) => k + 1);
   };
 
   return (
@@ -308,13 +301,35 @@ const Kundenstimmen = () => {
         ) : (
           <>
             <div
-              key={fadeKey}
-              className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 animate-in fade-in duration-300"
+              className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
               data-testid="kundenstimmen-grid"
             >
-              {items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((r) => (
+              {visibleItems.map((r) => (
                 <CompactReviewCard key={r.id} review={r} />
               ))}
+            </div>
+            {/* Load-More Steuerung */}
+            <div className="mt-10 flex flex-col items-center gap-3" data-testid="kundenstimmen-loadmore-wrap">
+              <p className="text-[12.5px] text-bank-text-muted" data-testid="kundenstimmen-visible-count">
+                {`${visibleItems.length} von ${items.length} Kundenstimmen angezeigt`}
+              </p>
+              {remaining > 0 ? (
+                <button
+                  type="button"
+                  onClick={loadMore}
+                  data-testid="kundenstimmen-loadmore-btn"
+                  className="inline-flex items-center gap-2 rounded-full border border-bank-primary bg-bank-primary px-6 py-2.5 text-[13.5px] font-medium text-white transition-colors hover:bg-bank-primary/90"
+                >
+                  {`Weitere ${Math.min(PAGE_SIZE, remaining)} Kundenstimmen anzeigen`}
+                  <ChevronDown className="h-4 w-4" strokeWidth={1.6} />
+                </button>
+              ) : (
+                items.length > PAGE_SIZE && (
+                  <p className="text-[12.5px] italic text-bank-text-muted" data-testid="kundenstimmen-all-loaded">
+                    Alle {items.length} Kundenstimmen sind geladen.
+                  </p>
+                )
+              )}
             </div>
           </>
         )}
