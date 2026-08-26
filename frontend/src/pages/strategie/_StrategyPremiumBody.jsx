@@ -23,10 +23,17 @@ import StrategySectionNav from './_StrategySectionNav';
 import StrategySelfCheck from './_StrategySelfCheck';
 import StrategyComparison from './_StrategyComparison';
 import StrategieCta from './_StrategieCta';
+import {
+  StrategyKeyTakeaways,
+  ReadingTimeBadge,
+  StrategyTerms,
+  StrategyDeepLearn,
+  StrategyNewsSection,
+  StrategyConversationQuestions,
+  StrategyReportDownload,
+  computeReadingMinutes,
+} from './_StrategyKnowledgeCenter';
 
-/**
- * Icon-Map — nur Icons, die tatsächlich in den Content-Blobs referenziert sind.
- */
 const ICONS = {
   'alert-triangle': AlertTriangle,
   award: Award,
@@ -72,29 +79,31 @@ const FaqItem = ({ q, a, idx }) => {
   );
 };
 
-/**
- * Rendert die Premium-Detail-Seite unterhalb des gemeinsamen Hero.
- * Erwartet `topic` (aus strategieContent.js) und `premium` (aus strategiePremiumContent.js).
- */
 const StrategyPremiumBody = ({ category, topic, premium }) => {
+  const readingMinutes = React.useMemo(() => computeReadingMinutes(premium), [premium]);
+
   const navItems = [
     { id: 'ueberblick', label: 'Überblick' },
+    { id: 'key-takeaways', label: 'Das Wichtigste' },
     { id: 'kurz-erklaert', label: 'Kurz erklärt' },
     { id: 'fuer-wen', label: 'Für wen?' },
     { id: 'funktionsweise', label: 'Funktionsweise' },
     { id: 'wichtige-aspekte', label: 'Wichtige Aspekte' },
     { id: 'beispiel', label: 'Beispiel' },
     { id: 'vorteile-und-punkte', label: 'Vorteile & zu beachten' },
-    { id: 'haeufige-fehler', label: 'Häufige Fehler' },
+    { id: 'wichtige-begriffe', label: 'Begriffe' },
+    { id: 'wissen-vertiefen', label: 'Wissen vertiefen' },
+    { id: 'aktuelle-einblicke', label: 'Aktuelle Einblicke' },
     { id: 'self-check', label: 'Self-Check' },
+    { id: 'fragen-fuer-gespraech', label: 'Fragen fürs Gespräch' },
     { id: 'vergleich', label: 'Vergleich' },
     { id: 'faq', label: 'FAQ' },
+    { id: 'merkblatt', label: 'Merkblatt' },
     { id: 'verwandte-themen', label: 'Verwandte Themen' },
   ];
 
   return (
     <div className="mt-8 lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-x-12 xl:grid-cols-[260px_minmax(0,1fr)]">
-      {/* In-Page-Nav */}
       <aside className="lg:sticky lg:top-24 lg:self-start" aria-label="Seiten-Navigation">
         <div className="hidden lg:block">
           <p className="mb-3 text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted">Auf dieser Seite</p>
@@ -102,25 +111,27 @@ const StrategyPremiumBody = ({ category, topic, premium }) => {
         <StrategySectionNav items={navItems} />
       </aside>
 
-      {/* Hauptinhalt */}
       <div className="min-w-0">
+        {/* Reading time badge */}
+        <div className="mb-2">
+          <ReadingTimeBadge minutes={readingMinutes} />
+        </div>
+
+        {/* Key Takeaways — direkt nach dem Hero */}
+        <StrategyKeyTakeaways items={premium.keyTakeaways || []} />
+
         {/* Überblick / Summary */}
-        <section id="ueberblick" className="scroll-mt-24">
+        <section id="ueberblick" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Überblick" title="Kurzfassung" />
           <p className="mt-4 text-[15.5px] leading-relaxed text-bank-text-muted">{premium.summary}</p>
           <StrategyQuickFacts items={premium.quickFacts} />
         </section>
 
-        {/* Kurz erklärt */}
         <section id="kurz-erklaert" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Kurz erklärt" title="Die Grundidee in wenigen Punkten" />
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {premium.shortExplanation.map((item, i) => (
-              <div
-                key={i}
-                className="rounded-xl border border-bank-border bg-white p-5 sm:p-6"
-                data-testid={`strategie-short-${i}`}
-              >
+              <div key={i} className="rounded-xl border border-bank-border bg-white p-5 sm:p-6" data-testid={`strategie-short-${i}`}>
                 <p className="font-serif text-[16px] leading-snug text-bank-text">{item.title}</p>
                 <p className="mt-2 text-[13.5px] leading-relaxed text-bank-text-muted">{item.body}</p>
               </div>
@@ -128,17 +139,13 @@ const StrategyPremiumBody = ({ category, topic, premium }) => {
           </div>
         </section>
 
-        {/* Für wen */}
         <section id="fuer-wen" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Für wen?" title="Für wen kann das Thema interessant sein?" />
           <p className="mt-4 text-[14.5px] leading-relaxed text-bank-text-muted">{premium.suitableFor.intro}</p>
           <ul className="mt-4 space-y-2.5">
             {premium.suitableFor.points.map((p, i) => (
               <li key={i} className="flex items-start gap-3">
-                <span
-                  aria-hidden
-                  className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-bank-primary/25 bg-bank-primary/[0.06] text-bank-primary"
-                >
+                <span aria-hidden className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-bank-primary/25 bg-bank-primary/[0.06] text-bank-primary">
                   <Check className="h-3 w-3" strokeWidth={2.4} />
                 </span>
                 <span className="text-[14.5px] leading-relaxed text-bank-text">{p}</span>
@@ -150,7 +157,6 @@ const StrategyPremiumBody = ({ category, topic, premium }) => {
           </p>
         </section>
 
-        {/* Wie funktioniert das? */}
         <section id="funktionsweise" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Funktionsweise" title="Wie funktioniert das in der Praxis?" />
           <ol className="mt-6 space-y-4">
@@ -165,23 +171,15 @@ const StrategyPremiumBody = ({ category, topic, premium }) => {
           </ol>
         </section>
 
-        {/* Wichtige Aspekte */}
         <section id="wichtige-aspekte" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Wichtige Aspekte" title="Was Sie beim Thema im Blick haben sollten" />
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {premium.aspects.map((a, i) => {
               const Icon = ICONS[a.iconName] || Check;
               return (
-                <div
-                  key={i}
-                  className="rounded-xl border border-bank-border bg-white p-5 sm:p-6"
-                  data-testid={`strategie-aspect-${i}`}
-                >
+                <div key={i} className="rounded-xl border border-bank-border bg-white p-5 sm:p-6" data-testid={`strategie-aspect-${i}`}>
                   <div className="flex items-start gap-3">
-                    <span
-                      aria-hidden
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-bank-primary/20 bg-bank-primary/[0.06] text-bank-primary"
-                    >
+                    <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-bank-primary/20 bg-bank-primary/[0.06] text-bank-primary">
                       <Icon className="h-4 w-4" strokeWidth={1.7} />
                     </span>
                     <div className="min-w-0">
@@ -195,7 +193,6 @@ const StrategyPremiumBody = ({ category, topic, premium }) => {
           </div>
         </section>
 
-        {/* Beispiel */}
         <section id="beispiel" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Beispiel" title={premium.example.title} />
           <div className="mt-4 rounded-2xl border border-bank-border bg-bank-primary/[0.03] p-5 sm:p-7">
@@ -204,7 +201,6 @@ const StrategyPremiumBody = ({ category, topic, premium }) => {
           </div>
         </section>
 
-        {/* Vorteile & zu beachten */}
         <section id="vorteile-und-punkte" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Vorteile & zu beachten" title="Mögliche Vorteile — und Punkte, die man abwägen sollte" />
           <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -233,20 +229,23 @@ const StrategyPremiumBody = ({ category, topic, premium }) => {
           </div>
         </section>
 
-        {/* Häufige Fehler */}
+        {/* Knowledge Center: Terms + Deep Learn */}
+        <StrategyTerms items={premium.terms || []} />
+        <StrategyDeepLearn items={premium.deepLearn || []} />
+
+        {/* News dynamisch aus /api/content/news */}
+        <StrategyNewsSection
+          topicSlug={topic.slug}
+          keywords={premium.newsKeywords || []}
+          topicTitle={topic.title}
+        />
+
         <section id="haeufige-fehler" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Häufige Fehler" title="Woran viele Anleger scheitern" />
           <ul className="mt-6 space-y-3">
             {premium.mistakes.map((m, i) => (
-              <li
-                key={i}
-                data-testid={`strategie-mistake-${i}`}
-                className="flex items-start gap-3 rounded-xl border border-bank-border bg-white p-4"
-              >
-                <span
-                  aria-hidden
-                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-bank-primary/25 bg-bank-primary/[0.05] font-mono text-[11px] font-semibold text-bank-primary"
-                >
+              <li key={i} data-testid={`strategie-mistake-${i}`} className="flex items-start gap-3 rounded-xl border border-bank-border bg-white p-4">
+                <span aria-hidden className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-bank-primary/25 bg-bank-primary/[0.05] font-mono text-[11px] font-semibold text-bank-primary">
                   {i + 1}
                 </span>
                 <p className="text-[14px] leading-relaxed text-bank-text">{m}</p>
@@ -255,49 +254,41 @@ const StrategyPremiumBody = ({ category, topic, premium }) => {
           </ul>
         </section>
 
-        {/* Self-Check */}
         <section id="self-check" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Self-Check" title="Was ist für Sie persönlich wichtig?" />
           <div className="mt-6">
-            <StrategySelfCheck
-              question={premium.selfCheck.question}
-              options={premium.selfCheck.options}
-              summary={premium.selfCheck.summary}
-            />
+            <StrategySelfCheck question={premium.selfCheck.question} options={premium.selfCheck.options} summary={premium.selfCheck.summary} />
           </div>
         </section>
 
-        {/* Vergleich */}
+        {/* Fragen fürs Gespräch — direkt nach Self-Check */}
+        <StrategyConversationQuestions items={premium.conversationQuestions || []} />
+
         <section id="vergleich" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Vergleich" title={`${premium.comparison.leftTitle} vs. ${premium.comparison.rightTitle}`} />
           <p className="mt-3 text-[13.5px] text-bank-text-muted">
             Beide Ansätze haben ihre Berechtigung — Ziel des Vergleichs ist Klarheit, kein Ranking.
           </p>
           <div className="mt-6">
-            <StrategyComparison
-              leftTitle={premium.comparison.leftTitle}
-              rightTitle={premium.comparison.rightTitle}
-              rows={premium.comparison.rows}
-            />
+            <StrategyComparison leftTitle={premium.comparison.leftTitle} rightTitle={premium.comparison.rightTitle} rows={premium.comparison.rows} />
           </div>
         </section>
 
-        {/* FAQ */}
         {premium.faqs && premium.faqs.length > 0 ? (
           <section id="faq" className="mt-16 scroll-mt-24" aria-label="Häufige Fragen">
             <SectionHeading eyebrow="FAQ" title="Häufige Fragen" />
             <div className="mt-4 border-t border-bank-border">
-              {premium.faqs.map((f, i) => (
-                <FaqItem key={i} idx={i} q={f.q} a={f.a} />
-              ))}
+              {premium.faqs.map((f, i) => <FaqItem key={i} idx={i} q={f.q} a={f.a} />)}
             </div>
           </section>
         ) : null}
 
+        {/* Merkblatt-Download */}
+        <StrategyReportDownload category={category} topic={topic} premium={premium} />
+
         {/* CTA */}
         <StrategieCta topicTitle={topic.title} topicSlug={topic.slug} categorySlug={category.slug} />
 
-        {/* Verwandte Themen */}
         <section id="verwandte-themen" className="mt-16 scroll-mt-24">
           <SectionHeading eyebrow="Verwandte Themen" title="Weiterlesen" />
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -309,20 +300,14 @@ const StrategyPremiumBody = ({ category, topic, premium }) => {
                 className="group flex items-center justify-between gap-3 rounded-xl border border-bank-border bg-white p-4 transition-colors hover:border-bank-primary/40 hover:bg-bank-primary/[0.03]"
               >
                 <span className="font-serif text-[15px] text-bank-text">{r.label}</span>
-                <ArrowRight
-                  className="h-4 w-4 shrink-0 text-bank-primary transition-transform group-hover:translate-x-0.5"
-                  strokeWidth={1.6}
-                  aria-hidden
-                />
+                <ArrowRight className="h-4 w-4 shrink-0 text-bank-primary transition-transform group-hover:translate-x-0.5" strokeWidth={1.6} aria-hidden />
               </Link>
             ))}
           </div>
         </section>
 
-        {/* Disclaimer */}
         <p className="mt-16 text-[12px] italic leading-relaxed text-bank-text-muted" data-testid="strategie-disclaimer">
-          Die Inhalte dienen der allgemeinen Information und ersetzen keine individuelle Anlage-, Steuer- oder
-          Rechtsberatung.
+          Die Inhalte dienen der allgemeinen Information und ersetzen keine individuelle Anlage-, Steuer- oder Rechtsberatung.
         </p>
       </div>
     </div>

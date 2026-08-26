@@ -574,8 +574,14 @@ export const premiumTopics = {
 };
 
 import { premiumTopicsExtra } from './strategiePremiumContentExtra';
+import { premiumMeta } from './strategiePremiumMeta';
 
-/** Merged registry: Flagships (80.21a) + weitere 9 Topics (80.21b). */
-const mergedPremiumTopics = { ...premiumTopics, ...premiumTopicsExtra };
+/** Merged registry: Flagships (80.21a) + weitere 9 Topics (80.21b) + Knowledge-Center-Meta (80.22). */
+const mergedPremiumTopics = Object.keys({ ...premiumTopics, ...premiumTopicsExtra }).reduce((acc, slug) => {
+  const base = premiumTopics[slug] || premiumTopicsExtra[slug];
+  const meta = premiumMeta[slug];
+  acc[slug] = meta ? { ...base, ...meta } : base;
+  return acc;
+}, {});
 
 export const findPremium = (topicSlug) => mergedPremiumTopics[topicSlug] || null;

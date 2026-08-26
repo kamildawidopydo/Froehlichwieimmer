@@ -27,6 +27,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from services.report_pdf import PRODUCT_CATALOG, build_filename, render_pdf
+from services.strategy_report_pdf import build_strategy_filename, render_strategy_report_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -141,3 +142,64 @@ async def list_report_products():
             for k, v in PRODUCT_CATALOG.items()
         ]
     }
+
+
+# ---------------------------------------------------------------------------
+# Session 80.22 — Strategy Knowledge Center: Merkblatt-PDF pro Strategie-Topic.
+# ---------------------------------------------------------------------------
+
+
+class StrategyPdfRequest(BaseModel):
+    """
+    Body-Schema für POST /api/reports/strategy-pdf.
+
+    Content wird vom Frontend geliefert (Quelle: strategiePremiumContent.js).
+    Backend rendert data-driven — kein Content-Duplikat im Backend.
+    """
+
+    category_slug: str = Field(default="", max_length=64)
+    category_title: str = Field(default="", max_length=120)
+    topic_slug: str = Field(..., min_length=1, max_length=80)
+    topic_title: str = Field(..., min_length=1, max_length=160)
+    intro: str = Field(default="", max_length=2000)
+    summary: str = Field(default="", max_length=2000)
+    key_takeaways: list = Field(default_factory=list)
+    quick_facts: list = Field(default_factory=list)
+    how_it_works: list = Field(default_factory=list)
+    aspects: list = Field(default_factory=list)
+    advantages: list = Field(default_factory=list)
+    considerations: list = Field(default_factory=list)
+    self_check_options: list = Field(default_factory=list)
+    related: list = Field(default_factory=list)
+    conversation_questions: list = Field(default_factory=list)
+
+
+@router.post("/strategy-pdf")
+async def create_strategy_report_pdf(payload: StrategyPdfRequest):
+    data = payload.model_dump()
+    try:
+        pdf_bytes: bytes = await asyncio.wait_for(
+            asyncio.to_thread(render_strategy_report_pdf, data),
+            timeout=RENDER_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("strategy pdf timeout: topic=%s", payload.topic_slug)
+        return JSONResponse(status_code=504, content={"ok": False, "error": "render_timeout"})
+    except Exception:  # noqa: BLE001
+        logger.exception("strategy pdf render crashed for topic=%s", payload.topic_slug)
+        return JSONResponse(status_code=500, content={"ok": False, "error": "render_failed"})
+
+    if not pdf_bytes or not pdf_bytes.startswith(b"%PDF"):
+        logger.error("weasyprint returned invalid strategy PDF (%d bytes)", len(pdf_bytes) if pdf_bytes else 0)
+        return JSONResponse(status_code=500, content={"ok": False, "error": "invalid_pdf_output"})
+
+    filename = build_strategy_filename(payload.topic_slug)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": _content_disposition(filename),
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )

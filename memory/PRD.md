@@ -8,6 +8,17 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.22 (Feb 26 2026) — **Strategy Knowledge Center (Reports, News, Deep-Learn, Terms, Conversation Questions)**:
+  - Neue Datei `strategiePremiumMeta.js` mit fünf Zusatzfeldern je Topic (keyTakeaways/newsKeywords/terms/deepLearn/conversationQuestions) für alle 12 Topics; wird in `strategiePremiumContent.js#findPremium` gemerged.
+  - Neue React-Komponenten in `_StrategyKnowledgeCenter.jsx`: `StrategyKeyTakeaways`, `ReadingTimeBadge`, `StrategyTerms`, `StrategyDeepLearn` (Accordion), `StrategyNewsSection` (fetch `/api/content/news?limit=50`, clientseitig auf `newsKeywords` gefiltert, max 4), `StrategyConversationQuestions`, `StrategyReportDownload` + `computeReadingMinutes`.
+  - `_StrategyPremiumBody.jsx` neu strukturiert: Hero → ReadingTime → KeyTakeaways → Überblick → Kurz erklärt → Für wen? → Funktionsweise → Aspekte → Beispiel → Vorteile/zu beachten → Begriffe → Wissen vertiefen → Aktuelle Einblicke → Häufige Fehler → Self-Check → Fragen fürs Gespräch → Vergleich → FAQ → Merkblatt → CTA → Verwandte Themen → Disclaimer. Sticky-Nav umfasst jetzt 17 Sections.
+  - Backend: `services/strategy_report_pdf.py` + `templates/strategy_report.html` (WeasyPrint, A4, Header/Footer, Seitenzahlen, Datum, Disclaimer). Neuer Route `POST /api/reports/strategy-pdf` in `routes/reports.py`; Content wird vom Frontend geliefert (data-driven).
+  - 4 echte PDFs erzeugt: Value Investing / ESG / Private Rentenvorsorge / Vermögensübertragung — HTTP 200, `application/pdf`, `%PDF-1.7`-Magic, ~21 KB.
+  - News-Fetch reuse: bestehender `/api/content/news`-Endpoint wird wiederverwendet, keine zweite News-DB. Bei 0 Treffern erscheint neutrale Empty-Message („Aktuell keine passenden Beiträge…").
+  - Reading Time wird clientseitig aus dem Content-Umfang berechnet (~220 wpm, min. 3 Min., ganze Minuten).
+  - Session-80.21a/b/c bleiben unverändert; alle 12 Premium-Seiten weiterhin funktional (h1=1, alle KC-Marker vorhanden). Keine Console-Errors.
+
+
 - 80.21b (Feb 26 2026) — **9 verbleibende Strategie-Topics auf Premium-Standard**:
   - Neue Datei `strategiePremiumContentExtra.js` mit vollständigen Premium-Blobs für Dividendenstrategien, Impact Investing, Vermögensschutz, Inflationsschutz, Vermögensaufbau, Altersvorsorge, Betriebliche Altersvorsorge, Vermögensaufbau für Kinder, Vermögensübertragung.
   - `strategiePremiumContent.js` merged jetzt `premiumTopics` + `premiumTopicsExtra` → `findPremium(topicSlug)` liefert für alle 12 Topics einen Premium-Blob.
