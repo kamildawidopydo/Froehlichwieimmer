@@ -89,20 +89,19 @@ export async function listArticles({
 }
 
 export async function getArticleBySlug(slug, { signal } = {}) {
-  let q = supabase
-    .from('news_articles')
-    .select(ARTICLE_COLUMNS)
-    .eq('slug', slug)
-    .maybeSingle();
-  if (signal) q = q.abortSignal(signal);
-  const { data, error } = await q;
-  if (error) throw error;
-  return data ?? null;
+  // Session 80.23 — News-Detail über MongoDB-Endpoint (Feed & Detail konsistent).
+  const base = process.env.REACT_APP_BACKEND_URL || '';
+  const url = `${base}/api/content/news/${encodeURIComponent(slug)}`;
+  const res = await fetch(url, { signal });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`news_detail_${res.status}`);
+  return await res.json();
 }
 
 export async function incrementArticleView(slug) {
-  const { error } = await supabase.rpc('news_increment_view', { p_slug: slug });
-  if (error) console.warn('news_increment_view failed', error.message);
+  // Session 80.23 — Supabase-RPC entfernt (Migration zu Mongo-Detail).
+  // View-Counter wird aktuell serverseitig nicht getrackt — no-op statt Fehler.
+  void slug;
 }
 
 export async function listVideos({

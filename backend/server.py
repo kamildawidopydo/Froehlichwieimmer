@@ -382,6 +382,40 @@ async def list_news(limit: int = 20):
     } for d in docs]
 
 
+@api.get("/content/news/{slug}")
+async def get_news_by_slug(slug: str):
+    """
+    Session 80.23 — Detail-Endpoint für News-Artikel.
+    Sucht zuerst in `db.news` (Feed-Kollektion), anschließend Live+Archive
+    aus `news_retention` (Session-79.5). So bleiben aktuelle Feed-Artikel
+    sowie archivierte Beiträge unter derselben URL erreichbar.
+    """
+    doc = await db.news.find_one({"slug": slug})
+    from_archive = False
+    if not doc:
+        from news_retention import find_article_by_slug as _find_article
+        doc = await _find_article(db, slug, include_archive=True)
+        from_archive = bool(doc and doc.get("_from_archive", False))
+    if not doc:
+        raise HTTPException(status_code=404, detail="not_found")
+    published = doc.get("published_at")
+    if isinstance(published, datetime):
+        published = published.isoformat()
+    return {
+        "id": str(doc.get("_id", "")),
+        "slug": doc.get("slug", slug),
+        "title": doc.get("title", ""),
+        "excerpt": doc.get("excerpt", ""),
+        "summary": doc.get("summary", doc.get("excerpt", "")),
+        "content": doc.get("content", doc.get("body", "")),
+        "category": doc.get("category", "markt"),
+        "image_url": doc.get("image_url"),
+        "published_at": published or "",
+        "read_time_minutes": doc.get("read_time_minutes"),
+        "is_archived": from_archive,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Emergent-managed email (Resend) — used to send the review invitation link
 # ---------------------------------------------------------------------------

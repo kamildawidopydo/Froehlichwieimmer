@@ -8,6 +8,20 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.23 (Feb 26 2026) — **News-Detail-Fix + Live-Crosslink-Verifikation**:
+  - Root Cause: `newsService.getArticleBySlug` griff noch auf Supabase (`.from('news_articles')`), obwohl News-Daten in MongoDB liegen und der Detail-Endpoint fehlte. Ergebnis: 3 aktuelle Feed-Slugs → Detail-Error-State.
+  - Fix Backend: Neuer Endpoint `GET /api/content/news/{slug}` in `server.py` — sucht zuerst in `db.news` (Feed-Kollektion), dann Live+Archive via `news_retention.find_article_by_slug` (Session-79.5-Fallback erhalten). Rückgabe inkl. `is_archived`-Flag, `summary`, `content`, `read_time_minutes`.
+  - Fix Frontend: `newsService.getArticleBySlug` ruft jetzt `GET ${REACT_APP_BACKEND_URL}/api/content/news/{slug}` und liefert 404 → `null`, sonst JSON. `incrementArticleView` als No-Op (RPC entfernt).
+  - Verifikation:
+    * `/api/content/news/ezb-zinsentscheidung-februar-2026` → 200 ✓
+    * `/api/content/news/bbva-erhoeht-flexgeld-zins` → 200 ✓
+    * `/api/content/news/dax-ausblick-q1-2026` → 200 ✓
+    * `/api/content/news/does-not-exist-xyz` → 404 ✓
+    * News→Strategy: EZB-Artikel zeigt Crosslink „Inflationsschutz" (klickbar, lädt Premium-Seite mit Key Takeaways + CTA, Back-Nav funktioniert); DAX-Artikel zeigt Crosslink „Dividendenstrategien". BBVA korrekt ohne Crosslink (keine sichere Themenzuordnung).
+    * Strategy→News: Inflationsschutz-Detail listet EZB-Artikel und dessen Klick öffnet die reparierte News-Detailseite ohne Error-State.
+    * Mobile 390×800 (dax-ausblick-q1-2026): H1 + Crosslink sichtbar, Overflow=0.
+
+
 - 80.22b (Feb 26 2026) — **Knowledge Center Completion**:
   - Neu: `strategyNewsMap.js` (DRY-Mapping mit `scoreArticleForTopic`/`rankNewsForTopic`/`findRelatedStrategyTopicsForNews`), `_StrategyDownloadCenter.jsx` (4 Featured + „Alle anzeigen" für die restlichen 8), `NewsStrategyCrosslink.jsx` (max. 2 Topics unter News-Detail, min-Score 3).
   - Angepasst: `StrategieOverview.jsx` (Download-Center eingebunden), `PublicNewsDetailPage.jsx` (Crosslink am Ende), `_StrategyKnowledgeCenter.jsx` (News-Ranking mit `rankNewsForTopic` statt Substring, Analytics-Events wired).
