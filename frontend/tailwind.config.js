@@ -68,6 +68,37 @@ module.exports = {
                                 'ink-soft': 'rgb(var(--bank-ink-soft) / <alpha-value>)',
                                 'ink-elev': 'rgb(var(--bank-ink-elev) / <alpha-value>)',
                                 'on-ink': 'rgb(var(--bank-on-ink) / <alpha-value>)',
+
+                                /* Session 80.26 — subtle multi-color semantic accents */
+                                petrol:          'rgb(var(--bank-petrol) / <alpha-value>)',
+                                'petrol-strong': 'rgb(var(--bank-petrol-strong) / <alpha-value>)',
+                                'petrol-ink':    'rgb(var(--bank-petrol-ink) / <alpha-value>)',
+                                'petrol-tint':   'rgb(var(--bank-petrol-tint) / <alpha-value>)',
+                                'petrol-border': 'rgb(var(--bank-petrol-border) / <alpha-value>)',
+
+                                coral:          'rgb(var(--bank-coral) / <alpha-value>)',
+                                'coral-strong': 'rgb(var(--bank-coral-strong) / <alpha-value>)',
+                                'coral-ink':    'rgb(var(--bank-coral-ink) / <alpha-value>)',
+                                'coral-tint':   'rgb(var(--bank-coral-tint) / <alpha-value>)',
+                                'coral-border': 'rgb(var(--bank-coral-border) / <alpha-value>)',
+
+                                violet:          'rgb(var(--bank-violet) / <alpha-value>)',
+                                'violet-strong': 'rgb(var(--bank-violet-strong) / <alpha-value>)',
+                                'violet-ink':    'rgb(var(--bank-violet-ink) / <alpha-value>)',
+                                'violet-tint':   'rgb(var(--bank-violet-tint) / <alpha-value>)',
+                                'violet-border': 'rgb(var(--bank-violet-border) / <alpha-value>)',
+
+                                amber:          'rgb(var(--bank-amber) / <alpha-value>)',
+                                'amber-strong': 'rgb(var(--bank-amber-strong) / <alpha-value>)',
+                                'amber-ink':    'rgb(var(--bank-amber-ink) / <alpha-value>)',
+                                'amber-tint':   'rgb(var(--bank-amber-tint) / <alpha-value>)',
+                                'amber-border': 'rgb(var(--bank-amber-border) / <alpha-value>)',
+
+                                info:          'rgb(var(--bank-info) / <alpha-value>)',
+                                'info-strong': 'rgb(var(--bank-info-strong) / <alpha-value>)',
+                                'info-ink':    'rgb(var(--bank-info-ink) / <alpha-value>)',
+                                'info-tint':   'rgb(var(--bank-info-tint) / <alpha-value>)',
+                                'info-border': 'rgb(var(--bank-info-border) / <alpha-value>)',
                         },
                         background: 'hsl(var(--background))',
                         foreground: 'hsl(var(--foreground))',

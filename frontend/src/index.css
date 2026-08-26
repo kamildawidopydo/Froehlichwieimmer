@@ -42,6 +42,41 @@
     --bank-signature-hover:  109 157 152; /* #6D9D98 */
     --bank-error:          220 38 38;
 
+    /* --------------------------------------------------------------------
+       Session 80.26 — Semantic multi-color accents (SPARINGLY used, 15–20%).
+       Values are intentionally muted to preserve the Private-Banking mood.
+       Use for icons, small badges, KPI numerics, tags, borders, chart lines.
+       -------------------------------------------------------------------- */
+    --bank-petrol:         82 127 123;    /* #527F7B — growth / positive accent */
+    --bank-petrol-strong:  55 100 96;     /* #376460 — hover/pressed */
+    --bank-petrol-ink:     34 68 65;      /* #224441 — text on light bg */
+    --bank-petrol-tint:    234 243 242;   /* #EAF3F2 — very light surface */
+    --bank-petrol-border:  195 220 217;   /* #C3DCD9 — subtle border */
+
+    --bank-coral:          204 88 96;     /* #CC5860 — attention / brand accent (rare) */
+    --bank-coral-strong:   176 68 76;     /* #B0444C */
+    --bank-coral-ink:      120 48 54;     /* #783036 */
+    --bank-coral-tint:     252 237 239;   /* #FCEDEF */
+    --bank-coral-border:   243 209 213;   /* #F3D1D5 */
+
+    --bank-violet:         112 100 156;   /* #70649C — differentiation */
+    --bank-violet-strong:  86 78 128;     /* #564E80 */
+    --bank-violet-ink:     58 51 92;      /* #3A335C */
+    --bank-violet-tint:    241 239 247;   /* #F1EFF7 */
+    --bank-violet-border:  217 212 234;   /* #D9D4EA */
+
+    --bank-amber:          172 134 63;    /* #AC863F — subtle warm gold */
+    --bank-amber-strong:   142 108 42;    /* #8E6C2A */
+    --bank-amber-ink:      88 66 20;      /* #584214 */
+    --bank-amber-tint:     249 243 226;   /* #F9F3E2 */
+    --bank-amber-border:   232 217 179;   /* #E8D9B3 */
+
+    --bank-info:           76 124 186;    /* #4C7CBA — data / information */
+    --bank-info-strong:    58 100 153;    /* #3A6499 */
+    --bank-info-ink:       34 62 100;     /* #223E64 */
+    --bank-info-tint:      238 243 250;   /* #EEF3FA */
+    --bank-info-border:    205 219 240;   /* #CDDBF0 */
+
     /* Dark contrast bands — anthracite footers */
     --bank-ink:            48 42 44;     /* #302A2C footer/dark bands */
     --bank-ink-hover:      60 52 55;
@@ -100,6 +135,37 @@
     --bank-signature:        127 175 170;
     --bank-signature-hover:  109 157 152;
     --bank-error:          239 68 68;
+
+    /* Session 80.26 — Dark-mode semantic accents (softened for contrast) */
+    --bank-petrol:         149 195 190;
+    --bank-petrol-strong:  180 214 210;
+    --bank-petrol-ink:     215 232 229;
+    --bank-petrol-tint:     26 44 42;
+    --bank-petrol-border:   58 92 88;
+
+    --bank-coral:          232 132 140;
+    --bank-coral-strong:   242 168 175;
+    --bank-coral-ink:      250 214 218;
+    --bank-coral-tint:      60 26 30;
+    --bank-coral-border:    98 48 54;
+
+    --bank-violet:         167 155 214;
+    --bank-violet-strong:  196 186 230;
+    --bank-violet-ink:     224 218 240;
+    --bank-violet-tint:     36 30 62;
+    --bank-violet-border:   70 62 108;
+
+    --bank-amber:          214 178 108;
+    --bank-amber-strong:   232 202 148;
+    --bank-amber-ink:      245 226 188;
+    --bank-amber-tint:      46 34 12;
+    --bank-amber-border:    90 72 34;
+
+    --bank-info:           130 172 219;
+    --bank-info-strong:    172 200 232;
+    --bank-info-ink:       214 228 245;
+    --bank-info-tint:       20 34 56;
+    --bank-info-border:     50 76 112;
 
     --bank-ink:            30 30 34;
     --bank-ink-hover:      48 42 44;
@@ -394,6 +460,120 @@
   .dark :where(.shadow-sm:not(.keep-light), .shadow:not(.keep-light), .shadow-md:not(.keep-light), .shadow-lg:not(.keep-light), .shadow-xl:not(.keep-light)) {
     --tw-shadow-color: rgba(0, 0, 0, 0.5);
   }
+
+  /* --------------------------------------------------------------------------
+     Session 80.26 — Global harmonisation layer (LIGHT mode).
+     Remaps Tailwind's raw palette utilities to muted, editorial bank tokens
+     so accent colours across the app feel like one cohesive Private-Banking
+     system instead of a bright SaaS pastel grid. Semantics are preserved:
+       emerald → petrol (growth / positive)
+       rose    → coral  (attention / decline)
+       amber   → amber  (warning / warm highlight)
+       violet  → violet (differentiation)
+       sky     → info   (data / information)
+       blue    → info   (data / information)
+     Only touches light mode; dark mode retains the existing overrides above.
+     Escape hatch: any element with `.keep-raw` opts out.
+     -------------------------------------------------------------------------- */
+  :root:not(.dark) :where(.text-emerald-500:not(.keep-raw), .text-emerald-600:not(.keep-raw), .text-emerald-700:not(.keep-raw)) { color: rgb(var(--bank-petrol-strong)); }
+  :root:not(.dark) :where(.text-emerald-800:not(.keep-raw), .text-emerald-900:not(.keep-raw)) { color: rgb(var(--bank-petrol-ink)); }
+  :root:not(.dark) :where(.text-emerald-400:not(.keep-raw), .text-emerald-300:not(.keep-raw)) { color: rgb(var(--bank-petrol)); }
+  :root:not(.dark) :where(.bg-emerald-50:not(.keep-raw), .bg-emerald-100:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root:not(.dark) :where(.bg-emerald-500:not(.keep-raw), .bg-emerald-600:not(.keep-raw)) { background-color: rgb(var(--bank-petrol)); }
+  :root:not(.dark) :where(.bg-emerald-700:not(.keep-raw), .bg-emerald-800:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-strong)); }
+  :root:not(.dark) :where(.border-emerald-100:not(.keep-raw), .border-emerald-200:not(.keep-raw), .border-emerald-300:not(.keep-raw)) { border-color: rgb(var(--bank-petrol-border)); }
+  :root:not(.dark) :where(.border-emerald-400:not(.keep-raw), .border-emerald-500:not(.keep-raw), .border-emerald-600:not(.keep-raw)) { border-color: rgb(var(--bank-petrol)); }
+
+  :root:not(.dark) :where(.text-rose-500:not(.keep-raw), .text-rose-600:not(.keep-raw), .text-rose-700:not(.keep-raw)) { color: rgb(var(--bank-coral-strong)); }
+  :root:not(.dark) :where(.text-rose-800:not(.keep-raw), .text-rose-900:not(.keep-raw)) { color: rgb(var(--bank-coral-ink)); }
+  :root:not(.dark) :where(.text-rose-400:not(.keep-raw), .text-rose-300:not(.keep-raw)) { color: rgb(var(--bank-coral)); }
+  :root:not(.dark) :where(.bg-rose-50:not(.keep-raw), .bg-rose-100:not(.keep-raw)) { background-color: rgb(var(--bank-coral-tint)); }
+  :root:not(.dark) :where(.bg-rose-500:not(.keep-raw), .bg-rose-600:not(.keep-raw)) { background-color: rgb(var(--bank-coral)); }
+  :root:not(.dark) :where(.bg-rose-700:not(.keep-raw), .bg-rose-800:not(.keep-raw)) { background-color: rgb(var(--bank-coral-strong)); }
+  :root:not(.dark) :where(.border-rose-100:not(.keep-raw), .border-rose-200:not(.keep-raw), .border-rose-300:not(.keep-raw)) { border-color: rgb(var(--bank-coral-border)); }
+  :root:not(.dark) :where(.border-rose-400:not(.keep-raw), .border-rose-500:not(.keep-raw)) { border-color: rgb(var(--bank-coral)); }
+
+  /* Red = destructive; keep semantically red but softened to coral family */
+  :root:not(.dark) :where(.text-red-500:not(.keep-raw), .text-red-600:not(.keep-raw), .text-red-700:not(.keep-raw)) { color: rgb(var(--bank-coral-strong)); }
+  :root:not(.dark) :where(.text-red-800:not(.keep-raw), .text-red-900:not(.keep-raw)) { color: rgb(var(--bank-coral-ink)); }
+  :root:not(.dark) :where(.bg-red-50:not(.keep-raw), .bg-red-100:not(.keep-raw)) { background-color: rgb(var(--bank-coral-tint)); }
+  :root:not(.dark) :where(.border-red-100:not(.keep-raw), .border-red-200:not(.keep-raw), .border-red-300:not(.keep-raw)) { border-color: rgb(var(--bank-coral-border)); }
+
+  :root:not(.dark) :where(.text-amber-500:not(.keep-raw), .text-amber-600:not(.keep-raw), .text-amber-700:not(.keep-raw)) { color: rgb(var(--bank-amber-strong)); }
+  :root:not(.dark) :where(.text-amber-800:not(.keep-raw), .text-amber-900:not(.keep-raw)) { color: rgb(var(--bank-amber-ink)); }
+  :root:not(.dark) :where(.text-amber-400:not(.keep-raw), .text-amber-300:not(.keep-raw)) { color: rgb(var(--bank-amber)); }
+  :root:not(.dark) :where(.bg-amber-50:not(.keep-raw), .bg-amber-100:not(.keep-raw)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root:not(.dark) :where(.bg-amber-500:not(.keep-raw), .bg-amber-600:not(.keep-raw)) { background-color: rgb(var(--bank-amber)); }
+  :root:not(.dark) :where(.border-amber-100:not(.keep-raw), .border-amber-200:not(.keep-raw), .border-amber-300:not(.keep-raw)) { border-color: rgb(var(--bank-amber-border)); }
+  :root:not(.dark) :where(.border-amber-400:not(.keep-raw), .border-amber-500:not(.keep-raw)) { border-color: rgb(var(--bank-amber)); }
+
+  /* Yellow / orange share the amber slot in the muted palette */
+  :root:not(.dark) :where(.text-yellow-600:not(.keep-raw), .text-yellow-700:not(.keep-raw), .text-orange-600:not(.keep-raw), .text-orange-700:not(.keep-raw)) { color: rgb(var(--bank-amber-strong)); }
+  :root:not(.dark) :where(.bg-yellow-50:not(.keep-raw), .bg-yellow-100:not(.keep-raw), .bg-orange-50:not(.keep-raw), .bg-orange-100:not(.keep-raw)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root:not(.dark) :where(.border-yellow-100:not(.keep-raw), .border-yellow-200:not(.keep-raw), .border-orange-100:not(.keep-raw), .border-orange-200:not(.keep-raw)) { border-color: rgb(var(--bank-amber-border)); }
+
+  :root:not(.dark) :where(.text-violet-500:not(.keep-raw), .text-violet-600:not(.keep-raw), .text-violet-700:not(.keep-raw)) { color: rgb(var(--bank-violet-strong)); }
+  :root:not(.dark) :where(.text-violet-800:not(.keep-raw), .text-violet-900:not(.keep-raw)) { color: rgb(var(--bank-violet-ink)); }
+  :root:not(.dark) :where(.text-violet-400:not(.keep-raw)) { color: rgb(var(--bank-violet)); }
+  :root:not(.dark) :where(.bg-violet-50:not(.keep-raw), .bg-violet-100:not(.keep-raw)) { background-color: rgb(var(--bank-violet-tint)); }
+  :root:not(.dark) :where(.bg-violet-500:not(.keep-raw), .bg-violet-600:not(.keep-raw)) { background-color: rgb(var(--bank-violet)); }
+  :root:not(.dark) :where(.border-violet-100:not(.keep-raw), .border-violet-200:not(.keep-raw), .border-violet-300:not(.keep-raw)) { border-color: rgb(var(--bank-violet-border)); }
+
+  /* Purple / indigo / fuchsia / pink share the violet slot */
+  :root:not(.dark) :where(.text-purple-600:not(.keep-raw), .text-purple-700:not(.keep-raw), .text-indigo-600:not(.keep-raw), .text-indigo-700:not(.keep-raw), .text-fuchsia-600:not(.keep-raw), .text-fuchsia-700:not(.keep-raw)) { color: rgb(var(--bank-violet-strong)); }
+  :root:not(.dark) :where(.bg-purple-50:not(.keep-raw), .bg-purple-100:not(.keep-raw), .bg-indigo-50:not(.keep-raw), .bg-indigo-100:not(.keep-raw), .bg-fuchsia-50:not(.keep-raw), .bg-pink-50:not(.keep-raw), .bg-pink-100:not(.keep-raw)) { background-color: rgb(var(--bank-violet-tint)); }
+  :root:not(.dark) :where(.border-purple-100:not(.keep-raw), .border-purple-200:not(.keep-raw), .border-indigo-100:not(.keep-raw), .border-indigo-200:not(.keep-raw), .border-pink-100:not(.keep-raw), .border-pink-200:not(.keep-raw)) { border-color: rgb(var(--bank-violet-border)); }
+
+  :root:not(.dark) :where(.text-sky-500:not(.keep-raw), .text-sky-600:not(.keep-raw), .text-sky-700:not(.keep-raw), .text-blue-500:not(.keep-raw), .text-blue-600:not(.keep-raw), .text-blue-700:not(.keep-raw)) { color: rgb(var(--bank-info-strong)); }
+  :root:not(.dark) :where(.text-sky-800:not(.keep-raw), .text-sky-900:not(.keep-raw), .text-blue-800:not(.keep-raw), .text-blue-900:not(.keep-raw)) { color: rgb(var(--bank-info-ink)); }
+  :root:not(.dark) :where(.text-sky-400:not(.keep-raw), .text-blue-400:not(.keep-raw)) { color: rgb(var(--bank-info)); }
+  :root:not(.dark) :where(.bg-sky-50:not(.keep-raw), .bg-sky-100:not(.keep-raw), .bg-blue-50:not(.keep-raw), .bg-blue-100:not(.keep-raw)) { background-color: rgb(var(--bank-info-tint)); }
+  :root:not(.dark) :where(.bg-sky-500:not(.keep-raw), .bg-sky-600:not(.keep-raw), .bg-blue-500:not(.keep-raw), .bg-blue-600:not(.keep-raw)) { background-color: rgb(var(--bank-info)); }
+  :root:not(.dark) :where(.border-sky-100:not(.keep-raw), .border-sky-200:not(.keep-raw), .border-sky-300:not(.keep-raw), .border-blue-100:not(.keep-raw), .border-blue-200:not(.keep-raw), .border-blue-300:not(.keep-raw)) { border-color: rgb(var(--bank-info-border)); }
+  :root:not(.dark) :where(.border-sky-500:not(.keep-raw), .border-blue-500:not(.keep-raw)) { border-color: rgb(var(--bank-info)); }
+
+  /* Teal / cyan share the petrol slot */
+  :root:not(.dark) :where(.text-teal-500:not(.keep-raw), .text-teal-600:not(.keep-raw), .text-teal-700:not(.keep-raw), .text-cyan-600:not(.keep-raw), .text-cyan-700:not(.keep-raw)) { color: rgb(var(--bank-petrol-strong)); }
+  :root:not(.dark) :where(.bg-teal-50:not(.keep-raw), .bg-teal-100:not(.keep-raw), .bg-cyan-50:not(.keep-raw), .bg-cyan-100:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root:not(.dark) :where(.border-teal-100:not(.keep-raw), .border-teal-200:not(.keep-raw), .border-cyan-100:not(.keep-raw), .border-cyan-200:not(.keep-raw)) { border-color: rgb(var(--bank-petrol-border)); }
+
+  /* Green (some components use green-*) shares petrol */
+  :root:not(.dark) :where(.text-green-500:not(.keep-raw), .text-green-600:not(.keep-raw), .text-green-700:not(.keep-raw)) { color: rgb(var(--bank-petrol-strong)); }
+  :root:not(.dark) :where(.text-green-800:not(.keep-raw), .text-green-900:not(.keep-raw)) { color: rgb(var(--bank-petrol-ink)); }
+  :root:not(.dark) :where(.bg-green-50:not(.keep-raw), .bg-green-100:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root:not(.dark) :where(.border-green-100:not(.keep-raw), .border-green-200:not(.keep-raw), .border-green-300:not(.keep-raw)) { border-color: rgb(var(--bank-petrol-border)); }
+
+  /* Neutrals (gray/slate/zinc/neutral/stone -50) → warm bank surface tint,
+     so bland "SaaS grey" strips read as editorial cream. */
+  :root:not(.dark) :where(.bg-gray-50:not(.keep-raw):not(.keep-light), .bg-slate-50:not(.keep-raw):not(.keep-light), .bg-zinc-50:not(.keep-raw):not(.keep-light), .bg-neutral-50:not(.keep-raw):not(.keep-light), .bg-stone-50:not(.keep-raw):not(.keep-light)) { background-color: rgb(var(--bank-surface-elev)); }
+
+  /* Hover-state harmonisation (light mode) — keeps interactive accents in the
+     muted bank palette, not the raw Tailwind neons. */
+  :root:not(.dark) .hover\:bg-emerald-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-emerald-100:hover:not(.keep-raw) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root:not(.dark) .hover\:text-emerald-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-emerald-700:hover:not(.keep-raw) { color: rgb(var(--bank-petrol-strong)); }
+  :root:not(.dark) .hover\:border-emerald-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-emerald-300:hover:not(.keep-raw) { border-color: rgb(var(--bank-petrol-border)); }
+
+  :root:not(.dark) .hover\:bg-rose-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-rose-100:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-red-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-red-100:hover:not(.keep-raw) { background-color: rgb(var(--bank-coral-tint)); }
+  :root:not(.dark) .hover\:text-rose-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-rose-700:hover:not(.keep-raw), :root:not(.dark) .hover\:text-red-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-red-700:hover:not(.keep-raw) { color: rgb(var(--bank-coral-strong)); }
+  :root:not(.dark) .hover\:border-rose-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-rose-300:hover:not(.keep-raw), :root:not(.dark) .hover\:border-red-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-red-300:hover:not(.keep-raw) { border-color: rgb(var(--bank-coral-border)); }
+
+  :root:not(.dark) .hover\:bg-amber-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-amber-100:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-yellow-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-orange-50:hover:not(.keep-raw) { background-color: rgb(var(--bank-amber-tint)); }
+  :root:not(.dark) .hover\:text-amber-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-amber-700:hover:not(.keep-raw) { color: rgb(var(--bank-amber-strong)); }
+  :root:not(.dark) .hover\:border-amber-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-amber-300:hover:not(.keep-raw) { border-color: rgb(var(--bank-amber-border)); }
+
+  :root:not(.dark) .hover\:bg-violet-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-violet-100:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-purple-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-indigo-50:hover:not(.keep-raw) { background-color: rgb(var(--bank-violet-tint)); }
+  :root:not(.dark) .hover\:text-violet-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-violet-700:hover:not(.keep-raw), :root:not(.dark) .hover\:text-purple-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-purple-700:hover:not(.keep-raw) { color: rgb(var(--bank-violet-strong)); }
+
+  :root:not(.dark) .hover\:bg-sky-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-sky-100:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-blue-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-blue-100:hover:not(.keep-raw) { background-color: rgb(var(--bank-info-tint)); }
+  :root:not(.dark) .hover\:text-sky-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-sky-700:hover:not(.keep-raw), :root:not(.dark) .hover\:text-blue-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-blue-700:hover:not(.keep-raw) { color: rgb(var(--bank-info-strong)); }
+  :root:not(.dark) .hover\:border-sky-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-sky-300:hover:not(.keep-raw), :root:not(.dark) .hover\:border-blue-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-blue-300:hover:not(.keep-raw) { border-color: rgb(var(--bank-info-border)); }
+
+  /* Opacity variants of the -50/-100 surface tints (bg-*-50/60 etc.) */
+  :root:not(.dark) :where(.bg-emerald-50\/40:not(.keep-raw), .bg-emerald-50\/50:not(.keep-raw), .bg-emerald-50\/60:not(.keep-raw), .bg-emerald-50\/70:not(.keep-raw), .bg-emerald-50\/80:not(.keep-raw), .bg-emerald-50\/90:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-tint) / 0.7); }
+  :root:not(.dark) :where(.bg-rose-50\/40:not(.keep-raw), .bg-rose-50\/50:not(.keep-raw), .bg-rose-50\/60:not(.keep-raw), .bg-rose-50\/70:not(.keep-raw), .bg-rose-50\/80:not(.keep-raw)) { background-color: rgb(var(--bank-coral-tint) / 0.7); }
+  :root:not(.dark) :where(.bg-amber-50\/40:not(.keep-raw), .bg-amber-50\/50:not(.keep-raw), .bg-amber-50\/60:not(.keep-raw), .bg-amber-50\/70:not(.keep-raw), .bg-amber-50\/80:not(.keep-raw)) { background-color: rgb(var(--bank-amber-tint) / 0.7); }
+  :root:not(.dark) :where(.bg-sky-50\/40:not(.keep-raw), .bg-sky-50\/50:not(.keep-raw), .bg-sky-50\/60:not(.keep-raw), .bg-sky-50\/70:not(.keep-raw), .bg-blue-50\/40:not(.keep-raw), .bg-blue-50\/50:not(.keep-raw), .bg-blue-50\/60:not(.keep-raw), .bg-blue-50\/70:not(.keep-raw)) { background-color: rgb(var(--bank-info-tint) / 0.7); }
+  :root:not(.dark) :where(.bg-violet-50\/40:not(.keep-raw), .bg-violet-50\/50:not(.keep-raw), .bg-violet-50\/60:not(.keep-raw), .bg-violet-50\/70:not(.keep-raw)) { background-color: rgb(var(--bank-violet-tint) / 0.7); }
 }
 
 @layer utilities {
@@ -803,6 +983,87 @@
       padding-bottom: 0 !important;
     }
   }
+
+  /* --------------------------------------------------------------------------
+     Session 80.26 — Editorial multi-color helpers.
+     Use these to add a *whisper* of colour to cards, KPIs and tags without
+     tipping the layout into full-fill pastel territory.
+     -------------------------------------------------------------------------- */
+  .card-accent-top {
+    position: relative;
+  }
+  .card-accent-top::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background-color: rgb(var(--bank-primary));
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+    pointer-events: none;
+  }
+  .card-accent-top-petrol::before { background-color: rgb(var(--bank-petrol)); }
+  .card-accent-top-coral::before  { background-color: rgb(var(--bank-coral)); }
+  .card-accent-top-violet::before { background-color: rgb(var(--bank-violet)); }
+  .card-accent-top-amber::before  { background-color: rgb(var(--bank-amber)); }
+  .card-accent-top-info::before   { background-color: rgb(var(--bank-info)); }
+  .card-accent-top-navy::before   { background-color: rgb(var(--bank-ink)); }
+
+  /* Icon-badge — pastel square/circle wrapper for a lucide icon.
+     Keeps large surfaces neutral, colour lives only on the tiny badge. */
+  .icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background-color: rgb(var(--bank-petrol-tint));
+    color: rgb(var(--bank-petrol-strong));
+    flex-shrink: 0;
+  }
+  .icon-badge-sm { width: 1.5rem; height: 1.5rem; border-radius: 0.375rem; }
+  .icon-badge-lg { width: 2.5rem; height: 2.5rem; border-radius: 0.625rem; }
+  .icon-badge-petrol { background-color: rgb(var(--bank-petrol-tint)); color: rgb(var(--bank-petrol-strong)); }
+  .icon-badge-coral  { background-color: rgb(var(--bank-coral-tint));  color: rgb(var(--bank-coral-strong)); }
+  .icon-badge-violet { background-color: rgb(var(--bank-violet-tint)); color: rgb(var(--bank-violet-strong)); }
+  .icon-badge-amber  { background-color: rgb(var(--bank-amber-tint));  color: rgb(var(--bank-amber-strong)); }
+  .icon-badge-info   { background-color: rgb(var(--bank-info-tint));   color: rgb(var(--bank-info-strong)); }
+  .icon-badge-navy   { background-color: rgb(var(--bank-ink) / 0.06);  color: rgb(var(--bank-ink)); }
+
+  /* KPI figure — coloured numeric value while label stays navy/neutral. */
+  .kpi-figure {
+    font-family: theme('fontFamily.display');
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--bank-ink));
+  }
+  .kpi-figure.kpi-petrol { color: rgb(var(--bank-petrol-strong)); }
+  .kpi-figure.kpi-coral  { color: rgb(var(--bank-coral-strong)); }
+  .kpi-figure.kpi-violet { color: rgb(var(--bank-violet-strong)); }
+  .kpi-figure.kpi-amber  { color: rgb(var(--bank-amber-strong)); }
+  .kpi-figure.kpi-info   { color: rgb(var(--bank-info-strong)); }
+
+  /* Tag — subtle pill (soft tint + strong-tone text + hairline border). */
+  .tag-editorial {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+  }
+  .tag-navy   { background-color: rgb(var(--bank-ink) / 0.06);      color: rgb(var(--bank-ink));            border-color: rgb(var(--bank-ink) / 0.14); }
+  .tag-petrol { background-color: rgb(var(--bank-petrol-tint));     color: rgb(var(--bank-petrol-ink));     border-color: rgb(var(--bank-petrol-border)); }
+  .tag-coral  { background-color: rgb(var(--bank-coral-tint));      color: rgb(var(--bank-coral-ink));      border-color: rgb(var(--bank-coral-border)); }
+  .tag-violet { background-color: rgb(var(--bank-violet-tint));     color: rgb(var(--bank-violet-ink));     border-color: rgb(var(--bank-violet-border)); }
+  .tag-amber  { background-color: rgb(var(--bank-amber-tint));      color: rgb(var(--bank-amber-ink));      border-color: rgb(var(--bank-amber-border)); }
+  .tag-info   { background-color: rgb(var(--bank-info-tint));       color: rgb(var(--bank-info-ink));       border-color: rgb(var(--bank-info-border)); }
 
   /* Honor reduced-motion users globally */
   @media (prefers-reduced-motion: reduce) {

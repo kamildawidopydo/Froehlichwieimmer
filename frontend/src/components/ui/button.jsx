@@ -32,6 +32,18 @@ const buttonVariants = cva(
           "border border-bank-border bg-white text-bank-text hover:border-bank-signature/45 hover:bg-bank-signature/[0.06] hover:text-bank-signature dark:border-bank-border dark:bg-bank-surface-elev dark:text-bank-text dark:hover:border-bank-signature/50 dark:hover:bg-bank-signature/10 dark:hover:text-bank-signature",
         "ghost-ink":
           "text-bank-text hover:bg-bank-signature/[0.08] hover:text-bank-signature",
+
+        // Session 80.26 — subtle multi-color outline variants (icons/tags/rare CTAs)
+        "outline-petrol":
+          "border border-bank-petrol-border bg-white text-bank-petrol-ink hover:border-bank-petrol hover:bg-bank-petrol-tint",
+        "outline-coral":
+          "border border-bank-coral-border bg-white text-bank-coral-ink hover:border-bank-coral hover:bg-bank-coral-tint",
+        "outline-violet":
+          "border border-bank-violet-border bg-white text-bank-violet-ink hover:border-bank-violet hover:bg-bank-violet-tint",
+        "outline-amber":
+          "border border-bank-amber-border bg-white text-bank-amber-ink hover:border-bank-amber hover:bg-bank-amber-tint",
+        "outline-info":
+          "border border-bank-info-border bg-white text-bank-info-ink hover:border-bank-info hover:bg-bank-info-tint",
       },
       size: {
         default: "h-10 px-5 py-2",

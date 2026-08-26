@@ -15,6 +15,13 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
         outline: "text-foreground",
+        // Session 80.26 — subtle editorial accent variants (soft tint + ink text + hairline border)
+        navy:   "border-bank-ink/15   bg-bank-ink/[0.06]        text-bank-ink font-medium",
+        petrol: "border-bank-petrol-border bg-bank-petrol-tint  text-bank-petrol-ink font-medium",
+        coral:  "border-bank-coral-border  bg-bank-coral-tint   text-bank-coral-ink font-medium",
+        violet: "border-bank-violet-border bg-bank-violet-tint  text-bank-violet-ink font-medium",
+        amber:  "border-bank-amber-border  bg-bank-amber-tint   text-bank-amber-ink font-medium",
+        info:   "border-bank-info-border   bg-bank-info-tint    text-bank-info-ink font-medium",
       },
     },
     defaultVariants: {
