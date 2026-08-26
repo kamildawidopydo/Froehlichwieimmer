@@ -7,6 +7,13 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 80.9 (Feb 26 2026) — **10 weitere Kundenstimmen (Session 80.9 Template-Batch)**:
+  - Neu: `backend/scripts/seed_template_testimonials_v6.py` (identisches Muster wie v3–v5).
+  - 10 neue Namen: Antje R. (5⭐/beratung), Carsten M. (5⭐/service), Doreen L. (5⭐/persoenliche-betreuung), Erik B. (4⭐/transparenz), Franziska H. (5⭐/vertrauen), Günther A. (5⭐/langfristigkeit), Hannah P. (5⭐/erreichbarkeit), Jonas W. (4⭐/investmentuebersicht), Katja D. (5⭐/beratung+persoenliche-betreuung), Norbert Z. (5⭐/kundenorientierung).
+  - Sterneverteilung: 8×5⭐ + 2×4⭐.
+  - Public-Count: **67 → 77**. Total-Reviews: 285 → 295. 2. Lauf: 0 Inserts / 10 Updates / 0 Skips (Idempotenz OK).
+  - Dedupe-Skips: 0 (alle 10 Primärtexte unter Jaccard-Schwelle 0.55).
+
 - 80.8 (Feb 26 2026) — **5 weitere Kundenstimmen (Session 80.8 Template-Batch)**:
   - Neu: `backend/scripts/seed_template_testimonials_v5.py` (identisches Muster wie v3/v4: Jaccard-Similarity 0.55, Idempotenz per E-Mail, Fallback-Pool).
   - Texte im Format „Heading. Body." — Frontend-`CompactReviewCard.headlineOf()` extrahiert die Überschrift aus dem ersten Satz.
