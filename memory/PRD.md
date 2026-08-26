@@ -7,6 +7,13 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 80.8 (Feb 26 2026) — **5 weitere Kundenstimmen (Session 80.8 Template-Batch)**:
+  - Neu: `backend/scripts/seed_template_testimonials_v5.py` (identisches Muster wie v3/v4: Jaccard-Similarity 0.55, Idempotenz per E-Mail, Fallback-Pool).
+  - Texte im Format „Heading. Body." — Frontend-`CompactReviewCard.headlineOf()` extrahiert die Überschrift aus dem ersten Satz.
+  - 5 neue Namen: Holger V. (5⭐/beratung), Simone A. (5⭐/persoenliche-betreuung), Dennis P. (5⭐/erreichbarkeit), Bettina R. (4⭐/transparenz), Manuela K. (5⭐/vertrauen).
+  - Public-Count: **62 → 67**. Total-Reviews: 280 → 285. 2. Lauf: 0 Inserts / 5 Updates / 0 Skips.
+  - API-Verifikation (localhost:8001): Suche findet alle 5 (5/5 queries mit Hit, Anforderung ≥ 2 erfüllt); Filter `rating=4` liefert Bettina R.; Filter `topic=vertrauen/beratung/erreichbarkeit` liefert jeweils die passende neue Kundenstimme; `limit=10 offset=0/10` bestätigt Pagination.
+
 - 80.7 (Feb 26 2026) — **10 weitere Kundenstimmen (Template-Batch)**:
   - Neu: `backend/scripts/seed_template_testimonials_v4.py` (identisches Muster wie v3: Jaccard-Similarity-Guard 0.55, Idempotenz per E-Mail, Fallback-Pool für zu ähnliche Texte).
   - 10 neue Namen (Vorname + Initial): Sabrina M., Rüdiger K., Elke T., Fabian O., Konstantin B., Iris B., Andreas W., Lena F., Georg P., Marlene D. — Sterneverteilung 8×5 + 2×4 (Fabian O., Lena F.).
