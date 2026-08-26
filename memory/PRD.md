@@ -7,6 +7,47 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+
+- 80.21 pre (Feb 26 2026) — **Handoff-Vorbereitung für Session 80.21a (nicht implementiert)**:
+  - Kein Deploy erfolgt. Kein Code aus 80.21a in Repo (git working tree geprüft, keine halbfertigen Dateien).
+  - Bestehende 12 Detailseiten bleiben auf **Session-80.19-Stand** (data-driven via `strategieContent.js` `sections`+`faqs`).
+  - Session-80.20-Overview bleibt **unverändert** (Goal-Cards + Strategy Finder + direkte Themenauswahl + Trust-Block + Product-Wizard-CTA).
+  - Alle 18 Strategie-Routen HTTP 200 verifiziert.
+  - **NEXT ACTION**: Session 80.21a — Premium Strategy Detail Framework + 3 Flagship-Seiten (Value Investing, ESG, Private Rentenvorsorge). Vollständiger Auftragstext beim Nutzer.
+
+- 80.20 (Feb 26 2026) — **Goal-based Strategy Center**:
+  - Neu: `frontend/src/data/strategieGoals.js` (6 Ziele × Fokus-Optionen × Mapping auf bestehende Themen).
+  - Neu: `frontend/src/pages/strategie/_StrategyFinder.jsx` (2-Schritt-Finder, clientseitig, kein Backend/PII).
+  - Überschrieben: `frontend/src/pages/strategie/StrategieOverview.jsx` — Hero „Welche finanziellen Ziele möchten Sie erreichen?", 6 Goal-Cards (Icon+Titel+Lede+„Themen entdecken →"), Strategy Finder, direkte Themenauswahl aller 5 Kategorien, Trust-Block + finaler CTA → `/#home-product-wizard`.
+
+- 80.19 (Feb 26 2026) — **Strategie-Hub v1 (18 URLs)**:
+  - Neu: `frontend/src/data/strategieContent.js` — 5 Kategorien × 12 Themen mit `slug`, `title`, `intro`, `sections[{heading, body}]`, `faqs[{q,a}]`, `meta`.
+  - Neu: `frontend/src/pages/strategie/StrategieOverview.jsx`, `StrategieCategory.jsx`, `StrategieDetail.jsx`, `_StrategieBreadcrumb.jsx` (mit BreadcrumbList JSON-LD), `_StrategieCta.jsx` (Link → `/#home-product-wizard`).
+  - App.js: 3 neue Routes `/strategie`, `/strategie/:category`, `/strategie/:category/:topic`.
+  - siteCopy.js: neue Nav-Gruppe „Strategie" zwischen Angebote und Wissen.
+  - sitemap.xml: 18 neue URLs für `kapital-direkt24.de`.
+  - SEO: unique title/description/canonical via PageMeta, BreadcrumbList JSON-LD überall, FAQPage JSON-LD wo `faqs.length > 0`.
+
+### Aktuelle 18 Strategie-Routen (alle HTTP 200)
+- `/strategie` (Overview 2.0 mit Goal-Cards)
+- `/strategie/anlagestile` · `/anlagestile/value-investing` · `/anlagestile/dividendenstrategien`
+- `/strategie/nachhaltigkeit` · `/nachhaltigkeit/nachhaltige-investments-esg` · `/nachhaltigkeit/impact-investing`
+- `/strategie/schutz-steuerung` · `/schutz-steuerung/vermoegensschutz` · `/schutz-steuerung/inflationsschutz` · `/schutz-steuerung/vermoegensaufbau`
+- `/strategie/altersvorsorge` · `/altersvorsorge/altersvorsorge` · `/altersvorsorge/private-rentenvorsorge` · `/altersvorsorge/betriebliche-altersvorsorge`
+- `/strategie/generationen` · `/generationen/vermoegensaufbau-fuer-kinder` · `/generationen/vermoegensuebertragung`
+
+### Kernarchitektur Strategie (data-driven)
+- Content-Modell: `strategieContent.js` → categories → topics → `{intro, sections, faqs, meta}`
+- Detail-Renderer: `StrategieDetail.jsx` iteriert `topic.sections` und rendert `topic.faqs` als Accordion (Testid `strategie-faq-{i}`)
+- CTA sitewide: bestehender Home Product Wizard über `<Link to="/#home-product-wizard">` (kein neues Formular)
+- Overview 2.0: goals (Session 80.20) + Strategy Finder + direkte Themenauswahl
+
+## Historisch (Sessions 80.7 – 80.18)
+- 80.7–80.9, 80.13–80.17: iteratives Seeding von Template-Kundenstimmen (137 public, 0 Duplikate)
+- 80.10: POOL_SIZE + Backend-limit-Cap auf 200
+- 80.11: Startup-Seed via `reviews_snapshot.json`
+- 80.12: Load-More-Button im `Kundenstimmen.jsx`
+- 80.18: Business-Reply-Feature (`admin_response`) in `CompactReviewCard.jsx` + 26 kuratierte Antworten (19 %)
 - 80.12 (Feb 26 2026) — **Load-More-Button für Kundenstimmen (statt versteckter Pagination)**:
   - Symptom: Nutzer sah immer nur 10 der 77 Reviews — Root Cause war, dass die früher entfernten Pagination-Steuerungen (ChevronLeft/Right Buttons) nie wieder eingebaut wurden, während der Slice `items.slice((page-1)*10, page*10)` fest auf Seite 1 stand.
   - Fix in `frontend/src/pages/Kundenstimmen.jsx`:
