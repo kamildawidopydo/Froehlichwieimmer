@@ -7,6 +7,14 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 80.7 (Feb 26 2026) — **10 weitere Kundenstimmen (Template-Batch)**:
+  - Neu: `backend/scripts/seed_template_testimonials_v4.py` (identisches Muster wie v3: Jaccard-Similarity-Guard 0.55, Idempotenz per E-Mail, Fallback-Pool für zu ähnliche Texte).
+  - 10 neue Namen (Vorname + Initial): Sabrina M., Rüdiger K., Elke T., Fabian O., Konstantin B., Iris B., Andreas W., Lena F., Georg P., Marlene D. — Sterneverteilung 8×5 + 2×4 (Fabian O., Lena F.).
+  - Alle Datensätze: `is_verified=false`, `is_demo=false`, `content_origin="template_generated"`, `admin_note="session 80.7 template"` → kein VERIFIZIERT-Badge.
+  - Kollision mit v2-Eintrag „Petra H." (gleiche E-Mail) erkannt und behoben: Ursprünglicher v2-Text wiederhergestellt (`admin_note="session 80.5 template"`, Rating 5, Topics langfristigkeit+erreichbarkeit), Session-80.7-Slot durch neuen Eintrag **Iris B.** ersetzt.
+  - Public-Count: **52 → 62**. Total-Reviews: 270 → 280. 2. Seeder-Lauf (Idempotenz-Test): 0 Inserts / 10 Updates / 0 Skips.
+  - Verifiziert via `GET /api/reviews/public?limit=100`: 62/62 Items, 10/10 Session-80.7-Reviews vorhanden, `is_verified=false` bei allen 10.
+
 - 80.1 (Feb 25 2026) — **LinkedIn Publisher Integration (Production-Safe)**:
   - **API-Verifikation** (Web-Search gegen offizielle LinkedIn-Docs Feb 2026): der bisherige `ugcPosts`-Endpoint ist **deprecated**. Aktueller offizieller Endpoint = `POST https://api.linkedin.com/rest/posts` mit Headern `Authorization: Bearer <token>`, `LinkedIn-Version: YYYYMM` (versioned monatlich), `X-Restli-Protocol-Version: 2.0.0`. Scope `w_organization_social` (gated via Marketing Developer Program). Author = `urn:li:organization:{id}`. Nutzer benötigt ADMINISTRATOR/CONTENT_ADMIN/DIRECT_SPONSORED_CONTENT_POSTER-Rolle. Permission-Probe via `GET /rest/organizationAuthorizations?q=roleAssignee`.
   - **Provider-Abstraktion** `backend/providers/social/linkedin.py`: schmale Schicht mit `is_configured()`, `public_config_summary()` (ohne Secrets), `build_payload()`, `validate_credentials()` (read-only Probe, kein Post), `publish()`. Wirft `LinkedInPublishError(kind, ...)` mit klassifizierten Fehler-Kinds: `credentials`/`rate_limited`/`provider_error`/`timeout`/`payload_invalid`/`unknown`. `LINKEDIN_API_VERSION` env-konfigurierbar (Default `202608`), Timeout via `LINKEDIN_HTTP_TIMEOUT`.
