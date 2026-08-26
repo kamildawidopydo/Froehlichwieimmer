@@ -1161,7 +1161,7 @@ async def list_public_reviews(
     }
     sort_field = sort_map.get(sort, sort_map["newest"])
     total = await db.reviews.count_documents(query)
-    docs = await db.reviews.find(query).sort(sort_field).skip(max(offset, 0)).limit(min(max(limit, 1), 100)).to_list(limit)
+    docs = await db.reviews.find(query).sort(sort_field).skip(max(offset, 0)).limit(min(max(limit, 1), 200)).to_list(limit)
     return {
         "total": total,
         "items": [_review_to_public(d) for d in docs],

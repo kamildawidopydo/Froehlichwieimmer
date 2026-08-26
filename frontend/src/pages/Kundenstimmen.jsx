@@ -7,7 +7,7 @@ import ReviewSubmitForm from '@/components/reviews/ReviewSubmitForm';
 import { reviewsApi } from '@/services/reviewsApi';
 
 const PAGE_SIZE   = 10;      // 10 Karten pro Seite (Session 80.5)
-const POOL_SIZE   = 60;      // clientseitige Pagination auf einem gecachten Pool
+const POOL_SIZE   = 200;     // clientseitige Pagination auf einem gecachten Pool (Session 80.10: >60 Kundenstimmen)
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Neueste zuerst' },

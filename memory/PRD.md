@@ -7,6 +7,11 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 80.10 (Feb 26 2026) — **Bugfix: nur 60 von 77 Kundenstimmen sichtbar (Pagination-Cap)**:
+  - Ursache: `Kundenstimmen.jsx` cachte den API-Pool mit `POOL_SIZE = 60`; Backend `/reviews/public` cappte Limit zusätzlich hart bei 100. Da wir seit Session 80.9 **77 Reviews** haben, blieben die letzten 17 Karten unsichtbar — der Zähler zeigte 77, aber die clientseitige Pagination hatte nur 6 statt 8 Seiten.
+  - Fix: `POOL_SIZE = 200` (Client-Cache) + Backend-Limit-Cap `min(limit, 200)` (`server.py` Zeile 1164). Rechnet gleichzeitig Wachstum bis 200 vor, ohne echte Backend-Pagination auf Seitenwechseln nötig zu machen.
+  - Verifiziert via `GET /api/reviews/public?limit=200`: `total=77`, `items=77`. Client-Pagination = 8 Seiten (7×10 + 1×7).
+
 - 80.9 (Feb 26 2026) — **10 weitere Kundenstimmen (Session 80.9 Template-Batch)**:
   - Neu: `backend/scripts/seed_template_testimonials_v6.py` (identisches Muster wie v3–v5).
   - 10 neue Namen: Antje R. (5⭐/beratung), Carsten M. (5⭐/service), Doreen L. (5⭐/persoenliche-betreuung), Erik B. (4⭐/transparenz), Franziska H. (5⭐/vertrauen), Günther A. (5⭐/langfristigkeit), Hannah P. (5⭐/erreichbarkeit), Jonas W. (4⭐/investmentuebersicht), Katja D. (5⭐/beratung+persoenliche-betreuung), Norbert Z. (5⭐/kundenorientierung).
