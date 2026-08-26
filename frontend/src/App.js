@@ -53,6 +53,9 @@ const AdminStockResearch = lazy(() => import('@/pages/admin/AdminStockResearch')
 const CreditLeadPage = lazy(() => import('@/pages/CreditLeadPage'));
 const Bewertungen = lazy(() => import('@/pages/Bewertungen'));
 const Kundenstimmen = lazy(() => import('@/pages/Kundenstimmen'));
+const StrategieOverview = lazy(() => import('@/pages/strategie/StrategieOverview'));
+const StrategieCategory = lazy(() => import('@/pages/strategie/StrategieCategory'));
+const StrategieDetail = lazy(() => import('@/pages/strategie/StrategieDetail'));
 const PublicNewsPage = lazy(() => import('@/pages/NewsMarkte'));
 const PublicNewsPageLegacy = lazy(() => import('@/pages/news/PublicNewsPage'));
 const NewsCategoryDetail = lazy(() => import('@/pages/NewsCategoryDetail'));
@@ -250,6 +253,9 @@ function App() {
                   <Route path="/leistungen" element={<Leistungen />} />
                   <Route path="/wissen" element={<Wissen />} />
                   <Route path="/wissen/:slug" element={<WissenArtikel />} />
+                  <Route path="/strategie" element={<StrategieOverview />} />
+                  <Route path="/strategie/:category" element={<StrategieCategory />} />
+                  <Route path="/strategie/:category/:topic" element={<StrategieDetail />} />
                   <Route path="/finanzwissen/:slug" element={<FinanzwissenArtikel />} />
                   <Route path="/bausteine" element={<Navigate to="/leistungen#bausteine" replace />} />
                   <Route path="/contact" element={<Contact />} />

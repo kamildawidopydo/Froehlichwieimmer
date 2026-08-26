@@ -107,6 +107,18 @@ export const siteCopy = {
         ],
       },
       {
+        id: 'strategie',
+        label: 'Strategie',
+        links: [
+          { name: 'Strategie-Hub', path: '/strategie', desc: 'Anlagestile, Nachhaltigkeit, Vorsorge und Generationen' },
+          { name: 'Anlagestile', path: '/strategie/anlagestile', desc: 'Value Investing und Dividendenstrategien' },
+          { name: 'Nachhaltigkeit', path: '/strategie/nachhaltigkeit', desc: 'ESG-Investments und Impact Investing' },
+          { name: 'Schutz & Steuerung', path: '/strategie/schutz-steuerung', desc: 'Vermögensschutz, Inflationsschutz, Aufbau' },
+          { name: 'Altersvorsorge', path: '/strategie/altersvorsorge', desc: 'Gesetzlich, privat und betrieblich verzahnen' },
+          { name: 'Generationen', path: '/strategie/generationen', desc: 'Für Kinder aufbauen, Vermögen übertragen' },
+        ],
+      },
+      {
         id: 'wissen',
         label: 'Wissen',
         links: [
