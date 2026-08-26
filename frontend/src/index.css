@@ -31,15 +31,18 @@
     --bank-primary-hover:  109 157 152;  /* #6D9D98 */
     --bank-primary-strong: 82 127 123;   /* #527F7B darker teal (contrast/hover) */
     --bank-secondary:      127 175 170;  /* teal */
-    /* Accent (Koralle) — nur für Conversion-CTAs, max ~5% Fläche */
-    --bank-accent:         229 106 115;  /* #E56A73 muted coral */
-    --bank-accent-strong:  216 91 101;   /* #D85B65 coral hover */
+    /* Accent (Koralle) — nur für Conversion-CTAs, max ~5% Fläche.
+       Session 80.26 fix-pass: darkened from #E56A73 (3.16:1) to #B0444C (4.5:1 AA) so
+       "Konto eröffnen"-Button + Kicker sind AA-konform. */
+    --bank-accent:         176 68 76;    /* #B0444C AA-safe coral */
+    --bank-accent-strong:  143 55 62;    /* #8F373E deeper coral hover */
     /* Legacy „gold"-Slot als Koralle-Highlight umgedeutet (sparsam) */
-    --bank-gold:           229 106 115;  /* #E56A73 */
+    --bank-gold:           176 68 76;    /* mirrors accent */
     --bank-gold-soft:      252 237 239;  /* #FCEDEF very light coral surface */
     --bank-success:        16 185 129;   /* #10B981 */
-    --bank-signature:        127 175 170; /* #7FAFAA primary CTA */
-    --bank-signature-hover:  109 157 152; /* #6D9D98 */
+    /* Primary CTA fill — Session 80.26 fix-pass: darkened for AA (was #7FAFAA @ 2.44:1). */
+    --bank-signature:        55 100 96;  /* #376460 AA-safe petrol on white (6.2:1) */
+    --bank-signature-hover:  34 68 65;   /* #224441 deeper petrol pressed */
     --bank-error:          220 38 38;
 
     /* --------------------------------------------------------------------
@@ -119,6 +122,7 @@
     --bank-bg:             30 30 34;     /* #1E1E22 body dark */
     --bank-surface:        40 40 44;
     --bank-surface-elev:   52 52 56;
+    --bank-panel:          36 36 40;     /* Session 80.26 fix-pass: was missing → topbar stayed near-white */
     --bank-border:         74 74 78;
 
     --bank-text:           245 246 247;
@@ -127,13 +131,17 @@
     --bank-primary:        149 195 190;  /* teal helled für Dark-Kontrast */
     --bank-primary-hover:  127 175 170;
     --bank-secondary:      149 195 190;
-    --bank-accent:         240 130 138;  /* coral helled */
-    --bank-accent-strong:  229 106 115;
-    --bank-gold:           240 130 138;
+    /* Session 80.26 fix-pass: coral leicht abgedunkelt für AA gegen dunkle Buttons */
+    --bank-accent:         232 140 148;  /* AA >4.5:1 mit weißem Text auf dunklem BG */
+    --bank-accent-strong:  240 130 138;
+    --bank-gold:           232 140 148;
     --bank-gold-soft:      54 24 26;
     --bank-success:        52 211 153;
-    --bank-signature:        127 175 170;
-    --bank-signature-hover:  109 157 152;
+    /* Primary CTA fill (dark) — light-teal auf dunklem BG mit dunklem Text.
+       Behalten wir hell, weil in dark der Button-Text auf dunkel invertiert wird via
+       .dark-Overrides; ausreichender Kontrast bleibt erhalten. */
+    --bank-signature:        149 195 190;
+    --bank-signature-hover:  180 214 210;
     --bank-error:          239 68 68;
 
     /* Session 80.26 — Dark-mode semantic accents (softened for contrast) */
@@ -283,7 +291,7 @@
     outline: none;
     box-shadow:
       0 0 0 2px rgb(var(--bank-surface)),
-      0 0 0 4px rgb(var(--bank-accent) / 0.38);
+      0 0 0 4px rgb(var(--bank-signature) / 0.42);
   }
 
   h1, h2, h3, h4 {
@@ -381,44 +389,64 @@
   .dark :where(.border-gray-200:not(.keep-light), .border-slate-200:not(.keep-light), .border-zinc-200:not(.keep-light), .border-neutral-200:not(.keep-light)) { border-color: rgb(28 46 72); }
   .dark :where(.border-gray-300:not(.keep-light), .border-slate-300:not(.keep-light)) { border-color: rgb(56 78 110); }
 
-  .dark :where(.bg-emerald-50:not(.keep-light)) { background-color: rgb(5 46 22 / 0.35); }
-  .dark :where(.bg-rose-50:not(.keep-light)) { background-color: rgb(76 5 25 / 0.35); }
-  .dark :where(.bg-amber-50:not(.keep-light)) { background-color: rgb(69 26 3 / 0.35); }
-  .dark :where(.bg-blue-50:not(.keep-light)) { background-color: rgb(23 37 84 / 0.35); }
-  .dark :where(.bg-sky-50:not(.keep-light)) { background-color: rgb(12 74 110 / 0.35); }
-  .dark :where(.bg-sky-50\/60:not(.keep-light), .bg-sky-50\/50:not(.keep-light)) {
+  /* Session 80.26 fix-pass: bumped specificity from `.dark :where(...)` (0,1,0) to
+     `:root.dark :where(...)` (0,2,0) so these remaps beat Tailwind utilities on
+     equal-specificity source-order ties. Previously raw emerald/rose/amber/sky/violet
+     leaked into dark mode (verified via computed styles). */
+  :root.dark :where(.bg-emerald-50:not(.keep-light)) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root.dark :where(.bg-emerald-100:not(.keep-light)) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root.dark :where(.bg-rose-50:not(.keep-light)) { background-color: rgb(var(--bank-coral-tint)); }
+  :root.dark :where(.bg-rose-100:not(.keep-light)) { background-color: rgb(var(--bank-coral-tint)); }
+  :root.dark :where(.bg-amber-50:not(.keep-light)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root.dark :where(.bg-amber-100:not(.keep-light)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root.dark :where(.bg-blue-50:not(.keep-light)) { background-color: rgb(var(--bank-info-tint)); }
+  :root.dark :where(.bg-blue-100:not(.keep-light)) { background-color: rgb(var(--bank-info-tint)); }
+  :root.dark :where(.bg-sky-50:not(.keep-light)) { background-color: rgb(var(--bank-info-tint)); }
+  :root.dark :where(.bg-sky-100:not(.keep-light)) { background-color: rgb(var(--bank-info-tint)); }
+  :root.dark :where(.bg-sky-50\/60:not(.keep-light), .bg-sky-50\/50:not(.keep-light)) {
     background-color: rgb(var(--bank-surface));
   }
-  .dark :where(.bg-emerald-50\/50:not(.keep-light), .bg-emerald-50\/40:not(.keep-light)) {
+  :root.dark :where(.bg-emerald-50\/50:not(.keep-light), .bg-emerald-50\/40:not(.keep-light)) {
     background-color: rgb(var(--bank-surface-elev));
   }
-  .dark :where(.bg-bank-gold-soft\/30:not(.keep-light), .bg-bank-gold-soft\/80:not(.keep-light)) {
+  :root.dark :where(.bg-bank-gold-soft\/30:not(.keep-light), .bg-bank-gold-soft\/80:not(.keep-light)) {
     background-color: rgb(var(--bank-surface-elev));
   }
-  .dark :where(.bg-yellow-50:not(.keep-light)) { background-color: rgb(66 32 6 / 0.35); }
-  .dark :where(.bg-orange-50:not(.keep-light)) { background-color: rgb(67 20 7 / 0.35); }
-  .dark :where(.bg-red-50:not(.keep-light)) { background-color: rgb(69 10 10 / 0.35); }
-  .dark :where(.bg-indigo-50:not(.keep-light)) { background-color: rgb(30 27 75 / 0.35); }
-  .dark :where(.bg-violet-50:not(.keep-light)) { background-color: rgb(46 16 101 / 0.35); }
+  :root.dark :where(.bg-yellow-50:not(.keep-light), .bg-yellow-100:not(.keep-light)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root.dark :where(.bg-orange-50:not(.keep-light), .bg-orange-100:not(.keep-light)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root.dark :where(.bg-red-50:not(.keep-light), .bg-red-100:not(.keep-light)) { background-color: rgb(var(--bank-coral-tint)); }
+  :root.dark :where(.bg-indigo-50:not(.keep-light), .bg-indigo-100:not(.keep-light)) { background-color: rgb(var(--bank-violet-tint)); }
+  :root.dark :where(.bg-violet-50:not(.keep-light), .bg-violet-100:not(.keep-light)) { background-color: rgb(var(--bank-violet-tint)); }
+  :root.dark :where(.bg-purple-50:not(.keep-light), .bg-purple-100:not(.keep-light), .bg-pink-50:not(.keep-light), .bg-pink-100:not(.keep-light)) { background-color: rgb(var(--bank-violet-tint)); }
+  :root.dark :where(.bg-teal-50:not(.keep-light), .bg-teal-100:not(.keep-light), .bg-cyan-50:not(.keep-light), .bg-cyan-100:not(.keep-light), .bg-green-50:not(.keep-light), .bg-green-100:not(.keep-light)) { background-color: rgb(var(--bank-petrol-tint)); }
 
-  .dark :where(.border-emerald-100:not(.keep-light), .border-emerald-200:not(.keep-light)) { border-color: rgb(6 95 70 / 0.5); }
-  .dark :where(.border-rose-100:not(.keep-light), .border-rose-200:not(.keep-light)) { border-color: rgb(159 18 57 / 0.5); }
-  .dark :where(.border-amber-100:not(.keep-light), .border-amber-200:not(.keep-light)) { border-color: rgb(146 64 14 / 0.5); }
-  .dark :where(.border-blue-100:not(.keep-light), .border-blue-200:not(.keep-light)) { border-color: rgb(11 58 92 / 0.5); }
-  .dark :where(.border-sky-100:not(.keep-light), .border-sky-200:not(.keep-light)) { border-color: rgb(7 89 133 / 0.5); }
-  .dark :where(.border-yellow-100:not(.keep-light), .border-yellow-200:not(.keep-light)) { border-color: rgb(133 77 14 / 0.5); }
+  :root.dark :where(.border-emerald-100:not(.keep-light), .border-emerald-200:not(.keep-light), .border-emerald-300:not(.keep-light)) { border-color: rgb(var(--bank-petrol-border)); }
+  :root.dark :where(.border-rose-100:not(.keep-light), .border-rose-200:not(.keep-light), .border-rose-300:not(.keep-light), .border-red-100:not(.keep-light), .border-red-200:not(.keep-light), .border-red-300:not(.keep-light)) { border-color: rgb(var(--bank-coral-border)); }
+  :root.dark :where(.border-amber-100:not(.keep-light), .border-amber-200:not(.keep-light), .border-amber-300:not(.keep-light), .border-yellow-100:not(.keep-light), .border-yellow-200:not(.keep-light), .border-orange-100:not(.keep-light), .border-orange-200:not(.keep-light)) { border-color: rgb(var(--bank-amber-border)); }
+  :root.dark :where(.border-blue-100:not(.keep-light), .border-blue-200:not(.keep-light), .border-blue-300:not(.keep-light), .border-sky-100:not(.keep-light), .border-sky-200:not(.keep-light), .border-sky-300:not(.keep-light)) { border-color: rgb(var(--bank-info-border)); }
+  :root.dark :where(.border-violet-100:not(.keep-light), .border-violet-200:not(.keep-light), .border-violet-300:not(.keep-light), .border-purple-100:not(.keep-light), .border-purple-200:not(.keep-light), .border-indigo-100:not(.keep-light), .border-indigo-200:not(.keep-light), .border-pink-100:not(.keep-light), .border-pink-200:not(.keep-light)) { border-color: rgb(var(--bank-violet-border)); }
+  :root.dark :where(.border-teal-100:not(.keep-light), .border-teal-200:not(.keep-light), .border-cyan-100:not(.keep-light), .border-cyan-200:not(.keep-light), .border-green-100:not(.keep-light), .border-green-200:not(.keep-light), .border-green-300:not(.keep-light)) { border-color: rgb(var(--bank-petrol-border)); }
 
-  .dark :where(.text-emerald-700:not(.keep-light)) { color: rgb(52 211 153); }
-  .dark :where(.text-emerald-600:not(.keep-light)) { color: rgb(52 211 153); }
-  .dark :where(.text-rose-700:not(.keep-light)) { color: rgb(251 113 133); }
-  .dark :where(.text-rose-600:not(.keep-light)) { color: rgb(251 113 133); }
-  .dark :where(.text-amber-700:not(.keep-light)) { color: rgb(252 211 77); }
-  .dark :where(.text-amber-600:not(.keep-light)) { color: rgb(252 211 77); }
-  .dark :where(.text-blue-700:not(.keep-light)) { color: rgb(108 167 224); }
-  .dark :where(.text-blue-600:not(.keep-light)) { color: rgb(108 167 224); }
-  .dark :where(.text-violet-600:not(.keep-light), .text-violet-700:not(.keep-light)) { color: rgb(167 139 250); }
-  .dark :where(.text-emerald-800:not(.keep-light), .text-emerald-900:not(.keep-light)) { color: rgb(110 231 183); }
-  .dark :where(.text-amber-800:not(.keep-light), .text-amber-900:not(.keep-light)) { color: rgb(252 211 77); }
+  :root.dark :where(.text-emerald-500:not(.keep-light), .text-emerald-600:not(.keep-light), .text-emerald-700:not(.keep-light)) { color: rgb(var(--bank-petrol-strong)); }
+  :root.dark :where(.text-emerald-800:not(.keep-light), .text-emerald-900:not(.keep-light)) { color: rgb(var(--bank-petrol-ink)); }
+  :root.dark :where(.text-emerald-400:not(.keep-light), .text-emerald-300:not(.keep-light)) { color: rgb(var(--bank-petrol)); }
+  :root.dark :where(.text-green-500:not(.keep-light), .text-green-600:not(.keep-light), .text-green-700:not(.keep-light)) { color: rgb(var(--bank-petrol-strong)); }
+  :root.dark :where(.text-teal-500:not(.keep-light), .text-teal-600:not(.keep-light), .text-teal-700:not(.keep-light), .text-cyan-600:not(.keep-light), .text-cyan-700:not(.keep-light)) { color: rgb(var(--bank-petrol-strong)); }
+
+  :root.dark :where(.text-rose-500:not(.keep-light), .text-rose-600:not(.keep-light), .text-rose-700:not(.keep-light)) { color: rgb(var(--bank-coral-strong)); }
+  :root.dark :where(.text-rose-800:not(.keep-light), .text-rose-900:not(.keep-light)) { color: rgb(var(--bank-coral-ink)); }
+  :root.dark :where(.text-red-500:not(.keep-light), .text-red-600:not(.keep-light), .text-red-700:not(.keep-light)) { color: rgb(var(--bank-coral-strong)); }
+  :root.dark :where(.text-red-800:not(.keep-light), .text-red-900:not(.keep-light)) { color: rgb(var(--bank-coral-ink)); }
+
+  :root.dark :where(.text-amber-500:not(.keep-light), .text-amber-600:not(.keep-light), .text-amber-700:not(.keep-light)) { color: rgb(var(--bank-amber-strong)); }
+  :root.dark :where(.text-amber-800:not(.keep-light), .text-amber-900:not(.keep-light)) { color: rgb(var(--bank-amber-ink)); }
+  :root.dark :where(.text-yellow-600:not(.keep-light), .text-yellow-700:not(.keep-light), .text-orange-600:not(.keep-light), .text-orange-700:not(.keep-light)) { color: rgb(var(--bank-amber-strong)); }
+
+  :root.dark :where(.text-sky-500:not(.keep-light), .text-sky-600:not(.keep-light), .text-sky-700:not(.keep-light), .text-blue-500:not(.keep-light), .text-blue-600:not(.keep-light), .text-blue-700:not(.keep-light)) { color: rgb(var(--bank-info-strong)); }
+  :root.dark :where(.text-blue-800:not(.keep-light), .text-blue-900:not(.keep-light), .text-sky-800:not(.keep-light), .text-sky-900:not(.keep-light)) { color: rgb(var(--bank-info-ink)); }
+
+  :root.dark :where(.text-violet-500:not(.keep-light), .text-violet-600:not(.keep-light), .text-violet-700:not(.keep-light), .text-purple-600:not(.keep-light), .text-purple-700:not(.keep-light), .text-indigo-600:not(.keep-light), .text-indigo-700:not(.keep-light), .text-fuchsia-600:not(.keep-light), .text-fuchsia-700:not(.keep-light)) { color: rgb(var(--bank-violet-strong)); }
+  :root.dark :where(.text-violet-800:not(.keep-light), .text-violet-900:not(.keep-light)) { color: rgb(var(--bank-violet-ink)); }
 
   /* Hardcoded hex text on comparison cards — remap to bank tokens in dark mode. */
   .dark :where(.text-\[\#1a4295\]:not(.keep-light)) { color: rgb(var(--bank-primary)); }
@@ -542,6 +570,17 @@
   :root:not(.dark) :where(.text-green-800:not(.keep-raw), .text-green-900:not(.keep-raw)) { color: rgb(var(--bank-petrol-ink)); }
   :root:not(.dark) :where(.bg-green-50:not(.keep-raw), .bg-green-100:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-tint)); }
   :root:not(.dark) :where(.border-green-100:not(.keep-raw), .border-green-200:not(.keep-raw), .border-green-300:not(.keep-raw)) { border-color: rgb(var(--bank-petrol-border)); }
+
+  /* Session 80.26 fix-pass: BrandLogo PNG is opaque (RGB, no alpha). The naive
+     `brightness(0) invert(1)` pipeline paints a solid white rectangle in dark mode
+     because it collapses every pixel to a single luminance. Replace it with a filter
+     chain that preserves the text↔background luminance delta and then screen-blend
+     onto the dark canvas so the white background vanishes and the wordmark reads
+     as light-gray/white. */
+  :root.dark img.brand-logo-invertible {
+    filter: invert(1) grayscale(1) brightness(1.6) contrast(2) !important;
+    mix-blend-mode: screen;
+  }
 
   /* Neutrals (gray/slate/zinc/neutral/stone -50) → warm bank surface tint,
      so bland "SaaS grey" strips read as editorial cream. */

@@ -67,15 +67,15 @@ const InterestRateSparkline = memo(function InterestRateSparkline({
       >
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#16a34a" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#16a34a" stopOpacity="0.03" />
+            <stop offset="0%" stopColor="rgb(var(--bank-petrol))" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="rgb(var(--bank-petrol))" stopOpacity="0.03" />
           </linearGradient>
         </defs>
         {areaPath ? <path d={areaPath} fill={`url(#${gradId})`} /> : null}
         <path
           d={linePath}
           fill="none"
-          stroke="#16a34a"
+          stroke="rgb(var(--bank-petrol-strong))"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"

@@ -4,10 +4,15 @@ import { BRAND_LOGO_PNG_SRC } from '@/lib/brand';
 
 /**
  * Fröhlich Vermögensberatung lockup — echt transparent, kein weißer Karten-Hintergrund.
- * - `light` / auto (light theme): Original-Blau auf transparent.
- * - `onDark` / auto (dark theme): dieselbe PNG, per CSS-Filter zu Weiß invertiert
- *   → wirkt auf blauen/dunklen Flächen sauber ohne Kasten.
+ * - Light / auto (light theme): Original-Blau auf transparent.
+ * - onDark / auto (dark theme): transparente PNG-Variante; per CSS-Filter zu Weiß
+ *   gefärbt (funktioniert nur mit echt transparentem Hintergrund).
+ * Session 80.26 fix-pass: switched dark variant source from opaque `frohlich-logo.png`
+ * to `frohlich-logo-transparent.png` — Test-Agent reported the invert filter produced
+ * a solid white rectangle instead of a white wordmark.
  */
+const BRAND_LOGO_TRANSPARENT_SRC = '/assets/logo/frohlich-logo-transparent.png?v=3';
+
 export default function BrandLogo({
   alt = 'Fröhlich Vermögensberatung',
   className,
@@ -20,13 +25,15 @@ export default function BrandLogo({
     imgClassName,
   );
 
-  // Filter macht die blaue Wortmarke auf dunklen Untergründen komplett weiß.
-  const invertToWhite = '[filter:brightness(0)_invert(1)]';
+  // Farbfilter macht die (transparent gelieferte) Wortmarke auf dunklen Flächen weiß.
+  // Stabiler Class-Hook `brand-logo-invertible` gestattet CSS-Overrides (siehe index.css
+  // Session 80.26 fix-pass: mix-blend-mode: screen für nicht-transparente PNGs).
+  const invertToWhite = 'brand-logo-invertible [filter:brightness(0)_invert(1)]';
 
   if (variant === 'onDark') {
     return (
       <img
-        src={BRAND_LOGO_PNG_SRC}
+        src={BRAND_LOGO_TRANSPARENT_SRC}
         alt={alt}
         className={cn(imgCls, invertToWhite, className)}
         {...props}
@@ -45,7 +52,7 @@ export default function BrandLogo({
     );
   }
 
-  // auto: helles Theme → Original, dunkles Theme → weiß-invertiert (kein Kasten)
+  // auto: helles Theme → Original, dunkles Theme → transparente PNG + Invert
   return (
     <>
       <img
@@ -55,7 +62,7 @@ export default function BrandLogo({
         {...props}
       />
       <img
-        src={BRAND_LOGO_PNG_SRC}
+        src={BRAND_LOGO_TRANSPARENT_SRC}
         alt=""
         aria-hidden="true"
         className={cn(imgCls, invertToWhite, className, 'hidden dark:inline-block')}
