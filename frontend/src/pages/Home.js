@@ -38,11 +38,15 @@ const Home = () => {
   const [inquiryProduct, setInquiryProduct] = useState(
     /** @type {'aktien' | 'anleihen' | 'fonds' | 'tagesgeld' | 'festgeld' | 'flexgeld' | null} */ (null),
   );
+  const [inquiryTopic, setInquiryTopic] = useState(/** @type {string | null} */ (null));
+  const [inquiryTopicSlug, setInquiryTopicSlug] = useState(/** @type {string | null} */ (null));
   const prefersReduced = useReducedMotion();
   const location = useLocation();
 
   const openProductInquiry = (key) => {
     setInquiryProduct(key);
+    setInquiryTopic(null);
+    setInquiryTopicSlug(null);
     setInquiryOpen(true);
   };
 
@@ -67,6 +71,36 @@ const Home = () => {
     });
     return () => cancelAnimationFrame(id);
   }, [location.pathname, location.hash, prefersReduced]);
+
+  // Session 80.21c — Deep-Link Handler for Strategy-CTA:
+  // `/?openInquiry=1&topic=Value+Investing&topicSlug=value-investing&product=aktien#home-product-wizard`
+  // opens the Product-Inquiry-Wizard in „Gesprächsanfrage"-mode with topic prefilled.
+  useEffect(() => {
+    if (location.pathname !== '/') return;
+    const params = new URLSearchParams(location.search);
+    if (params.get('openInquiry') !== '1') return;
+    const validProducts = new Set(['aktien', 'anleihen', 'fonds', 'tagesgeld', 'festgeld', 'flexgeld']);
+    const rawProduct = params.get('product') || 'fonds';
+    const productKey = validProducts.has(rawProduct) ? rawProduct : 'fonds';
+    const topicTitle = (params.get('topic') || '').trim();
+    const topicSlug = (params.get('topicSlug') || '').trim();
+    setInquiryProduct(productKey);
+    setInquiryTopic(topicTitle || null);
+    setInquiryTopicSlug(topicSlug || null);
+    setInquiryOpen(true);
+    // Scroll into view + strip the query params from URL so a page reload
+    // won't re-trigger the modal.
+    const raf = requestAnimationFrame(() => {
+      const el = document.getElementById('home-product-wizard');
+      if (el) el.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'start' });
+      try {
+        window.history.replaceState({}, '', '/#home-product-wizard');
+      } catch {
+        /* history API not available — non-fatal */
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [location.pathname, location.search, prefersReduced]);
 
   const fetchCreditOffers = async () => {
     try {
@@ -151,9 +185,15 @@ const Home = () => {
         open={inquiryOpen}
         onOpenChange={(o) => {
           setInquiryOpen(o);
-          if (!o) setInquiryProduct(null);
+          if (!o) {
+            setInquiryProduct(null);
+            setInquiryTopic(null);
+            setInquiryTopicSlug(null);
+          }
         }}
         product={inquiryProduct}
+        topic={inquiryTopic}
+        topicSlug={inquiryTopicSlug}
       />
       <ProductInquiryStickyCta onOpenWizard={openProductInquiry} />
       <BankingHero />

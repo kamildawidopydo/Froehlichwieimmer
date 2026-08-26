@@ -8,6 +8,26 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.21c (Feb 26 2026) — **Strategie-CTA öffnet Lead-Wizard direkt (Fix)**:
+  - `_StrategieCta.jsx`: `<Link to="/#home-product-wizard">` durch programmatische `useNavigate`-Route ersetzt: `/?openInquiry=1&topic=…&topicSlug=…&product=…#home-product-wizard`. Copy geändert zu „Persönliches Gespräch anfragen" (kein Kalender/Terminslot vorhanden — transparent).
+  - `StrategieDetail.jsx`: übergibt `topic`, `topicSlug`, `categorySlug` an den CTA (data-driven, kein Hardcode).
+  - Category→Product Mapping im CTA: anlagestile→aktien, nachhaltigkeit/schutz-steuerung/altersvorsorge/generationen→fonds.
+  - `Home.js`: Neuer `useEffect` liest `?openInquiry=1` beim Mount, setzt Product/Topic-State und öffnet den Wizard. URL wird nach Öffnen auf `/#home-product-wizard` bereinigt (Reload retriggert nicht).
+  - `ProductInquiryWizard.jsx`: Neue Props `topic` + `topicSlug`. Im Topic-Modus:
+      * springt direkt zur Kontakt-Stufe (`setStep(questionCount)` beim ersten Öffnen via `topicInitedRef`),
+      * Titel = `Persönliches Gespräch: {topic}` (statt product-Label),
+      * Topic-Banner (`[data-testid="product-inquiry-topic-banner"]`) über dem Kontaktformular,
+      * Progress-Bar + Back-Button versteckt,
+      * `answers._strategie_thema` + `answers._strategie_anliegen` mit Freitext-Prefill werden mitgesendet (Berater-Mail zeigt Thema + Anliegen).
+  - Verifiziert per Screenshot:
+      * Value Investing (Desktop 1440×900) — Wizard offen, Titel + Banner korrekt, Kontaktfelder direkt sichtbar, URL bereinigt.
+      * Inflationsschutz (Mobile 390×800) — Wizard offen, Banner „Inflationsschutz".
+      * Private Rentenvorsorge (Desktop 1600×900) — Wizard offen, Formularvalidierung + Prefill funktionieren, Submit-Button aktiv.
+      * ESG (Desktop) — Banner „Nachhaltige Investments (ESG)"; Wizard schließbar; Browser-Back kehrt zurück zur Strategie-Seite.
+      * Regression Home-Produktkarte (Aktien) — Wizard zeigt weiterhin Fragen (Progress 1/7), kein Topic-Banner, Titel „Aktien" — bestehender Flow unverändert.
+  - Kein Backend-Change, keine Schema-Änderung. Product-Constraint respektiert (Mapping auf zulässige Produkte).
+
+
 - 80.21b (Feb 26 2026) — **Trust-Points-Zeile im Home-Product-Wizard entfernt**:
   - `HomeProductWizardSection.jsx`: 4-Spalten-Trust-Strip („Passende Empfehlung / Mögliche Vorteile / Kostenlos & unverbindlich / In wenigen Minuten") gelöscht.
   - Ungenutzte Imports entfernt (`CheckCircle2`, `Clock`, `HandCoins`, `ShieldCheck`, `WIZARD_TRUST_POINTS`, `TRUST_ICONS`).

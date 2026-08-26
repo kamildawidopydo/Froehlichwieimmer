@@ -61,9 +61,9 @@ const initialContact = {
 const QUESTION_ICONS = [Euro, Clock3, BarChart3, Shield, Target];
 
 /**
- * @param {{ open: boolean; onOpenChange: (open: boolean) => void; product: 'aktien' | 'anleihen' | 'fonds' | 'tagesgeld' | 'festgeld' | 'flexgeld' | null }} props
+ * @param {{ open: boolean; onOpenChange: (open: boolean) => void; product: 'aktien' | 'anleihen' | 'fonds' | 'tagesgeld' | 'festgeld' | 'flexgeld' | null; topic?: string | null; topicSlug?: string | null }} props
  */
-const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
+const ProductInquiryWizard = ({ open, onOpenChange, product, topic = null, topicSlug = null }) => {
   const reduceMotion = useReducedMotion();
   const { user } = useAuth();
   const questions = useMemo(
@@ -173,6 +173,29 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
   useEffect(() => {
     if (!open) reset();
   }, [open, reset]);
+
+  // Session 80.21c — Topic-Modus (Strategie-CTA):
+  // Wenn beim Öffnen ein `topic` gesetzt ist, springt der Wizard direkt zur
+  // Kontakt-Stufe (überspringt Produkt-Fragen) und initialisiert `answers`
+  // mit dem Strategie-Thema, damit der Berater es in Report/Mail sieht.
+  const topicInitedRef = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      topicInitedRef.current = false;
+      return;
+    }
+    if (topic && product && !topicInitedRef.current) {
+      topicInitedRef.current = true;
+      setStep(questionCount);
+      setAnswers({
+        _strategie_thema: { value: topicSlug || topic, label: topic },
+        _strategie_anliegen: {
+          value: 'strategie-cta',
+          label: `Ich interessiere mich für das Thema ${topic} und möchte ein unverbindliches Gespräch.`,
+        },
+      });
+    }
+  }, [open, topic, topicSlug, product, questionCount]);
 
   const isContactStep = step >= questionCount;
   const currentQuestion = !isContactStep ? questions[step] : null;
@@ -401,7 +424,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bank-primary/25 to-transparent"
           />
           <div className="relative z-[1] flex items-start gap-2 sm:gap-3">
-            {step > 0 && !done ? (
+            {step > 0 && !done && !topic ? (
               <button
                 type="button"
                 onClick={handleBack}
@@ -435,7 +458,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                     : 'mt-1 text-[1.35rem] sm:text-2xl',
                 )}
               >
-                {done ? 'Anfrage gesendet' : titleLabel}
+                {done ? 'Anfrage gesendet' : (topic ? `Persönliches Gespräch: ${topic}` : titleLabel)}
               </DialogTitle>
             </div>
             {isAktien && compactQuestionStep ? (
@@ -460,7 +483,7 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                 : 'Beantworten Sie bitte einige kurze Fragen (ca. 2 Minuten). Unverbindliche Erstinformation — keine rechtsverbindliche Eignungsfeststellung.'}
             </DialogDescription>
           )}
-          {!done && (
+          {!done && !topic && (
             <div
               className="relative z-[1] mt-2"
               data-testid="product-inquiry-progress"
@@ -670,6 +693,18 @@ const ProductInquiryWizard = ({ open, onOpenChange, product }) => {
                 >
               {isContactStep ? (
                 <>
+                  {topic ? (
+                    <div
+                      className="mb-4 rounded-lg border border-bank-primary/20 bg-bank-primary/[0.04] px-4 py-3"
+                      data-testid="product-inquiry-topic-banner"
+                    >
+                      <p className="text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">Ihr Thema</p>
+                      <p className="mt-1 font-serif text-[15px] leading-snug text-bank-ink">{topic}</p>
+                      <p className="mt-1 text-[12.5px] leading-relaxed text-bank-text-muted">
+                        Wir melden uns unverbindlich mit einer Ersteinschätzung zu diesem Thema.
+                      </p>
+                    </div>
+                  ) : null}
                   <h4 className="font-display text-[1.25rem] font-medium tracking-tight text-bank-ink sm:text-[1.35rem]">
                     Ihre Kontaktdaten
                   </h4>

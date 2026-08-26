@@ -99,7 +99,11 @@ const StrategieDetail = () => {
           </section>
         )}
 
-        <StrategieCta topicTitle={topic.title} />
+        <StrategieCta
+          topicTitle={topic.title}
+          topicSlug={topic.slug}
+          categorySlug={category.slug}
+        />
 
         {otherTopics.length > 0 && (
           <nav className="mt-16 border-t border-bank-border pt-10" aria-label="Weitere Themen in dieser Kategorie">
