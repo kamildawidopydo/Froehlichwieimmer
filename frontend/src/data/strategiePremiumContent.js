@@ -573,4 +573,9 @@ export const premiumTopics = {
   },
 };
 
-export const findPremium = (topicSlug) => premiumTopics[topicSlug] || null;
+import { premiumTopicsExtra } from './strategiePremiumContentExtra';
+
+/** Merged registry: Flagships (80.21a) + weitere 9 Topics (80.21b). */
+const mergedPremiumTopics = { ...premiumTopics, ...premiumTopicsExtra };
+
+export const findPremium = (topicSlug) => mergedPremiumTopics[topicSlug] || null;

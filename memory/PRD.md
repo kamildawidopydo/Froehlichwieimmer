@@ -8,6 +8,16 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.21b (Feb 26 2026) — **9 verbleibende Strategie-Topics auf Premium-Standard**:
+  - Neue Datei `strategiePremiumContentExtra.js` mit vollständigen Premium-Blobs für Dividendenstrategien, Impact Investing, Vermögensschutz, Inflationsschutz, Vermögensaufbau, Altersvorsorge, Betriebliche Altersvorsorge, Vermögensaufbau für Kinder, Vermögensübertragung.
+  - `strategiePremiumContent.js` merged jetzt `premiumTopics` + `premiumTopicsExtra` → `findPremium(topicSlug)` liefert für alle 12 Topics einen Premium-Blob.
+  - Rendering-Framework aus 80.21a unverändert wiederverwendet (kein Zusatz-JSX). Kategorie→Produkt-Mapping der CTA unverändert; Topic-Prefill funktioniert auf allen 12 Seiten.
+  - Themenspezifische Fachlogik pro Topic: Dividendenrendite/Total Return, Additionalität/Impact-Washing, Diversifikation/Liquidität, Kaufkraft/reale Rendite, Sparrate/Zinseszins, Drei-Säulen-Modell/Entnahmephase, Entgeltumwandlung/Portabilität, Kinderdepot/Volljährigkeit, Schenkung/Nachlass — jeweils ohne Renditeversprechen oder individuelle Empfehlungen.
+  - QA: 12/12 Seiten mit h1=1, quickFacts/nav/selfCheck/comparison/cta/disclaimer sichtbar; 4–5 FAQs je Seite; 3 Related-Links; keine Console-Errors.
+  - Alle 18 Strategie-Routen HTTP 200. Mobile-Overflow 0 auf Vermögensschutz und Vermögensübertragung geprüft. CTA-Topic-Prefill E2E getestet auf Dividendenstrategien („Dividendenstrategien"), Vermögensschutz („Vermögensschutz"), Vermögensübertragung („Vermögensübertragung").
+  - Session-80.21a-Flagships (Value Investing, ESG, Private Rentenvorsorge) und Session-80.21c-CTA-Flow bleiben identisch.
+
+
 - 80.21a (Feb 26 2026) — **Premium Strategy Detail Flagships (Value Investing / ESG / Private Rentenvorsorge)**:
   - Neue Datei `strategiePremiumContent.js` mit strukturierten Premium-Blobs für die drei Flagships (summary, quickFacts, shortExplanation, suitableFor, howItWorks, aspects, example, advantages, considerations, mistakes, selfCheck, comparison, related, faqs). Additiv — die bestehende `strategieContent.js` bleibt Quelle für Nav/Overview und alle nicht ausgebauten Topics.
   - Neue Sub-Components: `_StrategyQuickFacts.jsx`, `_StrategySectionNav.jsx` (Sticky Desktop / horizontale Chips Mobile mit IntersectionObserver-Active-State), `_StrategySelfCheck.jsx` (rein clientseitig, kein Scoring, keine Speicherung), `_StrategyComparison.jsx` (neutrale 2-Spalten-Vergleichstabelle), `_StrategyPremiumBody.jsx` (orchestriert alle 12 Premium-Sektionen, inkl. FAQ-Accordion, Related-Cards, Disclaimer, wiederverwendetem `StrategieCta`).
