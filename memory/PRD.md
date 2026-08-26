@@ -7,6 +7,13 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
+- 80.11 (Feb 26 2026) — **Bugfix: Production-DB leer, 0 Kundenstimmen sichtbar → Auto-Seed via Startup-Snapshot**:
+  - Root Cause: Nach dem ersten Deploy zu kapital-direkt24.de bekommt die Production ihre eigene, frische MongoDB. Alle 77 Kundenstimmen existierten nur in der Preview-DB (`kapitalmitte`). `GET https://kapital-direkt24.de/api/reviews/public` lieferte `total=0`.
+  - Fix: **JSON-Snapshot der Preview-DB** in `backend/data/reviews_snapshot.json` (77 Reviews, 60 KB, ins Repo eingecheckt). Neuer Loader `backend/reviews_seed_loader.py` mit idempotentem Insert per E-Mail. Wired in `server.py` `on_startup` nach `seed_content()`.
+  - Verhalten: bei jedem Backend-Start werden 77 Reviews idempotent geladen — existierende bleiben unberührt (`skipped_existing`), fehlende werden `insert_one`ed. Kill-Switch `REVIEWS_SEED_ENABLED=false` deaktiviert das Auto-Seeding.
+  - Preview-Startup-Log: `reviews_seed: done — loaded=77 inserted=0 skipped_existing=77 errors=0` (alle bereits da).
+  - Nach Redeploy erhält Production 77 Reviews inkl. der 11 verifizierten echten Kunden (Anna M., Michael W. …) und 55 Templates + 11 realen unverifizierten.
+
 - 80.10 (Feb 26 2026) — **Bugfix: nur 60 von 77 Kundenstimmen sichtbar (Pagination-Cap)**:
   - Ursache: `Kundenstimmen.jsx` cachte den API-Pool mit `POOL_SIZE = 60`; Backend `/reviews/public` cappte Limit zusätzlich hart bei 100. Da wir seit Session 80.9 **77 Reviews** haben, blieben die letzten 17 Karten unsichtbar — der Zähler zeigte 77, aber die clientseitige Pagination hatte nur 6 statt 8 Seiten.
   - Fix: `POOL_SIZE = 200` (Client-Cache) + Backend-Limit-Cap `min(limit, 200)` (`server.py` Zeile 1164). Rechnet gleichzeitig Wachstum bis 200 vor, ohne echte Backend-Pagination auf Seitenwechseln nötig zu machen.

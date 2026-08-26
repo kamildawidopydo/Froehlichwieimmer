@@ -3219,6 +3219,13 @@ async def on_startup():
     await db.symbol_news_cache.create_index("expires_at", expireAfterSeconds=0)
     await seed_admin()
     await seed_content()
+    # Session 80.11: idempotenter Reviews-Snapshot-Import — sorgt dafür, dass
+    # frisch deployte Production-DBs die kuratierten Kundenstimmen erhalten.
+    try:
+        from reviews_seed_loader import seed_reviews_from_snapshot
+        await seed_reviews_from_snapshot(db)
+    except Exception as exc:
+        logger.warning("reviews_seed startup failed: %s", exc)
     logger.info("Startup complete")
 
 
