@@ -6,6 +6,7 @@ import { strategieCategories } from '@/data/strategieContent';
 import { goals } from '@/data/strategieGoals';
 import StrategieBreadcrumb from './_StrategieBreadcrumb';
 import StrategyFinder from './_StrategyFinder';
+import StrategyDownloadCenter from './_StrategyDownloadCenter';
 
 const GOAL_ICONS = { sprout: Sprout, 'shield-check': ShieldCheck, clock: Clock, users: Users, leaf: Leaf, 'trending-up': TrendingUp };
 
@@ -141,6 +142,7 @@ const StrategieOverview = () => (
       </section>
 
       <TrustBlock />
+      <StrategyDownloadCenter />
     </main>
   </div>
 );

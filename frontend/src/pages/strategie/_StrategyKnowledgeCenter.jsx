@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Download, ArrowRight, Sparkles, BookOpen, MessageSquare } from 'lucide-react';
+import { trackInvestmentEvent } from '@/lib/investmentAnalytics';
+import { rankNewsForTopic } from '@/data/strategyNewsMap';
 
 const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : '/api';
 
@@ -144,10 +146,9 @@ export const StrategyNewsSection = ({ topicSlug, keywords = [], topicTitle }) =>
         if (!res.ok) throw new Error(String(res.status));
         const all = await res.json();
         if (!alive) return;
-        const filtered = (Array.isArray(all) ? all : [])
-          .filter((a) => matchesTopicKeywords(a, keywords))
-          .slice(0, 4);
-        setItems(filtered);
+        // Session 80.22b — Scoring-basiertes Ranking statt purer substring-Filter.
+        const ranked = rankNewsForTopic(Array.isArray(all) ? all : [], keywords, { limit: 3, minScore: 3 });
+        setItems(ranked);
         setState('done');
       } catch {
         if (alive) setState('error');
@@ -179,6 +180,7 @@ export const StrategyNewsSection = ({ topicSlug, keywords = [], topicTitle }) =>
             <li key={n.id || n.slug}>
               <Link
                 to={`/news/${n.slug}`}
+                onClick={() => trackInvestmentEvent('strategy_news_clicked', { topic_slug: topicSlug, article_slug: n.slug, position: items.indexOf(n) })}
                 data-testid={`strategie-news-item-${n.slug}`}
                 className="group block rounded-xl border border-bank-border bg-white p-5 transition-colors hover:border-bank-primary/40"
               >
@@ -241,6 +243,11 @@ export const StrategyReportDownload = ({ category, topic, premium }) => {
   const [state, setState] = useState('idle'); // idle | loading | error
   const handleDownload = async () => {
     setState('loading');
+    trackInvestmentEvent('strategy_report_download_started', {
+      topic_slug: topic.slug,
+      category_slug: category.slug,
+      source: 'strategy_detail',
+    });
     try {
       const res = await fetch(`${API}/reports/strategy-pdf`, {
         method: 'POST',
@@ -274,8 +281,18 @@ export const StrategyReportDownload = ({ category, topic, premium }) => {
       a.remove();
       URL.revokeObjectURL(url);
       setState('idle');
+      trackInvestmentEvent('strategy_report_download_success', {
+        topic_slug: topic.slug,
+        category_slug: category.slug,
+        source: 'strategy_detail',
+      });
     } catch {
       setState('error');
+      trackInvestmentEvent('strategy_report_download_failed', {
+        topic_slug: topic.slug,
+        category_slug: category.slug,
+        source: 'strategy_detail',
+      });
     }
   };
   return (

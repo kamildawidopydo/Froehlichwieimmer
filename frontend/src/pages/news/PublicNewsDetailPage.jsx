@@ -15,6 +15,7 @@ import {
 import PublicNewsLayout from '@/components/news/PublicNewsLayout';
 import PublicNewsErrorState from '@/components/news/PublicNewsErrorState';
 import RelatedNewsArticles from '@/components/news/RelatedNewsArticles';
+import NewsStrategyCrosslink from '@/components/news/NewsStrategyCrosslink';
 import SafeNewsImage from '@/components/news/SafeNewsImage';
 import EuronewsVideoPlayer from '@/components/dashboard/news/EuronewsVideoPlayer';
 
@@ -181,6 +182,7 @@ const PublicNewsDetailPage = () => {
             category={article.category}
             excludeSlug={article.slug}
           />
+          <NewsStrategyCrosslink article={article} />
         </>
       )}
     </PublicNewsLayout>

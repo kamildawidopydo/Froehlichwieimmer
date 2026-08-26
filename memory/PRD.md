@@ -8,6 +8,14 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.22b (Feb 26 2026) — **Knowledge Center Completion**:
+  - Neu: `strategyNewsMap.js` (DRY-Mapping mit `scoreArticleForTopic`/`rankNewsForTopic`/`findRelatedStrategyTopicsForNews`), `_StrategyDownloadCenter.jsx` (4 Featured + „Alle anzeigen" für die restlichen 8), `NewsStrategyCrosslink.jsx` (max. 2 Topics unter News-Detail, min-Score 3).
+  - Angepasst: `StrategieOverview.jsx` (Download-Center eingebunden), `PublicNewsDetailPage.jsx` (Crosslink am Ende), `_StrategyKnowledgeCenter.jsx` (News-Ranking mit `rankNewsForTopic` statt Substring, Analytics-Events wired).
+  - Analytics: `strategy_news_clicked`, `strategy_report_download_started/success/failed`, `strategy_download_center_opened`, `news_strategy_crosslink_clicked` via bestehenden `trackInvestmentEvent`.
+  - Download-Center: 4 Featured + Expand-Button für die weiteren 8 Merkblätter. PDFs werden on-demand via bestehendem `POST /api/reports/strategy-pdf` erzeugt.
+  - Preview-Note: News-Detail (`/news/:slug`) liefert für die 3 aktuellen Feed-Artikel Error-State (`useNewsArticle` fand kein passendes Dokument). Crosslink-Komponente kehrt in diesem Fall korrekt `null` zurück. DRY-Trockentest bestätigt: Score-Logik matched die Titel (EZB→Inflationsschutz, DAX→Value Investing, BBVA→altersvorsorge). Sobald Artikel im Detail-Endpoint verfügbar sind, erscheint der Crosslink automatisch.
+
+
 - 80.22 (Feb 26 2026) — **Strategy Knowledge Center (Reports, News, Deep-Learn, Terms, Conversation Questions)**:
   - Neue Datei `strategiePremiumMeta.js` mit fünf Zusatzfeldern je Topic (keyTakeaways/newsKeywords/terms/deepLearn/conversationQuestions) für alle 12 Topics; wird in `strategiePremiumContent.js#findPremium` gemerged.
   - Neue React-Komponenten in `_StrategyKnowledgeCenter.jsx`: `StrategyKeyTakeaways`, `ReadingTimeBadge`, `StrategyTerms`, `StrategyDeepLearn` (Accordion), `StrategyNewsSection` (fetch `/api/content/news?limit=50`, clientseitig auf `newsKeywords` gefiltert, max 4), `StrategyConversationQuestions`, `StrategyReportDownload` + `computeReadingMinutes`.
