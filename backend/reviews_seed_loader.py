@@ -81,9 +81,26 @@ async def seed_reviews_from_snapshot(db) -> dict:
             result["errors"] += 1
             continue
         try:
-            existing = await db.reviews.find_one({"email": email}, {"_id": 1})
+            existing = await db.reviews.find_one({"email": email}, {"_id": 1, "display_name": 1, "first_name": 1, "last_name": 1})
             if existing:
-                result["skipped_existing"] += 1
+                # Idempotent: bestehenden Datensatz nicht überschreiben, aber
+                # Namensfelder aus dem Snapshot synchronisieren, falls sie sich
+                # geändert haben (z. B. Kollisions-Umbenennung Thomas R.→Rainer T.).
+                snap_display = doc.get("display_name")
+                snap_first = doc.get("first_name")
+                snap_last = doc.get("last_name")
+                name_update: dict = {}
+                if snap_display and snap_display != existing.get("display_name"):
+                    name_update["display_name"] = snap_display
+                if snap_first and snap_first != existing.get("first_name"):
+                    name_update["first_name"] = snap_first
+                if snap_last and snap_last != existing.get("last_name"):
+                    name_update["last_name"] = snap_last
+                if name_update:
+                    await db.reviews.update_one({"_id": existing["_id"]}, {"$set": name_update})
+                    result["renamed"] = result.get("renamed", 0) + 1
+                else:
+                    result["skipped_existing"] += 1
                 continue
             normalized = _normalize_doc(doc)
             normalized["email"] = email
@@ -97,7 +114,7 @@ async def seed_reviews_from_snapshot(db) -> dict:
             logger.warning("reviews_seed: insert failed for %s: %s", email, exc)
 
     logger.info(
-        "reviews_seed: done — loaded=%d inserted=%d skipped_existing=%d errors=%d",
-        result["loaded"], result["inserted"], result["skipped_existing"], result["errors"],
+        "reviews_seed: done — loaded=%d inserted=%d skipped_existing=%d renamed=%d errors=%d",
+        result["loaded"], result["inserted"], result["skipped_existing"], result.get("renamed", 0), result["errors"],
     )
     return result
