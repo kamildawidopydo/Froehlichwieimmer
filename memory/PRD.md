@@ -8,6 +8,15 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.25 (Feb 26 2026) — **News-Ingestion 2.0 / Source-Rich Article Pipeline**:
+  - **Root Cause**: Der News-Synthesizer (`news_synthesizer.py`) schreibt bereits seit Session 79.5 hochwertige Artikel mit `content`/`summary`/`source_names`/`source_urls`/`sources[]` in Kollektion **`db.news_articles`** (30 real synthesized docs). Die drei Endpoints (`GET /api/content/news`, `GET /api/content/news/{slug}`, `POST .../view`) lasen jedoch aus **`db.news`** — einer 3-Item-Demo-Seed-Kollektion (server.py:1932) ohne Content/Source. Reader ↔ Writer waren auf zwei getrennte Kollektionen verdrahtet.
+  - **Fix (chirurgisch, kein Pipeline-Umbau)**: `server.py` Reader auf `db.news_articles` umgestellt; List-Endpoint filtert `is_published=True, status="published"`, Excerpt = `summary` gekürzt auf 280 Zeichen. Detail-Endpoint mappt `source_names[0]`/`source_urls[0]` → `source`/`source_url`, ergänzt `sources[]` und leitet `content_origin` deterministisch ab (`ai_summary_from_source` / `provider_summary` / `short_only`). View-Counter erhöht `views` in `db.news_articles` (Archive-Fallback erhalten).
+  - Finales News-Schema (jetzt konsumiert): `slug, title, summary, subtitle, content, category, content_type, source_names[], source_urls[], sources[{name,url}], image_url, published_at, updated_at, generated_at, status, is_published, is_top_news, relevance_score, quality_note, content_origin (derived), views`.
+  - **Content-Origin-Modell**: `ai_summary_from_source` (Synthesizer + belastbare Quellen) / `provider_summary` (Content ohne Quellen) / `short_only` (Fallback).
+  - Getestet: List liefert 5 echte Artikel; Beispiel-Detail „Von der Leyen ONS-Konferenz" — content-len 3823, summary-len 336, source=„EU-Kommission", source_url=`https://ec.europa.eu/commission/presscorner/detail/en/speech_26_1754`, `content_origin='ai_summary_from_source'`. View-Counter 0→2 nach 2× POST. 404-Sanity 200 / Detail-404 ok.
+  - Bestehende Pipeline-Merkmale bleiben erhalten: RSS-Fetch → `news_raw` → Dedupe → `_quality_gate` → Content-Grounding, kein Live-URL-Erfundenlink, kein Halluzinieren. Cron `news-fetch-feeds`, `news-synthesize`, `news-image-sweep`, `news-retention-archive` unverändert.
+
+
 - 80.24 (Feb 26 2026) — **News-Detail Content-Qualität + Mongo-View-Counter**:
   - Bestand (`db.news`, 3 Artikel): alle **NO_CONTENT** (weder `content`/`body`/`summary` noch `source` in MongoDB vorhanden). Ergo: keine erfundenen Volltexte ergänzt — Content-Integrität ist wichtiger als Textmenge.
   - Neuer Endpoint `POST /api/content/news/{slug}/view` in `server.py`: atomic `$inc` auf `db.news`, Archive-Fallback auf `db.news_articles_archive`. Fehler blockieren die Seite nie (`{ok:false}` statt Exception).

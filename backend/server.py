@@ -370,12 +370,17 @@ async def list_offers(bank_slug: Optional[str] = None, product_type: Optional[st
 
 @api.get("/content/news", response_model=List[NewsOut])
 async def list_news(limit: int = 20):
-    docs = await db.news.find({}).sort("published_at", -1).limit(limit).to_list(limit)
+    """
+    Session 80.25 — Reader auf `db.news_articles` umgestellt (Session-79.5 Kollektion
+    des Synthesizers). Nur veröffentlichte, nicht-archivierte Artikel im Feed.
+    """
+    query = {"is_published": True, "status": "published"}
+    docs = await db.news_articles.find(query).sort("published_at", -1).limit(limit).to_list(limit)
     return [{
         "id": str(d["_id"]),
         "slug": d["slug"],
         "title": d["title"],
-        "excerpt": d["excerpt"],
+        "excerpt": (d.get("summary") or d.get("subtitle") or "")[:280],
         "published_at": d["published_at"].isoformat() if isinstance(d.get("published_at"), datetime) else d.get("published_at", ""),
         "category": d.get("category", "markt"),
         "image_url": d.get("image_url"),
@@ -385,12 +390,13 @@ async def list_news(limit: int = 20):
 @api.get("/content/news/{slug}")
 async def get_news_by_slug(slug: str):
     """
-    Session 80.23 — Detail-Endpoint für News-Artikel.
-    Sucht zuerst in `db.news` (Feed-Kollektion), anschließend Live+Archive
-    aus `news_retention` (Session-79.5). So bleiben aktuelle Feed-Artikel
-    sowie archivierte Beiträge unter derselben URL erreichbar.
+    Session 80.23/80.25 — Detail-Endpoint für News-Artikel.
+    Sucht in `db.news_articles` (Synthesizer-Kollektion). Fallback:
+    news_retention Live+Archive (Session-79.5). Liefert die vom Frontend
+    erwarteten Felder: source, source_url, content, summary, views, is_archived,
+    content_origin.
     """
-    doc = await db.news.find_one({"slug": slug})
+    doc = await db.news_articles.find_one({"slug": slug})
     from_archive = False
     if not doc:
         from news_retention import find_article_by_slug as _find_article
@@ -401,17 +407,32 @@ async def get_news_by_slug(slug: str):
     published = doc.get("published_at")
     if isinstance(published, datetime):
         published = published.isoformat()
+    # Primärquelle für die dezente Quellenangabe (Session 80.24).
+    src_names = doc.get("source_names") or []
+    src_urls = doc.get("source_urls") or []
+    primary_source = src_names[0] if src_names else None
+    primary_source_url = src_urls[0] if src_urls else None
+    # content_origin — für Transparenz auf der Detailseite (Session 80.25).
+    if doc.get("content_type") == "news_synthesis" and src_names:
+        content_origin = "ai_summary_from_source"
+    elif doc.get("content"):
+        content_origin = "provider_summary"
+    else:
+        content_origin = "short_only"
+    summary_val = doc.get("summary") or doc.get("subtitle") or ""
     return {
         "id": str(doc.get("_id", "")),
         "slug": doc.get("slug", slug),
         "title": doc.get("title", ""),
-        "excerpt": doc.get("excerpt", ""),
-        "summary": doc.get("summary", doc.get("excerpt", "")),
-        "content": doc.get("content", doc.get("body", "")),
+        "excerpt": summary_val[:280],
+        "summary": summary_val,
+        "content": doc.get("content", ""),
         "category": doc.get("category", "markt"),
         "image_url": doc.get("image_url"),
-        "source": doc.get("source") or doc.get("source_name"),
-        "source_url": doc.get("source_url"),
+        "source": primary_source,
+        "source_url": primary_source_url,
+        "sources": doc.get("sources") or [],
+        "content_origin": content_origin,
         "published_at": published or "",
         "read_time_minutes": doc.get("read_time_minutes"),
         "views": int(doc.get("views", 0) or 0),
@@ -422,13 +443,12 @@ async def get_news_by_slug(slug: str):
 @api.post("/content/news/{slug}/view")
 async def increment_news_view(slug: str):
     """
-    Session 80.24 — Atomic view-counter. Live-first, dann Archive-Fallback.
-    Fehler dürfen nie die Artikelseite blockieren → immer 200 mit ok-Flag.
+    Session 80.24/80.25 — Atomic view-counter auf `db.news_articles`.
+    Archive-Fallback für 79.5-Retention. Fehler blockieren die Seite nie.
     """
     try:
-        res = await db.news.update_one({"slug": slug}, {"$inc": {"views": 1}})
+        res = await db.news_articles.update_one({"slug": slug}, {"$inc": {"views": 1}})
         if res.matched_count == 0:
-            # Archive-Fallback (Session-79.5): auch archivierte Artikel zählen.
             await db["news_articles_archive"].update_one(
                 {"slug": slug}, {"$inc": {"views": 1}}
             )
