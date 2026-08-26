@@ -99,9 +99,17 @@ export async function getArticleBySlug(slug, { signal } = {}) {
 }
 
 export async function incrementArticleView(slug) {
-  // Session 80.23 — Supabase-RPC entfernt (Migration zu Mongo-Detail).
-  // View-Counter wird aktuell serverseitig nicht getrackt — no-op statt Fehler.
-  void slug;
+  // Session 80.24 — Mongo view-counter (fire-and-forget).
+  if (!slug) return;
+  const base = process.env.REACT_APP_BACKEND_URL || '';
+  try {
+    await fetch(`${base}/api/content/news/${encodeURIComponent(slug)}/view`, {
+      method: 'POST',
+      keepalive: true,
+    });
+  } catch {
+    // fire-and-forget — never block the article render
+  }
 }
 
 export async function listVideos({

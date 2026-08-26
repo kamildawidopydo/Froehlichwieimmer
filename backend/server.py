@@ -410,10 +410,32 @@ async def get_news_by_slug(slug: str):
         "content": doc.get("content", doc.get("body", "")),
         "category": doc.get("category", "markt"),
         "image_url": doc.get("image_url"),
+        "source": doc.get("source") or doc.get("source_name"),
+        "source_url": doc.get("source_url"),
         "published_at": published or "",
         "read_time_minutes": doc.get("read_time_minutes"),
+        "views": int(doc.get("views", 0) or 0),
         "is_archived": from_archive,
     }
+
+
+@api.post("/content/news/{slug}/view")
+async def increment_news_view(slug: str):
+    """
+    Session 80.24 — Atomic view-counter. Live-first, dann Archive-Fallback.
+    Fehler dürfen nie die Artikelseite blockieren → immer 200 mit ok-Flag.
+    """
+    try:
+        res = await db.news.update_one({"slug": slug}, {"$inc": {"views": 1}})
+        if res.matched_count == 0:
+            # Archive-Fallback (Session-79.5): auch archivierte Artikel zählen.
+            await db["news_articles_archive"].update_one(
+                {"slug": slug}, {"$inc": {"views": 1}}
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("news view counter failed for slug=%s", slug)
+        return {"ok": False}
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------------------

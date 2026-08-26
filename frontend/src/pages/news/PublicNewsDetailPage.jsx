@@ -171,8 +171,38 @@ const PublicNewsDetailPage = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-[14px] text-bank-text-muted">
-                Für diese Meldung steht aktuell kein vollständiger Text zur Verfügung.
+              <div className="max-w-prose" data-testid="news-detail-briefing">
+                <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-bank-gold">Kurz eingeordnet</p>
+                {article.excerpt ? (
+                  <p className="mt-3 text-[15px] leading-[1.8] text-bank-text">{article.excerpt}</p>
+                ) : (
+                  <p className="mt-3 text-[14px] leading-relaxed text-bank-text-muted">
+                    Zu dieser Meldung liegen uns derzeit nur die wichtigsten Eckpunkte vor. Titel, Kategorie und Veröffentlichungsdatum finden Sie oben.
+                  </p>
+                )}
+                <p className="mt-4 text-[13px] leading-relaxed text-bank-text-muted">
+                  Grundlagen und Zusammenhänge zum Thema finden Sie unter „Passendes Hintergrundwissen". Weitere Meldungen zur gleichen Kategorie sind unten verlinkt.
+                </p>
+              </div>
+            )}
+            {(article.source || article.source_url) && (
+              <p
+                className="mt-6 border-t border-bank-border/50 pt-4 text-[12px] text-bank-text-muted"
+                data-testid="news-detail-source"
+              >
+                Quelle:{' '}
+                {article.source_url ? (
+                  <a
+                    href={article.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-bank-primary underline-offset-4 hover:underline"
+                  >
+                    {article.source || article.source_url}
+                  </a>
+                ) : (
+                  <span>{article.source}</span>
+                )}
               </p>
             )}
           </div>

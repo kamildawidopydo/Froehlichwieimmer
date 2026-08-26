@@ -8,6 +8,15 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.24 (Feb 26 2026) — **News-Detail Content-Qualität + Mongo-View-Counter**:
+  - Bestand (`db.news`, 3 Artikel): alle **NO_CONTENT** (weder `content`/`body`/`summary` noch `source` in MongoDB vorhanden). Ergo: keine erfundenen Volltexte ergänzt — Content-Integrität ist wichtiger als Textmenge.
+  - Neuer Endpoint `POST /api/content/news/{slug}/view` in `server.py`: atomic `$inc` auf `db.news`, Archive-Fallback auf `db.news_articles_archive`. Fehler blockieren die Seite nie (`{ok:false}` statt Exception).
+  - `newsService.incrementArticleView` ruft den neuen Endpoint per fire-and-forget (`keepalive:true`), kein Supabase mehr.
+  - Detail-Endpoint liefert jetzt zusätzlich `source`, `source_url`, `views`.
+  - `PublicNewsDetailPage`: statt technischer Empty-State-Meldung („Für diese Meldung steht aktuell kein vollständiger Text zur Verfügung.") jetzt hochwertiger „Kurz eingeordnet"-Block mit Excerpt + neutralem Kontextsatz + Verweis auf Hintergrundwissen/weitere Meldungen. Wenn `source`/`source_url` gesetzt sind, dezenter Quellenblock (`target="_blank" rel="noopener noreferrer"`); ohne Quelle bleibt der Block versteckt.
+  - Verifikation: View-Counter 0→2 nach zwei POSTs; 404-Sanity ok; alle 3 Artikel zeigen jetzt Briefing statt Fehltext; EZB→Inflationsschutz-Crosslink weiter klickbar; DAX→Dividendenstrategien weiter klickbar; keine Console-Errors; Mobile-Overflow=0.
+
+
 - 80.23 (Feb 26 2026) — **News-Detail-Fix + Live-Crosslink-Verifikation**:
   - Root Cause: `newsService.getArticleBySlug` griff noch auf Supabase (`.from('news_articles')`), obwohl News-Daten in MongoDB liegen und der Detail-Endpoint fehlte. Ergebnis: 3 aktuelle Feed-Slugs → Detail-Error-State.
   - Fix Backend: Neuer Endpoint `GET /api/content/news/{slug}` in `server.py` — sucht zuerst in `db.news` (Feed-Kollektion), dann Live+Archive via `news_retention.find_article_by_slug` (Session-79.5-Fallback erhalten). Rückgabe inkl. `is_archived`-Flag, `summary`, `content`, `read_time_minutes`.
