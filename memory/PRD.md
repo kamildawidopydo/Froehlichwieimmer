@@ -8,6 +8,17 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.21a (Feb 26 2026) — **Premium Strategy Detail Flagships (Value Investing / ESG / Private Rentenvorsorge)**:
+  - Neue Datei `strategiePremiumContent.js` mit strukturierten Premium-Blobs für die drei Flagships (summary, quickFacts, shortExplanation, suitableFor, howItWorks, aspects, example, advantages, considerations, mistakes, selfCheck, comparison, related, faqs). Additiv — die bestehende `strategieContent.js` bleibt Quelle für Nav/Overview und alle nicht ausgebauten Topics.
+  - Neue Sub-Components: `_StrategyQuickFacts.jsx`, `_StrategySectionNav.jsx` (Sticky Desktop / horizontale Chips Mobile mit IntersectionObserver-Active-State), `_StrategySelfCheck.jsx` (rein clientseitig, kein Scoring, keine Speicherung), `_StrategyComparison.jsx` (neutrale 2-Spalten-Vergleichstabelle), `_StrategyPremiumBody.jsx` (orchestriert alle 12 Premium-Sektionen, inkl. FAQ-Accordion, Related-Cards, Disclaimer, wiederverwendetem `StrategieCta`).
+  - `StrategieDetail.jsx` wählt via `findPremium(topicSlug)` zwischen Premium-Layout (`max-w-[1240px]`, 2-Spalten mit Sticky-Nav) und dem bestehenden Sections/FAQ-Fallback (`max-w-3xl`, unverändert für die 9 übrigen Topics).
+  - FAQPage-JSON-LD zieht bei Premium aus `premium.faqs` (5 FAQs Value Investing, 5 FAQs ESG, 4 FAQs Rente) und bleibt sonst am bestehenden `topic.faqs` — nur sichtbare FAQs im JSON-LD.
+  - Session-80.21c-CTA-Flow unverändert: Premium-Body ruft `<StrategieCta topicTitle topicSlug categorySlug />` auf → Topic-Prefill („Value Investing", „Nachhaltige Investments (ESG)", „Private Rentenvorsorge") landet im ProductInquiryWizard-Banner.
+  - Regression 9 Nicht-Premium-Topics (u.a. Impact Investing, Dividendenstrategien): rendern weiterhin über Fallback, keine Premium-Marker, alte FAQs + CTA vorhanden, keine Console-Errors.
+  - Alle 18 Strategie-Routen (via curl): HTTP 200.
+  - Kein horizontaler Overflow (390×800) auf allen drei Flagships (overflow diff = 0).
+
+
 - 80.21c (Feb 26 2026) — **Strategie-CTA öffnet Lead-Wizard direkt (Fix)**:
   - `_StrategieCta.jsx`: `<Link to="/#home-product-wizard">` durch programmatische `useNavigate`-Route ersetzt: `/?openInquiry=1&topic=…&topicSlug=…&product=…#home-product-wizard`. Copy geändert zu „Persönliches Gespräch anfragen" (kein Kalender/Terminslot vorhanden — transparent).
   - `StrategieDetail.jsx`: übergibt `topic`, `topicSlug`, `categorySlug` an den CTA (data-driven, kein Hardcode).
