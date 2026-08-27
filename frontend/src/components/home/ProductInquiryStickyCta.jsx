@@ -409,9 +409,10 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
               <span
                 aria-hidden
                 className={cn(
-                  'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-bank-primary/20 bg-[rgb(var(--bank-primary)/0.10)] text-bank-primary',
-                  'shadow-[0_6px_18px_-8px_rgb(127_175_170/0.55)] transition-colors duration-200',
-                  'group-hover:bg-[rgb(var(--bank-primary)/0.16)] group-hover:border-bank-primary/35',
+                  /* Session 80.26d — Blush-Icon-Badge (Editorial-Companion, dezent). */
+                  'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-bank-rose-border bg-bank-rose-tint text-bank-rose-strong',
+                  'shadow-[0_6px_18px_-10px_rgb(204_154_160/0.45)] transition-colors duration-200',
+                  'group-hover:bg-bank-rose/15 group-hover:border-bank-rose/60',
                 )}
               >
                 <MessageCircleQuestion className="h-6 w-6" strokeWidth={LUCIDE_STROKE} />

@@ -8,6 +8,15 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.26d (Feb 26 2026) — **Blush punktueller Ersteinsatz (drei Editorial-Signaturen)**:
+  Rein additive Anwendung des in 80.26c eingeführten `bank.rose`-Slots an drei kleinen Editorial-Stellen. Coral bleibt Markenakzent, Navy/Weiß/Creme/Petrol-Balance unangetastet, keine bunten Flächen.
+  - **Home Hero-Kicker** (`HomePlatformShowcase.jsx`): kleine Blush-Dateline „— seit 2020" mit feiner Blush-Hairline vor dem bestehenden coralen „Investmentplattform & Vermögensberatung"-Eyebrow. Font-mono, 9.5px, tracking 0.32em, `text-bank-rose-strong`. Wirkt wie eine leise editoriale Signatur, verdrängt Coral nicht.
+  - **„Neu bei Fröhlich" Icon-Badge** (`ProductInquiryStickyCta.jsx`): das Kurzfragebogen-Sticky-Widget rendert erstmalige Besucher an. Sein 14×14 Icon-Wrapper wurde von Petrol auf Blush umgestellt (`border-bank-rose-border bg-bank-rose-tint text-bank-rose-strong` + subtiler Blush-Schatten). Genau ein Badge, nicht mehr.
+  - **Kundenstimmen-Editorial-Block** (`HomeTestimonials.jsx`): CTA-Divider „Weitere Erfahrungen · Noch mehr Stimmen unserer Kunden" bekommt einen einzelnen `card-accent-top card-accent-top-rose` (2px Blush-Top-Line, ::before-Element, überlagert bestehende border-t-Trennlinie). Der ehemals `text-bank-accent-strong`-Kicker („Weitere Erfahrungen") ist auf `text-bank-rose-strong` umgestellt, sodass die 2px-Linie mit dem Kicker visuell zusammenspielt.
+  - **Verifikation**: Screenshots Desktop-Light zeigen `SEIT 2020` mit feiner Blush-Hairline oberhalb des Hero-H2 (sehr dezent, wirkt wie ein Chapter-Marker); Kurzfragebogen-Widget in allen Views mit Blush-Icon (auch Mobile & Dark). Kundenstimmen-CTA-Divider mit 2px Blush-Top über der bestehenden grauen Trennlinie + rose-strong Kicker.
+  - Keine bestehenden Tokens angefasst, keine anderen Komponenten berührt. Wenn die drei Stellen zu präsent wirken, würde ich zuerst Intensität am Icon-Badge zurücknehmen (bg-tint→bg-white + border-rose statt bg-rose-tint), nicht weitere Bereiche einfärben.
+
+
 - 80.26c (Feb 26 2026) — **Blush / Dusty-Rose Editorial Accent Slot (additiv)**:
   - Rein additive Ergänzung um einen sechsten sparsamen Akzent-Slot `bank.rose` — Coral bleibt Markenakzent, Blush ist die leise editorial-Companion-Farbe für Icon-Badges, Tags, feine 2px Card-Top-Akzente, kleine Kicker/Overlines, dekorative Linien und sehr helle BG-Tints. Nie für große Flächen, Sections, Fließtext, Primary Buttons, Nav, Success/Error/Warning.
   - **CSS-Vars** (Light `:root` + Dark `.dark` in `index.css`):

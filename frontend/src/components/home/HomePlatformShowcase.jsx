@@ -46,6 +46,11 @@ export default function PlatformShowcase() {
         {/* LEDE + TABLET */}
         <div className="grid gap-x-12 gap-y-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-x-16">
           <motion.div {...fade(0)} className="max-w-3xl">
+            {/* Session 80.26d — Blush editorial dateline (subtle brand signature). */}
+            <p className="mb-3 inline-flex items-center gap-2 font-mono text-[9.5px] font-semibold uppercase tracking-[0.32em] text-bank-rose-strong">
+              <span aria-hidden className="inline-block h-px w-6 bg-bank-rose/70" />
+              Seit 2020
+            </p>
             <p className="font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-gold">
               Investmentplattform &amp; Vermögensberatung
             </p>

@@ -120,9 +120,9 @@ const HomeTestimonials = () => {
         </div>
 
         {/* Divider + CTA to full page */}
-        <div className="mt-16 border-t border-bank-border pt-12" data-testid="home-testimonials-cta">
+        <div className="card-accent-top card-accent-top-rose mt-16 rounded-b-lg border-t border-bank-border pt-12" data-testid="home-testimonials-cta">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bank-accent-strong">
+            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bank-rose-strong">
               Weitere Erfahrungen
             </p>
             <h3 className="mt-2 font-serif text-2xl text-bank-text sm:text-3xl">
