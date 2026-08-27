@@ -8,6 +8,8 @@ import NachrichtenRelated from '@/components/news/NachrichtenRelated';
 import SafeNewsImage from '@/components/news/SafeNewsImage';
 import TopicCrossLinkBox from '@/components/investment/TopicCrossLinkBox';
 import KnowledgeCrossLinkBox from '@/components/knowledge/KnowledgeCrossLinkBox';
+import NewsStrategyCrosslink from '@/components/news/NewsStrategyCrosslink';
+import EinordnungInlineBox from '@/components/news/EinordnungInlineBox';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -242,6 +244,9 @@ const NachrichtenDetailPage = () => {
             );
           })()}
 
+          {/* Session 80.29 Phase 2 — Inline Fröhlich Einordnung (nur wenn Match). */}
+          <EinordnungInlineBox article={item} />
+
           {/* Bevorzugt: lizenzierter Volltext. Fallback: eigene redaktionelle Zusammenfassung. */}
           {hasLicensedFulltext ? (
             <div className="mt-6" data-testid="news-detail-fulltext">
@@ -315,6 +320,9 @@ const NachrichtenDetailPage = () => {
               cta="Fonds-Grundlagen ansehen"
             />
           )}
+
+          {/* Session 80.29 Phase 2 — News → Strategie Crosslink (max. 1, category-basiert). */}
+          <NewsStrategyCrosslink article={item} />
 
           <NachrichtenRelated slug={slug} />
           </div>

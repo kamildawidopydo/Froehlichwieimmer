@@ -8,6 +8,33 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.29 Phase-2 (Aug 27 2026) — **Financial Intelligence Hub — Phase 2**:
+
+  **1. „Heute wichtig"-Top-3** in `pages/news/NachrichtenPage.jsx`:
+  - Kuration via `useMemo`-Sortierung: `is_top_news DESC → relevance_score DESC → published_at DESC`
+  - **Diversity-Regel**: Nach der Sortierung wird pro Kategorie nur EIN Artikel picked, bis Slot 3 voll ist. Fallback auf Original-Reihenfolge, falls weniger als 3 unterschiedliche Kategorien verfügbar
+  - Render-Guards: nur wenn `category === 'alle'` UND `publisher === 'alle'` UND genau 3 Artikel gefunden → Filter-Semantik bleibt intakt
+  - Nutzt bestehende `Link`- und `timeAgo`-Helper, keine neuen APIs. Cards mit `card-accent-top-petrol` + kategorienbasiertem Kicker
+  - Live-verifiziert: 3 Cards mit `MÄRKTE / WIRTSCHAFT / POLITIK` — keine Themen-Redundanz
+
+  **2. Inline „Fröhlich Einordnung"** — neue Komponente `components/news/EinordnungInlineBox.jsx`:
+  - Datenquelle: `/api/einordnung?limit=50` (bestehender Endpoint), einmalig pro Session via Modul-Cache — **kein N+1**, kein neuer Backend-Call pro Artikel
+  - Matching-Reihenfolge: (1) `related_news_slug === article.slug` → (2) `investment_topic_slug`-Beidseitig-Match → (3) `category`-Match (case-insensitive) → sonst **null** (Box wird weggelassen, kein zufälliges Fallback)
+  - Design: `card-accent-top-petrol` + Petrol-Kicker „FRÖHLICH EINORDNUNG" + Serif-Titel + CTA-Link zur vollständigen Einordnung. Klar visuell von externem Nachrichtentext getrennt
+  - Verifiziert: Politik-Artikel „Merz Rente mit 63" zeigt korrekt KEINE Einordnung (verfügbare Einordnungen sind alle Kategorie „zinsen" — kein Match, Box entfällt)
+
+  **3. News → Strategie Crosslink** — `NewsStrategyCrosslink` bereits produktiv in Codebase (`data/strategyNewsMap.js`), jetzt in `NachrichtenDetailPage.jsx` neben `KnowledgeCrossLinkBox` gemountet. Kategorien-basiertes Matching, max. 1 Strategie-Link, wird nur bei relevantem Match gerendert
+
+  **Informationshierarchie News-Detail (Session 80.29-Ziel erreicht)**:
+  Headline → Quelle/Zeit → **Das Wichtigste in Kürze** (Blush) → **Fröhlich Einordnung** (Petrol, optional) → Artikel → **Topic/Knowledge Crosslink** → **Strategy Crosslink** → Related News
+
+  **Getestete Routes/Breakpoints**: `/news/nachrichten` Desktop 1440 + `/nachrichten/<slug>` Desktop 1440. Diversity-Regel greift, Einordnung entfällt bei Non-Match, Strategy-Links werden nur bei relevantem Match gerendert.
+
+  **Zusätzliche API-Calls**: Genau 1× `/api/einordnung?limit=50` pro Session (Modul-Cache). Keine anderen neuen Endpoints. Freshness 48h weiterhin intakt.
+
+  **Verbleibende Issues**: Aktuell verfügbare Einordnungs-Seeds sind alle Kategorie „zinsen" — deshalb schlägt Einordnungs-Match für die meisten Politik/Märkte-Artikel nicht an. Sobald Redaktion mehr Einordnungen zu weiteren Kategorien publiziert, greift der Match automatisch. Kein Code-Fix nötig.
+
+
 - 80.29 Phase-1 (Aug 27 2026) — **Financial Intelligence Hub — Audit + erste P0-Slice**:
 
   **Audit-Ergebnis** — Wiederverwendungspotenzial hoch: `db.news_articles` liefert bereits alle nötigen Felder (`summary, excerpt, sources[], investment_topic_slug, is_top_news, relevance_score, category`). `db.einordnung_posts` + Router existiert produktiv. Kategorien-Mapping (`CATEGORY_LABELS`), Strategy-Cluster (`strategieClusters.js`) und Cross-Link-Komponenten (`NewsStrategyCrosslink`, `KnowledgeCrossLinkBox`, `TopicCrossLinkBox`, `NachrichtenRelated`) sind alle bereits im Frontend integriert. Marktdaten-Komponenten (`MarktuebersichtSidebar`, `MiniMarketChart`, etc.) und Home-Preview (`HomeNewsPreview`, `HomeHeroNewsPreview`) sind fertig. Fehlt konkret: (a) „Heute wichtig"-Top-3-Kuration im Nachrichten-Feed, (b) „Das Wichtigste in Kürze"-Bullets auf Detail, (c) inline „Fröhlich Einordnung"-Kopplung an Artikel.

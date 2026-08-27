@@ -302,6 +302,37 @@ const NachrichtenPage = () => {
   const headlines = items.slice(1, 6);
   const grid = items.slice(1);
 
+  // Session 80.29 Phase 2 — „Heute wichtig"-Top-3-Kuration.
+  // Sortierung: is_top_news DESC → relevance_score DESC → published_at DESC.
+  // Diversity: nach der Sortierung bevorzugen wir bis zu 3 Meldungen aus
+  // UNTERSCHIEDLICHEN Kategorien. Wenn dadurch weniger als 3 verfügbar wären,
+  // fallen wir auf die Original-Reihenfolge zurück.
+  const topThree = useMemo(() => {
+    if (!items || items.length === 0) return [];
+    const scored = [...items].sort((a, b) => {
+      const at = a.is_top_news ? 1 : 0;
+      const bt = b.is_top_news ? 1 : 0;
+      if (at !== bt) return bt - at;
+      const ar = a.relevance_score || 0;
+      const br = b.relevance_score || 0;
+      if (ar !== br) return br - ar;
+      return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
+    });
+    const picked = [];
+    const seenCats = new Set();
+    for (const it of scored) {
+      if (picked.length >= 3) break;
+      if (!seenCats.has(it.category)) { picked.push(it); seenCats.add(it.category); }
+    }
+    if (picked.length < 3) {
+      for (const it of scored) {
+        if (picked.length >= 3) break;
+        if (!picked.includes(it)) picked.push(it);
+      }
+    }
+    return picked;
+  }, [items]);
+
   const categories = useMemo(() => Object.entries(CAT_LABEL), []);
 
   return (
@@ -333,6 +364,54 @@ const NachrichtenPage = () => {
       </section>
 
       <div className="mx-auto max-w-6xl px-6 pb-20 pt-10 sm:px-10">
+        {/* Session 80.29 Phase 2 — „Heute wichtig" Editorial-Top-3.
+            Nur wenn Category ALLE aktiv ist und mindestens 3 Meldungen vorliegen.
+            Auf gefilterten Ansichten (Kategorie/Publisher) wird der Block
+            unterdrückt, damit Filter-Semantik nicht durcheinander gerät. */}
+        {!loading && category === 'alle' && publisher === 'alle' && topThree.length === 3 && (
+          <section
+            data-testid="nachrichten-heute-wichtig"
+            aria-labelledby="heute-wichtig-title"
+            className="mb-14 border-b border-bank-border pb-14"
+          >
+            <div className="mb-6 flex items-baseline justify-between gap-6">
+              <p id="heute-wichtig-title" className="font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-petrol-strong">
+                Heute wichtig
+              </p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-bank-text-muted">
+                Top 3 der letzten 48 Stunden
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {topThree.map((it, i) => (
+                <Link
+                  key={it.slug}
+                  to={`/nachrichten/${it.slug}`}
+                  data-testid={`heute-wichtig-card-${i}`}
+                  className="card-accent-top card-accent-top-petrol group flex flex-col border border-bank-border bg-white p-5 transition-shadow hover:shadow-editorial-sm"
+                >
+                  <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-petrol-strong">
+                    {(CAT_LABEL[it.category] || it.category || 'Aktuell')}
+                  </span>
+                  <h3 className="mt-2 font-serif text-[19px] leading-snug text-bank-text group-hover:text-bank-primary">
+                    {it.title}
+                  </h3>
+                  {(it.excerpt || it.summary) && (
+                    <p className="mt-2 line-clamp-3 text-[13.5px] leading-relaxed text-bank-text-muted">
+                      {it.excerpt || it.summary}
+                    </p>
+                  )}
+                  <p className="mt-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-bank-text-muted">
+                    <span>{it.source || (it.source_names && it.source_names[0]) || 'Fröhlich Redaktion'}</span>
+                    <span aria-hidden>·</span>
+                    <span>{timeAgo(it.published_at)}</span>
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Hero + Headlines */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr]">
           {loading || !hero ? (
