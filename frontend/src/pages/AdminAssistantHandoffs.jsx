@@ -1,7 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Inbox, RefreshCw, Search, X, Mail, Phone, MapPin, MessageSquare, CheckCircle2, Clock, Archive } from 'lucide-react';
+import {
+  Inbox, RefreshCw, Search, X, Mail, Phone, MapPin, MessageSquare, CheckCircle2,
+  Clock, Archive, Send, MailCheck, MailQuestion,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageMeta from '@/components/PageMeta';
@@ -20,13 +23,24 @@ const API = axios.create({
 });
 
 const STATUS_META = {
-  new:         { label: 'Neu',            cls: 'bg-amber-50 text-amber-800 border-amber-200',   icon: Inbox },
-  in_progress: { label: 'In Bearbeitung', cls: 'bg-blue-50 text-blue-800 border-blue-200',       icon: Clock },
+  new:         { label: 'Neu',            cls: 'bg-amber-50 text-amber-800 border-amber-200',    icon: Inbox },
+  in_progress: { label: 'In Bearbeitung', cls: 'bg-blue-50 text-blue-800 border-blue-200',        icon: Clock },
   completed:   { label: 'Abgeschlossen',  cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', icon: CheckCircle2 },
   archived:    { label: 'Archiviert',     cls: 'bg-neutral-100 text-neutral-700 border-neutral-200', icon: Archive },
 };
 
 const STATUS_ORDER = ['new', 'in_progress', 'completed', 'archived'];
+
+const STATUS_TIMELINE_LABEL = {
+  new: 'Als „neu" markiert',
+  in_progress: 'In Bearbeitung übernommen',
+  completed: 'Abgeschlossen',
+  archived: 'Archiviert',
+};
+
+const REPLY_MESSAGE_LIMIT = 3000;
+const REPLY_SUBJECT_LIMIT = 200;
+const DEFAULT_REPLY_SUBJECT = 'Ihre Anfrage bei Fröhlich Vermögensberatung';
 
 const StatusBadge = ({ status }) => {
   const meta = STATUS_META[status] || STATUS_META.new;
@@ -53,11 +67,196 @@ const StatCard = ({ label, value, testId }) => (
   </div>
 );
 
+// --- Timeline ---------------------------------------------------------------
+
+const buildTimelineEvents = (handoff) => {
+  const events = [];
+  if (handoff.created_at) {
+    events.push({
+      kind: 'created',
+      timestamp: handoff.created_at,
+      label: 'Anfrage eingegangen',
+      by: null,
+    });
+  }
+  (handoff.status_history || []).forEach((ev) => {
+    events.push({
+      kind: 'status',
+      timestamp: ev.changed_at,
+      label: STATUS_TIMELINE_LABEL[ev.status] || ev.status,
+      by: ev.changed_by,
+      status: ev.status,
+    });
+  });
+  (handoff.reply_history || []).forEach((ev) => {
+    events.push({
+      kind: 'reply',
+      timestamp: ev.timestamp,
+      label: 'Antwort an Kunden gesendet',
+      by: ev.admin,
+      subject: ev.subject,
+    });
+  });
+  // Filtern + sortieren
+  return events
+    .filter((e) => e.timestamp)
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+};
+
+const Timeline = ({ handoff }) => {
+  const events = useMemo(() => buildTimelineEvents(handoff), [handoff]);
+  if (events.length === 0) return null;
+  const lastIdx = events.length - 1;
+  return (
+    <section data-testid="handoff-timeline">
+      <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-bank-text-muted">Verlauf</p>
+      <ol className="mt-3 space-y-0">
+        {events.map((ev, i) => {
+          const isLast = i === lastIdx;
+          const dotColor = isLast ? 'bg-bank-petrol-strong' : 'bg-neutral-300';
+          const lineColor = 'bg-bank-border';
+          return (
+            <li key={`${ev.kind}-${i}`} className="relative flex gap-3 pb-4 last:pb-0" data-testid={`timeline-event-${ev.kind}`}>
+              <div className="relative flex flex-col items-center">
+                <span className={`mt-1 h-2 w-2 rounded-full ${dotColor}`} aria-hidden="true" />
+                {!isLast && <span className={`mt-1 w-px flex-1 ${lineColor}`} aria-hidden="true" />}
+              </div>
+              <div className="min-w-0 flex-1 pb-1">
+                <p className="text-[10.5px] font-mono uppercase tracking-[0.18em] text-bank-text-muted">
+                  {formatDateDE(ev.timestamp)}
+                </p>
+                <p className="mt-0.5 text-[13.5px] font-medium text-bank-text">{ev.label}</p>
+                {ev.by && (
+                  <p className="mt-0.5 text-[11.5px] text-bank-text-muted">von {ev.by}</p>
+                )}
+                {ev.subject && (
+                  <p className="mt-0.5 text-[11.5px] italic text-bank-text-muted">Betreff: „{ev.subject}"</p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+};
+
+// --- Reply-Formular ---------------------------------------------------------
+
+const ReplyForm = ({ handoff, onSuccess }) => {
+  const [subject, setSubject] = useState(DEFAULT_REPLY_SUBJECT);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [feedback, setFeedback] = useState(null); // {kind, text}
+
+  const canSend = subject.trim().length > 0 && message.trim().length >= 4 && !sending;
+
+  const send = async () => {
+    if (!canSend) return;
+    setSending(true);
+    setFeedback(null);
+    try {
+      const { data } = await API.post(`/admin/assistant-handoffs/${handoff.id}/reply`, {
+        subject: subject.trim(),
+        message: message.trim(),
+      });
+      setFeedback({ kind: 'success', text: 'Antwort wurde gesendet.' });
+      setMessage('');
+      onSuccess(data.handoff);
+    } catch (e) {
+      // Defensive Error-Copy: Edge-Proxies (Cloudflare o.ä.) können bei 5xx
+      // eigene HTML-Fehlerseiten zurückliefern. Wir zeigen NUR unsere eigenen,
+      // kurzen JSON-Details an — sonst neutralen deutschen Fallback.
+      const detail = e?.response?.data?.detail;
+      const isCleanText =
+        typeof detail === 'string' &&
+        detail.length > 0 &&
+        detail.length <= 240 &&
+        !/<[a-z][^>]*>/i.test(detail) &&
+        !/cloudflare|bad gateway|error 1[0-9]{3}/i.test(detail);
+      setFeedback({ kind: 'error', text: isCleanText ? detail : 'Versand fehlgeschlagen. Bitte in einer Minute erneut versuchen.' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <section className="space-y-3 rounded-xl border border-bank-border p-4" data-testid="reply-form">
+      <div className="flex items-center justify-between">
+        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-bank-text-muted">Kunden antworten</p>
+        <span className="rounded-full border border-bank-border px-2.5 py-0.5 font-mono text-[10px] text-bank-text-muted" data-testid="reply-recipient">
+          an {handoff.email}
+        </span>
+      </div>
+
+      <div>
+        <label htmlFor="reply-subject" className="text-[11.5px] font-medium text-bank-text">Betreff</label>
+        <Input
+          id="reply-subject"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value.slice(0, REPLY_SUBJECT_LIMIT))}
+          maxLength={REPLY_SUBJECT_LIMIT}
+          className="mt-1.5"
+          data-testid="reply-subject-input"
+        />
+        <p className="mt-1 text-[10.5px] text-bank-text-muted">{subject.length}/{REPLY_SUBJECT_LIMIT}</p>
+      </div>
+
+      <div>
+        <label htmlFor="reply-message" className="text-[11.5px] font-medium text-bank-text">Nachricht</label>
+        <textarea
+          id="reply-message"
+          value={message}
+          onChange={(e) => setMessage(e.target.value.slice(0, REPLY_MESSAGE_LIMIT))}
+          rows={6}
+          maxLength={REPLY_MESSAGE_LIMIT}
+          placeholder="Kurze, persönliche Antwort. Keine sensiblen Daten hier einfügen."
+          className="mt-1.5 w-full rounded-md border border-bank-border p-3 text-sm"
+          data-testid="reply-message-textarea"
+        />
+        <p className="mt-1 text-[10.5px] text-bank-text-muted">{message.length}/{REPLY_MESSAGE_LIMIT} · mindestens 4 Zeichen</p>
+      </div>
+
+      {feedback && (
+        <p
+          className={`rounded-md px-2.5 py-1.5 text-[12px] ${
+            feedback.kind === 'success'
+              ? 'bg-emerald-50 text-emerald-800'
+              : 'bg-rose-50 text-rose-800'
+          }`}
+          data-testid={`reply-feedback-${feedback.kind}`}
+        >
+          {feedback.text}
+        </p>
+      )}
+
+      <Button
+        onClick={send}
+        disabled={!canSend}
+        className="w-full rounded-xl bg-bank-petrol-strong text-white hover:bg-bank-petrol-strong/90"
+        data-testid="reply-send-btn"
+      >
+        <Send size={14} className="mr-2" />
+        {sending ? 'Wird gesendet…' : 'Antwort senden'}
+      </Button>
+    </section>
+  );
+};
+
+// --- Detail Drawer ---------------------------------------------------------
+
 const DetailDrawer = ({ handoff, onClose, onUpdate }) => {
   const [status, setStatus] = useState(handoff.status || 'new');
   const [notes, setNotes] = useState(handoff.admin_notes || '');
   const [assigned, setAssigned] = useState(handoff.assigned_to || '');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    // Synchronisieren, wenn Handoff extern aktualisiert wird (z.B. nach Reply → in_progress).
+    setStatus(handoff.status || 'new');
+    setNotes(handoff.admin_notes || '');
+    setAssigned(handoff.assigned_to || '');
+  }, [handoff.id, handoff.status, handoff.admin_notes, handoff.assigned_to]);
 
   const save = async () => {
     setSaving(true);
@@ -89,7 +288,14 @@ const DetailDrawer = ({ handoff, onClose, onUpdate }) => {
         </header>
 
         <div className="space-y-6 px-6 py-6">
-          <StatusBadge status={handoff.status} />
+          <div className="flex items-center justify-between">
+            <StatusBadge status={handoff.status} />
+            <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-text-muted" data-testid="handoff-reply-count">
+              {handoff.reply_count > 0
+                ? `${handoff.reply_count} Antwort${handoff.reply_count > 1 ? 'en' : ''}`
+                : 'Noch unbeantwortet'}
+            </span>
+          </div>
 
           <section className="space-y-2 rounded-xl border border-bank-border bg-neutral-50 p-4">
             <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-bank-text-muted">Kontakt</p>
@@ -131,6 +337,10 @@ const DetailDrawer = ({ handoff, onClose, onUpdate }) => {
               </div>
             )}
           </section>
+
+          <Timeline handoff={handoff} />
+
+          <ReplyForm handoff={handoff} onSuccess={onUpdate} />
 
           <section className="space-y-3 rounded-xl border border-bank-border p-4">
             <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-bank-text-muted">Bearbeitung</p>
@@ -196,41 +406,86 @@ const DetailDrawer = ({ handoff, onClose, onUpdate }) => {
   );
 };
 
+// --- Inbox ------------------------------------------------------------------
+
+const ReplySignal = ({ handoff }) => {
+  const replied = (handoff.reply_count || 0) > 0;
+  return (
+    <div className="flex items-center gap-1.5 text-[11.5px]" data-testid={`row-reply-signal-${handoff.id}`}>
+      {replied ? (
+        <>
+          <MailCheck size={13} className="text-bank-petrol-strong" strokeWidth={1.8} />
+          <span className="text-bank-text-muted">
+            Beantwortet · {formatDateDE(handoff.last_reply_at)}
+          </span>
+        </>
+      ) : (
+        <>
+          <MailQuestion size={13} className="text-neutral-400" strokeWidth={1.8} />
+          <span className="text-bank-text-muted">Noch unbeantwortet</span>
+        </>
+      )}
+    </div>
+  );
+};
+
 const AdminAssistantHandoffs = () => {
   const [items, setItems] = useState([]);
   const [stats, setStats] = useState({ total: 0, by_status: {}, last_7d: 0, last_30d: 0 });
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
 
-  const load = useCallback(async () => {
+  // Session 80.41 — Race-Condition-freies Suchen: monotone Request-ID.
+  const reqSeqRef = useRef(0);
+  const abortRef = useRef(null);
+
+  const runQuery = useCallback(async (statusOpt, searchOpt) => {
+    const mySeq = ++reqSeqRef.current;
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     try {
       const params = { limit: 100 };
-      if (statusFilter !== 'all') params.status = statusFilter;
-      if (search.trim()) params.q = search.trim();
+      if (statusOpt !== 'all') params.status = statusOpt;
+      if (searchOpt && searchOpt.trim()) params.q = searchOpt.trim();
       const [listRes, statsRes] = await Promise.all([
-        API.get('/admin/assistant-handoffs', { params }),
-        API.get('/admin/assistant-handoffs/stats'),
+        API.get('/admin/assistant-handoffs', { params, signal: controller.signal }),
+        API.get('/admin/assistant-handoffs/stats', { signal: controller.signal }),
       ]);
+      // Nur den aktuellsten Response übernehmen — ältere silently verwerfen.
+      if (mySeq !== reqSeqRef.current) return;
       setItems(listRes.data.items || []);
       setStats(statsRes.data || { total: 0, by_status: {}, last_7d: 0, last_30d: 0 });
     } catch (e) {
+      if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
+      if (mySeq !== reqSeqRef.current) return;
       toast.error('Handoffs konnten nicht geladen werden.');
     } finally {
-      setLoading(false);
+      if (mySeq === reqSeqRef.current) setLoading(false);
     }
-  }, [statusFilter, search]);
+  }, []);
 
-  useEffect(() => { load(); }, [statusFilter]); // eslint-disable-line
+  // Debounced search: 350 ms nach letztem Tastendruck. Status-Wechsel triggert sofort.
+  useEffect(() => {
+    const handle = setTimeout(() => { runQuery(statusFilter, search); }, 350);
+    return () => clearTimeout(handle);
+  }, [search, statusFilter, runQuery]);
 
-  const filteredItems = useMemo(() => items, [items]);
+  const selected = useMemo(
+    () => items.find((x) => x.id === selectedId) || null,
+    [items, selectedId]
+  );
 
   const onUpdated = (updated) => {
     setItems((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
-    setSelected(updated);
-    load();
+    // Stats separat aktualisieren (status ist ggf. gewechselt).
+    API.get('/admin/assistant-handoffs/stats')
+      .then((res) => setStats(res.data))
+      .catch(() => {});
   };
 
   return (
@@ -243,7 +498,7 @@ const AdminAssistantHandoffs = () => {
           titleIcon={Inbox}
           description="Human-Handoffs aus dem Fröhlich Assistenten. Datensparsam gespeichert, PII beim Empfang entfernt."
           actions={
-            <Button variant="outline" onClick={load} disabled={loading} className="rounded-xl" data-testid="handoff-refresh-btn">
+            <Button variant="outline" onClick={() => runQuery(statusFilter, search)} disabled={loading} className="rounded-xl" data-testid="handoff-refresh-btn">
               <RefreshCw size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
               Aktualisieren
             </Button>
@@ -263,10 +518,10 @@ const AdminAssistantHandoffs = () => {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') load(); }}
               placeholder="Name, E-Mail, Anliegen…"
               className="pl-9"
               data-testid="handoff-search-input"
+              aria-label="Handoffs durchsuchen"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -300,23 +555,26 @@ const AdminAssistantHandoffs = () => {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-bank-text-muted">Datum</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-bank-text-muted">Kontakt</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-bank-text-muted">Anliegen</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-bank-text-muted">Antwort</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-bank-text-muted">Status</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-bank-text-muted">Aktion</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-bank-border/60" data-testid="handoff-list">
-                {loading ? (
-                  <tr><td colSpan={5} className="px-4 py-12 text-center text-bank-text-muted">Wird geladen…</td></tr>
-                ) : filteredItems.length === 0 ? (
-                  <tr><td colSpan={5} className="px-4 py-12 text-center text-bank-text-muted" data-testid="handoff-empty">Noch keine Anfragen in diesem Filter.</td></tr>
+                {loading && items.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-12 text-center text-bank-text-muted">Wird geladen…</td></tr>
+                ) : items.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-12 text-center text-bank-text-muted" data-testid="handoff-empty">Noch keine Anfragen in diesem Filter.</td></tr>
                 ) : (
-                  filteredItems.map((h) => (
+                  items.map((h) => (
                     <tr key={h.id} className={adminRowHover} data-testid={`handoff-row-${h.id}`}>
                       <td className="px-4 py-4 align-top text-sm text-bank-text-muted whitespace-nowrap">{formatDateDE(h.created_at)}</td>
                       <td className="px-4 py-4 align-top">
                         <p className="font-medium text-bank-text">{h.name}</p>
                         <p className="text-[12px] text-bank-text-muted">{h.email}</p>
-                        {h.phone && <p className="text-[12px] text-bank-text-muted">{h.phone}</p>}
+                        {h.assigned_to && (
+                          <p className="mt-0.5 text-[11px] text-bank-text-muted">Zuständig: {h.assigned_to}</p>
+                        )}
                       </td>
                       <td className="px-4 py-4 align-top">
                         <p className="line-clamp-2 max-w-md text-sm text-bank-text">{h.concern}</p>
@@ -328,9 +586,15 @@ const AdminAssistantHandoffs = () => {
                           </div>
                         )}
                       </td>
+                      <td className="px-4 py-4 align-top">
+                        <ReplySignal handoff={h} />
+                        {(h.reply_count || 0) > 0 && (
+                          <p className="mt-0.5 text-[10.5px] text-bank-text-muted">{h.reply_count} Antwort{h.reply_count > 1 ? 'en' : ''}</p>
+                        )}
+                      </td>
                       <td className="px-4 py-4 align-top"><StatusBadge status={h.status} /></td>
                       <td className="px-4 py-4 align-top text-right">
-                        <Button size="sm" variant="outline" onClick={() => setSelected(h)} className="rounded-xl" data-testid={`handoff-open-${h.id}`}>
+                        <Button size="sm" variant="outline" onClick={() => setSelectedId(h.id)} className="rounded-xl" data-testid={`handoff-open-${h.id}`}>
                           <MessageSquare size={13} className="mr-1.5" />
                           Öffnen
                         </Button>
@@ -345,7 +609,7 @@ const AdminAssistantHandoffs = () => {
       </AdminSubpageLayout>
 
       {selected && (
-        <DetailDrawer handoff={selected} onClose={() => setSelected(null)} onUpdate={onUpdated} />
+        <DetailDrawer handoff={selected} onClose={() => setSelectedId(null)} onUpdate={onUpdated} />
       )}
     </>
   );

@@ -4017,10 +4017,10 @@ try:
 except Exception as _exc:  # noqa: BLE001
     logger.warning("assistant router not registered: %s", _exc)
 
-# Session 80.40 — Admin-Inbox für Assistant-Handoffs (Lead Ops).
+# Session 80.40 + 80.41 — Admin-Inbox für Assistant-Handoffs (Lead Ops + Reply).
 try:
     from routes.assistant_admin import register as _register_assistant_admin  # noqa: E402
-    _register_assistant_admin(app, db, require_admin)
+    _register_assistant_admin(app, db, require_admin, _send_email_via_emergent)
 except Exception as _exc:  # noqa: BLE001
     logger.warning("assistant-admin router not registered: %s", _exc)
 

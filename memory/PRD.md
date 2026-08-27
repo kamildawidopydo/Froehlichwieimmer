@@ -9,6 +9,69 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 ## Session Log
 
 
+
+
+- 80.41b (Feb 26 2026) — **Testing-Fixes (Session 80.41 Follow-up)**:
+  * **MEDIUM** Cloudflare-Edge ersetzt bei 5xx die Origin-Response durch eigene englische HTML-Fehlerseite → deutsche Message erreichte den Admin nicht. **Fix**: Alle Mail-Provider-Failures mappen jetzt auf **HTTP 424 Failed Dependency** (4xx = CF-safe). Zusätzlich: 429 (Rate-Limit) und 422 (Undeliverable) werden im `try/except HTTPException`-Block sauber differenziert und mit passenden deutschen Copys ausgeliefert („E-Mail-Versand aktuell gedrosselt. Bitte in einer Minute erneut versuchen." / „Die hinterlegte Kunden-E-Mail konnte nicht zugestellt werden.").
+  * **MEDIUM** `ReplyForm` Error-Handling defensiv gemacht: prüft `detail`-String auf `<...>`-Tags und Cloudflare-Marker; nicht-saubere Antworten werden durch einen neutralen deutschen Fallback ersetzt.
+  * **CLEANUP** Dead-Helper `_apply_status_change()` aus `assistant_admin.py` entfernt (nie verwendet).
+  * Verifikation: Reply auf `@example.com` → `HTTP 424` + `{"detail":"Mailversand ist fehlgeschlagen. Der Handoff wurde nicht verändert."}` (echtes JSON, nicht CF-HTML). `reply_count`/`status`/`status_history`/`reply_history` alle unverändert ✓.
+
+
+- 80.41 (Feb 26 2026) — **Lead-Inbox Productivity (Reply + Timeline + Debounce)**:
+
+  **Backend** (`/app/backend/routes/assistant_admin.py`):
+  * **`POST /api/admin/assistant-handoffs/{id}/reply`** — geschützt via `require_admin`. Pydantic `ReplyIn` mit `subject` (1–200) und `message` (4–3000, strip_whitespace).
+  * **Empfänger STRIKT serverseitig**: aus `assistant_handoffs.email` geladen. Zusätzliche Payload-Felder `email/to/recipient` werden ignoriert (Pydantic-Modell nimmt sie nicht an; falls doch übergeben, verworfen).
+  * **HTML-safe**: `_reply_html()` mit `html.escape` für Name/Subject/Body. XSS-Guard via `_assert_safe_email` (kein `<form>`, keine unsafe Links). Rechnet nicht in DB-Text ein — Subject wird 1:1 als Audit-String gespeichert, weil die Speicherung selbst kein Rendering-Risiko darstellt.
+  * **Mailfehler = keine DB-Änderung**: Provider-422 (z.B. „undeliverable_recipient") oder `email_id=None` → HTTPException 502, kein `reply_count`-Inkrement, kein Statuswechsel, kein History-Eintrag.
+  * **Smart-Status (Phase F)**: Wenn `status ∈ {null, "new"}` und Reply erfolgreich → `status = "in_progress"` + status_history push. Bereits `in_progress`/`completed`/`archived` bleiben unverändert.
+  * **Reply-Audit (Phase C — datensparsam)**:
+    - `reply_count` (`$inc: 1`)
+    - `last_reply_at`, `last_reply_by`
+    - `reply_history[]`: `{timestamp, admin, subject}` — **kein Mailtext**.
+  * **Status-Historie (Phase D)**: Bei jedem PATCH-Status-Wechsel `$push status_history: {status, changed_at, changed_by}`. Nur wenn `new_status != current`. Rück­wechsel wird ebenfalls protokolliert. Legacy-Docs ohne Array bleiben kompatibel (MongoDB `$push` initialisiert das Array).
+  * **Fault-Tolerant**: Provider-Ausfall (httpx-Exception, Timeout, HTTPStatusError) wird sauber gefangen; DB bleibt unberührt.
+
+  **Frontend** (`/app/frontend/src/pages/AdminAssistantHandoffs.jsx`):
+  * **`ReplyForm`** im DetailDrawer: Betreff (Default: „Ihre Anfrage bei Fröhlich Vermögensberatung"), Nachricht (Textarea, 3000-Zeichen-Limit + Live-Counter), Empfänger als **read-only Chip** (`data-testid="reply-recipient"`), Send-Button mit Loading, Success/Error-Feedback inline.
+  * **`Timeline`** (Phase E): vertikale Editorial-Timeline — Hairline (`bg-bank-border` w-px), Status-Dot in Petrol für den letzten Event, sonst Neutralgrau. Rendert Events aus `created_at` + `status_history` + `reply_history`, sortiert nach Timestamp. Labels: „Anfrage eingegangen", „In Bearbeitung übernommen", „Abgeschlossen", „Antwort an Kunden gesendet" (+ Betreff-Zitat). Keine Fake-Events, nur reale Timestamps.
+  * **Reply-Signal in Tabelle (Phase H)**: neue Spalte „Antwort". `MailCheck`-Icon petrol + „Beantwortet · Datum" bei `reply_count > 0`, sonst `MailQuestion` grau + „Noch unbeantwortet". Zeigt Antwort-Count. Zuständiger Admin (`assigned_to`) unter Kontakt-Zelle.
+  * **Debounced Search (Phase G)**: 350 ms nach letztem Tastendruck. Monotone Request-ID + `AbortController` verhindern Race-Conditions (ältere Responses können neuere nicht überschreiben). `useEffect([search, statusFilter])` triggert kombinierte Query. Enter nicht mehr nötig.
+  * **DetailDrawer bindet an `selectedId`** statt an Object — nach `onUpdate` wird das Items-Array modifiziert und der Drawer zeigt automatisch die frische Version (inkl. neuer Timeline/Status).
+
+  **Verifikation via curl** (echter Resend-Provider):
+  * Reply mit `delivered@resend.dev` → `success:true, email_id:c89bf141-…`, `reply_count:1`, `status:in_progress`, beide Histories populiert ✓
+  * 2. Reply → `reply_count:2`, `status` bleibt `in_progress`, `reply_history: 2` Einträge ✓
+  * `message:""` → 422 (Pydantic) ✓
+  * `message:"ab"` (unter 4) → 422 ✓
+  * Payload mit `email/to/recipient=attacker@evil.example` → Mail geht trotzdem an `delivered@resend.dev` (aus DB) ✓
+  * Subject/Message mit `<script>` → 200, im HTML gerendert als escapte Entities ✓
+  * Nicht-Admin (frisch registrierter User) → 403 ✓
+  * Unbekannte ID / ungültige ObjectId → 404 ✓
+  * Unauth (kein Cookie) → 401 ✓
+  * Undeliverable Recipient (@example.com) → **424 Failed Dependency** mit deutschem JSON-Body (nicht mehr 502, kommt jetzt am CF-Edge vorbei), `reply_count` bleibt 0, `status` bleibt `new`, keine History-Einträge ✓
+  * PATCH new→completed→new → 2 status_history-Einträge, korrekte Reihenfolge ✓
+
+  **Definition of Done erfüllt**:
+  * ✓ Admin antwortet aus Inbox
+  * ✓ Empfänger serverseitig geschützt
+  * ✓ Mailversand real getestet
+  * ✓ `reply_count` + `last_reply_at` korrekt
+  * ✓ NEW → IN_PROGRESS nach erster Antwort
+  * ✓ status_history vorhanden
+  * ✓ Timeline im Drawer
+  * ✓ Search Debounce 350 ms
+  * ✓ Legacy-Docs bleiben kompatibel
+  * ✓ Kein Mailtext dauerhaft gespeichert
+  * ✓ Security: 401/403/404/422/502 alle korrekt
+
+  **Bekannte Restrisiken**:
+  * `reply_history` wächst pro Handoff mit jedem Reply — bei sehr aktiven Leads könnte das Doc wachsen. Aktuell keine Kappung; nur Subject (≤200 chars) + Admin + Timestamp. Bei künftigem Bedarf: TTL oder LRU-Kappung.
+  * Emergent-Mail-Proxy blockt Test-Domains (`@example.com`) mit 422 — nur `delivered@resend.dev` und echte MX-Records funktionieren in Produktion.
+  * Reply-Endpoint teilt kein separates Rate-Limit — geschützt allein durch Admin-Auth (Session).
+
+
 - 80.40b (Feb 26 2026) — **Testing-Fixes (Session 80.40 Follow-up)**:
   * **CRITICAL** FloatingAssistant war importiert, aber nicht gerendert → Testing-Agent hat `<FloatingAssistant />` in `App.js` neben `<CookieConsent />` platziert. Bestätigt: korrekt am App-Root, außerhalb der Router-Blöcke.
   * **CRITICAL** Z-Index/Positions-Kollision mit `ProductInquiryStickyCta` (z-[90], bottom-right, 22rem breit) → Launcher & Panel verschoben nach **bottom-LEFT** (z-[95] / z-[100]). Kein Overlay-Konflikt mehr.
