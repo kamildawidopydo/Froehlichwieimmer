@@ -14,6 +14,7 @@ import WasBedeutetDasBlock from '@/components/news/WasBedeutetDasBlock';
 import PassendZumThema from '@/components/news/PassendZumThema';
 import { buildKeyTakeaways } from '@/lib/news/keyTakeaways';
 import { relativeTimeLabel, updatedLabel } from '@/lib/news/relativeTime';
+import { resolveKnowledgeLinks } from '@/lib/news/crosslinkResolver';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -317,18 +318,20 @@ const NachrichtenDetailPage = () => {
               nur bei eindeutigen Zins-/Spar-News und mit Duplikat-Schutz
               gegen den Money-Impact-CTA. */}
           <PassendZumThema article={item} />
-          {(item.category === 'fonds-etfs' || item.category === 'fonds' || item.category === 'etf') && (
+          {/* Session 80.33 — Knowledge-Crosslinks topic-first via zentralem
+              Resolver. Zeigt max. 2 kanonische Wissensziele. Fallback auf
+              Kategorie NUR für Artikel ohne gültigen Topic-Slug. */}
+          {resolveKnowledgeLinks(item).map((k) => (
             <KnowledgeCrossLinkBox
-              testId="fonds-grundlagen-crosslink"
-              eyebrow={item.investment_topic_slug ? 'Wissen kompakt' : 'Neu bei Fonds & ETFs?'}
-              title={item.investment_topic_slug
-                ? 'Fonds-Grundlagen kurz erklärt'
-                : 'Fonds-Grundlagen verständlich erklärt'}
-              description="Wie funktionieren Fonds, welche Kosten können entstehen und worin unterscheiden sich Fonds, ETFs und Einzelanlagen?"
-              href="/fonds-grundlagen"
-              cta="Fonds-Grundlagen ansehen"
+              key={k.slug}
+              testId={`${k.slug}-crosslink`}
+              eyebrow={item.investment_topic_slug ? 'Wissen kompakt' : 'Grundlagen'}
+              title={k.title}
+              description={k.description}
+              href={k.href}
+              cta={k.cta}
             />
-          )}
+          ))}
 
           {/* Session 80.29 Phase 2 — News → Strategie Crosslink (max. 1, category-basiert). */}
           <NewsStrategyCrosslink article={item} />

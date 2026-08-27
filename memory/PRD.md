@@ -8,6 +8,59 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.33 (Aug 27 2026) — **Topic-First Strategy & Content Crosslink Intelligence**:
+
+  **Phase A — Audit-Ergebnis**:
+     * `NewsStrategyCrosslink` — Regex-first via `findRelatedStrategyTopicsForNews` (keyword-scoring) ⇒ muss umgestellt.
+     * `KnowledgeCrossLinkBox`-Invocation — hardcoded auf `category === 'fonds-etfs'` ⇒ muss umgestellt.
+     * `TopicCrossLinkBox` — bereits topic-first (nutzt `topicSlug` prop) ✓
+     * `EinordnungInlineBox` — bereits topic-first seit 80.31 ✓
+     * `PassendZumThema` — bereits topic-first seit 80.32 ✓
+     * `WasBedeutetDasBlock` — keyword-basiert für Themen ohne Topic-Slug (Inflation etc.) — beabsichtigt.
+
+  **Phase B/C — Zentraler Resolver** (`/app/frontend/src/lib/news/`):
+     * **`topicRegistry.js`** — Frontend-Mirror von `TOPIC_REGISTRY` (Backend bleibt SSoT). Enthält label/accent/knowledgeSlugs/strategyCategories/sparangebote/einordnungCategories für die 5 kanonischen Slugs.
+     * **`crosslinkResolver.js`** — zentrale API:
+       * `resolveStrategyLinks(article)`: Priorität = Registry.strategyCategories → Fallback zu keyword-scoring NUR bei fehlendem Topic. Max. 1 Strategy pro Artikel.
+       * `resolveKnowledgeLinks(article)`: Priorität = Registry.knowledgeSlugs → Legacy-Category-Fallback (`fonds-etfs`→`fonds-grundlagen`) NUR bei fehlendem Topic. Max. 2. Kanonischer `KNOWLEDGE_CATALOG` verhindert erfundene Ziele.
+     * **Kern-Regel**: bei valider Topic-Zuordnung ohne Registry-Mapping wird KEIN Regex-Fallback nachgeschoben — struktureller Non-Match schlägt Keyword-Match.
+
+  **Phase B — `NewsStrategyCrosslink`**: komplett neu, delegiert an `resolveStrategyLinks`. Analytics-Payload erhält `resolver: 'topic-first'|'keyword-fallback'` für Transparenz.
+
+  **Phase D — `KnowledgeCrossLinkBox`-Aufruf**: hardcoded Category-Check entfernt; loopt jetzt über `resolveKnowledgeLinks(item)`. Verhalten für Fonds/ETF-Kategorie ohne Topic bleibt identisch.
+
+  **Phase E/F — Einordnung & PassendZumThema**: unverändert (bereits topic-first).
+
+  **Mapping der 5 kanonischen Topics** (Backend + Frontend identisch):
+     | Slug | Strategy Categories | Knowledge Slugs | Sparangebote-CTA |
+     |---|---|---|---|
+     | aktien | anlagestile | — | nein |
+     | anleihen | schutz-steuerung | — | nein |
+     | dividenden | anlagestile | — | nein |
+     | zinsen-sparen | schutz-steuerung | — | **ja** |
+     | ruhestand-vorsorge | altersvorsorge | — | nein |
+
+  **Testmatrix** (9 Jest-Tests grün):
+     * aktien+DAX → Strategy-Category `anlagestile` via topic-first ✓
+     * zinsen-sparen+Tagesgeld → `schutz-steuerung` via topic-first ✓
+     * ruhestand-vorsorge+Rentenreform → `altersvorsorge` ✓
+     * Artikel ohne Topic + fonds-etfs-Kategorie → `fonds-grundlagen` via Legacy-Fallback ✓
+     * Artikel MIT `aktien`-Topic + fonds-etfs-Kategorie → **keine** Knowledge-Links (Registry hat leere `knowledgeSlugs`, struktureller Non-Match wins, kein Legacy-Fallback) ✓
+     * Unbekannter/ungültiger Topic-Slug → Keyword-Fallback (nicht crashen) ✓
+     * null/undefined article → `[]` ✓
+
+  **Screenshot-Verifikation Desktop 1440**: 3 aktien-Artikel — takeaways/money-impact/strategy-crosslink rendern; Passend-zum-Thema korrekt unterdrückt (keine Zins-News); Fonds-Grundlagen-Crosslink nur beim ETF-Artikel mit passendem Legacy-Kontext.
+
+  **Anzahl zusätzlicher API-Calls**: **0**. Alles client-seitig auf bereits geladenen Artikeldaten.
+
+  **Bekannte Schwächen**:
+     * `aktien` und `dividenden` teilen sich `anlagestile` — bei zwei parallelen Artikeln kann derselbe Strategy-Link zweimal auftauchen (durch Duplikat-Schutz im Resolver auf max. 1 pro Artikel begrenzt).
+     * Keine `knowledgeSlugs` für die 5 Topics gefüllt — sobald konkrete Wissensziele existieren, Registry ergänzen.
+     * `WasBedeutetDasBlock` bleibt bewusst keyword-basiert für Themen ohne Slug (Inflation, Marktkorrektur) — kein Konflikt mit topic-first-Prinzip.
+
+  **Freeze eingehalten**: MarketSnapshot 80.29e, 48h-Freshness, Editorial Score 80.30, Event-Dedup, Takeaways, Threshold 5, Backfill — **alles unangetastet**.
+
+
 - 80.32 (Aug 27 2026) — **Unified Financial Topic Taxonomy**:
 
   **Phase A — Audit** (dokumentiert):

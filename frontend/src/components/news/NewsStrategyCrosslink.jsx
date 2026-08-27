@@ -1,21 +1,24 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen } from 'lucide-react';
-import { findRelatedStrategyTopicsForNews } from '@/data/strategyNewsMap';
+import { resolveStrategyLinks } from '@/lib/news/crosslinkResolver';
 import { trackInvestmentEvent } from '@/lib/investmentAnalytics';
 
 /**
- * Session 80.22b — News → Strategy Crosslink.
- * Zeigt max. 2 passende Strategie-Themen unter einem News-Artikel.
- * DRY-Mapping: nutzt `findRelatedStrategyTopicsForNews` (dieselbe Quelle wie
- * Strategy → News).
- * Kein Modul bei unsicheren Matches.
+ * Session 80.33 — News → Strategy Crosslink, topic-first.
+ *
+ * Priorität (via `resolveStrategyLinks`):
+ *   1. valider `investment_topic_slug`
+ *        → `TOPIC_REGISTRY[slug].strategyCategories`
+ *   2. bei Artikeln OHNE Topic: kontrollierter Keyword-Fallback wie bisher
+ *   3. sonst: kein Modul.
+ *
+ * Wenn ein gültiger Topic-Slug aber KEINE Strategy-Kategorie hat, wird
+ * bewusst KEIN Regex-Fallback nachgeschoben — der strukturelle Non-Match
+ * ist stärker als ein unsicherer Keyword-Match.
  */
 const NewsStrategyCrosslink = ({ article }) => {
-  const topics = useMemo(
-    () => (article ? findRelatedStrategyTopicsForNews(article, { limit: 2, minScore: 3 }) : []),
-    [article],
-  );
+  const topics = useMemo(() => resolveStrategyLinks(article), [article]);
 
   if (!article || topics.length === 0) return null;
 
@@ -24,6 +27,7 @@ const NewsStrategyCrosslink = ({ article }) => {
       article_slug: article.slug,
       topic_slug: topic.slug,
       source: 'news_detail',
+      resolver: article.investment_topic_slug ? 'topic-first' : 'keyword-fallback',
     });
   };
 
