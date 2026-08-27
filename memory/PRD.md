@@ -8,6 +8,58 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.34 (Aug 27 2026) — **Professional Live Market Intelligence Strip**:
+
+  **Umbau `MarketSnapshot.jsx`**: aus 4-Kachel-Snapshot (80.29) wird ein 6-Instrument-Streifen mit Hairline-Layout — kein Trading-Terminal, sondern Editorial-Modul.
+
+  **Instrumente & Provider-Mapping** (alle real via yfinance, keine ETF-Proxies):
+     | UI | Symbol | Provider | Einheit | Change-Basis |
+     |---|---|---|---|---|
+     | DAX | `^GDAXI` | yfinance | Punkte | previous_close |
+     | S&P 500 | `^GSPC` | yfinance | Punkte | previous_close |
+     | NASDAQ 100 | `^NDX` | yfinance | Punkte | previous_close |
+     | Gold | `GC=F` | yfinance | € / Feinunze | previous_close × fx_rate |
+     | Brent | `BZ=F` | yfinance | € / Barrel | previous_close × fx_rate |
+     | EUR/USD | `EURUSD=X` | yfinance | rate | previous_close |
+
+  **Change-Berechnung**:
+     * `change = current_price - previous_close` (backend `_yf_fetch_sync`)
+     * `change_percent = (change / previous_close) × 100`
+     * Bei Commodities in EUR: absolute Change wird proportional mit `fx_rate` konvertiert, damit die EUR-Anzeige konsistent bleibt.
+
+  **Cache & Refresh**:
+     * Backend-TTL: **300 s** für Indizes/Commodities, **600 s** für FX, **24 h** stale-Fenster (Session 80.29e — unverändert).
+     * Frontend-Refresh: **60 s** (visibility-aware, pausiert bei versteckter Seite).
+     * Ergebnis: max. 1 Provider-Hit pro Instrument alle 5 Min — Provider ist geschützt.
+
+  **UI-Features**:
+     * Desktop 6 Spalten mit `divide-x divide-bank-border`-Hairlines (ein zusammenhängendes Modul).
+     * Mobile 2×3-Grid mit `divide-y`-Hairlines. Kein horizontaler Scroll.
+     * Kicker (Label, mono-tracking) · großer serifer Kurs · Change-Zeile (absolute + % + ↑/↓).
+     * **Dezente Tint-Animation** (450 ms) bei Preisänderung zwischen Refreshes — Petrol-Tint bei Anstieg, Coral-Tint bei Rückgang. Kein Blinken, keine Neonfarben.
+     * **Market-Context-Line** (regelbasiert aus %-Cluster): „Europäische Aktien fester · US-Aktien nahezu unverändert · Gold schwächer."
+     * **Timestamp** rechts oben (`STAND HH:MM UHR`), Umschaltung auf `LETZTER VERFÜGBARER STAND` bei Daten > 15 Min alt.
+     * **Instrument-Tooltips** (max. eine Zeile: „Deutscher Aktienindex · 40 große deutsche Unternehmen" etc.).
+     * **Accessibility**: `+/−` Prefix + Pfeil zusätzlich zur Farbe. Screenreader-Text „DAX steigt heute um 0,19 Prozent" pro Kachel.
+     * Bei `Math.abs(pct) < 0.005` → neutraler `text-bank-text-muted`, keine Farbaussage bei 0-Prozent-Bewegung.
+
+  **Getestete Live-Werte** (Screenshot Desktop 1440):
+     * DAX 26.364,51 · +50,05 · +0,2 % ↑
+     * S&P 500 7.675,70 · −1,58 · −0,0 % ↓
+     * NASDAQ 100 29.224,52 · +15,29 · +0,1 % ↑
+     * Gold 3.994,67 € · −23,70 · −0,6 % ↓
+     * Brent 75,00 € · +0,67 · +0,9 % ↑
+     * EUR/USD 1,1644 · −0,0014 · −0,1 % ↓
+     * Context-Line: „Europäische Aktien fester · US-Aktien nahezu unverändert · Gold schwächer."
+     * Timestamp: STAND 11:52 UHR + „Marktdaten zeitverzögert"
+
+  **Fehlerverhalten**: einzelnes Instrument ohne `price` → Kachel ausgeblendet, Layout verteilt sich selbst (Grid-Struktur). Provider-Down + kein Cache → gesamte Komponente rendert `null`. Kein Fake-Preis, kein Hardcode.
+
+  **Anzahl zusätzlicher API-Calls**: **0** neue Endpoints. Wiederverwendung `/api/news-markte/market/overview`.
+
+  **Freeze eingehalten**: 48h News-Freshness · News-Ingestion · Topic Registry · Topic Mapper · Crosslinks · Sparangebote · Strategy · Knowledge · Global Color System — **unangetastet**.
+
+
 - 80.33 (Aug 27 2026) — **Topic-First Strategy & Content Crosslink Intelligence**:
 
   **Phase A — Audit-Ergebnis**:
