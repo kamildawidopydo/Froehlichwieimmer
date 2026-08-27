@@ -19,6 +19,7 @@ import ComparisonOfferCard from '@/components/comparison/ComparisonOfferCard';
 import CountryFlagIcon from '@/components/CountryFlagIcon';
 import { getCountryLabelDe } from '@/lib/countryFlags';
 import ComparisonOfferTable from '@/components/comparison/ComparisonOfferTable';
+import MarketContextStrip from '@/components/comparison/MarketContextStrip';
 import { fetchOfferReviewStatsBatch } from '@/lib/offerReviews';
 import { fetchInterestRateHistoryBatch } from '@/lib/interestRateHistory';
 import { getDisplayProductType } from '@/lib/productDisplay';
@@ -698,6 +699,8 @@ const SavingsComparison = () => {
       <div className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 lg:flex lg:items-start lg:gap-12 lg:px-12 lg:py-14">
         {/* Main column */}
         <div className="min-w-0 flex-1">
+          {/* Session 80.37 — Market context strip: EZB + Top-Rates aus Live-API */}
+          <MarketContextStrip />
           {/* Spotlight — editorial premium strip */}
           {!loading && spotlightOffers.length > 0 && (
             <div className="mb-12 grid gap-4 sm:grid-cols-3">

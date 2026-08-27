@@ -368,6 +368,63 @@ async def list_offers(bank_slug: Optional[str] = None, product_type: Optional[st
     return result
 
 
+# --- Session 80.37 — Structured Savings Comparison --------------------------
+
+@api.get("/content/comparison/offers")
+async def list_structured_offers(product_type: Optional[str] = None,
+                                  term_months: Optional[int] = None,
+                                  new_customers_only: Optional[bool] = None):
+    """Erweiterte Vergleichsdaten mit Aktionszins-Trennung, Einlagensicherung,
+    Quellen-Timestamp und Freshness-Label. Filter: product_type/term_months/
+    new_customers_only. Rangliste-Sortierung sekundär im Frontend."""
+    from savings_data import to_public, compute_freshness, dedupe_key, is_plausible_rate
+    q: dict = {}
+    if product_type:
+        q["product_type"] = product_type
+    if term_months is not None:
+        q["term_months"] = int(term_months)
+    if new_customers_only is not None:
+        q["new_customers_only"] = bool(new_customers_only)
+    docs = await db.savings_offers.find(q).to_list(500)
+    # Deduplizierung + Plausibilitäts-Guard + stale-Filter.
+    seen: set = set()
+    out: list[dict] = []
+    for d in docs:
+        if not is_plausible_rate(d.get("interest_rate")):
+            continue
+        k = dedupe_key(d)
+        if k in seen:
+            continue
+        seen.add(k)
+        pub = to_public(d)
+        if pub.get("freshness") == "stale":
+            continue  # stale Angebote automatisch verstecken
+        out.append(pub)
+    return {"offers": out, "count": len(out)}
+
+
+@api.get("/content/comparison/context")
+async def comparison_context():
+    """Markt-Kontext für die Vergleichsseite: EZB-Referenz + abgeleitete
+    Top-Rates aus den aktuellen Angeboten (keine Marktannahmen)."""
+    from savings_data import EZB_REFERENCE, to_public, is_plausible_rate
+    all_docs = await db.savings_offers.find({}).to_list(500)
+    fresh = [to_public(d) for d in all_docs if is_plausible_rate(d.get("interest_rate"))
+             and to_public(d).get("freshness") != "stale"]
+    # Top Tagesgeld (nach Nominalzins, ohne Aktions/Standard-Gewichtung — der
+    # Frontend zeigt beides klar getrennt).
+    tagesgeld = [o for o in fresh if o["product_type"] == "tagesgeld"]
+    festgeld_12m = [o for o in fresh if o["product_type"] == "festgeld" and o.get("term_months") == 12]
+    top_tagesgeld = max(tagesgeld, key=lambda x: x["interest_rate"], default=None)
+    top_festgeld_12m = max(festgeld_12m, key=lambda x: x["interest_rate"], default=None)
+    return {
+        "ecb": EZB_REFERENCE,
+        "top_tagesgeld": top_tagesgeld,
+        "top_festgeld_12m": top_festgeld_12m,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Session 80.27 — Harte Freshness-Regel für aktuelle News-Feeds.
 #
@@ -1995,7 +2052,7 @@ async def seed_content():
     ]
     if await db.banks.count_documents({}) == 0:
         await db.banks.insert_many(banks)
-    offers = [
+    offers_v1 = [
         {"bank_slug": "bbva", "product_type": "tagesgeld", "interest_rate": 3.5, "term_months": None, "min_amount": 1000, "max_amount": 250000, "currency": "EUR"},
         {"bank_slug": "bbva", "product_type": "festgeld", "interest_rate": 3.85, "term_months": 12, "min_amount": 5000, "max_amount": 500000, "currency": "EUR"},
         {"bank_slug": "bbva", "product_type": "flexgeld", "interest_rate": 3.25, "term_months": None, "min_amount": 500, "max_amount": 100000, "currency": "EUR"},
@@ -2006,6 +2063,9 @@ async def seed_content():
         {"bank_slug": "postbank", "product_type": "festgeld", "interest_rate": 3.4, "term_months": 6, "min_amount": 2500, "max_amount": None, "currency": "EUR"},
         {"bank_slug": "knab", "product_type": "festgeld", "interest_rate": 3.65, "term_months": 12, "min_amount": 1000, "max_amount": 100000, "currency": "EUR"},
     ]
+    # Session 80.37 — Refresh mit strukturiertem Model (Aug 2026).
+    from savings_data import STRUCTURED_OFFERS, is_plausible_rate
+    offers = [o for o in STRUCTURED_OFFERS if is_plausible_rate(o.get("interest_rate"))]
     if await db.savings_offers.count_documents({}) == 0:
         await db.savings_offers.insert_many(offers)
 

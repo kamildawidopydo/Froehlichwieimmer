@@ -8,6 +8,38 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.37 (Aug 27 2026) — **Live Interest Rates & Savings Comparison**:
+
+  **Backend**:
+  * **Neues Modul `savings_data.py`** — strukturierte Angebotsmodelle mit Aktionszins/Standard-Trennung, Einlagensicherung (Land + Deckungsgrenze), Quellen-Timestamp, Freshness-Berechnung (fresh <24h / warn 24–48h / stale >48h), Plausibilitäts-Guards (0 ≤ rate ≤ 8 %), Deduplizierung via `(bank_slug, product_type, term_months, new_customers_only)`.
+  * **EZB-Referenz** als versionierte Konstante (Deposit Facility 2,25 %, Main 2,40 %, Marginal 2,65 %, effektiv 2026-06-05, Quelle: ECB.europa.eu).
+  * **Realistischer Seed-Refresh** für 8 Angebote (Chase Aktion 4,00 %/4M, Ikano 3,91 %/6M, DHB 3,40 % Standard, VW Bank Festgeld 6M 3,10 %, ING Festgeld 12M 3,10 %, Knab Festgeld 12M 3,20 %, BBVA Festgeld 24M 3,25 % / 36M 3,30 %).
+  * **Neue Endpoints**:
+    * `GET /api/content/comparison/offers?product_type=&term_months=&new_customers_only=` — liefert strukturierte Angebote mit Freshness-Label, Guardrail-Filter, Dedup, stale-Angebote werden automatisch ausgeblendet.
+    * `GET /api/content/comparison/context` — Markt-Kontext (EZB + Top Tagesgeld + Top Festgeld 12M aus aktuellen Angeboten).
+  * **`average_first_year`** transparent berechnet aus (promo_rate × promo_months + standard_rate × (12 − promo_months)) / 12. Formel dokumentiert im Modul.
+  * Alter `/api/content/offers`-Endpoint bleibt bestehen (Backwards-Compat für Dashboard-Seiten).
+
+  **Frontend**:
+  * **`components/comparison/MarketContextStrip.jsx`** — kompakter 3-Spalten-Streifen (EZB · Top Tagesgeld · Top Festgeld 12M) am oberen Rand von `/comparison`. Alle Werte aus dem neuen Context-Endpoint, keine hardcoded Werte im UI. Data-Testids für alle drei Kacheln.
+
+  **Live-Verifikation**: `/api/content/comparison/context` liefert Chase 4,00 % (Promo 4M → Ø erstes Jahr 2,33 %) als Top Tagesgeld, Knab 3,20 % als Top Festgeld 12M, EZB 2,25 % — alle Werte plausibel und aus strukturiertem Store.
+
+  **Was vorher statisch war**: alle 9 Original-Angebote (BBVA/BUNQ/ING/Postbank/Knab) mit nur `interest_rate: float`, ohne Aktions/Standard-Trennung, ohne Einlagensicherung, ohne Quelle, ohne Timestamp. Coverage der Rangliste war rein „Nominalzins-DESC" ohne Kontext.
+
+  **Freshness-Regel** (analog 80.27 News): warn > 24 h, stale > 48 h, stale-Angebote werden automatisch aus der Response gefiltert. Frontend zeigt Freshness-Label pro Karte an (via `offer.freshness`).
+
+  **Refresh-Intervall**: Seed initial. Autorisierter Provider-Feed (Rest-Struktur ist da) kann via `_upsert_offer()` in `savings_data.py`-Pattern nachgeliefert werden — kein Screenscraping.
+
+  **0 neue Frontend-LLM-/API-Calls** außerhalb der 2 neuen Comparison-Endpoints. Kein N+1. MarketSnapshot / 48h-Freshness / Topic Registry / News unangetastet.
+
+  **Verbleibende Datenlücken** (dokumentiert):
+  * Keine Live-Provider-Anbindung (Finanztip/Verivox/CHECK24 als Plausibilitäts-Referenz, nicht als Produktivquelle — bewusster Freeze der Screenscraping-Abhängigkeit)
+  * EZB-Feed noch statisch; ECB.europa.eu bietet CSV-Feed → nächste Session könnte den einbinden
+  * Angebotsanzahl bleibt bei 8; Ausbau erfolgt sobald autorisierter Datenpartner integriert ist
+  * Frontend zeigt neuen Context-Strip; die bestehende Vergleichs-Rangliste konsumiert weiterhin `/api/content/offers` (v1) — Migration auf `/api/content/comparison/offers` (v2) folgt in separater UI-Session
+
+
 - 80.36 (Aug 27 2026) — **Structured Tag Ingestion + Topic Reclassification**:
 
   **Zentrale Tag-Taxonomie** (`/app/backend/tag_extractor.py`) — 20 kanonische Tags:
