@@ -11,6 +11,7 @@ import KnowledgeCrossLinkBox from '@/components/knowledge/KnowledgeCrossLinkBox'
 import NewsStrategyCrosslink from '@/components/news/NewsStrategyCrosslink';
 import EinordnungInlineBox from '@/components/news/EinordnungInlineBox';
 import WasBedeutetDasBlock from '@/components/news/WasBedeutetDasBlock';
+import PassendZumThema from '@/components/news/PassendZumThema';
 import { buildKeyTakeaways } from '@/lib/news/keyTakeaways';
 import { relativeTimeLabel, updatedLabel } from '@/lib/news/relativeTime';
 
@@ -312,6 +313,10 @@ const NachrichtenDetailPage = () => {
           </div>
 
           {item.investment_topic_slug && <TopicCrossLinkBox topicSlug={item.investment_topic_slug} />}
+          {/* Session 80.31 Phase C — „Passend zum Thema" (Sparangebote-CTA),
+              nur bei eindeutigen Zins-/Spar-News und mit Duplikat-Schutz
+              gegen den Money-Impact-CTA. */}
+          <PassendZumThema article={item} />
           {(item.category === 'fonds-etfs' || item.category === 'fonds' || item.category === 'etf') && (
             <KnowledgeCrossLinkBox
               testId="fonds-grundlagen-crosslink"

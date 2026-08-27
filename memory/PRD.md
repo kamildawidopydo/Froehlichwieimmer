@@ -8,6 +8,40 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.31 (Aug 27 2026) — **Investment Topic Intelligence + „Passend zum Thema"**:
+
+  **Phase A — Backfill**:
+     * Audit ergab: nur 3 valide Slugs (`aktien`, `anleihen`, `dividenden`) in der `investment_topics`-Collection. 45 von 46 Artikeln hatten `investment_topic_slug: None`. `news_synthesizer.py` setzte das Feld gar nicht.
+     * **Zentrale Mapping-Logik** in `/app/backend/topic_mapper.py`: regelbasiertes Scoring (+3 Titel-Strong, +2 zweiter Titel, +3 Tag, +2 Kategorie, +1 Summary, Reject bei Negative Guard). **High-Confidence-Threshold: 5**.
+     * **Dry-Run + Write-Script** `scripts/backfill_topics.py` (idempotent, respektiert bestehende gültige Werte).
+     * **Live-Ergebnis**: 46 analysiert · 1 geschützt · **5 High-Confidence-Matches geschrieben** (alle korrekt → `aktien`: ETF-Zuflüsse, DAX/Nvidia, US-Börsen, US-Inflation-Nvidia, Deutsche-Bank-Aktie) · 40 bewusst ohne Topic (keine falschen Zuordnungen).
+     * **Zweiter Lauf schreibt 0**: Idempotenz bestätigt.
+     * **Synthesizer integriert** (`news_synthesizer.py`): neue Artikel bekommen die gleiche Klassifikation beim Erstellen.
+     * **Unit-Tests** (`tests/test_topic_mapper.py`, 15 Cases): 5 positive matches, 6 negative cases (Personalie, Politik-Steuer, Klima, Inflation-Reallöhne, Rente-mit-63, Wohnungsmarkt), Negative-Guards (Rezession, Gewinnwarnung), Idempotenz.
+
+  **Bewusst nicht klassifiziert** — Themen ohne existierenden Topic-Slug:
+     * Zinsen/Sparen, Inflation, Rente/Vorsorge, Immobilien, Nachhaltigkeit
+     * Grundprinzip: „Lieber kein Topic als ein falsches Topic." Diese Bereiche werden stattdessen im Frontend via Keyword-Match für Money-Impact & Sparangebote-CTA genutzt.
+
+  **Phase C — „Passend zum Thema"** (`components/news/PassendZumThema.jsx`):
+     * Dezente Text-Link-Sektion (kein Card, keine Bank-Logos, kein Zinssatz).
+     * Trigger: `STRONG_KEYWORDS` (Tagesgeld/Festgeld/Sparzins/Einlagenzins) ODER (EZB-Signal + Sparer-Signal).
+     * Negative Guards: Aktienmarkt/Kursziel/Rentenreform/Immobilienpreise.
+     * **Duplikat-Schutz**: rendert `null`, wenn `WasBedeutetDasBlock` bereits einen `/sparangebote`-CTA zeigt (`ezb-zinsen`-Profil).
+     * Position: nach TopicCrossLinkBox, vor Strategy-Crosslink.
+
+  **Zusätzliche API-Calls**: **0**. Backfill nutzt existierende Mongo-Connection. PassendZumThema klassifiziert client-seitig aus bereits geladenen Artikeldaten.
+
+  **Verifikations-Screenshots**: 3 Detailseiten (DAX/Nvidia, ETF-Zuflüsse, Deutsche Bank Aktie) — alle mit korrekt aktivem Money-Impact (wo relevant), Passend-zum-Thema unterdrückt (keine Zins-News), Strategie-Crosslink wo passend, Einordnung nur bei Match.
+
+  **Freeze eingehalten**: MarketSnapshot (80.29e) unangetastet — DAX ^GDAXI, S&P ^GSPC, EUR/USD, Gold GC=F. Keine Sparklines, Krypto, Watchlist, neue Provider.
+
+  **Verbleibende Datenbasis-Schwächen**:
+     * `dividenden`-Slug bekam 0 Matches (aktuell keine Dividenden-News im 48h-Fenster).
+     * `anleihen`-Slug bekam 0 Matches (EZB-Zinsentscheide bekommen aktuell keine breite Berichterstattung).
+     * `tags`-Feld ist in allen aktuellen News-Docs `None` → Tag-Boost trägt nichts bei; das ist ok, aber sobald Aggregatoren Tags liefern, würde die Präzision weiter steigen.
+
+
 - 80.30 (Aug 27 2026) — **News Intelligence &amp; Editorial Quality**:
 
   **Ziel**: Weniger Aggregator, mehr kuratierte Finanzplattform. „Was ist passiert → Warum wichtig → Was bedeutet es für mein Geld → Was sollte ich verstehen?"

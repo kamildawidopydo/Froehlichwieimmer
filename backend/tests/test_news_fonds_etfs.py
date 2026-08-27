@@ -60,9 +60,14 @@ class TestFondsEtfsDetail:
         assert d.get("is_demo") is False
         assert "_id" not in d
 
-    def test_investment_topic_slug_is_null(self, detail):
+    def test_investment_topic_slug_is_aktien_or_null(self, detail):
+        """Session 80.31 — mit zentralem `topic_mapper.classify_article`
+        wird ein ETF-Artikel (Titel enthält „ETF") deterministisch zu
+        `aktien` klassifiziert. Vor 80.31 blieb das Feld leer. Beides ist
+        akzeptabel (leer, falls Artikel vor Backfill entstand und noch
+        nicht klassifiziert wurde), aber KEIN anderer Wert."""
         d = detail.get("item", detail)
-        assert d.get("investment_topic_slug") in (None, "")
+        assert d.get("investment_topic_slug") in (None, "", "aktien")
 
     def test_full_text_structure(self, detail):
         d = detail.get("item", detail)

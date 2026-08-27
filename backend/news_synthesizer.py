@@ -1312,6 +1312,20 @@ async def synthesize_pending(db, max_articles: int = 25) -> dict:
             img = _pick_fallback(category, article.get("title") or anchor["title"])
 
         slug = _slugify(article.get("title") or anchor["title"])
+        # Session 80.31 — zentrale Topic-Zuordnung. Wir schreiben den Slug nur,
+        # wenn High-Confidence erreicht ist; sonst bleibt das Feld None
+        # („lieber kein Topic als ein falsches Topic").
+        try:
+            from topic_mapper import classify_article as _classify_topic
+            _match = _classify_topic(
+                title=article.get("title") or "",
+                summary=article.get("summary") or "",
+                category=category,
+                tags=[],
+            )
+            topic_slug = _match.slug if _match else None
+        except Exception:  # noqa: BLE001
+            topic_slug = None
         doc = {
             "slug": slug,
             "title": article.get("title"),
@@ -1320,6 +1334,7 @@ async def synthesize_pending(db, max_articles: int = 25) -> dict:
             "content": article.get("content"),
             "category": category,
             "content_type": "news_synthesis",
+            "investment_topic_slug": topic_slug,
             "sources":       [{"name": n, "url": u} for n, u in zip(meta["sources"], meta["urls"])],
             "source_names":  meta["sources"],
             "source_urls":   meta["urls"],
