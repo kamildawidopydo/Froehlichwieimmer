@@ -8,6 +8,26 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.28 (Aug 27 2026) — **News & Märkte Freshness-Fallback + Sticky-CTA Overlay-Fix**:
+
+  **Ursache news_markte_articles-Leeransicht**: Die Kollektion war seit Session-Beginn nur EINMALIG geseedet (`server.py:1993`, Guard `count_documents({}) == 0`). Ohne Cron-Refresh alterte der Seed natürlich; sobald >48h alt, griff die in 80.27 eingeführte Freshness-Regel → `top=0, overview=0` dauerhaft. Kein eigener Ingest-Pipeline existiert für `news_markte_articles`.
+
+  **Fix (pragmatisch, ohne neue Pipeline)**:
+  - `server.py:855` `news_markte_feed`: Wenn die 48h-gefilterte Query auf `news_markte_articles` **0 Docs** liefert, wird automatisch aus der bereits synthesizer-gepflegten Haupt-Kollektion `news_articles` nachgeladen (`is_published=True, status=published, content_type != demo, published_at >= NOW-48h`) und in das erwartete `_article_to_out`-Format normalisiert (`featured=False`, `excerpt := summary`, `source := source_names[0] || 'Fröhlich Redaktion'`). Gleiches Fallback für `all_docs`/Featured-Pool. Kein Nachrücken älterer Artikel — nur frische Meldungen aus dem produktiven Feed.
+  - Damit erbt News & Märkte automatisch die stündliche Refresh-Kadenz des Synthesizers (`news-fetch-feeds` `0 * * * *` + `news-synthesize` `10 * * * *` — bereits konfiguriert in `.emergent/crons.yml`, Prod-verifiziert).
+  - Kein neuer Cron nötig, keine spekulative Konfiguration hinzugefügt.
+  - Verifikation: `/api/news-markte/feed` → 3 top + 15 overview, alle 0.3h alt, `stale=0`. Frontend `/news` zeigt fresh Top-News.
+
+  **Ursache Sticky-Promo Overlay-Bug**: `ProductInquiryStickyCta.jsx` versteckt sich per `IntersectionObserver` NUR für zwei Selectoren: `#home-newsletter` (Mobile-Nudge) und `#invtopic-teaser` (Aktien-im-Fokus). Alle anderen Bereiche (Footer, Trust-Icons, Artikel-Ende) wurden vom CTA überdeckt.
+
+  **Fix**:
+  - `ProductInquiryStickyCta.jsx`: `TEASER_SEL` erweitert auf `#invtopic-teaser, [data-hide-sticky-cta], footer, #footer, .site-footer`. Alle Elemente in dieser Liste blenden den CTA per Opacity-Fade aus (kein Layout-Sprung, fixed position bleibt).
+  - `Footer.js`: `<footer>` bekommt `id="footer"` + `data-hide-sticky-cta` als semantisches Signal.
+  - Beliebige Seite kann jetzt einem eigenen Element `data-hide-sticky-cta` geben (z. B. Trust-Bereiche, lange Artikel-Enden), um den CTA lokal auszublenden — ohne die Sticky-Logik zu berühren.
+
+  **Nicht geändert**: Session-80.27-Freshness-Logik, Color-System, Typografie, Cron-Konfiguration, Detail-/Archiv-Pfade, Artikel-Layout, Business Logic außerhalb dieser beiden Punkte.
+
+
 - 80.27 (Aug 27 2026) — **Harte 48h-Freshness-Regel für aktuelle News-Feeds**:
   **Root Cause der veralteten 4–5-Tage-Meldungen** (nachweisbar via Live-DB-Probe):
   - Server-Side: `list_news` (server.py:371) und `news_markte_feed` (server.py:855) hatten **keinen Freshness-Filter** — nur `sort(published_at DESC).limit(20)`. Wenn der Synthesizer-Cron seit >48h keine neuen Artikel produziert hat, blieben die letzten synthetisierten Meldungen als "aktuell" im Feed hängen.

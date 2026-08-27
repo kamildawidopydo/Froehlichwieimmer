@@ -853,17 +853,51 @@ async def _fetch_market_snapshots() -> List[dict]:
 
 
 async def news_markte_feed(category: Optional[str] = None, limit: int = 30):
-    # Session 80.27 — Harte 48h-Freshness. Ältere Meldungen tauchen weder in
-    # `articles` noch in `top`/`weitere`/`anleger` auf, unabhängig von Featured-Flag.
+    # Session 80.27 — Harte 48h-Freshness.
+    # Session 80.28 — `news_markte_articles` ist nur eine EINMALIG geseedete
+    # Kollektion (server.py:1993, count==0-Guard) ohne Cron-Refresh. Sobald
+    # der Seed >48h alt ist, greift die Freshness-Regel und der News-&-Märkte-
+    # Tab wäre dauerhaft leer. Fallback auf `news_articles` (synthesizer-
+    # gepflegt, stündlich frisch): wenn keine frischen markte-Docs vorhanden
+    # sind, ziehen wir die aktuellen synthetisierten Artikel dieser Kategorie
+    # aus der Haupt-Kollektion nach — mit identischer 48h-Freshness und
+    # `published_at DESC`-Sortierung, kein Nachrücken älterer Artikel.
     cutoff = _current_feed_cutoff()
     q: dict = {"published_at": {"$gte": cutoff}}
     if category and category != "alle":
         q["category"] = category
     docs = await db.news_markte_articles.find(q).sort("published_at", -1).limit(limit).to_list(limit)
+
+    if not docs:
+        syn_q: dict = {
+            "is_published": True,
+            "status": "published",
+            "content_type": {"$ne": "demo"},
+            "published_at": {"$gte": cutoff},
+        }
+        if category and category != "alle":
+            syn_q["category"] = category
+        syn_docs = await db.news_articles.find(syn_q).sort("published_at", -1).limit(limit).to_list(limit)
+        # Normalise into the `news_markte_articles`-shape expected by _article_to_out
+        for d in syn_docs:
+            d.setdefault("featured", False)
+            d.setdefault("excerpt", d.get("summary", ""))
+            d.setdefault("source", (d.get("source_names") or ["Fröhlich Redaktion"])[0])
+        docs = syn_docs
+
     articles = [_article_to_out(d) for d in docs]
     all_docs = docs if len(q) == 1 else await db.news_markte_articles.find(
         {"published_at": {"$gte": cutoff}}
     ).sort("published_at", -1).to_list(50)
+    if not all_docs:
+        all_docs = await db.news_articles.find({
+            "is_published": True, "status": "published", "content_type": {"$ne": "demo"},
+            "published_at": {"$gte": cutoff},
+        }).sort("published_at", -1).limit(50).to_list(50)
+        for d in all_docs:
+            d.setdefault("featured", False)
+            d.setdefault("excerpt", d.get("summary", ""))
+            d.setdefault("source", (d.get("source_names") or ["Fröhlich Redaktion"])[0])
     all_articles = [_article_to_out(d) for d in all_docs]
     top = [a for a in all_articles if a["featured"]][:3]
     if len(top) < 3:

@@ -50,7 +50,7 @@ const Footer = () => {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative isolate">
+    <footer id="footer" data-hide-sticky-cta className="relative isolate">
       <FooterBenefitsBand />
 
       <div className="relative isolate overflow-hidden bg-bank-panel text-bank-text">

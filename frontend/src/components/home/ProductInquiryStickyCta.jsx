@@ -100,8 +100,12 @@ const ProductInquiryStickyCta = ({ onOpenWizard }) => {
     //                       nicht zu blockieren. Der Wrapper bleibt im DOM
     //                       (Fade-Out via opacity), daher zusätzlich
     //                       `data-visible !== "false"` prüfen.
+    // Session 80.28 — Erweiterte Hide-Selectors: Der Sticky-CTA verschwindet
+    // beim Footer, bei Trust-/Bewertungs-Bereichen und beim Artikel-Ende.
+    // Andernfalls verdeckt er Content im unteren Viewport (Bewertungen,
+    // Footer, Artikel-Fließtext-Ende).
     const NEWSLETTER_SEL = '#home-newsletter';
-    const TEASER_SEL = '#invtopic-teaser';
+    const TEASER_SEL = '#invtopic-teaser, [data-hide-sticky-cta], footer, #footer, .site-footer';
     const SELECTORS = [NEWSLETTER_SEL, TEASER_SEL];
 
     const findTargets = () =>
