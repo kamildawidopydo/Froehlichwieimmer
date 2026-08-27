@@ -9,6 +9,8 @@ import EinordnungSection from '@/components/nachrichten/EinordnungSection';
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
 
+import { buildTopicWorlds } from '@/data/newsTopicWorlds';
+
 const CAT_LABEL = {
   alle: 'Alle',
   politik: 'Politik',
@@ -333,6 +335,16 @@ const NachrichtenPage = () => {
     return picked;
   }, [items]);
 
+  // Session 80.29 Phase 3 — Themenwelten-Bündelung.
+  // 1× Client-side-Reduktion über den bereits geladenen Feed — kein neuer API-Call.
+  // Excludiert die Top-3 (Deduplizierung „Heute wichtig" ↔ Themenwelten).
+  // Leere Themenwelten werden nicht gerendert.
+  const topicWorlds = useMemo(() => {
+    if (!items || items.length === 0) return [];
+    const topSlugs = new Set(topThree.map((t) => t.slug));
+    return buildTopicWorlds(items, { excludeSlugs: topSlugs, limit: 4 });
+  }, [items, topThree]);
+
   const categories = useMemo(() => Object.entries(CAT_LABEL), []);
 
   return (
@@ -433,6 +445,73 @@ const NachrichtenPage = () => {
             <RedaktionSlot />
           </div>
         </div>
+
+        {/* Session 80.29 Phase 3 — Themenwelten (Editorial-Sektionen). Nur wenn
+            keine Filter aktiv sind, damit die Filter-Semantik intakt bleibt.
+            Farbe pro Welt = Orientierungshilfe (bestehende 80.26-Semantik),
+            eingesetzt nur als kleiner Kicker + card-accent-top. Cards
+            wiederverwenden vorhandene HeroCard-artige Struktur. */}
+        {!loading && category === 'alle' && publisher === 'alle' && topicWorlds.length > 0 && (
+          <div className="mt-14 space-y-14" data-testid="nachrichten-themenwelten">
+            {topicWorlds.map((world) => (
+              <section
+                key={world.id}
+                data-testid={`themenwelt-${world.id}`}
+                aria-labelledby={`themenwelt-${world.id}-title`}
+                className="border-t border-bank-border pt-10"
+              >
+                <div className="mb-6 flex items-baseline justify-between gap-6">
+                  <div className="flex items-baseline gap-3">
+                    <span
+                      aria-hidden
+                      className={`inline-block h-2 w-2 rounded-full bg-bank-${world.color}`}
+                    />
+                    <p
+                      id={`themenwelt-${world.id}-title`}
+                      className={`font-mono text-[10.5px] uppercase tracking-[0.28em] text-bank-${world.color}-strong`}
+                    >
+                      {world.title}
+                    </p>
+                  </div>
+                  <Link
+                    to={world.href}
+                    data-testid={`themenwelt-${world.id}-more`}
+                    className={`text-[11px] uppercase tracking-[0.18em] text-bank-${world.color}-strong hover:underline`}
+                  >
+                    Mehr zu {world.title} →
+                  </Link>
+                </div>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                  {world.articles.map((it) => (
+                    <Link
+                      key={it.slug}
+                      to={`/nachrichten/${it.slug}`}
+                      data-testid={`themenwelt-${world.id}-card-${it.slug}`}
+                      className={`card-accent-top card-accent-top-${world.color} group flex flex-col border border-bank-border bg-white p-4 transition-shadow hover:shadow-editorial-sm`}
+                    >
+                      <span className={`font-mono text-[10px] uppercase tracking-[0.22em] text-bank-${world.color}-strong`}>
+                        {CAT_LABEL[it.category] || it.category || 'Aktuell'}
+                      </span>
+                      <h3 className="mt-2 font-serif text-[16.5px] leading-snug text-bank-text group-hover:text-bank-primary line-clamp-3">
+                        {it.title}
+                      </h3>
+                      {(it.excerpt || it.summary) && (
+                        <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-bank-text-muted">
+                          {it.excerpt || it.summary}
+                        </p>
+                      )}
+                      <p className="mt-3 flex items-center gap-2 text-[10.5px] uppercase tracking-[0.16em] text-bank-text-muted">
+                        <span>{it.source || (it.source_names && it.source_names[0]) || 'Fröhlich Redaktion'}</span>
+                        <span aria-hidden>·</span>
+                        <span>{timeAgo(it.published_at)}</span>
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
 
         {/* Category nav */}
         <nav className="mt-12 flex gap-2 overflow-x-auto border-b border-bank-border pb-3 [scrollbar-width:thin]" data-testid="news-category-nav">

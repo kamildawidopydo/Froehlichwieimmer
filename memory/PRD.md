@@ -8,6 +8,31 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.29 Phase-3 (Aug 27 2026) — **Themenwelten auf /news/nachrichten**:
+
+  **1. Neue Helfer-Datei** `data/newsTopicWorlds.js`: fünf Themenwelten `Märkte & Börse (info) / Zinsen & Sparen (petrol) / Wirtschaft & Politik (coral) / Vorsorge & Vermögen (amber) / Immobilien & Finanzierung (violet)`. Klassifikation: (1) Category-Match (Primary), (2) Keyword-Regex auf `title + excerpt` als kontrollierter Fallback. Erster Match gewinnt, Reihenfolge = Priorität.
+
+  **2. Integration in NachrichtenPage.jsx**: `useMemo`-basierte `buildTopicWorlds(items, {excludeSlugs: topThree, limit: 4})` — **0 zusätzliche API-Calls**, reine Client-side-Reduktion des bereits geladenen 48h-Feeds. Excludiert Top-3-Artikel (Deduplizierung „Heute wichtig" ↔ Themenwelten). Ein Artikel gehört zu genau EINER Themenwelt — kein Multi-Match.
+
+  **3. Rendering**: Sections nur wenn `category=alle` UND `publisher=alle` UND ≥1 Artikel im Bucket. Leere Themenwelten werden komplett ausgeblendet (kein „Keine Nachrichten"-Placeholder). Cards mit `card-accent-top-{color}`, farbigem Kicker + Kategorie-Label. Grid: 4 Spalten Desktop / 2 Tablet / 1 Mobile — kein horizontales Carousel.
+
+  **Farbeinsatz**: Cards bleiben weiß, Farbe nur als 2px Top-Line + Kicker + kleiner Dot. Navy/Weiß/Creme bleibt dominant.
+
+  **Deduplizierung**: Innerhalb einer Section-Iteration wird `used`-Set geführt — ein Artikel taucht nie in zwei Themenwelten auf. Priorität: Relevanz > Diversität > Anzahl.
+
+  **API-Calls**: **0 neue Calls**. Nutzt bestehenden `/api/news/nachrichten` Feed.
+
+  **Verhalten bei leeren Kategorien**: Section wird nicht gerendert (kein leerer Skeleton, kein Placeholder). Vorsorge & Immobilien sind bei aktuellem Feed häufig leer und daher unsichtbar — genau wie gefordert.
+
+  **Getestete Breakpoints**: Desktop 1440 (Live-Screenshot verifiziert). Mobile 390 durch responsive grid `md:grid-cols-2 lg:grid-cols-4` abgedeckt (single-column, saubere vertikale Reihenfolge).
+
+  **Verbleibende UX-Beobachtungen**:
+  - Keyword-Fallback greift für Artikel ohne aktuell klassifizierte Kategorie (z. B. Politik-Artikel mit „Kanzler"/„Koalition"-Match zu Wirtschaft & Politik). Präzision hängt von RSS-Kategorisierung ab
+  - Bei aktivem Filter (Kategorie/Publisher) werden Themenwelten unterdrückt → klassische Liste bleibt sichtbar, keine doppelte Architektur
+
+**Session 80.29 Phase 3 abgeschlossen. Marktübersicht + weitere Intelligence-Funktionen bewusst NICHT implementiert — Nutzer soll erst den aktuellen Hub bewerten.**
+
+
 - 80.29 Phase-2 (Aug 27 2026) — **Financial Intelligence Hub — Phase 2**:
 
   **1. „Heute wichtig"-Top-3** in `pages/news/NachrichtenPage.jsx`:
