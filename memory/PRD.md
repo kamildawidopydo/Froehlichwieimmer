@@ -8,6 +8,32 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.35 (Aug 27 2026) — **Themen-Landingpages: /themen/zinsen-sparen & /themen/ruhestand-vorsorge**:
+
+  **Backend**: `investment_topic_slug`-Filter zu `list_items` + `count_items` (`news_provider.py`) und zum Endpoint `/api/news/nachrichten` (`server.py`) hinzugefügt. **Nur echter Slug-Match**, kein Category-Fallback. Verifiziert: `?investment_topic_slug=aktien` → 4 Artikel, `?investment_topic_slug=zinsen-sparen` → 0 (korrekt, aktuell keine echten Zins-News im 48h-Feed).
+
+  **Frontend**:
+     * **`ThemenLandingLayout.jsx`** — geteilte, registry-driven Layout-Komponente. Sektionen (alle außer Hero optional): Hero → Aktuell zum Thema (48h-Filter) → „Was bedeutet …?" (statischer Editorial-Block) → Fröhlich Einordnung (topic-first Match) → Wissen & Grundlagen → Primary Offer (Sparangebote/Strategy) → Strategie → Related Topics. 2 parallel API-Calls (`/news/nachrichten` mit topic-slug + `/einordnung`) — **kein N+1**.
+     * **`ZinsenSparenPage.jsx`** — accent=petrol, CTA `/sparangebote`, Editorial-Block „Was bedeutet die Zinslage für Sparer?" mit 3 statischen Punkten (Tagesgeld reagiert schnell, Festgeld = Planungssicherheit, Realzins = Nominal − Inflation). Knowledge: Inflation/Vermögensaufbau + Fonds-Grundlagen. Strategy: `/strategie/schutz-steuerung`. Related: Anleihen, Ruhestand.
+     * **`RuhestandVorsorgePage.jsx`** — accent=amber, CTA `/strategie/altersvorsorge`, Editorial-Block „Was verändert sich bei Rente & Vorsorge?" (Beitragssatz/Rentenniveau/Renteneintritt, private Vorsorge federt Reformen ab, 20-30-Jahre-Horizont). Knowledge: Altersvorsorge + Inflation. Strategy: `/strategie/altersvorsorge`. Related: Aktien, Zinsen.
+     * **Routing**: explizite Routen VOR `/themen/:slug`-Catch-all registriert; lazy-loaded.
+
+  **Verifikations-Screenshot Desktop 1440**:
+     * `/themen/zinsen-sparen`: H1 „Zinsen verstehen. Chancen richtig einordnen." — Sektionen aktiv: hero, context, knowledge, sparangebote, strategy, related. Nicht aktiv: current-news (0 Artikel — korrekt ausgeblendet), einordnung (kein topic-Match — korrekt). Primary CTA → `/sparangebote`.
+     * `/themen/ruhestand-vorsorge`: H1 „Heute planen. Morgen freier entscheiden." — Sektionen: hero, context, knowledge, ruhestand-strategy, strategy, related. Primary CTA → `/strategie/altersvorsorge`.
+
+  **Verhalten bei 0 News**: Section „Aktuell zum Thema" wird **komplett ausgeblendet** — Evergreen-Sektionen tragen die Seite. Kein Kategorie-Regex-Fallback.
+
+  **Additional API-Calls pro Seitenaufruf**: 2 (parallel) — `/news/nachrichten?investment_topic_slug=…&limit=3` + `/einordnung?limit=25`. Beides via existierende Endpoints und Client-Modul-Cache-fähig.
+
+  **Freeze eingehalten**: 48h-Freshness · MarketSnapshot · Topic Registry · Topic Mapper · Threshold 5 · Crosslink Resolver · Global Colors — alles unangetastet.
+
+  **Verbleibende UX-/Content-Lücken**:
+     * News-Sektion bleibt aktuell auf beiden Seiten leer, bis Topic-Backfill mehr Matches produziert (aktueller News-Pool trifft die 2 neuen Slugs nicht mit Confidence ≥ 5).
+     * `/finanzwissen/altersvorsorge` und `/inflation-und-vermoegensaufbau` als Knowledge-Ziele referenziert — sofern eine Route fehlt, führt der Link zur 404-Route (nicht durch diese Session neu erzeugt).
+     * Editorial-Blöcke sind statisch; sobald ein CMS-Feld für Themen-Copy existiert, kann der Text redaktionell gepflegt werden.
+
+
 - 80.34 (Aug 27 2026) — **Professional Live Market Intelligence Strip**:
 
   **Umbau `MarketSnapshot.jsx`**: aus 4-Kachel-Snapshot (80.29) wird ein 6-Instrument-Streifen mit Hairline-Layout — kein Trading-Terminal, sondern Editorial-Modul.

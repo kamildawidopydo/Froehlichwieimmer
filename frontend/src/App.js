@@ -43,6 +43,9 @@ const FinanzwissenArtikel = lazy(() => import('@/pages/FinanzwissenArtikel'));
 const NewsletterPage = lazy(() => import('@/pages/NewsletterPage'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const InvestmentTopicPage = lazy(() => import('@/pages/InvestmentTopicPage'));
+// Session 80.35 — dedizierte Themen-Landingpages für die 2 neuen Registry-Slugs.
+const ZinsenSparenPage = lazy(() => import('@/pages/themen/ZinsenSparenPage'));
+const RuhestandVorsorgePage = lazy(() => import('@/pages/themen/RuhestandVorsorgePage'));
 const HandelnHub = lazy(() => import('@/pages/HandelnHub'));
 const InvestmentTopicsOverviewPage = lazy(() => import('@/pages/InvestmentTopicsOverviewPage'));
 const AdminInvestmentTopics = lazy(() => import('@/pages/admin/AdminInvestmentTopics'));
@@ -260,6 +263,9 @@ function App() {
                   <Route path="/bausteine" element={<Navigate to="/leistungen#bausteine" replace />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/themen" element={<InvestmentTopicsOverviewPage />} />
+                  {/* Session 80.35 — explizite Routen vor der Catch-all `:slug`. */}
+                  <Route path="/themen/zinsen-sparen" element={<ZinsenSparenPage />} />
+                  <Route path="/themen/ruhestand-vorsorge" element={<RuhestandVorsorgePage />} />
                   <Route path="/themen/:slug" element={<InvestmentTopicPage />} />
                   <Route path="/kredit" element={<CreditLeadPage />} />
                   <Route path="/news" element={<PublicNewsPage />} />

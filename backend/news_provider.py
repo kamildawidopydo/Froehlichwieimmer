@@ -429,7 +429,8 @@ class MongoNewsProvider(NewsProvider):
         }
 
     async def list_items(self, category: Optional[str] = None, limit: int = 20, skip: int = 0,
-                         source: Optional[str] = None) -> List[dict]:
+                         source: Optional[str] = None,
+                         investment_topic_slug: Optional[str] = None) -> List[dict]:
         if self._db is None:
             return []
         cat = (category or "alle").lower()
@@ -456,6 +457,11 @@ class MongoNewsProvider(NewsProvider):
             else:
                 syn_query["category"] = cat
 
+        # Session 80.35 — Topic-Filter für die neuen Themen-Landingpages.
+        # Nur echter Slug-Match, keine Kategorie-Fallback-Regex.
+        if investment_topic_slug:
+            syn_query["investment_topic_slug"] = str(investment_topic_slug).strip()
+
         if source:
             src_raw = str(source).strip()
             src_norm = src_raw.lower().replace("ö", "oe").replace("ä", "ae").replace("ü", "ue")
@@ -477,7 +483,8 @@ class MongoNewsProvider(NewsProvider):
         items = [self._to_public(d) for d in docs]
         return items[skip: skip + limit]
 
-    async def count_items(self, category: Optional[str] = None, source: Optional[str] = None) -> int:
+    async def count_items(self, category: Optional[str] = None, source: Optional[str] = None,
+                          investment_topic_slug: Optional[str] = None) -> int:
         if self._db is None:
             return 0
         cat = (category or "alle").lower()
@@ -494,6 +501,8 @@ class MongoNewsProvider(NewsProvider):
         }
         if cat != "alle":
             q["category"] = cat
+        if investment_topic_slug:
+            q["investment_topic_slug"] = str(investment_topic_slug).strip()
         if source:
             src_raw = str(source).strip()
             src_norm = src_raw.lower().replace("ö", "oe").replace("ä", "ae").replace("ü", "ue")

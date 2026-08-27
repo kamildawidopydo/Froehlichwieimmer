@@ -3778,17 +3778,24 @@ async def _newsletter_indexes_startup() -> None:
 
 
 async def news_nachrichten_list(category: Optional[str] = None, source: Optional[str] = None,
+                                 investment_topic_slug: Optional[str] = None,
                                  limit: int = 24, skip: int = 0):
     """Public news feed. Serves synthesized editorial articles + RSS-aggregator items
-    (Publisher-attributed) from a single pipeline. Supports pagination via skip/limit
-    and case-insensitive Publisher filter via `source`."""
+    (Publisher-attributed) from a single pipeline. Supports pagination via skip/limit,
+    case-insensitive Publisher filter via `source`, and `investment_topic_slug` filter
+    (Session 80.35 — Themen-Landingpages)."""
     limit = max(1, min(int(limit or 24), 60))
     skip = max(0, int(skip or 0))
     src = (source or "").strip() or None
-    items = await _news_provider.list_items(category=category, limit=limit, skip=skip, source=src)
+    topic = (investment_topic_slug or "").strip() or None
+    items = await _news_provider.list_items(
+        category=category, limit=limit, skip=skip, source=src,
+        investment_topic_slug=topic,
+    )
     total = None
     try:
-        total = await _news_provider.count_items(category=category, source=src)
+        total = await _news_provider.count_items(category=category, source=src,
+                                                  investment_topic_slug=topic)
     except Exception:  # noqa: BLE001
         total = None
     return {
@@ -3800,6 +3807,7 @@ async def news_nachrichten_list(category: Optional[str] = None, source: Optional
         "limit": limit,
         "skip": skip,
         "source": src,
+        "investment_topic_slug": topic,
         "has_more": (total or 0) > (skip + len(items)),
         "last_updated": items[0]["published_at"] if items else datetime.now(timezone.utc).isoformat(),
     }
