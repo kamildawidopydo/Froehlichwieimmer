@@ -94,6 +94,32 @@
     --bank-rose-tint:      250 240 242;   /* #FAF0F2 — very light blush surface */
     --bank-rose-border:    236 213 218;   /* #ECD5DA — hairline border */
 
+    /* Session 80.42 — Gold (real, private-banking gold, NOT the legacy coral alias).
+       Redefines --bank-gold (was mirroring accent) into a proper warm-gold slot.
+       Wealth, investment, premium markers. Small doses only. */
+    --bank-gold:           200 154 61;   /* #C89A3D warm private-banking gold */
+    --bank-gold-strong:    168 121 34;   /* #A87922 hover/pressed */
+    --bank-gold-ink:       111 80 24;    /* #6F5018 ink on light bg (AA on white/tint) */
+    --bank-gold-tint:      251 245 232;  /* #FBF5E8 very light surface */
+    --bank-gold-border:    231 213 172;  /* #E7D5AC hairline */
+    --bank-gold-soft:      252 237 239;  /* legacy — points to old coral tint, still used by dashboard */
+
+    /* Session 80.42 — Champagne. Editorial surfaces, knowledge, section breaks.
+       FLÄCHENFARBE — never a dominant CTA. */
+    --bank-champagne:        216 197 163;  /* #D8C5A3 base */
+    --bank-champagne-strong: 174 144 98;   /* #AE9062 hover/text */
+    --bank-champagne-ink:    105 86 59;    /* #69563B ink */
+    --bank-champagne-tint:   250 247 241;  /* #FAF7F1 warm section break */
+    --bank-champagne-border: 233 223 207;  /* #E9DFCF hairline */
+
+    /* Session 80.42 — Sage. Sustainability, structure, long-term stability.
+       Editorial, NOT a replacement for Petrol's functional-positive role. */
+    --bank-sage:             143 168 154;  /* #8FA89A base */
+    --bank-sage-strong:      97 125 110;   /* #617D6E hover/text */
+    --bank-sage-ink:         56 84 72;     /* #385448 ink */
+    --bank-sage-tint:        241 246 243;  /* #F1F6F3 surface */
+    --bank-sage-border:      203 218 210;  /* #CBDAD2 hairline */
+
     /* Dark contrast bands — anthracite footers */
     --bank-ink:            48 42 44;     /* #302A2C footer/dark bands */
     --bank-ink-hover:      60 52 55;
@@ -150,6 +176,24 @@
     --bank-accent-strong:  240 130 138;
     --bank-gold:           232 140 148;
     --bank-gold-soft:      54 24 26;
+    /* Session 80.42 — Gold in dark: warm but reads clearly on Charcoal bg.
+       Ink/strong lightened for AA against dark surfaces. */
+    --bank-gold-strong:    228 198 128;   /* softer, lighter */
+    --bank-gold-ink:       244 226 188;   /* text on dark */
+    --bank-gold-tint:       46 36 12;     /* very dark warm surface */
+    --bank-gold-border:     92 74 30;
+    /* Session 80.42 — Champagne (dark). Warm neutral, remains editorial. */
+    --bank-champagne:        200 176 138;
+    --bank-champagne-strong: 220 200 168;
+    --bank-champagne-ink:    235 220 194;
+    --bank-champagne-tint:    40 34 26;
+    --bank-champagne-border:  78 66 52;
+    /* Session 80.42 — Sage (dark). Muted-green, distinct from Petrol. */
+    --bank-sage:             156 184 168;
+    --bank-sage-strong:      188 210 196;
+    --bank-sage-ink:         214 232 222;
+    --bank-sage-tint:         24 40 32;
+    --bank-sage-border:       60 84 74;
     --bank-success:        52 211 153;
     /* Primary CTA fill (dark) — light-teal auf dunklem BG mit dunklem Text.
        Behalten wir hell, weil in dark der Button-Text auf dunkel invertiert wird via
@@ -1069,6 +1113,10 @@
   .card-accent-top-info::before   { background-color: rgb(var(--bank-info)); }
   .card-accent-top-navy::before   { background-color: rgb(var(--bank-ink)); }
   .card-accent-top-rose::before   { background-color: rgb(var(--bank-rose)); }
+  /* Session 80.42 — expanded editorial palette */
+  .card-accent-top-gold::before      { background-color: rgb(var(--bank-gold)); }
+  .card-accent-top-champagne::before { background-color: rgb(var(--bank-champagne)); }
+  .card-accent-top-sage::before      { background-color: rgb(var(--bank-sage)); }
 
   /* Icon-badge — pastel square/circle wrapper for a lucide icon.
      Keeps large surfaces neutral, colour lives only on the tiny badge. */
@@ -1092,6 +1140,10 @@
   .icon-badge-info   { background-color: rgb(var(--bank-info-tint));   color: rgb(var(--bank-info-strong)); }
   .icon-badge-navy   { background-color: rgb(var(--bank-ink) / 0.06);  color: rgb(var(--bank-ink)); }
   .icon-badge-rose   { background-color: rgb(var(--bank-rose-tint));   color: rgb(var(--bank-rose-strong)); }
+  /* Session 80.42 */
+  .icon-badge-gold      { background-color: rgb(var(--bank-gold-tint));      color: rgb(var(--bank-gold-strong)); }
+  .icon-badge-champagne { background-color: rgb(var(--bank-champagne-tint)); color: rgb(var(--bank-champagne-strong)); }
+  .icon-badge-sage      { background-color: rgb(var(--bank-sage-tint));      color: rgb(var(--bank-sage-strong)); }
 
   /* KPI figure — coloured numeric value while label stays navy/neutral. */
   .kpi-figure {
@@ -1107,6 +1159,10 @@
   .kpi-figure.kpi-amber  { color: rgb(var(--bank-amber-strong)); }
   .kpi-figure.kpi-info   { color: rgb(var(--bank-info-strong)); }
   .kpi-figure.kpi-rose   { color: rgb(var(--bank-rose-strong)); }
+  /* Session 80.42 */
+  .kpi-figure.kpi-gold      { color: rgb(var(--bank-gold-strong)); }
+  .kpi-figure.kpi-champagne { color: rgb(var(--bank-champagne-strong)); }
+  .kpi-figure.kpi-sage      { color: rgb(var(--bank-sage-strong)); }
 
   /* Tag — subtle pill (soft tint + strong-tone text + hairline border). */
   .tag-editorial {
@@ -1128,6 +1184,10 @@
   .tag-amber  { background-color: rgb(var(--bank-amber-tint));      color: rgb(var(--bank-amber-ink));      border-color: rgb(var(--bank-amber-border)); }
   .tag-info   { background-color: rgb(var(--bank-info-tint));       color: rgb(var(--bank-info-ink));       border-color: rgb(var(--bank-info-border)); }
   .tag-rose   { background-color: rgb(var(--bank-rose-tint));       color: rgb(var(--bank-rose-ink));       border-color: rgb(var(--bank-rose-border)); }
+  /* Session 80.42 */
+  .tag-gold      { background-color: rgb(var(--bank-gold-tint));      color: rgb(var(--bank-gold-ink));      border-color: rgb(var(--bank-gold-border)); }
+  .tag-champagne { background-color: rgb(var(--bank-champagne-tint)); color: rgb(var(--bank-champagne-ink)); border-color: rgb(var(--bank-champagne-border)); }
+  .tag-sage      { background-color: rgb(var(--bank-sage-tint));      color: rgb(var(--bank-sage-ink));      border-color: rgb(var(--bank-sage-border)); }
 
   /* Honor reduced-motion users globally */
   @media (prefers-reduced-motion: reduce) {

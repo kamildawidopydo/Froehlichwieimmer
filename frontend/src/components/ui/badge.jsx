@@ -23,6 +23,10 @@ const badgeVariants = cva(
         amber:  "border-bank-amber-border  bg-bank-amber-tint   text-bank-amber-ink font-medium",
         info:   "border-bank-info-border   bg-bank-info-tint    text-bank-info-ink font-medium",
         rose:   "border-bank-rose-border   bg-bank-rose-tint    text-bank-rose-ink font-medium",
+        // Session 80.42 — expanded palette
+        gold:      "border-bank-gold-border      bg-bank-gold-tint      text-bank-gold-ink font-medium",
+        champagne: "border-bank-champagne-border bg-bank-champagne-tint text-bank-champagne-ink font-medium",
+        sage:      "border-bank-sage-border      bg-bank-sage-tint      text-bank-sage-ink font-medium",
       },
     },
     defaultVariants: {

@@ -38,7 +38,8 @@ const ThemenLandingLayout = ({
   strategyLinks = [],
   primaryOffer,           // optional { kicker, title, body, ctaLabel, href, testId }
   relatedTopics = [],     // [{ label, href }]
-  accent = 'petrol',      // 'petrol' | 'amber'
+  accent = 'petrol',      // 'petrol' | 'amber' | 'gold' | 'champagne' | 'sage'
+  editorialAccent,        // optional — secondary editorial surface (champagne | gold | sage)
 }) => {
   const [news, setNews] = useState([]);
   const [einordnungen, setEinordnungen] = useState([]);
@@ -67,9 +68,23 @@ const ThemenLandingLayout = ({
     return () => { alive = false; };
   }, [slug]);
 
-  const accentText = accent === 'amber' ? 'text-bank-amber-strong' : 'text-bank-petrol-strong';
-  const accentCardTop = accent === 'amber' ? 'card-accent-top-amber' : 'card-accent-top-petrol';
-  const accentBorder = accent === 'amber' ? 'border-bank-amber-strong' : 'border-bank-petrol-strong';
+  // Session 80.42 — Expanded accent palette (gold/champagne/sage).
+  const ACCENT_MAP = {
+    petrol:    { text: 'text-bank-petrol-strong',    top: 'card-accent-top-petrol',    border: 'border-bank-petrol-strong',    tint: 'bg-bank-petrol-tint' },
+    amber:     { text: 'text-bank-amber-strong',     top: 'card-accent-top-amber',     border: 'border-bank-amber-strong',     tint: 'bg-bank-amber-tint' },
+    gold:      { text: 'text-bank-gold-strong',      top: 'card-accent-top-gold',      border: 'border-bank-gold-strong',      tint: 'bg-bank-gold-tint' },
+    champagne: { text: 'text-bank-champagne-strong', top: 'card-accent-top-champagne', border: 'border-bank-champagne-strong', tint: 'bg-bank-champagne-tint' },
+    sage:      { text: 'text-bank-sage-strong',      top: 'card-accent-top-sage',      border: 'border-bank-sage-strong',      tint: 'bg-bank-sage-tint' },
+  };
+  const acc = ACCENT_MAP[accent] || ACCENT_MAP.petrol;
+  const accentText = acc.text;
+  const accentCardTop = acc.top;
+  const accentBorder = acc.border;
+  const editorialAcc = editorialAccent && ACCENT_MAP[editorialAccent];
+  // Editorial surface for the Wissen-Section: warm tint (champagne/gold),
+  // sehr subtil, nur EINE Section — kein Rainbow.
+  const editorialSurface = editorialAcc ? editorialAcc.tint : '';
+  const editorialKicker = editorialAcc ? editorialAcc.text : accentText;
 
   return (
     <div className="min-h-screen bg-bank-bg">
@@ -207,8 +222,11 @@ const ThemenLandingLayout = ({
         {/* Wissen & Grundlagen                                            */}
         {/* -------------------------------------------------------------- */}
         {knowledgeLinks.length > 0 && (
-          <section className="mt-14" data-testid="themen-knowledge">
-            <p className={`font-mono text-[10.5px] uppercase tracking-[0.28em] ${accentText}`}>
+          <section
+            className={`mt-14 ${editorialSurface ? `-mx-6 rounded-xl px-6 py-10 sm:-mx-8 sm:px-8 ${editorialSurface}` : ''}`}
+            data-testid="themen-knowledge"
+          >
+            <p className={`font-mono text-[10.5px] uppercase tracking-[0.28em] ${editorialKicker}`}>
               Wissen & Grundlagen
             </p>
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">

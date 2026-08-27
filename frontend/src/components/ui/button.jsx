@@ -46,6 +46,11 @@ const buttonVariants = cva(
           "border border-bank-info-border bg-white text-bank-info-ink hover:border-bank-info hover:bg-bank-info-tint",
         "outline-rose":
           "border border-bank-rose-border bg-white text-bank-rose-ink hover:border-bank-rose hover:bg-bank-rose-tint",
+        // Session 80.42 — Gold + Sage outline variants (no solid gold CTA by design).
+        "outline-gold":
+          "border border-bank-gold-border bg-white text-bank-gold-ink hover:border-bank-gold hover:bg-bank-gold-tint",
+        "outline-sage":
+          "border border-bank-sage-border bg-white text-bank-sage-ink hover:border-bank-sage hover:bg-bank-sage-tint",
       },
       size: {
         default: "h-10 px-5 py-2",

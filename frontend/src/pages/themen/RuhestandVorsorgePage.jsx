@@ -10,6 +10,7 @@ const RuhestandVorsorgePage = () => (
   <ThemenLandingLayout
     slug="ruhestand-vorsorge"
     accent="amber"
+    editorialAccent="gold"
     seo={{
       title: 'Ruhestand & Vorsorge | Fröhlich Vermögensberatung',
       description: 'Gesetzliche Rente, betriebliche und private Vorsorge im Überblick — Grundlagen und aktuelle Reformen langfristig einordnen.',

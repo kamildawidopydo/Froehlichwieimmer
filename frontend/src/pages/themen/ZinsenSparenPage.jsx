@@ -12,6 +12,7 @@ const ZinsenSparenPage = () => (
   <ThemenLandingLayout
     slug="zinsen-sparen"
     accent="petrol"
+    editorialAccent="champagne"
     seo={{
       title: 'Zinsen & Sparen | Fröhlich Vermögensberatung',
       description: 'Zinsen verstehen, Sparzinsen im aktuellen Umfeld neutral einordnen und aktuelle Angebote für Tagesgeld und Festgeld überblicken.',

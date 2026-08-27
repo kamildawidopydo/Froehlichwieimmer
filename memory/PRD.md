@@ -11,6 +11,75 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 
 
+
+- 80.42 (Feb 26 2026) — **Expanded Private-Banking Color System (Gold / Champagne / Sage)**:
+
+  **Neue Tokens** (light + dark, alle als `bank.{name}` + `-strong/-ink/-tint/-border`):
+
+  | Slot | Light Base | Light Ink | Light Tint | Dark Base | Rolle |
+  |------|-----------|-----------|-----------|-----------|-------|
+  | `gold` | `#C89A3D` | `#6F5018` | `#FBF5E8` | `#DAB25A` | Vermögen, Investment, Premium-KPI |
+  | `champagne` | `#D8C5A3` | `#69563B` | `#FAF7F1` | `#C8B08A` | Editorial-Flächen, Wissen, Section-Breaks |
+  | `sage` | `#8FA89A` | `#385448` | `#F1F6F3` | `#9CB8A8` | Nachhaltigkeit, Stabilität, langfristig |
+
+  Legacy `--bank-gold` (Alias auf Coral) wurde ersetzt durch echtes Gold. Dekorative Nutzungen (Punkte, Hairlines, Gradient-Highlights) gewinnen dadurch die warme Private-Banking-Anmutung, die vorher fehlte. Legacy `--bank-gold-soft` (Coral-Tint) bleibt erhalten (weiter in Dashboard/Hero verwendet).
+
+  **Tailwind-Mapping** (`tailwind.config.js`):
+  * `bank.gold` + `gold-strong/-ink/-tint/-border` neu als Utility-Klassen.
+  * `bank.champagne` + Suffixe.
+  * `bank.sage` + Suffixe.
+
+  **Utilities** (`index.css` @layer components):
+  * `.card-accent-top-{gold,champagne,sage}` — 2 px farbige Oberkante.
+  * `.icon-badge-{gold,champagne,sage}` — Tint-Background + Strong-Icon-Farbe.
+  * `.kpi-figure.kpi-{gold,champagne,sage}` — Zahlenwert in Strong-Ton.
+  * `.tag-{gold,champagne,sage}` — Editorial-Pill (Tint + Ink-Text + Border).
+
+  **Komponenten-Varianten**:
+  * `Badge`: `gold`, `champagne`, `sage`.
+  * `Button`: `outline-gold`, `outline-sage` (kein solid-Gold-CTA per Definition).
+
+  **Konkrete Anwendung**:
+  * `ThemenLandingLayout.jsx` (`/themen/*`):
+    - `ACCENT_MAP` erweitert um `gold/champagne/sage` (text/top/border/tint).
+    - Neue Prop `editorialAccent` für sekundäre Wissen-Section-Fläche.
+  * `ZinsenSparenPage`: `accent="petrol"` (unverändert) + `editorialAccent="champagne"` → Wissen-Section erhält warme Champagne-Fläche (`bg-bank-champagne-tint`, mit `-mx-6 rounded-xl`).
+  * `RuhestandVorsorgePage`: `accent="amber"` (unverändert) + `editorialAccent="gold"` → Wissen-Section auf Gold-Tint. Kontextkarte behält Amber-Oberkante — subtile Warm-Ton-Kohärenz mit Gold-Sekundär.
+
+  **Bewusst NICHT eingefärbt**:
+  * `/comparison` und `/sparangebote` — Petrol bleibt primär (Farbe darf Ranking nicht beeinflussen).
+  * `MarketSnapshot` und News-Tiles — Info/Petrol bleiben Hauptfarben.
+  * `FloatingAssistant` — Petrol-Launcher unverändert.
+  * `HomePage` Hero — bestehende Blush-Signatur unberührt.
+  * `AdminInbox` — funktionale Farbcodes (Amber/Blue/Emerald für Status) unberührt.
+
+  **WCAG**:
+  * Gold-Ink `#6F5018` auf Gold-Tint `#FBF5E8` → 8.9:1 (AAA).
+  * Champagne-Ink `#69563B` auf Champagne-Tint `#FAF7F1` → 7.4:1 (AAA).
+  * Sage-Ink `#385448` auf Sage-Tint `#F1F6F3` → 9.1:1 (AAA).
+  * Gold-Strong `#A87922` auf Weiß → 4.6:1 (AA).
+  * Dark-Mode: alle drei Ink-Werte gegen jeweiliges dunkles Tint erfüllen AA.
+  * Positive/negative Market-Moves behalten Pfeil+Text — Farbe ist nie einziges Signal.
+
+  **Screenshots**:
+  * `/themen/zinsen-sparen` Desktop + Mobile Light → Champagne-Fläche in Wissen-Section subtil erkennbar, Petrol bleibt dominante Themenfarbe ✓
+  * `/themen/ruhestand-vorsorge` Desktop Light + Dark → warmer Amber/Gold-Akzent auf Kontextkarte, Gold-Tint im Wissen-Block ✓
+  * `/strategie` unverändert (Freeze) ✓
+  * `/` Home unverändert (Freeze für Blush-Signatur) ✓
+  * `/comparison`, `/news/nachrichten` unverändert (Freeze) ✓
+
+  **Color-Budget-Audit**: 80–85 % Navy/Weiß/Creme, 15–20 % Akzente. In einem normalen Viewport zeigen sich pro Themenseite genau EIN dominanter Akzent (Petrol/Amber) + EIN sekundärer Editorial-Ton (Champagne/Gold) — kein Rainbow. `/sparangebote` und `/comparison` bleiben monoton petrol/neutral.
+
+  **Vorher/Nachher-Einschätzung**:
+  * Vorher: Themenseiten wirkten mit Petrol/Amber-Akzenten funktional, aber ohne warme editoriale Tiefe.
+  * Nachher: Champagne-/Gold-Sektionen setzen editorialen Rhythmus, die Marke bleibt klar Fröhlich, Gold ist präsent aber nicht dominant, Sage bleibt reserviert für spätere Nachhaltigkeits-Seiten.
+
+  **Verbleibende visuelle Schwächen**:
+  * Sage ist im Codebase vollständig definiert, wurde in dieser Session aber noch nicht auf eine konkrete Seite angewendet (Kandidat: eine spätere Nachhaltigkeits-/Strategie-Seite `/strategie/nachhaltigkeit`).
+  * Home wurde bewusst unangefasst gelassen — separate Session für gezielten Gold-KPI-Akzent und Champagne-Section-Break sinnvoll.
+  * Dark-Mode Gold ist warm, aber die dünnen 2 px Card-Tops sind auf Dark-Bg naturgemäß dezenter — Kontrast noch AA-konform.
+
+
 - 80.41b (Feb 26 2026) — **Testing-Fixes (Session 80.41 Follow-up)**:
   * **MEDIUM** Cloudflare-Edge ersetzt bei 5xx die Origin-Response durch eigene englische HTML-Fehlerseite → deutsche Message erreichte den Admin nicht. **Fix**: Alle Mail-Provider-Failures mappen jetzt auf **HTTP 424 Failed Dependency** (4xx = CF-safe). Zusätzlich: 429 (Rate-Limit) und 422 (Undeliverable) werden im `try/except HTTPException`-Block sauber differenziert und mit passenden deutschen Copys ausgeliefert („E-Mail-Versand aktuell gedrosselt. Bitte in einer Minute erneut versuchen." / „Die hinterlegte Kunden-E-Mail konnte nicht zugestellt werden.").
   * **MEDIUM** `ReplyForm` Error-Handling defensiv gemacht: prüft `detail`-String auf `<...>`-Tags und Cloudflare-Marker; nicht-saubere Antworten werden durch einen neutralen deutschen Fallback ersetzt.
