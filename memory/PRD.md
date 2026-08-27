@@ -8,6 +8,23 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.29 Phase-1 (Aug 27 2026) — **Financial Intelligence Hub — Audit + erste P0-Slice**:
+
+  **Audit-Ergebnis** — Wiederverwendungspotenzial hoch: `db.news_articles` liefert bereits alle nötigen Felder (`summary, excerpt, sources[], investment_topic_slug, is_top_news, relevance_score, category`). `db.einordnung_posts` + Router existiert produktiv. Kategorien-Mapping (`CATEGORY_LABELS`), Strategy-Cluster (`strategieClusters.js`) und Cross-Link-Komponenten (`NewsStrategyCrosslink`, `KnowledgeCrossLinkBox`, `TopicCrossLinkBox`, `NachrichtenRelated`) sind alle bereits im Frontend integriert. Marktdaten-Komponenten (`MarktuebersichtSidebar`, `MiniMarketChart`, etc.) und Home-Preview (`HomeNewsPreview`, `HomeHeroNewsPreview`) sind fertig. Fehlt konkret: (a) „Heute wichtig"-Top-3-Kuration im Nachrichten-Feed, (b) „Das Wichtigste in Kürze"-Bullets auf Detail, (c) inline „Fröhlich Einordnung"-Kopplung an Artikel.
+
+  **P0-Slice implementiert**: `NachrichtenDetailPage.jsx` — neue `<aside data-testid="news-detail-key-takeaways">` mit `card-accent-top-rose` + Blush-Bulletpoints. Splitet das existierende `summary`/`excerpt`-Feld an Satzgrenzen (Lookahead auf `[.!?]` + Großbuchstabe/Ziffer), filtert Sätze auf 30–220 Zeichen, rendert 2–4 Bullets. Render-Guards: `raw.length ≥ 140` UND ≥2 saubere Sätze; sonst wird der Block still ausgeblendet. Keine neuen API-Calls, keine neuen Datenfelder — reine Client-Logik auf bestehendem Feld.
+
+  **Live-Verifikation**: Detail-Seite „Kabinettsklausur in Neuhardenberg …" rendert 3 Bullets, visuell klar vom externen Artikeltext getrennt (Blush-Signatur = Fröhlich-editorial, nicht externer Fakten-Ton).
+
+  **Nicht angetastet**: 48h-Freshness, Cron, Global Color System, Nav, News-Slugs, Archive, Business Logic, News-Layout unter dem Take-Aways-Block.
+
+  **Backlog Phase 2 (empfohlene Reihenfolge)**:
+  1. **„Heute wichtig"-Top-3** auf `/news/nachrichten` — sortiert nach `is_top_news DESC, relevance_score DESC, published_at DESC`, limit 3, oberhalb der Themen-Sektion. Nutzt `NewsHeroFeatured`-Komponente
+  2. **Inline „Fröhlich Einordnung"** im Detail — sofern `einordnung_posts` mit passendem `category` oder `topic` verfügbar, unter Take-Aways rendern; klar visuell abgetrennt (Petrol-Signatur, Kicker „Fröhlich Einordnung")
+  3. **Themenwelten-Grid** auf `/news/nachrichten` — `NewsCategorySections` gruppiert bereits nach Kategorie; nur Reihenfolge + Semantik anpassen (Märkte/Zinsen/Vorsorge/Wirtschaft/…)
+  4. **News→Strategie/Wissen inline** — sind bereits verlinkbar; auf Detail unter Take-Aways einfach 1–3 verwandte Wissensartikel + 1 passenden Strategy-Cluster rendern (existierende Komponenten wiederverwenden)
+
+
 - 80.28b (Aug 27 2026) — **`data-hide-sticky-cta` proaktiv auf Overlap-Hotspots**:
   Der in 80.28 eingeführte `data-hide-sticky-cta`-Mechanismus wird auf die drei bekannten Content-Regionen ausgerollt und um den **Investment-Topic-Teaser** ergänzt (der eigentliche Overlap-Verursacher, den 80.28 fälschlich nur beim ProductInquiryStickyCta beobachtet hatte).
 

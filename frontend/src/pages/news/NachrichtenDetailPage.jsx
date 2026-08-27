@@ -200,6 +200,48 @@ const NachrichtenDetailPage = () => {
             </div>
           )}
 
+          {/* Session 80.29 — „Das Wichtigste in Kürze": splittet die redaktionelle
+              Kurzfassung an Satzgrenzen und rendert 2–4 Bullets. Reine Client-Logik
+              auf bereits existierendem `summary`/`excerpt`-Feld — kein neuer Daten-
+              call. Wird nur gerendert, wenn genug Substanz vorhanden ist (≥2 Sätze
+              oder ≥140 Zeichen), sonst wird der Block ausgeblendet. Klar visuell
+              vom externen Artikeltext getrennt (Blush-Ton, kleine Bullets, Border). */}
+          {(() => {
+            const raw = (item.summary || item.excerpt || '').trim();
+            if (raw.length < 140) return null;
+            const sentences = raw
+              .split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ0-9])/)
+              .map(s => s.trim())
+              .filter(s => s.length >= 30 && s.length <= 220);
+            const bullets = sentences.slice(0, 4);
+            if (bullets.length < 2) return null;
+            return (
+              <aside
+                data-testid="news-detail-key-takeaways"
+                className="card-accent-top card-accent-top-rose mt-8 border border-bank-border bg-white p-6"
+                aria-labelledby="news-detail-key-takeaways-title"
+              >
+                <p
+                  id="news-detail-key-takeaways-title"
+                  className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-rose-strong"
+                >
+                  Das Wichtigste in Kürze
+                </p>
+                <ul className="mt-4 space-y-2.5">
+                  {bullets.map((b, i) => (
+                    <li key={i} className="flex gap-3 text-[14px] leading-relaxed text-bank-text">
+                      <span
+                        aria-hidden
+                        className="mt-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-bank-rose"
+                      />
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+            );
+          })()}
+
           {/* Bevorzugt: lizenzierter Volltext. Fallback: eigene redaktionelle Zusammenfassung. */}
           {hasLicensedFulltext ? (
             <div className="mt-6" data-testid="news-detail-fulltext">
