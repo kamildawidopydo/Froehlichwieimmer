@@ -110,6 +110,68 @@ DEFAULT_TOPICS = [
         "compliance_label": "Information der Fröhlich Vermögensberatung",
         "related_news_slugs": [],
     },
+    # Session 80.32 — Zinsen & Sparen (neu)
+    {
+        "slug": "zinsen-sparen",
+        "category": "Zinsen & Sparen",
+        "headline": "Zinsen &amp; Sparen — einordnen statt jagen",
+        "teaser": (
+            "Tagesgeld, Festgeld und Sparzinsen im aktuellen Zinsumfeld — worauf Sparer "
+            "achten sollten und wie sich Angebote seriös einordnen lassen."
+        ),
+        "overview_short": (
+            "Wie Sie Sparzinsen im Zusammenspiel mit Inflation, EZB-Leitzins und "
+            "Einlagensicherung neutral bewerten."
+        ),
+        "target_url": "/themen/zinsen-sparen",
+        "image_url": None,
+        "enabled": True,
+        "priority": 9,
+        "display_delay_ms": 35000,
+        "scroll_threshold_pct": 50,
+        "cooldown_days": 7,
+        "allowed_routes": [],
+        "excluded_routes": [
+            "/themen/zinsen-sparen",
+            "/login", "/register", "/forgot-password", "/reset-password",
+            "/formular", "/dokumente/vorschau",
+            "/admin",
+            "/dashboard",
+        ],
+        "compliance_label": "Information der Fröhlich Vermögensberatung",
+        "related_news_slugs": [],
+    },
+    # Session 80.32 — Ruhestand & Vorsorge (neu)
+    {
+        "slug": "ruhestand-vorsorge",
+        "category": "Ruhestand & Vorsorge",
+        "headline": "Ruhestand &amp; Vorsorge langfristig denken",
+        "teaser": (
+            "Gesetzliche Rente, betriebliche und private Vorsorge — Grundlagen und aktuelle "
+            "Entwicklungen verständlich eingeordnet, ohne Produktversprechen."
+        ),
+        "overview_short": (
+            "Wie eine tragfähige Ruhestandsplanung aussieht, welche Bausteine sich ergänzen "
+            "und wo Reformen tatsächlich Auswirkungen haben können."
+        ),
+        "target_url": "/themen/ruhestand-vorsorge",
+        "image_url": None,
+        "enabled": True,
+        "priority": 9,
+        "display_delay_ms": 35000,
+        "scroll_threshold_pct": 50,
+        "cooldown_days": 7,
+        "allowed_routes": [],
+        "excluded_routes": [
+            "/themen/ruhestand-vorsorge",
+            "/login", "/register", "/forgot-password", "/reset-password",
+            "/formular", "/dokumente/vorschau",
+            "/admin",
+            "/dashboard",
+        ],
+        "compliance_label": "Information der Fröhlich Vermögensberatung",
+        "related_news_slugs": [],
+    },
 ]
 
 

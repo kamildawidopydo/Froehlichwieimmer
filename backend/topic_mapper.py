@@ -1,12 +1,17 @@
-"""Session 80.31 — Zentrales Investment-Topic-Mapping.
+"""Session 80.31–80.32 — Zentrales Investment-Topic-Mapping + Registry.
 
 Regelbasiertes Scoring + harte Guards. Wird gleichermaßen vom Backfill-Script
 UND von der laufenden News-Synthesis-Pipeline aufgerufen, damit historische
 und zukünftige Artikel EINE gemeinsame Klassifikation teilen.
 
-Grundprinzip: „Lieber kein Topic als ein falsches Topic."
+Grundprinzip:
+    „Lieber kein Topic als ein falsches Topic."
+    Ein Topic beschreibt ein DAUERHAFTES Finanzthema — nicht eine
+    News-Kategorie. Topics werden nur angelegt, wenn mindestens zwei
+    Ebenen (News/Wissen/Strategie/Einordnung/Produkt) sinnvoll verbunden
+    werden können.
 
-Confidence-Modell:
+Confidence-Modell (Session 80.31):
     +3  starker Titel-Match (Regex im Titel)
     +2  zweiter starker Titel-Match
     +3  strukturierter Tag / Topic
@@ -15,26 +20,33 @@ Confidence-Modell:
     Reject bei Negative-Guard-Match
 
 High-Confidence-Threshold: 5.  Alles darunter → kein Topic.
+Threshold in Session 80.32 unverändert — Coverage ist kein Erfolgsziel an
+sich.
 
-Aktuell gültige Slugs (aus `investment_topics`-Collection, Stand 80.31):
-    aktien, anleihen, dividenden
+Gültige Slugs (Stand 80.32, MÜSSEN mit `investment_topics.slug` matchen):
+    aktien           — Aktien & Kapitalmärkte (bestehend seit 80.x)
+    anleihen         — Anleihen & Zinsen        (bestehend seit 80.x)
+    dividenden       — Dividenden & Ausschüttungen (bestehend seit 80.x)
+    zinsen-sparen    — Sparen, Tagesgeld, Festgeld, EZB-Sparbezug (NEU 80.32)
+    ruhestand-vorsorge — Altersvorsorge, Rente, Ruhestandsplanung (NEU 80.32)
 
-Themen wie „Zinsen/Sparen", „Rente", „Immobilien", „Inflation", „Nachhaltig"
-existieren im Topic-Katalog NICHT — sie werden bewusst NICHT synthetisch
-erzeugt. Nur ihre Sparangebote-CTA-Relevanz wird separat im Frontend
-(WasBedeutetDasBlock / PassendZumThema) via Keyword-Matching genutzt.
+Bewusst NICHT angelegt in 80.32 (Topic-Inflation vermeiden):
+    immobilien-finanzierung — nur News-Layer, keine Strategie/Wissen
+    inflation-kaufkraft     — nur WasBedeutetDasBlock-CTA, keine dauerhafte
+                              Content-Ebene; Money-Impact-Regel bleibt aktiv
+    etf-investieren         — deckungsgleich mit `aktien` (ETF-Signal ist
+                              bereits STRONG-Keyword im `aktien`-Rule-Set)
 """
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 # ---------------------------------------------------------------------------
 # Kanonische Slugs — MÜSSEN mit `investment_topics.slug` übereinstimmen.
-# Erweitern nur, wenn ein entsprechendes Topic-Dokument existiert.
 # ---------------------------------------------------------------------------
-VALID_SLUGS = {"aktien", "anleihen", "dividenden"}
+VALID_SLUGS = {"aktien", "anleihen", "dividenden", "zinsen-sparen", "ruhestand-vorsorge"}
 
 HIGH_CONFIDENCE_THRESHOLD = 5
 
@@ -54,9 +66,81 @@ class Rule:
     negative: tuple[re.Pattern, ...] = ()
 
 
-# NB: `re.I` verwendet — Regex-Boundaries sind wichtig, damit „Zins" NICHT
-# in „Rezension" matcht.
+# NB: Reihenfolge ist Priorität bei Score-Gleichstand.
+# spezifischere Topics zuerst → damit „ETF-Sparplan" nicht in `aktien`
+# hängen bleibt, wenn `zinsen-sparen` gleichzeitig matcht.
 RULES: tuple[Rule, ...] = (
+    # -----------------------------------------------------------------------
+    # zinsen-sparen — Session 80.32
+    # Ziel: EZB-Sparbezug, Tages-/Festgeld, Einlagenzins. Nicht Anleihe-Zins.
+    # -----------------------------------------------------------------------
+    Rule(
+        slug="zinsen-sparen",
+        title_strong=(
+            re.compile(r"\btagesgeld\b", re.I),
+            re.compile(r"\bfestgeld\b", re.I),
+            re.compile(r"\bsparzins", re.I),
+            re.compile(r"\beinlagenzins", re.I),
+            re.compile(r"\bsparangebote?\b", re.I),
+            re.compile(r"\bsparerpauschbetrag\b", re.I),
+            # EZB-Zinsentscheid mit Bezug im Titel — nur wenn zusätzlich
+            # Sparbezug im Summary matcht (siehe summary_signals + score-Regel).
+            re.compile(r"\b(?:ezb|leitzins)\b.*\b(?:sparer|einlage)", re.I),
+        ),
+        tags=("tagesgeld", "festgeld", "sparzinsen", "einlagen"),
+        categories=("zinsen", "sparen"),
+        summary_signals=(
+            re.compile(r"\bsparer(?:n|innen)?\b", re.I),
+            re.compile(r"\beinlage[nr]?\b", re.I),
+            re.compile(r"\btages-?\s*und\s*festgeld", re.I),
+        ),
+        negative=(
+            # Unternehmens- oder Kreditzinsen ohne Sparbezug
+            re.compile(r"\bunternehmensanleihe", re.I),
+            re.compile(r"\bkreditzins", re.I),
+            re.compile(r"\bbauzins", re.I),
+            re.compile(r"\bhypothek", re.I),
+        ),
+    ),
+    # -----------------------------------------------------------------------
+    # ruhestand-vorsorge — Session 80.32
+    # Ziel: Alters-/Rentenpolitik, private Vorsorge. Nicht Personalie.
+    # -----------------------------------------------------------------------
+    Rule(
+        slug="ruhestand-vorsorge",
+        title_strong=(
+            re.compile(r"\bgesetzliche\s+rente\b", re.I),
+            re.compile(r"\brentenreform\b", re.I),
+            re.compile(r"\brenteneintritt\b", re.I),
+            re.compile(r"\brentenniveau\b", re.I),
+            re.compile(r"\brentenpaket\b", re.I),
+            re.compile(r"\baltersvorsorge\b", re.I),
+            re.compile(r"\bprivate\s+rente\b", re.I),
+            re.compile(r"\bbetriebsrente\b", re.I),
+            re.compile(r"\brürup", re.I),
+            re.compile(r"\briester", re.I),
+            re.compile(r"\bruhestand", re.I),
+            # „Rente mit 63/67" — starkes Signal
+            re.compile(r"\brente\s+mit\s+\d{2}\b", re.I),
+        ),
+        tags=("rente", "altersvorsorge", "vorsorge", "ruhestand"),
+        categories=("vorsorge", "altersvorsorge", "rente"),
+        summary_signals=(
+            re.compile(r"\brentenbeitrag\b", re.I),
+            re.compile(r"\brentenbeziehende?\b", re.I),
+            re.compile(r"\brentenkasse\b", re.I),
+            re.compile(r"\bpension(?:en|är)", re.I),
+        ),
+        negative=(
+            # Personalie: „geht in Rente", „geht mit 65 in den Ruhestand"
+            re.compile(r"\bvorstand[a-zäöüß]*\s+geht\s+in\s+rente", re.I),
+            re.compile(r"\bceo[a-zäöüß]*\s+geht\s+in\s+(?:rente|ruhestand)", re.I),
+            re.compile(r"\bgeschäftsführer[a-zäöüß]*\s+geht\s+in\s+rente", re.I),
+        ),
+    ),
+    # -----------------------------------------------------------------------
+    # aktien — Session 80.31 (unverändert bis auf zwei Guard-Erweiterungen)
+    # -----------------------------------------------------------------------
     Rule(
         slug="aktien",
         title_strong=(
@@ -77,11 +161,13 @@ RULES: tuple[Rule, ...] = (
             re.compile(r"\bportfolio\b", re.I),
         ),
         negative=(
-            # personelle Kontexte
             re.compile(r"\bwechselt zu\b", re.I),
             re.compile(r"\br[uü]cktritt\b", re.I),
         ),
     ),
+    # -----------------------------------------------------------------------
+    # anleihen — Session 80.31 (unverändert)
+    # -----------------------------------------------------------------------
     Rule(
         slug="anleihen",
         title_strong=(
@@ -103,10 +189,12 @@ RULES: tuple[Rule, ...] = (
             re.compile(r"\blaufzeit\b", re.I),
         ),
         negative=(
-            # allgemeine Rezession / Konjunktur ohne Zinsbezug
             re.compile(r"\brezession\b(?!.*(?:zins|anleih|bond))", re.I),
         ),
     ),
+    # -----------------------------------------------------------------------
+    # dividenden — Session 80.31 (unverändert)
+    # -----------------------------------------------------------------------
     Rule(
         slug="dividenden",
         title_strong=(
@@ -122,11 +210,66 @@ RULES: tuple[Rule, ...] = (
             re.compile(r"\bquartalsdividende\b", re.I),
         ),
         negative=(
-            # Gewinnwarnungen sind KEINE Dividenden-Meldungen
             re.compile(r"\bgewinnwarnung\b", re.I),
         ),
     ),
 )
+
+
+# ---------------------------------------------------------------------------
+# TOPIC REGISTRY — Single Source of Truth für UI-Metadaten & Cross-Mappings.
+# Die eigentliche Klassifikationslogik lebt in `RULES` oben; die Registry
+# beschreibt VERKNÜPFUNGEN (Knowledge/Strategy/Product/Einordnung) und wird
+# bewusst schmal gehalten, damit Frontend und Backend dieselben kanonischen
+# Bezeichner nutzen können.
+# ---------------------------------------------------------------------------
+TOPIC_REGISTRY: dict[str, dict] = {
+    "aktien": {
+        "label": "Aktien & Kapitalmärkte",
+        "accent": "primary",   # bestehend
+        "knowledge_slugs": ["fonds-grundlagen"],
+        "strategy_categories": ["anlagestile"],
+        "sparangebote": False,
+        "einordnung_categories": ["aktienmaerkte", "maerkte"],
+    },
+    "anleihen": {
+        "label": "Anleihen & Zinsen",
+        "accent": "petrol",
+        "knowledge_slugs": [],
+        "strategy_categories": ["schutz-steuerung"],
+        "sparangebote": False,
+        "einordnung_categories": ["zinsen"],
+    },
+    "dividenden": {
+        "label": "Dividenden & Ausschüttungen",
+        "accent": "amber",
+        "knowledge_slugs": [],
+        "strategy_categories": ["anlagestile"],
+        "sparangebote": False,
+        "einordnung_categories": [],
+    },
+    "zinsen-sparen": {
+        "label": "Zinsen & Sparen",
+        "accent": "petrol",
+        "knowledge_slugs": [],
+        "strategy_categories": ["schutz-steuerung"],
+        "sparangebote": True,   # → /sparangebote CTA erlaubt
+        "einordnung_categories": ["zinsen"],
+    },
+    "ruhestand-vorsorge": {
+        "label": "Ruhestand & Vorsorge",
+        "accent": "amber",
+        "knowledge_slugs": [],
+        "strategy_categories": ["altersvorsorge"],
+        "sparangebote": False,
+        "einordnung_categories": [],
+    },
+}
+
+
+def get_topic_metadata(slug: str) -> Optional[dict]:
+    """Liefert Cross-Mapping-Metadaten für einen kanonischen Slug."""
+    return TOPIC_REGISTRY.get(slug)
 
 
 def _score_rule(rule: Rule, title: str, summary: str, category: str, tags: list[str]) -> tuple[int, list[str]]:
@@ -134,7 +277,6 @@ def _score_rule(rule: Rule, title: str, summary: str, category: str, tags: list[
     reasons: list[str] = []
     score = 0
 
-    # 1) Titel-Matches (max. zwei zählen)
     title_hits = [rx.pattern for rx in rule.title_strong if rx.search(title)]
     if title_hits:
         score += 3
@@ -143,7 +285,6 @@ def _score_rule(rule: Rule, title: str, summary: str, category: str, tags: list[
             score += 2
             reasons.append(f"title:{title_hits[1]} (+2)")
 
-    # 2) Tag-Match (nur einer zählt)
     if tags:
         norm_tags = {t.lower().strip() for t in tags if isinstance(t, str)}
         tag_hit = norm_tags & set(rule.tags)
@@ -151,19 +292,16 @@ def _score_rule(rule: Rule, title: str, summary: str, category: str, tags: list[
             score += 3
             reasons.append(f"tag:{sorted(tag_hit)[0]} (+3)")
 
-    # 3) Kategorie
     if category and category.lower() in rule.categories:
         score += 2
         reasons.append(f"category:{category} (+2)")
 
-    # 4) Summary-Signal (max. eins)
     for rx in rule.summary_signals:
         if rx.search(summary):
             score += 1
             reasons.append(f"summary:{rx.pattern} (+1)")
             break
 
-    # 5) Negative-Guard → Reject
     combined = f"{title} {summary}"
     for rx in rule.negative:
         if rx.search(combined):
@@ -194,8 +332,7 @@ def classify_article(
 
     Verhalten bei Mehrdeutigkeit: das Regelset mit dem höchsten Score
     gewinnt. Bei Gleichstand gewinnt die frühere Position in `RULES`
-    (aktien > anleihen > dividenden — bewusste Reihenfolge, weil
-    „Dividenden" fast immer auch als „Aktien" gilt, umgekehrt nicht).
+    (spezifischere Topics vor allgemeineren).
     """
     text_title = (title or "").strip()
     text_summary = ((summary or "") + " " + (excerpt or "")).strip()

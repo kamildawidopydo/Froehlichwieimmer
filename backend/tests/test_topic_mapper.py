@@ -17,6 +17,13 @@ POSITIVE_CASES = [
     ("Deutsche Bank Aktie klettert auf 15-Jahres-Hoch", "Aktionäre freuen sich", "maerkte", [], "aktien"),
     ("EZB senkt Leitzins um 25 Basispunkte", "Die Notenbank passt an", "zinsen", [], "anleihen"),
     ("Nvidia-Zahlen treiben S&P 500 an", "Der Index legt zu", "maerkte", [], "aktien"),
+    # Session 80.32 — zinsen-sparen positive
+    ("Tagesgeld-Zinsen sinken auf breiter Front", "Sparer erhalten weniger", "zinsen", [], "zinsen-sparen"),
+    ("Festgeld-Vergleich: große Unterschiede zwischen Banken", "Sparer sollten prüfen", "zinsen", [], "zinsen-sparen"),
+    ("Sparzinsen unter Druck: Was jetzt zählt", "Einlagenzinsen fallen", "zinsen", [], "zinsen-sparen"),
+    # Session 80.32 — ruhestand-vorsorge positive
+    ("Rentenreform: Bundesregierung plant Anhebung des Rentenniveaus", "Rentenbeitrag steigt", "politik", [], "ruhestand-vorsorge"),
+    ("Altersvorsorge im Wandel", "Pensionäre profitieren", "vorsorge", [], "ruhestand-vorsorge"),
 ]
 
 
@@ -41,10 +48,14 @@ NEGATIVE_CASES = [
     ("Klimapolitik unter Druck", "Umweltschutz-Debatte", "politik", []),
     # Inflation ohne Zins-/Sparbezug — bewusst NICHT klassifiziert (kein passender Slug)
     ("Reallöhne steigen — Kaufkraft nimmt zu", "Preisniveau...", "wirtschaft", []),
-    # Rente-Thema — bewusst NICHT klassifiziert (kein passender Slug)
-    ("Merz will Rente mit 63 abschaffen", "Rentenreform geplant", "politik", []),
     # Immobilie ohne Finanzierungssignal
     ("Wohnungsmarkt zeigt regionale Unterschiede", "Marktbericht", "wirtschaft", []),
+    # Session 80.32 — Bauzinsen sollen NICHT zinsen-sparen triggern (Guard)
+    ("Bauzinsen steigen deutlich", "Immobilienkredite werden teurer", "zinsen", []),
+    # Session 80.32 — Personalien-Rente Guard
+    ("Vorstand Meier geht in Rente", "Nachfolger gesucht bei Konzern", "unternehmen", []),
+    # Session 80.32 — Merz-Rente-mit-63 hat nur 3 pt (title-only), unter Threshold — bewusst
+    ("Merz hält an Abschaffung der Rente mit 63 fest", "Politische Debatte", "politik", []),
 ]
 
 

@@ -8,6 +8,59 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.32 (Aug 27 2026) — **Unified Financial Topic Taxonomy**:
+
+  **Phase A — Audit** (dokumentiert):
+     * Existierende Topic-Slugs vor 80.32: `aktien`, `anleihen`, `dividenden` (aus `investment_topics`-Collection).
+     * Verstreute Taxonomien: Strategy hat eigenen `topicIndex` (5 Cluster: anlagestile, nachhaltigkeit, schutz-steuerung, altersvorsorge, generationen). Einordnung-Posts nutzen `category`-Feld (zinsen, aktienmaerkte, rohstoffe, technologie). News-Kategorien != Topics.
+     * Verwendungsstellen: `EinordnungInlineBox`, `TopicCrossLinkBox` (COPY-Dict), `NewsStrategyCrosslink`, `TopicWissenBlock`, `topic_mapper.py`, `AdminNewsArticles.jsx`.
+
+  **Phase B/C — Ziel-Taxonomie**:
+     Final gültige Slugs (5): `aktien`, `anleihen`, `dividenden`, **`zinsen-sparen` (neu)**, **`ruhestand-vorsorge` (neu)**.
+     * `zinsen-sparen`: verbindet News + Einordnung(category=zinsen) + Sparangebote-CTA + Strategy(schutz-steuerung) = **4 Ebenen** ✓
+     * `ruhestand-vorsorge`: News + Strategy(altersvorsorge) + Einordnung-Potential = **2-3 Ebenen** ✓
+
+     Bewusst NICHT angelegt (Topic-Inflation vermeiden):
+     * `immobilien-finanzierung` — nur News-Layer, keine dauerhafte Strategie/Wissen ⇒ SKIP
+     * `inflation-kaufkraft` — nur transient über Money-Impact-CTA, keine Content-Ebene ⇒ SKIP
+     * `etf-investieren` — deckungsgleich mit `aktien` (ETF ist bereits STRONG-Keyword) ⇒ SKIP
+
+  **Phase D — Single Source of Truth** (`/app/backend/topic_mapper.py`):
+     * `VALID_SLUGS = {aktien, anleihen, dividenden, zinsen-sparen, ruhestand-vorsorge}`
+     * `TOPIC_REGISTRY[slug]` mit `label`, `accent`, `knowledge_slugs`, `strategy_categories`, `sparangebote (bool)`, `einordnung_categories`.
+     * Threshold **unverändert 5** — keine Absenkung für Coverage.
+
+  **Phase F — Strong Signals** (im Mapper):
+     * `zinsen-sparen`: Tagesgeld, Festgeld, Sparzinsen, Einlagenzins, Sparangebote, Sparerpauschbetrag, EZB+Sparer-Kombination. **Negative Guards**: Unternehmensanleihe, Kreditzins, Bauzins, Hypothek (verhindert Overlap mit Anleihen/Immobilien).
+     * `ruhestand-vorsorge`: gesetzliche Rente, Rentenreform, Renteneintritt, Rentenniveau, Rentenpaket, Altersvorsorge, private/betriebliche Rente, Rürup, Riester, Ruhestand, „Rente mit 63/67". **Negative Guards**: Personalien-Rente („Vorstand geht in Rente").
+
+  **Phase G — Frontend-Integration**:
+     * `TopicCrossLinkBox` (COPY): 2 neue Einträge für zinsen-sparen / ruhestand-vorsorge.
+     * `PassendZumThema` **topic-first**: prüft zuerst `investment_topic_slug === 'zinsen-sparen'`, dann Keyword-Fallback.
+     * Registry-Docs mit `target_url: /themen/{slug}` sind gespeichert; Route selbst existiert schon als Investment-Topic-Detail.
+
+  **Phase H — Dry Run + Backfill**:
+     * 46 analysiert · 6 bestehende geschützt · **0 neue Matches**.
+     * Grund: aktuelle 40 nicht-klassifizierten News enthalten weder Tages-/Festgeld-Signale noch stark genug scored Rentenreform-Meldungen. Bsp. „Merz Rente mit 63 abschaffen" scored 3 (title-only) — unter Threshold. **Kein Regex-Aufblähen für Coverage** (DoD).
+     * Idempotency-Check: zweiter Lauf 0 Writes ✓.
+
+  **Phase I — Unit-Tests** (`test_topic_mapper.py`, 18 Cases): 8 positive (davon 5 neu für zinsen-sparen/ruhestand-vorsorge), 8 negative (davon 3 neu: Bauzinsen-Guard, Personalien-Rente-Guard, Merz-Rente-Coverage-Check), 2 Guard-Regressions.  Alle **grün**.
+
+  **Phase O — Regression**:
+     * Screenshots von 3 News-Detailseiten: takeaways/money-impact/strategy-crosslink rendern korrekt.
+     * `heute-wichtig`-Kacheln: 3 ✓ (Top-3-Kuration unverändert)
+     * MarketSnapshot: unverändert (DAX ^GDAXI, S&P ^GSPC, EUR/USD, Gold GC=F). Freeze eingehalten.
+
+  **Zusätzliche API-Calls**: **0**. `TOPIC_REGISTRY` ist In-Memory. TopicCrossLinkBox nutzt bestehenden `/api/investment-topics/active`-Endpoint (bereits vor 80.32 im Einsatz).
+
+  **False-Positive-Risiken** (dokumentiert):
+     * „Rendite" im `anleihen`-Rule könnte auf Aktien-News matchen — durch Negative-Guards und Reihenfolge (spezifisch vor allgemein) gemildert, aber nicht 100 % ausgeschlossen.
+     * `Rente mit 63` als starkes Signal könnte bei politischen Nebenerwähnungen triggern — durch Threshold=5 und Personalien-Guard geschützt.
+     * `Einlagenzins` in Zinsen-Rule könnte theoretisch Anleihenzins-Kontexte erwischen — Reihenfolge `zinsen-sparen` vor `anleihen` + Negative-Guard `unternehmensanleihe` schützt.
+
+  **Freeze eingehalten**: keine Tag-Ingestion-Pipeline (Phase L), keine event_signature (Phase M), MarketSnapshot 80.29e unangetastet, keine Sparklines/Krypto/Watchlist.
+
+
 - 80.31 (Aug 27 2026) — **Investment Topic Intelligence + „Passend zum Thema"**:
 
   **Phase A — Backfill**:

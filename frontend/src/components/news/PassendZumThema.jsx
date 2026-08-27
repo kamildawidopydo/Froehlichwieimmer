@@ -52,6 +52,9 @@ const hasNegative = (text) => NEGATIVE_KEYWORDS.some((rx) => rx.test(text));
 
 const shouldRender = (article) => {
   if (!article) return false;
+  // Session 80.32 — Topic-first: strukturierter Slug ist die stärkste Quelle.
+  // Fällt der Slug leer aus, greift das keyword-basierte Safety-Fallback.
+  if (article.investment_topic_slug === 'zinsen-sparen') return true;
   const text = `${article.title || ''} ${article.summary || ''} ${article.excerpt || ''}`;
   if (hasNegative(text)) return false;
   if (hasStrong(text)) return true;

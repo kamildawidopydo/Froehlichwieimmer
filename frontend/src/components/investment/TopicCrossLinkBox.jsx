@@ -22,6 +22,19 @@ const COPY = {
     body: 'Erfahren Sie, welche Kennzahlen bei Dividendenunternehmen tatsächlich zählen und warum eine hohe Ausschüttungsrendite allein noch kein Qualitätsmerkmal ist.',
     cta: 'Zum Thema Dividenden',
   },
+  // Session 80.32 — neue Topics
+  'zinsen-sparen': {
+    eyebrow: 'Mehr zum Thema',
+    headline: 'Zinsen & Sparen richtig einordnen',
+    body: 'Wie sich Sparzinsen im aktuellen Zinsumfeld neutral bewerten lassen — im Zusammenspiel mit Inflation, EZB-Leitzins und Einlagensicherung.',
+    cta: 'Zum Thema Zinsen & Sparen',
+  },
+  'ruhestand-vorsorge': {
+    eyebrow: 'Mehr zum Thema',
+    headline: 'Ruhestand & Vorsorge langfristig denken',
+    body: 'Gesetzliche, betriebliche und private Vorsorge im Überblick — Grundlagen und Reformen verständlich eingeordnet.',
+    cta: 'Zum Thema Ruhestand',
+  },
 };
 
 /**
