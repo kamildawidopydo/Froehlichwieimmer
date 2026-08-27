@@ -10,6 +10,9 @@ import TopicCrossLinkBox from '@/components/investment/TopicCrossLinkBox';
 import KnowledgeCrossLinkBox from '@/components/knowledge/KnowledgeCrossLinkBox';
 import NewsStrategyCrosslink from '@/components/news/NewsStrategyCrosslink';
 import EinordnungInlineBox from '@/components/news/EinordnungInlineBox';
+import WasBedeutetDasBlock from '@/components/news/WasBedeutetDasBlock';
+import { buildKeyTakeaways } from '@/lib/news/keyTakeaways';
+import { relativeTimeLabel, updatedLabel } from '@/lib/news/relativeTime';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -124,7 +127,13 @@ const NachrichtenDetailPage = () => {
               )}
               <p className="mt-5 text-[15.5px] leading-relaxed text-bank-text-muted">{item.summary}</p>
               <p className="mt-6 text-[11px] uppercase tracking-[0.18em] text-bank-text-muted">
-                {publishedFmt}
+                {relativeTimeLabel(item.published_at) || publishedFmt}
+                {updatedLabel(item.updated_at, item.published_at) && (
+                  <>
+                    <span aria-hidden className="mx-2 text-bank-gold">·</span>
+                    <span data-testid="news-detail-updated-label">{updatedLabel(item.updated_at, item.published_at)}</span>
+                  </>
+                )}
                 <span> · Redaktion: <span className="text-bank-text">Fröhlich Vermögensberatung</span></span>
               </p>
 
@@ -202,21 +211,12 @@ const NachrichtenDetailPage = () => {
             </div>
           )}
 
-          {/* Session 80.29 — „Das Wichtigste in Kürze": splittet die redaktionelle
-              Kurzfassung an Satzgrenzen und rendert 2–4 Bullets. Reine Client-Logik
-              auf bereits existierendem `summary`/`excerpt`-Feld — kein neuer Daten-
-              call. Wird nur gerendert, wenn genug Substanz vorhanden ist (≥2 Sätze
-              oder ≥140 Zeichen), sonst wird der Block ausgeblendet. Klar visuell
-              vom externen Artikeltext getrennt (Blush-Ton, kleine Bullets, Border). */}
+          {/* Session 80.30 — „Das Wichtigste in Kürze" mit strukturierter
+              Diversity (WAS/WARUM/WER/FOLGE). Erzeugt keine neuen Fakten —
+              zieht Sätze aus vorhandenem summary+excerpt. Fallback: null. */}
           {(() => {
-            const raw = (item.summary || item.excerpt || '').trim();
-            if (raw.length < 140) return null;
-            const sentences = raw
-              .split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ0-9])/)
-              .map(s => s.trim())
-              .filter(s => s.length >= 30 && s.length <= 220);
-            const bullets = sentences.slice(0, 4);
-            if (bullets.length < 2) return null;
+            const bullets = buildKeyTakeaways(item);
+            if (!bullets) return null;
             return (
               <aside
                 data-testid="news-detail-key-takeaways"
@@ -246,6 +246,10 @@ const NachrichtenDetailPage = () => {
 
           {/* Session 80.29 Phase 2 — Inline Fröhlich Einordnung (nur wenn Match). */}
           <EinordnungInlineBox article={item} />
+
+          {/* Session 80.30 — „Was bedeutet das für mein Geld?" (kontextuell,
+              nur bei klarem Themen-Match; max. 1 Next-Step-CTA). */}
+          <WasBedeutetDasBlock article={item} />
 
           {/* Bevorzugt: lizenzierter Volltext. Fallback: eigene redaktionelle Zusammenfassung. */}
           {hasLicensedFulltext ? (

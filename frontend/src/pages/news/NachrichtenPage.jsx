@@ -6,6 +6,8 @@ import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import EinordnungSection from '@/components/nachrichten/EinordnungSection';
 import MarketSnapshot from '@/components/news-markte/MarketSnapshot';
+import { pickTopThree } from '@/lib/news/editorialRelevance';
+import { relativeTimeLabel } from '@/lib/news/relativeTime';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -33,14 +35,7 @@ const CAT_LABEL = {
   wissen: 'Wissen',
 };
 
-const timeAgo = (iso) => {
-  if (!iso) return '';
-  const diff = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 90) return 'gerade eben';
-  if (diff < 3600) return `vor ${Math.floor(diff / 60)} Min.`;
-  if (diff < 86400) return `vor ${Math.floor(diff / 3600)} Std.`;
-  return `vor ${Math.floor(diff / 86400)} Tagen`;
-};
+const timeAgo = relativeTimeLabel;
 
 const CategoryTag = ({ category }) => (
   <span className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-accent-strong">
@@ -305,36 +300,9 @@ const NachrichtenPage = () => {
   const headlines = items.slice(1, 6);
   const grid = items.slice(1);
 
-  // Session 80.29 Phase 2 — „Heute wichtig"-Top-3-Kuration.
-  // Sortierung: is_top_news DESC → relevance_score DESC → published_at DESC.
-  // Diversity: nach der Sortierung bevorzugen wir bis zu 3 Meldungen aus
-  // UNTERSCHIEDLICHEN Kategorien. Wenn dadurch weniger als 3 verfügbar wären,
-  // fallen wir auf die Original-Reihenfolge zurück.
-  const topThree = useMemo(() => {
-    if (!items || items.length === 0) return [];
-    const scored = [...items].sort((a, b) => {
-      const at = a.is_top_news ? 1 : 0;
-      const bt = b.is_top_news ? 1 : 0;
-      if (at !== bt) return bt - at;
-      const ar = a.relevance_score || 0;
-      const br = b.relevance_score || 0;
-      if (ar !== br) return br - ar;
-      return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
-    });
-    const picked = [];
-    const seenCats = new Set();
-    for (const it of scored) {
-      if (picked.length >= 3) break;
-      if (!seenCats.has(it.category)) { picked.push(it); seenCats.add(it.category); }
-    }
-    if (picked.length < 3) {
-      for (const it of scored) {
-        if (picked.length >= 3) break;
-        if (!picked.includes(it)) picked.push(it);
-      }
-    }
-    return picked;
-  }, [items]);
+  // Session 80.30 — kuratierte Top-3 mit Editorial-Score, Event-Deduplizierung
+  // und Kategorien-Diversity (relevance-first). Reine Client-Reduktion.
+  const topThree = useMemo(() => pickTopThree(items), [items]);
 
   // Session 80.29 Phase 3 — Themenwelten-Bündelung.
   // 1× Client-side-Reduktion über den bereits geladenen Feed — kein neuer API-Call.

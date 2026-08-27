@@ -1,17 +1,15 @@
 /**
  * Session 80.29 Phase 2 — Inline „Fröhlich Einordnung" auf News-Detail.
+ * Session 80.30 — strengeres Relevanz-Gating: reine Kategorie-Matches werden
+ * NICHT mehr akzeptiert, damit keine generischen Einordnungen unter beliebigen
+ * Nachrichten erscheinen. Erlaubt sind nur harte Bezüge (Slug-Backlink oder
+ * gemeinsames investment_topic_slug).
  *
  * Datenquelle: /api/einordnung (bereits produktiver Endpoint aus 80.x).
  * Matching-Priorität:
- *   1. investment_topic_slug (falls Artikel + Einordnung beide gesetzt)
- *   2. related_news_slug === Artikel-Slug
- *   3. category-Match
- *   4. sonst: nichts rendern.
- * Kein zufälliges Fallback, kein "irgend eine Einordnung" — lieber weglassen.
- *
- * Rendert: kompakte Box mit Petrol-Signatur, klar als redaktionelle
- * Fröhlich-Perspektive gekennzeichnet, visuell vom externen Nachrichtentext
- * getrennt. Kein neuer globaler Style.
+ *   1. related_news_slug === Artikel-Slug          (starker Bezug)
+ *   2. gemeinsames investment_topic_slug           (thematischer Bezug)
+ *   3. sonst: nichts rendern.                      (kein generisches Fallback)
  */
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
@@ -40,19 +38,16 @@ const EinordnungInlineBox = ({ article }) => {
     let alive = true;
     loadEinordnungen().then((posts) => {
       if (!alive || !posts.length) return;
-      // 1. exakter Backlink über related_news_slug
-      let m = posts.find((p) => p.related_news_slug && p.related_news_slug === article.slug);
-      // 2. investment_topic_slug beidseitig
+      const published = posts.filter((p) => !p.status || p.status === 'published');
+      // 1. exakter Backlink über related_news_slug (stärkster Bezug)
+      let m = published.find((p) => p.related_news_slug && p.related_news_slug === article.slug);
+      // 2. gemeinsames investment_topic_slug (thematischer Bezug)
       if (!m && article.investment_topic_slug) {
-        m = posts.find((p) => p.related_news_slug === article.investment_topic_slug
-          || p.category === article.investment_topic_slug);
+        m = published.find((p) => p.investment_topic_slug === article.investment_topic_slug
+          || p.related_news_slug === article.investment_topic_slug);
       }
-      // 3. Kategorien-Match
-      if (!m && article.category) {
-        m = posts.find((p) => p.category && p.category.toLowerCase() === article.category.toLowerCase());
-      }
-      // Nur veröffentlichte, nicht-demo Einordnungen anzeigen
-      if (m && (m.status && m.status !== 'published')) m = null;
+      // Kein Kategorie-Fallback mehr (80.30) — lieber nichts anzeigen als
+      // einen zufällig passenden „Anleger sollten langfristig denken"-Text.
       setMatch(m || null);
     });
     return () => { alive = false; };

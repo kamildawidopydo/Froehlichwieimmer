@@ -8,6 +8,61 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.30 (Aug 27 2026) — **News Intelligence &amp; Editorial Quality**:
+
+  **Ziel**: Weniger Aggregator, mehr kuratierte Finanzplattform. „Was ist passiert → Warum wichtig → Was bedeutet es für mein Geld → Was sollte ich verstehen?"
+
+  **1. Editorial Relevance Boosting (`/app/frontend/src/lib/news/editorialRelevance.js`)**
+     - `editorialScore(article)` = `relevance_score + is_top_bonus(20) + high_impact_bonus(15) - low_impact_penalty(12) + freshness(0–5)`
+     - High-Impact-Keywords: EZB/Leitzins/Notenbank/Fed, Inflation/Teuerung/Verbraucherpreise, Crash/Rekordhoch/Talfahrt, Rente/Vorsorge/Pension, Abgeltungsteuer/Erbschaftsteuer, Koalitionsvertrag/Haushaltsplan/Schuldenbremse.
+     - Low-Impact-Penalty: Personalien/Rücktritt, Promi/Lifestyle-Wirtschaft, repetitive Quartalszahlen.
+
+  **2. Event-Deduplizierung** — `isSameEvent(a, b)`:
+     - gleicher `slug` → same event
+     - gleicher `investment_topic_slug` + ≥2 überlappende Event-Key-Tokens → same event
+     - Event-Key: Titel-Signaturwörter (≥4 Zeichen, ohne Stopwords) mit Synonym-Cluster-Reduktion (ezb/lagarde/notenbank → `ezb`, leitzins/zinssenkung/zinserhöhung → `leitzins`).
+     - `pickTopThree(items)`: Pass 1 = Diversity + Dedup, Pass 2 = fehlende Slots ohne Kat-Diversity, aber weiter mit Dedup.
+
+  **3. „Das Wichtigste in Kürze" v2 (`/lib/news/keyTakeaways.js`)**
+     - Merged `summary + excerpt`, splittet an Satzgrenzen (30–220 Chars).
+     - Klassifiziert Sätze nach Fragetyp: **WAS** (Fakt) → **WARUM** (deshalb/weil/bedeutet) → **WER** (anleger/sparer/verbraucher/rentner) → **FOLGE** (könnte/dürfte/erwart/reagier).
+     - Pro Typ max. 1 Bullet (WAS = max. 2), 2-Token-Overlap-Filter >55 % → skip Duplikate.
+     - Rendert 2–4 Bullets in Storyfluss-Reihenfolge; unter 2 → nichts.
+
+  **4. „Was bedeutet das für mein Geld?" (`/lib/news/moneyImpact.js` + `/components/news/WasBedeutetDasBlock.jsx`)**
+     - 4 geschützte Themen-Profile mit STRONG/SUPPORT-Keyword-Layern:
+       - `ezb-zinsen` (petrol) → CTA `/sparangebote`
+       - `inflation` (amber) → CTA `/inflation-und-vermoegensaufbau`
+       - `markt-korrektur` (coral) → CTA `/strategie/aufbauen`
+       - `rente-vorsorge` (amber) → CTA `/strategie/ruhestand`
+     - Match nur bei STRONG-Keyword ODER (Kategorie/Topic UND SUPPORT-Keyword).
+     - Max. 3 Punkte (nur wenn ≥2 SUPPORT-Treffer, sonst 2 Punkte).
+     - Genau **1** kontextuelle CTA. Hinweis „keine individuelle Anlageberatung".
+
+  **5. Einordnung-Guard (`/components/news/EinordnungInlineBox.jsx`)**
+     - Kategorie-Only-Fallback entfernt.
+     - Erlaubt: `related_news_slug === article.slug` ODER gemeinsames `investment_topic_slug`.
+     - Kein generischer „Anleger sollten langfristig denken"-Text mehr.
+
+  **6. Verständliche Zeitangaben (`/lib/news/relativeTime.js`)**
+     - `relativeTimeLabel`: gerade eben / vor N Min. / vor N Std. / Heute HH:MM / Gestern HH:MM
+     - `updatedLabel`: nur wenn `updated_at - published_at ≥ 10 Min`, verhindert kosmetische Auto-Republish-Anzeigen.
+
+  **7. Zusätzliche API-Calls**: **0**. Alle Verbesserungen sind Client-Reduktionen auf bereits geladenen `/api/news/nachrichten`- und `/api/einordnung`-Daten. Kein N+1.
+
+  **8. Explizit NICHT geändert (Freeze)**: MarketSnapshot (80.29e bleibt bit-identisch), keine Sparklines, keine Krypto-Kachel, kein Watchlist, keine neuen Detailseiten, keine klickbaren Market-Tiles, keine neuen Provider.
+
+  **9. Verifikations-Ergebnis**:
+     - Top-3-Kuration Live: **DAX/Nvidia (Märkte)** + **Reallöhne/Kaufkraft (Wirtschaft)** + **Rente-mit-63 (Politik)** — drei Kategorien, drei High-Impact-Themen, Event-Dedup greift.
+     - News-Detail DAX-Artikel: `key-takeaways ✓`, `money-impact (Börsen-Korrektur, coral) ✓`, `strategy-crosslink ✓`, `sources ✓`, `einordnung → NO (kein Match, kein Fake) ✓`, `updated-label → NO (unter 10-min-Threshold) ✓`.
+     - MarketSnapshot: DAX 26.365, S&P 7.675, EUR/USD 1,1647, Gold 3.977 € — unverändert korrekt (80.29e-Baseline).
+
+  **10. Verbleibende Datenbasis-Schwächen** (dokumentiert, kein Fix in dieser Session):
+     - Fast alle News-Artikel haben aktuell `investment_topic_slug: None` → Editorial-Dedup fällt öfter auf reine Titel-Signaturen zurück (funktioniert, aber weniger präzise).
+     - `excerpt` ist bei fast allen Aggregator-Items leer → Takeaways stammen 1:1 aus `summary`.
+     - `updated_at` ist bei praktisch allen Items ≈ `published_at` → „Aktualisiert vor…" erscheint selten. Beabsichtigt.
+
+
 - 80.29e (Aug 27 2026) — **Market Data Integrity Fix** (Root-Cause & Provider-Swap):
 
   **Root Cause**: Der ursprünglich angezeigte „DAX 47,83" / „S&P 500 512,44" war kein Bug im Frontend, sondern eine **strukturelle Fehldeklaration im Backend**. Die `MARKET_INDEX_SYMBOLS`-Konfiguration in `server.py` mappte:
