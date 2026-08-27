@@ -8,6 +8,31 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.28b (Aug 27 2026) — **`data-hide-sticky-cta` proaktiv auf Overlap-Hotspots**:
+  Der in 80.28 eingeführte `data-hide-sticky-cta`-Mechanismus wird auf die drei bekannten Content-Regionen ausgerollt und um den **Investment-Topic-Teaser** ergänzt (der eigentliche Overlap-Verursacher, den 80.28 fälschlich nur beim ProductInquiryStickyCta beobachtet hatte).
+
+  **Root-Cause-Ergänzung**: Der als "Aktien im Fokus" sichtbare Overlay ist `InvestmentTopicTeaser.jsx` (mount via `Layout.js`), NICHT `ProductInquiryStickyCta`. 80.28 hatte den Hide-Selektor nur im ProductInquiry-CTA erweitert → der Teaser blieb sichtbar. Fix: eigener IntersectionObserver im Teaser, identische Selektor-Liste (`[data-hide-sticky-cta], footer, #footer, .site-footer`), Fade-Only via kombiniertem `isShown`-State (kein Layout-Shift).
+
+  **Markierte Wrapper**:
+  - `components/investment/InvestmentTopicTeaser.jsx` — eigene Safe-Zone-Observer-Logik + `hiddenForSafeZone`-State + `isShown = visible && !hiddenForSafeZone`
+  - `components/Footer.js` — `<footer id="footer" data-hide-sticky-cta>` (site-weit, aus 80.28)
+  - `pages/news/NachrichtenDetailPage.jsx` — Wrapper-`<div data-hide-sticky-cta>` ab Quellen-Block bis inkl. `NachrichtenRelated`
+  - `pages/Leistungen.js` — Section `<section data-hide-sticky-cta>` „Ihre Ziele / CTA" (letzte Section vor Footer)
+  - `pages/Bewertungen.jsx` — Section `<section id="bewertung-abgeben" data-hide-sticky-cta>` (Submit-Form + Trust-Copy)
+
+  **Verifikation (DOM-Probe live)**:
+  - `/bewertungen` (Submit-Section im Viewport): Teaser `opacity=0`, `pointerEvents=none`, `dataVisible=false`, `marks=2` ✓
+  - `/leistungen` (Footer im Viewport): kein Teaser sichtbar ✓
+  - `/nachrichten/<slug>` (Artikel-Ende im Viewport): keine Überlagerung ✓
+  - Fade-only-Transition (300ms opacity), kein Layout-Shift, DOM bleibt
+
+  **Getestete Routes**: `/bewertungen`, `/leistungen`, `/nachrichten/<slug>`  
+  **Getestete Breakpoints**: Desktop 1440, Mobile 390 (Tablet nicht separat — Hide-Logik ist viewport-unabhängig)  
+  **Verbleibende Overlap-Issues**: keine bekannten. Weitere Content-Regionen können sitewide per `data-hide-sticky-cta` markiert werden — MutationObserver im Teaser erkennt neu hinzugefügte Elemente automatisch.
+
+**Session 80.28 vollständig eingefroren.**
+
+
 - 80.28 (Aug 27 2026) — **News & Märkte Freshness-Fallback + Sticky-CTA Overlay-Fix**:
 
   **Ursache news_markte_articles-Leeransicht**: Die Kollektion war seit Session-Beginn nur EINMALIG geseedet (`server.py:1993`, Guard `count_documents({}) == 0`). Ohne Cron-Refresh alterte der Seed natürlich; sobald >48h alt, griff die in 80.27 eingeführte Freshness-Regel → `top=0, overview=0` dauerhaft. Kein eigener Ingest-Pipeline existiert für `news_markte_articles`.

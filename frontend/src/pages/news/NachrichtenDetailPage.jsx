@@ -218,6 +218,10 @@ const NachrichtenDetailPage = () => {
             </div>
           )}
 
+          {/* Session 80.28b — Artikel-Ende + Quellen + Related sind der "Content-Abschluss"
+              des News-Detail. Sticky-CTA hier lokal ausblenden, damit er nicht das
+              Ende des Fließtexts, den Quellen-Nachweis oder Cross-Links verdeckt. */}
+          <div data-hide-sticky-cta>
           {/* Verwendete Faktenquellen — dezent am Ende, klickbar */}
           {(item.sources && item.sources.length > 0) && (
             <div className="mt-12 border-t border-bank-border pt-6" data-testid="news-detail-sources">
@@ -271,6 +275,7 @@ const NachrichtenDetailPage = () => {
           )}
 
           <NachrichtenRelated slug={slug} />
+          </div>
         </article>
       )}
     </div>

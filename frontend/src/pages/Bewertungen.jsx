@@ -183,7 +183,10 @@ const Bewertungen = () => {
       </section>
 
       {/* Submit form */}
-      <section id="bewertung-abgeben" className="border-t border-bank-border bg-neutral-50/50 py-16 sm:py-20">
+      {/* Session 80.28b — Letzter inhaltlicher Section vor dem Footer + Formular.
+          Sticky-CTA hier ausblenden, damit die Bewertungs-Submit-Card, „Bewertung
+          abgeben"-Trust-Copy und die Submit-Buttons nicht überdeckt werden. */}
+      <section id="bewertung-abgeben" data-hide-sticky-cta className="border-t border-bank-border bg-neutral-50/50 py-16 sm:py-20">
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-10 px-6 sm:px-10 lg:grid-cols-[1fr_1.2fr]">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-bank-accent-strong">Bewertung abgeben</p>

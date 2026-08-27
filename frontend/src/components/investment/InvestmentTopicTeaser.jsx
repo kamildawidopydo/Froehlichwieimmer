@@ -68,6 +68,11 @@ const InvestmentTopicTeaser = () => {
   const [topic, setTopic] = useState(null);
   const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // Session 80.28b — Wenn `[data-hide-sticky-cta]`-Zonen (Footer, Trust-Icons,
+  // Artikel-Ende, Conversion-CTAs) im Viewport sind, blenden wir den Teaser
+  // per Opacity aus — kein Layout-Shift, DOM bleibt, nur pointer-events und
+  // opacity werden weggeschaltet. Selbe Semantik wie ProductInquiryStickyCta.
+  const [hiddenForSafeZone, setHiddenForSafeZone] = useState(false);
   const timerRef = useRef(null);
   const scrollHandlerRef = useRef(null);
   const closeBtnRef = useRef(null);
@@ -196,14 +201,59 @@ const InvestmentTopicTeaser = () => {
     setVisible(false);
   };
 
+  // Session 80.28b — Safe-Zones (Footer, Trust-Icons, Artikel-Ende, Bewertungs-
+  // Formular, Conversion-CTAs, alles mit [data-hide-sticky-cta]) beobachten
+  // und Teaser bei Sichtkontakt ausblenden. Fade-only, kein Layout-Shift.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const SEL = '[data-hide-sticky-cta], footer, #footer, .site-footer';
+    const intersecting = new Set();
+
+    const recompute = () => {
+      let anyActive = false;
+      for (const el of intersecting) {
+        if (el.isConnected) { anyActive = true; break; }
+      }
+      setHiddenForSafeZone(anyActive);
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) intersecting.add(e.target);
+          else intersecting.delete(e.target);
+        });
+        recompute();
+      },
+      { threshold: 0.05 },
+    );
+
+    const observed = new WeakSet();
+    const observeAll = () => {
+      document.querySelectorAll(SEL).forEach((el) => {
+        if (!observed.has(el)) { io.observe(el); observed.add(el); }
+      });
+    };
+    observeAll();
+
+    const mo = new MutationObserver(observeAll);
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    return () => { io.disconnect(); mo.disconnect(); };
+  }, []);
+
   if (!mounted || !topic) return null;
+
+  // Session 80.28b — Kombinierter Sichtbarkeits-State: nur wenn der Teaser
+  // eigentlich sichtbar wäre UND keine Safe-Zone im Viewport ist.
+  const isShown = visible && !hiddenForSafeZone;
 
   return (
     <div
       role="complementary"
-      aria-hidden={!visible}
+      aria-hidden={!isShown}
       className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-end px-3 pb-3 transition-opacity duration-300 sm:inset-auto sm:bottom-6 sm:right-6 sm:pb-0 ${
-        visible ? 'opacity-100' : 'opacity-0'
+        isShown ? 'opacity-100' : 'opacity-0'
       }`}
     >
       <div
@@ -212,9 +262,9 @@ const InvestmentTopicTeaser = () => {
         aria-describedby="invtopic-teaser-body"
         data-testid="invtopic-teaser"
         id="invtopic-teaser"
-        data-visible={visible ? 'true' : 'false'}
-        className={`pointer-events-auto w-full max-w-md border border-bank-border bg-white shadow-[0_18px_38px_-14px_rgba(15,25,45,0.28)] transition-transform duration-300 ease-out ${
-          visible ? 'translate-y-0' : 'translate-y-4'
+        data-visible={isShown ? 'true' : 'false'}
+        className={`${isShown ? 'pointer-events-auto' : 'pointer-events-none'} w-full max-w-md border border-bank-border bg-white shadow-[0_18px_38px_-14px_rgba(15,25,45,0.28)] transition-transform duration-300 ease-out ${
+          isShown ? 'translate-y-0' : 'translate-y-4'
         }`}
       >
         <div className="relative px-5 py-5 sm:px-6 sm:py-6">

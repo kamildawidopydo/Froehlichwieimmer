@@ -137,7 +137,10 @@ export default function Leistungen() {
       </section>
 
       {/* IHRE ZIELE / CTA */}
-      <section className="py-16 sm:py-20">
+      {/* Session 80.28b — Letzte Content-Section vor dem Footer + Conversion-CTA.
+          Sticky-CTA hier ausblenden, damit „Persönliches Gespräch vereinbaren"
+          und der Bewertungs-Fluss nicht überlagert werden. */}
+      <section className="py-16 sm:py-20" data-hide-sticky-cta>
         <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
           <p className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">Ihre Ziele</p>
           <h2 className="mt-5 max-w-3xl font-display text-[clamp(1.55rem,3.2vw+0.6rem,2.35rem)] font-light leading-[1.1] tracking-[-0.02em] text-bank-text" style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}>
