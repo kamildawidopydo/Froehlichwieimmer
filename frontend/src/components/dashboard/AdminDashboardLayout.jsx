@@ -361,6 +361,11 @@ const AdminDashboardLayout = () => {
           badge: pendingProductInquiryCount,
         },
         {
+          to: '/admin/assistant-handoffs',
+          label: t('shell.admin.assistantHandoffs', { defaultValue: 'Assistent-Anfragen' }),
+          icon: MessageCircle,
+        },
+        {
           to: '/admin/social-preview-messages',
           label: t('shell.admin.socialPreviewMessages', { defaultValue: 'Social-Nachrichten' }),
           icon: MessageCircle,

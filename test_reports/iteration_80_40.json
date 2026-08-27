@@ -1,0 +1,48 @@
+{
+  "summary": "Session 80.40 Assistant-Handoff lead management tested end-to-end. Backend: 16 pytest cases (create/24-hex id/DB doc, honeypot silent-drop, duplicate detection, consent, validation, rate-limit, admin 401/403, list/stats/single/PATCH, status+search filter, chat regression) — 14 passed, 2 failed. Frontend: FloatingAssistant chat + handoff form + admin inbox (stats, filters, detail drawer, PATCH persistence, sidebar link) verified. Two blocking frontend defects found: FloatingAssistant was imported but never rendered in App.js (fixed by test agent) and the assistant launcher is completely covered/click-intercepted by the product-inquiry sticky CTA (z-90 over z-70) — still open.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/assistant/handoff", "issue": "Consent not enforced when the field is omitted: code checks only `if payload.consent is False`, so a payload without `consent` is stored (200 + handoff_id). DSGVO consent can be bypassed by any non-browser client. Should be `if payload.consent is not True`.", "priority": "HIGH"},
+      {"endpoint": "POST /api/assistant/handoff (_strip_pii)", "issue": "PII redaction order bug + PIN digits kept. 'IBAN DE89370400440532013000 und PIN 1234' is stored as 'Meine [entfernt] [[entfernt] entfernt] und [entfernt] 1234.' — (a) the SENSITIVE keyword pass runs AFTER the IBAN pass and mangles the '[IBAN entfernt]' marker, (b) the PIN/TAN digits themselves (1234) are never removed because CARDLIKE requires 13-19 digits. Spec expected '[IBAN entfernt]' and no clear-text PIN. Fix: run SENSITIVE pass first (or use non-matching markers) and add a rule for `(pin|tan|passwort|kennwort)\\W{0,6}\\d{3,8}` -> '[entfernt]'.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "GET /api/admin/assistant-handoffs/stats", "issue": "Aggregation maps a null/missing status group to key 'new' with `by_status[key] = count` (overwrite, not accumulate). With one legacy doc without `status` plus real new docs, one group is silently dropped -> stats showed total=2 while the list returned 3 items. Use `by_status[key] = by_status.get(key,0)+count` and derive total from count_documents({})."},
+      {"endpoint": "GET /api/admin/assistant-handoffs?status=new", "issue": "Docs whose `status` field is missing are rendered as 'Neu' badge by _to_public but are NOT returned by ?status=new -> filter/badge mismatch. Query should be {'status': {'$in': ['new', None]}} for 'new' (or backfill the field)."},
+      {"endpoint": "POST /api/assistant/handoff (rate limit)", "issue": "Rate limit keys on `request.client.host`, which behind the k8s ingress is the proxy IP -> the 5/h bucket is effectively shared by ALL visitors (measured: only 2 distinct source IPs for the whole preview traffic). Also in-memory, so it resets on every backend restart and is not shared across replicas. Consider X-Forwarded-For (left-most) plus a Mongo/TTL-backed counter."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "App.js / FloatingAssistant", "issue": "FloatingAssistant was imported but never rendered — the assistant launcher/panel did not exist anywhere in the app. FIXED by test agent (added <FloatingAssistant /> next to <CookieConsent /> in App.js). Please review placement.", "selector": "[data-testid=assistant-launcher]", "priority": "CRITICAL"},
+      {"component": "FloatingAssistant launcher vs ProductInquiry sticky CTA", "issue": "The product-inquiry sticky CTA (data-testid=product-inquiry-sticky-cta, fixed bottom-right, z-[90]) sits exactly on top of the assistant launcher (fixed bottom-6 right-6, z-[70]). Playwright click fails with 'subtree intercepts pointer events'; after dismissing the CTA the restore pill (product-inquiry-sticky-restore) still covers the launcher. Real users cannot open the assistant on any page where that CTA is shown. Needs offset/stacking coordination (e.g. shift launcher up or raise z-index and reposition the CTA).", "selector": "[data-testid=assistant-launcher]", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Handoff submit (bot timing guard)", "issue": "Working as designed but very tight for fast fills: the 1500 ms guard rejects submits with 'Bitte einen Moment warten, dann erneut senden.' and gives no auto-retry/countdown; automated/fast users must click twice. Consider retrying automatically after the remaining delay.", "affected_selectors": ["[data-testid=handoff-submit-btn]", "[data-testid=handoff-error]"]}
+    ],
+    "design_issues": [
+      {"screen": "Admin inbox detail drawer", "issues": ["Contact block shows the origin route as a bare '/' next to a map-pin icon without a label — unclear; prefix with 'Herkunftsseite'.", "Stat card 'Gesamt' can disagree with the number of table rows (see backend stats bug) — misleading to admins."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_assistant_handoff.py", "/app/test_reports/pytest/assistant_handoff.xml"],
+  "action_items": [
+    "Fix z-index/position conflict between assistant launcher and product-inquiry sticky CTA (launcher currently unclickable).",
+    "Enforce consent strictly: reject when consent is not True (missing field currently accepted).",
+    "Fix _strip_pii ordering and add PIN/TAN digit redaction so '[IBAN entfernt]' marker survives and digits are removed.",
+    "Fix stats aggregation accumulation + treat missing status as 'new' in the status filter.",
+    "Review the <FloatingAssistant /> render added by the test agent in App.js (placement/route exclusions, e.g. hide inside /admin)."
+  ],
+  "critical_code_review_comments": [
+    "assistant_admin.py declares 4 placeholder endpoints on a module-level `router` that raise 500 ('unbound'); the router is never included, but leaving dead duplicates is a trap — if anyone includes `router`, the placeholders can shadow the real routes. Delete them and inject deps via a dependency factory instead.",
+    "routes/assistant.py imports `db`, `_send_email_via_emergent`, FRONTEND_URL etc. from server inside the request handler; move to a shared deps module to avoid silent fallbacks (mail is skipped entirely if the import fails, with no telemetry).",
+    "Handoff PATCH does not record a status-history/audit trail — only updated_by/updated_at; consider an events array for lead workflow traceability.",
+    "Handoff rate limit + honeypot state is per-process in-memory; with more than one backend replica the protection degrades silently."
+  ],
+  "updated_files": ["/app/frontend/src/App.js", "/app/backend/tests/test_assistant_handoff.py"],
+  "success_rate": {"backend": "87.5% (14/16 pytest)", "frontend": "80% (chat, handoff form, admin inbox/drawer/filters/persistence/sidebar all OK; launcher blocked by overlay, render was missing)"},
+  "seed_data_creation": "Temporary handoffs created via API/UI (name prefix TEST_/TESTUI) and deleted afterwards. 2 pre-existing dev docs left untouched (one of them has no `status` field — useful to reproduce the stats bug).",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "admin@kapitalmitte.com / admin123 (from /app/memory/test_credentials.md) — cookie JWT login works, 401 unauth and 403 non-admin verified",
+  "context_for_next_testing_agent": "Run backend suite serially: `cd /app/backend && pytest tests/test_assistant_handoff.py -n 0` (handoff rate limit is 5/h/IP in-memory; each class restarts the backend via the `reset_rl` fixture to reset it — do NOT run this file with the default -n 2). Visitor gate is dismissed with localStorage keys `kapitalmitte_visitor_profile` and `kapitalmitte_cookie_consent` (NOT 'visitor-welcome-gate.v1'). For the assistant launcher you must currently hide [data-testid=product-inquiry-sticky-cta] via add_style_tag, otherwise clicks are intercepted. Handoff submit requires >1.5 s between form open and submit. Admin UI verified at /admin/assistant-handoffs.",
+  "rca_of_the_issue": "1) Launcher unreachable: two independently developed fixed-position widgets share the bottom-right slot; product-inquiry CTA uses z-[90] vs assistant z-[70] and a wide (22rem) card, so it covers and intercepts the launcher. 2) Missing render: App.js imported FloatingAssistant but the JSX was never added to the tree. 3) Consent bypass: `payload.consent is False` only catches an explicit false, not an absent field. 4) PII: IBAN placeholder text itself contains the word 'IBAN', which the later SENSITIVE keyword pass rewrites to '[entfernt]'; PIN digits are shorter than the 13-digit CARDLIKE threshold. 5) Stats: dict assignment instead of accumulation collapses the null-status group into 'new'."
+}

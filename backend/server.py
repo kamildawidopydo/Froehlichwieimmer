@@ -4017,6 +4017,25 @@ try:
 except Exception as _exc:  # noqa: BLE001
     logger.warning("assistant router not registered: %s", _exc)
 
+# Session 80.40 — Admin-Inbox für Assistant-Handoffs (Lead Ops).
+try:
+    from routes.assistant_admin import register as _register_assistant_admin  # noqa: E402
+    _register_assistant_admin(app, db, require_admin)
+except Exception as _exc:  # noqa: BLE001
+    logger.warning("assistant-admin router not registered: %s", _exc)
+
+
+@app.on_event("startup")
+async def _assistant_handoffs_indexes() -> None:
+    try:
+        await db.assistant_handoffs.create_index("created_at")
+        await db.assistant_handoffs.create_index("status")
+        await db.assistant_handoffs.create_index("fingerprint")
+        await db.assistant_handoffs.create_index("email")
+        logger.info("assistant_handoffs indexes ensured")
+    except Exception:  # noqa: BLE001
+        logger.exception("assistant_handoffs index creation failed")
+
 # Auth-Routen (Session 78.0 — extrahiert aus server.py)
 from routes import auth as _auth_routes  # noqa: E402
 app.include_router(_auth_routes.router)

@@ -1,0 +1,34 @@
+{
+  "summary": "Session 80.40b retest. Backend: pytest /app/backend/tests/test_assistant_handoff.py run serially (-n 0) → 21/21 PASSED (16 original + 5 new cases I added for the 80.40b fixes: exact PII spec string, consent:null, XFF separate buckets, XFF same-IP 429, legacy-doc status=new/stats consistency). All previously failing cases now pass (consent enforced when field omitted/null/false; PII output exactly '[entfernt] [Kontoverbindung entfernt] und [entfernt] sowie mein [entfernt] ist geheim.'; stats.total == list total; ?status=new includes legacy docs without status field). Frontend: launcher visible+clickable bottom-left (x=32,y=992, 56x56, nothing intercepting), panel opens on the LEFT (x=32,w=400); launcher hidden on /login, /admin, /admin/assistant-handoffs; handoff form submitted 0.10s after opening → NO 'Bitte einen Moment warten' error, handoff-success appeared (auto-wait works); admin detail drawer shows 'Herkunftsseite: /' label; stat cards (9/8/1/9) consistent with list total 9; filter pills (Alle 9, Neu 8, In Bearbeitung 1, Abgeschlossen 0) and search (Enter) + empty state work; detail drawer save (handoff-save-btn) works; assistant chat + quick-question regression works (real AI answer with sources).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/login (preview edge)", "issue": "Response carries 'access-control-allow-origin: *' together with 'access-control-allow-credentials: true' (header appears to be injected by the preview ingress, not FastAPI). Harmless in preview but verify explicit-origin CORS in production."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin → Assistent-Anfragen search", "issues": ["Search only fires on Enter (no debounce, no hint). Typing without Enter leaves the list unfiltered — add debounce or an 'Enter zum Suchen' hint."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_assistant_handoff.py", "/app/test_reports/pytest/pytest_8040b.xml"],
+  "action_items": [
+    "Optional: debounce the admin handoff search input (currently Enter-only).",
+    "Note: /admin/dashboard is not a defined route — it redirects to '/', where the assistant launcher correctly appears. FRONTEND-FIX-2 verified on real admin routes (/admin, /admin/assistant-handoffs) where the launcher count is 0."
+  ],
+  "critical_code_review_comments": [
+    "Rate limit is in-memory per process only; with multiple backend workers/pods the 5/h/IP budget multiplies. Consider a shared store if abuse protection matters.",
+    "_real_ip trusts the leftmost X-Forwarded-For value, which a client can spoof to bypass the handoff rate limit. Behind a trusted ingress prefer the rightmost/trusted-hop IP.",
+    "Home page fires ~17 x 401 responses for unauthenticated session probes in the console — noisy, consider gating auth/me-style calls."
+  ],
+  "updated_files": ["/app/backend/tests/test_assistant_handoff.py"],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "100% of retested flows (4/4 fixes verified + regression)"},
+  "seed_data_creation": "Created and deleted TEST_ handoffs via API/UI; inserted+removed one legacy status-less handoff doc in mongo. Rate-limit/XFF test docs (name TEST_*) cleaned via fixture; 8 pre-existing handoff docs left untouched.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "admin@kapitalmitte.com / admin123 (bcrypt hash verified as $2b$12$, role=admin; login sets HttpOnly Secure SameSite=None access_token + refresh_token cookies)",
+  "context_for_next_testing_agent": "test_assistant_handoff.py must be run with -n 0 (in-memory 5/h/IP rate limit; each class restarts backend). Handoff POSTs from the Playwright container share the rate-limit bucket with pytest runs — restart backend before UI handoff tests or you get a legitimate 429. Visitor gate must be dismissed via localStorage keys kapitalmitte_visitor_profile + kapitalmitte_cookie_consent BEFORE navigating to /login, otherwise the gate dialog (z-[10000]) intercepts the login button.",
+  "rca_of_the_issue": "Previous 2 pytest failures were fixed in app code (consent 'is not True' check; ordered _strip_pii with PIN_DIGITS regex and (?<!\\[) lookbehind in SENSITIVE). The only test-side change needed was updating the outdated assertion expecting the old '[IBAN entfernt]' marker to the new spec marker '[Kontoverbindung entfernt]'. A 429 seen in the first UI run was self-inflicted (shared rate-limit bucket with the pytest suite), not an app defect — confirmed by re-running after a backend restart."
+}

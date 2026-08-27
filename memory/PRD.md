@@ -8,6 +8,104 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+
+- 80.40b (Feb 26 2026) — **Testing-Fixes (Session 80.40 Follow-up)**:
+  * **CRITICAL** FloatingAssistant war importiert, aber nicht gerendert → Testing-Agent hat `<FloatingAssistant />` in `App.js` neben `<CookieConsent />` platziert. Bestätigt: korrekt am App-Root, außerhalb der Router-Blöcke.
+  * **CRITICAL** Z-Index/Positions-Kollision mit `ProductInquiryStickyCta` (z-[90], bottom-right, 22rem breit) → Launcher & Panel verschoben nach **bottom-LEFT** (z-[95] / z-[100]). Kein Overlay-Konflikt mehr.
+  * **Auto-hide** auf `/admin/*`, `/login`, `/register`, `/reset-password` — FloatingAssistant ist ein Support-Widget für öffentliche Besucher, kein Admin-Werkzeug.
+  * **HIGH** Consent-Bypass geschlossen: Backend prüft jetzt `payload.consent is not True` — fehlendes Feld liefert 400 (DSGVO-konform).
+  * **HIGH** PII-Redaction gefixt:
+    - Marker enthalten keine SENSITIVE-Keywords mehr (`[Kontoverbindung entfernt]` statt `[IBAN entfernt]`).
+    - `PIN_DIGITS`-Regex fängt `pin|tan|passwort|kennwort|kennung` + 3–10 Ziffern (löst „PIN 1234"-Leak).
+    - Reihenfolge: IBAN → CARDLIKE → PIN+Ziffern → Keyword-Pass mit `(?<!\[)`-Lookbehind (kein Selbst-Match auf Marker).
+    - Verifiziert: „IBAN DE89370400440532013000 und PIN 1234 sowie mein kennwort ist geheim." → „[entfernt] [Kontoverbindung entfernt] und [entfernt] sowie mein [entfernt] ist geheim."
+  * **MINOR** Stats-Aggregation: Accumulator statt Overwrite; `total` via `count_documents({})` (autoritativ). Legacy-Docs ohne Status zählen als „neu".
+  * **MINOR** Status-Filter `?status=new`: `{"$or": [{"status":"new"}, {"status":{"$exists":False}}, {"status":None}]}` — Legacy-Docs jetzt konsistent inkludiert.
+  * **MINOR** Rate-Limit nutzt jetzt `X-Forwarded-For` (leftmost) via `_real_ip()` → hinter K8s-Ingress werden echte Client-IPs gebucht, statt allen Traffic auf die Proxy-IP zu bündeln.
+  * **UX** Handoff-Timing-Guard: Statt 1.5s-Fehler wartet der Client die Rest-Zeit automatisch ab (`await sleep(remaining)`) — kein „Bitte einen Moment warten"-Doppel-Klick mehr.
+  * **UX** DetailDrawer: „Herkunftsseite: /route" Label statt bare `/`.
+  * `assistant_admin.py` bereinigt: dead placeholder-Endpoints entfernt, saubere `register()`-Factory.
+
+  Verifikation (curl):
+  * Consent omitted → 400 ✓
+  * PII: IBAN + PIN 1234 + kennwort → 3× `[entfernt]` + `[Kontoverbindung entfernt]` ✓
+  * Stats: `total=3, by_status={new:2, in_progress:1, ...}` konsistent mit list total ✓
+  * `?status=new` liefert 2 Docs (echter status=new + legacy ohne Feld) ✓
+  * XFF-basierte IPs erhalten separate Rate-Limit-Buckets ✓
+
+
+- 80.40 (Feb 26 2026) — **Assistant Lead Operations / Production Handoff**:
+
+  **Backend** (`/app/backend/routes/assistant.py` + `/app/backend/routes/assistant_admin.py`):
+  * **Erweiterter `POST /api/assistant/handoff`**:
+    - Honeypot-Feld `website` (silent-accept bei Bot).
+    - Zeit-Guard `hp_ts` (Frontend-Zeitstempel; Backend akzeptiert, Frontend rejectet <1.5s).
+    - Rate-Limit: 5 Handoffs / IP / Stunde (in-memory, unabhängig vom Chat-Limit).
+    - **Duplicate-Detection**: `fingerprint = sha256(email + concern[:200])[:32]` innerhalb 10 min → 200 OK ohne neuen Insert, `duplicate:true`.
+    - **PII-Redaction**: IBAN-Pattern, Card-like (13–19 Ziffern), SENSITIVE-Regex (iban/bic/pin/passwort/kontonummer/depot/steuer-id/ausweis/tan) → `[entfernt]`.
+    - **`context_summary`** regelbasiert erzeugt (KEIN LLM-Call, deterministisch): „Chat mit N Nachrichten. Thematischer Fokus: X, Y. Zuletzt gesehene Seite: /route." — **kein voller Chat-Verlauf** wird gespeichert.
+    - **`recent_topics`** aus 6 kanonischen Signal-Regexen (Tagesgeld/Festgeld, Marktdaten, Aktien/ETF, Ruhestand/Vorsorge, Nachhaltigkeit, Steuer/Erbe).
+    - **`ip_hash`** (sha256[:32]) statt Klartext-IP.
+    - **Consent-Pflicht**: Frontend muss `consent:true` senden, sonst 400.
+    - Validierung: Name 2–200, E-Mail regex + 200 char cap, Concern 4–2000.
+  * **E-Mail-Notifications via Resend/Emergent** (`_send_email_via_emergent`):
+    - Admin-Mail an `ASSISTANT_HANDOFF_TO` (Fallback `EMAIL_REPLY_TO` → `PRODUCT_INQUIRY_TO`) mit Kontakt/Anliegen/Kontext/CTA-Button zur Admin-Inbox.
+    - Kunden-Empfangsbestätigung (kompakt, Fröhlich-Corporate, „innerhalb 24h").
+    - Beide HTML-Vorlagen sind XSS-safe (escape) und passieren `_assert_safe_email`-Guards.
+    - Fehler bei Mail-Versand blockieren NICHT den DB-Insert (fault-tolerant).
+  * **Admin-API** (`/api/admin/assistant-handoffs`, geschützt via `require_admin` aus server.py):
+    - `GET /` — Liste mit `status`-Filter, `q`-Fulltext-Search (Name/E-Mail/Concern), Limit/Offset.
+    - `GET /stats` — `{total, by_status: {new,in_progress,completed,archived}, last_7d, last_30d}`.
+    - `GET /{id}` — Detail.
+    - `PATCH /{id}` — Status (new/in_progress/completed/archived), `admin_notes` (max 4000), `assigned_to`.
+    - `updated_by` = current admin.email, `updated_at` = now UTC.
+  * **MongoDB-Indizes** (bei Startup): `created_at`, `status`, `fingerprint`, `email`.
+
+  **Frontend**:
+  * **`FloatingAssistant.jsx` erweitert** um Inline-Handoff-Formular:
+    - Auslösung via **CTA-Button** auf handoff-recommended Antworten ODER Footer-Icon.
+    - Formularfelder: Name, E-Mail, Telefon (optional), Anliegen (Textarea), Consent-Checkbox.
+    - **Honeypot** (off-screen `website`-Input), Client-Zeit-Guard 1.5s.
+    - Success-View mit Fröhlich-Petrol-Akzent, „Zurück zum Chat".
+    - Konversations-Historie wird **nur zur Kontext-Bildung** an Backend übergeben (letzte 6 Turns, je max. 240 chars) — Backend generiert daraus die datensparse `context_summary`, speichert KEINEN vollen Text.
+  * **`AdminAssistantHandoffs.jsx` (NEU)** — Admin-Inbox unter `/admin/assistant-handoffs`:
+    - Stats-Kacheln (Gesamt/Neu/In Bearbeitung/7 Tage).
+    - Status-Filter-Pills, Fulltext-Suche.
+    - Tabelle mit Kontakt, Anliegen (line-clamp-2), Topic-Chips, Status-Badge, Öffnen-Button.
+    - **DetailDrawer**: PII-redigiertes Anliegen im Serifen-Editorial-Block, Kontext-Summary, Topic-Chips, Status-Select, Zugewiesen-an, Notes-Textarea, E-Mail-Delivery-Status.
+    - Alle Interaktionen mit `data-testid` (handoff-refresh-btn, handoff-status-select, handoff-save-btn, handoff-filter-*, stat-*, handoff-row-*, etc.).
+  * **App.js**: neuer Route `/admin/assistant-handoffs` unter `ProtectedRoute requireAdmin`.
+  * **AdminDashboardLayout.jsx**: neuer Sidebar-Eintrag „Assistent-Anfragen" (icon MessageCircle) unterhalb der Produkt-Anfragen.
+
+  **Verifikation** (curl gegen `REACT_APP_BACKEND_URL`):
+  * `POST /api/assistant/handoff` mit IBAN/PIN im Concern → gespeichert mit „[IBAN entfernt]/[entfernt]" statt Klartext ✓
+  * Honeypot `website:"https://spam..."` → 200 success, `handoff_id:null`, kein DB-Insert ✓
+  * Duplicate (gleiche E-Mail + Concern innerhalb 10 min) → 200 mit `duplicate:true`, existierender `handoff_id` ✓
+  * `consent:false` → 400 „Bitte den Datenschutzhinweis bestätigen." ✓
+  * Ungültige E-Mail → 400 „Bitte eine gültige E-Mail-Adresse angeben." ✓
+  * `GET /api/admin/assistant-handoffs` ohne Cookie → 401 „Not authenticated" ✓
+  * Admin-Login → `GET/stats/id/PATCH` alle 200, `total=2, by_status={new:1,in_progress:1,...}` ✓
+  * `PATCH` mit ungültigem Status → 400 „Ungültiger Status." ✓
+  * Filter `?status=in_progress` → nur passende Docs, korrektes Total ✓
+  * Fulltext-Suche `?q=Tagesgeld` → matched Concern ✓
+  * Admin-Mail wurde erfolgreich an `kundenservice@kapitalmitte.com` zugestellt (`email_sent_admin:true`).
+
+  **Datensparsamkeit / Privacy**:
+  * KEIN voller Chatlog im DB-Doc — nur `context_summary` (max 600 chars, regelbasiert) + `recent_topics` (max 5 Tags).
+  * PII destruktiv redigiert vor Insert (irreversibel).
+  * IP nur als sha256-Hash gespeichert.
+
+  **Zusätzliche API-Calls**: 4 neue Admin-Endpoints. Kein LLM-Call im Handoff-Pfad. 2 Mail-Sendungen pro Handoff (Admin + Customer), fault-tolerant.
+
+  **Freeze eingehalten**: `/api/assistant/chat`-Signatur bleibt unverändert, MarketSnapshot, 48h-Freshness, Topic-Registry, News-Ingestion — alles unangetastet.
+
+  **Verbleibende Risiken**:
+  * In-memory Rate-Limit verliert Zustand bei Backend-Restart (für Deployment OK, bei Skalierung auf Redis).
+  * Kunden-Empfangsmail wird nur best-effort versendet; bei Provider-Ausfall bekommt der Kunde keine Bestätigung (Admin-Doc bleibt aber intakt).
+  * Fingerprint verhindert nur exakte Wiederholungen — abgewandelte Bot-Texte kämen durch (Honeypot + Zeit-Guard sind das primäre Bot-Bollwerk).
+
+
+
 - 80.38 (Aug 27 2026) — **Fröhlich Assistent (KI-Chat)**:
 
   **Backend** (`/app/backend/routes/assistant.py`, ~230 Zeilen):

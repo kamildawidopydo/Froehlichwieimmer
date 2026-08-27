@@ -144,6 +144,7 @@ const AdminSupport = lazy(() => import('@/pages/AdminSupport'));
 const AdminCreditLeads = lazy(() => import('@/pages/AdminCreditLeads'));
 const AdminInsufficientBuyingPower = lazy(() => import('@/pages/AdminInsufficientBuyingPower'));
 const AdminProductInquiryLeads = lazy(() => import('@/pages/AdminProductInquiryLeads'));
+const AdminAssistantHandoffs = lazy(() => import('@/pages/AdminAssistantHandoffs'));
 const AdminSocialPreviewMessages = lazy(() => import('@/pages/AdminSocialPreviewMessages'));
 const AdminContractSubmissions = lazy(() => import('@/pages/AdminContractSubmissions'));
 const AdminOfferReviews = lazy(() => import('@/pages/AdminOfferReviews'));
@@ -827,6 +828,7 @@ function App() {
                   <Route path="support" element={<AdminSupport />} />
                   <Route path="credit-leads" element={<AdminCreditLeads />} />
                   <Route path="product-inquiry-leads" element={<AdminProductInquiryLeads />} />
+                  <Route path="assistant-handoffs" element={<AdminAssistantHandoffs />} />
                   <Route path="social-preview-messages" element={<AdminSocialPreviewMessages />} />
                   <Route path="contract-submissions" element={<AdminContractSubmissions />} />
                   <Route path="offer-reviews" element={<AdminOfferReviews />} />
@@ -851,6 +853,7 @@ function App() {
             <VisitorTracker />
             <VisitorWelcomeGate />
             <CookieConsent />
+            <FloatingAssistant />
             <SocialPreviewModal />
           </div>
           </MotionConfig>
