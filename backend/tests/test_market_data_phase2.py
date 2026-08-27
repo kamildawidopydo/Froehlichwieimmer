@@ -61,10 +61,13 @@ def test_overview_no_secrets_leaked():
 
 
 def test_overview_provider_configured_matches_env():
-    # When the key is empty in .env, provider_configured must be False and everything comes from fallback.
-    provider_configured = bool((os.environ.get("ALPHA_VANTAGE_API_KEY") or os.environ.get("ALPHA_VANTAGE_KEY") or "").strip())
+    # Session 80.29e: `provider_configured` now reflects the presence of ANY real
+    # market provider (yfinance is always available; Alpha Vantage only when
+    # keyed). Without a key we still expect True because yfinance is on.
     data = _get("/news-markte/market/overview").json()
-    assert data["provider_configured"] is provider_configured
+    sources = set(data.get("data_source_summary") or [])
+    has_real_provider = bool(sources & {"yfinance", "alpha_vantage", "cache", "stale_cache"})
+    assert data["provider_configured"] is has_real_provider
 
 
 # ----- quote normalisation ---------------------------------------------------
@@ -80,7 +83,7 @@ def test_single_quote_full_shape(symbol):
     assert isinstance(q["price"], (int, float)) and q["price"] > 0
     assert q["currency"] in {"USD", "EUR", "GBP", "JPY", "CHF", None}
     assert q["market_status"] in {"live", "delayed"}
-    assert q["data_source"] in {"alpha_vantage", "cache", "stale_cache", "fallback"}
+    assert q["data_source"] in {"alpha_vantage", "yfinance", "cache", "stale_cache", "fallback"}
     assert isinstance(q["is_delayed"], bool)
     # New currency-normalisation contract
     for key in ("asset_class", "original_price", "original_currency", "display_price",
@@ -122,7 +125,7 @@ def test_stocks_endpoint_full_list():
     assert {"SAP", "SIE", "ALV", "DBK", "IFX", "RHM", "NVDA", "AAPL", "MSFT", "GOOGL", "AMZN"} <= symbols
     for q in data["items"]:
         assert q["price"] > 0
-        assert q["data_source"] in {"alpha_vantage", "cache", "stale_cache", "fallback"}
+        assert q["data_source"] in {"alpha_vantage", "yfinance", "cache", "stale_cache", "fallback"}
 
 
 # ----- commodities / fx ------------------------------------------------------
@@ -146,12 +149,16 @@ def test_fx_endpoint():
 # ----- caching ---------------------------------------------------------------
 
 def test_provider_absent_returns_fallback():
-    """Without an ALPHA_VANTAGE_API_KEY, every quote must be a `fallback` source."""
+    """Session 80.29e: yfinance is always available (no key needed). When
+    ALPHA_VANTAGE_API_KEY is unset, indices/commodities/fx come from
+    `yfinance` (or `cache` on repeat calls) — never from `fallback` anymore
+    for those asset classes. Stocks may still fall back."""
     if (os.environ.get("ALPHA_VANTAGE_API_KEY") or os.environ.get("ALPHA_VANTAGE_KEY") or "").strip():
-        pytest.skip("Alpha Vantage key configured — fallback path not applicable.")
+        pytest.skip("Alpha Vantage key configured — this path is yfinance-first.")
     data = _get("/news-markte/market/overview").json()
-    all_sources = {q["data_source"] for q in data["indices"] + data["commodities"] + data["fx"]}
-    assert all_sources == {"fallback"}
+    allowed = {"yfinance", "cache", "stale_cache"}
+    for q in data["indices"] + data["commodities"] + data["fx"]:
+        assert q["data_source"] in allowed, f"{q['symbol']}: unexpected source {q['data_source']}"
 
 
 def test_cache_ttl_index_present():

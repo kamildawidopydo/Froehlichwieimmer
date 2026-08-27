@@ -16,11 +16,14 @@ import {
 // sind alle vier leer, rendert die Komponente `null`.
 
 // Auswahl exakt gemäß User-Prompt: DAX, S&P 500, EUR/USD, Gold.
+// Session 80.29e: Kurz-Label für UI, `fallbackNote` beschreibt das exakte
+// Instrument (wird als `title`-Tooltip gerendert). Rückgriff auf Backend-`note`,
+// falls dort präzisere Angaben stehen.
 const SNAPSHOT_SYMBOLS = [
-  { symbol: 'DAX',    label: 'DAX',      bucket: 'indices' },
-  { symbol: 'SPX',    label: 'S&P 500',  bucket: 'indices' },
-  { symbol: 'EURUSD', label: 'EUR/USD',  bucket: 'fx' },
-  { symbol: 'GOLD',   label: 'Gold',     bucket: 'commodities' },
+  { symbol: 'DAX',    label: 'DAX',      bucket: 'indices',    fallbackNote: 'DAX Performance-Index (^GDAXI)' },
+  { symbol: 'SPX',    label: 'S&P 500',  bucket: 'indices',    fallbackNote: 'S&P 500 Index (^GSPC)' },
+  { symbol: 'EURUSD', label: 'EUR/USD',  bucket: 'fx',         fallbackNote: 'Spot EUR/USD (1 EUR = x USD)' },
+  { symbol: 'GOLD',   label: 'Gold',     bucket: 'commodities', fallbackNote: 'COMEX Gold-Future (GC=F) · Feinunze' },
 ];
 
 const REFRESH_MS = 120_000; // stiller Refresh alle 2 Min., an Sidebar-Rhythmus angelehnt
@@ -30,7 +33,7 @@ const findRow = (data, cfg) => {
   return list.find((r) => r.symbol === cfg.symbol) || null;
 };
 
-const SnapshotTile = ({ label, row }) => {
+const SnapshotTile = ({ label, row, note }) => {
   const changePct = row?.changePct;
   const positive = Number(changePct) >= 0;
   const Arrow = positive ? ArrowUpRight : ArrowDownRight;
@@ -45,6 +48,7 @@ const SnapshotTile = ({ label, row }) => {
     <div
       className="flex min-w-0 flex-col justify-between gap-2 border border-bank-border bg-white px-4 py-3 sm:px-5 sm:py-4"
       data-testid={`market-snapshot-${row.symbol.toLowerCase()}`}
+      title={note || undefined}
     >
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">
@@ -87,7 +91,8 @@ const MarketSnapshot = () => {
           .map((cfg) => {
             const row = findRow(data, cfg);
             if (!row || row.price == null || Number.isNaN(Number(row.price))) return null;
-            return { cfg, row };
+            const note = row.note || cfg.fallbackNote;
+            return { cfg, row, note };
           })
           .filter(Boolean);
         setTiles(resolved);
@@ -162,8 +167,8 @@ const MarketSnapshot = () => {
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {tiles.map(({ cfg, row }) => (
-          <SnapshotTile key={cfg.symbol} label={cfg.label} row={row} />
+        {tiles.map(({ cfg, row, note }) => (
+          <SnapshotTile key={cfg.symbol} label={cfg.label} row={row} note={note} />
         ))}
       </div>
       {(meta.lastUpdated || meta.isDelayed) && (

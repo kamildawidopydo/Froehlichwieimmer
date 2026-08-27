@@ -8,6 +8,45 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.29e (Aug 27 2026) — **Market Data Integrity Fix** (Root-Cause & Provider-Swap):
+
+  **Root Cause**: Der ursprünglich angezeigte „DAX 47,83" / „S&P 500 512,44" war kein Bug im Frontend, sondern eine **strukturelle Fehldeklaration im Backend**. Die `MARKET_INDEX_SYMBOLS`-Konfiguration in `server.py` mappte:
+    - DAX → `EWG` (iShares MSCI Germany ETF, ETF-Anteil ~$47)
+    - SPX → `SPY` (SPDR S&P 500 ETF, ~$512)
+    - NDX → `QQQ`  (Invesco QQQ ETF)
+    - DJI → `DIA`  (SPDR DJIA ETF)
+    - GOLD → `GLD` (SPDR Gold Shares ETF)
+
+  Grund: Alpha-Vantage-Free liefert keine echten Indizes → Team wählte ETF-Proxies. Zusätzlich existierten hardcodete `_FALLBACK_QUOTES` in Höhe der Proxy-Preise. Ohne AV-Key (aktueller Zustand) griffen ausschließlich diese Konstanten → Kacheln zeigten **statische ETF-Preise mit Index-Label**.
+
+  **Fix**: Neuer Provider-Layer mit klarer Priorität:
+    1. **yfinance direkt** (kein Key, echte Indizes/Futures/FX)
+       - DAX → `^GDAXI` → **26.363 Punkte** ✓
+       - SPX → `^GSPC`  → **7.676 Punkte** ✓
+       - NDX → `^NDX`   → **29.225 Punkte** ✓
+       - DJI → `^DJI`   → **53.464 Punkte** ✓
+       - GOLD → `GC=F`  → **4.650 USD/Feinunze** (COMEX Gold-Future) → 3.991 € nach FX-Konvertierung ✓
+       - SILVER → `SI=F`, OIL → `BZ=F`
+       - EURUSD → `EURUSD=X` → **1,1651** ✓
+    2. Alpha Vantage (nur mit Key, mit ETF-Proxy-Kennzeichnung, unverändert)
+    3. Stale-Cache (24 h)
+    4. **Kein hardcoded Fallback** mehr für indices/commodities/fx → `_fetch_quote` liefert `None`, `_fetch_many` filtert. Stocks (`Aktien im Fokus`) behalten den bisherigen Fallback (nicht Teil des Audits).
+
+  **UI**: `MarketSnapshot`-Tile bekommt `title`-Tooltip mit exakter Instrumentbezeichnung (z. B. „COMEX Gold-Future (GC=F) · Feinunze"). Fehlerhafte Einzeltiles werden ausgeblendet, ist die gesamte Liste leer → Komponente rendert `null`.
+
+  **Definition of Done (alle ✓)**:
+  | UI-Label | Provider-Symbol | Instrumenttyp | Einheit | Ergebnis |
+  |---|---|---|---|---|
+  | DAX | `^GDAXI` | Index | Punkte | ✓ |
+  | S&P 500 | `^GSPC` | Index | Punkte | ✓ |
+  | EUR/USD | `EURUSD=X` | FX-Spot | rate | ✓ |
+  | Gold | `GC=F` | Future (COMEX) | Feinunze | ✓ |
+
+  **Test-Update**: `test_overview_provider_configured_matches_env` reflektiert neue Semantik (yfinance als Baseline-Provider ohne Key), `data_source` erweitert um `"yfinance"`. Plausibilitäts-Check gegen Bereichs- & Einheit-Constraints implementiert (Live-Verifikation).
+
+  **Explizit NICHT geändert**: Sparklines, Bitcoin/Krypto, Watchlist-Verzahnung, Detailseiten, klickbare Tiles — bewusst ausgelassen laut User-Prompt.
+
+
 - 80.29 Phase-4 (Aug 27 2026) — **„Märkte heute" auf /news/nachrichten**:
 
   **1. Neue Komponente** `components/news-markte/MarketSnapshot.jsx`: kompakter, nicht-sticky Snapshot mit **DAX, S&P 500, EUR/USD, Gold**. Desktop 4-Spalten, Mobile 2×2 Grid. Petrol-strong für positive Werte, Coral-strong für negative — semantische Farben aus 80.26-System. Weiße Kacheln, dünner bank-border, keine Trading-Terminal-Optik.

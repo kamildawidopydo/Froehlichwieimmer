@@ -2395,21 +2395,39 @@ _TTL_STALE_KEEP = 3600 * 24  # keep last-known-good for 24 h even after TTL
 # native DAX / SPX / commodities futures — we use widely-tracked ETF proxies
 # and mark those results with a `note`. Stocks with primary listing outside
 # NYSE/NASDAQ are looked up via their ADR ticker.
+# Session 80.29e — Datenintegrität. Provider-Priorität pro Instrument:
+#   1) yfinance direkt (echte Indizes / Futures / FX-Paare, kein API-Key nötig)
+#   2) Alpha Vantage (nur wenn Key gesetzt; verwendet ETF-Proxies, wird
+#      entsprechend als „Proxy" markiert)
+#   3) Cache / stale-Cache
+#   4) Für Indices/Commodities/FX gibt es KEINEN hardcoded-Fallback mehr —
+#      fehlerhafte Werte werden `None` und vom Endpoint gefiltert (kein Fake).
+#      Stocks behalten den bisherigen deterministischen Fallback.
+#
+# Yahoo-Ticker sind eindeutig:
+#   ^GDAXI  → DAX Performance-Index (Punkte)
+#   ^GSPC   → S&P 500 (Punkte)
+#   ^NDX    → Nasdaq-100 (Punkte)  — echter Index, nicht ETF
+#   ^DJI    → Dow Jones Industrial Average (Punkte)
+#   GC=F    → COMEX Gold-Future (USD/Feinunze)
+#   SI=F    → COMEX Silber-Future (USD/Feinunze)
+#   BZ=F    → ICE Brent Crude Future (USD/Barrel)
+#   EURUSD=X→ Spot EUR/USD (1 EUR = x USD)
 MARKET_INDEX_SYMBOLS = [
-    {"symbol": "DAX",  "name": "DAX",       "av_symbol": "EWG",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "DAX-Proxy (iShares MSCI Germany ETF)"},
-    {"symbol": "SPX",  "name": "S&P 500",   "av_symbol": "SPY",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "S&P-500-Proxy (SPDR S&P 500 ETF)"},
-    {"symbol": "NDX",  "name": "Nasdaq",    "av_symbol": "QQQ",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "Nasdaq-100-Proxy (Invesco QQQ)"},
-    {"symbol": "DJI",  "name": "Dow Jones", "av_symbol": "DIA",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "Dow-Jones-Proxy (SPDR DJIA ETF)"},
+    {"symbol": "DAX",  "name": "DAX",         "yf_symbol": "^GDAXI", "av_symbol": "EWG",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "DAX Performance-Index"},
+    {"symbol": "SPX",  "name": "S&P 500",     "yf_symbol": "^GSPC",  "av_symbol": "SPY",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "S&P 500 Index"},
+    {"symbol": "NDX",  "name": "Nasdaq-100",  "yf_symbol": "^NDX",   "av_symbol": "QQQ",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "Nasdaq-100 Index"},
+    {"symbol": "DJI",  "name": "Dow Jones",   "yf_symbol": "^DJI",   "av_symbol": "DIA",  "asset_class": "index", "unit": "Punkte", "native_currency": None, "note": "Dow Jones Industrial Average"},
 ]
 
 MARKET_COMMODITY_SYMBOLS = [
-    {"symbol": "GOLD",   "name": "Gold",      "av_symbol": "GLD", "asset_class": "commodity", "unit": "Feinunze", "native_currency": "USD", "note": "Gold-Proxy (SPDR Gold Shares)"},
-    {"symbol": "SILVER", "name": "Silber",    "av_symbol": "SLV", "asset_class": "commodity", "unit": "Feinunze", "native_currency": "USD", "note": "Silber-Proxy (iShares Silver Trust)"},
-    {"symbol": "OIL",    "name": "Brent Öl",  "av_symbol": "USO", "asset_class": "commodity", "unit": "Barrel",   "native_currency": "USD", "note": "Öl-Proxy (US Oil Fund)"},
+    {"symbol": "GOLD",   "name": "Gold-Future",   "yf_symbol": "GC=F", "av_symbol": "GLD", "asset_class": "commodity", "unit": "Feinunze", "native_currency": "USD", "note": "COMEX Gold-Future (GC=F)"},
+    {"symbol": "SILVER", "name": "Silber-Future", "yf_symbol": "SI=F", "av_symbol": "SLV", "asset_class": "commodity", "unit": "Feinunze", "native_currency": "USD", "note": "COMEX Silber-Future (SI=F)"},
+    {"symbol": "OIL",    "name": "Brent Öl",      "yf_symbol": "BZ=F", "av_symbol": "USO", "asset_class": "commodity", "unit": "Barrel",   "native_currency": "USD", "note": "ICE Brent Crude Future (BZ=F)"},
 ]
 
 MARKET_FX_SYMBOLS = [
-    {"symbol": "EURUSD", "name": "EUR/USD", "asset_class": "fx", "unit": "", "from_curr": "EUR", "to_curr": "USD", "native_currency": None},
+    {"symbol": "EURUSD", "name": "EUR/USD", "yf_symbol": "EURUSD=X", "asset_class": "fx", "unit": "", "from_curr": "EUR", "to_curr": "USD", "native_currency": None, "note": "Spot EUR/USD (1 EUR = x USD)"},
 ]
 
 MARKET_STOCK_SYMBOLS = [
@@ -2524,6 +2542,43 @@ async def _cache_put(symbol: str, quote: dict, ttl_s: int) -> None:
     )
 
 
+# --- yfinance direct fetch (Session 80.29e) ---------------------------------
+# Free, no API key. Yahoo publishes the real index levels for ^GDAXI/^GSPC etc.
+# We call this BEFORE Alpha Vantage so Märkte-heute-Kacheln zeigen echte Werte,
+# nicht ETF-Proxies. Runs the blocking yfinance client in a thread to keep the
+# async loop free.
+
+def _yf_fetch_sync(yf_symbol: str) -> Optional[dict]:
+    try:
+        import yfinance as yf  # type: ignore
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        t = yf.Ticker(yf_symbol)
+        fi = t.fast_info
+        price = float(fi.last_price) if fi.last_price else None
+        prev = float(fi.previous_close) if fi.previous_close else None
+        if not price or price <= 0:
+            return None
+        change = (price - prev) if (prev and prev > 0) else 0.0
+        change_pct = (change / prev * 100.0) if (prev and prev > 0) else 0.0
+        return {
+            "price": round(price, 4),
+            "change": round(change, 4),
+            "change_percent": round(change_pct, 3),
+            "previous_close": round(prev, 4) if prev else None,
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.info("yfinance %s error: %s", yf_symbol, str(exc)[:120])
+        return None
+
+
+async def _yf_call(yf_symbol: Optional[str]) -> Optional[dict]:
+    if not yf_symbol:
+        return None
+    return await asyncio.to_thread(_yf_fetch_sync, yf_symbol)
+
+
 async def _av_call(params: dict) -> Optional[dict]:
     """Perform a single Alpha Vantage GET. Returns parsed JSON dict or None on any failure/limit."""
     if not ALPHA_VANTAGE_KEY:
@@ -2577,8 +2632,17 @@ def _parse_fx(data: dict) -> Optional[dict]:
     return {"price": rate, "change": 0.0, "change_percent": 0.0}
 
 
-async def _fetch_quote(cfg: dict) -> dict:
-    """Return a normalised quote for one config entry. Uses cache → provider → fallback."""
+async def _fetch_quote(cfg: dict) -> Optional[dict]:
+    """Return a normalised quote for one config entry.
+
+    Priority: cache → yfinance (real indices/futures/FX) → Alpha Vantage
+    (ETF proxies) → stale-cache → deterministic fallback (stocks only).
+
+    For asset_class ∈ {index, commodity, fx} we NEVER return the hardcoded
+    fallback: without a real provider we return None so the endpoint can skip
+    the instrument. That is the price of data integrity — better fewer tiles
+    than fake numbers labelled as an index.
+    """
     symbol = cfg["symbol"]
     ttl = _TTL_FX if cfg.get("from_curr") else _TTL_QUOTE
 
@@ -2589,6 +2653,19 @@ async def _fetch_quote(cfg: dict) -> dict:
         q["last_updated"] = (cached.get("cached_at") or _now_utc()).isoformat() if isinstance(cached.get("cached_at"), datetime) else q.get("last_updated")
         return q
 
+    # (1) yfinance — real values for indices / commodities futures / FX.
+    yf_sym = cfg.get("yf_symbol")
+    if yf_sym:
+        parsed = await _yf_call(yf_sym)
+        if parsed:
+            quote = _build_quote(cfg, parsed["price"], parsed["change"], parsed["change_percent"],
+                                 source="yfinance", note=cfg.get("note"))
+            quote["previous_close"] = parsed.get("previous_close")
+            quote["provider_symbol"] = yf_sym
+            await _cache_put(symbol, quote, ttl)
+            return quote
+
+    # (2) Alpha Vantage — only if key present. Still uses ETF proxies, marked as such.
     provider_data = None
     if ALPHA_VANTAGE_KEY:
         if cfg.get("from_curr"):
@@ -2611,7 +2688,7 @@ async def _fetch_quote(cfg: dict) -> dict:
             await _cache_put(symbol, quote, ttl)
             return quote
 
-    # Provider failed / rate-limited / no key → keep last known good if within stale window.
+    # (3) Stale cache — keep last known good within 24 h.
     if cached and cached.get("cached_at"):
         cached_age = (_now_utc() - cached["cached_at"]).total_seconds() if isinstance(cached["cached_at"], datetime) else 0
         if cached_age < _TTL_STALE_KEEP:
@@ -2620,20 +2697,31 @@ async def _fetch_quote(cfg: dict) -> dict:
             q["is_delayed"] = True
             return q
 
+    # (4) Data integrity: indices/commodities/fx must NEVER show hardcoded fake
+    # prices. Signal skip to the caller by returning None.
+    if cfg.get("asset_class") in ("index", "commodity", "fx"):
+        return None
+
     reason = "no_api_key" if not ALPHA_VANTAGE_KEY else "provider_unavailable"
     return _fallback_quote(cfg, reason=reason)
 
 
 async def _fetch_many(configs: List[dict]) -> List[dict]:
     """Fetch quotes sequentially — Alpha Vantage free plan is 5 calls/min. Cache
-    covers repeat hits; we intentionally do NOT parallelise external calls."""
+    covers repeat hits; we intentionally do NOT parallelise external calls.
+
+    Session 80.29e — None-returning quotes (indices/commodities/fx with no
+    real provider) are filtered out. Stocks still fall back to constants.
+    """
     results = []
     for cfg in configs:
         try:
-            results.append(await _fetch_quote(cfg))
+            q = await _fetch_quote(cfg)
         except Exception as exc:  # noqa: BLE001
             logger.exception("market fetch error for %s: %s", cfg.get("symbol"), type(exc).__name__)
-            results.append(_fallback_quote(cfg, reason="internal_error"))
+            q = None if cfg.get("asset_class") in ("index", "commodity", "fx") else _fallback_quote(cfg, reason="internal_error")
+        if q is not None:
+            results.append(q)
     return results
 
 
@@ -2655,7 +2743,7 @@ async def _get_usd_to_eur() -> Optional[dict]:
         q = await _fetch_quote(fx_cfg)
     except Exception:  # noqa: BLE001
         return None
-    eurusd = float(q.get("price") or 0)
+    eurusd = float(q.get("price") or 0) if q else 0
     if eurusd <= 0.1 or eurusd > 10:
         return None
     return {
@@ -2776,7 +2864,10 @@ async def market_overview(display_currency: Optional[str] = None):
         "fx": fx,
         "last_updated": latest,
         "is_delayed": True,
-        "provider_configured": bool(ALPHA_VANTAGE_KEY),
+        # Session 80.29e: yfinance ist der primäre Provider für Indizes/Futures/FX
+        # und benötigt keinen Key. Wir zählen "configured" sobald mindestens ein
+        # Quote von einem echten Provider (nicht `fallback`/`unavailable`) kam.
+        "provider_configured": bool(ALPHA_VANTAGE_KEY) or any(s in {"yfinance", "alpha_vantage", "cache"} for s in sources),
         "data_source_summary": sorted(sources),
         "display_currency": target,
         "fx_usd_to_eur": fx_info,
