@@ -8,6 +8,18 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.26c (Feb 26 2026) — **Blush / Dusty-Rose Editorial Accent Slot (additiv)**:
+  - Rein additive Ergänzung um einen sechsten sparsamen Akzent-Slot `bank.rose` — Coral bleibt Markenakzent, Blush ist die leise editorial-Companion-Farbe für Icon-Badges, Tags, feine 2px Card-Top-Akzente, kleine Kicker/Overlines, dekorative Linien und sehr helle BG-Tints. Nie für große Flächen, Sections, Fließtext, Primary Buttons, Nav, Success/Error/Warning.
+  - **CSS-Vars** (Light `:root` + Dark `.dark` in `index.css`):
+    Light: `--bank-rose: 204 154 160 (#CC9AA0)`, `-strong: 172 118 128 (#AC7680)`, `-ink: 112 60 70 (#703C46)`, `-tint: 250 240 242 (#FAF0F2)`, `-border: 236 213 218 (#ECD5DA)` — bewusst warm-desaturiert, kein Bright-Pink/Magenta, kein feminin-verspielter Ton.
+    Dark: `--bank-rose: 214 168 175`, `-strong: 232 192 198`, `-ink: 244 220 224`, `-tint: 58 30 38`, `-border: 100 62 72`.
+  - **Tailwind-Mapping** in `tailwind.config.js`: `bank.rose / rose-strong / rose-ink / rose-tint / rose-border` mit `<alpha-value>`-Support.
+  - **Editorial Utilities** in `@layer components`: `.card-accent-top-rose::before` (2px Blush-Top-Border), `.icon-badge-rose` (feiner Icon-Wrapper), `.kpi-figure.kpi-rose`, `.tag-editorial.tag-rose` (Tint + Ink + Hairline-Border-Pattern).
+  - **Shared UI-Komponenten**: `Badge` Variant `rose` und `Button` Variant `outline-rose` — beide im gleichen `Tint-BG + Ink-Text + Hairline-Border`-Muster wie die anderen Multi-Color-Varianten.
+  - **Keine bestehenden Tokens verändert. Keine globale Rohfarben-Zuordnung erweitert.** Blush ist ausschließlich per expliziter Klassenwahl aktivierbar → keine Rainbow-Wirkung, keine Verdrängung von Coral als Markenakzent.
+  - **Verifikation**: Live-Probe zeigt Tokens verfügbar (`bg-bank-rose-tint → rgb(250,240,242)` Light / `rgb(58,30,38)` Dark; `text-bank-rose-ink → rgb(112,60,70)`). Screenshots über Home, Strategie und Sparangebote in Light + Dark sind identisch zum Vor-Zustand — bestätigt die "no visual regression"-Erwartung eines additiven Slots.
+
+
 - 80.26b (Feb 26 2026) — **80.26 Regression-Fix-Pass (Testing-Agent Report iter_60)**:
   Nach 80.26 hat der Testing-Agent 11 Findings gemeldet (4 HIGH + Multi-Color-System sonst funktional). Alle HIGH-Punkte + Semantik-kritische MEDIUM-Punkte behoben:
   - **Dark-Mode-Remap-Spezifität**: Sämtliche `.dark :where(...)` Accent-Remaps in index.css umgestellt auf `:root.dark :where(...)` — die alten Regeln hatten Spezifität (0,1,0) gleichauf mit Tailwind-Utilities und verloren durch Source-Order. Ergebnis (via Live-Probe verifiziert): `text-emerald-600 → rgb(180,214,210)` (petrol-strong dark), `bg-emerald-50 → rgb(26,44,42)` (petrol-tint dark) statt Rohfarbe.

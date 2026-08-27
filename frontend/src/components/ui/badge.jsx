@@ -22,6 +22,7 @@ const badgeVariants = cva(
         violet: "border-bank-violet-border bg-bank-violet-tint  text-bank-violet-ink font-medium",
         amber:  "border-bank-amber-border  bg-bank-amber-tint   text-bank-amber-ink font-medium",
         info:   "border-bank-info-border   bg-bank-info-tint    text-bank-info-ink font-medium",
+        rose:   "border-bank-rose-border   bg-bank-rose-tint    text-bank-rose-ink font-medium",
       },
     },
     defaultVariants: {

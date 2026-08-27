@@ -99,6 +99,13 @@ module.exports = {
                                 'info-ink':    'rgb(var(--bank-info-ink) / <alpha-value>)',
                                 'info-tint':   'rgb(var(--bank-info-tint) / <alpha-value>)',
                                 'info-border': 'rgb(var(--bank-info-border) / <alpha-value>)',
+
+                                /* Session 80.26c — Blush / dusty-rose (sparse editorial detail slot) */
+                                rose:          'rgb(var(--bank-rose) / <alpha-value>)',
+                                'rose-strong': 'rgb(var(--bank-rose-strong) / <alpha-value>)',
+                                'rose-ink':    'rgb(var(--bank-rose-ink) / <alpha-value>)',
+                                'rose-tint':   'rgb(var(--bank-rose-tint) / <alpha-value>)',
+                                'rose-border': 'rgb(var(--bank-rose-border) / <alpha-value>)',
                         },
                         background: 'hsl(var(--background))',
                         foreground: 'hsl(var(--foreground))',

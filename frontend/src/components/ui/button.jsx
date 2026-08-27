@@ -44,6 +44,8 @@ const buttonVariants = cva(
           "border border-bank-amber-border bg-white text-bank-amber-ink hover:border-bank-amber hover:bg-bank-amber-tint",
         "outline-info":
           "border border-bank-info-border bg-white text-bank-info-ink hover:border-bank-info hover:bg-bank-info-tint",
+        "outline-rose":
+          "border border-bank-rose-border bg-white text-bank-rose-ink hover:border-bank-rose hover:bg-bank-rose-tint",
       },
       size: {
         default: "h-10 px-5 py-2",

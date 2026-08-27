@@ -80,6 +80,20 @@
     --bank-info-tint:      238 243 250;   /* #EEF3FA */
     --bank-info-border:    205 219 240;   /* #CDDBF0 */
 
+    /* --------------------------------------------------------------------
+       Session 80.26c — Blush / dusty-rose editorial accent (additive slot).
+       ONLY for the smallest details: icon-badges, tags, 2px card-top borders,
+       tiny kickers, decorative hairlines, occasional editorial highlights.
+       Never for large surfaces, body text, primary CTAs, or navigation.
+       Values are intentionally warm-desaturated so the palette stays private-
+       banking editorial and never reads as playful/feminine pink.
+       -------------------------------------------------------------------- */
+    --bank-rose:           204 154 160;   /* #CC9AA0 — dusty rose base */
+    --bank-rose-strong:    172 118 128;   /* #AC7680 — deeper dusty rose (hover/text) */
+    --bank-rose-ink:       112  60  70;   /* #703C46 — deep rose ink for tag text */
+    --bank-rose-tint:      250 240 242;   /* #FAF0F2 — very light blush surface */
+    --bank-rose-border:    236 213 218;   /* #ECD5DA — hairline border */
+
     /* Dark contrast bands — anthracite footers */
     --bank-ink:            48 42 44;     /* #302A2C footer/dark bands */
     --bank-ink-hover:      60 52 55;
@@ -174,6 +188,13 @@
     --bank-info-ink:       214 228 245;
     --bank-info-tint:       20 34 56;
     --bank-info-border:     50 76 112;
+
+    /* Session 80.26c — Blush / dusty-rose (dark). Same conservative dosage. */
+    --bank-rose:           214 168 175;
+    --bank-rose-strong:    232 192 198;
+    --bank-rose-ink:       244 220 224;
+    --bank-rose-tint:       58  30  38;
+    --bank-rose-border:    100  62  72;
 
     --bank-ink:            30 30 34;
     --bank-ink-hover:      48 42 44;
@@ -1047,6 +1068,7 @@
   .card-accent-top-amber::before  { background-color: rgb(var(--bank-amber)); }
   .card-accent-top-info::before   { background-color: rgb(var(--bank-info)); }
   .card-accent-top-navy::before   { background-color: rgb(var(--bank-ink)); }
+  .card-accent-top-rose::before   { background-color: rgb(var(--bank-rose)); }
 
   /* Icon-badge — pastel square/circle wrapper for a lucide icon.
      Keeps large surfaces neutral, colour lives only on the tiny badge. */
@@ -1069,6 +1091,7 @@
   .icon-badge-amber  { background-color: rgb(var(--bank-amber-tint));  color: rgb(var(--bank-amber-strong)); }
   .icon-badge-info   { background-color: rgb(var(--bank-info-tint));   color: rgb(var(--bank-info-strong)); }
   .icon-badge-navy   { background-color: rgb(var(--bank-ink) / 0.06);  color: rgb(var(--bank-ink)); }
+  .icon-badge-rose   { background-color: rgb(var(--bank-rose-tint));   color: rgb(var(--bank-rose-strong)); }
 
   /* KPI figure — coloured numeric value while label stays navy/neutral. */
   .kpi-figure {
@@ -1083,6 +1106,7 @@
   .kpi-figure.kpi-violet { color: rgb(var(--bank-violet-strong)); }
   .kpi-figure.kpi-amber  { color: rgb(var(--bank-amber-strong)); }
   .kpi-figure.kpi-info   { color: rgb(var(--bank-info-strong)); }
+  .kpi-figure.kpi-rose   { color: rgb(var(--bank-rose-strong)); }
 
   /* Tag — subtle pill (soft tint + strong-tone text + hairline border). */
   .tag-editorial {
@@ -1103,6 +1127,7 @@
   .tag-violet { background-color: rgb(var(--bank-violet-tint));     color: rgb(var(--bank-violet-ink));     border-color: rgb(var(--bank-violet-border)); }
   .tag-amber  { background-color: rgb(var(--bank-amber-tint));      color: rgb(var(--bank-amber-ink));      border-color: rgb(var(--bank-amber-border)); }
   .tag-info   { background-color: rgb(var(--bank-info-tint));       color: rgb(var(--bank-info-ink));       border-color: rgb(var(--bank-info-border)); }
+  .tag-rose   { background-color: rgb(var(--bank-rose-tint));       color: rgb(var(--bank-rose-ink));       border-color: rgb(var(--bank-rose-border)); }
 
   /* Honor reduced-motion users globally */
   @media (prefers-reduced-motion: reduce) {
