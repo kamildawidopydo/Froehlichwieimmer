@@ -5,6 +5,7 @@ import axios from 'axios';
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import EinordnungSection from '@/components/nachrichten/EinordnungSection';
+import MarketSnapshot from '@/components/news-markte/MarketSnapshot';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
@@ -422,6 +423,14 @@ const NachrichtenPage = () => {
               ))}
             </div>
           </section>
+        )}
+
+        {/* Session 80.29 Phase 4 — „Märkte heute". Kompakter Snapshot direkt
+            unter „Heute wichtig", oberhalb Hero + Themenwelten. Nur auf der
+            ungefilterten Übersicht — auf Kategorie/Publisher-Filtern
+            unterdrückt, damit die Filter-Semantik nicht durcheinander gerät. */}
+        {category === 'alle' && publisher === 'alle' && (
+          <MarketSnapshot />
         )}
 
         {/* Hero + Headlines */}

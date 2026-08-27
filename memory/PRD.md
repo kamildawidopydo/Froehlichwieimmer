@@ -8,6 +8,22 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.29 Phase-4 (Aug 27 2026) — **„Märkte heute" auf /news/nachrichten**:
+
+  **1. Neue Komponente** `components/news-markte/MarketSnapshot.jsx`: kompakter, nicht-sticky Snapshot mit **DAX, S&P 500, EUR/USD, Gold**. Desktop 4-Spalten, Mobile 2×2 Grid. Petrol-strong für positive Werte, Coral-strong für negative — semantische Farben aus 80.26-System. Weiße Kacheln, dünner bank-border, keine Trading-Terminal-Optik.
+
+  **2. Datenquelle**: bestehender `fetchMarketOverview()` aus `services/marketService.js` (Backend `/api/news-markte/market/overview`, yfinance-Fallback). **Keine Mock-Daten** — fehlende/veraltete Symbole werden gefiltert, ist die Liste komplett leer, rendert die Komponente `null`. Stiller Refresh alle 2 Min., visibility-aware.
+
+  **3. Integration** in `pages/news/NachrichtenPage.jsx`: direkt unter „Heute wichtig", oberhalb Hero + Themenwelten. Nur bei `category=alle` UND `publisher=alle` — auf gefilterten Ansichten unterdrückt.
+
+  **4. Live-Verifikation**: DAX 47,83 (+0,4%), S&P 500 512,44 (+0,3%), EUR/USD 1,0862 (+0,1%), Gold 201,30 €/Feinunze (+0,4%). Screenshot desktop verifiziert, alle 4 Tiles via data-testid vorhanden.
+
+  **API-Calls**: **0 neue Backend-Routen**. Wiederverwendung bestehender Overview-Endpoint + Cache-/Refresh-Logik.
+
+**Session 80.29 abgeschlossen** (Phase 1–4). Financial Intelligence Hub live.
+
+
+
 - 80.29 Phase-3 (Aug 27 2026) — **Themenwelten auf /news/nachrichten**:
 
   **1. Neue Helfer-Datei** `data/newsTopicWorlds.js`: fünf Themenwelten `Märkte & Börse (info) / Zinsen & Sparen (petrol) / Wirtschaft & Politik (coral) / Vorsorge & Vermögen (amber) / Immobilien & Finanzierung (violet)`. Klassifikation: (1) Category-Match (Primary), (2) Keyword-Regex auf `title + excerpt` als kontrollierter Fallback. Erster Match gewinnt, Reihenfolge = Priorität.
