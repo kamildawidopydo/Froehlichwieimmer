@@ -4011,6 +4011,11 @@ async def news_nachrichten_related(slug: str, limit: int = 3):
 # Modular routers — neue Features werden hier registriert statt in server.py inline.
 from routes import reports as _reports_routes  # noqa: E402
 app.include_router(_reports_routes.router)
+try:
+    from routes.assistant import router as _assistant_router  # Session 80.38
+    app.include_router(_assistant_router)
+except Exception as _exc:  # noqa: BLE001
+    logger.warning("assistant router not registered: %s", _exc)
 
 # Auth-Routen (Session 78.0 — extrahiert aus server.py)
 from routes import auth as _auth_routes  # noqa: E402

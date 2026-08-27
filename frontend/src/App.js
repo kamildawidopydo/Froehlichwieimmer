@@ -9,6 +9,7 @@ import VisitorWelcomeGate from '@/components/VisitorWelcomeGate';
 import VisitorTracker from '@/components/VisitorTracker';
 import ScrollToTop from '@/components/ScrollToTop';
 import Layout from '@/components/Layout';
+import FloatingAssistant from '@/components/assistant/FloatingAssistant';
 import { AuthProvider } from '@/context/AuthContext';
 import { SocialPreviewProvider } from '@/context/SocialPreviewContext';
 import { DisplayCurrencyProvider } from '@/context/DisplayCurrencyContext';
