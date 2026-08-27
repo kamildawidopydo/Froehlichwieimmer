@@ -1317,14 +1317,21 @@ async def synthesize_pending(db, max_articles: int = 25) -> dict:
         # („lieber kein Topic als ein falsches Topic").
         try:
             from topic_mapper import classify_article as _classify_topic
+            from tag_extractor import extract_news_tags as _extract_tags
+            _tags = _extract_tags(
+                title=article.get("title") or "",
+                summary=article.get("summary") or "",
+                category=category,
+            )
             _match = _classify_topic(
                 title=article.get("title") or "",
                 summary=article.get("summary") or "",
                 category=category,
-                tags=[],
+                tags=_tags,
             )
             topic_slug = _match.slug if _match else None
         except Exception:  # noqa: BLE001
+            _tags = []
             topic_slug = None
         doc = {
             "slug": slug,
@@ -1335,6 +1342,7 @@ async def synthesize_pending(db, max_articles: int = 25) -> dict:
             "category": category,
             "content_type": "news_synthesis",
             "investment_topic_slug": topic_slug,
+            "tags": _tags,
             "sources":       [{"name": n, "url": u} for n, u in zip(meta["sources"], meta["urls"])],
             "source_names":  meta["sources"],
             "source_urls":   meta["urls"],

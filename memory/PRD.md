@@ -8,6 +8,46 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.36 (Aug 27 2026) — **Structured Tag Ingestion + Topic Reclassification**:
+
+  **Zentrale Tag-Taxonomie** (`/app/backend/tag_extractor.py`) — 20 kanonische Tags:
+     * Zinsen/Sparen: `ezb`, `leitzins`, `tagesgeld`, `festgeld`, `sparzinsen`
+     * Vorsorge: `rente`, `altersvorsorge`, `rentenreform`
+     * Märkte: `dax`, `sp500`, `nasdaq`, `aktienmarkt`, `etf`
+     * Makro: `inflation`, `kaufkraft`
+     * Immobilien: `bauzinsen`, `baufinanzierung`
+     * Anlageklassen: `aktien`, `anleihen`, `dividenden`, `gold`
+
+  **Extraktionslogik**:
+     * `extract_news_tags(title, summary, excerpt, category)` — regelbasiert, phrase-first, deterministisch. **Kein LLM-Call.**
+     * Confidence: exact/canonical title match = +3, summary/excerpt = +2, category = +1. `MIN_CONF = 2` — schwache Category-only-Signale werden verworfen.
+     * **Negative Guards**: Personalien-Rente (Vorstand/CEO geht in Rente), Bauzinsen ≠ Leitzins, Gewinnwarnung ≠ Dividende, Rezession ohne Zinsbezug.
+
+  **Backfill** (`scripts/backfill_tags.py`): dry-run + write, mit optionalem `--reclassify`. Idempotent, schützt bestehende non-leere Tags/Topics.
+
+  **Live-Ergebnis**:
+     * 46 Artikel analysiert · **13 neu getaggt** · 0 Legacy-Tags überschrieben · **1 neuer Topic-Match** (`ruhestand-vorsorge` für Merz-Rente-Artikel — dank `rente`-Tag +3 überschreitet der Score jetzt Threshold 5) · 6 bestehende Topics geschützt.
+     * Idempotency: 2. Lauf schreibt 0.
+     * Top-Tags: `inflation` (6), `dax` (2), `ezb` (2), `etf` (1), `gold` (1), `rente` (1), `kaufkraft` (1), `aktienmarkt` (1), `aktien` (1).
+     * Topic-Coverage: 6/46 vorher → **7/46 nachher** (+1). Kein Coverage-Erzwingen — die restlichen 39 bleiben bewusst untagged für Topics (kein Category-Fallback).
+
+  **Synthesizer-Hook** (`news_synthesizer.py`): neue Artikel bekommen `tags` beim Erstellen (`extract_news_tags`) — DIESELBE Funktion wie Backfill. Zentrale Logik, keine Duplikate.
+
+  **Konkrete UI-Auswirkung**:
+     * **`/themen/ruhestand-vorsorge` zeigt jetzt „Aktuell zum Thema"** mit dem Merz-Rente-Artikel. Ohne Session 80.36 wäre die Sektion weiterhin leer.
+     * `/themen/zinsen-sparen` bleibt korrekt leer (aktuelle News-Pool enthält keine echten Tages-/Festgeld-Meldungen).
+
+  **Zusätzliche API-/LLM-Calls**: **0**. Reine Server-Side-Backfill-Skripte, keine neuen Endpoints, keine LLM-N+1.
+
+  **Tests** (37/37 grün): 13 neue Tag-Extractor-Tests (9 positive Cases, 3 Negative Guards, Idempotency + Empty + Weak-Category-Guard) + 22 Topic-Mapper (unverändert) + 2 Fonds-ETF.
+
+  **Freeze eingehalten**: 48h-Freshness · MarketSnapshot · Topic Registry · Topic Threshold 5 · Crosslink Resolver · Global Colors · Editorial Score · Event-Dedup · published_at — **alles unangetastet**.
+
+  **Bekannte Grenzen**:
+     * Coverage bleibt niedrig, weil der aktuelle News-Feed (~46 Artikel) inhaltlich nur schmal ist. Sobald der News-Aggregator diverse Themen liefert, greift die Taxonomie automatisch.
+     * `/api/news/nachrichten` gibt `tags` derzeit noch nicht im Public-Shape zurück — für Frontend-Filter/Chip-Anzeige müsste `_to_public` in `news_provider.py` ergänzt werden (nicht Teil dieser Session — bewusster Freeze der Frontend-API-Contracts).
+
+
 - 80.35 (Aug 27 2026) — **Themen-Landingpages: /themen/zinsen-sparen & /themen/ruhestand-vorsorge**:
 
   **Backend**: `investment_topic_slug`-Filter zu `list_items` + `count_items` (`news_provider.py`) und zum Endpoint `/api/news/nachrichten` (`server.py`) hinzugefügt. **Nur echter Slug-Match**, kein Category-Fallback. Verifiziert: `?investment_topic_slug=aktien` → 4 Artikel, `?investment_topic_slug=zinsen-sparen` → 0 (korrekt, aktuell keine echten Zins-News im 48h-Feed).
