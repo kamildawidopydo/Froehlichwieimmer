@@ -8,6 +8,25 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.26e (Feb 26 2026) — **Strategy Cluster Color Signatures (Abschluss 80.26)**:
+  Sechs Ziel-Cluster bekommen dezente semantische Farb-Signaturen als Wiedererkennungsmerkmal. Farbe = Kategorie, nicht Dekoration.
+  - **Mapping** (per User): Aufbauen → petrol, Schützen → info, Ruhestand → amber, Familie → coral, Nachhaltig → petrol, Verstehen → violet.
+  - **Neue Helfer-Datei** `data/strategieClusters.js`: Lookup-Maps `CLUSTER_COLOR_BY_GOAL` (Overview) und `CLUSTER_COLOR_BY_CATEGORY` (Detail) + gebündeltes `CLUSTER_CLASSES`-Objekt mit literalen Klassenstrings für alle fünf Farben (`accentTop`, `iconBadge`, `textStrong`, `borderSoft`, `ring`). Literale Strings garantieren, dass Tailwind's JIT alle Klassen emittiert, auch wenn die Farbe dynamisch gewählt wird.
+  - **StrategieOverview.jsx** `GoalCard`: Icon-Wrapper von `bg-bank-primary/10 text-bank-primary` auf `icon-badge icon-badge-lg icon-badge-{color} rounded-full` umgestellt; 2px `card-accent-top card-accent-top-{color}` als Top-Signatur; „Themen entdecken"-CTA-Text auf `text-bank-{color}-strong`; Focus-Ring auf cluster-spezifisch.
+  - **StrategieDetail.jsx** Hero-Eyebrow: kategoriebasierte Cluster-Farbe via `clusterClassesForCategory(category.slug).textStrong` — dieselbe Farbe wie im Overview-Cluster, sodass ein Topic überall gleich signiert ist.
+  - **Verifikation (DOM-Probe alle 6 Karten Light-Mode)**:
+    * Aufbauen: top rgb(82,127,123), badge-bg rgb(234,243,242), icon rgb(55,100,96) → Petrol ✓
+    * Schützen: top rgb(76,124,186), badge-bg rgb(238,243,250), icon rgb(58,100,153) → Info ✓
+    * Ruhestand: top rgb(172,134,63), badge-bg rgb(249,243,226), icon rgb(142,108,42) → Amber ✓
+    * Familie: top rgb(204,88,96), badge-bg rgb(252,237,239), icon rgb(176,68,76) → Coral ✓
+    * Nachhaltig: top rgb(82,127,123) → Petrol ✓
+    * Verstehen: top rgb(112,100,156), badge-bg rgb(241,239,247), icon rgb(86,78,128) → Violet ✓
+  - Alle Top-Lines exakt 2px, Position absolute, inset:0 0 auto 0. Cards bleiben weiß mit Navy-Typografie, ~85% neutral, ~15% Cluster-Signal. Dark Mode kohärent (Tint-Werte automatisch dunkel), Mobile ebenfalls ok. Detail-Seite Altersvorsorge zeigt Amber-Kicker, Value-Investing zeigt Violet-Kicker.
+  - Keine Palette-Änderung, keine neuen Tokens, keine vollflächigen Card-Fills, kein Rainbow-Effekt.
+
+**Session 80.26 (a–e) visuell eingefroren und abgeschlossen.**
+
+
 - 80.26d (Feb 26 2026) — **Blush punktueller Ersteinsatz (drei Editorial-Signaturen)**:
   Rein additive Anwendung des in 80.26c eingeführten `bank.rose`-Slots an drei kleinen Editorial-Stellen. Coral bleibt Markenakzent, Navy/Weiß/Creme/Petrol-Balance unangetastet, keine bunten Flächen.
   - **Home Hero-Kicker** (`HomePlatformShowcase.jsx`): kleine Blush-Dateline „— seit 2020" mit feiner Blush-Hairline vor dem bestehenden coralen „Investmentplattform & Vermögensberatung"-Eyebrow. Font-mono, 9.5px, tracking 0.32em, `text-bank-rose-strong`. Wirkt wie eine leise editoriale Signatur, verdrängt Coral nicht.

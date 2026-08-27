@@ -4,6 +4,7 @@ import { ArrowRight, Sprout, ShieldCheck, Clock, Users, Leaf, TrendingUp } from 
 import PageMeta from '@/components/PageMeta';
 import { strategieCategories } from '@/data/strategieContent';
 import { goals } from '@/data/strategieGoals';
+import { clusterClassesForGoal } from '@/data/strategieClusters';
 import StrategieBreadcrumb from './_StrategieBreadcrumb';
 import StrategyFinder from './_StrategyFinder';
 import StrategyDownloadCenter from './_StrategyDownloadCenter';
@@ -14,18 +15,19 @@ const GoalCard = ({ g }) => {
   const Icon = GOAL_ICONS[g.icon] || TrendingUp;
   const firstTopic = g.topics[0];
   const href = firstTopic ? `/strategie/${firstTopic.category}/${firstTopic.topic}` : '/strategie';
+  const cluster = clusterClassesForGoal(g.slug);
   return (
     <Link
       to={href}
       data-testid={`strategie-goal-card-${g.slug}`}
-      className="group flex flex-col border border-bank-border bg-white p-7 transition-shadow duration-200 hover:shadow-editorial-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary"
+      className={`group relative flex flex-col border border-bank-border bg-white p-7 transition-shadow duration-200 hover:shadow-editorial-sm focus-visible:outline-none focus-visible:ring-2 ${cluster.ring} ${cluster.accentTop}`}
     >
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-bank-primary/10 text-bank-primary">
+      <div className={`${cluster.iconBadge} rounded-full`}>
         <Icon size={20} strokeWidth={1.6} />
       </div>
       <h3 className="mt-4 font-serif text-xl leading-snug text-bank-text">{g.title}</h3>
       <p className="mt-2 flex-1 text-[13.5px] leading-relaxed text-bank-text-muted">{g.lede}</p>
-      <span className="mt-5 inline-flex items-center gap-2 text-[12.5px] font-medium text-bank-primary">
+      <span className={`mt-5 inline-flex items-center gap-2 text-[12.5px] font-medium ${cluster.textStrong}`}>
         Themen entdecken
         <ArrowRight size={14} strokeWidth={1.8} className="transition-transform group-hover:translate-x-0.5" />
       </span>

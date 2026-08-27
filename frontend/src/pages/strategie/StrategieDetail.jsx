@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import { findTopic } from '@/data/strategieContent';
 import { findPremium } from '@/data/strategiePremiumContent';
+import { clusterClassesForCategory } from '@/data/strategieClusters';
 import StrategieBreadcrumb from './_StrategieBreadcrumb';
 import StrategieCta from './_StrategieCta';
 import StrategyPremiumBody from './_StrategyPremiumBody';
@@ -100,7 +101,7 @@ const StrategieDetail = () => {
         />
 
         <header className={isPremium ? 'mt-6 max-w-3xl' : 'mt-6'}>
-          <p className="text-[10.5px] uppercase tracking-[0.24em] text-bank-primary">{category.eyebrow}</p>
+          <p className={`text-[10.5px] uppercase tracking-[0.24em] ${clusterClassesForCategory(category.slug).textStrong}`}>{category.eyebrow}</p>
           <h1 className="mt-3 font-serif text-4xl leading-tight text-bank-text sm:text-5xl lg:text-6xl">
             {topic.title}
           </h1>
