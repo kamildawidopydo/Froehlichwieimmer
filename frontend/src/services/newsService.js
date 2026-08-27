@@ -4,6 +4,26 @@
 
 import { supabase } from '@/lib/supabase';
 
+// Session 80.27 — Harte 48h-Freshness auch clientseitig erzwingen.
+// Backup gegen Legacy-Supabase-Reads: selbst wenn die Supabase-Tabelle
+// veraltete Artikel enthält, werden sie in "aktuellen" Feeds gefiltert.
+// Detail-Aufrufe (getArticleBySlug) sind davon NICHT betroffen.
+const CURRENT_FEED_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+
+const isFresh = (item) => {
+  const pa = item?.published_at;
+  if (!pa) return false; // ohne Datum niemals als "aktuell" ausliefern
+  const ts = new Date(pa).getTime();
+  if (Number.isNaN(ts)) return false;
+  return Date.now() - ts <= CURRENT_FEED_MAX_AGE_MS;
+};
+
+// Filtert eine Feed-Liste auf published_at >= NOW-48h; sortiert absteigend.
+export const filterFreshFeed = (items) =>
+  (Array.isArray(items) ? items : [])
+    .filter(isFresh)
+    .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
+
 const DEFAULT_LIMIT = 20;
 const ARTICLE_COLUMNS =
   'id, slug, guid, title, summary, content, image_url, category, source_url, published_at, language, view_count, read_time_minutes, video_embed_url, video_thumbnail_url, video_source_url';
@@ -28,6 +48,12 @@ const fuzzySearch = async ({
   });
   if (error) throw error;
   const payload = data ?? { data: [], count: 0 };
+  // Session 80.27 — fuzzy-search result must also honour the 48h rule for
+  // article feeds; videos keep their original list.
+  if (source === 'articles') {
+    const fresh = filterFreshFeed(payload.data);
+    return { data: fresh, count: payload.count ?? fresh.length };
+  }
   return {
     data: payload.data ?? [],
     count: payload.count ?? null,
@@ -202,9 +228,11 @@ export async function listPublicFeed({
       throw err;
     }
     if (data?.error) throw new Error(data.error);
+    // Session 80.27 — 48h Freshness auf Edge-Function-Response anwenden.
+    const freshData = filterFreshFeed(data?.data);
     return {
-      data: data?.data ?? [],
-      count: data?.count ?? null,
+      data: freshData,
+      count: data?.count ?? freshData.length,
       cached: Boolean(data?.cached),
     };
   } catch (err) {
@@ -241,7 +269,9 @@ export async function listRelatedArticles({
   if (signal) q = q.abortSignal(signal);
   const { data, error } = await q;
   if (error) throw error;
-  return { data: data ?? [] };
+  // Session 80.27 — Related-Feed ebenfalls auf 48h beschränken.
+  const fresh = filterFreshFeed(data);
+  return { data: fresh };
 }
 
 export async function listRelatedVideos({

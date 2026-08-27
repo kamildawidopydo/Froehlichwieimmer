@@ -8,6 +8,39 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.27 (Aug 27 2026) — **Harte 48h-Freshness-Regel für aktuelle News-Feeds**:
+  **Root Cause der veralteten 4–5-Tage-Meldungen** (nachweisbar via Live-DB-Probe):
+  - Server-Side: `list_news` (server.py:371) und `news_markte_feed` (server.py:855) hatten **keinen Freshness-Filter** — nur `sort(published_at DESC).limit(20)`. Wenn der Synthesizer-Cron seit >48h keine neuen Artikel produziert hat, blieben die letzten synthetisierten Meldungen als "aktuell" im Feed hängen.
+  - Cron-Side: In dieser Preview-Env hat der stündliche Cron `news-fetch-feeds` + `news-synthesize` seit 68h nicht erfolgreich synthetisiert (Live-DB-Snapshot: alle 20 Artikel mit identischem `published_at = 2026-08-24T12:09:10Z`, entspricht dem letzten erfolgreichen Synthese-Lauf).
+  - Zusätzliches Rendering-Detail: `news_synthesizer.py:1337` setzt beim Publish `published_at = now` (Synthese-Zeit) statt Source-Zeit, weil ein synthetisierter Artikel MEHRERE RSS-Quellen aggregiert — die Aggregation IST die "Publikation" der Fröhlich-Redaktion. Freshness-Semantik bleibt dadurch sinnvoll (48h ab Redaktions-Publish, nicht ab Original-Source), die Quality-Gate-Vorstufe (line 1128) begrenzt Rohitems auf max. 24h vor Synthese, sodass keine "alten" Nachrichten in einen neuen synthetisierten Artikel fließen können.
+
+  **Fix (zentral, API-Ebene)**:
+  - Neues Modul-Konstante `CURRENT_FEED_MAX_AGE = timedelta(hours=48)` + Helfer `_current_feed_cutoff()` in `server.py:383-388` (Single Source of Truth).
+  - `list_news` (server.py:391): Query um `"published_at": {"$gte": _current_feed_cutoff()}` erweitert.
+  - `news_markte_feed` (server.py:855): Cutoff-Filter auf `q`, `all_docs`-Fallback und Featured-Pool angewandt — kein Nachrücken älterer Artikel als "Top/Weitere/Anleger"-Füllmaterial.
+  - `news_for_you` (server.py:1043): personalisierter Feed erbt dieselbe 48h-Regel.
+  - Sortierung `published_at DESC` bleibt; Detail-/Archiv-/Suche-Pfade unverändert (ältere Artikel via slug weiter zugänglich).
+  - Ingestion-Trigger manuell ausgeführt: `POST /api/news/admin/fetch-feeds` (240 fetched, 135 relevant, 8 new) + `POST /api/news/admin/synthesize?max_articles=15` (LLM-Synthese läuft im Backend, jede Meldung ~30s).
+
+  **Verifikation (Live via API)**:
+  - Vor Fix: 20 Artikel, alle 68.3h alt (STALE).
+  - Nach Fix + Ingestion: `/api/content/news?limit=20` liefert nur Artikel mit `age ≤ 0.5h` (Synthese-frisch). Frontend `/nachrichten` zeigt live „Reallöhne in Deutschland", „VW-Chef Blume", „Merz Rente mit 63" — alle heute publiziert.
+  - `news_markte_feed` gefiltert; wenn weniger als 15 frische Artikel verfügbar → kürzere Liste, KEIN Nachrücken älterer Meldungen.
+
+  **Was NICHT geändert**: Layout, Typographie, Color-System, Card-Design, Navigation, News-Detail-/Archiv-/Suche-Pfade, Relative-Zeit-Anzeige (nutzt bereits `published_at` clientseitig).
+
+  **Follow-ups (Backlog)**:
+  - Cron-Zuverlässigkeit in Preview-Env verifizieren (in Prod läuft stündlich, in Preview scheint der Trigger inkonsistent — evtl. Emergent-Platform-spezifisch).
+  - Empfehlung: `news-synthesize`-Cron auf `*/30 * * * *` erhöhen für frischere Feeds bei geringem RSS-Volumen.
+  - Optional: `content/news`-Endpoint um `?since_hours=` Parameter erweitern für Kunden-Widgets, die andere Windows brauchen (z. B. Weekly Digest 7d).
+
+  **80.27b Follow-up-Fix** (nach erstem Verifikations-Pass entdeckt): Der Frontend-`/news/nachrichten` nutzt `/api/news/nachrichten` (NICHT `/api/content/news`), gemounted via `_news_provider.list_items` in `news_provider.py`. Zusätzlich existiert ein Legacy-Supabase-Fallback via `newsService.js` → `listPublicFeed` → `listArticles`. Beide Pfade waren nach 80.27-Fix noch UNGEFILTERT. Nachtrag:
+  - `news_provider.py:431` `MongoNewsProvider.list_items` — 48h-Cutoff via `published_at: {$gte: NOW-48h}` in `syn_query`.
+  - `news_provider.py:470` `MongoNewsProvider.count_items` — dieselbe Regel im Count, sonst überzogenes `has_more`.
+  - `frontend/src/services/newsService.js` — modul-lokaler `filterFreshFeed(items)`-Helper (`CURRENT_FEED_MAX_AGE_MS = 48h`, drops items ohne published_at) wird jetzt in `listArticles`, `listPublicFeed` (Edge-Function-Response), `fuzzySearch` (nur `source=articles`) und `listRelatedArticles` angewandt. Detail-Aufrufe (`getArticleBySlug`) bleiben ungefiltert — Archivzugriff via Slug muss weiter funktionieren.
+  - Verifikation: `/api/news/nachrichten?category=alle&limit=20` liefert 15 fresh items (all 0.2h), `last_updated=2026-08-27T08:27:47Z`. Frontend Nachrichten-Seite zeigt „VOR 10 MIN." durchgängig statt „VOR 5 TAGEN" — visuell verifiziert.
+
+
 - 80.26e (Feb 26 2026) — **Strategy Cluster Color Signatures (Abschluss 80.26)**:
   Sechs Ziel-Cluster bekommen dezente semantische Farb-Signaturen als Wiedererkennungsmerkmal. Farbe = Kategorie, nicht Dekoration.
   - **Mapping** (per User): Aufbauen → petrol, Schützen → info, Ruhestand → amber, Familie → coral, Nachhaltig → petrol, Verstehen → violet.

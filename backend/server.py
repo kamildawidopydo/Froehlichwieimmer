@@ -368,13 +368,41 @@ async def list_offers(bank_slug: Optional[str] = None, product_type: Optional[st
     return result
 
 
+# ---------------------------------------------------------------------------
+# Session 80.27 — Harte Freshness-Regel für aktuelle News-Feeds.
+#
+# Alle "aktuellen" News-Endpoints (Home-News, /nachrichten, /news/markte …)
+# dürfen NUR Artikel mit `published_at >= NOW - CURRENT_FEED_MAX_AGE` liefern.
+# Ältere Artikel bleiben in Archiv-/Detail-/Suche-Pfaden zugänglich, tauchen
+# aber niemals als "aktuell" auf. Kein Nachrücken älterer Meldungen als
+# Füllmaterial — lieber weniger Karten als veraltete Karten.
+#
+# Zeit wird strikt in UTC verglichen (published_at wird beim Ingest bereits
+# als UTC gespeichert, alle mongodb-Docs sind timezone-aware).
+# ---------------------------------------------------------------------------
+CURRENT_FEED_MAX_AGE = timedelta(hours=48)
+
+
+def _current_feed_cutoff() -> datetime:
+    """Cutoff-Zeitpunkt für 'aktuelle' Feeds — Artikel jünger als 48h."""
+    return datetime.now(timezone.utc) - CURRENT_FEED_MAX_AGE
+
+
 @api.get("/content/news", response_model=List[NewsOut])
 async def list_news(limit: int = 20):
     """
     Session 80.25 — Reader auf `db.news_articles` umgestellt (Session-79.5 Kollektion
     des Synthesizers). Nur veröffentlichte, nicht-archivierte Artikel im Feed.
+
+    Session 80.27 — Harte 48h-Freshness-Regel: `published_at >= NOW-48h`.
+    Kein Nachrücken älterer Artikel; falls weniger als `limit` Artikel frisch
+    sind, wird die kürzere Liste zurückgegeben — bewusst.
     """
-    query = {"is_published": True, "status": "published"}
+    query = {
+        "is_published": True,
+        "status": "published",
+        "published_at": {"$gte": _current_feed_cutoff()},
+    }
     docs = await db.news_articles.find(query).sort("published_at", -1).limit(limit).to_list(limit)
     return [{
         "id": str(d["_id"]),
@@ -825,12 +853,17 @@ async def _fetch_market_snapshots() -> List[dict]:
 
 
 async def news_markte_feed(category: Optional[str] = None, limit: int = 30):
-    q: dict = {}
+    # Session 80.27 — Harte 48h-Freshness. Ältere Meldungen tauchen weder in
+    # `articles` noch in `top`/`weitere`/`anleger` auf, unabhängig von Featured-Flag.
+    cutoff = _current_feed_cutoff()
+    q: dict = {"published_at": {"$gte": cutoff}}
     if category and category != "alle":
         q["category"] = category
     docs = await db.news_markte_articles.find(q).sort("published_at", -1).limit(limit).to_list(limit)
     articles = [_article_to_out(d) for d in docs]
-    all_docs = docs if q == {} else await db.news_markte_articles.find({}).sort("published_at", -1).to_list(50)
+    all_docs = docs if len(q) == 1 else await db.news_markte_articles.find(
+        {"published_at": {"$gte": cutoff}}
+    ).sort("published_at", -1).to_list(50)
     all_articles = [_article_to_out(d) for d in all_docs]
     top = [a for a in all_articles if a["featured"]][:3]
     if len(top) < 3:
@@ -1006,7 +1039,11 @@ async def news_for_you(user: dict = Depends(get_current_user), limit: int = 12):
     interests = (doc or {}).get("interests", []) if doc else []
     if not interests:
         return {"personalized": False, "items": []}
-    q = {"category": {"$in": interests}}
+    # Session 80.27 — Freshness auch für personalisierte Feeds erzwingen.
+    q = {
+        "category": {"$in": interests},
+        "published_at": {"$gte": _current_feed_cutoff()},
+    }
     docs = await db.news_markte_articles.find(q).sort("published_at", -1).limit(limit).to_list(limit)
     return {"personalized": True, "items": [_article_to_out(d) for d in docs]}
 

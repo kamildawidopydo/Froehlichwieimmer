@@ -437,9 +437,19 @@ class MongoNewsProvider(NewsProvider):
         alias_map = {"umwelt": "klima", "aktien": "maerkte", "aktienmaerkte": "maerkte"}
         cat = alias_map.get(cat, cat)
 
+        # Session 80.27 — Harte 48h-Freshness. `/api/news/nachrichten` ist der
+        # zentrale "Aktuell"-Feed, der die Nachrichten-Hauptseite befüllt.
+        # Detail (`get_item`) bleibt unangefasst — Archivzugriff via Slug ok.
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+
         # Nur synthetisierte Artikel ausliefern — jeder Publisher fließt über
         # source_names in unseren konsolidierten Redaktionsartikel ein.
-        syn_query: dict = {"is_published": True, "status": "published", "content_type": {"$ne": "demo"}}
+        syn_query: dict = {
+            "is_published": True,
+            "status": "published",
+            "content_type": {"$ne": "demo"},
+            "published_at": {"$gte": cutoff},
+        }
         if cat != "alle":
             if cat == "videos":
                 syn_query["content_type"] = "video"
@@ -473,7 +483,15 @@ class MongoNewsProvider(NewsProvider):
         cat = (category or "alle").lower()
         alias_map = {"umwelt": "klima", "aktien": "maerkte", "aktienmaerkte": "maerkte"}
         cat = alias_map.get(cat, cat)
-        q: dict = {"is_published": True, "status": "published", "content_type": {"$ne": "demo"}}
+        # Session 80.27 — Freshness auch im Count mitzählen, sonst wird "has_more"
+        # / Pagination auf 20 alte Meldungen ausgelegt, obwohl nur 3 frisch sind.
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+        q: dict = {
+            "is_published": True,
+            "status": "published",
+            "content_type": {"$ne": "demo"},
+            "published_at": {"$gte": cutoff},
+        }
         if cat != "alle":
             q["category"] = cat
         if source:
