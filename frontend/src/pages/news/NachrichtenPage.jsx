@@ -6,6 +6,7 @@ import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import EinordnungSection from '@/components/nachrichten/EinordnungSection';
 import MarketSnapshot from '@/components/news-markte/MarketSnapshot';
+import WissenBridge from '@/components/newsroom/WissenBridge';
 import { pickTopThree } from '@/lib/news/editorialRelevance';
 import { relativeTimeLabel } from '@/lib/news/relativeTime';
 
@@ -399,6 +400,16 @@ const NachrichtenPage = () => {
             unterdrückt, damit die Filter-Semantik nicht durcheinander gerät. */}
         {category === 'alle' && publisher === 'alle' && (
           <MarketSnapshot />
+        )}
+
+        {/* Session 80.48 — News → Wissen Bridge. Reale Tag-/Topic-Overlap gegen
+            WISSEN_ARTICLES; keine Fake-Beziehungen. Nur auf der ungefilterten
+            Übersicht rendern, damit Filter-Semantik intakt bleibt. Komponente
+            blendet sich selbst aus, falls kein Match existiert. */}
+        {!loading && category === 'alle' && publisher === 'alle' && topThree.length > 0 && (
+          <div className="-mx-6 mt-10 sm:-mx-10">
+            <WissenBridge articles={topThree} />
+          </div>
         )}
 
         {/* Hero + Headlines */}

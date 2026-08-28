@@ -17,6 +17,53 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 
 
+
+- 80.48 (Feb 27 2026) — **Investment Newsroom Foundation (Reusable Primitives + Proof Point)**:
+
+  **Umfang bewusst begrenzt** — reusable Primitives + ein anwendungsbereiter Proof-Point. Vollflächige Newsroom-Migration bleibt Sessions 80.49–80.53 vorbehalten (Safe Investing Hub, Trust Layer, Morning/Closing Brief, Market Intelligence, News Feed & Editorial Pipeline).
+
+  **Bestehende Architektur (kurzer Audit)**:
+  * Öffentliche Newsroom-Routen: `/news`, `/news/nachrichten`, `/news/nachrichten/:slug`, `/news/watchlist`, `/news/aktien`, `/news/einordnung/:slug`, `/news/archiv`, `/news/kategorie/:category`, `/newsletter`.
+  * Backend-Feed: `GET /api/news/nachrichten` via `_news_provider.list_items()` — 48h-Freshness-Filter (aus 80.27) intakt.
+  * Bestehende NachrichtenPage: „Heute wichtig" Top-3 + `MarketSnapshot` + Hero+Headlines + Themenwelten. **NICHT angetastet.**
+  * Wissen-Corpus: `WISSEN_ARTICLES` mit `tags[]` und `slug`/`category` — reale Basis für Bridge-Matching.
+
+  **Neue Deliverables**:
+  * `/app/frontend/src/design-system/newsroom.js` — `RESEARCH_FORMATS` (news, market_brief, explainer, deep_dive, risk_check, data_insight), `NEWSROOM_CATEGORIES` (inkl. „Sicher investieren" als First-Class Vertical), `matchWissenBridge(article, wissen, limit=3)` — Tag/Topic-Overlap-Score, keine Fake-Beziehungen. `TRUST_META_KEYS` reserviert (leer bis 80.50).
+  * `/app/frontend/src/components/newsroom/FormatBadge.jsx` — `FormatBadge` (Format-Meta-Pill, tokenized via `formatAccent`) + `StoryMeta` (CATEGORY · SOURCE · TIME · READING). Fehlende Felder werden stumm ausgeblendet.
+  * `/app/frontend/src/components/newsroom/WissenBridge.jsx` — „Zum Verständnis"-Sektion mit bis zu 3 real gematchten Wissen-Artikeln. Champagne-Editorial-Surface (`resolveAccentPair('navy','champagne')`), Rendered NUR wenn Match ≥ 1.
+  * `/app/frontend/src/pages/news/NachrichtenPage.jsx` — WissenBridge wird auf der ungefilterten Übersicht unter „Heute wichtig"/MarketSnapshot gerendert, gefüttert aus den Top-3 (`topThree`).
+
+  **Editorial-Format-Taxonomie**:
+  | Format | Accent | Rolle |
+  |--------|--------|------|
+  | NEWS | navy | Standard-Meldung |
+  | MARKET BRIEF | info | Marktkontext |
+  | EXPLAINER | violet | Grundlage |
+  | DEEP DIVE | champagne | Langform |
+  | RISK CHECK | amber | Risiko-Erklärung |
+  | DATA INSIGHT | gold | Daten-/Chart-Analyse |
+
+  Alle Formate = kleine Mono-Uppercase-Badges (`FormatBadge`), keine bunten SaaS-Pills, kein Rainbow.
+
+  **„Sicher investieren"-Vertikal**: in `NEWSROOM_CATEGORIES` als `sicher-investieren` (Accent Petrol — Trust/Vertrauen-Semantik) angelegt. Editorial-Only in dieser Session — die eigentliche Vertikal-Landingpage `/wissen/sicher-investieren` folgt in Session 80.49.
+
+  **News ↔ Wissen Bridge**: `matchWissenBridge` scored Wissen-Artikel gegen News-Signals (Tags, `investment_topic_slug`, `category`); Slug-Substring als schwaches Signal. Ergebnis top-3 nach Score. Realer Content-Fluss: aktuelle Top-3-News → matched gegen `WISSEN_ARTICLES` → UI blendet sich aus wenn 0 Match.
+
+  **Trust-Metadaten**: `TRUST_META_KEYS` als Shape-Definition mit heute verfügbaren (`source`, `source_url`, `published_at`, `updated_at`, `author`) und vorbereiteten (`primary_source_url`, `fact_checked_at`, `methodology_url`, `next_review_at`) Feldern. Fehlende Werte werden von `StoryMeta` stumm ignoriert — **keine erfundenen Autoren/Zeitpunkte**.
+
+  **Freeze intakt**: MarketSnapshot, News-Ranking, `/news/nachrichten` Feed-Logik, 48h-Freshness, Assistant, Handoff, Comparison, Calculator, Home Gold Rollout, Nachhaltigkeit Sage Band, Wissen Champagne Band, tokenBridge, Data-Viz-Mapping — alles unangetastet.
+
+  **Governance**: Bridge nutzt `champagne + navy` (in `ALLOWED_ACCENT_PAIRS`). Kein neuer Slot. 80–85 % neutral. Kein Rainbow. Positive/Negative-Market-Farben unberührt.
+
+  **Verifikation**: `yarn contrast:check` → **19/19 PASS** · Prebuild-Gate ok · Bridge rendert live auf `/news/nachrichten` bei realem Content · Fallback (kein Match) blendet sauber aus.
+
+  **Limitationen (offen)**:
+  * Full „Investment News Stream" mit Kategorie-Chip-Filter, Story-Anatomy-Cards und Format-Badges pro Artikel folgt in 80.53 (News Feed & Editorial Pipeline).
+  * „Sicher investieren"-Landing folgt 80.49.
+  * Backend liefert derzeit keine `research_format`- oder `source_url`-Felder pro Artikel — `FormatBadge` ist als reusable Komponente jetzt einsetzbar, sobald 80.53 die Ingest-Pipeline erweitert.
+
+
 - 80.47 (Feb 27 2026) — **Chart Palette Refresh (Data-Viz Proof Point)**:
 
   **Chart ausgewählt**: `SavingsGrowthChart.jsx` — die Wachstumskurve im öffentlichen Sparrechner unter `/calculator`. Zwei Serien:
