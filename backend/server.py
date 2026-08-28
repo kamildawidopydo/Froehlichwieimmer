@@ -2035,6 +2035,50 @@ async def seed_admin():
             )
             logger.info("Updated admin password hash for %s", admin_email)
 
+    # Session 80.49c — Zusätzliche Admins aus ENV `ADMIN_EXTRAS`.
+    # Format: "email1:passwort1:Name1,email2:passwort2:Name2"
+    # Name ist optional (Fallback: local-part der E-Mail).
+    # Idempotent: legt an bei Bedarf, aktualisiert Passwort-Hash + Rolle sonst.
+    extras_raw = (os.environ.get("ADMIN_EXTRAS") or "").strip()
+    if not extras_raw:
+        return
+    for entry in extras_raw.split(","):
+        entry = entry.strip()
+        if not entry:
+            continue
+        parts = entry.split(":")
+        if len(parts) < 2:
+            logger.warning("ADMIN_EXTRAS: ungültiger Eintrag ignoriert: %r", entry)
+            continue
+        e_email = parts[0].strip().lower()
+        e_pw = parts[1].strip()
+        e_name = (parts[2].strip() if len(parts) > 2 and parts[2].strip() else e_email.split("@")[0])
+        if not e_email or not e_pw:
+            continue
+        existing = await db.users.find_one({"email": e_email})
+        if not existing:
+            await db.users.insert_one({
+                "email": e_email,
+                "password_hash": hash_password(e_pw),
+                "name": e_name,
+                "display_name": e_name,
+                "role": "admin",
+                "avatar_url": None,
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
+            })
+            logger.info("Seeded extra admin: %s", e_email)
+        else:
+            update = {}
+            if existing.get("role") != "admin":
+                update["role"] = "admin"
+            if not verify_password(e_pw, existing.get("password_hash", "")):
+                update["password_hash"] = hash_password(e_pw)
+            if update:
+                update["updated_at"] = datetime.now(timezone.utc)
+                await db.users.update_one({"_id": existing["_id"]}, {"$set": update})
+                logger.info("Updated extra admin %s (%s)", e_email, ",".join(update.keys()))
+
 
 async def seed_content():
     # Seed each collection independently so a partial seed can be repaired.
