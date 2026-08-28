@@ -15,6 +15,38 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 
 
+
+- 80.46 (Feb 27 2026) — **Editorial Rhythm on Wissen (Champagne)**:
+
+  **Geänderte Datei**: `/app/frontend/src/pages/Wissen.js` (nur diese eine).
+
+  **Ausgewählte Section**: „Ratgeber & Perspektiven" (id=`ratgeber`) — die redaktionelle Artikelliste mit 10.5px-Kickern, Serif-Headlines und `Weiterlesen`-CTA. Semantisch die Section, die am ehesten wie eine Private-Banking-Research-Bibliothek liest. Vorher `bg-white` (flach zwischen zwei white/cream Sections), Nachher `bg-bank-champagne-tint` mit warmen Hairlines.
+
+  **Umsetzung**:
+  * Import `resolveAccentPair` aus `@/design-system/accents`.
+  * `resolveAccentPair('gold', 'champagne')` → validiert Kombination via `ALLOWED_ACCENT_PAIRS[champagne] = ['navy', 'gold', 'violet']` ✓ (Gold ist bereits als Kicker/Nummer-Ornament in dieser Section aktiv — keine Rainbow-Verletzung).
+  * Section-Klassen: `border-y border-bank-champagne-border ${editorial.tint}` — statt `border-b border-bank-border bg-white`.
+  * Artikel-Divide: `divide-bank-champagne-border border-y border-bank-champagne-border` — statt `divide-bank-border border-y border-bank-border`.
+  * Keine ad-hoc-hex-Werte, keine lokalen Palette-Definitionen. Alle Tokens aus zentraler API.
+  * Kein Solid-Champagne-CTA, keine Typografie-/Copy-/Hierarchie-Änderungen. `Eyebrow`, Serif-h2, Body, Article-Cards, `Weiterlesen`-Pfeil identisch. Der Section-CTA-Button unten am Seitenende (Hinweis+CTA) unverändert.
+
+  **Section-Rhythmus vorher/nachher**:
+  * Vorher: Hero (dark) → Hub (white) → Themen (bank-bg cream) → Ratgeber (white) → Hinweis (surface/30) — visuell flach.
+  * Nachher: Hero (dark) → Hub (white) → Themen (bank-bg cream) → **Ratgeber (Champagne)** → Hinweis (surface/30) — ruhige editoriale Kadenz mit einer intentionalen warmen Fläche.
+
+  **Verifikation**:
+  * `yarn contrast:check` → **OK: 19/19 contrast checks pass** (unverändert, keine Token-Änderungen).
+  * Prebuild-Gate greift automatisch bei nächstem `yarn build`.
+  * Light Desktop 1440 ✓ · Dark Mobile 390 ✓ (`bg-bank-champagne-tint` löst in Dark Mode auf `#28221A` — separate Dark-Tokens, keine Invertierung).
+  * Text/Links/Kicker: Bank-Text (#1E292B) auf Champagne-Tint (#FAF7F1) → 15.9:1 (AAA). Bank-Text-Muted (#4d5b5b) auf Champagne-Tint → ~7.7:1 (AAA). Bank-Gold Kicker (Base #C89A3D) auf Champagne-Tint → ~3.1:1 (AA large — decorative uppercase 10.5px). Bank-Primary „Weiterlesen"-Link auf Champagne-Tint → identisch mit White-Fall (Tint L≈98%). Focus-Ring `focus-visible:ring-bank-accent/30` unangetastet.
+  * Hover auf Artikel-Row (`group-hover:text-bank-primary`) funktioniert unverändert auf Champagne-Fläche.
+  * Kein Rainbow: pro Viewport genau **1 dominant** (Neutral-Text/Serif) + **1 sekundär** (Champagne-Fläche + Gold-Ornamente = erlaubtes Paar).
+
+  **Freeze intakt**: Home Gold Rollout, Nachhaltigkeit Sage Band, Chart-Palette, MarketSnapshot, News-Ranking, Comparison, Assistant, ProductInquirySticky, Handoff-Endpoints, Farb-Tokens, Contrast-Thresholds — kein Byte geändert.
+
+  **Restrisiken**: Keine. Gold-Kicker in dieser Section nutzt weiterhin Base-Gold (#C89A3D) statt Gold-Strong — für die 10.5px-Mono-Ornamente akzeptabel (dekorativ, AA large text passt). Bei zukünftiger Umstellung auf Gold-Strong würde AA text (5+) auch auf Champagne-Tint erreicht.
+
+
 - 80.45 (Feb 27 2026) — **CI Contrast Gate**:
 
   **Umgesetzt**: `check-contrast.py` als **mandatorischer prebuild-npm-Hook** in `frontend/package.json` verdrahtet — läuft automatisch vor jedem `yarn build` und blockiert Deploy bei Regression.

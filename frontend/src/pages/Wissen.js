@@ -6,6 +6,7 @@ import Eyebrow from '@/components/editorial/Eyebrow';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { WISSEN_ARTICLES, WISSEN_CATEGORIES } from '@/data/wissenArticles';
+import { resolveAccentPair } from '@/design-system/accents';
 
 /**
  * /wissen — redaktioneller Wissenshub.
@@ -68,6 +69,12 @@ const TOPIC_ITEMS = [
 ];
 
 export default function Wissen() {
+  // Session 80.46 — Editorial Rhythm: Ratgeber & Perspektiven bekommt eine
+  // ruhige Champagne-Fläche (mit bestehenden Gold-Ornamenten kombinierbar
+  // laut ALLOWED_ACCENT_PAIRS.champagne = ['navy', 'gold', 'violet']).
+  // resolveAccentPair validiert die Kombination in DEV.
+  const { secondary: editorial } = resolveAccentPair('gold', 'champagne');
+
   return (
     <div className="min-h-screen w-full bg-bank-bg text-bank-text" data-testid="wissen-page">
       <PageMeta
@@ -215,8 +222,12 @@ export default function Wissen() {
         </div>
       </section>
 
-      {/* RATGEBER & PERSPEKTIVEN — bestehende Beiträge */}
-      <section id="ratgeber" className="border-b border-bank-border bg-white">
+      {/* RATGEBER & PERSPEKTIVEN — Champagne editorial surface (Session 80.46) */}
+      <section
+        id="ratgeber"
+        className={`border-y border-bank-champagne-border ${editorial.tint}`}
+        data-testid="wissen-ratgeber-section"
+      >
         <div className="mx-auto max-w-[1100px] px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
           <Eyebrow>Ratgeber &amp; Perspektiven</Eyebrow>
           <h2 className="mt-4 max-w-3xl font-serif text-3xl leading-tight text-bank-text sm:text-[38px]">
@@ -227,7 +238,7 @@ export default function Wissen() {
             zum Nachschlagen und Einordnen.
           </p>
 
-          <div className="mt-10 divide-y divide-bank-border border-y border-bank-border">
+          <div className="mt-10 divide-y divide-bank-champagne-border border-y border-bank-champagne-border">
             {WISSEN_ARTICLES.map((a, i) => {
               const cat = WISSEN_CATEGORIES[a.category];
               return (
