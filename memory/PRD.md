@@ -6,6 +6,26 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.50c (Feb 28 2026) — **Produktions-News-Pipeline reanimiert (kapital-direkt24.de zeigte leere News-Kacheln)**:
+
+  **Symptom (User meldet auf Deploy)**: Auf `kapital-direkt24.de` blieb der Top-News-Kasten leer trotz Session 80.50b Guard-Fix. Der Screenshot zeigte den Skeleton-Loader für immer.
+
+  **Root Cause**: `/api/news/nachrichten` auf Produktion antwortete `{"items": []}`. Analyse via Admin-Status-Endpoint:
+  * `fetch_feeds.last_success_at`: 240 Feeds, 29 relevant — **OK**
+  * `synthesize_pending.last_success_at`: `null` — **NIE GELAUFEN**
+
+  Der `_news_post_deploy_fetch`-Startup-Hook triggerte nur den Fetch, aber nicht den nachgelagerten Synthesize (LLM-basierte Redaktion). Ergebnis: Rohe RSS-Einträge stapeln sich in der DB, aber `status: "published"` bleibt 0.
+
+  **Fix**:
+  1. `_news_post_deploy_fetch` in `server.py` erweitert: nach dem Fetch läuft ein Guard-basierter Synthesize (`_news_synthesize(db, max_articles=15)`) sobald `published < 30`. Damit wird jeder Deploy automatisch bis zu 15 Artikel publizieren, ohne LLM-Budget zu sprengen.
+  2. `HomeNewsPreview.jsx` — Empty-State-Fallback ergänzt: wenn `top` fehlt und Loader vorbei ist, wird eine gebrandete „Redaktion in Vorbereitung"-Kachel gerendert statt endlosem `animate-pulse`. Beugt zukünftigen leeren Zuständen zwischen Deploys vor.
+  3. **Sofort-Rescue Produktion**: 10× `/api/news/admin/synthesize?max_articles=5` als batched HTTP-Calls (jeder <95 s wegen Cloudflare 524 Timeout). Ergebnis: 50 publizierte Artikel mit Bildern, `synthesize.last_success_at` gesetzt, `freshness=fresh`, 66 Artikel in 24 h.
+
+  **Verifikation**:
+  * `GET /api/news/nachrichten?limit=50` → 50 Items mit `image_url`, `slug`, `summary`, `title`.
+  * `GET /api/news/admin/status` → `freshness: fresh`, `synth.last_summary: {published: 5, needs_review: 0, llm_failed: 0}`.
+  * `GET /api/news-markte/feed` → `top: 3, overview: 15, weitere: 9` (statt 0/0/0).
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:

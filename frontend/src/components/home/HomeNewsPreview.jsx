@@ -262,8 +262,21 @@ const HomeNewsPreview = () => {
                 </div>
               </div>
             </Link>
-          ) : (
+          ) : newsState.loading ? (
             <div className="h-[420px] animate-pulse border border-bank-border bg-white/70" />
+          ) : (
+            <div className="flex h-[420px] flex-col justify-between border border-bank-border bg-white p-8" data-testid="home-news-top-empty">
+              <SafeNewsImage src="" category="wirtschaft" alt="" className="mb-6 h-40 w-full object-cover" />
+              <div>
+                <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-gold">Redaktion in Vorbereitung</p>
+                <h3 className="mt-3 font-serif text-2xl leading-tight text-bank-text sm:text-[26px]">
+                  Aktuelle Analysen folgen in Kürze.
+                </h3>
+                <p className="mt-3 text-[13.5px] leading-relaxed text-bank-text-muted">
+                  Unsere Redaktion sichtet gerade die neuesten Marktentwicklungen. Bis dahin finden Sie unten die aktuelle Marktübersicht sowie unsere Einordnungen.
+                </p>
+              </div>
+            </div>
           )}
         </div>
 

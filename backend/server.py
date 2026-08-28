@@ -3737,27 +3737,42 @@ async def _news_purge_startup() -> None:
 
 @app.on_event("startup")
 async def _news_post_deploy_fetch() -> None:
-    """Post-Deploy: einmalig RSS-Feeds ziehen (30s nach Start), damit nicht bis
-    zum nächsten Cron gewartet werden muss. Läuft im Hintergrund, blockiert
-    den Server-Startup nicht. Guard: wenn letzter erfolgreicher Fetch <30 Min
-    her ist, überspringen — vermeidet doppelte Läufe bei WatchFiles-Reloads."""
+    """Post-Deploy: einmalig RSS-Feeds ziehen (30s nach Start) UND anschließend
+    synthetisieren, damit die News-Timeline direkt nach dem Deploy befüllt ist.
+    Läuft im Hintergrund, blockiert den Server-Startup nicht. Guards:
+    - Fetch: 30-Min-Cooldown seit letztem erfolgreichen Fetch.
+    - Synthesize: läuft immer, wenn pending-Kandidaten vorhanden sind (guard
+      per `job_summaries.synthesize_pending.last_success_at` — bei 0 Publiziert
+      wird retry im nächsten Deploy)."""
     async def _run():
         try:
             await asyncio.sleep(30)  # kurz warten, damit alles initialisiert ist
-            # 30-Min-Guard: wenn letzter erfolgreicher Fetch <30 Min zurückliegt,
-            # überspringen. Reduziert unnötige Trigger bei häufigen Backend-Reloads.
             summary = await db.job_summaries.find_one({"_id": "fetch_feeds"})
             last_ok = summary.get("last_success_at") if summary else None
+            skip_fetch = False
             if isinstance(last_ok, datetime):
                 age_min = (datetime.now(timezone.utc) - last_ok).total_seconds() / 60.0
                 if age_min < 30:
                     logger.info(
                         "startup fetch skipped: recent successful fetch (%.1f min ago)", age_min,
                     )
-                    return
-            logger.info("news_post_deploy_fetch: starting one-shot fetch")
-            stats = await _news_fetch_feeds(db, trigger_source="post_deploy")
-            logger.info("news_post_deploy_fetch: done — %s", stats)
+                    skip_fetch = True
+            if not skip_fetch:
+                logger.info("news_post_deploy_fetch: starting one-shot fetch")
+                stats = await _news_fetch_feeds(db, trigger_source="post_deploy")
+                logger.info("news_post_deploy_fetch: done — %s", stats)
+
+            # Synthesize direkt danach — max 15 Kandidaten pro Deploy, damit
+            # der Prozess nicht Emergent-LLM-Budget sprengt. Wird bei jedem
+            # Deploy wiederholt, bis 0 pending übrig sind.
+            published = await db.news_articles.count_documents({"status": "published"})
+            if published < 30:
+                logger.info("news_post_deploy_synth: starting (published=%d < 30)", published)
+                try:
+                    synth_stats = await _news_synthesize(db, max_articles=15)
+                    logger.info("news_post_deploy_synth: done — %s", synth_stats)
+                except Exception:  # noqa: BLE001
+                    logger.exception("news_post_deploy_synth failed")
         except Exception:  # noqa: BLE001
             logger.exception("news post-deploy fetch failed")
     asyncio.create_task(_run())
