@@ -19,6 +19,33 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 
 
+
+- 80.49b (Feb 27 2026) — **Deploy-Blocker fix: Contrast Gate resilient gemacht**:
+
+  **Symptom (User meldet)**: Emergent-Deploy fällt. `deployment_agent` statisch = PASS, aber der reale Build-Container bricht ab.
+
+  **Root Cause**: Session 80.45 verdrahtete `"prebuild": "yarn contrast:check"` → `python3 scripts/check-contrast.py`. Lokaler Preview-Pod hat Python3 (`/root/.venv/bin/python3`), aber der **Emergent-Deploy-Build-Container ist Node-only** — `python3: command not found` → yarn beendet mit exit 127 **vor** Webpack. `yarn build` läuft im Deploy-Kontext nie durch.
+
+  **Fix**: Neuer Wrapper `/app/frontend/scripts/contrast-gate.js` (Node):
+  * Prüft mit `spawnSync('python3', ['--version'])` ob Python3 verfügbar ist.
+  * Python3 vorhanden → `spawnSync('python3', ['scripts/check-contrast.py'], {stdio:'inherit'})` — **volle strikte Regression, blockiert bei FAIL**.
+  * Python3 fehlt → warnt `⚠️ contrast:check skipped — python3 not available in this build environment.` und beendet mit `exit 0`. Deploy läuft weiter.
+  * `package.json` `prebuild` zeigt jetzt auf `node scripts/contrast-gate.js` statt direkt auf yarn contrast:check.
+
+  **Verifikation**:
+  * Lokal (Python3 vorhanden): `node scripts/contrast-gate.js` → `OK: 19/19 contrast checks pass`, exit 0 ✓
+  * Simulierter no-python3 (`PATH=$(dirname $(which node)) node scripts/contrast-gate.js`) → Warnung + exit 0, keine Blockade ✓
+  * `yarn build` läuft komplett durch bis Webpack-Ende, `build/` erzeugt ✓
+  * `yarn contrast:check` (direkter Aufruf, CI + lokal) unverändert strikt.
+
+  **Konsequenz für CI/Deploy**:
+  * Lokale Devs + jede Umgebung mit Python3 → weiterhin harter Gate.
+  * Emergent-Deploy-Container → soft-skip mit sichtbarer Warnung im Build-Log.
+  * Wenn strikter Gate im Deploy erwünscht wird: Python3 im Build-Image installieren (aptitude/docker layer) — Kontrast-Check zieht automatisch an, sobald Python3 auf PATH liegt.
+
+  **Freeze intakt**: Keine UI/Token/Content-Änderung. `check-contrast.py` unverändert. Alle vorherigen Session-Deliverables unangetastet.
+
+
 - 80.49 (Feb 27 2026) — **Safe Investing Hub (`/wissen/sicher-investieren`)**:
 
   **Architektur**
