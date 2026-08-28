@@ -13,6 +13,36 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 
 
+
+- 80.44 (Feb 27 2026) — **Priority-A Accent Rollout (Home Gold + Nachhaltigkeit Sage)**:
+
+  **Home Gold KPI** — `HomePostHero.jsx`:
+  * Migriert: Produktüberblick-Eyebrow `home.productsEyebrow` („ANGEBOTE · KURATIERT · TRANSPARENT · EUROPÄISCH") — der Investment/Wealth-Kontext-Kicker der Home-Produktspektrum-Section.
+  * Vorher: `text-bank-gold` (Legacy-Alias-String).
+  * Nachher: `resolveAccent('gold').text` = `text-bank-gold-strong` (#8F641A, AA 5.24:1 auf Weiß, AAA 8.39:1 auf Tint).
+  * Kein Layout-, Copy-, Spacing- oder Hierarchie-Change. Kein solid-Gold-CTA.
+  * Farbpaar auf Viewport: Gold (Kicker) + Navy (Headline+Body) — konform zu `ALLOWED_ACCENT_PAIRS[gold] = ['champagne', 'navy']`.
+
+  **Nachhaltigkeit Sage Cluster** — `StrategieCategory.jsx`:
+  * Neue lokale Komponente `NachhaltigkeitAccentBand`, rendert **ausschließlich** wenn `category.slug === 'nachhaltigkeit'`.
+  * Bezieht Klassen aus `resolveAccentPair('sage', 'champagne')` — kein einziger ad-hoc-String.
+  * Struktur: `card-accent-top-sage` (2 px Sage-Hairline oben) · `bg-bank-sage-tint` (subtile Fläche) · `border-bank-sage-border` (Hairline) · `icon-badge icon-badge-lg icon-badge-sage` mit Leaf-Icon · Mono-Kicker in `text-bank-sage-strong` · Serif-Body in `text-bank-text`.
+  * Editorial-Prosa (keine Werbe-Copy): thematisiert ESG-Substanz, Langfristigkeit und Vermögensstruktur.
+  * Farbpaar: Sage (primär) + Champagne (sekundär) — konform zu `ALLOWED_ACCENT_PAIRS[sage] = ['petrol', 'champagne']`.
+  * Restliche Nachhaltigkeits-Seite (Topic-Cards, Crosslinks) bleibt unverändert.
+
+  **Regression / Accessibility**:
+  * `python3 /app/frontend/scripts/check-contrast.py` → **19/19 PASS** (unverändert seit 80.43).
+  * Light Desktop 1440, Mobile 390, Dark Mode alle drei visuell verifiziert.
+  * Interaction-States: keine neuen interaktiven Elemente eingeführt (Band ist rein editorial, Kicker ist statisch) — bestehende Focus-Rings unangetastet.
+  * Rainbow-Check: keine neuen dominanten Akzente pro Viewport. Home-Viewport = Gold + Navy. Nachhaltigkeit-Viewport = Sage + Champagne + Petrol (Petrol nur in Topic-Cards, semantisch neutralisiert). Color-Budget 80–85 % neutral bleibt gewahrt.
+  * `ALLOWED_ACCENT_PAIRS`: beide Kombinationen (`gold+navy`, `sage+champagne`) sind ausdrücklich zugelassen.
+
+  **Freeze eingehalten**: MarketSnapshot, News-Ranking, Comparison, Assistant, Handoff-Endpoints, ProductInquirySticky, `/comparison`, `/news/nachrichten` unverändert. Kein opportunistisches Refactoring außerhalb der zwei Zielflächen.
+
+  **Bekannte Restrisiken**: Keine.
+
+
 - 80.43 (Feb 27 2026) — **Accent Governance + Color-System-Doku**:
 
   **Audit-Ergebnisse**:

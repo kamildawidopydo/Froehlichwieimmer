@@ -1,9 +1,40 @@
 import React from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Leaf } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import { findCategory, strategieCategories } from '@/data/strategieContent';
 import StrategieBreadcrumb from './_StrategieBreadcrumb';
+import { resolveAccentPair } from '@/design-system/accents';
+
+// Session 80.44 — Priority-A Rollout: dezente Sage-Band unter dem Hero,
+// ausschließlich für die Nachhaltigkeits-Kategorie. Editorial, nicht promotional.
+const NachhaltigkeitAccentBand = () => {
+  const { primary: sage } = resolveAccentPair('sage', 'champagne');
+  return (
+    <aside
+      data-testid="strategie-nachhaltigkeit-sage-band"
+      aria-label="Editorial-Notiz zur Nachhaltigkeits-Strategie"
+      className={`card-accent-top ${sage.top} mt-10 border border-bank-sage-border ${sage.tint} px-6 py-6 sm:px-8`}
+    >
+      <div className="flex items-start gap-4">
+        <span className={`icon-badge icon-badge-lg ${sage.icon}`} aria-hidden>
+          <Leaf size={20} strokeWidth={1.6} />
+        </span>
+        <div className="min-w-0">
+          <p className={`font-mono text-[10.5px] uppercase tracking-[0.24em] ${sage.text}`}>
+            Editorial · Nachhaltigkeit
+          </p>
+          <p className="mt-2 max-w-2xl font-serif text-[16.5px] leading-relaxed text-bank-text">
+            Nachhaltigkeit ist bei Fröhlich Vermögensberatung keine Etikette,
+            sondern strukturelle Frage: Wie werden ESG-Kriterien tatsächlich
+            umgesetzt, welche Ziele lassen sich langfristig tragen, und wie
+            passt der Ansatz zu Ihrer Vermögensstruktur über Generationen?
+          </p>
+        </div>
+      </div>
+    </aside>
+  );
+};
 
 const StrategieCategory = () => {
   const { category: categorySlug } = useParams();
@@ -30,6 +61,8 @@ const StrategieCategory = () => {
           <h1 className="mt-3 font-serif text-4xl leading-tight text-bank-text sm:text-5xl">{category.title}</h1>
           <p className="mt-5 text-[15px] leading-relaxed text-bank-text-muted">{category.intro}</p>
         </header>
+
+        {category.slug === 'nachhaltigkeit' && <NachhaltigkeitAccentBand />}
 
         <section
           className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"

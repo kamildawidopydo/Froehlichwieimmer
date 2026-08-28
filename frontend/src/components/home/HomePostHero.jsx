@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
 import siteCopy from '@/data/siteCopy';
+import { resolveAccent } from '@/design-system/accents';
 
 const EASE = [0.22, 1, 0.36, 1];
 const { home } = siteCopy;
@@ -15,6 +16,11 @@ const productTiles = home.productTiles;
  */
 const HomePostHero = () => {
   const prefersReduced = useReducedMotion();
+  // Session 80.44 — Priority-A Rollout: dieser Produkt-Kicker gehört
+  // semantisch zum Investment/Wealth-Kontext („So investieren Sie …").
+  // Wir migrieren ihn kontrolliert auf den zentralen Gold-Slot — kein
+  // Layout-, kein Copy-, kein Spacing-Change.
+  const investAcc = resolveAccent('gold');
   const reveal = (i = 0) => ({
     initial: { opacity: 0, y: 22 },
     whileInView: { opacity: 1, y: 0 },
@@ -47,7 +53,7 @@ const HomePostHero = () => {
       >
         <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
           <div className="mx-auto mb-12 max-w-3xl text-center lg:mb-14">
-            <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.24em] text-bank-gold">
+            <p className={`font-mono text-[10.5px] font-semibold uppercase tracking-[0.24em] ${investAcc.text}`}>
               {home.productsEyebrow}
             </p>
             <h2
