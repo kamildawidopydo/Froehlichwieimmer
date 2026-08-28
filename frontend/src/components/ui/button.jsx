@@ -46,11 +46,14 @@ const buttonVariants = cva(
           "border border-bank-info-border bg-white text-bank-info-ink hover:border-bank-info hover:bg-bank-info-tint",
         "outline-rose":
           "border border-bank-rose-border bg-white text-bank-rose-ink hover:border-bank-rose hover:bg-bank-rose-tint",
-        // Session 80.42 — Gold + Sage outline variants (no solid gold CTA by design).
+        // Session 80.42/80.43 — Gold + Sage + Champagne outline variants (no solid gold CTA).
+        // Volles Interaction-State-Set: hover / active / focus-visible / disabled.
         "outline-gold":
-          "border border-bank-gold-border bg-white text-bank-gold-ink hover:border-bank-gold hover:bg-bank-gold-tint",
+          "border border-bank-gold-border bg-white text-bank-gold-ink hover:border-bank-gold hover:bg-bank-gold-tint active:bg-bank-gold-tint/70 active:text-bank-gold-strong focus-visible:ring-bank-gold/60 disabled:border-bank-border disabled:text-bank-text-muted disabled:hover:bg-white dark:bg-bank-surface-elev dark:text-bank-gold-ink dark:hover:bg-bank-gold-tint/60",
         "outline-sage":
-          "border border-bank-sage-border bg-white text-bank-sage-ink hover:border-bank-sage hover:bg-bank-sage-tint",
+          "border border-bank-sage-border bg-white text-bank-sage-ink hover:border-bank-sage hover:bg-bank-sage-tint active:bg-bank-sage-tint/70 active:text-bank-sage-strong focus-visible:ring-bank-sage/60 disabled:border-bank-border disabled:text-bank-text-muted disabled:hover:bg-white dark:bg-bank-surface-elev dark:text-bank-sage-ink dark:hover:bg-bank-sage-tint/60",
+        "outline-champagne":
+          "border border-bank-champagne-border bg-white text-bank-champagne-ink hover:border-bank-champagne hover:bg-bank-champagne-tint active:bg-bank-champagne-tint/70 active:text-bank-champagne-strong focus-visible:ring-bank-champagne/60 disabled:border-bank-border disabled:text-bank-text-muted disabled:hover:bg-white dark:bg-bank-surface-elev dark:text-bank-champagne-ink dark:hover:bg-bank-champagne-tint/60",
       },
       size: {
         default: "h-10 px-5 py-2",

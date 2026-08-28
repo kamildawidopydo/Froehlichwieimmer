@@ -5,6 +5,7 @@ import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { relativeTimeLabel } from '@/lib/news/relativeTime';
+import { resolveAccentPair } from '@/design-system/accents';
 
 /**
  * Session 80.35 — Geteiltes Layout für Themen-Landingpages.
@@ -68,21 +69,11 @@ const ThemenLandingLayout = ({
     return () => { alive = false; };
   }, [slug]);
 
-  // Session 80.42 — Expanded accent palette (gold/champagne/sage).
-  const ACCENT_MAP = {
-    petrol:    { text: 'text-bank-petrol-strong',    top: 'card-accent-top-petrol',    border: 'border-bank-petrol-strong',    tint: 'bg-bank-petrol-tint' },
-    amber:     { text: 'text-bank-amber-strong',     top: 'card-accent-top-amber',     border: 'border-bank-amber-strong',     tint: 'bg-bank-amber-tint' },
-    gold:      { text: 'text-bank-gold-strong',      top: 'card-accent-top-gold',      border: 'border-bank-gold-strong',      tint: 'bg-bank-gold-tint' },
-    champagne: { text: 'text-bank-champagne-strong', top: 'card-accent-top-champagne', border: 'border-bank-champagne-strong', tint: 'bg-bank-champagne-tint' },
-    sage:      { text: 'text-bank-sage-strong',      top: 'card-accent-top-sage',      border: 'border-bank-sage-strong',      tint: 'bg-bank-sage-tint' },
-  };
-  const acc = ACCENT_MAP[accent] || ACCENT_MAP.petrol;
+  // Session 80.43 — zentrale Accent-API mit Governance-Warn im DEV.
+  const { primary: acc, secondary: editorialAcc } = resolveAccentPair(accent, editorialAccent);
   const accentText = acc.text;
   const accentCardTop = acc.top;
   const accentBorder = acc.border;
-  const editorialAcc = editorialAccent && ACCENT_MAP[editorialAccent];
-  // Editorial surface for the Wissen-Section: warm tint (champagne/gold),
-  // sehr subtil, nur EINE Section — kein Rainbow.
   const editorialSurface = editorialAcc ? editorialAcc.tint : '';
   const editorialKicker = editorialAcc ? editorialAcc.text : accentText;
 

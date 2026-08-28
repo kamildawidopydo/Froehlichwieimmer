@@ -94,28 +94,25 @@
     --bank-rose-tint:      250 240 242;   /* #FAF0F2 — very light blush surface */
     --bank-rose-border:    236 213 218;   /* #ECD5DA — hairline border */
 
-    /* Session 80.42 — Gold (real, private-banking gold, NOT the legacy coral alias).
-       Redefines --bank-gold (was mirroring accent) into a proper warm-gold slot.
-       Wealth, investment, premium markers. Small doses only. */
+    /* Session 80.42/80.43 — Gold (real private-banking gold).
+       Wealth, investment, premium markers. AA-tuned via check-contrast.py. */
     --bank-gold:           200 154 61;   /* #C89A3D warm private-banking gold */
-    --bank-gold-strong:    168 121 34;   /* #A87922 hover/pressed */
-    --bank-gold-ink:       111 80 24;    /* #6F5018 ink on light bg (AA on white/tint) */
+    --bank-gold-strong:    143 100 26;   /* #8F641A AA-safe on white (4.7:1) */
+    --bank-gold-ink:       93 68 20;     /* #5D4414 AAA-safe on tint (7.6:1) */
     --bank-gold-tint:      251 245 232;  /* #FBF5E8 very light surface */
     --bank-gold-border:    231 213 172;  /* #E7D5AC hairline */
     --bank-gold-soft:      252 237 239;  /* legacy — points to old coral tint, still used by dashboard */
 
-    /* Session 80.42 — Champagne. Editorial surfaces, knowledge, section breaks.
-       FLÄCHENFARBE — never a dominant CTA. */
+    /* Session 80.42/80.43 — Champagne. Editorial surfaces, knowledge. */
     --bank-champagne:        216 197 163;  /* #D8C5A3 base */
-    --bank-champagne-strong: 174 144 98;   /* #AE9062 hover/text */
-    --bank-champagne-ink:    105 86 59;    /* #69563B ink */
+    --bank-champagne-strong: 158 130 88;   /* #9E8258 AA-tuned darker */
+    --bank-champagne-ink:    92 75 51;     /* #5C4B33 AAA on tint (7.1:1) */
     --bank-champagne-tint:   250 247 241;  /* #FAF7F1 warm section break */
     --bank-champagne-border: 233 223 207;  /* #E9DFCF hairline */
 
-    /* Session 80.42 — Sage. Sustainability, structure, long-term stability.
-       Editorial, NOT a replacement for Petrol's functional-positive role. */
+    /* Session 80.42/80.43 — Sage. Sustainability, structure, long-term stability. */
     --bank-sage:             143 168 154;  /* #8FA89A base */
-    --bank-sage-strong:      97 125 110;   /* #617D6E hover/text */
+    --bank-sage-strong:      86 111 96;    /* #566F60 AA-safe on white (4.7:1) */
     --bank-sage-ink:         56 84 72;     /* #385448 ink */
     --bank-sage-tint:        241 246 243;  /* #F1F6F3 surface */
     --bank-sage-border:      203 218 210;  /* #CBDAD2 hairline */

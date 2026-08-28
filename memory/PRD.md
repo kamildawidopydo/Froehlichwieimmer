@@ -12,6 +12,67 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 
 
+
+- 80.43 (Feb 27 2026) — **Accent Governance + Color-System-Doku**:
+
+  **Audit-Ergebnisse**:
+  * Rainbow-Views: KEINE. `badge.jsx`/`button.jsx` sind Library-Files (alle Varianten). `strategieClusters` und `WasBedeutetDasBlock` sind Multi-Color-Mapper (nie zeitgleich gerendert).
+  * Coral in Wealth/Investment: KEINE Funde. Coral wird korrekt für Kinder/Familie und negative Market-Moves genutzt.
+  * Interaction-States: `outline-gold`/`outline-sage` hatten nur `hover:` — jetzt komplett (hover / active / focus-visible / disabled + Dark-Mode-Overrides), zusätzlich `outline-champagne` ergänzt.
+
+  **Zentrale Accent-API** — `/app/frontend/src/design-system/accents.js`:
+  * `ACCENT_NAMES` (Union-Freeze aller 10 Slots).
+  * `ACCENT_TOKENS[name]` mit `text/ink/top/border/tint/ring/icon/kpi/tag` — vollständige Klassen-Bundles.
+  * `ALLOWED_ACCENT_PAIRS` als Governance-Regel (welcher primäre Akzent darf mit welchem sekundären kombiniert werden).
+  * `resolveAccent(name, fallback)` + `resolveAccentPair(primary, secondary)` — beide validieren, warnen in DEV per `console.warn` bei ungültigen Werten oder verbotenen Kombinationen (kein throw).
+  * `ThemenLandingLayout` migriert auf zentrale API — lokale `ACCENT_MAP` entfernt.
+
+  **AA/AAA-Härtung** — `check-contrast.py` deckte 6 Grenzfälle auf; Token-Werte iterativ verschärft:
+
+  | Slot                | Vorher (light)     | Nachher (light)    | Ratio auf Weiß  | Ratio auf Tint  |
+  |---------------------|--------------------|--------------------|-----------------|-----------------|
+  | gold-strong         | #A87922 (3.87 ✗)   | **#8F641A**        | 5.24 (AA)       | 4.83 (AA)       |
+  | gold-ink            | #6F5018 (6.81)     | **#5D4414**        | 9.12 (AAA)      | 8.39 (AAA)      |
+  | champagne-strong    | #AE9062 (3.01)     | **#9E8258**        | 3.63 (AA large) | —               |
+  | champagne-ink       | #69563B (6.56)     | **#5C4B33**        | 8.37 (AAA)      | 7.83 (AAA)      |
+  | sage-strong         | #617D6E (4.50 ✗)   | **#566F60**        | 5.47 (AA)       | 5.01 (AA)       |
+  | sage-ink            | #385448 (schon ok) | #385448            | 8.30 (AAA)      | 7.60 (AAA)      |
+
+  **Automatisiertes Kontrast-Regression** — `/app/frontend/scripts/check-contrast.py`:
+  * 19 Prüfungen (Light + Dark), pure Python, keine Node-Dependency.
+  * Exit-Code 0 bei PASS, 1 bei FAIL — in CI direkt integrierbar.
+  * Aktueller Stand: **19/19 PASS**.
+  * Bei Token-Änderungen ausführen: `python3 /app/frontend/scripts/check-contrast.py`.
+
+  **Chart / Data-Viz-Semantik** (dokumentiert in `COLORS.md`):
+  * Positive Move → Petrol · Negative Move → Coral · Neutral → Info
+  * Wealth/Commodity → **Gold** · ESG/Nachhaltigkeit → **Sage** · Ruhestand → Amber
+  * Max 3 Farben/Chart, weitere Serien via Opacity-Stufen der Primärfarbe.
+
+  **Design-System-Dokumentation** — `/app/frontend/src/design-system/COLORS.md`:
+  * Semantik-Tabelle aller 10 Slots (erlaubt/verboten pro Slot).
+  * Erlaubte Farbpaare (Matrix Primär × Sekundär).
+  * Color-Budget-Regel (80–85 % neutral, max. 1+1 Akzent pro Viewport).
+  * Do/Don't pro neuer Farbe.
+  * Utility-Klassen-Beispiele.
+  * Chart-Mapping.
+
+  **Adoption-Sweep** — `/app/memory/color-adoption-candidates.md`:
+  * Priorität A (hoher Nutzen, geringes Risiko): Home-Investment-KPI, `/themen/aktien`-Kicker, Wissen-Artikel-Hairline, Wissen-Landing-Champagne-Fläche, Strategy-Detail-Section-Breaks, `/strategie/nachhaltigkeit`-Sage-Cluster.
+  * Priorität B (mit Redesign): News-Money-Impact `gold`-Slot, Admin-Investment-KPI, Comparison-„Spitzenzins"-Tag (RANKING-NEUTRAL).
+  * **Bewusst NICHT migrieren**: Comparison-Ranking (Petrol-Neutralität), MarketSnapshot-Up/Down, FloatingAssistant-Launcher, Auth-Seiten, Admin-Status-Farben.
+  * Migration-Regel: `ALLOWED_ACCENT_PAIRS`-Check → Screenshots → Contrast-Test → Bedeutung > Dekoration.
+
+  **Visual-Regression-Matrix**: Screenshots von Zinsen-Sparen (Champagne-Sektion), Ruhestand-Vorsorge (Gold-Sektion Light + Dark), Strategie-Overview Light — alle unverändert nach Token-Härtung.
+
+  **Freeze eingehalten**: 48h-News-Freshness, Topic-Registry, MarketSnapshot-Datenlogik, Comparison-Ranking, Savings-Ranking, Assistant-Retrieval/Intent/Handoff, Reply-Endpoint, Status-History, ProductInquirySticky — alle unangetastet.
+
+  **Verbleibende Restrisiken**:
+  * Kontrast-Test ist noch nicht in CI-Pipeline gehängt (nur manuell auszuführen) — Todo für Deploy-Härtung.
+  * Sage/Gold sind nur auf Themen-Seiten produktiv — Adoption-Sweep-Kandidaten warten auf explizite Freigabe pro Seite.
+  * `ALLOWED_ACCENT_PAIRS`-Verletzung produziert nur DEV-warn, keine build-time-Fehler (bewusst weich, um Layout-Regressionen im Prod zu vermeiden).
+
+
 - 80.42 (Feb 26 2026) — **Expanded Private-Banking Color System (Gold / Champagne / Sage)**:
 
   **Neue Tokens** (light + dark, alle als `bank.{name}` + `-strong/-ink/-tint/-border`):
