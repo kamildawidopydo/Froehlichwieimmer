@@ -94,6 +94,24 @@ Feste semantische Zuordnung — die UI-Palette wird **nicht** als zufällige Cha
 
 Für Multi-Serie-Charts gilt: **max. 3 Farben pro Chart**. Bei mehr Serien werden Nuancen der Primärfarbe (opacity 100/70/40) verwendet, nicht neue Slots.
 
+### Token-Bridge für Recharts (Session 80.47)
+
+Recharts (und die meisten Chart-Libraries) erwarten konkrete Farb-Strings, keine Tailwind-Klassen.
+Statt Hex-Duplikate in Chart-Komponenten zu pflegen, lesen wir die zentralen `--bank-*`-CSS-Variablen
+aus `index.css` zur Laufzeit über `/app/frontend/src/design-system/tokenBridge.js`:
+
+```jsx
+import { DATAVIZ } from '@/design-system/tokenBridge';
+
+// Statt raw hex '#B49450' oder CHART_COLORS.gold:
+<Area stroke={DATAVIZ.wealth()} fill={...} />
+```
+
+`DATAVIZ.wealth()`, `.wealthDeep()`, `.esg()`, `.esgDeep()` reichen die Slot-Werte aus
+`index.css` durch. Light/Dark werden automatisch übernommen — kein Chart-Update bei Token-Änderung nötig.
+`rgbVar(varName, fallback)` ist der Low-Level-Zugriff für andere Slots.
+
+
 ## Wartung
 
 - Neue Token-Werte → `index.css` + `tailwind.config.js` + `accents.js` **synchron** anpassen.

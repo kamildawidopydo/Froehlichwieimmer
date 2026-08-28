@@ -10,11 +10,11 @@ import {
   YAxis,
 } from 'recharts';
 import {
-  CHART_COLORS,
   CHART_GRID_STROKE,
   CHART_LEGEND,
   chartMargin,
 } from '@/components/dashboard/charts/chartTheme';
+import { DATAVIZ } from '@/design-system/tokenBridge';
 
 const formatEur = (n) =>
   new Intl.NumberFormat('de-DE', {
@@ -50,18 +50,25 @@ function ChartTooltip({ active, payload, label, showNet }) {
 export default function SavingsGrowthChart({ series, showNet }) {
   if (!series?.length) return null;
 
+  // Session 80.47 — Chart Palette Refresh: dieses Diagramm zeigt reines
+  // Kapitalwachstum über Zeit → Wealth/Investment-Semantik → Gold-Slot.
+  // Farben kommen aus dem zentralen Design-System via CSS-Variablen, damit
+  // Light/Dark-Werte aus index.css automatisch übernommen werden.
+  const wealthGross = DATAVIZ.wealth();      // Brutto — primärer Vermögensverlauf
+  const wealthNet   = DATAVIZ.wealthDeep();  // Nach Steuern — sekundärer, tieferer Ton derselben Semantik
+
   return (
     <div className="mt-8 h-[220px] w-full sm:h-[260px]" data-testid="calc-growth-chart">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={series} margin={chartMargin}>
           <defs>
             <linearGradient id="calcBalanceGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={CHART_COLORS.accent} stopOpacity={0.35} />
-              <stop offset="100%" stopColor={CHART_COLORS.accent} stopOpacity={0} />
+              <stop offset="0%" stopColor={wealthGross} stopOpacity={0.35} />
+              <stop offset="100%" stopColor={wealthGross} stopOpacity={0} />
             </linearGradient>
             <linearGradient id="calcNetGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={CHART_COLORS.gold} stopOpacity={0.28} />
-              <stop offset="100%" stopColor={CHART_COLORS.gold} stopOpacity={0} />
+              <stop offset="0%" stopColor={wealthNet} stopOpacity={0.28} />
+              <stop offset="100%" stopColor={wealthNet} stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke={CALC_GRID || CHART_GRID_STROKE} strokeDasharray="3 3" vertical={false} />
@@ -90,7 +97,7 @@ export default function SavingsGrowthChart({ series, showNet }) {
             type="monotone"
             dataKey="balance"
             name="balance"
-            stroke={CHART_COLORS.accent}
+            stroke={wealthGross}
             strokeWidth={2}
             fill="url(#calcBalanceGrad)"
             isAnimationActive={false}
@@ -100,7 +107,7 @@ export default function SavingsGrowthChart({ series, showNet }) {
               type="monotone"
               dataKey="netBalance"
               name="netBalance"
-              stroke={CHART_COLORS.gold}
+              stroke={wealthNet}
               strokeWidth={2}
               fill="url(#calcNetGrad)"
               isAnimationActive={false}

@@ -16,6 +16,46 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 
 
+
+- 80.47 (Feb 27 2026) — **Chart Palette Refresh (Data-Viz Proof Point)**:
+
+  **Chart ausgewählt**: `SavingsGrowthChart.jsx` — die Wachstumskurve im öffentlichen Sparrechner unter `/calculator`. Zwei Serien:
+  * `balance` (Brutto-Kapitalverlauf) — reines Vermögenswachstum
+  * `netBalance` (Nach-Steuern-Verlauf, optional) — gleiche Semantik, tieferer Ton
+  Beide Serien repräsentieren Wealth/Investment/Value über Zeit — Lehrbuchfall für den Gold-Slot laut `COLORS.md`.
+
+  **Geänderte Dateien**:
+  * `/app/frontend/src/design-system/tokenBridge.js` (neu) — `rgbVar(varName, fallback)` liest `--bank-*`-CSS-Vars aus `index.css` und liefert `rgb(r,g,b)`-Strings. `DATAVIZ.wealth/wealthDeep/esg/esgDeep()` als semantische Convenience-Wrapper.
+  * `/app/frontend/src/components/calculator/SavingsGrowthChart.jsx` — Import `DATAVIZ` statt `CHART_COLORS`; beide Serien (`stroke` + Gradient-Stops) fließen jetzt aus `DATAVIZ.wealth()` / `DATAVIZ.wealthDeep()`.
+  * `/app/frontend/src/design-system/COLORS.md` — neuer Abschnitt „Token-Bridge für Recharts" mit Codebeispiel.
+
+  **Chart-Library**: Recharts 2.15.2 (bereits vorhanden, keine neuen Dependencies).
+
+  **Serien-Änderungen**:
+  * Brutto (`balance`): `CHART_COLORS.accent` (`#4C7CBA` blau) → `DATAVIZ.wealth()` (`rgb(200,154,61)` = Gold Base #C89A3D).
+  * Netto (`netBalance`): `CHART_COLORS.gold` (`#B49450` isolierter Raw-Hex) → `DATAVIZ.wealthDeep()` (`rgb(143,100,26)` = Gold-Strong #8F641A).
+
+  **Warum Gold**: Kapitalwachstum ist keine Positive/Negative-Bewegung (keine Market-Semantik-Kollision) — es ist pure Wealth-Semantik. Beide Serien beschreiben denselben Datentyp (Kapital) und werden durch tonalen Kontrast innerhalb des Gold-Slots unterschieden, konform mit COLORS.md-Regel „Multi-Serie: Nuancen der Primärfarbe statt neuer Slots".
+
+  **Zentraler Token-Konsum**: Recharts erwartet String-Werte (kein Tailwind). Statt Hex-Duplikate im Chart zu pflegen, liest der Chart die Design-System-Tokens zur Laufzeit aus den CSS-Vars. Konsequenz: Token-Änderungen in `index.css` (Light+Dark) fließen ohne Chart-Anpassung durch.
+
+  **Datensemantik unangetastet**: Keine Status-/Positive-/Negative-Codierung geändert. `positiveNegativeColor()` in `chartTheme.js`, MarketSnapshot-Grün/Rot, News-Impact-Coral — alles unangetastet. Legend/Tooltip-Text („Brutto"/„Nach Steuern") bleibt als non-color Signal.
+
+  **Verifikation**:
+  * `yarn contrast:check` → **OK: 19/19**, exit 0.
+  * Prebuild-Gate greift.
+  * Light Desktop 1440 ✓ · Dark Mobile 390 ✓ — beide Serien deutlich vom dunklen Chart-Panel-Hintergrund abgesetzt (Chart-Panel ist dunkel, Weißanteil-Ticks auf Grid unverändert).
+  * Legend-Marker (rechts oben, `iconType: 'circle'`) übernimmt automatisch die neuen Stroke-Farben. Tooltip-Werte weiterhin klar zugeordnet über Feldnamen.
+  * Hover: Recharts-eigene ActiveDot nutzt Stroke-Farbe → automatisch Gold. Kein Console-Error.
+  * Zwei Serien bleiben durch Tonal-Differenz + Legend-Labels + Tooltip-Zeilen unterscheidbar (non-color redundancy).
+
+  **Governance**: 1 dominanter Akzent (Gold) pro Viewport, restlicher Chart-Container/Sparrechner-Card unverändert. Kein Rainbow, kein Sekundär-Slot im Chart hinzugefügt. Sparrechner-Card-Background weiter dark-neutral.
+
+  **Freeze intakt**: Home Gold Rollout, Nachhaltigkeit Sage Band, Wissen Champagne Band, MarketSnapshot Positive/Negative, News-Ranking, Comparison, Assistant, ProductInquirySticky, Handoff-Endpoints, alle Color-Tokens und Contrast-Thresholds — unverändert.
+
+  **Restrisiken**: `getComputedStyle`-Aufruf bei jedem Render (React kompensiert via memoization am Chart-Rerender-Level — hier vernachlässigbar, da Chart-Renderfrequenz gering). SSR-Fallback via Hex ist gesichert.
+
+
 - 80.46 (Feb 27 2026) — **Editorial Rhythm on Wissen (Champagne)**:
 
   **Geänderte Datei**: `/app/frontend/src/pages/Wissen.js` (nur diese eine).
