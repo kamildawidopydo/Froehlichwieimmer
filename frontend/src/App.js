@@ -39,6 +39,7 @@ const About = lazy(() => import('@/pages/About'));
 const Philosophie = lazy(() => import('@/pages/Philosophie'));
 const Leistungen = lazy(() => import('@/pages/Leistungen'));
 const Wissen = lazy(() => import('@/pages/Wissen'));
+const SicherInvestierenHub = lazy(() => import('@/pages/wissen/SicherInvestierenHub'));
 const WissenArtikel = lazy(() => import('@/pages/WissenArtikel'));
 const FinanzwissenArtikel = lazy(() => import('@/pages/FinanzwissenArtikel'));
 const NewsletterPage = lazy(() => import('@/pages/NewsletterPage'));
@@ -257,6 +258,7 @@ function App() {
                   <Route path="/philosophie" element={<Philosophie />} />
                   <Route path="/leistungen" element={<Leistungen />} />
                   <Route path="/wissen" element={<Wissen />} />
+                  <Route path="/wissen/sicher-investieren" element={<SicherInvestierenHub />} />
                   <Route path="/wissen/:slug" element={<WissenArtikel />} />
                   <Route path="/strategie" element={<StrategieOverview />} />
                   <Route path="/strategie/:category" element={<StrategieCategory />} />

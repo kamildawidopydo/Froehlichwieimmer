@@ -18,6 +18,55 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 
 
+
+- 80.49 (Feb 27 2026) — **Safe Investing Hub (`/wissen/sicher-investieren`)**:
+
+  **Architektur**
+  * Route neu: `/wissen/sicher-investieren` → `pages/wissen/SicherInvestierenHub.jsx`. Registriert in `App.js` innerhalb bestehender Wissen-Routing-Sektion (kein Refactor der Wissen-Landing).
+  * Wissen-Discovery: Ein Topic-Item „Sicher investieren" oben in `TOPIC_ITEMS` von `Wissen.js` — Champagne-Ratgeber-Sektion aus 80.46 unberührt.
+  * Reused: Bestehende Wissen-Typo/-Spacing/Eyebrow, `FormatBadge`, `matchWissenBridge`, `resolveAccentPair`, `WISSEN_ARTICLES`, Newsroom-Kategorie `sicher-investieren`, Eyebrow-Editorial.
+
+  **Safety Framework (reusable Data-Model, inline im Hub)**
+  * **6 Dimensionen**: Kapitalrisiko · Insolvenzschutz · Liquidität · Zinsrisiko · Inflationsrisiko · Laufzeit. Jede mit Klartext-Erklärung.
+  * **3 Level**: `niedrig` (Sage-Tint), `mittel` (neutral), `erhöht` (Amber-Tint) — Farbe NIE alleiniges Signal, Level-Text steht daneben.
+  * **6 Instrumente** verglichen: Tagesgeld · Festgeld · Geldmarktfonds · Staatsanleihen · Unternehmensanleihen · breit diversifizierte ETFs. Jedes mit `what` + 6-Dim-Profil + `caveat` (Amber-Warning-Block) + `horizon`. Kein Ranking, keine „best product"-Aussage.
+  * **5 Zentrale Unterscheidungen** (Champagne-Editorial-Fläche): Einlagensicherung ≠ Sondervermögen · Nominal ≠ real · Kursschwankung ≠ Verlust · Staatsanleihe ≠ risikofrei · ETF ≠ Einlagensicherung.
+  * **4 Schutzmechanismen** (EU/DE): Einlagensicherung, Sondervermögen, Emittentenrisiko, Depot- vs. Einlagenverwahrung — bewusst OHNE erfundene Zahlen/Deckungssummen. Regulatorische Werte werden explizit als „Zu belegen · Trust Layer 80.50" markiert.
+  * **6-Frage-Entscheidungs-Framework** (Sage-Editorial-Fläche): Zeitrahmen, Schwankungstoleranz, Liquidität, Nominal-vs-Real, Diversifikation, Risikoausschluss. Keine Empfehlungs-Engine.
+  * **4 Szenarien**: Notgroschen · 2-Jahres-Bedarf · Langfristiger Vermögensaufbau · Ruhestand/Entnahme — je mit Fokus + erklärender Prosa, keine personalisierten Allokationen.
+
+  **Risk Check Editorial Format**
+  * 5 Einträge (Tagesgeld/Geldmarktfonds/ETF/Staatsanleihen/Festgeld) mit `FormatBadge format="risk_check"`.
+  * Automatisches Matching via `matchWissenBridge` gegen echte `WISSEN_ARTICLES`. Wenn Match → verlinkt. Wenn kein Match → sichtbarer **Content-Gap-Marker** („Redaktioneller Content-Gap · geplant"), KEIN Fake-Link.
+
+  **Newsroom-Integration**
+  * `Aktuell zum Thema`-Section holt `GET /api/news/nachrichten?category=sicher-investieren&limit=6` live.
+  * Rendered NUR wenn `news.length > 0` — sonst stumm ausgeblendet. Keine erfundenen Headlines.
+  * Aktueller Real-World-Fall: Backend liefert 0 Items für diese Kategorie (Legacy-Kategorie-Mapping) → Section blendet sich sauber aus. Sobald `News Feed & Editorial Pipeline` (80.53) die Kategorie befüllt, aktiviert sie sich automatisch.
+
+  **Trust Gaps (an 80.50 übergeben)**
+  1. **Gesetzliche Einlagensicherung DE/EU** — Deckungssumme, Verfahren, Auszahlungsfristen (Primärquelle: BaFin / EBA / Entschädigungseinrichtung).
+  2. **Sondervermögen KAGB** — genaue Rechtsgrundlage, Verwahrstelle-Pflichten (Primärquelle: KAGB, BaFin).
+  3. **Depot-Sondervermögens-Status** — Rechtsfolgen bei Brokerinsolvenz (Primärquelle: WpHG / BaFin).
+  4. **Rating-Skalen** für Anleihen (S&P / Moody's / Fitch — Primärquellen).
+  Alle regulatorischen Behauptungen sind derzeit konzeptionell formuliert; konkrete Zahlen/Zitate warten auf Trust-Layer-Anbindung.
+
+  **Governance**
+  * Accent-Paar: `sage + champagne` (aus `ALLOWED_ACCENT_PAIRS[sage] = ['petrol','champagne']` ✓).
+  * Warning-Caveats nutzen `amber` — semantisch korrekt (Vorsorge/Warnung), kein Rainbow.
+  * Level-Farben: Sage (niedrig), Neutral (mittel), Amber (erhöht) — alle mit Text-Redundanz.
+  * Color-Budget: Hero (Navy) → Framework (Sage-Tint) → Instruments (White) → Distinctions (Champagne) → Protection (White) → Decision (Sage) → Scenarios (White) → Risk Check (Champagne) → News (White) — ruhiger 80/20-Wechsel, max. 1 dominant + 1 sekundär pro Section.
+
+  **Verifikation**
+  * `yarn contrast:check` → **19/19 PASS**, exit 0.
+  * Prebuild-Gate ok.
+  * Light Desktop 1440 verifiziert · Hub rendert alle 6 Dims, 6 Instruments, 5 Distinctions, 4 Scenarios, 5 Risk-Check-Einträge.
+  * `role="list"`/`listitem` auf Instrument-Cards, `aria-label="Risikodimensionen"` auf Level-Grid, semantische H1-H3-Kaskade, alle Level-Angaben haben Text-Redundanz.
+  * Keine Console-Errors.
+
+  **Freeze intakt**: news_provider, News-Ranking, MarketSnapshot, Newsroom-Top-3, Comparison, Assistant, ProductInquirySticky, Handoff, Calculator, SavingsGrowthChart, Home Gold, Nachhaltigkeit Sage, Wissen Champagne, tokenBridge, Tokens, Contrast-Thresholds — alle unangetastet.
+
+
 - 80.48 (Feb 27 2026) — **Investment Newsroom Foundation (Reusable Primitives + Proof Point)**:
 
   **Umfang bewusst begrenzt** — reusable Primitives + ein anwendungsbereiter Proof-Point. Vollflächige Newsroom-Migration bleibt Sessions 80.49–80.53 vorbehalten (Safe Investing Hub, Trust Layer, Morning/Closing Brief, Market Intelligence, News Feed & Editorial Pipeline).

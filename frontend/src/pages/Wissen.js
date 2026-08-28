@@ -46,6 +46,13 @@ const HUB_ITEMS = [
 
 const TOPIC_ITEMS = [
   {
+    slug: 'sicher-investieren',
+    href: '/wissen/sicher-investieren',
+    title: 'Sicher investieren',
+    lede:
+      'Sechs Dimensionen finanzieller Sicherheit — Kapitalrisiko, Insolvenzschutz, Liquidität, Zins-, Inflations- und Laufzeitrisiko im editorialen Vergleich.',
+  },
+  {
     slug: 'aktien',
     href: '/themen/aktien',
     title: 'Aktien',
