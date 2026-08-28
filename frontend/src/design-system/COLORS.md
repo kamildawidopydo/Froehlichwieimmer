@@ -99,3 +99,20 @@ Für Multi-Serie-Charts gilt: **max. 3 Farben pro Chart**. Bei mehr Serien werde
 - Neue Token-Werte → `index.css` + `tailwind.config.js` + `accents.js` **synchron** anpassen.
 - Kontrast-Check ausführen: `python3 /app/frontend/scripts/check-contrast.py`.
 - Screenshots erneuern: siehe `/app/memory/color-adoption-candidates.md`.
+
+## CI Contrast Gate (Session 80.45)
+
+Der Kontrast-Check ist als **`prebuild`-npm-Hook** in `frontend/package.json` verdrahtet:
+
+```json
+"prebuild": "yarn contrast:check",
+"contrast:check": "python3 scripts/check-contrast.py"
+```
+
+Konsequenzen:
+
+- **Jeder `yarn build` läuft zwangsläufig zuerst `contrast:check`.** Der Deploy-Pipeline-Build (via Emergent-Deploy-Agent oder `cf:deploy`) blockiert bei Contrast-Regressionen mit Exit-Code 1 vor dem eigentlichen Webpack-Build.
+- **Lokal ausführen**: `cd /app/frontend && yarn contrast:check` — pure Python, keine zusätzlichen Dependencies.
+- **19/19 PASS** ist Pflicht. Erwarteter Output endet mit `OK: 19/19 contrast checks pass`.
+- Bei Token-Änderungen (`index.css` / `tailwind.config.js`) `scripts/check-contrast.py` **im gleichen PR** synchron mit-anpassen und laufen lassen.
+

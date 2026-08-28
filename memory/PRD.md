@@ -14,6 +14,36 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 
 
+
+- 80.45 (Feb 27 2026) — **CI Contrast Gate**:
+
+  **Umgesetzt**: `check-contrast.py` als **mandatorischer prebuild-npm-Hook** in `frontend/package.json` verdrahtet — läuft automatisch vor jedem `yarn build` und blockiert Deploy bei Regression.
+
+  **Geänderte Datei (Pipeline)**: `/app/frontend/package.json`
+  ```json
+  "prebuild": "yarn contrast:check",
+  "contrast:check": "python3 scripts/check-contrast.py"
+  ```
+  Ausgeführter Command: `python3 scripts/check-contrast.py` (via `yarn contrast:check` → als `prebuild` von `yarn build` automatisch gestartet).
+
+  **Warum diese Verdrahtung**: Das Repo hat keinen klassischen CI-Workflow (`.github/workflows/*`, `.gitlab-ci.yml` etc.). Der Deploy-Pfad läuft über Emergent-Deploy-Agent, der `yarn build` im Frontend ausführt. Der `prebuild`-Hook ist der idiomatische, dependency-freie Aufhängepunkt und läuft vor Webpack. Keine neuen Packages, keine zweite CI-Ebene.
+
+  **Verifikation**:
+  * **Success-Path**: `yarn contrast:check` → `OK: 19/19 contrast checks pass`, exit 0, yarn Done ✓
+  * **Failure-Simulation**: `gold-strong` im *Script* (nicht Tokens!) temporär auf `#D8B77A` → Kontrast fällt auf 1.91/1.76 → Script `FAILED: 2/19`, exit 1 → yarn Command failed with exit code 1 → Build würde blockiert ✓
+  * **Revert**: `gold-strong` zurück auf `#8F641A`, danach erneut `yarn contrast:check` → `OK: 19/19`, exit 0 ✓
+  * **Prebuild-Chain**: `yarn build` triggert automatisch `prebuild` → `contrast:check` läuft vor Webpack ✓
+  * `yarn test` / bestehendes Frontend-Build-Verhalten ansonsten unverändert.
+
+  **Documentation-Update**: Ein Abschnitt „CI Contrast Gate" in `/app/frontend/src/design-system/COLORS.md` ergänzt (was der Gate prüft, wie lokal ausgeführt, dass Regressionen den Build blockieren). Keine redundante README erzeugt.
+
+  **Freeze intakt**: Home Gold Kicker, Nachhaltigkeit Sage Band, Wissen UI, Chart-Farben, MarketSnapshot, News-Ranking, Comparison, Assistant, ProductInquirySticky, Handoff-Endpoints — alle unangetastet. Keine Farb-Tokens wurden für den Gate geändert.
+
+  **Restrisiken**:
+  * Der Gate hängt an `yarn build`. Wer im Deploy einen anderen Build-Command umgeht, umgeht auch den Gate — auf Deploy-Ebene ist `yarn build` aber der einzige verdrahtete Frontend-Build.
+  * Der Gate deckt nur die aktuell in `CHECKS` + `DARK_CHECKS` gelisteten Paare ab. Bei neuen Slots muss die Prüfliste erweitert werden (dokumentiert in COLORS.md-Wartungsabschnitt).
+
+
 - 80.44 (Feb 27 2026) — **Priority-A Accent Rollout (Home Gold + Nachhaltigkeit Sage)**:
 
   **Home Gold KPI** — `HomePostHero.jsx`:

@@ -85,6 +85,8 @@
   "scripts": {
     "start": "craco start",
     "build": "cross-env CI=false DISABLE_ESLINT_PLUGIN=true GENERATE_SOURCEMAP=false craco build",
+    "prebuild": "yarn contrast:check",
+    "contrast:check": "python3 scripts/check-contrast.py",
     "test": "craco test",
     "dev": "concurrently -k -n api,web -c blue,green \"node scripts/dev-api-server.js\" \"craco start\"",
     "dev:api": "node scripts/dev-api-server.js",
