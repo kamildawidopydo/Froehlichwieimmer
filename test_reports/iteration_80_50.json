@@ -1,0 +1,52 @@
+{
+  "summary": "Session 80.50 P0 verification (backend + frontend). Backend: 15/15 pytest pass (/api/news-markte/market/sparkline/{DAX,SPX,NDX,DJI} = 200 with >=10 points, unsupported symbols = fast 404 <300ms, /api/unsplash-proxy = 200 image/jpeg + 403 allowlist + 422 missing param, patron login + /api/auth/me + /api/admin/assistant-handoffs = 200). Frontend (Playwright, 1920x1080): DOMContentLoaded 0.32 s, ZERO requests to supabase.co/functions/v1/stock-history or market-sparklines (P0 fix confirmed), 0 broken images (196 imgs home / 18 article), login patron -> /admin OK, admin handoff inbox (/admin/assistant-handoffs) loads 10 leads, /wissen/sicher-investieren renders clean. HOWEVER: the logged-in dashboard is still Supabase-driven and completely broken (54 supabase.co REST calls, all HTTP 400, red error banner, all values 0,00 EUR), dashboard sparklines never render (only unsupported equity symbols requested -> 404), the new /api/unsplash-proxy has NO frontend consumer (unsplashProxyUrl.js imported nowhere; article images still hotlink images.unsplash.com), and Home.js still calls Supabase credit_offers/savings_offers (2x HTTP 401 on every public page load).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/news-markte/market/sparkline/DAX", "issue": "Returns data_source='fallback' with prev_close 47.71 while the dashboard ticker shows DAX 26.512 — synthetic series has an unrelated price scale, so the rendered sparkline shape/level is meaningless for the index."},
+      {"endpoint": "/api/unsplash-proxy", "issue": "Backend sets Cache-Control max-age=86400 but the preview ingress rewrites it to 'no-store, no-cache, must-revalidate' -> every image request hits the proxy again (no browser caching). Verify on the production domain."},
+      {"endpoint": "/api/auth/login", "issue": "Edge injects Access-Control-Allow-Origin: * together with Allow-Credentials: true (browser would reject credentialed cross-origin); works today because frontend is same-origin. Worth confirming explicit origin list in app CORS config."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Dashboard (UebersichtPage / AktienPage)", "issue": "Red banner 'Einige Dashboard-Daten konnten nicht geladen werden' on every load; all KPIs 0,00 EUR. Root cause: ~54 requests to https://vitmvkmjjwabfzndynlj.supabase.co/rest/v1/* return HTTP 400 (Supabase /auth/v1/token?grant_type=password also 400 -> no Supabase session). Same deprecated-Supabase class as the fixed stock-history bug.", "selector": "/dashboard/uebersicht, /dashboard/aktien", "priority": "HIGH"},
+      {"component": "Dashboard sparklines ('30 TAGE' column, Aktien im Blick)", "issue": "Only unsupported symbols are requested (AAPL, MSFT, NVDA, AMZN, GOOGL) -> all 404, column renders '–'. No DAX/SPX/NDX/DJI sparkline request is made on the dashboard at all, so effectively zero sparklines render. Fails silently (good) but the feature is non-functional.", "selector": "[data-testid^=\"sparkline-\"]", "priority": "MEDIUM"},
+      {"component": "WatchlistSection / MiniSparkline (news-markte, /news/watchlist)", "issue": "Malformed watchlist symbols cause 7 x 404 per page load: 'BUND 2', '5% 2034', 'APPLE 3', '25% 2029' (plus AAPL/MSFT/NVDA). Looks like a symbol derived from an instrument name by splitting on spaces. Non-blocking (placeholder shown) but pollutes console/network.", "selector": "[data-testid$=\"-placeholder\"]", "priority": "MEDIUM"},
+      {"component": "Home.js fetchCreditOffers", "issue": "Still queries Supabase credit_offers + savings_offers -> 2 x HTTP 401 console errors on every public page load (home, news, article). Section renders via fallback, so cosmetic/noise only.", "selector": "[data-testid=\"home-credit-offers\"]", "priority": "MEDIUM"},
+      {"component": "Routing", "issue": "/admin/inbox (path named in the test request) is not a route and silently redirects to '/' with no 404 page. Real path is /admin/assistant-headoffs -> /admin/assistant-handoffs. Also /partnerbanken silently redirects to '/'.", "selector": "n/a", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Unsplash image proxy", "issue": "New /api/unsplash-proxy endpoint is dead code on the frontend: src/lib/unsplashProxyUrl.js has ZERO importers (grep). Article page loads 4 images directly from images.unsplash.com; 0 requests to /api/unsplash-proxy anywhere. Endpoint itself works (200 image/jpeg). Wire the helper into the image components or drop it.", "affected_selectors": ["img[src*='images.unsplash.com']"]},
+      {"flow": "marketSparklineService batch", "issue": "No in-flight de-duplication: each unsupported symbol is requested twice per page load (UNSUPPORTED set is only filled after the response, and the batch fires all requests via Promise.all). Doubles the 404 traffic.", "affected_selectors": ["/api/news-markte/market/sparkline/*"]},
+      {"flow": "MarktuebersichtSidebar sparklines", "issue": "Could not be exercised: the sidebar only lives in PublicNewsLayout (/news/:slug, /news/v/:slug), while the live article route /nachrichten/:slug uses NachrichtenDetailPage without the sidebar, and /news/watchlist is auth-protected (redirects to /login). No DAX/SPX/NDX/DJI sparkline request was observed on any reachable public page.", "affected_selectors": ["MarktuebersichtSidebar"]}
+    ],
+    "design_issues": [
+      {"screen": "Dashboard Übersicht/Aktien", "issues": ["Persistent red error banner above the fold on every load", "All KPI tiles show 0,00 EUR while the onboarding tour modal opens on top — looks broken to the user"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_p0_sparkline_unsplash_8050.py", "/app/test_reports/pytest/p0_8050.xml"],
+  "action_items": [
+    "P0: Migrate /dashboard/* data loading off Supabase REST (54 x HTTP 400) to FastAPI, or hide the error banner — dashboard currently shows no data for the logged-in admin.",
+    "Wire src/lib/unsplashProxyUrl.js into image rendering (or remove it) — /api/unsplash-proxy is currently unused; images hotlink images.unsplash.com directly.",
+    "Fix watchlist symbol data ('BUND 2', '5% 2034', 'APPLE 3', '25% 2029') and stop requesting sparklines for symbols outside _SPARKLINE_SUPPORTED (or extend backend support to equities).",
+    "Add in-flight dedupe/UNSUPPORTED pre-check in marketSparklineService.fetchMarketSparklinesBatch (each 404 symbol is fetched twice per load).",
+    "Remove the remaining Supabase credit_offers/savings_offers query in pages/Home.js (2 x 401 on every public page).",
+    "Sparkline for DAX returns data_source 'fallback' at price level ~47.7 vs real 26.512 — either fetch real provider data or scale the synthetic series to the ticker price."
+  ],
+  "critical_code_review_comments": [
+    "pages/Home.js:105-119 still imports Supabase — same deprecated dependency class that caused the P0; wrap in try/catch already exists but produces 401 noise.",
+    "marketSparklineService.fetchOne: UNSUPPORTED cache is per-module and populated post-response; concurrent batch calls (5m + 15m) duplicate every request.",
+    "src/lib/unsplashProxyUrl.js is unreferenced — the production proxy endpoint added in server.py:~330 therefore has no effect.",
+    "MarktuebersichtSidebar requests sparklines for all indices+commodities+forex symbols although backend supports only 4 — filter client-side against a supported list to avoid guaranteed 404s.",
+    "Auth playbook checks pass: bcrypt hash $2b$12$, httpOnly+Secure+SameSite=None access/refresh cookies, Allow-Credentials true, ADMIN_EXTRAS seed idempotent (patron is admin)."
+  ],
+  "updated_files": ["/app/backend/tests/test_p0_sparkline_unsplash_8050.py"],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "60% (P0 stock-history/images fixed; dashboard data + sparkline rendering + unsplash-proxy wiring still broken)"},
+  "seed_data_creation": "None (used existing patron admin + existing 10 assistant handoffs)",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "patron@froehlich-vermoegensberatung.de / 500Euro! works (redirects to /admin). Visitor gate bypass key is 'kapitalmitte_visitor_profile' (+ 'kapitalmitte_cookie_consent'), NOT 'froehlich.visitorGate.v2'.",
+  "context_for_next_testing_agent": "Backend regression file: /app/backend/tests/test_p0_sparkline_unsplash_8050.py (15 tests, all green). Visitor gate bypass: localStorage 'kapitalmitte_visitor_profile' = {role,country,timestamp,version} + 'kapitalmitte_cookie_consent'; must be set BEFORE the final navigation. Admin handoff inbox route = /admin/assistant-handoffs (not /admin/inbox). MarktuebersichtSidebar is only rendered by PublicNewsLayout (/news/:slug, /news/watchlist[auth]) — the public article route is /nachrichten/:slug and has no sidebar. Dashboard remains Supabase-backed (HTTP 400 wall) — verify after migration.",
+  "rca_of_the_issue": "The 80.50 fix removed the deprecated Supabase stock-history/market-sparklines edge-function calls (verified: 0 supabase.co function requests, DOMContentLoaded 0.32s) and added a working /api/unsplash-proxy. Two gaps remain from the same root cause family: (a) the authenticated dashboard still talks to Supabase REST directly and every call returns 400 because the Supabase password grant fails (400) — hence 'Seite lädt nicht richtig' persists behind login; (b) the new unsplash proxy helper is never imported, so images continue to hotlink images.unsplash.com (works today, but the production endpoint is unused). Additionally sparkline consumers request symbols outside the backend's _SPARKLINE_SUPPORTED set, generating ~7-12 fast 404s (non-blocking, silent placeholders) and duplicate requests due to missing in-flight dedupe."
+}

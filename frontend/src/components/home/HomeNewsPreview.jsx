@@ -4,7 +4,6 @@ import axios from 'axios';
 import { ArrowRight, ArrowUpRight, TrendingUp, TrendingDown } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import SafeNewsImage from '@/components/news/SafeNewsImage';
-import { getNewsFallbackImage } from '@/lib/news/newsImage';
 import { einordnungApi, EINORDNUNG_CATEGORY_LABEL } from '@/services/einordnungApi';
 import { fetchMarketOverview, formatDisplayPrice, formatChangePct } from '@/services/marketService';
 
@@ -241,18 +240,12 @@ const HomeNewsPreview = () => {
           {top ? (
             <Link to={`/news/nachrichten/${top.slug}`} className="group relative block overflow-hidden border border-bank-border bg-white" data-testid="home-news-top">
               <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
-                {top.image_url && (
-                  <img
-                    src={top.image_url}
-                    alt=""
-                    onError={(e) => {
-                      const t = e.currentTarget;
-                      if (!t.dataset.fb) { t.dataset.fb = '1'; t.src = getNewsFallbackImage(top.category); return; }
-                      t.style.display = 'none';
-                    }}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                  />
-                )}
+                <SafeNewsImage
+                  src={top.image_url}
+                  category={top.category}
+                  alt={top.title || ''}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                />
               </div>
               <div className="p-5 sm:p-6">
                 <div className="flex items-center gap-2">
@@ -290,7 +283,7 @@ const HomeNewsPreview = () => {
                 item ? (
                   <Link key={item.slug} to={`/news/nachrichten/${item.slug}`} className="group flex flex-col border border-bank-border bg-white transition-colors hover:border-bank-gold/60" data-testid={`home-news-card-${item.slug}`}>
                     <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
-                      {item.image_url && <SafeNewsImage src={item.image_url} category={item.category} alt={item.title || ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />}
+                      <SafeNewsImage src={item.image_url} category={item.category} alt={item.title || ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
                     </div>
                     <div className="flex flex-1 flex-col gap-1.5 px-3 py-3">
                       <CategoryTag category={item.category} />
@@ -314,9 +307,9 @@ const HomeNewsPreview = () => {
               {(einState.loading ? Array.from({ length: 3 }) : einState.items.slice(0, 3)).map((post, idx) => (
                 post ? (
                   <Link key={post.slug} to={`/news/einordnung/${post.slug}`} className="group flex gap-3 border border-bank-border bg-white p-3 transition-colors hover:border-bank-gold/60" data-testid={`home-einordnung-${post.slug}`}>
-                    {post.image_url && (
-                      <img src={post.image_url} alt="" loading="lazy" onError={(e) => { const t = e.currentTarget; if (!t.dataset.fb) { t.dataset.fb='1'; t.src = getNewsFallbackImage(post.category); return; } t.style.display='none'; }} className="h-16 w-20 shrink-0 object-cover" />
-                    )}
+                    <div className="h-16 w-20 shrink-0 overflow-hidden">
+                      <SafeNewsImage src={post.image_url} category={post.category} alt="" className="h-full w-full object-cover" />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <h4 className="line-clamp-2 font-serif text-[13.5px] leading-snug text-bank-text group-hover:text-bank-primary">{post.title}</h4>
                       <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-bank-text-muted">

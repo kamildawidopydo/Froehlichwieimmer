@@ -1,43 +1,59 @@
-// Historical price series for sparklines / detail charts. Proxies the
-// existing `stock-history` edge function (Yahoo chart endpoint).
+// Historical price series for sparklines / detail charts.
+// Uses the FastAPI backend (`/api/news-markte/market/sparkline/{symbol}`),
+// which serves a 15-min cached hourly series with deterministic synthetic
+// fallback for unsupported symbols. Never touches the deprecated Supabase
+// stock-history edge function anymore.
 
-import { supabase } from '@/lib/supabase';
+const API_ROOT = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
+
+const EMPTY_RESULT = Object.freeze({
+  points: [],
+  ohlc: [],
+  currency: 'USD',
+  price: null,
+  prevClose: null,
+  fiftyTwoWeekHigh: null,
+  fiftyTwoWeekLow: null,
+});
+
+// Remember symbols the backend does not support so we do not hammer 404s.
+const UNSUPPORTED = new Set();
 
 /**
  * Fetch raw history points for a symbol.
- * @returns {Promise<{points: {t:number,c:number}[], currency:string, price:number|null, prevClose:number|null}>}
+ * @returns {Promise<{points: {t:string,c:number}[], currency:string, price:number|null, prevClose:number|null}>}
  */
-export async function fetchStockHistory(symbol, range = '1mo', interval) {
-  const body = { symbol, range };
-  if (interval) body.interval = interval;
+export async function fetchStockHistory(symbol, _range = '1mo', _interval) {
+  if (!symbol || !API_ROOT) return { ...EMPTY_RESULT };
+  const sym = String(symbol).toUpperCase();
+  if (UNSUPPORTED.has(sym)) return { ...EMPTY_RESULT };
+
   try {
-    const { data, error } = await supabase.functions.invoke('stock-history', { body });
-    if (error) throw error;
+    const res = await fetch(
+      `${API_ROOT}/api/news-markte/market/sparkline/${encodeURIComponent(sym)}`,
+      { headers: { Accept: 'application/json' } },
+    );
+    if (res.status === 404) {
+      UNSUPPORTED.add(sym);
+      return { ...EMPTY_RESULT };
+    }
+    if (!res.ok) return { ...EMPTY_RESULT };
+    const data = await res.json();
     return {
-      points: data?.points || [],
-      ohlc: data?.ohlc || [],
-      currency: data?.currency || 'USD',
-      price: data?.price ?? null,
+      points: Array.isArray(data?.points) ? data.points : [],
+      ohlc: [],
+      currency: 'EUR',
+      price: null,
       prevClose: data?.prev_close ?? null,
-      fiftyTwoWeekHigh: data?.fifty_two_week_high ?? null,
-      fiftyTwoWeekLow: data?.fifty_two_week_low ?? null,
+      fiftyTwoWeekHigh: null,
+      fiftyTwoWeekLow: null,
     };
   } catch (err) {
-    // Unauthenticated callers (showcase components on public pages) surface 401 here.
-    // Suppress console noise; UIs render an empty chart state.
     if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
       console.debug('[stockHistoryService] skipped:', err?.message || err);
     }
-    return {
-      points: [],
-      ohlc: [],
-      currency: 'USD',
-      price: null,
-      prevClose: null,
-      fiftyTwoWeekHigh: null,
-      fiftyTwoWeekLow: null,
-    };
+    return { ...EMPTY_RESULT };
   }
 }
 

@@ -328,6 +328,44 @@ async def health():
 
 
 # ---------------------------------------------------------------------------
+# Unsplash proxy (production)
+# ---------------------------------------------------------------------------
+# The CRA dev server exposes `/api/unsplash-proxy` via setupProxy.js. In
+# production we serve it here so hotlinked images.unsplash.com URLs still
+# load through the same-origin endpoint the frontend expects.
+
+_UNSPLASH_ALLOWED = re.compile(r"^https://images\.unsplash\.com/")
+
+
+@api.get("/unsplash-proxy")
+async def unsplash_proxy(url: str):
+    if not url or not _UNSPLASH_ALLOWED.match(url):
+        raise HTTPException(status_code=403, detail="Only images.unsplash.com is allowed")
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client_http:
+            upstream = await client_http.get(
+                url,
+                headers={
+                    "Accept": "image/avif,image/webp,image/*,*/*;q=0.8",
+                    "User-Agent": "Froehlich-Vermoegensberatung-ImageProxy/1.0",
+                },
+            )
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Upstream fetch failed: {e}") from e
+
+    if upstream.status_code != 200:
+        raise HTTPException(status_code=502, detail="Upstream fetch failed")
+
+    content_type = upstream.headers.get("content-type", "image/jpeg")
+    return Response(
+        content=upstream.content,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"},
+    )
+
+
+
+# ---------------------------------------------------------------------------
 # Auth endpoints
 # ---------------------------------------------------------------------------
 

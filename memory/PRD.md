@@ -8,6 +8,37 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
 ## Session Log
 
+- 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:
+
+  **Symptom (User meldet, Produktions-Screenshot)**: `kapital-direkt24.de` zeigt einen großen leeren Kasten dort, wo die Top-News-Hero-Kachel sein sollte.
+
+  **Root Cause**: `HomeNewsPreview.jsx` renderte das Hero-Bild mit `{top.image_url && <img />}` — wenn `image_url` in der Produktions-DB leer/null ist, wird **überhaupt nichts** gerendert (nur der graue 16:10-Wrapper). Der bereits existierende `SafeNewsImage` mit SVG-Fallback wurde durch dieselbe Guard-Bedingung an drei Stellen deaktiviert (Top-News, Secondary-Grid, Einordnung-Sidebar). `HomeFinancialArticles.jsx` nutzte ein rohes `<img>` ohne `onError`-Handler.
+
+  **Fix**:
+  1. `HomeNewsPreview.jsx` — alle drei `{item.image_url &&}`-Guards entfernt. `SafeNewsImage` rendert bei leerem `src` deterministisch das gebrandete SVG (Navy + Gold), keine externen Requests, kein CORS.
+  2. `HomeFinancialArticles.jsx` — `onError`-Handler mit inline `data:image/svg+xml`-Fallback ergänzt. Fehlt ein Unsplash-Bild in Produktion, wird das Editorial-Placeholder gezeigt statt weißer Fläche.
+
+  **Verifikation**: Playwright-Screenshot Home nach LocalStorage-Bypass des Visitor-Gates zeigt Hero-Bild + Grid-Bilder gefüllt, `img.naturalWidth > 0` für alle sichtbaren Kacheln.
+
+- 80.50 (Feb 28 2026) — **P0 Frontend-Performance-Fix: Supabase-Entkopplung Sparklines + Unsplash-Prod-Proxy**:
+
+  **Symptom (User meldet)**: „die seite ladet nicht rightig und die bilder sind nicht zu sehen. uberprufe warum es nicht rightig und langsam ladet."
+
+  **Root Cause**: Frontend-Services `stockHistoryService.js` und `marketSparklineService.js` riefen weiterhin `supabase.functions.invoke('stock-history')` bzw. `'market-sparklines'` gegen die deprecated Supabase-Edge-Function-Domain. Das ergab bei jedem Public-Render der Marktübersicht 32 parallele Requests, die alle in 401 Unauthorized endeten. Browser-Retries blockierten das Rendering 3-8 s. Zusätzlich existierte `/api/unsplash-proxy` nur im CRA-Dev-Server (`setupProxy.js`), im Produktions-Bundle war der Endpoint tot → Bilder blieben leer.
+
+  **Fix**:
+  1. `stockHistoryService.js` komplett neugeschrieben — nutzt jetzt `GET ${REACT_APP_BACKEND_URL}/api/news-markte/market/sparkline/{symbol}`. In-memory `UNSUPPORTED`-Set cached 404s (nur DAX/SPX/NDX/DJI sind serverseitig unterstützt) und verhindert Wiederholungs-Requests. Kein Supabase-Import mehr.
+  2. `marketSparklineService.js` gleich behandelt — Batch-Modus lädt N Symbole parallel via denselben Endpunkt, verwirft nicht unterstützte Symbole schnell (< 200 ms 404) statt 3-8 s 401.
+  3. Neuer FastAPI-Endpoint `GET /api/unsplash-proxy` (server.py) mit strikter Regex-Allowlist `^https://images.unsplash.com/` + 24 h Cache-Control. Ersetzt den dev-only `setupProxy.js`-Handler in Produktion.
+
+  **Verifikation**:
+  * Curl: `/api/news-markte/market/sparkline/DAX` → HTTP 200, `/AAPL` → HTTP 404 in 190 ms.
+  * Curl: `/api/unsplash-proxy?url=...` → HTTP 200, 10 kB AVIF, richtige Content-Type/Cache-Header.
+  * Playwright Screenshot Home: `DOMContentLoaded 0.52 s`, `Supabase function calls: 0` (vorher 32).
+  * Playwright Screenshot /news-markte: `Supabase function calls: 0`, Unsplash-Proxy-Bilder laden via Backend.
+
+  **Konsequenz**: Public-Pages rendern jetzt in < 1 s ohne Netzwerk-Retries. Supabase-Detachment fast komplett — verbleibende `supabase.functions.invoke`-Callers stehen nur noch auf auth-gated Dashboard-/Admin-Seiten (Backlog Session 80.53).
+
 
 
 

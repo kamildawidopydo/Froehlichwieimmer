@@ -38,6 +38,17 @@ const ArticleCard = ({ article, testId }) => (
         alt=""
         loading="lazy"
         decoding="async"
+        onError={(e) => {
+          const t = e.currentTarget;
+          if (!t.dataset.fb) {
+            t.dataset.fb = '1';
+            // Local SVG fallback — deterministic Fröhlich-branded placeholder.
+            const label = encodeURIComponent('Fröhlich Vermögensberatung');
+            t.src = `data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450' preserveAspectRatio='xMidYMid slice'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230f1d34'/%3E%3Cstop offset='1' stop-color='%231a2c4d'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='800' height='450' fill='url(%23g)'/%3E%3Cline x1='60' y1='360' x2='740' y2='360' stroke='%23c9a961' stroke-opacity='0.35' stroke-width='1'/%3E%3Ctext x='60' y='345' fill='%23c9a961' font-family='Courier New, monospace' font-size='16' letter-spacing='4'%3EEDITORIAL%3C/text%3E%3Ctext x='60' y='410' fill='%23f4efe3' font-family='Georgia, serif' font-size='26' font-style='italic'%3E${label}%3C/text%3E%3C/svg%3E`;
+            return;
+          }
+          t.style.display = 'none';
+        }}
         className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
       />
     </div>
