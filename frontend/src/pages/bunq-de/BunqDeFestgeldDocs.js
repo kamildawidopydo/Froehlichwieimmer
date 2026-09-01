@@ -41,7 +41,7 @@ const BunqDeFestgeldDocs = () => {
 
         <div className="mb-10 overflow-hidden rounded-xl border border-bank-border bg-white shadow-bank-card">
           <div className="flex items-center gap-5 border-b-4 border-[#FF7819] bg-white px-8 py-6">
-            <img src="/assets/bank-logos/bunq-logo.png" alt="bunq" className="h-9 w-auto object-contain" />
+            <img src="/assets/bank-logos/bunq-logo.png" alt="bunq" width="120" height="36" className="h-9 w-auto object-contain" />
             <div className="h-8 w-px bg-[#1C1C1C]/15" />
             <div>
               <h1 className="text-lg font-medium tracking-[0.02em] text-[#1C1C1C]">Festgeld</h1>

@@ -197,6 +197,22 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
   **Nicht deployed** — User-Wunsch nur Preview-QA.
 
+- 80.60 (Sep 01 2026) — **Image Dimensioning & CLS Audit (Preview only)**:
+
+  **Wichtiger Befund**: CLS ist bereits **0.0000** auf Preview vor und nach Fix — die 79 imgs ohne intrinsische `width`/`height` verursachen keine sichtbaren Layout-Shifts, weil ihre Wrapper via Tailwind `aspect-*`-Klassen bereits Platz reservieren.
+
+  **Semantische Hygiene-Fixes** (kein CLS-Impact, aber HTML-Konformität):
+  * `BankLogo.js` — `width="120" height="120"` ergänzt (deckt Postbank 4× + alle Partner-Bank-Renderings ab)
+  * 5× `bunq-de/*.js` — `width="120" height="32/36"` je nach Wrapper-Höhe
+
+  **QA Preview**: 79 → **73** imgs ohne Dimensionen (–6 durch BankLogo-Fixes, betrifft alle Instanzen aller Partner-Banken). 0 broken Imgs, 0 distortedImgs, CLS bleibt 0.0000. Kein visueller Change — die neuen intrinsischen Dimensionen definieren nur das Ratio, `h-full w-full object-contain`-Klassen bleiben führend.
+
+  **Bewusst nicht angefasst** (User-Wunsch): keine Lazy-Loading-Änderungen, keine WebP/AVIF-Konvertierung, keine Preloads, keine Unsplash-URL-Änderungen, keine Design-Änderungen, keine erneute Logo-Kompression.
+
+  **Empfehlung**: Da CLS bereits 0 ist, ist der Fix optional. Deploy von 80.60 bringt nur HTML-Semantik-Vorteile (kleinere Lighthouse-Warnings), keine spürbare User-wahrnehmbare Verbesserung.
+
+  **Nicht deployed** — User-Wunsch nur Preview.
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:

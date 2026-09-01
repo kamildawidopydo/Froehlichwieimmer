@@ -99,6 +99,8 @@ const BankLogo = ({ logo, bankName, size = 'md', className = '', imageClassName 
       <img
         src={resolvedLogo}
         alt={`${bankName} logo`}
+        width="120"
+        height="120"
         className={`h-full w-full object-contain ${imagePadding} ${imageScale} ${imageClassName}`.trim()}
         onError={handleImageError}
         loading="lazy"

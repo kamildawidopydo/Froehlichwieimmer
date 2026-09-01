@@ -42,7 +42,7 @@ const BunqDeFlexgeldBedingungen = () => {
         {/* Header */}
         <div className="border-b-4 border-[#FF7819] bg-white px-8 py-6 md:px-10">
           <div className="flex items-center gap-4 mb-3">
-            <img src="/assets/bank-logos/bunq-logo.png" alt="bunq" className="h-8 w-auto object-contain" />
+            <img src="/assets/bank-logos/bunq-logo.png" alt="bunq" width="120" height="32" className="h-8 w-auto object-contain" />
             <div className="h-6 w-px bg-[#1C1C1C]/15" />
             <p className="text-[#1C1C1C]/50 text-[10px] tracking-[0.2em] uppercase">Deutschland</p>
           </div>
