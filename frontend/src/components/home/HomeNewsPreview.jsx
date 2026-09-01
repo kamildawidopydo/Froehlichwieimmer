@@ -34,7 +34,7 @@ const CategoryTag = ({ category, tone = 'gold' }) => (
 
 /** Marktüberblick-Streifen — Preview only (top 6 tiles + Zum Marktüberblick). */
 const MarketStrip = () => {
-  const [state, setState] = useState({ loading: true, tiles: [] });
+  const [state, setState] = useState({ loading: true, tiles: [], lastUpdated: null, isDelayed: true });
   useEffect(() => {
     let alive = true;
     fetchMarketOverview('EUR').then((o) => {
@@ -44,22 +44,55 @@ const MarketStrip = () => {
         ...o.commodities.filter((c) => ['GOLD', 'OIL'].includes(c.symbol)),
         ...o.fx.filter((f) => f.symbol === 'EURUSD'),
       ];
-      setState({ loading: false, tiles });
-    }).catch(() => setState({ loading: false, tiles: [] }));
+      // Ältester Timestamp aller sichtbaren Kacheln — fallback auf globales lastUpdated
+      const tileStamps = tiles
+        .map((t) => t.lastUpdated)
+        .filter(Boolean)
+        .map((s) => new Date(s).getTime())
+        .filter((n) => Number.isFinite(n));
+      const oldest = tileStamps.length ? new Date(Math.min(...tileStamps)).toISOString() : null;
+      setState({
+        loading: false,
+        tiles,
+        lastUpdated: oldest || o.lastUpdated || null,
+        isDelayed: !!o.isDelayed,
+      });
+    }).catch(() => setState({ loading: false, tiles: [], lastUpdated: null, isDelayed: true }));
     return () => { alive = false; };
   }, []);
 
   if (state.loading) return <div className="mt-6 h-16 animate-pulse border border-bank-border bg-white/70" />;
   if (!state.tiles.length) return null;
 
+  const stampLabel = state.lastUpdated ? (() => {
+    const d = new Date(state.lastUpdated);
+    if (Number.isNaN(d.getTime())) return null;
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())} Uhr`;
+  })() : null;
+  const stampSuffix = state.isDelayed
+    ? 'Kurse können zeitverzögert sein'
+    : 'Aktualisierung regelmäßig während der Handelszeiten';
+
   return (
     <div className="mt-8 border-y border-bank-gold/40 bg-white/70" data-testid="home-market-strip">
-      <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 pt-3 sm:px-6">
         <p className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">Marktüberblick</p>
         <Link to="/news" className="hidden items-center gap-1 font-mono text-[11px] uppercase tracking-[0.18em] text-bank-primary hover:underline sm:inline-flex" data-testid="home-market-more">
           Zum Marktüberblick <ArrowRight size={12} strokeWidth={1.8} />
         </Link>
       </div>
+      {stampLabel && (
+        <p
+          className="px-4 pb-3 text-[10.5px] leading-relaxed text-bank-text-muted sm:px-6"
+          data-testid="home-market-strip-timestamp"
+        >
+          <span className="text-bank-text-strong">Kursstand:</span>{' '}
+          <span className="tabular-nums">{stampLabel}</span>
+          {' · '}
+          <span>{stampSuffix}</span>
+        </p>
+      )}
       <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto border-t border-bank-border/60 px-4 py-4 sm:px-6 [scrollbar-width:thin]">
         {state.tiles.map((t) => {
           const up = (t.change_percent ?? 0) >= 0;
