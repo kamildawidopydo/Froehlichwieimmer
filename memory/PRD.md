@@ -157,6 +157,20 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
   **Ergebnis**: Console-Messages 24 → 8, Failed Requests 42 → 2. Keine Regressionen. Nicht deployed — nur Preview-QA.
 
+- 80.56 (Sep 01 2026) — **„So einfach geht's" Kreditbereich (Preview only)**:
+
+  **Neu**: `/app/frontend/src/components/credit/CreditProcessSteps.jsx` — rahmenlose Editorial-Sektion mit 3 nummerierten Schritten (Eckdaten eingeben / Angebote vergleichen / Antrag beim Anbieter abschließen). Text links, SVG-Placeholder rechts (Desktop) / darunter (Mobile). Dünne Warmgold-Verbindungslinie zwischen den Schritten. CTA „Jetzt Kreditvergleich starten →" als Text-Link zu `#credit-results`.
+
+  **Placeholder-SVG**: Royal-Blue-Illustration mit Phone-Mockup, Dokument/ID-Karte, Upload-Icon, Success-Check, Warmgold-Akzent. Kein Grün, keine Fremdmarken, keine Fotos, keine Card.
+
+  **Austauschbar** via `<CreditProcessSteps imageSrc={...} imageAlt="..." />`-Props — echtes Bild später ohne Code-Umbau einsetzbar.
+
+  **Integration**: `CreditLeadPage.js` — zwischen Hero-Grid und Kreditvergleich-Formular gemountet, damit der Nutzer den Ablauf vor Konditionsvergleich versteht.
+
+  **QA Preview**: Desktop 1920×1080 + Mobile 390×844 verifiziert. `border/radius/bg/shadow` alle transparent/0/none, 3 Steps + SVG gerendert, CTA verlinkt korrekt. Kreditlogik, Partnerlinks, Tracking, Consent, Navigation, Farbwelt aus 80.51 **unverändert**.
+
+  **Nicht deployed** — User-Wunsch nur Preview.
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:

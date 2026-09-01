@@ -4,6 +4,7 @@ import siteImages from '@/data/siteImages';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import BankLogo from '@/components/BankLogo';
+import CreditProcessSteps from '@/components/credit/CreditProcessSteps';
 import { getOfferRatingValue } from '@/lib/offerRating';
 import { toast } from 'sonner';
 import { sanitizeFormField } from '@/lib/formInputSanitize';
@@ -301,6 +302,8 @@ const CreditLeadPage = () => {
           </div>
 
           <div className="relative space-y-8 p-6 sm:p-8 lg:p-10">
+            <CreditProcessSteps />
+
             <form
               onSubmit={handleCompare}
               className="relative overflow-hidden rounded-2xl border border-bank-border bg-bank-bg/90 p-5 shadow-bank-card sm:p-6 dark:bg-bank-bg/60"
