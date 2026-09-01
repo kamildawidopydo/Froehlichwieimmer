@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import BankingHero from '@/components/BankingHero';
-import HomeSparkontenBanner from '@/components/home/HomeSparkontenBanner';
 import HomePostHero from '@/components/home/HomePostHero';
 import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
 import HomeTestimonials from '@/components/home/HomeTestimonials';
@@ -197,7 +196,6 @@ const Home = () => {
         topicSlug={inquiryTopicSlug}
       />
       <ProductInquiryStickyCta onOpenWizard={openProductInquiry} />
-      <HomeSparkontenBanner />
       <BankingHero />
 
       {/* ── News-Vorschau (kompakt, direkt unter dem Hero) ─────────────── */}
