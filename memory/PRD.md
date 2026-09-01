@@ -97,6 +97,21 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
   Farbwelt aus 80.51 und Layout, Content, Funktionalität aus 80.52 **unverändert**. Reversibel durch Entfernen des CSS-Blocks.
 
+- 80.52c (Sep 01 2026) — **Anleihen / Aktien / Kreditvergleich – Card-Chrome entfernt**:
+
+  **User-Wunsch**: Screenshot zeigte drei Produkt-Tiles auf Home in weißen Card-Containern mit Border, Rounded, Shadow. Sollten rahmenlos direkt auf warmer Fläche stehen. „Mehr erfahren"-Outline-Button → schlichter Text-Link.
+
+  **Fix — `/app/frontend/src/components/home/HomePostHero.jsx`**:
+  * `motion.article` className: entfernt `overflow-hidden rounded-xl border border-bank-border bg-white shadow-editorial-sm transition-[box-shadow,border-color] duration-200 hover:border-bank-primary/20 hover:shadow-editorial-md` — bleibt nur `group/card flex min-h-full cursor-pointer flex-col`
+  * Inner-Padding auf horizontal 0 gesetzt (nur `pb-*/pt-*` bleibt) — Spalten sitzen direkt auf Section-Fläche
+  * Divider `border-t border-bank-border/70 pt-6` vor CTA entfernt (nur `mt-6` bleibt)
+  * `<Button variant="outline-ink" size="lg">` durch `<Link>` mit Text-Klasse `text-bank-primary underline-offset-4 hover:underline` ersetzt — CTA jetzt „Mehr erfahren →" schlicht als Text-Link mit Royal-Blue-Farbe
+
+  **QA Playwright**:
+  * Desktop 1920×900: Anleihen-Spalte sichtbar links — rahmenlos, Checkmarks Royal Blue, "Mehr erfahren →" als schlichter Text-Link
+  * Mobile 390×844: identisches Verhalten, keine Layout-Verschiebung, Section-Struktur weiterhin über Whitespace + Typografie
+  * Content, Spaltenaufteilung, Reihenfolge unverändert
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:

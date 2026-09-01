@@ -78,8 +78,7 @@ const HomePostHero = () => {
                   key={p.slug}
                   {...reveal(idx)}
                   className={cn(
-                    'group/card flex min-h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-bank-border bg-white shadow-editorial-sm transition-[box-shadow,border-color] duration-200',
-                    'hover:border-bank-primary/20 hover:shadow-editorial-md',
+                    'group/card flex min-h-full cursor-pointer flex-col',
                     mosaic(p.slug),
                   )}
                   data-testid={p.testId}
@@ -87,7 +86,7 @@ const HomePostHero = () => {
                   <div
                     className={cn(
                       'flex flex-1 flex-col',
-                      isHeroTile ? 'px-6 pb-6 pt-5 sm:px-7 sm:pb-7 sm:pt-6 xl:px-9 xl:pb-8 xl:pt-7' : 'px-6 pb-6 pt-5 sm:px-7 sm:pb-7 sm:pt-6',
+                      isHeroTile ? 'pb-6 pt-1 sm:pb-7 sm:pt-2' : 'pb-6 pt-1 sm:pb-7 sm:pt-2',
                     )}
                   >
                     <h3
@@ -126,12 +125,17 @@ const HomePostHero = () => {
                       ))}
                     </ul>
 
-                    <div className="mt-8 border-t border-bank-border/70 pt-6">
-                      <Link to={p.href} className="block" data-testid={`${p.testId}-cta`}>
-                        <Button variant="outline-ink" size="lg" className="w-full gap-2 font-normal">
-                          {p.cta}
-                          <ArrowRight className="h-4 w-4" strokeWidth={LUCIDE_STROKE} />
-                        </Button>
+                    <div className="mt-6">
+                      <Link
+                        to={p.href}
+                        className="group/link inline-flex items-center gap-1.5 text-[14px] font-medium text-bank-primary underline-offset-4 transition-colors hover:text-bank-primary-hover hover:underline"
+                        data-testid={`${p.testId}-cta`}
+                      >
+                        {p.cta}
+                        <ArrowRight
+                          className="h-4 w-4 transition-transform duration-200 group-hover/link:translate-x-0.5"
+                          strokeWidth={LUCIDE_STROKE}
+                        />
                       </Link>
                     </div>
                   </div>
