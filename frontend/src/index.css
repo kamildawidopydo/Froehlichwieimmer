@@ -1205,14 +1205,15 @@
    -----------------------------------------------------------------------
    Ziel: „Whitespace → Text/Inhalt → Whitespace" statt „Rahmen → Inhalt → Rahmen".
    
-   Angriff: `.border-bank-border` ist die zentrale Utility für Content-Card-
-   Umrandungen (~1600 Nutzungen). Content-Container verlieren die sichtbare
-   Border; funktionale UI-Elemente bleiben unberührt via Restore-Selektoren.
+   Angriff: Alle generischen Border-Farb-Utilities (bank-border, bank-primary,
+   bank-gold, bank-accent, bank-ink, alle -tint-/-border-Varianten, shadcn
+   border-border) werden auf transparent gesetzt. Funktionale UI-Elemente
+   bleiben unberührt via Restore-Selektoren.
    
    Behalten die Umrandung:
      - <button>, <input>, <select>, <textarea>
      - ARIA-Rollen: dialog (Modal), menu, menuitem, listbox, option, tab, tabpanel,
-                    switch, checkbox, radio, grid, row, cell
+                    switch, checkbox, radio, grid, row, cell, combobox
      - <table>, <thead>, <tbody>, <tr>, <td>, <th>
      - .tag-*, .kpi-*, .icon-badge-* (setzen border-color selbst weiter oben)
      - Kalender/date-picker (rdp)
@@ -1220,83 +1221,131 @@
      - Anker im Button-Look (a.rounded-full, a[role=button])
      - Opt-in-Escape: [data-preserve-border]
    
-   Ebenso: kombiniertes shadow-editorial-* auf reinen Content-Cards entfernt.
+   Ebenso: kombiniertes shadow-* auf reinen Content-Cards entfernt.
    Modal/Popover/Dropdown-Chrome behält seinen Schatten.
    ========================================================================= */
 @layer utilities {
-  .border-bank-border {
+  .border-bank-border,
+  .border-bank-primary,
+  .border-bank-gold,
+  .border-bank-accent,
+  .border-bank-accent-strong,
+  .border-bank-ink,
+  .border-bank-signature,
+  .border-bank-text,
+  .border-bank-petrol-strong,
+  .border-bank-petrol-border,
+  .border-bank-champagne-border,
+  .border-bank-sage-border,
+  .border-bank-amber-border,
+  .border-bank-violet-border,
+  .border-bank-rose-border,
+  .border-bank-info-border,
+  .border-bank-coral-border,
+  .border-bank-gold-border,
+  .border-bank-rose,
+  .border-border {
     border-color: transparent;
   }
 
-  /* Restore für funktionale UI */
-  button.border-bank-border,
-  input.border-bank-border,
-  select.border-bank-border,
-  textarea.border-bank-border,
-  a.border-bank-border[role="button"],
-  a.rounded-full.border-bank-border,
-  [role="dialog"].border-bank-border,
-  [role="dialog"] .border-bank-border,
-  [role="menu"].border-bank-border,
-  [role="menu"] .border-bank-border,
-  [role="menuitem"].border-bank-border,
-  [role="listbox"].border-bank-border,
-  [role="listbox"] .border-bank-border,
-  [role="option"].border-bank-border,
-  [role="tab"].border-bank-border,
-  [role="tabpanel"] .border-bank-border,
-  [role="switch"].border-bank-border,
-  [role="checkbox"].border-bank-border,
-  [role="radio"].border-bank-border,
-  [role="grid"] .border-bank-border,
-  [role="row"].border-bank-border,
-  [role="cell"].border-bank-border,
-  [role="combobox"].border-bank-border,
-  table.border-bank-border,
-  table .border-bank-border,
-  thead.border-bank-border,
-  tbody.border-bank-border,
-  tr.border-bank-border,
-  td.border-bank-border,
-  th.border-bank-border,
-  [data-preserve-border].border-bank-border,
-  [data-preserve-border] .border-bank-border,
-  .rdp .border-bank-border,
-  [data-chart].border-bank-border,
-  [data-chart] .border-bank-border,
-  .form-control.border-bank-border,
-  .input-wrapper.border-bank-border {
-    border-color: rgb(var(--bank-border));
+  /* Restore für funktionale UI (alle Selektoren gelten für alle Token-Klassen) */
+  button.border-bank-border, button.border-bank-primary, button.border-bank-gold,
+  button.border-bank-accent, button.border-bank-accent-strong, button.border-bank-ink,
+  button.border-bank-signature, button.border-bank-text, button.border-bank-petrol-strong,
+  button.border-bank-petrol-border, button.border-bank-champagne-border,
+  button.border-bank-sage-border, button.border-bank-amber-border,
+  button.border-bank-violet-border, button.border-bank-rose-border,
+  button.border-bank-info-border, button.border-bank-coral-border,
+  button.border-bank-gold-border, button.border-bank-rose, button.border-border,
+  input[class*="border-bank-"], input.border-border,
+  select[class*="border-bank-"], select.border-border,
+  textarea[class*="border-bank-"], textarea.border-border,
+  a[role="button"][class*="border-bank-"], a[role="button"].border-border,
+  a.rounded-full[class*="border-bank-"], a.rounded-full.border-border,
+  [role="dialog"][class*="border-bank-"], [role="dialog"].border-border,
+  [role="dialog"] [class*="border-bank-"], [role="dialog"] .border-border,
+  [role="menu"][class*="border-bank-"], [role="menu"].border-border,
+  [role="menu"] [class*="border-bank-"], [role="menu"] .border-border,
+  [role="menuitem"][class*="border-bank-"], [role="menuitem"].border-border,
+  [role="listbox"][class*="border-bank-"], [role="listbox"].border-border,
+  [role="listbox"] [class*="border-bank-"], [role="listbox"] .border-border,
+  [role="option"][class*="border-bank-"], [role="option"].border-border,
+  [role="tab"][class*="border-bank-"], [role="tab"].border-border,
+  [role="tabpanel"] [class*="border-bank-"], [role="tabpanel"] .border-border,
+  [role="switch"][class*="border-bank-"], [role="switch"].border-border,
+  [role="checkbox"][class*="border-bank-"], [role="checkbox"].border-border,
+  [role="radio"][class*="border-bank-"], [role="radio"].border-border,
+  [role="grid"] [class*="border-bank-"], [role="grid"] .border-border,
+  [role="row"][class*="border-bank-"], [role="row"].border-border,
+  [role="cell"][class*="border-bank-"], [role="cell"].border-border,
+  [role="combobox"][class*="border-bank-"], [role="combobox"].border-border,
+  table[class*="border-bank-"], table.border-border,
+  table [class*="border-bank-"], table .border-border,
+  thead[class*="border-bank-"], tbody[class*="border-bank-"], tr[class*="border-bank-"],
+  td[class*="border-bank-"], th[class*="border-bank-"],
+  [data-preserve-border][class*="border-bank-"], [data-preserve-border].border-border,
+  [data-preserve-border] [class*="border-bank-"], [data-preserve-border] .border-border,
+  .rdp [class*="border-bank-"], .rdp .border-border,
+  [data-chart][class*="border-bank-"], [data-chart].border-border,
+  [data-chart] [class*="border-bank-"], [data-chart] .border-border,
+  .form-control[class*="border-bank-"], .form-control.border-border,
+  .input-wrapper[class*="border-bank-"], .input-wrapper.border-border {
+    border-color: initial;
   }
+
+  /* Restore mit korrekten Token-Farben — via CSS-Klassen-spezifische Fallbacks.
+     Da `initial` oben u.U. weiß liefert, hier explizite Farb-Restores: */
+  button.border-bank-border, input.border-bank-border, select.border-bank-border,
+  textarea.border-bank-border, [role="dialog"].border-bank-border,
+  [role="dialog"] .border-bank-border, [role="menu"].border-bank-border,
+  [role="menu"] .border-bank-border, [role="listbox"] .border-bank-border,
+  table.border-bank-border, [data-preserve-border].border-bank-border,
+  [data-preserve-border] .border-bank-border, a[role="button"].border-bank-border,
+  a.rounded-full.border-bank-border { border-color: rgb(var(--bank-border)); }
+
+  button.border-bank-primary, a[role="button"].border-bank-primary,
+  a.rounded-full.border-bank-primary, input.border-bank-primary,
+  [role="dialog"].border-bank-primary, [role="dialog"] .border-bank-primary,
+  [data-preserve-border].border-bank-primary { border-color: rgb(var(--bank-primary)); }
+
+  button.border-bank-gold, a[role="button"].border-bank-gold,
+  a.rounded-full.border-bank-gold, [role="dialog"].border-bank-gold,
+  [role="dialog"] .border-bank-gold, [data-preserve-border].border-bank-gold
+    { border-color: rgb(var(--bank-gold)); }
+
+  button.border-bank-accent, a[role="button"].border-bank-accent,
+  a.rounded-full.border-bank-accent, [role="dialog"].border-bank-accent,
+  [data-preserve-border].border-bank-accent { border-color: rgb(var(--bank-accent)); }
+
+  button.border-bank-signature, a[role="button"].border-bank-signature,
+  a.rounded-full.border-bank-signature, [role="dialog"].border-bank-signature,
+  [data-preserve-border].border-bank-signature { border-color: rgb(var(--bank-signature)); }
+
+  button.border-bank-ink, a[role="button"].border-bank-ink,
+  a.rounded-full.border-bank-ink, [role="dialog"].border-bank-ink,
+  [data-preserve-border].border-bank-ink { border-color: rgb(var(--bank-ink)); }
+
+  button.border-border, a[role="button"].border-border, a.rounded-full.border-border,
+  [role="dialog"].border-border, [role="dialog"] .border-border,
+  [role="menu"].border-border, [role="menu"] .border-border,
+  [role="listbox"].border-border, [role="listbox"] .border-border,
+  input.border-border, select.border-border, textarea.border-border,
+  table.border-border, [data-preserve-border].border-border,
+  [data-preserve-border] .border-border { border-color: hsl(var(--border)); }
 
   /* Editorial-Shadow auf reinen Content-Karten entfernen */
-  .border-bank-border.shadow-editorial-sm,
-  .border-bank-border.shadow-editorial-md,
-  .border-bank-border.shadow-editorial-lg,
-  .border-bank-border.shadow-editorial-2xl,
-  .border-bank-border.shadow-sm,
-  .border-bank-border.shadow-md,
-  .border-bank-border.shadow-lg {
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-sm,
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-md,
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-lg,
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-sm,
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-md,
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-lg,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-sm,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-md,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-lg,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-sm,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-md,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-lg {
     box-shadow: none;
-  }
-
-  /* Modal/Popover/Dropdown-Chrome behält Schatten */
-  [role="dialog"].shadow-editorial-md,
-  [role="dialog"].shadow-editorial-lg,
-  [role="dialog"].shadow-lg,
-  [role="dialog"].shadow-2xl,
-  [role="menu"].shadow-editorial-md,
-  [role="menu"].shadow-lg,
-  [role="menu"].shadow-md,
-  [role="listbox"].shadow-editorial-md,
-  [role="listbox"].shadow-lg,
-  [role="listbox"].shadow-md,
-  [data-preserve-border].shadow-editorial-sm,
-  [data-preserve-border].shadow-editorial-md,
-  [data-preserve-border].shadow-editorial-lg,
-  [data-preserve-border].shadow-sm,
-  [data-preserve-border].shadow-md,
-  [data-preserve-border].shadow-lg {
-    box-shadow: revert;
   }
 }

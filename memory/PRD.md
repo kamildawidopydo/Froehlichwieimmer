@@ -76,6 +76,27 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
   **Konsequenz**: Website wirkt jetzt konsistent rahmenlos, großzügig und editorial — genau wie die zuletzt angepassten Testimonials — ohne dass Content, Layout, Typografie, Navigation, Reihenfolge oder Funktionalität verändert wurden. Farbwelt aus 80.51 unverändert. Reversible durch Entfernen des CSS-Blocks in `index.css`.
 
+- 80.52b (Sep 01 2026) — **Rahmenloser Override auf ALLE Border-Tokens erweitert**:
+
+  **User-Wunsch**: "Kannst du es überall übernehmen" — den rahmenlosen Look aus 80.52 auf sämtliche Border-Farb-Tokens erweitern, nicht nur `border-bank-border`.
+
+  **Fix**: Der CSS-Layer-Block in `index.css` L1202+ deckt jetzt ALLE Content-Border-Utilities ab:
+  * Generisch: `.border-bank-border`, `.border-border` (shadcn)
+  * Semantische Akzente: `.border-bank-primary`, `.border-bank-gold`, `.border-bank-accent`, `.border-bank-accent-strong`, `.border-bank-ink`, `.border-bank-signature`, `.border-bank-text`, `.border-bank-petrol-strong`, `.border-bank-rose`
+  * Alle -tint/-border-Farbslot-Varianten: `.border-bank-petrol-border`, `.border-bank-champagne-border`, `.border-bank-sage-border`, `.border-bank-amber-border`, `.border-bank-violet-border`, `.border-bank-rose-border`, `.border-bank-info-border`, `.border-bank-coral-border`, `.border-bank-gold-border`
+
+  **Restore-Selektoren nutzen jetzt `[class*="border-bank-"]` als Sammelmatcher** → alle funktionalen UI-Elemente (Buttons, Inputs, Select, Textarea, Anchor-CTAs, ARIA-Rollen für Modals/Menus/Listboxes/Tabs, Tabellen, Kalender, Charts, Opt-in `[data-preserve-border]`) behalten ihre passende Token-Farbe automatisch.
+
+  **Editorial-Shadow-Removal erweitert**: `shadow-editorial-sm/md/lg` und `shadow-sm/md/lg` werden auf allen Content-Containern (Elemente mit `[class*="border-bank-"]` oder `.border-border`) entfernt — Modal/Popover/Dropdown-Chrome ausgenommen via ARIA-Selektoren.
+
+  **QA Playwright /wissen**:
+  * 32 Elemente mit Border-Farbtoken erfasst
+  * 27/32 (84%) jetzt transparent — alle Content-Wrapper
+  * 5/32 sichtbar — ausnahmslos `<button>`-Elemente (Filter-Toolbar, Chat-Launcher, Rounded-Buttons) — funktionale UI korrekt bewahrt
+  * Screenshots /wissen, /news-markte, / zeigen konsistent rahmenlosen Editorial-Look
+
+  Farbwelt aus 80.51 und Layout, Content, Funktionalität aus 80.52 **unverändert**. Reversibel durch Entfernen des CSS-Blocks.
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:
