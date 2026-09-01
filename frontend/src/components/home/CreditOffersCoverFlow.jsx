@@ -150,10 +150,8 @@ function CreditOfferCard({ offer, isActive, cardIndex, totalCount, isTopPick, ca
   return (
     <article
       className={cn(
-        'group relative flex w-full max-w-full flex-col overflow-hidden rounded-2xl border border-bank-border bg-white shadow-editorial-sm transition-shadow duration-500',
-        'dark:border-bank-border dark:bg-bank-surface-elev dark:shadow-none',
+        'group relative flex w-full max-w-full flex-col transition-shadow duration-500',
         !compact && 'h-full',
-        isActive ? 'shadow-editorial-md dark:ring-1 dark:ring-bank-border/80' : 'shadow-editorial-sm',
       )}
       style={{ width: cardWidth, ...(compact ? {} : { height: CARD_HEIGHT }) }}
       data-testid={`credit-offer-card-${offer.id}`}
@@ -275,7 +273,7 @@ function CreditOfferCard({ offer, isActive, cardIndex, totalCount, isTopPick, ca
       {showDetails && (
       <div
         className={cn(
-          'mt-auto shrink-0 border-t border-bank-border bg-bank-bg/40 px-4 pt-2.5 dark:bg-bank-surface/50',
+          'mt-auto shrink-0 px-4 pt-2.5',
           compact ? 'pb-4' : 'pb-3',
         )}
       >

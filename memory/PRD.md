@@ -128,6 +128,20 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
   * Mobile 390×844: identisches Verhalten, 1-Spalten-Layout, kein Card-Chrome
   * Content, Grid, Reveal-Animation, Bonus-Chips, Click-Handler unverändert
 
+- 80.52e (Sep 01 2026) — **Content-Card-Chrome Audit + Purge (Kredit-Karussell, Spar-Optionen)**:
+
+  **User-Wunsch**: Gezielte Bestandsaufnahme + Purge verbleibender Content-Card-Chrome. Funktionale UI und Readability-kritische Cards nicht anfassen.
+
+  **Geändert**:
+  * `HomeSavingsOptionsOverview.jsx` — 3 Spar-Produktkarten verlieren `rounded-2xl border bg-white shadow ring`, Divider vor CTA, Outline-Button → Royal-Blue-Text-Link; „Live-Vergleich"-Wrapper verliert Card-Chrome + Arrow-Kreis-Chrome
+  * `CreditOffersCoverFlow.jsx` — Karussell-Slides `<article>` verliert `rounded-2xl border bg-white shadow` + Ring + Hover-Shadow; CTA-Footer verliert `border-t bg-bank-bg/40`
+  
+  **Bewusst unverändert**: `CompactReviewCard.jsx` (in Dark-Section, Readability-Regression bei bg-Removal), inner chip-artige Info-Blocks (Rate-Example, Feature-Line), Nav-Buttons, Dot-Nav, alle in 80.52c/d bereits rahmenlosen Komponenten
+  
+  **QA Preview**: 80 Credit-Card-Elemente `transparent/0px/none` verifiziert, Screenshots Desktop + Mobile bestätigt. Keine Regressionen
+
+  **Nicht deployed** — User-Wunsch nur Preview.
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:

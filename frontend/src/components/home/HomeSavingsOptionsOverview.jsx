@@ -58,13 +58,11 @@ export default function HomeSavingsOptionsOverview() {
             <article
               key={product.slug}
               className={cn(
-                'group/card flex flex-col overflow-hidden rounded-2xl border border-bank-border bg-white shadow-editorial-sm transition-[box-shadow,border-color,transform] duration-300',
-                'hover:border-bank-gold/35 hover:shadow-editorial-md',
-                accent.ring,
-                'ring-1 ring-inset',
+                'group/card flex flex-col overflow-hidden transition-transform duration-300',
+                'hover:-translate-y-0.5',
               )}
             >
-              <div className="relative aspect-[16/10] w-full overflow-hidden border-b border-bank-border/60 bg-[#e8e4dc]">
+              <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#e8e4dc]">
                 <img
                   src={HOME_SAVINGS_CARD_IMAGES[product.slug]}
                   alt={HOME_SAVINGS_CARD_ALT[product.slug] ?? product.title}
@@ -81,7 +79,7 @@ export default function HomeSavingsOptionsOverview() {
                 />
               </div>
 
-              <div className="flex flex-1 flex-col px-6 pb-6 pt-4">
+              <div className="flex flex-1 flex-col pb-2 pt-5">
                 <div className="flex flex-col items-center gap-3">
                   <ProductIcon product={product.slug} size="md" />
                   <h3 className="text-center font-display text-2xl font-normal text-bank-ink">{product.title}</h3>
@@ -101,16 +99,14 @@ export default function HomeSavingsOptionsOverview() {
                   ))}
                 </ul>
 
-                <div className="mt-8 border-t border-bank-border/70 pt-6">
+                <div className="mt-8">
                   <Link
                     to={`/produkte/${product.slug}`}
-                    className="block"
+                    className="group/link inline-flex items-center gap-1.5 text-[14px] font-medium text-bank-primary underline-offset-4 transition-colors hover:text-bank-primary-hover hover:underline"
                     data-testid={`home-product-${product.slug}-cta`}
                   >
-                    <Button variant="outline-ink" size="lg" className="w-full gap-2 font-normal">
-                      Mehr erfahren
-                      <ArrowRight className="h-4 w-4" strokeWidth={LUCIDE_STROKE} />
-                    </Button>
+                    Mehr erfahren
+                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover/link:translate-x-0.5" strokeWidth={LUCIDE_STROKE} />
                   </Link>
                 </div>
               </div>
@@ -119,10 +115,10 @@ export default function HomeSavingsOptionsOverview() {
         })}
       </div>
 
-      <div className="mt-10 overflow-hidden rounded-2xl border border-bank-border bg-white/80 shadow-editorial-sm backdrop-blur-sm">
+      <div className="mt-10">
         <Link
           to="/comparison"
-          className="group flex w-full items-center justify-between gap-6 px-6 py-6 text-left transition-colors hover:bg-bank-surface-elev/60 sm:px-8 sm:py-7"
+          className="group flex w-full items-center justify-between gap-6 py-6 text-left transition-colors sm:py-7"
           data-testid="home-savings-options-cta"
         >
           <div className="min-w-0">
@@ -141,7 +137,7 @@ export default function HomeSavingsOptionsOverview() {
           </div>
           <span
             aria-hidden
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-bank-border bg-white text-bank-gold shadow-editorial-sm transition-all duration-300 group-hover:border-bank-gold/45 group-hover:shadow-editorial-md"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-bank-gold transition-all duration-300 group-hover:text-bank-gold/80"
           >
             <ArrowRight
               className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5"
