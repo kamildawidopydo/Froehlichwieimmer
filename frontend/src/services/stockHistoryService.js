@@ -6,6 +6,12 @@
 
 const API_ROOT = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
 
+// Backend `_SPARKLINE_SUPPORTED` = {"DAX", "SPX", "NDX", "DJI"}. Alle anderen
+// Symbole (Einzelaktien, Anleihen, ETFs, Rohstoffe mit Sonderzeichen) sind
+// nicht unterstützt und werden Frontend-seitig kurzgeschlossen — verhindert
+// unnötige 404-Requests + Console-Noise.
+const SUPPORTED_SPARKLINE_SYMBOLS = new Set(['DAX', 'SPX', 'NDX', 'DJI']);
+
 const EMPTY_RESULT = Object.freeze({
   points: [],
   ohlc: [],
@@ -27,6 +33,10 @@ export async function fetchStockHistory(symbol, _range = '1mo', _interval) {
   if (!symbol || !API_ROOT) return { ...EMPTY_RESULT };
   const sym = String(symbol).toUpperCase();
   if (UNSUPPORTED.has(sym)) return { ...EMPTY_RESULT };
+  if (!SUPPORTED_SPARKLINE_SYMBOLS.has(sym)) {
+    UNSUPPORTED.add(sym);
+    return { ...EMPTY_RESULT };
+  }
 
   try {
     const res = await fetch(

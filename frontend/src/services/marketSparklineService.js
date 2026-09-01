@@ -4,6 +4,10 @@
 
 const API_ROOT = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
 
+// Backend `_SPARKLINE_SUPPORTED` = {"DAX", "SPX", "NDX", "DJI"}. Frontend-
+// Allowlist verhindert 404-Rundtrips für Einzelaktien/Anleihen/ETFs.
+const SUPPORTED_SPARKLINE_SYMBOLS = new Set(['DAX', 'SPX', 'NDX', 'DJI']);
+
 const CACHE_TTL_MS = 120_000;
 const cache = new Map();
 const UNSUPPORTED = new Set();
@@ -28,6 +32,10 @@ const writeCache = (key, data) => {
 async function fetchOne(symbol) {
   const sym = String(symbol || '').toUpperCase();
   if (!sym || !API_ROOT || UNSUPPORTED.has(sym)) {
+    return { points: [], prevClose: null };
+  }
+  if (!SUPPORTED_SPARKLINE_SYMBOLS.has(sym)) {
+    UNSUPPORTED.add(sym);
     return { points: [], prevClose: null };
   }
   try {

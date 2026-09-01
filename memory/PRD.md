@@ -142,6 +142,21 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
   **Nicht deployed** — User-Wunsch nur Preview.
 
+- 80.55 (Sep 01 2026) — **Console-Warnings Audit & Cleanup (Preview only)**:
+
+  **Audit-Ergebnis Produktion vor Fix**: 24 Console-Messages, 42 Failed Requests, davon 7× Sparkline-404s für Symbole außerhalb der Backend-Allowlist (AAPL/NVDA/MSFT/APPLE 3/BUND 2/5% 2034/25% 2029).
+
+  **Fix (nur Kategorie A)**:
+  * `stockHistoryService.js` + `marketSparklineService.js` — `SUPPORTED_SPARKLINE_SYMBOLS = {DAX,SPX,NDX,DJI}` Allowlist ergänzt. Nicht-unterstützte Symbole werden vorab in `UNSUPPORTED`-Set eingetragen, **kein Network-Roundtrip mehr**. 7 → 0 Sparkline-404s auf Preview verifiziert.
+
+  **Bewusst belassen (Kategorien B/C/D)**:
+  * `net::ERR_ABORTED` chunk.js/assets (13) — Browser-Cancel bei Navigation, harmlos
+  * `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin` (4) — Consent-blockierte Third-Party-Scripts, Consent-System darf nicht geschwächt werden
+  * `/api/auth/me` → 401 (3) — Intentional Auth-Probe, semantisch korrekt für Public-Besucher
+  * `overflow: visible on img` Warning — keine eigene CSS-Regel identifiziert, Chrome-Debug-Hint
+
+  **Ergebnis**: Console-Messages 24 → 8, Failed Requests 42 → 2. Keine Regressionen. Nicht deployed — nur Preview-QA.
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:
