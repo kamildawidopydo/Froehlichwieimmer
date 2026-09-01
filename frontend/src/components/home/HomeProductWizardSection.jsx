@@ -95,8 +95,8 @@ const HomeProductWizardSection = ({ onOpenWizard }) => {
                 viewport={{ once: true, margin: '-64px' }}
                 transition={{ duration: prefersReduced ? 0 : 0.45, delay: prefersReduced ? 0 : 0.03 * i, ease: [0.22, 1, 0.36, 1] }}
                 className={cn(
-                  'group relative flex min-h-[152px] flex-col gap-2 rounded-xl border border-bank-border bg-white p-5 text-left transition-all sm:p-6',
-                  'hover:-translate-y-0.5 hover:border-bank-accent/40 hover:shadow-[0_18px_40px_-24px_rgb(9_33_66/0.28)]',
+                  'group relative flex min-h-[152px] flex-col gap-2 py-3 text-left transition-transform sm:py-4',
+                  'hover:-translate-y-0.5',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/40',
                 )}
               >

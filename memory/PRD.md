@@ -112,6 +112,22 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
   * Mobile 390×844: identisches Verhalten, keine Layout-Verschiebung, Section-Struktur weiterhin über Whitespace + Typografie
   * Content, Spaltenaufteilung, Reihenfolge unverändert
 
+- 80.52d (Sep 01 2026) — **Geldanlage-Wizard-Tiles rahmenlos**:
+
+  **User-Wunsch**: Sektion „Geldanlage für Ihre Ziele" (6 Tiles: Aktien, Anleihen, Fonds & ETFs, Tagesgeld, Festgeld, Flexgeld) sollte komplett rahmenlos werden — analog zu Session 80.52c. „FRAGEN BEANTWORTEN →" als schlichter Royal-Blue-Textlink.
+
+  **Fix — `/app/frontend/src/components/home/HomeProductWizardSection.jsx`**:
+  * `motion.button` className: entfernt `rounded-xl border border-bank-border bg-white p-5 sm:p-6 transition-all hover:border-bank-accent/40 hover:shadow-[0_18px_40px_-24px_rgb(9_33_66/0.28)]`
+  * Padding auf Vertikal-Only reduziert: `py-3 sm:py-4` (kein horizontales Padding mehr, Grid-Gap übernimmt Trennung)
+  * Hover-Chrome komplett entfernt, nur subtile `hover:-translate-y-0.5` Motion bleibt (User-Wunsch: Animationen erhalten)
+  * Focus-Ring für a11y erhalten
+  * Bestehende Kicker/Titel/Beschreibung/Bonus-Chip/Fragen-beantworten-Zeile unverändert — die bereits vorhandene Text-Link-Optik der CTA-Zeile (Royal-Blue-Mono-Uppercase + Arrow) wird jetzt sichtbar ohne umgebende Karte
+
+  **QA Playwright**:
+  * Desktop 1920×1080: 6/6 Tiles verifiziert — `border transparent`, `borderRadius 0px`, `backgroundColor transparent`, `boxShadow none`
+  * Mobile 390×844: identisches Verhalten, 1-Spalten-Layout, kein Card-Chrome
+  * Content, Grid, Reveal-Animation, Bonus-Chips, Click-Handler unverändert
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:
