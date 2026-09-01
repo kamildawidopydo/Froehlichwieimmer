@@ -26,6 +26,35 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
   * `GET /api/news/admin/status` → `freshness: fresh`, `synth.last_summary: {published: 5, needs_review: 0, llm_failed: 0}`.
   * `GET /api/news-markte/feed` → `top: 3, overview: 15, weitere: 9` (statt 0/0/0).
 
+- 80.51 (Feb 28 2026) — **Allvest-inspiriertes Farb-Rebrand (Royal Blue + Warmgrey + Warm Gold)**:
+
+  **User-Wunsch**: „Nutze allvest.de als visuelle Referenz für die Farbgestaltung. Übernimm die Farbwelt möglichst exakt (Primär, Sekundär, Akzente, Hintergründe, Text, Buttons, Hover, Borders). Nur visuelles Farbschema — kein Layout/Struktur ändern."
+
+  **Analyse Allvest**: Referenz nutzt Allianz-Familie Royal-Blue (`text-primary` ~ `#003781`) als dominante Farbe, warme Neutraltöne (`warmgrey-lighter` `#F7F3EC`, `warmgrey-light` `#F1EBDF`, `warmgrey-darker` `#6B6459`, `warmgrey-darkest` `#3E3A32`) als Hintergrund- und Textpalette, warmes Gold (`sphere_cropped_gold` — Renditebaustein) als sparsamer Akzent. Kein Türkis, keine Koralle, kein grünliches Sage-Grün.
+
+  **Fix — nur `--bank-*` CSS-Variablen getauscht, keine Komponenten**:
+  - `--bank-primary` `#7FAFAA` (Muted Teal) → `#003781` (Allianz Royal Blue)
+  - `--bank-signature` (CTA-Fill) `#376460` (Petrol) → `#003781` (Royal Blue, AAA 13:1)
+  - `--bank-surface-elev` `#FAF9F7` → `#F7F3EC` (warmgrey-lighter)
+  - `--bank-panel` `#F7FAF9` → `#F1EBDF` (warmgrey-light)
+  - `--bank-mint` `#EAF3F2` → `#EDF0F7` (light Royal-Blue tint)
+  - `--bank-border` `#DDE7E5` → `#E5DFD3` (warm neutral)
+  - `--bank-text` `#1E292B` → `#1A1A1D` (warm near-black)
+  - `--bank-text-muted` `#667675` → `#6B6459` (warm anthracite)
+  - `--bank-petrol` slot repurposed: `#527F7B` → `#0057B0` (bright Royal Blue for icons/data)
+  - `--bank-gold` (Slot 1 legacy alias) `#B0444C` (Coral-mirror) → `#B58853` (Allvest warm gold)
+  - `--bank-gold` (Slot 2 wealth marker) `#C89A3D` → `#B58853` (softer, warmer)
+  - `--bank-gold-strong` `#8F641A` → `#866432` (AA 4.79:1 auf Tint)
+  - `--bank-amber` slot re-baseline to same Allvest warm gold family
+  - `--bank-sage` `#8FA89A` (grün) → `#7894B0` (blue-grey, harmoniert mit Royal-Blue)
+  - `--bank-info` `#4C7CBA` → `#1E64BE` (kräftigeres Datenblau)
+  - shadcn Tokens (`--primary` HSL) analog auf Royal-Blue umgestellt
+  - Dark-Mode-Pendants an die neuen Werte angepasst
+
+  **Contrast-Gate**: `python3 scripts/check-contrast.py` — 19/19 PASS (nach Gold-Strong-Feinjustierung von `#8F6A3E` → `#866432`).
+
+  **Guarantie**: Keine Komponenten, Layouts, Abstände, Inhalte, Funktionalität geändert. Nur zentrale Design-Tokens getauscht — der komplette Rest der App zieht automatisch nach.
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:

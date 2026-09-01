@@ -9,40 +9,42 @@
     color-scheme: light;
 
     /* Fröhlich Vermögensberatung — Corporate Design Tokens
-       (Session 76.5 — Refined Teal + Coral, ruhiger Private-Banking-Look) */
-    --color-primary:        #7FAFAA;
-    --color-primary-hover:  #6D9D98;
-    --color-secondary:      #EDF5F4;
+       (Session 80.51 — Allvest-inspiriert: Royal Blue + Warmgrey + Sanftes Gold.
+        Warme, editoriale Neutraltöne. Private-Banking-Look ohne Türkis-Anteil.) */
+    --color-primary:        #003781;
+    --color-primary-hover:  #002862;
+    --color-secondary:      #F7F3EC;
 
-    /* Corporate light (open, airy, warm neutral) */
-    --bank-bg:             255 255 255;  /* #FFFFFF */
+    /* Corporate light — Allvest warmgrey neutral palette */
+    --bank-bg:             255 255 255;  /* #FFFFFF pure white base for cards */
     --bank-surface:        255 255 255;  /* #FFFFFF */
-    --bank-surface-elev:   250 249 247;  /* #FAF9F7 warm off-white */
-    --bank-panel:          247 250 249;  /* #F7FAF9 alternative section */
-    --bank-mint:           234 243 242;  /* #EAF3F2 very light teal/mint */
-    --bank-border:         221 231 229;  /* #DDE7E5 cool mint neutral */
+    --bank-surface-elev:   247 243 236;  /* #F7F3EC warmgrey-lighter (hero) */
+    --bank-panel:          241 235 223;  /* #F1EBDF warmgrey-light (section-break) */
+    --bank-mint:           237 240 247;  /* #EDF0F7 very light royal-blue tint */
+    --bank-border:         229 223 211;  /* #E5DFD3 warm neutral hairline */
 
-    --bank-text:           30 41 43;     /* #1E292B anthracite body */
-    --bank-text-muted:     102 118 117;  /* #667675 secondary */
-    --bank-text-soft:      122 135 134;  /* #7A8786 tertiary / copyright */
-    --bank-text-strong:    52 68 67;     /* #344443 primary links (light bg) */
+    --bank-text:           26 26 29;     /* #1A1A1D near-black */
+    --bank-text-muted:     107 100 89;   /* #6B6459 warmgrey-darker */
+    --bank-text-soft:      140 133 120;  /* #8C8578 warm tertiary */
+    --bank-text-strong:    62 58 50;     /* #3E3A32 warmgrey-darkest */
 
-    --bank-primary:        127 175 170;  /* #7FAFAA muted teal (65%+20%+10% budget) */
-    --bank-primary-hover:  109 157 152;  /* #6D9D98 */
-    --bank-primary-strong: 82 127 123;   /* #527F7B darker teal (contrast/hover) */
-    --bank-secondary:      127 175 170;  /* teal */
-    /* Accent (Koralle) — nur für Conversion-CTAs, max ~5% Fläche.
-       Session 80.26 fix-pass: darkened from #E56A73 (3.16:1) to #B0444C (4.5:1 AA) so
-       "Konto eröffnen"-Button + Kicker sind AA-konform. */
-    --bank-accent:         176 68 76;    /* #B0444C AA-safe coral */
-    --bank-accent-strong:  143 55 62;    /* #8F373E deeper coral hover */
-    /* Legacy „gold"-Slot als Koralle-Highlight umgedeutet (sparsam) */
-    --bank-gold:           176 68 76;    /* mirrors accent */
-    --bank-gold-soft:      252 237 239;  /* #FCEDEF very light coral surface */
-    --bank-success:        16 185 129;   /* #10B981 */
-    /* Primary CTA fill — Session 80.26 fix-pass: darkened for AA (was #7FAFAA @ 2.44:1). */
-    --bank-signature:        55 100 96;  /* #376460 AA-safe petrol on white (6.2:1) */
-    --bank-signature-hover:  34 68 65;   /* #224441 deeper petrol pressed */
+    --bank-primary:        0 55 129;     /* #003781 Allianz-inspired royal blue */
+    --bank-primary-hover:  0 40 98;      /* #002862 pressed */
+    --bank-primary-strong: 0 31 77;      /* #001F4D deeper for text on tints */
+    --bank-secondary:      0 55 129;     /* royal blue */
+    /* Accent — Session 80.51: auf Royal Blue umgestellt (Allvest-Ref hat KEINE
+       Koralle). Verwendet für Conversion-CTAs, Kicker, Hero-Mesh-Tinting.
+       Coral bleibt separat via --bank-coral für negative Delta-Marker. */
+    --bank-accent:         0 55 129;    /* #003781 royal blue — matches primary/signature */
+    --bank-accent-strong:  0 40 98;     /* #002862 deeper royal blue for hover */
+    /* Gold-Slot re-baseline auf Allvest-Warmgold (statt Koralle). Der Slot
+       wird jetzt sinngemäß für Premium/Rendite-Markierungen genutzt. */
+    --bank-gold:           181 136 83;   /* #B58853 Allvest warm gold */
+    --bank-gold-soft:      248 240 220;  /* #F8F0DC very light warm surface */
+    --bank-success:        43 138 62;    /* #2B8A3E warm green (Allvest-friendly) */
+    /* Primary CTA fill — royal blue (AAA on white ~13:1). */
+    --bank-signature:        0 55 129;   /* #003781 royal blue */
+    --bank-signature-hover:  0 40 98;    /* #002862 pressed */
     --bank-error:          220 38 38;
 
     /* --------------------------------------------------------------------
@@ -50,11 +52,11 @@
        Values are intentionally muted to preserve the Private-Banking mood.
        Use for icons, small badges, KPI numerics, tags, borders, chart lines.
        -------------------------------------------------------------------- */
-    --bank-petrol:         82 127 123;    /* #527F7B — growth / positive accent */
-    --bank-petrol-strong:  55 100 96;     /* #376460 — hover/pressed */
-    --bank-petrol-ink:     34 68 65;      /* #224441 — text on light bg */
-    --bank-petrol-tint:    234 243 242;   /* #EAF3F2 — very light surface */
-    --bank-petrol-border:  195 220 217;   /* #C3DCD9 — subtle border */
+    --bank-petrol:         0 87 176;      /* #0057B0 — bright royal blue (icons/data) */
+    --bank-petrol-strong:  0 55 129;      /* #003781 — hover/pressed */
+    --bank-petrol-ink:     0 31 77;       /* #001F4D — text on light bg (AAA) */
+    --bank-petrol-tint:    237 240 247;   /* #EDF0F7 — very light royal-blue surface */
+    --bank-petrol-border:  199 210 229;   /* #C7D2E5 — subtle border */
 
     --bank-coral:          204 88 96;     /* #CC5860 — attention / brand accent (rare) */
     --bank-coral-strong:   176 68 76;     /* #B0444C */
@@ -68,17 +70,17 @@
     --bank-violet-tint:    241 239 247;   /* #F1EFF7 */
     --bank-violet-border:  217 212 234;   /* #D9D4EA */
 
-    --bank-amber:          172 134 63;    /* #AC863F — subtle warm gold */
-    --bank-amber-strong:   142 108 42;    /* #8E6C2A */
-    --bank-amber-ink:      88 66 20;      /* #584214 */
-    --bank-amber-tint:     249 243 226;   /* #F9F3E2 */
-    --bank-amber-border:   232 217 179;   /* #E8D9B3 */
+    --bank-amber:          181 136 83;    /* #B58853 — Allvest warm gold base */
+    --bank-amber-strong:   134 100 50;    /* #866432 — AA on both tint (4.79:1) and white (5.4:1) */
+    --bank-amber-ink:      93 69 32;      /* #5D4520 — AAA on white (8.9:1) */
+    --bank-amber-tint:     248 240 220;   /* #F8F0DC — warm gold surface */
+    --bank-amber-border:   232 219 190;   /* #E8DBBE — hairline */
 
-    --bank-info:           76 124 186;    /* #4C7CBA — data / information */
-    --bank-info-strong:    58 100 153;    /* #3A6499 */
-    --bank-info-ink:       34 62 100;     /* #223E64 */
-    --bank-info-tint:      238 243 250;   /* #EEF3FA */
-    --bank-info-border:    205 219 240;   /* #CDDBF0 */
+    --bank-info:           30 100 190;    /* #1E64BE — data / information */
+    --bank-info-strong:    0 68 148;      /* #004494 */
+    --bank-info-ink:       0 42 92;       /* #002A5C */
+    --bank-info-tint:      232 240 250;   /* #E8F0FA */
+    --bank-info-border:    195 213 236;   /* #C3D5EC */
 
     /* --------------------------------------------------------------------
        Session 80.26c — Blush / dusty-rose editorial accent (additive slot).
@@ -94,109 +96,107 @@
     --bank-rose-tint:      250 240 242;   /* #FAF0F2 — very light blush surface */
     --bank-rose-border:    236 213 218;   /* #ECD5DA — hairline border */
 
-    /* Session 80.42/80.43 — Gold (real private-banking gold).
+    /* Session 80.51 — Gold (Allvest-inspiriertes warmes Gold).
        Wealth, investment, premium markers. AA-tuned via check-contrast.py. */
-    --bank-gold:           200 154 61;   /* #C89A3D warm private-banking gold */
-    --bank-gold-strong:    143 100 26;   /* #8F641A AA-safe on white (4.7:1) */
-    --bank-gold-ink:       93 68 20;     /* #5D4414 AAA-safe on tint (7.6:1) */
-    --bank-gold-tint:      251 245 232;  /* #FBF5E8 very light surface */
-    --bank-gold-border:    231 213 172;  /* #E7D5AC hairline */
-    --bank-gold-soft:      252 237 239;  /* legacy — points to old coral tint, still used by dashboard */
+    --bank-gold:           181 136 83;   /* #B58853 Allvest warm gold */
+    --bank-gold-strong:    134 100 50;   /* #866432 AA on tint (4.79:1) + white (5.4:1) */
+    --bank-gold-ink:       93 69 32;     /* #5D4520 AAA on white (8.9:1) */
+    --bank-gold-tint:      248 240 220;  /* #F8F0DC very light warm surface */
+    --bank-gold-border:    232 219 190;  /* #E8DBBE hairline */
+    --bank-gold-soft:      248 240 220;  /* aliases warm-gold tint */
 
-    /* Session 80.42/80.43 — Champagne. Editorial surfaces, knowledge. */
-    --bank-champagne:        216 197 163;  /* #D8C5A3 base */
-    --bank-champagne-strong: 158 130 88;   /* #9E8258 AA-tuned darker */
-    --bank-champagne-ink:    92 75 51;     /* #5C4B33 AAA on tint (7.1:1) */
-    --bank-champagne-tint:   250 247 241;  /* #FAF7F1 warm section break */
-    --bank-champagne-border: 233 223 207;  /* #E9DFCF hairline */
+    /* Session 80.51 — Champagne. Editoriale Warmtöne, ergänzt Gold. */
+    --bank-champagne:        213 195 165;  /* #D5C3A5 base */
+    --bank-champagne-strong: 158 130 88;   /* #9E8258 AA-tuned */
+    --bank-champagne-ink:    92 75 51;     /* #5C4B33 AAA */
+    --bank-champagne-tint:   250 245 236;  /* #FAF5EC warm section break */
+    --bank-champagne-border: 231 220 202;  /* #E7DCCA hairline */
 
-    /* Session 80.42/80.43 — Sage. Sustainability, structure, long-term stability. */
-    --bank-sage:             143 168 154;  /* #8FA89A base */
-    --bank-sage-strong:      86 111 96;    /* #566F60 AA-safe on white (4.7:1) */
-    --bank-sage-ink:         56 84 72;     /* #385448 ink */
-    --bank-sage-tint:        241 246 243;  /* #F1F6F3 surface */
-    --bank-sage-border:      203 218 210;  /* #CBDAD2 hairline */
+    /* Session 80.51 — Sage → kühles Blaugrau (statt Sage-Grün), harmoniert
+       mit Royal-Blue-Primary. Wird jetzt für Stabilität/Struktur genutzt. */
+    --bank-sage:             120 148 176;  /* #7894B0 blue-grey base */
+    --bank-sage-strong:      74 100 130;   /* #4A6482 AA on white (5.3:1) */
+    --bank-sage-ink:         42 62 88;     /* #2A3E58 AAA */
+    --bank-sage-tint:        238 243 249;  /* #EEF3F9 surface */
+    --bank-sage-border:      201 214 229;  /* #C9D6E5 hairline */
 
-    /* Dark contrast bands — anthracite footers */
-    --bank-ink:            48 42 44;     /* #302A2C footer/dark bands */
-    --bank-ink-hover:      60 52 55;
-    --bank-ink-soft:       72 62 66;
-    --bank-ink-elev:       92 82 86;
+    /* Dark contrast bands — warm-cool anthracite footers */
+    --bank-ink:            30 34 44;     /* #1E222C footer/dark bands, warm-cool */
+    --bank-ink-hover:      44 48 60;     /* #2C303C */
+    --bank-ink-soft:       56 60 72;     /* #383C48 */
+    --bank-ink-elev:       76 80 92;     /* #4C505C */
     --bank-on-ink:         255 255 255;
 
-    /* shadcn — Teal-primary + neutral cool border */
+    /* shadcn — Royal-Blue-primary + warm neutral border (Session 80.51) */
     --background: 0 0% 100%;
-    --foreground: 240 8% 13%;
+    --foreground: 240 8% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 240 8% 13%;
+    --card-foreground: 240 8% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 8% 13%;
-    --primary: 175 22% 59%;
+    --popover-foreground: 240 8% 12%;
+    --primary: 217 100% 25%;             /* #003781 royal blue */
     --primary-foreground: 0 0% 100%;
-    --secondary: 175 22% 96%;
-    --secondary-foreground: 240 8% 13%;
-    --muted: 175 22% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 175 22% 94%;
-    --accent-foreground: 177 15% 32%;
+    --secondary: 39 42% 94%;             /* #F7F3EC warmgrey-lighter */
+    --secondary-foreground: 240 8% 12%;
+    --muted: 39 42% 94%;
+    --muted-foreground: 35 9% 38%;       /* warm muted text */
+    --accent: 39 42% 91%;                /* warmer neutral for hover */
+    --accent-foreground: 217 100% 25%;   /* royal blue on accent */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 200 5% 90%;
-    --input: 200 5% 90%;
-    --ring: 175 22% 59%;
+    --border: 35 22% 86%;                /* warm neutral border */
+    --input: 35 22% 86%;
+    --ring: 217 100% 25%;
     --radius: 0.5rem;
-    --chart-1: 175 22% 59%;
-    --chart-2: 240 8% 13%;
-    --chart-3: 355 68% 66%;
-    --chart-4: 175 15% 42%;
-    --chart-5: 220 9% 46%;
+    --chart-1: 217 100% 25%;             /* royal blue */
+    --chart-2: 240 8% 12%;               /* near-black */
+    --chart-3: 32 39% 52%;               /* warm gold */
+    --chart-4: 217 60% 40%;              /* mid royal blue */
+    --chart-5: 35 10% 38%;               /* warm muted */
   }
 
   .dark {
     color-scheme: dark;
 
-    /* Fröhlich Palette — dark (Session 76.5 Teal+Coral) */
-    --bank-bg:             30 30 34;     /* #1E1E22 body dark */
-    --bank-surface:        40 40 44;
-    --bank-surface-elev:   52 52 56;
-    --bank-panel:          36 36 40;     /* Session 80.26 fix-pass: was missing → topbar stayed near-white */
-    --bank-border:         74 74 78;
+    /* Fröhlich Palette — dark (Session 80.51 Allvest Royal-Blue + Warm Gold) */
+    --bank-bg:             22 25 32;     /* #161920 body dark warm-cool */
+    --bank-surface:        30 34 44;     /* #1E222C */
+    --bank-surface-elev:   40 44 56;     /* #282C38 */
+    --bank-panel:          26 30 40;     /* #1A1E28 topbar */
+    --bank-border:         64 68 82;     /* #404452 */
 
     --bank-text:           245 246 247;
     --bank-text-muted:     170 174 180;
 
-    --bank-primary:        149 195 190;  /* teal helled für Dark-Kontrast */
-    --bank-primary-hover:  127 175 170;
-    --bank-secondary:      149 195 190;
-    /* Session 80.26 fix-pass: coral leicht abgedunkelt für AA gegen dunkle Buttons */
-    --bank-accent:         232 140 148;  /* AA >4.5:1 mit weißem Text auf dunklem BG */
+    --bank-primary:        122 168 232;  /* #7AA8E8 lighter royal blue for dark bg */
+    --bank-primary-hover:  152 190 240;  /* #98BEF0 pressed */
+    --bank-secondary:      122 168 232;
+    /* Coral retained for negative deltas (rare) */
+    --bank-accent:         232 140 148;
     --bank-accent-strong:  240 130 138;
-    --bank-gold:           232 140 148;
-    --bank-gold-soft:      54 24 26;
-    /* Session 80.42 — Gold in dark: warm but reads clearly on Charcoal bg.
-       Ink/strong lightened for AA against dark surfaces. */
-    --bank-gold-strong:    228 198 128;   /* softer, lighter */
-    --bank-gold-ink:       244 226 188;   /* text on dark */
-    --bank-gold-tint:       46 36 12;     /* very dark warm surface */
-    --bank-gold-border:     92 74 30;
-    /* Session 80.42 — Champagne (dark). Warm neutral, remains editorial. */
+    /* Gold (Allvest) — light warm-gold reads clearly on dark. */
+    --bank-gold:           220 176 116;   /* #DCB074 */
+    --bank-gold-soft:      46 36 20;      /* very dark warm surface */
+    --bank-gold-strong:    228 198 140;   /* #E4C68C for text-on-dark */
+    --bank-gold-ink:       244 226 188;   /* #F4E2BC AAA-on-dark */
+    --bank-gold-tint:       46 36 20;     /* very dark warm surface */
+    --bank-gold-border:     92 74 40;
+    /* Champagne (dark). */
     --bank-champagne:        200 176 138;
     --bank-champagne-strong: 220 200 168;
     --bank-champagne-ink:    235 220 194;
     --bank-champagne-tint:    40 34 26;
     --bank-champagne-border:  78 66 52;
-    /* Session 80.42 — Sage (dark). Muted-green, distinct from Petrol. */
-    --bank-sage:             156 184 168;
-    --bank-sage-strong:      188 210 196;
-    --bank-sage-ink:         214 232 222;
-    --bank-sage-tint:         24 40 32;
-    --bank-sage-border:       60 84 74;
-    --bank-success:        52 211 153;
-    /* Primary CTA fill (dark) — light-teal auf dunklem BG mit dunklem Text.
-       Behalten wir hell, weil in dark der Button-Text auf dunkel invertiert wird via
-       .dark-Overrides; ausreichender Kontrast bleibt erhalten. */
-    --bank-signature:        149 195 190;
-    --bank-signature-hover:  180 214 210;
+    /* Sage → blue-grey stability, mid-tone for dark */
+    --bank-sage:             168 190 216;
+    --bank-sage-strong:      194 210 232;
+    --bank-sage-ink:         220 232 248;
+    --bank-sage-tint:         24 32 48;
+    --bank-sage-border:       60 78 108;
+    --bank-success:        76 218 125;
+    /* Primary CTA fill (dark) — light royal blue on dark surface. */
+    --bank-signature:        122 168 232;
+    --bank-signature-hover:  152 190 240;
     --bank-error:          239 68 68;
 
     /* Session 80.26 — Dark-mode semantic accents (softened for contrast) */

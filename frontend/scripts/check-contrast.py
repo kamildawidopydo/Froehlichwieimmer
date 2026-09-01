@@ -22,47 +22,48 @@ import sys
 from typing import Tuple
 
 # Alle Werte gespiegelt aus /app/frontend/src/index.css (Light + Dark).
+# Session 80.51 — Allvest-inspiriert (Royal Blue + Warm Gold + Blaugraues Sage).
 LIGHT = {
     "white":               "#FFFFFF",
     "surface":             "#FFFFFF",
-    "text":                "#1E292B",
-    "text-muted":          "#667675",
-    # Gold — Session 80.43 AA-tuned
-    "gold":                "#C89A3D",
-    "gold-strong":         "#8F641A",
-    "gold-ink":            "#5D4414",
-    "gold-tint":           "#FBF5E8",
-    "gold-border":         "#E7D5AC",
-    # Champagne — Session 80.43 AA-tuned
-    "champagne":           "#D8C5A3",
+    "text":                "#1A1A1D",
+    "text-muted":          "#6B6459",
+    # Gold — Session 80.51 Allvest warm gold, AA-tuned
+    "gold":                "#B58853",
+    "gold-strong":         "#866432",
+    "gold-ink":            "#5D4520",
+    "gold-tint":           "#F8F0DC",
+    "gold-border":         "#E8DBBE",
+    # Champagne — Session 80.51 refined
+    "champagne":           "#D5C3A5",
     "champagne-strong":    "#9E8258",
     "champagne-ink":       "#5C4B33",
-    "champagne-tint":      "#FAF7F1",
-    "champagne-border":    "#E9DFCF",
-    # Sage — Session 80.43 AA-tuned
-    "sage":                "#8FA89A",
-    "sage-strong":         "#566F60",
-    "sage-ink":            "#385448",
-    "sage-tint":           "#F1F6F3",
-    "sage-border":         "#CBDAD2",
+    "champagne-tint":      "#FAF5EC",
+    "champagne-border":    "#E7DCCA",
+    # Sage — Session 80.51 repurposed as cool blue-grey (harmoniert mit Royal-Blue)
+    "sage":                "#7894B0",
+    "sage-strong":         "#4A6482",
+    "sage-ink":            "#2A3E58",
+    "sage-tint":           "#EEF3F9",
+    "sage-border":         "#C9D6E5",
 }
 
 DARK = {
-    "bg":                  "#1E1E22",
-    "surface-elev":        "#343438",
+    "bg":                  "#161920",
+    "surface-elev":        "#282C38",
     "text":                "#F5F6F7",
     # Gold (dark)
-    "gold-strong":         "#E4C680",
+    "gold-strong":         "#E4C68C",
     "gold-ink":            "#F4E2BC",
-    "gold-tint":           "#2E240C",
+    "gold-tint":           "#2E2414",
     # Champagne (dark)
     "champagne-strong":    "#DCC8A8",
     "champagne-ink":       "#EBDCC2",
     "champagne-tint":      "#28221A",
-    # Sage (dark)
-    "sage-strong":         "#BCD2C4",
-    "sage-ink":            "#D6E8DE",
-    "sage-tint":           "#182820",
+    # Sage (dark) — blue-grey
+    "sage-strong":         "#C2D2E8",
+    "sage-ink":            "#DCE8F8",
+    "sage-tint":           "#182030",
 }
 
 
