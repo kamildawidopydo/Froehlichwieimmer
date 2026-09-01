@@ -55,6 +55,27 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
   **Guarantie**: Keine Komponenten, Layouts, Abstände, Inhalte, Funktionalität geändert. Nur zentrale Design-Tokens getauscht — der komplette Rest der App zieht automatisch nach.
 
+- 80.52 (Sep 01 2026) — **Rahmenloses Content-Design (globaler Override)**:
+
+  **User-Wunsch**: "Übernimm den rahmenlosen Stil konsequent auf der GESAMTEN Website. Content-Bereiche ohne Kartenrahmen — funktionale UI (Buttons, Inputs, Modals, Tabellen, Tags) behält Umrandung."
+
+  **Skala vs. Ansatz**: 256 Files, 848 Occurrences von `border border-bank-border`. Datei-für-Datei-Bearbeitung unpraktikabel → **ein globaler CSS-Layer-Override in `index.css` L1202+** der auf `.border-bank-border` wirkt und funktionale Elemente ausschließt.
+
+  **Regeln**:
+  * Default: `.border-bank-border { border-color: transparent }` — alle Content-Wrapper verlieren Umrandung ohne Layout-Shift (1px width bleibt)
+  * Restore-Selektoren: `button`, `input`, `select`, `textarea`, alle ARIA-Rollen (`role="dialog|menu|listbox|tab|switch|checkbox|radio|grid|row|combobox"`), `<table>`+Cells, `a[role="button"]`, `a.rounded-full` (Pill-CTAs), `.rdp` (Kalender), `[data-chart]`, Opt-in `[data-preserve-border]`
+  * Zusätzlich: `shadow-editorial-*` und `shadow-sm/md/lg` auf reinen Content-Cards (`.border-bank-border.shadow-*`) entfernt
+  * Modal-/Popover-/Dropdown-Chrome behält Schatten (Restore-Regel für `[role=dialog|menu|listbox]`)
+
+  **QA Playwright**:
+  * `.border-bank-border`-Elemente auf `/`: **272/298 (91%) transparent** ✓
+  * Verbleibende 26 sichtbare Borders: ausnahmslos `<button>`-Elemente (Filter, Toolbar-Buttons) — funktionale UI korrekt erhalten ✓
+  * Screenshot `/wissen`: Hero rahmenlos, Text sitzt direkt auf warmer Section-Fläche, Feature-Kacheln editorial statt boxy
+  * Modal (`data-testid=visitor-welcome-gate`) behält Schatten und Border ✓
+  * „Konto eröffnen"-Royal-Blue-Pill unverändert ✓
+
+  **Konsequenz**: Website wirkt jetzt konsistent rahmenlos, großzügig und editorial — genau wie die zuletzt angepassten Testimonials — ohne dass Content, Layout, Typografie, Navigation, Reihenfolge oder Funktionalität verändert wurden. Farbwelt aus 80.51 unverändert. Reversible durch Entfernen des CSS-Blocks in `index.css`.
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:
