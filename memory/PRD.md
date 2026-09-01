@@ -171,6 +171,32 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
   **Nicht deployed** — User-Wunsch nur Preview.
 
+- 80.59 (Sep 01 2026) — **Global Image Performance Audit + Logo-Kompression (Preview only)**:
+
+  **Audit-Ergebnis Produktion `/`**: 168 img-Elemente, 48 Image-Requests, **3.7 MB Total-Transfer**. 79 imgs ohne Dimensionen (CLS-Risiko), 6 eager-Bilder below fold.
+
+  **Top-Ursache (~60% des Bild-Traffics)**: Fröhlich-Logos wurden als unkomprimierte 1828×860 RGB-PNGs ausgeliefert (1163 KB je Variante). Bei ~4 Logo-Instanzen pro Seite = **2.3-4.6 MB** Overhead pro Load.
+
+  **Fix (Kategorie B — sichere Kompression, kein Design-Change)**:
+  * `/app/frontend/public/assets/logo/frohlich-logo.png`: 1163 KB → **9 KB** (Downscale auf 800×376, palette-quantize 128 Farben, PNG-optimize)
+  * `/app/frontend/public/assets/logo/frohlich-logo-transparent.png`: 1163 KB → **22 KB**
+  * `/app/frontend/public/assets/logo/frohlich-mark.png`: 762 KB → **27 KB**
+  * `/app/frontend/public/assets/logo/frohlich-mark-transparent.png`: 602 KB → **116 KB**
+  * Cache-Buster `?v=3` → `?v=4` in allen 8 Referenz-Files (brand.js, social-profiles, SocialTopNav, BrandLogo)
+
+  **Ergebnis auf Preview verifiziert**:
+  * Total Image-Transfer: **3748 KB → 1874 KB** (50% Reduktion)
+  * Logo-Ladezeit: 423ms → 99ms
+  * 0 broken Logos, DOM zeigt 4× frohlich-Logo intakt gerendert
+  * Kein visuelles Change (gleiche 800×376-Rendering-Größe > 200px Display-Größe = ausreichend Retina-DPR)
+
+  **Bewusst nicht angefasst**:
+  * 79 imgs ohne Dimensionen — dimensioning bräuchte per-Komponente-Anpassung, Kontext-Budget nicht vertretbar. Nächste Session
+  * 6 eager-imgs below fold (Preview-Bilder für Social/LinkedIn/Facebook, nur admin-only Routes) — kein User-Impact
+  * Unsplash-URLs (350 KB je Foto) — extern gehostet, Kompression via `?w=&q=` bereits eingesetzt
+
+  **Nicht deployed** — User-Wunsch nur Preview-QA.
+
 ## Session Log
 
 - 80.50b (Feb 28 2026) — **Missing images fix (Home Top-News + Financial Articles)**:

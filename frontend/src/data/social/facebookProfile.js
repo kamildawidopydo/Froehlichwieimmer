@@ -2,7 +2,7 @@ import siteContact from '@/data/siteContact';
 import { POST_IMG } from '@/data/social/postArtwork';
 
 const PLACEHOLDER = '/assets/social/placeholder.svg';
-const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=3';
+const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=4';
 
 /** Statische Facebook-Vorschau — Fröhlich Vermögensberatung GmbH (kein echtes FB-Profil).
  *  Bilder werden zentral aus /data/social/postArtwork geteilt (auch Instagram nutzt sie). */

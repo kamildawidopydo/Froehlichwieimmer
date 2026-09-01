@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 const DEFAULT_TITLE = 'Fröhlich Vermögensberatung | Ihre Investments. Alle Banken. Eine Plattform.';
 const DEFAULT_DESCRIPTION =
   'Tagesgeld, Festgeld & mehr bei über 100 europäischen Banken – auf einer Plattform vergleichen und verwalten. Sicher, übersichtlich und unverbindlich mit Fröhlich Vermögensberatung.';
-const DEFAULT_IMAGE = '/assets/logo/frohlich-logo.png?v=3';
+const DEFAULT_IMAGE = '/assets/logo/frohlich-logo.png?v=4';
 
 const PageMeta = ({ title, description, path = '/', image = DEFAULT_IMAGE, noIndex = false }) => {
   const resolvedTitle = title

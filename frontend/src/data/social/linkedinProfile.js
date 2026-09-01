@@ -2,7 +2,7 @@ import siteContact from '@/data/siteContact';
 import { socialCopy } from '@/data/siteCopyPhase5';
 import { POST_IMG, NEUTRAL_FALLBACK } from '@/data/social/postArtwork';
 
-const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=3';
+const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=4';
 const TEAM_AVATAR = '/assets/social/team/team-neutral.svg';
 const SERVICE_AVATAR = '/assets/social/team/service-neutral.svg';
 const NEUTRAL_PAGE = '/assets/social/pages/neutral-page.svg';

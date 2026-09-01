@@ -29,7 +29,7 @@ const sparvergleichThread = [
       {
         id: 'rs3r1',
         author: 'Fröhlich Vermögensberatung',
-        avatar: '/assets/logo/frohlich-mark.png?v=3',
+        avatar: '/assets/logo/frohlich-mark.png?v=4',
         publishedAt: 'vor 3 Tagen',
         text: 'Freut uns — bei Fragen steht das FAQ in den Highlights bereit. 🙌',
         isCompany: true,
@@ -70,7 +70,7 @@ const zinsenThread = [
       {
         id: 'rz2r1',
         author: 'Fröhlich Vermögensberatung',
-        avatar: '/assets/logo/frohlich-mark.png?v=3',
+        avatar: '/assets/logo/frohlich-mark.png?v=4',
         publishedAt: 'vor 6 Tagen',
         text: 'So ist der Vergleich gedacht — viel Erfolg beim Sparen. 📊',
         isCompany: true,
@@ -111,7 +111,7 @@ const sicherheitThread = [
       {
         id: 'rf2r1',
         author: 'Fröhlich Vermögensberatung',
-        avatar: '/assets/logo/frohlich-mark.png?v=3',
+        avatar: '/assets/logo/frohlich-mark.png?v=4',
         publishedAt: 'vor 12 Tagen',
         text: 'Danke fürs Teilen — Story-Highlight „Sicherheit“ hat noch mehr Details. 🛡️',
         isCompany: true,

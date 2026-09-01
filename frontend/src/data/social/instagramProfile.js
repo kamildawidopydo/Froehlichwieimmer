@@ -4,8 +4,8 @@ import { instagramPostCommentsById } from '@/data/social/instagramPostComments';
 import { POST_IMG } from '@/data/social/postArtwork';
 
 const PLACEHOLDER = '/assets/social/placeholder.svg';
-const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=3';
-const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=3';
+const SITE_LOGO = '/assets/logo/frohlich-logo.png?v=4';
+const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=4';
 
 /** Highlight-Assets — jedes Highlight hat eigene Cover und 4 unterschiedliche Story-Slides. */
 const HL = {

@@ -11,7 +11,7 @@ import { BRAND_LOGO_PNG_SRC } from '@/lib/brand';
  * to `frohlich-logo-transparent.png` — Test-Agent reported the invert filter produced
  * a solid white rectangle instead of a white wordmark.
  */
-const BRAND_LOGO_TRANSPARENT_SRC = '/assets/logo/frohlich-logo-transparent.png?v=3';
+const BRAND_LOGO_TRANSPARENT_SRC = '/assets/logo/frohlich-logo-transparent.png?v=4';
 
 export default function BrandLogo({
   alt = 'Fröhlich Vermögensberatung',

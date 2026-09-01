@@ -1,7 +1,7 @@
 /** Synthetic Instagram post comments — unique German accounts per post, own avatar each. */
 const IG = '/assets/social/instagram';
 const IG_V = '?v=32';
-const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=3';
+const PROFILE_AVATAR = '/assets/logo/frohlich-mark.png?v=4';
 
 // ---------------------------------------------------------------------------
 // Realistic avatar mixer — bewusst KEIN Portrait-Grid, sondern glaubwürdige
