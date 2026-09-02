@@ -28,7 +28,7 @@ const EASE = [0.22, 1, 0.36, 1];
 const CARD_WIDTH = 300;
 const CARD_GAP = 124;
 const MOBILE_CAROUSEL_MAX = 639;
-const AUTO_PLAY_MS = 4000;
+const AUTO_PLAY_MS = 5500;
 function getCircularOffset(index, activeIndex, count) {
   if (count <= 0) return 0;
   let offset = index - activeIndex;
@@ -639,9 +639,17 @@ export default function CreditOffersCoverFlow({ offers }) {
           })}
         </div>
       ) : (
-        <p className="mt-6 hidden text-center font-mono text-[11px] tabular-nums tracking-[0.14em] text-bank-text-muted sm:mt-8 sm:block">
-          {String(activeIndex + 1).padStart(2, '0')} / {String(count).padStart(2, '0')} — {offers[activeIndex]?.bank_name}
-        </p>
+        <div className="mt-6 hidden sm:mt-8 sm:block">
+          <p className="text-center font-mono text-[11px] tabular-nums tracking-[0.14em] text-bank-text-muted">
+            {String(activeIndex + 1).padStart(2, '0')} / {String(count).padStart(2, '0')} · {offers[activeIndex]?.bank_name}
+          </p>
+          <div className="mx-auto mt-3 h-px w-56 max-w-[60%] overflow-hidden bg-bank-border/60" aria-hidden>
+            <div
+              className="h-full bg-bank-ink/70 transition-[width] duration-500 ease-out dark:bg-bank-text/80"
+              style={{ width: `${((activeIndex + 1) / count) * 100}%` }}
+            />
+          </div>
+        </div>
       )}
 
       <p className="sr-only" aria-live="polite">

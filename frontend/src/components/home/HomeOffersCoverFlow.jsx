@@ -20,7 +20,7 @@ const EASE = [0.22, 1, 0.36, 1];
 const CARD_WIDTH = 300;
 const CARD_GAP = 124;
 const MOBILE_CAROUSEL_MAX = 639;
-const AUTO_PLAY_MS = 4000;
+const AUTO_PLAY_MS = 5500;
 const EXAMPLE_DEPOSIT = 50_000;
 
 function getCircularOffset(index, activeIndex, count) {
@@ -49,35 +49,48 @@ function getSlideMotion(offset, reduced, compact) {
     return {
       x: offset * (CARD_WIDTH + 24),
       scale: offset === 0 ? 1 : 0.92,
-      opacity: abs > 1 ? 0 : 1,
+      opacity: offset === 0 ? 1 : abs === 1 ? 0.32 : 0,
       zIndex: 10 - abs,
       rotateY: 0,
       filter: 'none',
+      pointerEvents: abs <= 1 ? 'auto' : 'none',
     };
   }
 
-  if (abs > 3) {
+  // Only offset 0 (active) and ±1 (preview neighbours) visible.
+  // ±2/±3 fully faded — no ghost content around the active card.
+  if (abs >= 2) {
     return {
       x: offset * CARD_GAP,
-      scale: 0.55,
+      scale: 0.6,
       opacity: 0,
       zIndex: 0,
       rotateY: offset > 0 ? -18 : 18,
-      filter: 'blur(2px)',
+      filter: 'blur(3px)',
       pointerEvents: 'none',
     };
   }
 
-  const scale = offset === 0 ? 1 : abs === 1 ? 0.84 : abs === 2 ? 0.72 : 0.62;
-  const opacity = abs === 3 ? 0.35 : 1 - abs * 0.08;
+  if (abs === 1) {
+    return {
+      x: offset * CARD_GAP,
+      scale: 0.86,
+      opacity: 0.28,
+      zIndex: 5,
+      rotateY: offset * -10,
+      filter: 'blur(0.6px)',
+      pointerEvents: 'auto',
+    };
+  }
 
   return {
-    x: offset * CARD_GAP,
-    scale,
-    opacity,
-    zIndex: 10 - abs,
-    rotateY: offset * -10,
-    filter: abs >= 2 ? 'blur(0.4px)' : 'none',
+    x: 0,
+    scale: 1,
+    opacity: 1,
+    zIndex: 10,
+    rotateY: 0,
+    filter: 'none',
+    pointerEvents: 'auto',
   };
 }
 
@@ -144,21 +157,32 @@ function OfferCard({ offer, isActive, cardIndex, totalCount, isTopPick, cardWidt
   return (
     <article
       className={cn(
-        'group relative flex max-w-full flex-col overflow-hidden rounded-2xl border border-bank-border bg-white shadow-editorial-sm transition-shadow duration-500',
-        'dark:border-bank-border dark:bg-bank-surface-elev dark:shadow-none',
+        'group relative flex max-w-full flex-col overflow-hidden rounded-2xl transition-shadow duration-500',
         compact && 'h-auto',
         !compact && 'h-full',
-        isActive ? 'shadow-editorial-md dark:ring-1 dark:ring-bank-border/80' : 'shadow-editorial-sm',
+        // Active/compact: eigene Content-Fläche, damit nichts durchscheint.
+        // Preview-Nachbarn: transparent, keine Card — dürfen nie konkurrieren.
+        !preview
+          ? cn(
+              'border border-bank-border bg-white shadow-editorial-sm',
+              'dark:border-bank-border dark:bg-bank-surface-elev dark:shadow-none',
+              isActive && 'shadow-editorial-md dark:ring-1 dark:ring-bank-border/80',
+            )
+          : 'border-0 bg-transparent shadow-none',
       )}
       style={compact ? { width: cardWidth } : { width: cardWidth, height: cardHeight }}
       data-testid={`offer-card-${offer.id}`}
     >
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bank-gold/40 to-transparent"
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bank-gold/40 to-transparent',
+          preview && 'opacity-0',
+        )}
       />
 
-      {/* Header: pagination, badge, country */}
+      {/* Header: pagination, badge, country — hidden on preview neighbours */}
+      {!preview && (
       <div className="relative px-4 pb-2 pt-3.5">
         <div className="flex items-start justify-between gap-2">
           <span
@@ -196,30 +220,32 @@ function OfferCard({ offer, isActive, cardIndex, totalCount, isTopPick, cardWidt
           </div>
         )}
       </div>
+      )}
 
-      {/* Logo & rating */}
-      <div className="flex flex-col items-center px-4 pb-2">
+      {/* Logo & rating (preview: nur Logo + Banknamen, kein Rating) */}
+      <div className={cn('flex flex-col items-center px-4', preview ? 'pt-8 pb-3' : 'pb-2')}>
         <BankLogo logo={offer.bank_logo} bankName={offer.bank_name} size="lg" className="mx-auto" />
-        <h3 className="sr-only">{offer.bank_name}</h3>
-        <div className="mt-2.5 flex flex-col items-center gap-1">
-          <StarRating scoreOutOfFive={scoreOutOfFive} />
-          <p className="text-[11px] font-semibold tabular-nums text-bank-text" data-numeric>
-            {scoreFormatted}{' '}
-            <span className="font-normal text-bank-text-muted">/ 5,0</span>
-          </p>
-        </div>
+        <h3 className={cn(preview ? 'mt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-bank-text-muted' : 'sr-only')}>
+          {offer.bank_name}
+        </h3>
+        {!preview && (
+          <div className="mt-2.5 flex flex-col items-center gap-1">
+            <StarRating scoreOutOfFive={scoreOutOfFive} />
+            <p className="text-[11px] font-semibold tabular-nums text-bank-text" data-numeric>
+              {scoreFormatted}{' '}
+              <span className="font-normal text-bank-text-muted">/ 5,0</span>
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Rate & product */}
       <div className={cn('px-4 text-center', showDetails ? 'pb-3' : 'flex flex-1 flex-col justify-center pb-4')}>
-        <p className="rate-figure text-[1.65rem] font-light leading-none text-bank-gold" data-numeric>
-          bis zu {formatRateDe(offer.interest_rate)} % p.a.
+        <p className={cn('rate-figure font-light leading-none text-bank-gold', preview ? 'text-[1.2rem]' : 'text-[1.65rem]')} data-numeric>
+          bis zu {formatRateDe(offer.interest_rate)} %{!preview && ' p.a.'}
         </p>
-        <p className="mt-1.5 text-[11px] text-bank-text-muted">{getAvailabilitySubline(offer)}</p>
-        {preview && (
-          <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.14em] text-bank-text-muted/80">
-            Angebot öffnen
-          </p>
+        {!preview && (
+          <p className="mt-1.5 text-[11px] text-bank-text-muted">{getAvailabilitySubline(offer)}</p>
         )}
       </div>
 
