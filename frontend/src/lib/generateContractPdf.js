@@ -416,7 +416,7 @@ export async function generateContractPdf(formData) {
   const zp = zpLabels[formData.interestPayment] || '—';
   labelBar(s, `Zinsgutschrift: ${zp}`);
 
-  infoBox(s, 'Bitte beachten Sie, dass der Mindestanlagebetrag 20.000,00 EUR und der maximale Anlagebetrag 1.000.000,00 EUR betr\u00E4gt. Die Flexgeldanlage erfolgt f\u00FCr die vertraglich vereinbarte Laufzeit als teilweise fest angelegte Anlage. Eine vorzeitige Verf\u00FCgung \u00FCber den Anlagebetrag ist in den ersten 3 Monaten grunds\u00E4tzlich ausgeschlossen. Nach Ablauf der Gesamtlaufzeit wird der Gesamtbetrag automatisch auf das von Ihnen benannte Referenzkonto \u00FCberwiesen.', BOX_BORDER, LIGHT_BG, DARK_BLUE);
+  infoBox(s, 'Bitte beachten Sie, dass der Mindestanlagebetrag (je nach Zinssatz) zwischen 10.000,00 EUR und 30.000,00 EUR und der maximale Anlagebetrag 1.000.000,00 EUR betr\u00E4gt. Die Flexgeldanlage erfolgt f\u00FCr die vertraglich vereinbarte Laufzeit als teilweise fest angelegte Anlage. Eine vorzeitige Verf\u00FCgung \u00FCber den Anlagebetrag ist in den ersten 3 Monaten grunds\u00E4tzlich ausgeschlossen. Nach Ablauf der Gesamtlaufzeit wird der Gesamtbetrag automatisch auf das von Ihnen benannte Referenzkonto \u00FCberwiesen.', BOX_BORDER, LIGHT_BG, DARK_BLUE);
   s.y -= 1;
   warnBox(s, 'Wichtiger Hinweis:', 'Die Gew\u00E4hrung des Willkommensbonus setzt voraus, dass zum Zeitpunkt der Kontoer\u00F6ffnung keine bestehende Gesch\u00E4ftsbeziehung in Form eines Kontos bei der BBVA Deutschland vorliegt. Der Bonus wird ausschlie\u00DFlich Neukunden gew\u00E4hrt, die bislang kein Konto bei der BBVA Deutschland unterhalten haben. Bestehende oder ehemalige Kontoverbindungen k\u00F6nnen zum Ausschluss von der Bonusgew\u00E4hrung f\u00FChren.');
 

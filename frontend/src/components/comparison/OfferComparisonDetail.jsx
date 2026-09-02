@@ -29,7 +29,7 @@ import {
 } from '@/lib/offerReviews';
 import { getGuestReviewSessionToken } from '@/lib/guestReviewSession';
 import { COMPARISON_DEPOSIT_LABEL } from '@/components/comparison/ComparisonOfferCard';
-import { formatComparisonMinDepositWithCurrency } from '@/lib/comparisonDisplay';
+import { formatComparisonMinDepositWithCurrency, formatOfferMinDeposit } from '@/lib/comparisonDisplay';
 
 const TABS = [
   { id: 'produkt', label: 'Produktdetails' },
@@ -358,7 +358,7 @@ export default function OfferComparisonDetail({ offer, rateHistory = [], onClose
                         : `Fest gebunden · ${offer.deposit_term} Monate Laufzeit`
                     }
                   />
-                  <DetailRow label="Mindestanlage" value={formatComparisonMinDepositWithCurrency()} />
+                  <DetailRow label="Mindestanlage" value={formatOfferMinDeposit(offer) || formatComparisonMinDepositWithCurrency()} />
                   <DetailRow label="Maximale Anlage" value={maxDep} />
                 </div>
               </div>

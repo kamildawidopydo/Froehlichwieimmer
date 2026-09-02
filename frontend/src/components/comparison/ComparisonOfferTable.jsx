@@ -8,7 +8,7 @@ import { getDisplayProductType } from '@/lib/productDisplay';
 import { getOfferRatingBundle } from '@/lib/offerRating';
 import { formatRateDe } from '@/lib/interestRateHistory';
 import CountryFlagIcon from '@/components/CountryFlagIcon';
-import { formatComparisonMinDeposit } from '@/lib/comparisonDisplay';
+import { formatComparisonMinDeposit, formatOfferMinDeposit } from '@/lib/comparisonDisplay';
 
 const thClass =
   'px-4 py-3 text-left font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-bank-text-muted';
@@ -105,7 +105,7 @@ const ComparisonOfferTable = memo(function ComparisonOfferTable({
                 </td>
                 <td className="px-4 py-3.5 text-sm text-bank-text">{getTermLabel(offer)}</td>
                 <td className="px-4 py-3.5 text-right text-sm font-medium text-bank-text" data-numeric>
-                  {formatComparisonMinDeposit()}&nbsp;€
+                  {formatOfferMinDeposit(offer) || `${formatComparisonMinDeposit()} €`}
                 </td>
                 <td className="px-4 py-3.5 text-sm text-bank-text-muted">{getAvailabilityLabel(offer)}</td>
                 <td className="px-4 py-3.5 text-right text-sm font-semibold tabular-nums text-bank-text">

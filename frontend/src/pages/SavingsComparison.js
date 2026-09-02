@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/lib/supabase';
+import { offerMeetsAmount } from '@/lib/comparisonDisplay';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { logEvent, EVENTS } from '@/lib/activityLogger';
@@ -512,7 +513,7 @@ const SavingsComparison = () => {
 
     if (filters.investmentAmount) {
       const amount = parseFloat(filters.investmentAmount.replace(/\./g, '').replace(',', '.'));
-      if (!isNaN(amount)) result = result.filter((o) => (o.min_deposit ?? 0) <= amount);
+      if (!isNaN(amount)) result = result.filter((o) => offerMeetsAmount(o, amount));
     }
 
     result = result.filter(

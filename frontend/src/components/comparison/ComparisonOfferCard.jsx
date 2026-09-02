@@ -11,7 +11,7 @@ import { getDisplayProductType } from '@/lib/productDisplay';
 import { getOfferRatingBundle } from '@/lib/offerRating';
 import { formatRateDe } from '@/lib/interestRateHistory';
 import { getCountryLabelDe } from '@/lib/countryFlags';
-import { formatComparisonMinDeposit } from '@/lib/comparisonDisplay';
+import { formatComparisonMinDeposit, formatOfferMinDeposit } from '@/lib/comparisonDisplay';
 
 const labelClass =
   'font-mono text-[9px] font-medium uppercase tracking-[0.16em] text-[#6b7280] dark:text-bank-text-muted sm:text-[9.5px] sm:tracking-[0.2em]';
@@ -69,7 +69,9 @@ const ComparisonOfferCard = memo(function ComparisonOfferCard({
   const countryDe = getCountryLabelDe(offer.country, { uppercase: true });
   const premium = getPremiumBadge(offer, badge);
   const availability = getAvailabilityLabel(offer);
-  const minDep = formatComparisonMinDeposit();
+  // Session „Zinsstaffel": Mindestanlage folgt jetzt dynamisch dem Zinssatz.
+  // Fallback bleibt `formatComparisonMinDeposit()` = 10.000 € (untere Staffelstufe).
+  const minDep = formatOfferMinDeposit(offer) || `${formatComparisonMinDeposit()} €`;
   const depositLabel = COMPARISON_DEPOSIT_LABEL;
   const marketLine = [
     offer.founded_year ? `Seit ${offer.founded_year} am Markt` : null,

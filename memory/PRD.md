@@ -2161,3 +2161,30 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 - Kontraste: Grün auf Weiß AA (4.7:1), Dark-Hover AA large (6.2:1), Textfarben unverändert
 
 **Status: PASS — Green Refresh vollständig live**
+
+## Session Zinsstaffel — Mindestanlage dynamisch nach Zinssatz (02.09.2026)
+
+**Zentrale Business-Rule** in `frontend/src/lib/comparisonDisplay.js`:
+- `normalizeRatePct(raw)` — akzeptiert number/string, `,`/`.`-Dezimaltrenner, Dezimalanteil (0.035 → 3.5 %)
+- `getMinimumDepositForRate(rate)` — Staffel 3.00→10k, 3.90→15k, 4.30→20k, 4.60→25k, >4.60→30k (2-Dezimalstellen-Rounding gegen Float-Grenzfehler)
+- `getEffectiveMinDeposit(rate, offerMin)` — `max(zinsstaffel, produktspezifisch)`
+- `formatOfferMinDeposit(offer)` / `offerMeetsAmount(offer, amount)` — Display + Filter
+
+**Umgestellte Komponenten**
+- `ComparisonOfferCard.jsx`, `ComparisonOfferTable.jsx`, `OfferComparisonDetail.jsx` → `formatOfferMinDeposit(offer)` per Angebot
+- `SavingsComparison.js:515` Filter → `offerMeetsAmount(offer, amount)` (statt `offer.min_deposit ?? 0 <= amount`)
+- 12 Bank-Vertrag/Bedingungen/Produktinfo-Seiten → Range „10.000,00 EUR – 30.000,00 EUR" bzw. „Mindestanlagebetrag (je nach Zinssatz) zwischen …"
+- 13 PDF-Generatoren (`lib/generate*Pdf.js`) → Range-Text in Info-Box
+- `bankBonusTexts.js` (9 Zeilen) → „Mindestanlage abhängig vom Zinssatz: ab 10.000 €"
+- Legacy-Konstante `COMPARISON_MIN_DEPOSIT_EUR` = 10_000 (untere Staffelstufe, Fallback für Marketing-Kontexte)
+
+**Testmatrix (15 boundaries + 10 amount-tests) — alle 25 grün**
+- Rate: 2.99/3.00→10k · 3.01/3.90→15k · 3.91/4.30→20k · 4.31/4.60→25k · 4.61/4.90→30k · "3,00"→10k · "3,01"→15k · 0.035→15k · null/"abc"→null
+- Amount vs Rate: rate=2.9/amount=9999→false, 10000→true; 3.5/14999→false, 15000→true; 4.1/19999→false, 20000→true; 4.45/24999→false, 25000→true; 4.9/29999→false, 30000→true
+
+**Preview-QA**
+- Desktop 1920 `/comparison`: 8 sampled Karten zeigen exakt korrekte Staffel-Mapping (screenshots), 0 H-Overflow
+- Mobile 390 `/comparison`: Karten-Werte 10k/15k/20k/25k/30k je Zinssatz sichtbar, 0 H-Overflow, 3 console errors (pre-existing unrelated)
+- Filter/Slider: Kunde mit 12.000 € sieht nur ≤3.00% Angebote, mit 22.000 € sieht ≤4.30%, mit 30.000 € sieht alle Staffeln — technisch via `offerMeetsAmount`
+
+**READY FOR DEPLOY: JA** — Preview only, kein Deploy ausgeführt. Warte auf Freigabe.

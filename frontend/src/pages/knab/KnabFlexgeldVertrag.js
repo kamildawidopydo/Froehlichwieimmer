@@ -871,7 +871,7 @@ const KnabFlexgeldVertrag = () => {
           </div>
 
           <div className="bg-[#f0f4fa] border border-[#b0bec5] p-4 text-xs text-[#3a5070] leading-relaxed mb-4">
-            Bitte beachten Sie, dass der Mindestanlagebetrag <strong>20.000,00 EUR</strong> und der maximale Anlagebetrag <strong>1.000.000,00 EUR</strong> beträgt.
+            Bitte beachten Sie, dass der Mindestanlagebetrag (je nach Zinssatz) zwischen <strong>10.000,00 EUR</strong> und <strong>30.000,00 EUR</strong> und der maximale Anlagebetrag <strong>1.000.000,00 EUR</strong> beträgt.
             Die Flexgeldanlage erfolgt für die vertraglich vereinbarte Laufzeit als teilweise fest angelegte Anlage.
             Eine vorzeitige Verfügung über den Anlagebetrag ist in den ersten 3 Monaten grundsätzlich ausgeschlossen.
             Nach Ablauf der Gesamtlaufzeit wird der Gesamtbetrag automatisch auf das von Ihnen benannte Referenzkonto überwiesen.
