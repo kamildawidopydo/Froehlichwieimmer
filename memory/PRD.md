@@ -6,6 +6,27 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.68 (Sep 02 2026) — **Batch 2: weitere 25 Preview-Test-Reviews + Antworten (nur PREVIEW)**:
+
+  **User-Wunsch**: Weitere 25 Kommentare + je eine individuelle Antwort. Keine Wiederholungen zu Batch 1. Themen breiter mischen (Zins­vergleich, Prospekt, Depot-Übergabe, Video-Termin, Portal-App, Vor­sorge, Bau­sparen, Frei­stellungs­auftrag, Sprach­rücksicht, Voll­macht, Paar-Beratung, Not­groschen, Um­schichtung, Rendite-Realismus, Sperr­frist etc.). Realistische Sterne­verteilung mit vereinzelter Kritik. Nur Preview.
+
+  **Umsetzung**:
+  1. Neues Skript `backend/scripts/seed_preview_reviews_25_batch2.py` — 25 fri­sche Reviews, komplett andere Namen als Batch 1, neue Email-Endung `@preview-test-b2.local` zur eindeutigen Batch-Trennung, `content_origin="preview_test_v2"`, `admin_note="preview test batch 2 — do NOT deploy to prod"`.
+  2. Skript prüft **vor** dem Einspielen alle bereits vorhandenen Reviews, warnt bei möglichen display_name-Kollisionen und liefert am Ende Duplicate-Check-Zahlen.
+  3. Bestehende Reviews (echte + Batch 1) unverändert — kein Update, kein Overwrite.
+
+  **QA**:
+  - Vor Batch 2: 162 approved public → Nach Batch 2: **187** (delta = +25 ✅)
+  - Batch-2-Rows: 25 / Unique Texte: 25/25 / Unique Antworten: 25/25 / Cross-Kollisionen mit gesamter DB: 0
+  - Cross-Batch: 0 Text- und 0 Antwort-Kollisionen zwischen Batch 1 und Batch 2
+  - Rating-Verteilung: 18×5★ · 5×4★ · 2×3★-konstruktiv
+  - Desktop 1920: 3-Spalten-Grid, „Weitere laden" 2× erfolgreich, Antwort-Boxen sichtbar, kein Overflow ✅
+  - Kein Console-Error ✅
+
+  **Vor Prod-Deploy**: Cleanup-Filter kombiniert Batch 1 + 2:
+  `db.reviews.delete_many({"email": {"$regex": "@preview-test(-b2)?\\.local$"}})`.
+
+
 - 80.67 (Sep 02 2026) — **25 Preview-Test-Reviews + Antworten (nur PREVIEW)**:
 
   **User-Wunsch**: 25 zusätzliche Bewertungen inkl. jeweiliger Admin-Antwort für Layout-Test des Kundenstimmen-Bereichs. Mischung ~68 % 5★, 24 % 4★, 8 % 3★-konstruktiv. Keine echten Kundenbewertungen — reine Preview-Testdaten. Kein Deploy.
