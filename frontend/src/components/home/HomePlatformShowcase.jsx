@@ -128,10 +128,10 @@ export default function PlatformShowcase() {
             className="max-w-4xl font-display text-[clamp(1.35rem,2.8vw+0.6rem,2rem)] font-light leading-[1.2] tracking-[-0.015em] text-bank-text"
             style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}
           >
-            Wir denken nicht in einzelnen Produkten. Wir denken in Ihrem Vermögen als Ganzes.
+            Ihr Vermögen. Ihre Ziele. Eine Strategie, die beides verbindet.
           </blockquote>
           <figcaption className="mt-6 max-w-2xl text-[14.5px] leading-relaxed text-bank-text-muted">
-            Wir verbinden passende Anlagelösungen mit persönlicher Beratung – für ein Vermögen, das langfristig zu Ihren Zielen passt.
+            Persönliche Beratung und ausgewählte Anlagelösungen schaffen die Grundlage für langfristig durchdachte Entscheidungen.
           </figcaption>
         </motion.figure>
 
