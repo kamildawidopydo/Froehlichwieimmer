@@ -6,6 +6,24 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.71 (Sep 02 2026) — **Batch 5: weitere 25 Preview-Test-Reviews + Antworten (nur PREVIEW)**:
+
+  **Umsetzung**: `backend/scripts/seed_preview_reviews_25_batch5.py`, Email-Suffix `@preview-test-b5.local`, `content_origin="preview_test_v5"`. Neue Themen: Rohstoffe · Anleihen-Basics · Testaments­fragen im Depot · Vorruhestand · Auszahlplan · Junior-Depot Ausbildung mit BAFöG · Fondswechsel-Kosten beider Seiten · Handels­platzwahl-Hinweis · Live vs. verzögerte Kurse · Portal-Volltext­suche (Kritik) · Nachhaltigkeits-Report (Kritik) · Kontaktformular ohne Empfangs­bestätigung (Kritik) · Rendite-Historie inkl. Rückschläge · Freibetrags­übertrag Ehepaar · Skepsis-Erst­besuch · eID-Verifikation · DSGVO-Auskunft · Bevoll­mächtigten-Einsicht mit Widerruf · 2FA-Login (Kritik) · Renten­aufschub-Rechnung · Zeit­zone Asien · CHF-Konto (Kritik) · Angebots­sortierung nach Prioritäten · Beratungs­protokoll · Notariats-Koordination.
+
+  **QA**:
+  - Vor Batch 5: 237 → Nach Batch 5: **262** (delta = +25 ✅)
+  - Batch-5-Rows: 25 · Unique Texte 25/25 · Unique Antworten 25/25
+  - Cross-Kollisionen gesamte DB: 0 Text, 0 Antwort · Cross B5↔B1/B2/B3/B4: 0
+  - Rating: 18×5★ · 5×4★ · 2×3★-konstruktiv (Portal-Suche, Kontaktformular)
+  - display_name-Kollision: „Volker A." bereits vorhanden — Text/Antwort trotzdem völlig einzigartig
+  - Desktop 1920 ✅ · Load-More 3× → 9 → 36 Cards ✅ · kein Overflow ✅ · keine Console-Errors ✅
+
+  **Kumulativ Preview-Test-Reviews**: B1+B2+B3+B4+B5 = **125** Einträge · Bestand echte+Templates: 137 · Gesamt approved public: 262.
+
+  **Vor Prod-Deploy (kombinierter Cleanup B1-B5):**
+  `db.reviews.delete_many({"email": {"$regex": "@preview-test(-b[2345])?\\.local$"}})`
+
+
 - 80.70 (Sep 02 2026) — **Batch 4: weitere 25 Preview-Test-Reviews + Antworten (nur PREVIEW)**:
 
   **Umsetzung**: `backend/scripts/seed_preview_reviews_25_batch4.py`, Email-Suffix `@preview-test-b4.local`, `content_origin="preview_test_v4"`. Neue Themen: Trennung/Konto­trennung · Erbschaft (Immobilie+Depot) · Vertretung bei Krankheit · WhatsApp-Verzicht · Provisions-Klartext · Insider-Kennzeichnung · Video vs. Telefon für Senioren · E-Signatur · Steuer­ausländer · Job-Verlust-Umschichtung · ESG-Filterregeln · Gemeinschafts­depot · SMS-Erinnerung (Kritik) · ICS-Kalender (Kritik) · Regional­termin Hamburg · Digitale Ablage · Bar­einzahlungs-Ablehnung · Papier­formular (Kritik) · Räum­lichkeiten · Elternzeit-Termin · Stiftung angerissen · Sperr­minuten-Erklärung · Konkurrenz-Angebot fair verglichen · Nachbetreuung Baby.
