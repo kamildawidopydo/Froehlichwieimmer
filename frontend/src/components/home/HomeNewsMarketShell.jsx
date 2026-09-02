@@ -1,10 +1,48 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import SafeNewsImage from '@/components/news/SafeNewsImage';
 import { fetchMarketOverview, formatDisplayPrice, formatChangePct } from '@/services/marketService';
+
+/* ── Sparkline: real backend points, module-level cache, one fetch per symbol ── */
+const SPARKLINE_CACHE = new Map(); // symbol → { points, interval, ts }
+const SPARKLINE_TTL_MS = 60 * 1000; // 60s
+
+const fetchSparkline = async (apiInstance, symbol) => {
+  const cached = SPARKLINE_CACHE.get(symbol);
+  if (cached && Date.now() - cached.ts < SPARKLINE_TTL_MS) return cached;
+  try {
+    const res = await apiInstance.get(`/news-markte/market/sparkline/${symbol}`);
+    const points = Array.isArray(res.data?.points) ? res.data.points : [];
+    const entry = { points, interval: res.data?.interval || null, prevClose: res.data?.prev_close ?? null, ts: Date.now(), error: false };
+    SPARKLINE_CACHE.set(symbol, entry);
+    return entry;
+  } catch {
+    const entry = { points: [], interval: null, prevClose: null, ts: Date.now(), error: true };
+    SPARKLINE_CACHE.set(symbol, entry);
+    return entry;
+  }
+};
+
+const Sparkline = ({ points, width = 96, height = 26, positive }) => {
+  if (!Array.isArray(points) || points.length < 2) {
+    return <span className="inline-block" style={{ width, height }} aria-hidden />;
+  }
+  const values = points.map((p) => (typeof p === 'number' ? p : (p?.close ?? p?.value ?? p?.y))).filter(Number.isFinite);
+  if (values.length < 2) return <span className="inline-block" style={{ width, height }} aria-hidden />;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const stepX = width / (values.length - 1);
+  const d = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * stepX).toFixed(2)},${(height - ((v - min) / range) * height).toFixed(2)}`).join(' ');
+  const stroke = positive === true ? '#047857' : positive === false ? '#b91c1c' : '#003781';
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0" aria-hidden>
+      <path d={d} fill="none" stroke={stroke} strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+};
 
 /**
  * Session News-Redesign 1/6 — Grundarchitektur (nur Struktur, keine neue Card-Logik).
@@ -59,28 +97,40 @@ const fmtStamp = (iso) => {
 
 /* ─── Rechte Spalte: Markt-Sidebar (strukturell) ─────────────────────────── */
 
-const MarketRow = ({ tile }) => {
+const MarketRow = ({ tile, sparkline, prominent }) => {
   const { primary } = formatDisplayPrice(tile);
   const pct = tile.change_percent;
   const hasPct = Number.isFinite(pct);
   const up = hasPct && pct >= 0;
   const Icon = up ? TrendingUp : TrendingDown;
-  return (
-    <li
-      className="flex items-baseline justify-between gap-3 py-3"
-      data-testid={`market-sidebar-row-${tile.symbol}`}
-    >
-      <span className="text-[13px] text-bank-text-strong">{tile.name || tile.symbol}</span>
-      <span className="flex items-baseline gap-2 tabular-nums">
-        <span className="text-[13px] font-medium text-bank-text">{primary || '—'}</span>
-        {hasPct ? (
-          <span className={`inline-flex items-center gap-0.5 text-[11.5px] font-medium ${up ? 'text-emerald-700' : 'text-red-700'}`}>
-            <Icon size={12} strokeWidth={2} />
-            {formatChangePct(pct)}
+  const pctColor = !hasPct ? 'text-bank-text-muted' : up ? 'text-emerald-700' : 'text-red-700';
+  if (prominent) {
+    return (
+      <div className="pb-4" data-testid={`market-sidebar-row-${tile.symbol}`}>
+        <div className="flex items-baseline justify-between">
+          <span className="font-serif text-[18px] text-bank-text-strong">{tile.name || tile.symbol}</span>
+          <span className={`inline-flex items-center gap-0.5 text-[12px] font-medium ${pctColor} tabular-nums`}>
+            {hasPct ? <Icon size={13} strokeWidth={2} /> : null}
+            {hasPct ? formatChangePct(pct) : '—'}
           </span>
-        ) : (
-          <span className="text-[11.5px] text-bank-text-muted">—</span>
-        )}
+        </div>
+        <div className="mt-1 flex items-end justify-between gap-3">
+          <span className="font-serif text-[22px] text-bank-text tabular-nums">{primary || '—'}</span>
+          <Sparkline points={sparkline?.points || []} width={110} height={30} positive={hasPct ? up : null} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <li className="flex items-center justify-between gap-3 py-2.5" data-testid={`market-sidebar-row-${tile.symbol}`}>
+      <span className="min-w-0 flex-1 truncate text-[13px] text-bank-text-strong">{tile.name || tile.symbol}</span>
+      <Sparkline points={sparkline?.points || []} width={64} height={20} positive={hasPct ? up : null} />
+      <span className="flex flex-col items-end tabular-nums">
+        <span className="text-[13px] font-medium text-bank-text">{primary || '—'}</span>
+        <span className={`inline-flex items-center gap-0.5 text-[11px] ${pctColor}`}>
+          {hasPct ? <Icon size={10} strokeWidth={2} /> : null}
+          {hasPct ? formatChangePct(pct) : '—'}
+        </span>
       </span>
     </li>
   );
@@ -88,6 +138,7 @@ const MarketRow = ({ tile }) => {
 
 const MarketSidebar = () => {
   const [state, setState] = useState({ loading: true, tiles: [], lastUpdated: null, isDelayed: true, error: false });
+  const [sparks, setSparks] = useState({}); // symbol → entry
 
   useEffect(() => {
     let alive = true;
@@ -106,6 +157,19 @@ const MarketSidebar = () => {
       .catch(() => { if (alive) setState({ loading: false, tiles: [], lastUpdated: null, isDelayed: true, error: true }); });
     return () => { alive = false; };
   }, []);
+
+  // Parallel-Fetch der Sparklines nur für sichtbare Symbole, mit Modul-Cache (60s TTL)
+  useEffect(() => {
+    if (!state.tiles.length) return undefined;
+    let alive = true;
+    const symbols = state.tiles.map((t) => t.symbol);
+    Promise.all(symbols.map((s) => fetchSparkline(api, s).then((e) => [s, e])))
+      .then((pairs) => { if (alive) setSparks((prev) => ({ ...prev, ...Object.fromEntries(pairs) })); });
+    return () => { alive = false; };
+  }, [state.tiles]);
+
+  const prominent = state.tiles.find((t) => t.symbol === 'DAX') || state.tiles[0];
+  const rest = state.tiles.filter((t) => t !== prominent);
 
   return (
     <aside
@@ -128,8 +192,13 @@ const MarketSidebar = () => {
         </p>
       ) : (
         <>
-          <ul className="mt-4 divide-y divide-bank-border/50" data-testid="home-market-sidebar-list">
-            {state.tiles.map((t) => <MarketRow key={t.symbol} tile={t} />)}
+          {prominent && (
+            <div className="mt-6 border-b border-bank-border/50 pb-4" data-testid="home-market-sidebar-prominent">
+              <MarketRow tile={prominent} sparkline={sparks[prominent.symbol]} prominent />
+            </div>
+          )}
+          <ul className="mt-2 divide-y divide-bank-border/50" data-testid="home-market-sidebar-list">
+            {rest.map((t) => <MarketRow key={t.symbol} tile={t} sparkline={sparks[t.symbol]} />)}
           </ul>
           {state.lastUpdated && (
             <p className="mt-4 text-[10.5px] leading-relaxed text-bank-text-muted" data-testid="home-market-sidebar-timestamp">
@@ -158,7 +227,7 @@ const NewsMain = () => {
 
   useEffect(() => {
     let alive = true;
-    api.get('/news/nachrichten', { params: { limit: 8 } })
+    api.get('/news/nachrichten', { params: { limit: 16 } })
       .then((res) => {
         if (!alive) return;
         const items = (res.data.items || [])
