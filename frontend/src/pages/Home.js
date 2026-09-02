@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import BankingHero from '@/components/BankingHero';
+import HomeNewsMarketShell from '@/components/home/HomeNewsMarketShell';
 import HomePostHero from '@/components/home/HomePostHero';
 import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
 import HomeTestimonials from '@/components/home/HomeTestimonials';
@@ -9,7 +10,6 @@ import HomeTrustLine from '@/components/home/HomeTrustLine';
 import HomePlatformShowcase from '@/components/home/HomePlatformShowcase';
 import HomeCreditOffersSection from '@/components/home/HomeCreditOffersSection';
 import HomeSavingsOffersSection from '@/components/home/HomeSavingsOffersSection';
-import HomeNewsPreview from '@/components/home/HomeNewsPreview';
 import { mapCreditOffersForCarousel } from '@/lib/creditOfferDisplay';
 import StockResearchSection from '@/components/home/StockResearchSection';
 import HomeProductWizardSection from '@/components/home/HomeProductWizardSection';
@@ -199,7 +199,7 @@ const Home = () => {
       <BankingHero />
 
       {/* ── News-Vorschau (kompakt, direkt unter dem Hero) ─────────────── */}
-      <HomeNewsPreview />
+      <HomeNewsMarketShell />
 
       <HomeTrustLine />
 
