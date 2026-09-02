@@ -2106,3 +2106,39 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 - Kein neuer Console-/Network-Error
 
 **Gesamtstatus: READY FOR DEPLOY** — Preview-only, kein Deploy ausgeführt.
+
+## Session 80.65 — Green Refresh (02.09.2026, 14:00 UTC, Preview only)
+
+**Zentrale Änderung**: Farb-Slot `primary/signature/accent/mint` von Royal Blue (#003781) auf Primärgrün (#36A852) umgestellt, exklusiv über das CSS-Variablen-System in `frontend/src/index.css` (`:root`). Dadurch werden ALLE `bg-bank-primary`, `text-bank-primary`, `bg-bank-signature`, `bg-bank-accent`, `bg-bank-mint` und deren Alpha-Tints im gesamten Codebase konsistent grün — ohne einzelne Komponenten anzufassen.
+
+**CSS-Token-Änderungen (`frontend/src/index.css`)**
+- `--color-primary`: `#003781` → `#36A852`
+- `--color-primary-hover`: `#002862` → `#218739`
+- `--bank-primary`: `0 55 129` → `54 168 82` (#36A852)
+- `--bank-primary-hover`: `0 40 98` → `33 135 57` (#218739)
+- `--bank-primary-strong`: `0 31 77` → `18 100 40` (#126428)
+- `--bank-secondary`, `--bank-accent`, `--bank-signature`: alle → `54 168 82`
+- `--bank-accent-strong`, `--bank-signature-hover`: → `33 135 57`
+- `--bank-mint`: `237 240 247` (#EDF0F7) → `221 239 225` (#DDEFE1) — sichtbare helle Grün-Fläche
+- `--bank-success`: `43 138 62` → `33 135 57` (in Einklang mit primary-hover)
+- Shadcn-Layer `--primary`: `217 100% 25%` → `134 52% 44%` (HSL-Äquivalent)
+- Dark-Mode-Primary/Signature: `122 168 232` → `123 214 142` (helleres Grün für dunkle Bg)
+- Neue Token für Zielverwendung: `--bank-primary-tint: 221 239 225`, `--bank-primary-soft: 242 248 243`
+
+**Punktuelle Hardcoding-Fixes**
+- `frontend/src/components/credit/CreditProcessSteps.jsx`: SVG-Illustration — 8× `rgb(0,55,129)` → `rgb(54,168,82)`, 1× `rgb(237,240,247)` → `rgb(221,239,225)`.
+- `frontend/src/components/home/HomeNewsMarketShell.jsx`: Sparkline-Neutral-Stroke `#003781` → `#36A852`.
+
+**Bewusst nicht geändert (Editorial-Vielfalt bewahren)**
+- Semantische Slot-Akzente `--bank-petrol/coral/violet/amber/info/rose/sage/gold/champagne` — die Palette bleibt reich (User-Regel: „nicht komplett grün").
+- Warm-Off-White-Neutralflächen (`--bank-surface-elev` #F7F3EC, `--bank-panel` #F1EBDF) bleiben, um den Private-Banking-Look zu wahren.
+- Textfarben (dunkles Grau/Anthrazit) unverändert.
+- Layout, Struktur, Content, Funktionalität, Bilder — alles 1:1 identisch.
+
+**Preview-QA**
+- Desktop 1920: Home, /sparvergleich, /angebote — CTAs (Formular, Konto eröffnen, Persönliches Gespräch), Kicker (AKTUELLE NACHRICHTEN, WEITERE MELDUNGEN, MARKTÜBERBLICK), Themen-Tabs (MÄRKTE, ZINSEN, WIRTSCHAFT, WELT), Artikel-Lesen-Links, „Zum Marktüberblick"-CTA — alle grün, 0 Horizontal-Overflow.
+- Mobile 390: identisches Bild, 0 Horizontal-Overflow, Category-Tabs klar grün hervorgehoben.
+- Alle 8 Sparklines, Preise, Change-%, Kursstand, Delay-Hinweis unverändert. Text bleibt dunkelgrau.
+- Getestet an CTA-Button-Farbe: `background-color: rgb(54, 168, 82)` bestätigt für „Formular", „Konto eröffnen", „Handeln", „Persönliches Gespräch vereinbaren", „Zum Sparvergleich".
+
+**Status: READY FOR DEPLOY** (Preview only — kein Prod-Deploy in dieser Session).

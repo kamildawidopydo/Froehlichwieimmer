@@ -36,7 +36,7 @@ const Sparkline = ({ points, width = 96, height = 26, positive }) => {
   const range = max - min || 1;
   const stepX = width / (values.length - 1);
   const d = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * stepX).toFixed(2)},${(height - ((v - min) / range) * height).toFixed(2)}`).join(' ');
-  const stroke = positive === true ? '#047857' : positive === false ? '#b91c1c' : '#003781';
+  const stroke = positive === true ? '#047857' : positive === false ? '#b91c1c' : '#36A852';
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0" aria-hidden>
       <path d={d} fill="none" stroke={stroke} strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" />

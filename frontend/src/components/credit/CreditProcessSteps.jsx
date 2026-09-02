@@ -47,15 +47,15 @@ const DefaultIllustration = () => (
     <rect x="0" y="0" width="480" height="360" fill="url(#cpBg)" />
 
     {/* Phone mockup */}
-    <rect x="60" y="45" width="180" height="290" rx="18" fill="#ffffff" stroke="rgb(0,55,129)" strokeWidth="2" />
+    <rect x="60" y="45" width="180" height="290" rx="18" fill="#ffffff" stroke="rgb(54,168,82)" strokeWidth="2" />
     <rect x="72" y="65" width="156" height="24" rx="4" fill="rgb(237,240,247)" />
     <rect x="72" y="98" width="156" height="10" rx="2" fill="rgb(199,210,229)" />
     <rect x="72" y="115" width="110" height="10" rx="2" fill="rgb(199,210,229)" />
     <rect x="72" y="145" width="156" height="34" rx="4" fill="rgb(237,240,247)" />
-    <rect x="82" y="156" width="60" height="12" rx="2" fill="rgb(0,55,129)" />
+    <rect x="82" y="156" width="60" height="12" rx="2" fill="rgb(54,168,82)" />
     <rect x="72" y="188" width="156" height="34" rx="4" fill="rgb(237,240,247)" />
-    <rect x="82" y="199" width="90" height="12" rx="2" fill="rgb(0,55,129)" />
-    <rect x="72" y="240" width="156" height="34" rx="17" fill="rgb(0,55,129)" />
+    <rect x="82" y="199" width="90" height="12" rx="2" fill="rgb(54,168,82)" />
+    <rect x="72" y="240" width="156" height="34" rx="17" fill="rgb(54,168,82)" />
     <rect x="118" y="252" width="64" height="10" rx="2" fill="#ffffff" />
     <circle cx="150" cy="309" r="8" fill="none" stroke="rgb(199,210,229)" strokeWidth="2" />
 
@@ -64,20 +64,20 @@ const DefaultIllustration = () => (
     <path d="M290 174 L296 180 L290 186" stroke="rgb(181,136,83)" strokeWidth="2" strokeLinecap="round" fill="none" />
 
     {/* Document + ID card */}
-    <rect x="308" y="70" width="128" height="80" rx="6" fill="#ffffff" stroke="rgb(0,55,129)" strokeWidth="2" />
-    <circle cx="330" cy="100" r="12" fill="rgb(237,240,247)" stroke="rgb(0,55,129)" strokeWidth="1.5" />
-    <rect x="352" y="86" width="70" height="8" rx="2" fill="rgb(0,55,129)" />
+    <rect x="308" y="70" width="128" height="80" rx="6" fill="#ffffff" stroke="rgb(54,168,82)" strokeWidth="2" />
+    <circle cx="330" cy="100" r="12" fill="rgb(237,240,247)" stroke="rgb(54,168,82)" strokeWidth="1.5" />
+    <rect x="352" y="86" width="70" height="8" rx="2" fill="rgb(54,168,82)" />
     <rect x="352" y="102" width="54" height="6" rx="2" fill="rgb(199,210,229)" />
     <rect x="316" y="122" width="112" height="6" rx="2" fill="rgb(199,210,229)" />
     <rect x="316" y="134" width="76" height="6" rx="2" fill="rgb(199,210,229)" />
 
     {/* Upload arrow (Dokumentenupload) */}
-    <rect x="308" y="170" width="128" height="70" rx="6" fill="#ffffff" stroke="rgb(0,55,129)" strokeWidth="2" />
-    <path d="M372 218 L372 188 M362 198 L372 188 L382 198" stroke="rgb(0,55,129)" strokeWidth="2" strokeLinecap="round" fill="none" />
+    <rect x="308" y="170" width="128" height="70" rx="6" fill="#ffffff" stroke="rgb(54,168,82)" strokeWidth="2" />
+    <path d="M372 218 L372 188 M362 198 L372 188 L382 198" stroke="rgb(54,168,82)" strokeWidth="2" strokeLinecap="round" fill="none" />
     <rect x="336" y="224" width="72" height="4" rx="2" fill="rgb(199,210,229)" />
 
     {/* Success check (Abschluss) */}
-    <circle cx="372" cy="290" r="34" fill="rgb(0,55,129)" />
+    <circle cx="372" cy="290" r="34" fill="rgb(54,168,82)" />
     <path d="M356 291 L368 303 L390 279" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
 
     {/* Gold accent dot */}

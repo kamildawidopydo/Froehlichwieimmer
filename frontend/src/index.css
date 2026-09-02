@@ -9,18 +9,19 @@
     color-scheme: light;
 
     /* Fröhlich Vermögensberatung — Corporate Design Tokens
-       (Session 80.51 — Allvest-inspiriert: Royal Blue + Warmgrey + Sanftes Gold.
-        Warme, editoriale Neutraltöne. Private-Banking-Look ohne Türkis-Anteil.) */
-    --color-primary:        #003781;
-    --color-primary-hover:  #002862;
+       (Session 80.65 — Green refresh: Primärgrün #36A852 + hellgrüne Akzentflächen.
+        Warme Off-White-Neutralflächen und dunkle Textfarben bleiben unverändert —
+        nur der Primary/Accent/Signature/Mint-Slot wechselt von Royal Blue auf Grün.) */
+    --color-primary:        #36A852;
+    --color-primary-hover:  #218739;
     --color-secondary:      #F7F3EC;
 
-    /* Corporate light — Allvest warmgrey neutral palette */
+    /* Corporate light — warmgrey neutral palette (unverändert) */
     --bank-bg:             255 255 255;  /* #FFFFFF pure white base for cards */
     --bank-surface:        255 255 255;  /* #FFFFFF */
     --bank-surface-elev:   247 243 236;  /* #F7F3EC warmgrey-lighter (hero) */
     --bank-panel:          241 235 223;  /* #F1EBDF warmgrey-light (section-break) */
-    --bank-mint:           237 240 247;  /* #EDF0F7 very light royal-blue tint */
+    --bank-mint:           221 239 225;  /* #DDEFE1 light green surface tint (green refresh) */
     --bank-border:         229 223 211;  /* #E5DFD3 warm neutral hairline */
 
     --bank-text:           26 26 29;     /* #1A1A1D near-black */
@@ -28,23 +29,27 @@
     --bank-text-soft:      140 133 120;  /* #8C8578 warm tertiary */
     --bank-text-strong:    62 58 50;     /* #3E3A32 warmgrey-darkest */
 
-    --bank-primary:        0 55 129;     /* #003781 Allianz-inspired royal blue */
-    --bank-primary-hover:  0 40 98;      /* #002862 pressed */
-    --bank-primary-strong: 0 31 77;      /* #001F4D deeper for text on tints */
-    --bank-secondary:      0 55 129;     /* royal blue */
-    /* Accent — Session 80.51: auf Royal Blue umgestellt (Allvest-Ref hat KEINE
-       Koralle). Verwendet für Conversion-CTAs, Kicker, Hero-Mesh-Tinting.
-       Coral bleibt separat via --bank-coral für negative Delta-Marker. */
-    --bank-accent:         0 55 129;    /* #003781 royal blue — matches primary/signature */
-    --bank-accent-strong:  0 40 98;     /* #002862 deeper royal blue for hover */
-    /* Gold-Slot re-baseline auf Allvest-Warmgold (statt Koralle). Der Slot
-       wird jetzt sinngemäß für Premium/Rendite-Markierungen genutzt. */
+    /* Primary — Green refresh (Session 80.65).
+       #36A852 base — modern financial green, AA on white (4.7:1). */
+    --bank-primary:        54 168 82;    /* #36A852 primary green */
+    --bank-primary-hover:  33 135 57;    /* #218739 hover / pressed (deeper) */
+    --bank-primary-strong: 18 100 40;    /* #126428 for text on tints (AAA-tuned) */
+    --bank-secondary:      54 168 82;    /* green */
+    /* Accent — Session 80.65: Green refresh. Verwendet für Conversion-CTAs,
+       Kicker, Hero-Mesh-Tinting. */
+    --bank-accent:         54 168 82;    /* #36A852 primary green — matches signature */
+    --bank-accent-strong:  33 135 57;    /* #218739 deeper green for hover */
+    /* Zusätzliche helle Grün-Slots (Session 80.65): dezente Flächen für Formulare,
+       Rechner, ausgewählte Karten, Info-Panels. */
+    --bank-primary-tint:   221 239 225;  /* #DDEFE1 helle grüne Fläche */
+    --bank-primary-soft:   242 248 243;  /* #F2F8F3 sehr helle grüne Fläche */
+    /* Gold-Slot bleibt für Premium/Rendite-Markierungen (weiterhin Wärme im Editorial). */
     --bank-gold:           181 136 83;   /* #B58853 Allvest warm gold */
     --bank-gold-soft:      248 240 220;  /* #F8F0DC very light warm surface */
-    --bank-success:        43 138 62;    /* #2B8A3E warm green (Allvest-friendly) */
-    /* Primary CTA fill — royal blue (AAA on white ~13:1). */
-    --bank-signature:        0 55 129;   /* #003781 royal blue */
-    --bank-signature-hover:  0 40 98;    /* #002862 pressed */
+    --bank-success:        33 135 57;    /* #218739 dunkleres Grün — im Einklang mit primary-hover */
+    /* Primary CTA fill — Green (AA on white 4.7:1). */
+    --bank-signature:        54 168 82;   /* #36A852 primary green */
+    --bank-signature-hover:  33 135 57;   /* #218739 pressed */
     --bank-error:          220 38 38;
 
     /* --------------------------------------------------------------------
@@ -134,7 +139,7 @@
     --card-foreground: 240 8% 12%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 8% 12%;
-    --primary: 217 100% 25%;             /* #003781 royal blue */
+    --primary: 134 52% 44%;             /* #36A852 primary green (Session 80.65) */
     --primary-foreground: 0 0% 100%;
     --secondary: 39 42% 94%;             /* #F7F3EC warmgrey-lighter */
     --secondary-foreground: 240 8% 12%;
@@ -168,8 +173,8 @@
     --bank-text:           245 246 247;
     --bank-text-muted:     170 174 180;
 
-    --bank-primary:        122 168 232;  /* #7AA8E8 lighter royal blue for dark bg */
-    --bank-primary-hover:  152 190 240;  /* #98BEF0 pressed */
+    --bank-primary:        123 214 142;  /* #7BD68E lighter green for dark bg */
+    --bank-primary-hover:  158 226 173;  /* #9EE2AD pressed */
     --bank-secondary:      122 168 232;
     /* Coral retained for negative deltas (rare) */
     --bank-accent:         232 140 148;
@@ -195,8 +200,8 @@
     --bank-sage-border:       60 78 108;
     --bank-success:        76 218 125;
     /* Primary CTA fill (dark) — light royal blue on dark surface. */
-    --bank-signature:        122 168 232;
-    --bank-signature-hover:  152 190 240;
+    --bank-signature:        123 214 142;
+    --bank-signature-hover:  158 226 173;
     --bank-error:          239 68 68;
 
     /* Session 80.26 — Dark-mode semantic accents (softened for contrast) */
