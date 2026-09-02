@@ -145,12 +145,6 @@ export default function PlatformShowcase() {
             Persönliches Gespräch vereinbaren
             <ArrowUpRight className="ml-2 h-4 w-4" strokeWidth={1.6} aria-hidden />
           </Link>
-          <Link
-            to="/leistungen"
-            className={cn(buttonVariants({ variant: 'outline-ink', size: 'lg' }), 'inline-flex cursor-pointer')}
-          >
-            Unsere Leistungen
-          </Link>
         </motion.div>
       </div>
     </section>
