@@ -299,7 +299,16 @@ const HomeNewsPreview = () => {
             <div className="h-[420px] animate-pulse border border-bank-border bg-white/70" />
           ) : (
             <div className="flex h-[420px] flex-col justify-between border border-bank-border bg-white p-8" data-testid="home-news-top-empty">
-              <SafeNewsImage src="" category="wirtschaft" alt="" className="mb-6 h-40 w-full object-cover" />
+              <img
+                src="/assets/news/editorial-market-hero.jpg"
+                alt="Marktübersicht in Vorbereitung — Fröhlich Redaktion"
+                width={1400}
+                height={921}
+                loading="lazy"
+                decoding="async"
+                className="mb-6 h-40 w-full object-cover"
+                data-testid="home-news-top-empty-image"
+              />
               <div>
                 <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-gold">Redaktion in Vorbereitung</p>
                 <h3 className="mt-3 font-serif text-2xl leading-tight text-bank-text sm:text-[26px]">
