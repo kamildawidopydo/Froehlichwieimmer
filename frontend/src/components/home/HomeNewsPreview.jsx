@@ -61,7 +61,7 @@ const MarketStrip = () => {
     return () => { alive = false; };
   }, []);
 
-  if (state.loading) return <div className="mt-8 h-[160px] animate-pulse border-y border-bank-gold/40 bg-white/70 sm:h-[176px]" data-testid="home-market-strip-skeleton" />;
+  if (state.loading) return <div className="mt-6 h-16 animate-pulse border border-bank-border bg-white/70" />;
   if (!state.tiles.length) return null;
 
   const stampLabel = state.lastUpdated ? (() => {
@@ -180,31 +180,7 @@ const ExtendedTopicSections = () => {
     </section>
   );
 
-  if (state.loading) {
-    // Mirror the final 3-section structure: header (~76px) + 6-card grid (~320px per row on mobile,
-    // ~340px per row on desktop) → reserves near-final height to avoid CLS on hydration.
-    const CardSk = ({ i }) => <div key={i} className="h-[320px] animate-pulse border border-bank-border bg-neutral-50 sm:h-[340px]" />;
-    const SectionSk = ({ id }) => (
-      <section className="mt-16" data-testid={`home-topic-${id}-skeleton`}>
-        <div className="flex items-end justify-between border-b border-bank-border pb-3">
-          <div>
-            <div className="h-[13px] w-24 animate-pulse bg-neutral-100" />
-            <div className="mt-2 h-[30px] w-52 animate-pulse bg-neutral-100" />
-          </div>
-        </div>
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => <CardSk key={i} i={i} />)}
-        </div>
-      </section>
-    );
-    return (
-      <>
-        <SectionSk id="wirtschaft" />
-        <SectionSk id="europa" />
-        <SectionSk id="technologie" />
-      </>
-    );
-  }
+  if (state.loading) return <div className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({length:6}).map((_,i)=><div key={i} className="h-[280px] animate-pulse border border-bank-border bg-neutral-50"/>)}</div>;
   if (!Object.keys(state.sections).length) return null;
   // Nur Sektionen anzeigen, für die aktuell mindestens 6 echte Artikel vorhanden sind.
   const MIN = 6;
@@ -371,7 +347,7 @@ const HomeNewsPreview = () => {
                     </div>
                   </Link>
                 ) : (
-                  <div key={idx} className="h-[300px] animate-pulse border border-bank-border bg-white/70" />
+                  <div key={idx} className="h-[220px] animate-pulse border border-bank-border bg-white/70" />
                 )
               ))}
             </div>
