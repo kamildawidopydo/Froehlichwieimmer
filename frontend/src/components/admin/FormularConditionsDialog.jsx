@@ -161,7 +161,7 @@ const FormularConditionsDialog = ({ open, onOpenChange, codeRow, onSaved }) => {
                 id="cond-amount"
                 value={form.investmentAmountDisplay}
                 onChange={(e) => updateField('investmentAmountDisplay', e.target.value)}
-                placeholder="10.000,00"
+                placeholder="20.000,00"
                 className="mt-1"
               />
             </div>

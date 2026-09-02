@@ -85,7 +85,7 @@ const KnabFlexgeldProduktinfo = () => {
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="px-4 py-2.5 font-medium" style={{ color: colors.primary, backgroundColor: colors.bgMuted }}>Mindest-/Maximaleinlage</td>
-                  <td className="px-4 py-2.5">10.000,00 EUR / 1.000.000,00 EUR</td>
+                  <td className="px-4 py-2.5">20.000,00 EUR / 1.000.000,00 EUR</td>
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="px-4 py-2.5 font-medium" style={{ color: colors.primary, backgroundColor: colors.bgMuted }}>Einlagensicherung</td>
@@ -127,7 +127,7 @@ const KnabFlexgeldProduktinfo = () => {
               Anschluss ist das Guthaben täglich verfügbar.
             </p>
             <p className="mb-2"><strong>a] Währung:</strong> EUR</p>
-            <p className="mb-2"><strong>b] Mindest-/Maximaleinlage:</strong> 10.000,00 EUR / 1.000.000,00 EUR</p>
+            <p className="mb-2"><strong>b] Mindest-/Maximaleinlage:</strong> 20.000,00 EUR / 1.000.000,00 EUR</p>
             <p className="text-sm text-gray-500 ml-4 mb-3">
               Bitte beachten Sie: Die maximale Summe der bei der Bank angelegten Gelder darf
               1.000.000,00 EUR nicht überschreiten.

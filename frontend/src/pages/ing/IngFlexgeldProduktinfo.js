@@ -79,7 +79,7 @@ const IngFlexgeldProduktinfo = () => {
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="px-4 py-2.5 font-medium text-[#003087] bg-gray-50/50">Mindest-/Maximaleinlage</td>
-                  <td className="px-4 py-2.5">10.000,00 EUR / 1.000.000,00 EUR</td>
+                  <td className="px-4 py-2.5">20.000,00 EUR / 1.000.000,00 EUR</td>
                 </tr>
                 <tr className="border-b border-gray-100">
                   <td className="px-4 py-2.5 font-medium text-[#003087] bg-gray-50/50">Einlagensicherung</td>
@@ -122,7 +122,7 @@ const IngFlexgeldProduktinfo = () => {
               Anschluss ist das Guthaben täglich verfügbar.
             </p>
             <p className="mb-2"><strong>a] Währung:</strong> EUR</p>
-            <p className="mb-2"><strong>b] Mindest-/Maximaleinlage:</strong> 10.000,00 EUR / 1.000.000,00 EUR</p>
+            <p className="mb-2"><strong>b] Mindest-/Maximaleinlage:</strong> 20.000,00 EUR / 1.000.000,00 EUR</p>
             <p className="text-sm text-gray-500 ml-4 mb-3">
               Bitte beachten Sie: Die maximale Summe der bei der Bank angelegten Gelder darf
               1.000.000,00 EUR nicht überschreiten.

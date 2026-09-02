@@ -83,7 +83,7 @@ const KnabFestgeldBedingungen = () => {
               der Kontoeröffnung eine einmalige Einlage (den „Anlagebetrag") für den vereinbarten
               Anlagezeitraum zur Verfügung, für die ein laufzeitabhängiger, fest garantierter Zins
               vereinbart wird. Das Festgeldkonto wird ausschließlich in Euro geführt und erfordert
-              einen Mindestanlagebetrag von 10.000,00 EUR. Der maximale Anlagebetrag beträgt
+              einen Mindestanlagebetrag von 20.000,00 EUR. Der maximale Anlagebetrag beträgt
               1.000.000,00 EUR.
             </p>
             <p>

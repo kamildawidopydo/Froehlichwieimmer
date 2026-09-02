@@ -781,7 +781,7 @@ const BBVAFestgeldVertrag = () => {
           </div>
 
           <div className="bg-[#f0f4fa] border border-[#b0bec5] p-4 text-xs text-[#3a5070] leading-relaxed mb-4">
-            Bitte beachten Sie, dass der Mindestanlagebetrag <strong>10.000,00 EUR</strong> und der maximale Anlagebetrag <strong>1.000.000,00 EUR</strong> beträgt.
+            Bitte beachten Sie, dass der Mindestanlagebetrag <strong>20.000,00 EUR</strong> und der maximale Anlagebetrag <strong>1.000.000,00 EUR</strong> beträgt.
             Die Festgeldanlage erfolgt für die vertraglich vereinbarte Laufzeit als fest angelegte Anlage.
             Eine vorzeitige Verfügung über den Anlagebetrag ist während der gesamten Laufzeit grundsätzlich ausgeschlossen.
             Nach Ablauf der Laufzeit werden Kapital und Zinsen automatisch auf das von Ihnen benannte Referenzkonto überwiesen.

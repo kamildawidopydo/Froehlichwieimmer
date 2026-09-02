@@ -66,7 +66,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Bigbank aus Estland bietet eines der höchsten Flexgeld-Zinsniveaus im Vergleich. Der Neukundenbonus macht den Einstieg besonders attraktiv — Abschluss und Verwaltung laufen vollständig online.',
     conditions:
-      'Bonus für Neukunden bei Erstabschluss über Fröhlich Vermögensberatung. Mindestanlage 10.000 €. Kündigungsfristen gemäß Produktbedingungen beachten.',
+      'Bonus für Neukunden bei Erstabschluss über Fröhlich Vermögensberatung. Mindestanlage 20.000 €. Kündigungsfristen gemäß Produktbedingungen beachten.',
     benefits: [
       'Neukundenbonus bis 300 €',
       'Flexgeld mit überdurchschnittlichem Zinsniveau',
@@ -78,7 +78,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Citadele Banka (CBL Bank über Raisin) bietet Festgeld mit festem Zinssatz und lettischer EU-Einlagensicherung.',
     conditions:
-      'Festgeld mit 12 Monaten Laufzeit. Mindestanlage 10.000 €. Keine vorzeitige Verfügbarkeit während der Laufzeit.',
+      'Festgeld mit 12 Monaten Laufzeit. Mindestanlage 20.000 €. Keine vorzeitige Verfügbarkeit während der Laufzeit.',
     benefits: [
       'Festgeld 2,55% p.a. bei 12 Monaten',
       'Lettische EU-Einlagensicherung (FKTK)',
@@ -126,7 +126,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Artea AB (ehem. Šiaulių Bankas) ist eine litauische Bank mit Festgeld über Raisin. EU-Einlagensicherung und feste Laufzeiten.',
     conditions:
-      'Festgeld mit 12 Monaten Laufzeit. Mindestanlage 10.000 €. Keine vorzeitige Verfügbarkeit.',
+      'Festgeld mit 12 Monaten Laufzeit. Mindestanlage 20.000 €. Keine vorzeitige Verfügbarkeit.',
     benefits: [
       'Festgeld 2,01% p.a. bei 12 Monaten',
       'Litauische EU-Einlagensicherung',
@@ -174,7 +174,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Banca Progetto bietet italienisches Festgeld mit überdurchschnittlicher Verzinsung. Der Neukundenbonus ergänzt das Angebot für Erstanleger, die planbare Rendite suchen.',
     conditions:
-      'Bonus für Neukunden bei Mindestanlage 10.000 €. Laufzeit und Kündigungsmodalitäten gemäß Vertrag. Identifikation erforderlich.',
+      'Bonus für Neukunden bei Mindestanlage 20.000 €. Laufzeit und Kündigungsmodalitäten gemäß Vertrag. Identifikation erforderlich.',
     benefits: [
       'Neukundenbonus bis 200 €',
       'Festgeld mit fixem Zinssatz',
@@ -186,7 +186,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Klarna Bank verbindet Fintech-Kompetenz mit regulierten Festgeldprodukten aus Schweden. Neukunden erhalten eine Willkommensprämie zusätzlich zum Festgeld-Zins.',
     conditions:
-      'Neukundenbonus bei Erstabschluss. Mindestanlage 10.000 €. Schwedische Einlagensicherung und Finansinspektionen-Aufsicht.',
+      'Neukundenbonus bei Erstabschluss. Mindestanlage 20.000 €. Schwedische Einlagensicherung und Finansinspektionen-Aufsicht.',
     benefits: [
       'Neukundenbonus bis 200 €',
       'Festgeld mit planbarer Verzinsung',
@@ -198,7 +198,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Saxo Privatbank aus Dänemark bietet Festgeld mit nordischer Stabilität und Neukundenbonus. Geeignet für Anleger, die dänische Bankenqualität schätzen.',
     conditions:
-      'Bonus für Erstanleger. Mindestanlage 10.000 €. Bonus nach Erfüllung der Partnerbedingungen und Identifikation.',
+      'Bonus für Erstanleger. Mindestanlage 20.000 €. Bonus nach Erfüllung der Partnerbedingungen und Identifikation.',
     benefits: [
       'Neukundenbonus bis 200 €',
       'Festgeld mit dänischer Einlagensicherung',
@@ -210,7 +210,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Instabank aus Norwegen punktet mit digitalem Festgeld und Neukundenbonus. Das Angebot richtet sich an EU-Anleger mit Fokus auf Rendite und norwegischer Aufsicht.',
     conditions:
-      'Neukundenbonus bei Erstabschluss. Mindestanlage 10.000 €. Auszahlung nach bestätigter Kontoeröffnung.',
+      'Neukundenbonus bei Erstabschluss. Mindestanlage 20.000 €. Auszahlung nach bestätigter Kontoeröffnung.',
     benefits: [
       'Neukundenbonus bis 200 €',
       'Festgeld mit norwegischer Einlagensicherung',
@@ -222,7 +222,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Resurs Bank ist eine schwedische Spezialbank mit langjähriger Erfahrung im Konsumentenbereich. Neukunden erhalten beim Festgeld-Abschluss eine Willkommensprämie.',
     conditions:
-      'Bonus nur für Neukunden. Mindestanlage 10.000 €. Schwedische Einlagensicherung bis 1.050.000 SEK (Gegenwert in EUR variabel).',
+      'Bonus nur für Neukunden. Mindestanlage 20.000 €. Schwedische Einlagensicherung bis 1.050.000 SEK (Gegenwert in EUR variabel).',
     benefits: [
       'Neukundenbonus bis 200 €',
       'Festgeld mit planbarer Rendite',
@@ -270,7 +270,7 @@ const BANK_BONUS_COPY = {
     summary:
       'Banco Invest aus Portugal bietet Tagesgeld mit Neukundenbonus — auch bei moderatem Zinsniveau eine attraktive Ergänzung zum laufenden Zins.',
     conditions:
-      'Neukundenbonus bei Erstabschluss. Mindestanlage 10.000 €. Portugiesische FGD-Einlagensicherung.',
+      'Neukundenbonus bei Erstabschluss. Mindestanlage 20.000 €. Portugiesische FGD-Einlagensicherung.',
     benefits: [
       'Neukundenbonus bis 150 €',
       'Tagesgeld mit täglicher Verfügbarkeit',
