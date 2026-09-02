@@ -2004,3 +2004,20 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 - CTA-Zählung im News-Bereich: 1× „Alle Nachrichten" + 1× „Zum Marktüberblick" ✓.
 
 **Nicht deployt** — wartet auf ausdrückliche User-Freigabe.
+
+## Deploy — News-Redesign 1–6 nach Produktion (02.09.2026, 11:20 UTC)
+
+**Deploy-Job**: `4cb1a3eb-243a-47a8-a2cd-9c32d6e04c42` — abgeschlossen. Bundle-Wechsel `main.83d3d509.js` → `main.c268e3cc.js` auf `https://kapital-direkt24.de/`.
+
+**Prod-News-Pipeline reaktiviert**
+- Ursache: Prod-Cron `news-synthesize` (`10 * * * *`) hatte seit **28.08.2026 15:13 UTC** keinen erfolgreichen Lauf mehr (identisches Symptom wie auf Preview). Fetch-Cron lief weiter (last success 02.09. 09:19 UTC, `new=21`).
+- 48h-Freshness-Filter im Endpoint (`published_at ≥ now-48h`) filterte alle 107 Artikel raus → `items:0`.
+- Manuelle Reaktivierung via `/api/news/admin/synthesize?max_articles=3` in 5 Batches. Cloudflare terminierte jeden Batch bei 85–90 s (`HTTP:000`), Backend persistierte die bereits synthetisierten Artikel jedoch pro Loop-Iteration → 15 frische Artikel im 48h-Fenster.
+- Kategorien: europa (3), wirtschaft (3), industrie (1), mobilitaet (3), politik (4), welt (1).
+
+**Prod-QA nach Deploy**
+- Desktop 1920×1080: HERO=1, SECONDARY=5, EDITORIAL=5, COMPACT_ROWS=6, TABS=2, MARKET_ROWS=6, `<time>`-Tags=15, 15 eindeutige Slugs (0 Duplicates), 9 Bilder (0 broken), 0 Horizontal-Overflow, `Alle Nachrichten`=1, `Zum Marktüberblick`=1.
+- Mobile 390×844: 0 Horizontal-Overflow, 0 Broken Images, 0 kleine Tap-Targets (<36 px), Reihenfolge Hero (y=1626) → Secondary (2095) → Editorial (2863) → Compact (4768) → Market (5670).
+- Console: nur pre-existing 401 (`/api/auth/me` unauth) + 404-Sparkline für nicht unterstützte Symbole (GOLD/OIL/EURUSD/DJI/SILVER — Frontend fällt sauber zurück).
+
+**Gesamtstatus: PASS** — News-Redesign 1–6 vollständig live und mit echten Daten verifiziert.
