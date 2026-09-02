@@ -161,55 +161,98 @@ const NewsMain = () => {
     api.get('/news/nachrichten', { params: { limit: 8 } })
       .then((res) => {
         if (!alive) return;
-        const items = (res.data.items || []).slice().sort((a, b) => {
-          const da = a.published_at ? new Date(a.published_at).getTime() : 0;
-          const db = b.published_at ? new Date(b.published_at).getTime() : 0;
-          return db - da;
-        });
+        const items = (res.data.items || [])
+          .filter((it) => it && it.slug)
+          .slice()
+          .sort((a, b) => {
+            const da = a.published_at ? new Date(a.published_at).getTime() : 0;
+            const db = b.published_at ? new Date(b.published_at).getTime() : 0;
+            return db - da;
+          });
         setState({ items, loading: false, error: false });
       })
       .catch(() => { if (alive) setState({ items: [], loading: false, error: true }); });
     return () => { alive = false; };
   }, []);
 
-  const top = state.items[0];
-  const secondary = state.items.slice(1, 5);
+  /*
+   * Deduplizierung: Hero + Secondary teilen sich EIN Array; kein Artikel
+   * erscheint doppelt. Wir arbeiten explizit mit Slug-basierten Slices —
+   * keine Index-Hacks.
+   */
+  const validItems = state.items;
+  const heroItem = validItems[0] || null;
+  const usedSlugs = new Set(heroItem ? [heroItem.slug] : []);
+  const secondaryItems = validItems
+    .filter((it) => !usedSlugs.has(it.slug))
+    .slice(0, 4);
+  // remainingItems bleibt für Step 3+ (Kategorie-Sektionen) reserviert:
+  const remainingSlugs = new Set([...usedSlugs, ...secondaryItems.map((it) => it.slug)]);
+  // eslint-disable-next-line no-unused-vars
+  const remainingItems = validItems.filter((it) => !remainingSlugs.has(it.slug));
+
+  const heroCategory = heroItem ? humanize(heroItem.category) : '';
+  const heroPublisher = heroItem
+    ? (heroItem.content_type === 'aggregated' ? (heroItem.source_name || 'Externer Publisher') : 'Fröhlich Redaktion')
+    : '';
+  const heroTime = heroItem ? timeAgo(heroItem.published_at) : '';
 
   return (
     <div data-testid="home-news-main">
       <Eyebrow>Aktuelle Nachrichten</Eyebrow>
-      <h2 className="mt-3 font-serif text-3xl leading-[1.1] text-bank-text sm:text-4xl lg:text-[42px]">
+      <h2 className="mt-3 font-serif text-3xl leading-[1.05] text-bank-text sm:text-4xl lg:text-[42px]">
         Wichtige Themen.<br />Klar eingeordnet.
       </h2>
 
-      {/* Top-News-Slot */}
+      {/* ── Hauptstory (dominant) ─────────────────────────────────────── */}
       <div className="mt-8" data-testid="home-news-top-slot">
         {state.loading ? (
-          <div className="h-[380px] animate-pulse bg-neutral-100" />
-        ) : top ? (
+          <>
+            <div className="aspect-[16/9] w-full animate-pulse bg-neutral-100" />
+            <div className="mt-5 h-3 w-24 animate-pulse bg-neutral-100" />
+            <div className="mt-3 h-8 w-3/4 animate-pulse bg-neutral-100" />
+            <div className="mt-3 h-4 w-2/3 animate-pulse bg-neutral-100" />
+          </>
+        ) : heroItem ? (
           <Link
-            to={`/nachrichten/${top.slug}`}
+            to={`/nachrichten/${heroItem.slug}`}
             data-testid="home-news-top"
-            className="group block"
+            className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
           >
             <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
               <SafeNewsImage
-                src={top.image_url}
-                category={top.category}
-                alt={top.title || ''}
+                src={heroItem.image_url}
+                category={heroItem.category}
+                alt={heroItem.title || ''}
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.015]"
               />
             </div>
-            <div className="mt-4">
-              <div className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.2em]">
-                <span className="text-bank-gold">{humanize(top.category)}</span>
-                {top.published_at && <><span className="text-bank-border" aria-hidden>·</span><span className="text-bank-text-muted normal-case tracking-normal">{timeAgo(top.published_at)}</span></>}
+            <div className="mt-5">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.2em]">
+                {heroCategory && <span className="text-bank-gold" data-testid="home-news-top-kicker">{heroCategory}</span>}
+                {heroPublisher && (
+                  <>
+                    <span className="text-bank-border" aria-hidden>·</span>
+                    <span className="text-bank-text-muted normal-case tracking-normal">{heroPublisher}</span>
+                  </>
+                )}
+                {heroTime && (
+                  <>
+                    <span className="text-bank-border" aria-hidden>·</span>
+                    <span className="text-bank-text-muted normal-case tracking-normal">{heroTime}</span>
+                  </>
+                )}
               </div>
-              <h3 className="mt-2 font-serif text-[24px] leading-tight text-bank-text group-hover:text-bank-primary sm:text-[28px]">
-                {top.title}
+              <h3
+                className="mt-3 font-serif text-[26px] leading-[1.12] text-bank-text group-hover:text-bank-primary sm:text-[30px] lg:text-[34px]"
+                data-testid="home-news-top-headline"
+              >
+                {heroItem.title}
               </h3>
-              {top.summary && (
-                <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-bank-text-muted">{top.summary}</p>
+              {heroItem.summary && (
+                <p className="mt-3 max-w-[54ch] text-[14.5px] leading-relaxed text-bank-text-muted line-clamp-3">
+                  {heroItem.summary}
+                </p>
               )}
             </div>
           </Link>
@@ -223,34 +266,65 @@ const NewsMain = () => {
         )}
       </div>
 
-      {/* Sekundäre Nachrichten-Slots (2×2 Desktop, 1 Spalte Mobile) */}
-      <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2" data-testid="home-news-secondary-grid">
-        {state.loading
-          ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-[200px] animate-pulse bg-neutral-100" />)
-          : secondary.length
-            ? secondary.map((it) => (
-                <Link
-                  key={it.slug}
-                  to={`/nachrichten/${it.slug}`}
-                  className="group block"
-                  data-testid={`home-news-secondary-${it.slug}`}
-                >
-                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
-                    <SafeNewsImage src={it.image_url} category={it.category} alt={it.title || ''} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
+      {/* ── Secondary News (kompakte Liste, klar sekundär) ─────────────── */}
+      {(state.loading || secondaryItems.length > 0) && (
+        <ul
+          className="mt-10 divide-y divide-bank-border/50 border-t border-bank-border/50"
+          data-testid="home-news-secondary-list"
+        >
+          {state.loading
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <li key={i} className="flex items-start gap-4 py-5">
+                  <div className="aspect-[16/10] w-[120px] shrink-0 animate-pulse bg-neutral-100 sm:w-[140px]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="h-3 w-20 animate-pulse bg-neutral-100" />
+                    <div className="mt-2 h-5 w-4/5 animate-pulse bg-neutral-100" />
+                    <div className="mt-2 h-3 w-1/3 animate-pulse bg-neutral-100" />
                   </div>
-                  <div className="mt-3">
-                    <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em]">
-                      <span className="text-bank-gold">{humanize(it.category)}</span>
-                      {it.published_at && <><span className="text-bank-border" aria-hidden>·</span><span className="text-bank-text-muted normal-case tracking-normal">{timeAgo(it.published_at)}</span></>}
-                    </div>
-                    <h4 className="mt-1.5 font-serif text-[16px] leading-snug text-bank-text group-hover:text-bank-primary">{it.title}</h4>
-                  </div>
-                </Link>
+                </li>
               ))
-            : null}
-      </div>
+            : secondaryItems.map((it) => {
+                const cat = humanize(it.category);
+                const publisher = it.content_type === 'aggregated'
+                  ? (it.source_name || 'Externer Publisher')
+                  : 'Fröhlich Redaktion';
+                const t = timeAgo(it.published_at);
+                return (
+                  <li key={it.slug}>
+                    <Link
+                      to={`/nachrichten/${it.slug}`}
+                      className="group flex items-start gap-4 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
+                      data-testid={`home-news-secondary-${it.slug}`}
+                    >
+                      <div className="relative aspect-[16/10] w-[120px] shrink-0 overflow-hidden bg-neutral-100 sm:w-[140px]">
+                        <SafeNewsImage
+                          src={it.image_url}
+                          category={it.category}
+                          alt={it.title || ''}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[10px] uppercase tracking-[0.2em]">
+                          {cat && <span className="text-bank-gold">{cat}</span>}
+                        </div>
+                        <h4 className="mt-1.5 font-serif text-[16px] leading-snug text-bank-text group-hover:text-bank-primary sm:text-[17px]">
+                          {it.title}
+                        </h4>
+                        <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-bank-text-muted">
+                          {publisher && <span>{publisher}</span>}
+                          {publisher && t && <span aria-hidden>·</span>}
+                          {t && <span>{t}</span>}
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+        </ul>
+      )}
 
-      {/* Platzhalter-Slot für spätere Kategorien-Sektionen (Schritt 2+) */}
+      {/* Reserved slot for later category sections (Step 3+) */}
       <div className="mt-14" data-testid="home-news-categories-slot" aria-hidden />
 
       <Link
