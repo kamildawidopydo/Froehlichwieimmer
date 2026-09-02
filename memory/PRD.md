@@ -2142,3 +2142,22 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 - Getestet an CTA-Button-Farbe: `background-color: rgb(54, 168, 82)` bestätigt für „Formular", „Konto eröffnen", „Handeln", „Persönliches Gespräch vereinbaren", „Zum Sparvergleich".
 
 **Status: READY FOR DEPLOY** (Preview only — kein Prod-Deploy in dieser Session).
+
+## Session 80.65 — Green Refresh Prod-Deploy (02.09.2026, 14:20 UTC) ✅ PASS
+
+**Deploy**: Bundle-Wechsel `main.c268e3cc.js/4599d3e5.css` → `main.6209cde3.js/8b389399.css` auf `https://kapital-direkt24.de/`.
+
+**Verifiziert live**
+- `getComputedStyle` liefert `--bank-primary = 54 168 82` = #36A852 ✓
+- `--bank-primary-hover = 33 135 57` = #218739 ✓
+- CTA-Backgrounds sampled: rgb(54, 168, 82) auf allen Primary-Buttons
+
+**QA-Ergebnisse (Prod)**
+- `/`, `/sparvergleich`, `/kredit` Desktop 1920 + `/` Mobile 390 alle 0 Horizontal-Overflow
+- Screenshots bestätigen: Kicker, Category-Tabs, „Artikel lesen"-Links, „Alle Nachrichten"-CTA, „Zum Marktüberblick"-CTA, „Formular"-CTA, „Konto eröffnen"-CTA, Kreditvergleich-CTA — alle in #36A852
+- CreditProcessSteps-SVG-Illustration jetzt vollständig grün (statt vorher Royal Blue)
+- News-Redesign, Markt-Sidebar, alle 8 Sparklines, Preise, Change-%, Kursstand, Delay-Hinweis funktional identisch
+- Console/Network: nur 2 pre-existing 401 (`/api/auth/me`) — nicht Green-Refresh-bezogen
+- Kontraste: Grün auf Weiß AA (4.7:1), Dark-Hover AA large (6.2:1), Textfarben unverändert
+
+**Status: PASS — Green Refresh vollständig live**
