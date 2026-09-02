@@ -55,35 +55,48 @@ function getSlideMotion(offset, reduced, compact) {
     return {
       x: offset * (CARD_WIDTH + 24),
       scale: offset === 0 ? 1 : 0.92,
-      opacity: abs > 1 ? 0 : 1,
+      opacity: offset === 0 ? 1 : abs === 1 ? 0.32 : 0,
       zIndex: 10 - abs,
       rotateY: 0,
       filter: 'none',
+      pointerEvents: abs <= 1 ? 'auto' : 'none',
     };
   }
 
-  if (abs > 3) {
+  // Only offset 0 (active) and ±1 (preview neighbors) are visible.
+  // ±2/±3 fully faded — no ghost text bleeding around the active card.
+  if (abs >= 2) {
     return {
       x: offset * CARD_GAP,
-      scale: 0.55,
+      scale: 0.6,
       opacity: 0,
       zIndex: 0,
       rotateY: offset > 0 ? -18 : 18,
-      filter: 'blur(2px)',
+      filter: 'blur(3px)',
       pointerEvents: 'none',
     };
   }
 
-  const scale = offset === 0 ? 1 : abs === 1 ? 0.84 : abs === 2 ? 0.72 : 0.62;
-  const opacity = abs === 3 ? 0.35 : 1 - abs * 0.08;
+  if (abs === 1) {
+    return {
+      x: offset * CARD_GAP,
+      scale: 0.86,
+      opacity: 0.28,
+      zIndex: 5,
+      rotateY: offset * -10,
+      filter: 'blur(0.6px)',
+      pointerEvents: 'auto',
+    };
+  }
 
   return {
-    x: offset * CARD_GAP,
-    scale,
-    opacity,
-    zIndex: 10 - abs,
-    rotateY: offset * -10,
-    filter: abs >= 2 ? 'blur(0.4px)' : 'none',
+    x: 0,
+    scale: 1,
+    opacity: 1,
+    zIndex: 10,
+    rotateY: 0,
+    filter: 'none',
+    pointerEvents: 'auto',
   };
 }
 
@@ -150,19 +163,27 @@ function CreditOfferCard({ offer, isActive, cardIndex, totalCount, isTopPick, ca
   return (
     <article
       className={cn(
-        'group relative flex w-full max-w-full flex-col transition-shadow duration-500',
+        'group relative flex w-full max-w-full flex-col overflow-hidden rounded-2xl transition-shadow duration-500',
         !compact && 'h-full',
+        // Active card: own soft surface so nothing shows through.
+        // Preview neighbours: transparent, no surface — they must never compete.
+        !preview && 'bg-white ring-1 ring-bank-border/60 shadow-editorial-sm dark:bg-bank-surface dark:ring-bank-border/70',
+        preview && 'bg-transparent',
       )}
       style={{ width: cardWidth, ...(compact ? {} : { height: CARD_HEIGHT }) }}
       data-testid={`credit-offer-card-${offer.id}`}
     >
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-px bg-gradient-to-r from-transparent via-bank-gold/40 to-transparent"
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-0 z-[1] h-px bg-gradient-to-r from-transparent via-bank-gold/40 to-transparent',
+          preview && 'opacity-0',
+        )}
       />
       <div className={cn('relative flex flex-1 flex-col', showDetails && 'min-h-0')}>
 
-      {/* Header: pagination, badge, country */}
+      {/* Header: pagination, badge, country — hidden on preview neighbours so they don't echo the active card */}
+      {!preview && (
       <div className="relative shrink-0 px-4 pb-1.5 pt-3">
         <div className="flex items-start justify-between gap-2">
           <span
@@ -200,12 +221,15 @@ function CreditOfferCard({ offer, isActive, cardIndex, totalCount, isTopPick, ca
           </div>
         )}
       </div>
+      )}
 
-      {/* Logo & rating */}
-      <div className="flex shrink-0 flex-col items-center px-4 pb-1.5">
+      {/* Logo & rating (preview: nur Logo, kein Rating) */}
+      <div className={cn('flex shrink-0 flex-col items-center px-4', preview ? 'pt-8 pb-3' : 'pb-1.5')}>
         <BankLogo logo={offer.bank_logo} bankName={offer.bank_name} size="lg" className="mx-auto" />
-        <h3 className="sr-only">{offer.bank_name}</h3>
-        {scoreOutOfTen != null && scoreOutOfFive != null && scoreFormatted ? (
+        <h3 className={cn(preview ? 'mt-2 text-[11px] font-medium uppercase tracking-[0.14em] text-bank-text-muted' : 'sr-only')}>
+          {offer.bank_name}
+        </h3>
+        {!preview && scoreOutOfTen != null && scoreOutOfFive != null && scoreFormatted ? (
           <div className="mt-2.5 flex flex-col items-center gap-1">
             <StarRating scoreOutOfFive={scoreOutOfFive} />
             <p className="text-[11px] font-semibold tabular-nums text-bank-text" data-numeric>
@@ -213,21 +237,16 @@ function CreditOfferCard({ offer, isActive, cardIndex, totalCount, isTopPick, ca
               <span className="font-normal text-bank-text-muted">/ 10,0</span>
             </p>
           </div>
-        ) : (
-          <p className="mt-2.5 text-center text-[10px] text-bank-text-muted">Partnerbank</p>
-        )}
+        ) : null}
       </div>
 
       {/* Rate & product */}
       <div className={cn('shrink-0 px-4 text-center', showDetails ? 'pb-2' : 'flex flex-1 flex-col justify-center pb-4')}>
-        <p className="rate-figure text-[1.5rem] font-light leading-tight text-bank-gold" data-numeric>
-          ab {formatEffectiveRateDe(offer.effective_rate_from)} % eff. Jahreszins
+        <p className={cn('rate-figure font-light leading-tight text-bank-gold', preview ? 'text-[1.1rem]' : 'text-[1.5rem]')} data-numeric>
+          ab {formatEffectiveRateDe(offer.effective_rate_from)} %{!preview && ' eff. Jahreszins'}
         </p>
-        <p className="mt-1 text-[11px] text-bank-text-muted">{getCreditSubline(offer)}</p>
-        {preview && (
-          <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.14em] text-bank-text-muted/80">
-            Angebot öffnen
-          </p>
+        {!preview && (
+          <p className="mt-1 text-[11px] text-bank-text-muted">{getCreditSubline(offer)}</p>
         )}
       </div>
 
@@ -482,7 +501,7 @@ export default function CreditOffersCoverFlow({ offers }) {
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 select-none text-center font-display text-[clamp(3.5rem,12vw,7rem)] font-light uppercase leading-none tracking-tight text-bank-ink/[0.04] dark:text-white/[0.035] sm:block"
+        className="pointer-events-none absolute inset-x-0 top-1/2 hidden -translate-y-1/2 select-none text-center font-display text-[clamp(2.75rem,7vw,4.5rem)] font-light uppercase leading-none tracking-tight text-bank-ink/[0.018] dark:text-white/[0.02] sm:block"
       >
         Kreditangebote
       </div>

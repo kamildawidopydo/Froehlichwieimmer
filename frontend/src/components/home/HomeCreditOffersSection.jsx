@@ -25,11 +25,11 @@ export default function HomeCreditOffersSection({ offers }) {
 
   return (
     <section
-      className="border-b border-bank-border bg-white py-24 dark:bg-bank-bg sm:py-32"
+      className="border-b border-bank-border bg-white py-16 dark:bg-bank-bg sm:py-20"
       data-testid="home-credit-offers"
     >
       <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-        <div className="pb-14">
+        <div className="pb-10">
           <SectionLabel
             eyebrow="Kreditpartner"
             title="Ausgewählte Kreditangebote"
@@ -41,7 +41,7 @@ export default function HomeCreditOffersSection({ offers }) {
           <CreditOffersCoverFlow offers={offers} />
         </motion.div>
 
-        <motion.div {...reveal(1)} className="mt-12 flex justify-center px-1 sm:mt-16">
+        <motion.div {...reveal(1)} className="mt-8 flex justify-center px-1 sm:mt-10">
           <Link
             to="/kredit"
             className="block w-full max-w-[20rem] sm:max-w-none sm:w-auto"
