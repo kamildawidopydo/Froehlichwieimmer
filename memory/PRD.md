@@ -6,6 +6,36 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.66 (Sep 02 2026) — **Dark Mode Refresh — Graphit-Palette (nur PREVIEW)**:
+
+  **User-Wunsch**: „Überarbeite ausschließlich den Dark Mode. Warmes Graphit statt Deep-Navy: Body #24282D, Sections #292E34, Cards #30363D, elevated #363D45, Header #202429, Border #4A5159, Text #F5F2EA / #D7D8D5 / #AEB4B8 / #8F979D. Grün + Gold bleiben. Nicht deployen."
+
+  **Root-Cause (Session-Fork)**: Nachdem die neuen `--bank-*`-Graphit-Tokens gesetzt waren, blieb `body` weiterhin `rgb(10,19,31)` (Deep-Navy). Grund: der `.dark`-Block überschrieb shadcn `--background`, `--card`, `--muted`, `--accent`, `--border` mit HSL-Deep-Navy-Werten (214 50% 8% etc.), plus mehrere Legacy-Overrides in `@layer components`/`@layer utilities` mit hardcodierten `rgb(6 16 31)`, `rgb(18 36 60)`, `rgb(28 46 72)`, `rgb(56 78 110)`, `rgb(12 26 46)`.
+
+  **Fix — `frontend/src/index.css`, nur Dark-Block**:
+  - `.dark` shadcn-Tokens komplett auf Graphit-HSL neu gebaut (`--background 214 11% 16%` = #24282D, `--card 212 12% 22%` = #30363D, `--muted 213 12% 19%` = #292E34, `--accent 212 12% 24%` = #363D45, `--border/--input 212 9% 32%` = #4A5159, `--primary/--ring 134 55% 52%` = brighter green, `--foreground 45 33% 94%` = #F5F2EA, `--muted-foreground 200 5% 70%` = #AEB4B8).
+  - Legacy-Deep-Navy-Overrides für Tailwind-Klassen (`bg-slate-50/100/200`, `bg-gray-50/100`, `bg-zinc-50/100`, `bg-neutral-50/100`, `bg-stone-50`, `text-black/900/800/700/600/500/400`, `border-gray/slate/zinc/neutral-100/200/300`) auf `var(--bank-panel)` / `var(--bank-surface)` / `var(--bank-surface-elev)` / `var(--bank-text)` / `var(--bank-text-muted)` / `var(--bank-text-soft)` / `var(--bank-border)` remappt.
+  - `.dark :where(.bg-white)` auf `var(--bank-surface)` (Token) statt hardcodiertem `rgb(48 54 61)`.
+  - Recharts (`recharts-cartesian-axis-tick-value`, `recharts-text`, `recharts-legend-item-text`, `recharts-default-tooltip`, `recharts-tooltip-label`, `recharts-tooltip-item`) auf `var(--bank-text-muted)` / `var(--bank-surface-elev)` / `var(--bank-border)` / `var(--bank-text)`.
+  - `.dark .news-market-chart` auf `var(--bank-surface)/0.55` + `var(--bank-border)/0.6` (statt Deep-Navy 12 26 46 / 28 46 72).
+
+  **Nicht angefasst (bewusst brand-spezifisch beibehalten)**:
+  - ING (`#003087`), Postbank (`#003366`), LinkedIn (`#0A66C2`), Facebook (`#1877F2`), Instagram-Reel (`#121212`), LiveTicker (`#0d1117`), Fonds-Grundlagen-Phone-Mockup (`#0f172a`) — reine Brand-/Mockup-Simulationen mit lokalem Scope.
+  - `.social-preview-light` Shell — simuliert bewusst helle Plattform-UIs im Dark Mode.
+  - Light Mode komplett unverändert.
+
+  **QA-Verifikation via Playwright-Computed-Styles**:
+  - Homepage: `body_bg: rgb(36,40,45)` = #24282D ✅ · `body_color: rgb(245,242,235)` = #F5F2EA ✅ · Cards #30363D ✅ · Dark-Class aktiv ✅
+  - Vergleich `/comparison`: gleiche Werte ✅ · Filter-Panel klar von Body abgesetzt ✅ · Gold-Akzent auf „Überblick." erhalten ✅ · Grüne Zinssätze lesbar ✅
+  - News `/news`: Cream-Headlines auf Graphit ✅ · News-Cards elevated ✅ · Bilder ohne Overlay/Abdunkelung ✅
+  - Dokumente `/dokumente`: Cards vom Body klar getrennt ✅ · Icon-Badges (Gold) intakt ✅
+  - Mobile 390 px: kein Horizontal-Overflow ✅
+  - Light Mode Regression: `body_bg: rgb(255,255,255)` ✅ unverändert
+
+  **Keine Deep-Navy-Reste mehr, keine Console-Errors, keine Layout-/Content-Änderungen.**
+  **Status**: PREVIEW ONLY — Deploy erfolgt auf explizites User-Kommando.
+
+
 - 80.50c (Feb 28 2026) — **Produktions-News-Pipeline reanimiert (kapital-direkt24.de zeigte leere News-Kacheln)**:
 
   **Symptom (User meldet auf Deploy)**: Auf `kapital-direkt24.de` blieb der Top-News-Kasten leer trotz Session 80.50b Guard-Fix. Der Screenshot zeigte den Skeleton-Loader für immer.

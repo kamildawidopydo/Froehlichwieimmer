@@ -163,28 +163,34 @@
   .dark {
     color-scheme: dark;
 
-    /* Fröhlich Palette — dark (Session 80.51 Allvest Royal-Blue + Warm Gold) */
-    --bank-bg:             22 25 32;     /* #161920 body dark warm-cool */
-    --bank-surface:        30 34 44;     /* #1E222C */
-    --bank-surface-elev:   40 44 56;     /* #282C38 */
-    --bank-panel:          26 30 40;     /* #1A1E28 topbar */
-    --bank-border:         64 68 82;     /* #404452 */
+    /* Fröhlich Private Banking — Dark Mode Refresh (Session 80.66, 02.09.2026)
+       Warmes Graphit mit klar unterscheidbaren Ebenen:
+       Body → Section → Card → Elevated Card. Kein Schwarz, kein Near-Black. */
+    --bank-bg:             36 40 45;     /* #24282D global body */
+    --bank-panel:          41 46 52;     /* #292E34 sekundäre Section-Fläche */
+    --bank-surface:        48 54 61;     /* #30363D Cards/Panels/Sidebar */
+    --bank-surface-elev:   54 61 69;     /* #363D45 hervorgehobene Cards */
+    --bank-border:         74 81 89;     /* #4A5159 hairlines (heller für Struktur) */
 
-    --bank-text:           245 246 247;
-    --bank-text-muted:     170 174 180;
+    --bank-text:           245 242 234;  /* #F5F2EA Primärtext / Headlines */
+    --bank-text-strong:    250 248 241;  /* #FAF8F1 stronger headlines */
+    --bank-text-muted:     174 180 184;  /* #AEB4B8 Meta / Zeit / Publisher */
+    --bank-text-soft:      143 151 157;  /* #8F979D sehr dezent */
 
-    --bank-primary:        123 214 142;  /* #7BD68E lighter green for dark bg */
-    --bank-primary-hover:  158 226 173;  /* #9EE2AD pressed */
-    --bank-secondary:      122 168 232;
-    /* Coral retained for negative deltas (rare) */
-    --bank-accent:         232 140 148;
-    --bank-accent-strong:  240 130 138;
-    /* Gold (Allvest) — light warm-gold reads clearly on dark. */
-    --bank-gold:           220 176 116;   /* #DCB074 */
-    --bank-gold-soft:      46 36 20;      /* very dark warm surface */
-    --bank-gold-strong:    228 198 140;   /* #E4C68C for text-on-dark */
-    --bank-gold-ink:       244 226 188;   /* #F4E2BC AAA-on-dark */
-    --bank-gold-tint:       46 36 20;     /* very dark warm surface */
+    --bank-primary:        54 168 82;    /* #36A852 Corporate Green — unverändert */
+    --bank-primary-hover:  73 188 102;   /* #49BC66 Hover-Grün — heller für Dark */
+    --bank-primary-strong: 105 214 138;  /* #69D68A für Text auf dunklen Tints */
+    --bank-secondary:      54 168 82;
+    --bank-accent:         54 168 82;
+    --bank-accent-strong:  73 188 102;
+    --bank-primary-tint:    22 44 30;    /* dunkelgrüne Fläche für Card-Tint */
+    --bank-primary-soft:    18 32 24;    /* sehr dezente Grün-Fläche */
+    /* Gold Akzent (Champagner) — für kleine Premium-Highlights. */
+    --bank-gold:           200 163 106;  /* #C8A36A */
+    --bank-gold-soft:       46 36 20;    /* very dark warm surface */
+    --bank-gold-strong:    216 184 130;  /* #D8B882 for text-on-dark */
+    --bank-gold-ink:       236 210 168;  /* #ECD2A8 AAA-on-dark */
+    --bank-gold-tint:       46 36 20;
     --bank-gold-border:     92 74 40;
     /* Champagne (dark). */
     --bank-champagne:        200 176 138;
@@ -198,10 +204,10 @@
     --bank-sage-ink:         220 232 248;
     --bank-sage-tint:         24 32 48;
     --bank-sage-border:       60 78 108;
-    --bank-success:        76 218 125;
-    /* Primary CTA fill (dark) — light royal blue on dark surface. */
-    --bank-signature:        123 214 142;
-    --bank-signature-hover:  158 226 173;
+    --bank-success:        73 188 102;
+    /* Primary CTA fill (dark) — bestehendes Grün, hell für Contrast. */
+    --bank-signature:        54 168 82;
+    --bank-signature-hover:  73 188 102;
     --bank-error:          239 68 68;
 
     /* Session 80.26 — Dark-mode semantic accents (softened for contrast) */
@@ -242,36 +248,39 @@
     --bank-rose-tint:       58  30  38;
     --bank-rose-border:    100  62  72;
 
-    --bank-ink:            30 30 34;
-    --bank-ink-hover:      48 42 44;
-    --bank-ink-soft:       60 52 55;
-    --bank-ink-elev:       74 74 78;
+    --bank-ink:            32 36 41;     /* #202429 Header / Navigation dark band */
+    --bank-ink-hover:      42 47 53;     /* #2A2F35 hover on header items */
+    --bank-ink-soft:       54 61 69;     /* #363D45 aligned with surface-elev */
+    --bank-ink-elev:       74 81 89;     /* #4A5159 aligned with border */
     --bank-on-ink:         255 255 255;
 
-    --background: 214 50% 8%;
-    --foreground: 214 30% 96%;
-    --card: 214 46% 12%;
-    --card-foreground: 214 30% 96%;
-    --popover: 214 46% 12%;
-    --popover-foreground: 214 30% 96%;
-    --primary: 213 44% 64%;
-    --primary-foreground: 214 50% 8%;
-    --secondary: 214 30% 16%;
-    --secondary-foreground: 214 30% 96%;
-    --muted: 214 30% 14%;
-    --muted-foreground: 214 16% 66%;
-    --accent: 213 32% 20%;
-    --accent-foreground: 213 44% 74%;
+    /* Session 80.66 — Graphite dark shadcn tokens (mapped to --bank-*).
+       Body/background = #24282D. Cards = #30363D. Muted = #292E34.
+       Elevated/accent = #363D45. Border/input = #4A5159. Primary = green. */
+    --background: 214 11% 16%;           /* #24282D */
+    --foreground: 45 33% 94%;            /* #F5F2EA */
+    --card: 212 12% 22%;                 /* #30363D */
+    --card-foreground: 45 33% 94%;
+    --popover: 212 12% 22%;              /* #30363D */
+    --popover-foreground: 45 33% 94%;
+    --primary: 134 55% 52%;              /* #43C266 brighter green for dark */
+    --primary-foreground: 214 11% 10%;
+    --secondary: 213 12% 19%;            /* #292E34 */
+    --secondary-foreground: 45 33% 94%;
+    --muted: 213 12% 19%;                /* #292E34 */
+    --muted-foreground: 200 5% 70%;      /* #AEB4B8 */
+    --accent: 212 12% 24%;               /* #363D45 */
+    --accent-foreground: 45 33% 94%;
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 28% 24%;
-    --input: 214 28% 24%;
-    --ring: 213 44% 64%;
-    --chart-1: 213 44% 64%;
-    --chart-2: 42 45% 58%;
-    --chart-3: 214 28% 50%;
-    --chart-4: 199 55% 48%;
-    --chart-5: 214 16% 42%;
+    --border: 212 9% 32%;                /* #4A5159 */
+    --input: 212 9% 32%;
+    --ring: 134 55% 52%;                 /* green ring */
+    --chart-1: 134 55% 52%;              /* green */
+    --chart-2: 32 45% 62%;               /* champagne gold */
+    --chart-3: 212 8% 55%;               /* graphite mid */
+    --chart-4: 200 30% 60%;              /* cool grey-blue */
+    --chart-5: 45 20% 75%;               /* warm parchment */
   }
 
   /* ----------------------------------------------------------------------
@@ -441,20 +450,21 @@
     background-color: rgb(var(--bank-surface));
   }
 
-  .dark :where(.bg-white:not(.keep-light)) { background-color: rgb(12 26 46); }
-  .dark :where(.bg-slate-50:not(.keep-light), .bg-gray-50:not(.keep-light), .bg-zinc-50:not(.keep-light), .bg-neutral-50:not(.keep-light), .bg-stone-50:not(.keep-light)) { background-color: rgb(6 16 31); }
-  .dark :where(.bg-slate-100:not(.keep-light), .bg-gray-100:not(.keep-light), .bg-zinc-100:not(.keep-light), .bg-neutral-100:not(.keep-light)) { background-color: rgb(18 36 60); }
-  .dark :where(.bg-slate-200:not(.keep-light), .bg-gray-200:not(.keep-light)) { background-color: rgb(28 46 72); }
+  .dark :where(.bg-white:not(.keep-light)) { background-color: rgb(var(--bank-surface)); }
+  /* Session 80.66 — Graphite remaps (was legacy deep-navy) */
+  .dark :where(.bg-slate-50:not(.keep-light), .bg-gray-50:not(.keep-light), .bg-zinc-50:not(.keep-light), .bg-neutral-50:not(.keep-light), .bg-stone-50:not(.keep-light)) { background-color: rgb(var(--bank-panel)); }
+  .dark :where(.bg-slate-100:not(.keep-light), .bg-gray-100:not(.keep-light), .bg-zinc-100:not(.keep-light), .bg-neutral-100:not(.keep-light)) { background-color: rgb(var(--bank-surface)); }
+  .dark :where(.bg-slate-200:not(.keep-light), .bg-gray-200:not(.keep-light)) { background-color: rgb(var(--bank-surface-elev)); }
 
-  .dark :where(.text-black:not(.keep-light), .text-slate-900:not(.keep-light), .text-gray-900:not(.keep-light), .text-zinc-900:not(.keep-light)) { color: rgb(229 231 235); }
-  .dark :where(.text-slate-800:not(.keep-light), .text-gray-800:not(.keep-light)) { color: rgb(209 213 219); }
-  .dark :where(.text-slate-700:not(.keep-light), .text-gray-700:not(.keep-light)) { color: rgb(203 213 225); }
-  .dark :where(.text-slate-600:not(.keep-light), .text-gray-600:not(.keep-light), .text-slate-500:not(.keep-light), .text-gray-500:not(.keep-light)) { color: rgb(156 175 200); }
-  .dark :where(.text-slate-400:not(.keep-light), .text-gray-400:not(.keep-light)) { color: rgb(var(--bank-text-muted)); }
+  .dark :where(.text-black:not(.keep-light), .text-slate-900:not(.keep-light), .text-gray-900:not(.keep-light), .text-zinc-900:not(.keep-light)) { color: rgb(var(--bank-text)); }
+  .dark :where(.text-slate-800:not(.keep-light), .text-gray-800:not(.keep-light)) { color: rgb(var(--bank-text)); }
+  .dark :where(.text-slate-700:not(.keep-light), .text-gray-700:not(.keep-light)) { color: rgb(var(--bank-text)); }
+  .dark :where(.text-slate-600:not(.keep-light), .text-gray-600:not(.keep-light), .text-slate-500:not(.keep-light), .text-gray-500:not(.keep-light)) { color: rgb(var(--bank-text-muted)); }
+  .dark :where(.text-slate-400:not(.keep-light), .text-gray-400:not(.keep-light)) { color: rgb(var(--bank-text-soft)); }
 
-  .dark :where(.border-gray-100:not(.keep-light), .border-slate-100:not(.keep-light), .border-zinc-100:not(.keep-light), .border-neutral-100:not(.keep-light)) { border-color: rgb(28 46 72); }
-  .dark :where(.border-gray-200:not(.keep-light), .border-slate-200:not(.keep-light), .border-zinc-200:not(.keep-light), .border-neutral-200:not(.keep-light)) { border-color: rgb(28 46 72); }
-  .dark :where(.border-gray-300:not(.keep-light), .border-slate-300:not(.keep-light)) { border-color: rgb(56 78 110); }
+  .dark :where(.border-gray-100:not(.keep-light), .border-slate-100:not(.keep-light), .border-zinc-100:not(.keep-light), .border-neutral-100:not(.keep-light)) { border-color: rgb(var(--bank-border) / 0.6); }
+  .dark :where(.border-gray-200:not(.keep-light), .border-slate-200:not(.keep-light), .border-zinc-200:not(.keep-light), .border-neutral-200:not(.keep-light)) { border-color: rgb(var(--bank-border) / 0.8); }
+  .dark :where(.border-gray-300:not(.keep-light), .border-slate-300:not(.keep-light)) { border-color: rgb(var(--bank-border)); }
 
   /* Session 80.26 fix-pass: bumped specificity from `.dark :where(...)` (0,1,0) to
      `:root.dark :where(...)` (0,2,0) so these remaps beat Tailwind utilities on
@@ -530,23 +540,23 @@
   .dark .recharts-cartesian-axis-tick-value,
   .dark .recharts-text,
   .dark .recharts-legend-item-text {
-    fill: rgb(156 175 200) !important;
-    color: rgb(156 175 200) !important;
+    fill: rgb(var(--bank-text-muted)) !important;
+    color: rgb(var(--bank-text-muted)) !important;
   }
   .dark .recharts-default-tooltip {
-    background-color: rgb(12 26 46) !important;
-    border-color: rgb(28 46 72) !important;
-    color: rgb(229 231 235) !important;
+    background-color: rgb(var(--bank-surface-elev)) !important;
+    border-color: rgb(var(--bank-border)) !important;
+    color: rgb(var(--bank-text)) !important;
   }
-  .dark .recharts-tooltip-label { color: rgb(209 213 219) !important; }
-  .dark .recharts-tooltip-item { color: rgb(229 231 235) !important; }
+  .dark .recharts-tooltip-label { color: rgb(var(--bank-text)) !important; }
+  .dark .recharts-tooltip-item { color: rgb(var(--bank-text)) !important; }
   .dark .recharts-reference-line-line {
     stroke: rgba(148, 163, 184, 0.25) !important;
   }
 
   .dark .news-market-chart {
-    background-color: rgb(12 26 46 / 0.35);
-    border-color: rgb(28 46 72 / 0.8);
+    background-color: rgb(var(--bank-surface) / 0.55);
+    border-color: rgb(var(--bank-border) / 0.6);
   }
   .dark .news-market-chart text {
     fill: rgb(var(--bank-text-muted)) !important;
