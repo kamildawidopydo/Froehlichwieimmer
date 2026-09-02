@@ -131,8 +131,7 @@ export default function PlatformShowcase() {
             Wir denken nicht in einzelnen Produkten. Wir denken in Ihrem Vermögen als Ganzes.
           </blockquote>
           <figcaption className="mt-6 max-w-2xl text-[14.5px] leading-relaxed text-bank-text-muted">
-            Heute die richtige Anlage. Morgen die passende Bank. Und auch übermorgen ein persönlicher Ansprechpartner an
-            Ihrer Seite.
+            Wir verbinden passende Anlagelösungen mit persönlicher Beratung – für ein Vermögen, das langfristig zu Ihren Zielen passt.
           </figcaption>
         </motion.figure>
 
