@@ -198,7 +198,7 @@ const DokumentHochladen = () => {
     <>
       <PageMeta title="Dokument hochladen" description="Sicherer Dokument-Upload bei Fröhlich Vermögensberatung" />
       <div
-        className={`relative overflow-hidden ${step === 1 ? 'bg-bank-ink' : 'bg-bank-bg'} ${shaking ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}
+        className={`relative overflow-hidden ${step === 1 ? 'bg-[#F3F1EC]' : 'bg-bank-bg'} ${shaking ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}
       >
         <style>{`
           @keyframes shake {
@@ -212,27 +212,27 @@ const DokumentHochladen = () => {
 
         {step === 1 ? (
           <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-16">
-            <div className="topo-pattern pointer-events-none absolute inset-0 opacity-[0.07]" aria-hidden />
+            <div className="topo-pattern pointer-events-none absolute inset-0 opacity-[0.05]" aria-hidden />
             <div className="relative z-10 w-full max-w-md">
-              <div className="relative border border-white/10 bg-white/[0.03] px-7 py-12 backdrop-blur-xl sm:px-12 sm:py-14">
+              <div className="relative border border-[#D8D3C9] bg-[#FBFAF7] px-7 py-12 shadow-[0_1px_3px_rgba(37,39,34,0.04),0_10px_28px_-8px_rgba(37,39,34,0.10)] sm:px-12 sm:py-14">
                 <div className="mb-9 flex flex-col items-center text-center">
-                  <div className="mb-6 flex h-[72px] w-[72px] items-center justify-center rounded-full border border-bank-accent-strong/45 bg-bank-ink/60">
-                    <Lock className="h-7 w-7 text-bank-gold" strokeWidth={1.4} />
+                  <div className="mb-6 flex h-[72px] w-[72px] items-center justify-center rounded-full border border-[#B58A52]/40 bg-white">
+                    <Lock className="h-7 w-7 text-[#B58A52]" strokeWidth={1.4} />
                   </div>
-                  <p className="font-mono text-[10.5px] uppercase tracking-[0.32em] text-bank-gold">
+                  <p className="font-mono text-[10.5px] uppercase tracking-[0.32em] text-[#B58A52]">
                     Dokument · Upload
                   </p>
-                  <h1 className="mt-4 font-display text-[1.75rem] font-light text-white">
-                    Sicherer <em className="italic text-bank-gold-soft">Zugang</em>
+                  <h1 className="mt-4 font-display text-[1.75rem] font-light text-[#252722]">
+                    Sicherer <em className="italic text-[#36A852]">Zugang</em>
                   </h1>
-                  <p className="mt-4 text-[13.5px] leading-relaxed text-white/80">
+                  <p className="mt-4 text-[13.5px] leading-relaxed text-[#686A64]">
                     Bitte geben Sie Ihren Namen und den Einmal-Zugangscode ein.
                   </p>
                 </div>
 
                 <form onSubmit={handleVerify} className="space-y-4">
                   <label className="block">
-                    <span className="mb-2 block text-center font-mono text-[10px] uppercase tracking-[0.24em] text-white/80">
+                    <span className="mb-2 block text-center font-mono text-[10px] uppercase tracking-[0.24em] text-[#686A64]">
                       Ihr Name
                     </span>
                     <input
@@ -241,11 +241,11 @@ const DokumentHochladen = () => {
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Vor- und Nachname"
                       autoComplete="name"
-                      className="block w-full border border-white/20 bg-white/[0.06] px-5 py-4 text-center text-[15px] text-white placeholder-white/55 focus:border-bank-gold/55 focus:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/35"
+                      className="block w-full border border-[#D8D3C9] bg-white px-5 py-4 text-center text-[15px] text-[#252722] placeholder-[#9B9A93] focus:border-[#36A852] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#36A852]/30"
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-center font-mono text-[10px] uppercase tracking-[0.24em] text-white/80">
+                    <span className="mb-2 block text-center font-mono text-[10px] uppercase tracking-[0.24em] text-[#686A64]">
                       Zugangscode
                     </span>
                     <input
@@ -254,22 +254,22 @@ const DokumentHochladen = () => {
                       onChange={(e) => setCode(e.target.value)}
                       placeholder="ABCD1234"
                       autoFocus
-                      className="block w-full border border-white/20 bg-white/[0.06] px-5 py-4 text-center font-mono text-[15px] tracking-[0.18em] text-white placeholder-white/55 focus:border-bank-gold/55 focus:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/35"
+                      className="block w-full border border-[#D8D3C9] bg-white px-5 py-4 text-center font-mono text-[15px] tracking-[0.18em] text-[#252722] placeholder-[#9B9A93] focus:border-[#36A852] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#36A852]/30"
                     />
                   </label>
                   <button
                     type="submit"
                     disabled={verifying}
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 border border-bank-gold/70 bg-bank-gold/15 font-mono text-[10.5px] font-medium uppercase tracking-[0.28em] text-white transition-all hover:border-bank-gold hover:bg-bank-gold/25 disabled:opacity-50"
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 border border-[#36A852] bg-[#36A852] font-mono text-[10.5px] font-medium uppercase tracking-[0.28em] text-white transition-all hover:border-[#218739] hover:bg-[#218739] disabled:opacity-50"
                   >
                     {verifying ? 'Wird geprüft…' : 'Weiter'}
                     <ArrowUpRight className="h-4 w-4" strokeWidth={1.5} />
                   </button>
                 </form>
 
-                <div className="mt-8 flex items-center justify-center gap-2 border-t border-white/10 pt-6">
-                  <ShieldCheck className="h-4 w-4 text-bank-gold" strokeWidth={1.5} />
-                  <span className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-white/75">
+                <div className="mt-8 flex items-center justify-center gap-2 border-t border-[#D8D3C9] pt-6">
+                  <ShieldCheck className="h-4 w-4 text-[#36A852]" strokeWidth={1.5} />
+                  <span className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-[#686A64]">
                     Einmal-Code · Verschlüsselt
                   </span>
                 </div>
