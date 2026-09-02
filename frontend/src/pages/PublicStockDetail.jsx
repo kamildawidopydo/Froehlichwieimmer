@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, ExternalLink, Info } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
+
+const StockPriceChart = lazy(() => import('@/components/stock/StockPriceChart'));
+const StockFundamentals = lazy(() => import('@/components/stock/StockFundamentals'));
 
 const API_BASE = process.env.REACT_APP_BACKEND_URL;
 
@@ -205,20 +208,11 @@ function StockContent({ stock }) {
         </div>
       </section>
 
-      {/* CHART / DATA HINT — honest note, no fabricated data */}
-      <section className="mt-12 rounded-2xl border border-bank-border bg-bank-panel p-8 dark:bg-bank-surface sm:p-10" data-testid="public-stock-chart-placeholder">
-        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-bank-primary-strong">
-          Historischer Kursverlauf
-        </p>
-        <div className="mt-6 flex items-start gap-3">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-bank-text-muted" strokeWidth={LUCIDE_STROKE} />
-          <p className="text-[13.5px] leading-relaxed text-bank-text-muted">
-            Für einzelne Aktien stellen wir aktuell keinen eigenen Kurschart bereit — nur verifizierte
-            Analystenschätzungen mit Quellenangabe. Für tiefergehende Kursverläufe verweisen wir auf die
-            offizielle Quelle des jeweiligen Research-Anbieters.
-          </p>
-        </div>
-      </section>
+      {/* CHART & FUNDAMENTALS — real yfinance data only, hidden when unavailable */}
+      <Suspense fallback={null}>
+        <StockPriceChart symbol={stock.ticker} />
+        <StockFundamentals symbol={stock.ticker} currentPrice={current} />
+      </Suspense>
 
       {/* DISCLAIMER */}
       <p className="mt-10 max-w-[42rem] text-[12px] leading-relaxed text-bank-text-muted">

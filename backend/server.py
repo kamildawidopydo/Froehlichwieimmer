@@ -4257,6 +4257,10 @@ app.include_router(_stock_research_routes.router)
 from routes import news as _news_routes  # noqa: E402
 app.include_router(_news_routes.router)
 
+# Session 80.72 — Public single-stock endpoints (history + fundamentals)
+from routes import stock_public as _stock_public_routes  # noqa: E402
+app.include_router(_stock_public_routes.router)
+
 # Product-Inquiry-Router (Session 78.6 — Stub entfernt, direkt registriert)
 from routes import product_inquiry as _product_inquiry_routes  # noqa: E402
 app.include_router(_product_inquiry_routes.router)
