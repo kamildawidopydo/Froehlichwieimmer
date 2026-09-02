@@ -266,6 +266,19 @@ def _score_article(doc: dict, pat: re.Pattern) -> int:
     return score
 
 
+def detect_related_symbols(*, title: str = "", subtitle: str = "", summary: str = "") -> List[str]:
+    """Single source of truth: return the deduped list of ticker symbols
+    whose alias matched title/subtitle/summary via strict word boundaries.
+    Called at synthesis time to populate `news_articles.related_symbols`."""
+    fake = {"title": title or "", "subtitle": subtitle or "", "summary": summary or ""}
+    hits: List[str] = []
+    for sym, pat in _ALIAS_PATTERNS.items():
+        if _score_article(fake, pat) > 0:
+            hits.append(sym)
+    # Preserve insertion order, dedup (dict.fromkeys preserves order).
+    return list(dict.fromkeys(hits))
+
+
 def _published_at(doc: dict) -> Optional[datetime]:
     v = doc.get("published_at")
     if isinstance(v, datetime):
@@ -298,11 +311,10 @@ async def stock_news(symbol: str, limit: int = Query(default=5, ge=1, le=10)) ->
     now = _now()
     cutoff = now - timedelta(days=7)
 
-    # Only consider published, non-archived, non-demo articles.
     projection = {
         "slug": 1, "title": 1, "subtitle": 1, "summary": 1, "category": 1,
         "published_at": 1, "source_names": 1, "source_urls": 1,
-        "hero_image_url": 1, "image_url": 1,
+        "hero_image_url": 1, "image_url": 1, "related_symbols": 1,
     }
     cursor = _db.news_articles.find(
         {"status": {"$in": ["published", None]}, "is_archived": {"$ne": True}},
@@ -315,9 +327,15 @@ async def stock_news(symbol: str, limit: int = Query(default=5, ge=1, le=10)) ->
         pub = _published_at(d)
         if not pub or pub < cutoff:
             continue
-        score = _score_article(d, pat)
-        if score <= 0:
-            continue
+        # Priority A: explicit related_symbols tag written by synthesizer.
+        rs = d.get("related_symbols") or []
+        if isinstance(rs, list) and sym in rs:
+            score = 10  # explicit tag beats any alias hit
+        else:
+            # Priority B: legacy alias fallback for docs pre-related_symbols.
+            score = _score_article(d, pat)
+            if score <= 0:
+                continue
         matches.append((score, pub, d))
 
     # Sort: score desc, pub desc.

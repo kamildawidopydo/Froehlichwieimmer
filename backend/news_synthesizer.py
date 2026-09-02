@@ -40,6 +40,22 @@ import feedparser
 import httpx
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
+# Session 80.74 — single source of truth for ticker aliases (see stock_public.py).
+try:
+    from routes.stock_public import detect_related_symbols as _detect_related_symbols
+except Exception:  # noqa: BLE001
+    _detect_related_symbols = None  # graceful fallback: never write related_symbols
+
+
+def _detect_related_symbols_safe(*, title: str, subtitle: str, summary: str) -> list:
+    if _detect_related_symbols is None:
+        return []
+    try:
+        return _detect_related_symbols(title=title, subtitle=subtitle, summary=summary)
+    except Exception:  # noqa: BLE001
+        return []
+
+
 logger = logging.getLogger("news_synthesizer")
 
 # ---------------------------------------------------------------------------
@@ -1426,6 +1442,11 @@ async def synthesize_pending(db, max_articles: int = 25) -> dict:
             "relevance_score": relevance,
             "target_length": {"min": target[0], "max": target[1]},
             "quality_note": None if ok else reason,
+            "related_symbols": _detect_related_symbols_safe(
+                title=article.get("title") or "",
+                subtitle=article.get("subtitle") or "",
+                summary=article.get("summary") or "",
+            ),
         }
         try:
             await db.news_articles.update_one({"slug": slug}, {"$set": doc}, upsert=True)
