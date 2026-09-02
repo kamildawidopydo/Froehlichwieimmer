@@ -30,7 +30,7 @@ const Sparkline = ({ points, width = 96, height = 26, positive }) => {
   if (!Array.isArray(points) || points.length < 2) {
     return <span className="inline-block" style={{ width, height }} aria-hidden />;
   }
-  const values = points.map((p) => (typeof p === 'number' ? p : (p?.close ?? p?.value ?? p?.y))).filter(Number.isFinite);
+  const values = points.map((p) => (typeof p === 'number' ? p : (p?.c ?? p?.close ?? p?.value ?? p?.y))).filter(Number.isFinite);
   if (values.length < 2) return <span className="inline-block" style={{ width, height }} aria-hidden />;
   const min = Math.min(...values), max = Math.max(...values);
   const range = max - min || 1;
@@ -72,9 +72,26 @@ const CATEGORY_LABEL = {
   klima: 'Klima', technologie: 'Technologie', industrie: 'Industrie',
   mobilitaet: 'Mobilität', gesundheit: 'Gesundheit', sicherheit: 'Sicherheit',
   wissen: 'Wissen', 'fonds-etfs': 'Fonds & ETFs',
+  automobil: 'Automobil', handel: 'Handel', luxus: 'Luxus',
+  medien: 'Medien', startups: 'Startups', finanzen: 'Finanzen',
+  immobilien: 'Immobilien', arbeit: 'Arbeit', pharma: 'Pharma',
+  kryptowaehrungen: 'Kryptowährungen', nachhaltigkeit: 'Nachhaltigkeit',
+  banking: 'Banking', logistik: 'Logistik', konsum: 'Konsum',
 };
 
 const humanize = (raw) => CATEGORY_LABEL[raw] || (raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : '');
+
+/**
+ * Einheitliche Publisher-Anzeige.
+ * - Fröhlich-eigene Artikel (`content_type !== 'aggregated'`) → "Fröhlich Redaktion".
+ * - Aggregierte Artikel      → `source_name` aus Backend.
+ *   Fehlt der Publisher, wird nichts erfunden (kein "Externer Publisher"-Fake).
+ */
+const publisherOf = (it) => {
+  if (!it) return null;
+  if (it.content_type === 'aggregated') return it.source_name || null;
+  return 'Fröhlich Redaktion';
+};
 
 const timeAgo = (iso) => {
   if (!iso) return '';
@@ -99,7 +116,8 @@ const fmtStamp = (iso) => {
 
 const MarketRow = ({ tile, sparkline, prominent }) => {
   const { primary } = formatDisplayPrice(tile);
-  const pct = tile.change_percent;
+  // Backend liefert change_percent; marketService normalisiert das zu changePct.
+  const pct = tile.changePct ?? tile.change_percent;
   const hasPct = Number.isFinite(pct);
   const up = hasPct && pct >= 0;
   const Icon = up ? TrendingUp : TrendingDown;
@@ -203,13 +221,13 @@ const MarketSidebar = () => {
           {state.lastUpdated && (
             <p className="mt-4 text-[10.5px] leading-relaxed text-bank-text-muted" data-testid="home-market-sidebar-timestamp">
               <span className="text-bank-text-strong">Kursstand:</span>{' '}
-              <span className="tabular-nums">{fmtStamp(state.lastUpdated)}</span>
+              <time dateTime={state.lastUpdated} className="tabular-nums">{fmtStamp(state.lastUpdated)}</time>
               {state.isDelayed && <><br />Kurse können zeitverzögert sein</>}
             </p>
           )}
           <Link
             to="/news"
-            className="mt-6 inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.18em] text-bank-primary hover:underline"
+            className="mt-6 inline-flex min-h-[44px] items-center gap-1 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-bank-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70 sm:min-h-0 sm:py-0"
             data-testid="home-market-sidebar-more"
           >
             Zum Marktüberblick <ArrowRight size={12} strokeWidth={1.8} />
@@ -221,6 +239,91 @@ const MarketSidebar = () => {
 };
 
 /* ─── Linke Spalte: Nachrichten-Hauptbereich (strukturell) ───────────────── */
+
+/* ─── CompactWithTabs: client-side category tabs over the compact list ── */
+const TAB_ORDER = ['maerkte', 'unternehmen', 'wirtschaft', 'zinsen', 'rohstoffe', 'technologie'];
+const CompactWithTabs = ({ items }) => {
+  const [active, setActive] = useState('all');
+  // Only tabs with actually-present items (after dedup upstream)
+  const counts = useMemo(() => {
+    const m = {};
+    items.forEach((it) => { if (it.category) m[it.category] = (m[it.category] || 0) + 1; });
+    return m;
+  }, [items]);
+  const tabs = useMemo(() => {
+    const available = TAB_ORDER.filter((c) => (counts[c] || 0) > 0);
+    return [{ id: 'all', label: 'Alle', count: items.length }, ...available.map((c) => ({ id: c, label: humanize(c), count: counts[c] }))];
+  }, [counts, items.length]);
+  const visible = active === 'all' ? items : items.filter((it) => it.category === active);
+  const onKey = (e, idx) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+    setActive(tabs[next].id);
+    document.getElementById(`compact-tab-${tabs[next].id}`)?.focus();
+  };
+  return (
+    <div className="mt-14 border-t border-bank-border/50 pt-8" data-testid="home-news-compact-list">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">Nachrichten im Überblick</p>
+      </div>
+      <div
+        role="tablist"
+        aria-label="Themen filtern"
+        className="mt-4 flex gap-x-6 gap-y-2 overflow-x-auto border-b border-bank-border/50 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        data-testid="home-news-compact-tablist"
+      >
+        {tabs.map((t, idx) => {
+          const sel = active === t.id;
+          return (
+            <button
+              key={t.id}
+              id={`compact-tab-${t.id}`}
+              role="tab"
+              type="button"
+              aria-selected={sel}
+              tabIndex={sel ? 0 : -1}
+              onClick={() => setActive(t.id)}
+              onKeyDown={(e) => onKey(e, idx)}
+              className={`-mb-px shrink-0 whitespace-nowrap border-b-2 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70 ${sel ? 'border-bank-primary text-bank-primary' : 'border-transparent text-bank-text-muted hover:text-bank-text'}`}
+              data-testid={`home-news-compact-tab-${t.id}`}
+            >
+              {t.label}
+              <span className="ml-1 tabular-nums text-[10px] opacity-70">{t.count}</span>
+            </button>
+          );
+        })}
+      </div>
+      <ul className="mt-2 divide-y divide-bank-border/50" data-testid="home-news-compact-items">
+        {visible.map((it) => {
+          const cat = humanize(it.category);
+          const publisher = publisherOf(it);
+          const t = timeAgo(it.published_at);
+          return (
+            <li key={it.slug}>
+              <Link
+                to={`/nachrichten/${it.slug}`}
+                className="group grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70 sm:grid-cols-[76px_1fr_auto]"
+                data-testid={`home-news-compact-${it.slug}`}
+              >
+                <time
+                  dateTime={it.published_at || undefined}
+                  className="tabular-nums font-mono text-[11px] uppercase tracking-[0.16em] text-bank-text-muted sm:text-[11.5px]"
+                >{t || '—'}</time>
+                <h5 className="col-start-2 font-serif text-[15px] leading-snug text-bank-text group-hover:text-bank-primary">{it.title}</h5>
+                <span className="col-span-2 flex flex-wrap items-center gap-x-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-bank-text-muted sm:col-span-1 sm:col-start-3 sm:justify-self-end sm:self-center">
+                  {cat && <span className="text-bank-gold">{cat}</span>}
+                  {cat && publisher && <span aria-hidden className="normal-case">·</span>}
+                  {publisher && <span className="normal-case tracking-normal">{publisher}</span>}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
 
 const NewsMain = () => {
   const [state, setState] = useState({ items: [], loading: true, error: false });
@@ -260,9 +363,7 @@ const NewsMain = () => {
   compactListItems.forEach((it) => usedSlugs.add(it.slug));
 
   const heroCategory = heroItem ? humanize(heroItem.category) : '';
-  const heroPublisher = heroItem
-    ? (heroItem.content_type === 'aggregated' ? (heroItem.source_name || 'Externer Publisher') : 'Fröhlich Redaktion')
-    : '';
+  const heroPublisher = publisherOf(heroItem);
   const heroTime = heroItem ? timeAgo(heroItem.published_at) : '';
 
   return (
@@ -285,14 +386,15 @@ const NewsMain = () => {
           <Link
             to={`/nachrichten/${heroItem.slug}`}
             data-testid="home-news-top"
-            className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
+            className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70"
           >
             <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100">
               <SafeNewsImage
                 src={heroItem.image_url}
                 category={heroItem.category}
                 alt={heroItem.title || ''}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.015]"
+                loading="eager"
+                className="h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.015]"
               />
             </div>
             <div className="mt-5">
@@ -307,7 +409,12 @@ const NewsMain = () => {
                 {heroTime && (
                   <>
                     <span className="text-bank-border" aria-hidden>·</span>
-                    <span className="text-bank-text-muted normal-case tracking-normal">{heroTime}</span>
+                    <time
+                      dateTime={heroItem.published_at || undefined}
+                      className="text-bank-text-muted normal-case tracking-normal"
+                    >
+                      {heroTime}
+                    </time>
                   </>
                 )}
               </div>
@@ -353,15 +460,13 @@ const NewsMain = () => {
               ))
             : secondaryItems.map((it) => {
                 const cat = humanize(it.category);
-                const publisher = it.content_type === 'aggregated'
-                  ? (it.source_name || 'Externer Publisher')
-                  : 'Fröhlich Redaktion';
+                const publisher = publisherOf(it);
                 const t = timeAgo(it.published_at);
                 return (
                   <li key={it.slug}>
                     <Link
                       to={`/nachrichten/${it.slug}`}
-                      className="group flex items-start gap-4 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
+                      className="group flex items-start gap-4 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70"
                       data-testid={`home-news-secondary-${it.slug}`}
                     >
                       <div className="relative aspect-[16/10] w-[120px] shrink-0 overflow-hidden bg-neutral-100 sm:w-[140px]">
@@ -369,7 +474,7 @@ const NewsMain = () => {
                           src={it.image_url}
                           category={it.category}
                           alt={it.title || ''}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                          className="h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.02]"
                         />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -382,7 +487,7 @@ const NewsMain = () => {
                         <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-bank-text-muted">
                           {publisher && <span>{publisher}</span>}
                           {publisher && t && <span aria-hidden>·</span>}
-                          {t && <span>{t}</span>}
+                          {t && <time dateTime={it.published_at || undefined}>{t}</time>}
                         </p>
                       </div>
                     </Link>
@@ -400,15 +505,13 @@ const NewsMain = () => {
         >
           {editorialGridItems.map((it) => {
             const cat = humanize(it.category);
-            const publisher = it.content_type === 'aggregated'
-              ? (it.source_name || 'Externer Publisher')
-              : 'Fröhlich Redaktion';
+            const publisher = publisherOf(it);
             const t = timeAgo(it.published_at);
             return (
               <Link
                 key={it.slug}
                 to={`/nachrichten/${it.slug}`}
-                className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
+                className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70"
                 data-testid={`home-news-editorial-${it.slug}`}
               >
                 <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-100">
@@ -417,7 +520,7 @@ const NewsMain = () => {
                     category={it.category}
                     alt={it.title || ''}
                     loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                    className="h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.02]"
                   />
                 </div>
                 <div className="mt-4">
@@ -437,7 +540,7 @@ const NewsMain = () => {
                   <p className="mt-3 flex flex-wrap items-center gap-x-1.5 text-[11px] text-bank-text-muted">
                     {publisher && <span>{publisher}</span>}
                     {publisher && t && <span aria-hidden>·</span>}
-                    {t && <span>{t}</span>}
+                    {t && <time dateTime={it.published_at || undefined}>{t}</time>}
                   </p>
                 </div>
               </Link>
@@ -446,47 +549,15 @@ const NewsMain = () => {
         </div>
       )}
 
-      {/* ── Kompakte „Weitere Meldungen"-Liste (dichter Info-Block) ─── */}
+      {/* ── Kompakte „Nachrichten im Überblick"-Liste mit Themen-Tabs ─── */}
       {compactListItems.length > 0 && (
-        <div className="mt-14 border-t border-bank-border/50 pt-8" data-testid="home-news-compact-list">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">Weitere Meldungen</p>
-          <ul className="mt-4 divide-y divide-bank-border/50">
-            {compactListItems.map((it) => {
-              const cat = humanize(it.category);
-              const publisher = it.content_type === 'aggregated'
-                ? (it.source_name || null)
-                : 'Fröhlich Redaktion';
-              const t = timeAgo(it.published_at);
-              return (
-                <li key={it.slug}>
-                  <Link
-                    to={`/nachrichten/${it.slug}`}
-                    className="group grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 sm:grid-cols-[76px_1fr_auto]"
-                    data-testid={`home-news-compact-${it.slug}`}
-                  >
-                    <span className="tabular-nums font-mono text-[11px] uppercase tracking-[0.16em] text-bank-text-muted sm:text-[11.5px]">
-                      {t || '—'}
-                    </span>
-                    <h5 className="col-start-2 font-serif text-[15px] leading-snug text-bank-text group-hover:text-bank-primary">
-                      {it.title}
-                    </h5>
-                    <span className="col-span-2 flex flex-wrap items-center gap-x-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-bank-text-muted sm:col-span-1 sm:col-start-3 sm:justify-self-end sm:self-center">
-                      {cat && <span className="text-bank-gold">{cat}</span>}
-                      {cat && publisher && <span aria-hidden className="normal-case">·</span>}
-                      {publisher && <span className="normal-case tracking-normal">{publisher}</span>}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <CompactWithTabs items={compactListItems} />
       )}
 
       {/* Einziger Haupt-CTA am Ende des News-Bereichs */}
       <Link
         to="/nachrichten"
-        className="mt-10 inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.18em] text-bank-primary hover:underline"
+        className="mt-10 inline-flex min-h-[44px] items-center gap-1 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-bank-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70 sm:min-h-0 sm:py-0"
         data-testid="home-news-more"
       >
         Alle Nachrichten <ArrowRight size={12} strokeWidth={1.8} />

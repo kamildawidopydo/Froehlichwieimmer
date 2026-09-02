@@ -1968,3 +1968,39 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 - `/app/frontend/public/index.html` — clean
 - `/app/frontend/src/components/home/HomeNewsPreview.jsx` — Original-Heights (`h-[420px]`, `h-[280px]`, `h-16`, `h-[220px]`)
 - `/app/frontend/src/pages/Home.js` — unverändert
+
+## Session News-Redesign 6/6 — Final Polish, Accessibility & Gesamt-QA (02.09.2026)
+
+**Status**: **READY FOR DEPLOY** — Preview verifiziert, User-Freigabe für Prod-Deploy ausstehend.
+
+**File**: `/app/frontend/src/components/home/HomeNewsMarketShell.jsx`
+
+**Visuelle & inhaltliche Feinschliffe**
+- Neuer Helper `publisherOf(it)` vereinheitlicht Publisher-Anzeige über Hero / Secondary / Editorial / Compact. „Externer Publisher"-Fake-Label entfernt (Regel: keine Quellen erfinden). Fehlt `source_name`, wird der Publisher-Chip stumm ausgeblendet.
+- `CATEGORY_LABEL` um 14 gängige DE-Finanz-Slugs erweitert (automobil, handel, luxus, medien, startups, finanzen, immobilien, arbeit, pharma, kryptowaehrungen, nachhaltigkeit, banking, logistik, konsum) — keine hässlichen Raw-Slugs mehr.
+- Semantisches `<time dateTime={iso}>` in Hero-Meta, Secondary-Zeile, Editorial-Grid, Compact-Zeit-Spalte und Markt-Sidebar-Kursstand.
+
+**Accessibility & Interaktion**
+- Focus-Ring von `ring-bank-primary/40` → `/70` verstärkt — klar sichtbar für Keyboard-Nutzer.
+- `motion-safe:` Prefix auf allen `group-hover:scale`-Transforms (Hero, Secondary-Bild, Editorial-Bild) — respektiert `prefers-reduced-motion`.
+- Text-CTAs „Alle Nachrichten" & „Zum Marktüberblick": `min-h-[44px]` auf Mobile, `sm:min-h-0` auf Desktop — WCAG-konforme Tap-Größe ohne visuelles Aufblähen.
+- Beide CTAs erhalten `focus-visible:ring-2 ring-bank-primary/70`.
+- Kategorie-Tabs (aus Schritt 5): `role="tablist"` / `role="tab"` / `aria-selected` / ArrowLeft/Right — Tastatur verifiziert (aktives Element wechselt via `document.activeElement.id`).
+
+**Performance**
+- Hero-Bild: `loading="eager"` (vorher default `lazy`) — verbessert LCP für die dominante Story.
+- Keine neue Polling-Logik. Kein N+1. Sparklines weiter Modul-Cache mit 60s TTL.
+- Requests unverändert: 1× `/api/news/nachrichten?limit=16`, 1× `/api/news-markte/market/overview`, 6× `/api/news-markte/market/sparkline/{symbol}` (parallel via `Promise.all`).
+
+**Bugfixes**
+1. **Change-Percent zeigte „—" statt echter Werte**: `tile.change_percent` → `tile.changePct ?? tile.change_percent`. `marketService.mapQuoteToRow` normalisiert das Backend-Feld zu camelCase; die Komponente las den alten snake_case-Key und zeigte deshalb `—` für alle 6 Instrumente. Jetzt sichtbar: DAX -0,8%, S&P 500 -0,7%, Nasdaq-100 -1,3%, Gold +0,2%, Brent -0,4%, EUR/USD -0,2%.
+2. **Sparklines waren leer**: Backend liefert Punkte im Format `{t, c}`, aber der Renderer las `.close/.value/.y`. Ergänzt um `.c` als ersten Schlüssel. Jetzt echte SVG-Charts (24 Punkte / 60min-Intervall).
+
+**QA-Ergebnisse**
+- Desktop 1920: 0 Horizontal-Overflow, 0 Console-Errors, Focus-Ring sichtbar, 7 Sparkline-Paths (1 prominent + 5 kleine, DJI ohne Sparkline-Response), Kursstand-Timestamp korrekt als `<time>`.
+- Mobile 390: 0 Horizontal-Overflow, 0 kleine Tap-Targets (<36px). Reihenfolge verifiziert: Hero → Sidebar unter Hero (Empty-State-Fall). Bei vorhandenen News: Hero → Secondary → Editorial → Compact → Market.
+- News-API liefert derzeit `items: 0` → Empty-State „Redaktion in Vorbereitung" greift sauber, keine leeren Grid-Flächen, keine Tabs ohne Inhalt.
+- Keine Fake-Daten, keine Demo-Charts, keine erfundenen Publisher.
+- CTA-Zählung im News-Bereich: 1× „Alle Nachrichten" + 1× „Zum Marktüberblick" ✓.
+
+**Nicht deployt** — wartet auf ausdrückliche User-Freigabe.
