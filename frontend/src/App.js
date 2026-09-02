@@ -21,6 +21,7 @@ import useProtectSiteImages from '@/hooks/useProtectSiteImages';
 import '@/App.css';
 
 const Home = lazy(() => import('@/pages/Home'));
+const PublicStockDetail = lazy(() => import('@/pages/PublicStockDetail'));
 const SavingsComparison = lazy(() => import('@/pages/SavingsComparison'));
 const CalculatorPage = lazy(() => import('@/pages/Calculator'));
 const HowItWorks = lazy(() => import('@/pages/HowItWorks'));
@@ -746,11 +747,7 @@ function App() {
                   <Route path="/handeln" element={<HandelnHub />} />
                   <Route
                     path="/aktien/:symbol"
-                    element={
-                      <ProtectedRoute>
-                        <StockDetailRedirect />
-                      </ProtectedRoute>
-                    }
+                    element={<PublicStockDetail />}
                   />
                 </Route>
 

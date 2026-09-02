@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import axios from 'axios';
-import { LineChart } from 'lucide-react';
+import { ArrowRight, LineChart } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
@@ -105,14 +106,28 @@ const ResearchTable = ({ rows }) => (
           {rows.map((row, idx) => (
             <tr
               key={`${row.ticker}-${idx}`}
-              className="border-b border-bank-border/60 transition-colors last:border-b-0 hover:bg-bank-mint/25"
+              className="group cursor-pointer border-b border-bank-border/60 transition-colors last:border-b-0 hover:bg-bank-mint/25 focus-within:bg-bank-mint/30"
               data-testid={`stock-research-row-${row.ticker.toLowerCase()}`}
+              onClick={(e) => {
+                // Row click navigates; keyboard uses the anchor.
+                const link = e.currentTarget.querySelector('a[data-row-link]');
+                if (link && e.target.tagName !== 'A') link.click();
+              }}
             >
               <td className="px-6 py-5 align-top">
-                <p className="text-[15px] font-semibold leading-tight text-bank-text">{row.company}</p>
-                <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.2em] text-bank-text-muted">
-                  {row.ticker}
-                </p>
+                <Link
+                  to={`/aktien/${encodeURIComponent(row.ticker)}`}
+                  data-row-link
+                  className="block outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded"
+                  aria-label={`${row.company} · Details öffnen`}
+                >
+                  <p className="text-[15px] font-semibold leading-tight text-bank-text group-hover:text-bank-primary-strong transition-colors">
+                    {row.company}
+                  </p>
+                  <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.2em] text-bank-text-muted">
+                    {row.ticker}
+                  </p>
+                </Link>
               </td>
               <td className="px-6 py-5 text-right align-top">
                 <span className="rate-figure text-[15px] tabular-nums text-bank-text" data-numeric>
@@ -143,8 +158,17 @@ const ResearchTable = ({ rows }) => (
                   </p>
                 ) : null}
               </td>
-              <td className="px-6 py-5 text-right align-top font-mono text-[11.5px] uppercase tracking-[0.16em] text-bank-text-muted">
-                {formatDate(row.asOfDate)}
+              <td className="px-6 py-5 text-right align-top">
+                <div className="flex items-center justify-end gap-3">
+                  <span className="font-mono text-[11.5px] uppercase tracking-[0.16em] text-bank-text-muted">
+                    {formatDate(row.asOfDate)}
+                  </span>
+                  <ArrowRight
+                    className="h-3.5 w-3.5 shrink-0 text-bank-text-muted opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100"
+                    strokeWidth={LUCIDE_STROKE}
+                    aria-hidden
+                  />
+                </div>
               </td>
             </tr>
           ))}
@@ -155,7 +179,12 @@ const ResearchTable = ({ rows }) => (
     {/* Mobile — kompakte Research-Cards */}
     <ul className="divide-y divide-bank-border md:hidden">
       {rows.map((row, idx) => (
-        <li key={`m-${row.ticker}-${idx}`} className="px-5 py-5">
+        <li key={`m-${row.ticker}-${idx}`}>
+          <Link
+            to={`/aktien/${encodeURIComponent(row.ticker)}`}
+            className="block px-5 py-5 transition-colors hover:bg-bank-mint/25 focus-visible:bg-bank-mint/30 focus-visible:outline-none"
+            aria-label={`${row.company} · Details öffnen`}
+          >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="truncate text-[15px] font-semibold text-bank-text">{row.company}</p>
@@ -193,13 +222,17 @@ const ResearchTable = ({ rows }) => (
                 <dd className="mt-0.5 text-[11.5px] text-bank-text-muted">Quelle: {row.source}</dd>
               ) : null}
             </div>
-            <div className="col-span-2">
-              <dt className="font-mono text-[10px] uppercase tracking-[0.2em] text-bank-text-muted">Datenstand</dt>
-              <dd className="mt-0.5 font-mono text-[11.5px] uppercase tracking-[0.14em] text-bank-text-muted">
-                {formatDate(row.asOfDate)}
-              </dd>
+            <div className="col-span-2 flex items-center justify-between">
+              <div>
+                <dt className="font-mono text-[10px] uppercase tracking-[0.2em] text-bank-text-muted">Datenstand</dt>
+                <dd className="mt-0.5 font-mono text-[11.5px] uppercase tracking-[0.14em] text-bank-text-muted">
+                  {formatDate(row.asOfDate)}
+                </dd>
+              </div>
+              <ArrowRight className="h-4 w-4 text-bank-text-muted" strokeWidth={LUCIDE_STROKE} aria-hidden />
             </div>
           </dl>
+          </Link>
         </li>
       ))}
     </ul>
