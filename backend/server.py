@@ -2721,6 +2721,51 @@ async def _yf_call(yf_symbol: Optional[str]) -> Optional[dict]:
     return await asyncio.to_thread(_yf_fetch_sync, yf_symbol)
 
 
+# --- yfinance intraday history (Session Market-Reliability) -----------------
+# yfinance `Ticker.history(period="2d", interval="1h")` liefert echte
+# stündliche Schlusskurse für Indizes, Rohstoff-Futures und FX-Paare — die
+# gleichen realen Level, die auch `_yf_fetch_sync` als `last_price` sieht.
+# Zurückgegeben werden bis zu _SPARKLINE_POINTS (24) jüngste Punkte in der
+# Form [{t: ISO-8601, c: float}, ...]. Kein Random, keine ETF-Proxies, keine
+# hardcodierten Werte. Bei Fehler / <2 Punkten → None (der Endpoint gibt
+# dann sauber `points: []` mit `data_source: "unavailable"` zurück).
+
+def _yf_history_sync(yf_symbol: str) -> Optional[List[dict]]:
+    try:
+        import yfinance as yf  # type: ignore
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        t = yf.Ticker(yf_symbol)
+        hist = t.history(period="2d", interval="1h", prepost=False, auto_adjust=False)
+        if hist is None or hist.empty:
+            return None
+        pts: List[dict] = []
+        for idx, row in hist.iterrows():
+            try:
+                close = float(row["Close"])
+            except (TypeError, ValueError, KeyError):
+                continue
+            if not (close > 0):
+                continue
+            # pandas Timestamp → tz-aware ISO. Falls naive, als UTC interpretieren.
+            ts = idx.to_pydatetime() if hasattr(idx, "to_pydatetime") else idx
+            if getattr(ts, "tzinfo", None) is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            pts.append({"t": ts.astimezone(timezone.utc).isoformat(), "c": round(close, 4)})
+        pts = pts[-_SPARKLINE_POINTS:]
+        return pts if len(pts) >= 2 else None
+    except Exception as exc:  # noqa: BLE001
+        logger.info("yfinance history %s error: %s", yf_symbol, str(exc)[:120])
+        return None
+
+
+async def _yf_history_call(yf_symbol: Optional[str]) -> Optional[List[dict]]:
+    if not yf_symbol:
+        return None
+    return await asyncio.to_thread(_yf_history_sync, yf_symbol)
+
+
 async def _av_call(params: dict) -> Optional[dict]:
     """Perform a single Alpha Vantage GET. Returns parsed JSON dict or None on any failure/limit."""
     if not ALPHA_VANTAGE_KEY:
@@ -3321,28 +3366,11 @@ async def watchlist_search(q: str = "", limit: int = 12, user: dict = Depends(ge
 
 # --- Sparklines ------------------------------------------------------------
 
-# Only the four flagship indices (per Phase 2b scope). Any other symbol
-# returns a deterministic synthetic fallback so charts never break.
-_SPARKLINE_SUPPORTED = {"DAX", "SPX", "NDX", "DJI"}
+# Alle Symbole, für die der Provider (yfinance primär, Alpha Vantage optional)
+# nachweislich echte historische Daten liefert. Wird per QA-Skript verifiziert.
+_SPARKLINE_SUPPORTED = {"DAX", "SPX", "NDX", "DJI", "GOLD", "SILVER", "OIL", "EURUSD"}
 _SPARKLINE_TTL_S = 900   # 15 min per user requirement
 _SPARKLINE_POINTS = 24   # ~1 trading day at hourly resolution
-
-
-def _synthetic_sparkline(cfg: dict, seed_price: float) -> List[dict]:
-    """Deterministic synthetic sparkline based on the fallback/current price.
-    Used when the provider is unavailable. Marked upstream via data_source."""
-    rnd = random.Random(hash(cfg["symbol"]) & 0xFFFFFFFF)
-    points: List[dict] = []
-    price = seed_price
-    base_iso = _now_utc() - timedelta(hours=_SPARKLINE_POINTS)
-    for i in range(_SPARKLINE_POINTS):
-        drift = (rnd.random() - 0.5) * (seed_price * 0.006)
-        price = max(seed_price * 0.985, min(seed_price * 1.015, price + drift))
-        points.append({
-            "t": (base_iso + timedelta(hours=i)).isoformat(),
-            "c": round(price, 4),
-        })
-    return points
 
 
 def _parse_intraday(data: dict) -> Optional[List[dict]]:
@@ -3381,23 +3409,34 @@ async def market_sparkline(symbol: str):
             "provider_configured": bool(ALPHA_VANTAGE_KEY),
         }
 
-    source = "fallback"
+    source = "unavailable"
     points: Optional[List[dict]] = None
-    if ALPHA_VANTAGE_KEY and cfg.get("av_symbol"):
+
+    # 1) yfinance primary — echte Intraday-Historie (Session Market-Reliability).
+    #    Deckt Indizes (^GDAXI/^GSPC/^NDX/^DJI), Futures (GC=F/SI=F/BZ=F), FX (EURUSD=X).
+    yf_points = await _yf_history_call(cfg.get("yf_symbol"))
+    if yf_points:
+        points = yf_points
+        source = "yfinance"
+
+    # 2) Alpha Vantage secondary — nur genutzt, wenn Key konfiguriert und yfinance leer war.
+    if not points and ALPHA_VANTAGE_KEY and cfg.get("av_symbol"):
         data = await _av_call({
             "function": "TIME_SERIES_INTRADAY",
             "symbol": cfg["av_symbol"],
             "interval": "60min",
             "outputsize": "compact",
         })
-        points = _parse_intraday(data) if data else None
-        if points:
+        av_points = _parse_intraday(data) if data else None
+        if av_points:
+            points = av_points
             source = "alpha_vantage"
 
+    # 3) Kein synthetischer Fallback (Regel: keine Fake-Charts). Statt dessen
+    #    liefern wir points:[] mit data_source:"unavailable" — das Frontend
+    #    zeigt sauber "keinen Chart" ohne Fake-Linie und ohne Layout-Sprung.
     if not points:
-        # deterministic fallback based on current fallback price
-        seed = _FALLBACK_QUOTES.get(sym, {}).get("price", 100.0)
-        points = _synthetic_sparkline(cfg, seed)
+        points = []
 
     prev_close = round(points[0]["c"], 4) if points else None
     expires_at = _now_utc() + timedelta(seconds=_SPARKLINE_TTL_S)

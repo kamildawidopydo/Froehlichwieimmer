@@ -2072,3 +2072,37 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 - Feed liefert 29 Artikel im 48h-Fenster, aktuelle Titel („Steigende Ölpreise…", „Israels Notenbank überrascht mit Leitzinssenkung", „EZB unter Druck: Inflation im Euroraum auf Dreijahreshoch") — echte Handelsblatt/Bloomberg-Cluster synthetisiert.
 
 **Nächster Beobachtungspunkt**: Erster autonomer Platform-Cron-Fire (`0 * * * *` Fetch bzw. `10 * * * *` Synth). Sichtbar wird das als neuer `last_started_at`-Timestamp mit `trigger_source ≠ post_deploy/manual`.
+
+## Session Market-Reliability — Sparkline-Support vollständig erweitert (02.09.2026, 13:35 UTC)
+
+**Ausgangslage**
+- Sparkline-Endpoint war auf Allowlist `{DAX, SPX, NDX, DJI}` beschränkt → 404 für GOLD/SILVER/OIL/EURUSD.
+- Für DAX/SPX/NDX/DJI lief der Endpoint über `_synthetic_sparkline` mit `data_source: "fallback"` und ETF-Proxy-Seed-Preisen (DAX ~47.7 statt echter 25.860) — technisch Fake-Charts, im Widerspruch zur Regel „keine simulierten Linien".
+
+**Fix**
+- `_yf_history_call(yf_symbol)` neu — nutzt `yfinance.Ticker.history(period="2d", interval="1h")`, gibt bis zu 24 echte stündliche Schlusskurse `{t, c}` zurück (identische Quelle wie `_yf_fetch_sync` für Live-Kurse).
+- `market_sparkline` neu geordnet: **yfinance primär** → Alpha Vantage (falls Key gesetzt) → `points: []` mit `data_source: "unavailable"`. `_synthetic_sparkline` entfernt.
+- Allowlist `_SPARKLINE_SUPPORTED` erweitert: `{DAX, SPX, NDX, DJI, GOLD, SILVER, OIL, EURUSD}`.
+- Cache-Verhalten unverändert (900 s TTL, Modul-Cache-Struktur bleibt).
+
+**QA-Ergebnisse Preview (Cache leergeräumt vor Test)**
+
+| Symbol | HTTP | data_source | interval | points | echte Range |
+|---|---|---|---|---|---|
+| DAX | 200 | yfinance | 60min | 16 | 26.173 → 25.858 |
+| SPX | 200 | yfinance | 60min | 8 | 7.653 → 7.638 |
+| NDX | 200 | yfinance | 60min | 8 | 29.114 → 29.030 |
+| DJI | 200 | yfinance | 60min | 8 | 53.137 → 52.955 |
+| GOLD | 200 | yfinance | 60min | 24 | 4.413 → 4.391 (USD/oz) |
+| OIL | 200 | yfinance | 60min | 24 | 92.59 → 94.43 (USD/bbl) |
+| EURUSD | 200 | yfinance | 60min | 24 | 1.1621 → 1.1600 |
+| SILVER | 200 | yfinance | 60min | 24 | 65.48 → 65.28 (USD/oz) |
+
+**Frontend-QA (Preview)**
+- Desktop 1920: MARKET_ROWS=6, inline SVG-Paths=6, prominent SVG=1 → **7 Sparklines rendern** ✓, DESKTOP_H_OVERFLOW=0, **SPARKLINE_404s=0** (nur 2 pre-existing `/api/auth/me` 401)
+- Mobile 390: MOBILE_H_OVERFLOW=0, MOBILE_SPARKLINE_404=0
+- Preise jetzt echt: DAX **25.860,51** (statt 47.7 ETF-Proxy), SPX 7.636,56, NDX 29.031,95, Gold 3.784,91 €/Feinunze, Brent 81,41 €/Barrel, EUR/USD 1,1600
+- Change-%, Kursstand, Delay-Hinweis, CTAs, Layout, Farben, Typography — alles unverändert
+- Kein neuer Console-/Network-Error
+
+**Gesamtstatus: READY FOR DEPLOY** — Preview-only, kein Deploy ausgeführt.
