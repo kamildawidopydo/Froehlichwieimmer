@@ -1,97 +1,19 @@
 crons:
-  # RSS-Feed-Refresh strikt stündlich (0 * * * *). Mongo-Lock in fetch_feeds()
-  # verhindert parallele Läufe (z. B. mit Post-Deploy-Fetch).
+  # Stündlicher RSS-Fetch (Roh-Items nach news_raw). Endpoint acked 2xx sofort
+  # und feuert die Arbeit via asyncio.create_task (Bearer via WEBHOOK_CRON_SECRET).
   - name: news-fetch-feeds
-    schedule: "0 * * * *"
-    endpoint: "/api/news/admin/fetch-feeds?trigger=hourly_cron"
+    description: "Stündlich RSS-Feeds abrufen und in news_raw speichern"
+    cron: "0 * * * *"
+    endpoint: "{{BASE_URL}}/api/cron/news-fetch-feeds"
     method: POST
-    auth: admin
-    description: "Stündlich alle RSS-Feeds abrufen und in news_raw speichern."
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
 
-  # Synthese läuft 10 Min nach dem Fetch, damit alle Feeds sicher persistiert
-  # sind. Gruppiert neue Roh-Items thematisch und erzeugt konsolidierte Artikel.
+  # Stündliche News-Synthese via Claude Sonnet 5. Läuft 10 Min nach dem Fetch,
+  # damit alle Feeds persistiert sind. Long-running (~5-10 Min) — daher als
+  # Background-Task, damit die ~5s Cron-Ack-Deadline eingehalten wird.
   - name: news-synthesize
-    schedule: "10 * * * *"
-    endpoint: "/api/news/admin/synthesize?max_articles=25"
+    description: "Stündlich bis zu 25 konsolidierte Artikel synthetisieren (background)"
+    cron: "10 * * * *"
+    endpoint: "{{BASE_URL}}/api/cron/news-synthesize"
     method: POST
-    auth: admin
-    description: "Stündlich bis zu 25 konsolidierte Fröhlich-Artikel via Claude Sonnet 5 synthetisieren (mit Multi-Source-Merging)."
-
-  - name: price-alerts-check
-    schedule: "*/15 * * * *"
-    endpoint: "/api/alerts/admin/check-triggers"
-    method: POST
-    auth: admin
-    description: "Alle 15 Min aktive Preis-Alerts prüfen und ggf. Kursalarm-Mail versenden (Cooldown 6h)."
-
-  # Freitagvormittag Digest an alle aktiven Newsletter-Abonnenten.
-  # Dedup pro ISO-Woche via Collection `newsletter_digests`.
-  - name: newsletter-weekly-digest
-    schedule: "0 8 * * 5"
-    endpoint: "/api/newsletter/admin/send-weekly-digest"
-    method: POST
-    auth: admin
-    description: "Freitag 08:00 UTC: Wochen-Digest mit den 6 wichtigsten Fröhlich-Artikeln der letzten 7 Tage."
-
-  # Session 75.3 — täglich 02:30 UTC: alle publizierten image_urls neu prüfen
-  # (Sync und Synthese laufen zur vollen bzw. :10 Stunde → keine Kollision).
-  # Externe Bild-Hosts können Fotos nach der Publikation löschen; dieser Sweep
-  # markiert defekte URLs, damit das Frontend-SafeNewsImage sofort auf den
-  # lokalen SVG-Fallback wechselt.
-  - name: news-image-sweep
-    schedule: "30 2 * * *"
-    endpoint: "/api/news/admin/image-sweep"
-    method: POST
-    auth: admin
-    description: "Täglich 02:30 UTC alle publizierten image_urls revalidieren; defekte Links werden auf null gesetzt und markiert."
-
-  # Stock-Research Marktpreise (Session 78.9 — strikt getrennt vom Analystensync).
-  # Ruft ausschließlich den internen Quote-Provider auf; Finnhub wird hier nie
-  # angefasst — schont Free-Tier-Limits.
-  - name: stock-research-sync
-    schedule: "*/45 * * * *"
-    endpoint: "/api/admin/stock-research/sync?sync_type=prices"
-    method: POST
-    auth: admin
-    description: "Alle 45 Min: nur Marktpreise auf publizierten Research-Rows aktualisieren."
-
-  # Analystendaten 2×täglich. Ruft nur den Analystenprovider (Finnhub, wenn
-  # FINNHUB_API_KEY gesetzt; sonst NullAnalystProvider = No-Op).
-  - name: stock-research-analyst-sync
-    schedule: "0 4,16 * * *"
-    endpoint: "/api/admin/stock-research/sync?sync_type=analyst&auto_publish=true"
-    method: POST
-    auth: admin
-    description: "2×täglich: nur Finnhub-Analystendaten holen und (nach Validierung) automatisch veröffentlichen."
-
-  # Social Content Publisher (Session 80.1). ENV-Gate `LINKEDIN_AUTO_PUBLISH_ENABLED`
-  # muss auf `true` gesetzt sein, sonst No-Op. Kleiner Batch, alle 15 Min.
-  - name: social-content-publish
-    schedule: "*/15 * * * *"
-    endpoint: "/api/admin/social-content/publisher/run?limit=3"
-    method: POST
-    auth: admin
-    description: "Alle 15 Min bis zu 3 approved+scheduled LinkedIn-Drafts veröffentlichen (nur wenn LINKEDIN_AUTO_PUBLISH_ENABLED=true)."
-
-  # Social Content Automation (Session 80.0) — LinkedIn-Drafts. Läuft 20 Min
-  # nach der News-Synthese (Synthese: 10 * * * *), damit neue Artikel sofort
-  # als Draft in der Editorial-Queue erscheinen. `auto_publish` gibt es nicht —
-  # Drafts bleiben immer `status="draft"` bis Admin sie freigibt.
-  - name: social-content-generate
-    schedule: "30 * * * *"
-    endpoint: "/api/admin/social-content/generate?limit=5"
-    method: POST
-    auth: admin
-    description: "Stündlich :30 UTC bis zu 5 LinkedIn-Draft-Kandidaten erzeugen."
-
-  # News Retention Archive (P1). Täglich 03:15 UTC — außerhalb der Hauptlast:
-  # Fetch (0:00/stdl.), Synthese (0:10/stdl.), Image-Sweep (02:30), Stock-Analyst
-  # (04:00). Verschiebt Artikel > 90 Tage in `news_articles_archive`, damit die
-  # Live-Collection performant bleibt. Slug-Detail-Lookups fallen auf das Archiv
-  # zurück, damit alte Google-/Social-/Bookmark-Links nicht auf 404 laufen.
-  - name: news-retention-archive
-    schedule: "15 3 * * *"
-    endpoint: "/api/news/admin/retention/archive?batch_size=500"
-    method: POST
-    auth: admin
-    description: "Täglich 03:15 UTC: Artikel > 90 Tage in news_articles_archive verschieben (idempotent, Batch=500)."
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.

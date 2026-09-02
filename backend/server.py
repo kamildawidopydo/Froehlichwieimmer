@@ -3662,6 +3662,79 @@ async def _admin_synthesize(_user: dict = Depends(require_admin), max_articles: 
     return stats
 
 
+# ---------------------------------------------------------------------------
+# Cron-Webhook-Endpoints (Session News-Reliability, 02.09.2026)
+# ---------------------------------------------------------------------------
+# Der Emergent-Cron-Dispatcher hat eine ~5s Ack-Deadline und kann nur Bearer-
+# Auth ausliefern. Die alten `/api/news/admin/*`-Endpoints laufen synchron
+# (Synth: 5–10 Min) und benötigen JWT-Cookie-Auth — passt beides nicht zum
+# Cron-Contract, deshalb wurde bisher KEIN Cron je erfolgreich getriggert
+# (alle Fetch/Synth-Läufe kamen aus `post_deploy`-Triggern).
+#
+# Die neuen Webhook-Endpoints:
+#   - verifizieren Bearer-Token gegen `WEBHOOK_CRON_SECRET`
+#   - antworten sofort mit 202 + run_id
+#   - feuern die eigentliche Arbeit via `asyncio.create_task` im Hintergrund
+#     → keine Cloudflare-/HTTP-Timeout-Abhängigkeit mehr.
+import hmac as _hmac
+import secrets as _secrets
+
+
+def _verify_cron_bearer(auth_header: Optional[str]) -> None:
+    """Bearer-Token gegen `WEBHOOK_CRON_SECRET` in constant time vergleichen."""
+    secret = os.environ.get("WEBHOOK_CRON_SECRET", "")
+    if not secret:
+        # Fail fast — nie öffentlich fallback.
+        raise HTTPException(status_code=500, detail="WEBHOOK_CRON_SECRET not configured")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="missing bearer")
+    provided = auth_header[7:].strip()
+    if not _hmac.compare_digest(provided, secret):
+        raise HTTPException(status_code=401, detail="invalid bearer")
+
+
+async def _cron_news_fetch_feeds(request: Request):
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    _verify_cron_bearer(request.headers.get("authorization"))
+    run_id = _secrets.token_hex(8)
+    started = datetime.now(timezone.utc).isoformat()
+
+    async def _job() -> None:
+        try:
+            stats = await _news_fetch_feeds(db, trigger_source="hourly_cron")
+            logger.info("cron_news_fetch_feeds ok run_id=%s stats=%s", run_id, stats)
+            try:
+                await _news_evaluate_alert(db, _send_email_via_emergent)
+            except Exception:  # noqa: BLE001
+                logger.exception("news_alert evaluate failed (cron fetch)")
+        except Exception:  # noqa: BLE001
+            logger.exception("cron_news_fetch_feeds failed run_id=%s", run_id)
+
+    asyncio.create_task(_job())
+    return {"accepted": True, "run_id": run_id, "job": "news-fetch-feeds", "started_at": started}
+
+
+async def _cron_news_synthesize(request: Request):
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    _verify_cron_bearer(request.headers.get("authorization"))
+    run_id = _secrets.token_hex(8)
+    started = datetime.now(timezone.utc).isoformat()
+
+    async def _job() -> None:
+        try:
+            stats = await _news_synthesize(db, max_articles=25)
+            logger.info("cron_news_synthesize ok run_id=%s stats=%s", run_id, stats)
+            try:
+                await _news_evaluate_alert(db, _send_email_via_emergent)
+            except Exception:  # noqa: BLE001
+                logger.exception("news_alert evaluate failed (cron synth)")
+        except Exception:  # noqa: BLE001
+            logger.exception("cron_news_synthesize failed run_id=%s", run_id)
+
+    asyncio.create_task(_job())
+    return {"accepted": True, "run_id": run_id, "job": "news-synthesize", "started_at": started}
+
+
 async def _admin_news_list(_user: dict = Depends(require_admin), status: Optional[str] = None, limit: int = 50):
     query = {}
     if status:

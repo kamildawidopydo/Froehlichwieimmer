@@ -1050,12 +1050,70 @@ async def _synthesize_article(raw_items: List[dict], *, target: Tuple[int, int] 
     try:
         response = await chat.send_message(user)
         raw = getattr(response, "text", None) or str(response)
-        m = re.search(r"\{.*\}", raw, re.DOTALL)
-        data = json.loads(m.group(0)) if m else json.loads(raw)
     except Exception as exc:  # noqa: BLE001
-        logger.exception("llm_synthesis_failed: %s", exc)
+        logger.exception("llm_call_failed: %s", exc)
+        return None
+    data = _parse_llm_json(raw)
+    if data is None:
+        # Einzelner LLM-JSON-Fehler darf den gesamten Synthese-Lauf nicht
+        # stoppen — Cluster wird geskippt, nächster Cluster läuft weiter.
         return None
     return data
+
+
+# ---------------------------------------------------------------------------
+# LLM-JSON-Robustness (Session News-Reliability)
+# ---------------------------------------------------------------------------
+# Claude Sonnet 5 antwortet gelegentlich mit JSON, das unescaped Newlines
+# oder Steuerzeichen in String-Feldern enthält (z. B. mehrzeiliger `content`).
+# `json.loads` schlägt dann mit "Invalid control character" fehl. Statt den
+# gesamten Cluster zu verlieren, versuchen wir drei Parse-Stufen und geben
+# strukturiert `None` zurück, wenn alle scheitern.
+_JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
+_CTRL_IN_STRING_RE = re.compile(r"(?<!\\)([\x00-\x08\x0b\x0c\x0e-\x1f])")
+
+
+def _parse_llm_json(raw: str) -> Optional[dict]:
+    """Robuster JSON-Parser für LLM-Ausgaben.
+
+    Reihenfolge:
+      1. Strict `json.loads` auf das erste `{...}`-Match.
+      2. `strict=False` (erlaubt Steuerzeichen in Strings).
+      3. Manueller Repair-Pass: escape unescaped Control-Chars, retry.
+    Bei allen Fehlschlägen: Warnung loggen, `None` zurückgeben. Kein
+    Exception-Bubbling, kein Datenverlust anderer Cluster.
+    """
+    if not raw:
+        logger.warning("llm_json_empty_response")
+        return None
+    m = _JSON_OBJECT_RE.search(raw)
+    candidate = m.group(0) if m else raw
+
+    # 1) Strict
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        pass
+
+    # 2) Non-strict (erlaubt \n, \t, ... innerhalb von String-Literalen)
+    try:
+        data = json.loads(candidate, strict=False)
+        logger.info("llm_json_parsed_non_strict len=%d", len(candidate))
+        return data
+    except json.JSONDecodeError as exc:
+        logger.warning("llm_json_non_strict_fail pos=%s msg=%s",
+                       getattr(exc, "pos", "?"), str(exc)[:120])
+
+    # 3) Repair-Pass: escape unescaped C0-Control-Chars
+    repaired = _CTRL_IN_STRING_RE.sub(lambda mo: "\\u%04x" % ord(mo.group(1)), candidate)
+    try:
+        data = json.loads(repaired, strict=False)
+        logger.info("llm_json_repaired len=%d", len(repaired))
+        return data
+    except json.JSONDecodeError as exc:
+        logger.warning("llm_json_repair_fail pos=%s msg=%s",
+                       getattr(exc, "pos", "?"), str(exc)[:200])
+        return None
 
 
 # ---------------------------------------------------------------------------

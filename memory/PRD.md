@@ -2021,3 +2021,54 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 - Console: nur pre-existing 401 (`/api/auth/me` unauth) + 404-Sparkline für nicht unterstützte Symbole (GOLD/OIL/EURUSD/DJI/SILVER — Frontend fällt sauber zurück).
 
 **Gesamtstatus: PASS** — News-Redesign 1–6 vollständig live und mit echten Daten verifiziert.
+
+## Session News-Reliability — Cron- + JSON-Robustness-Fix (02.09.2026, 11:50 UTC)
+
+**Root Cause (endgültig)**
+- Die alte `.emergent/crons.yml` verwendete das laut Skill-Contract **verbotene Feld** `auth: admin` bei allen 9 Einträgen → Emergent-Scheduler hat alle Cron-Einträge verworfen. **Kein einziger Cron wurde jemals automatisch ausgeführt.** Sämtliche bisherigen Fetch/Synth-Läufe kamen aus `post_deploy`-Triggern (siehe `trigger_source: "post_deploy"` in allen `job_summaries`).
+- Zusätzlich: Emergent-Cron-Dispatcher hat ~5 s Ack-Deadline. Der ehemalige `/api/news/admin/synthesize`-Endpoint läuft synchron (5–10 min) → hätte selbst mit korrektem Auth die Deadline nie eingehalten.
+
+**Implementierter Fix**
+1. **Zwei neue Webhook-Endpoints** in `server.py` (in `routes/news.py` registriert):
+   - `POST /api/cron/news-fetch-feeds`
+   - `POST /api/cron/news-synthesize`
+   - Beide verifizieren Bearer-Token gegen `WEBHOOK_CRON_SECRET` in constant-time.
+   - Beide ACKen sofort `HTTP 200` mit `{accepted, run_id, job, started_at}` (<400 ms) und feuern die eigentliche Arbeit via `asyncio.create_task` im Hintergrund → keine Cloudflare-/HTTP-Timeout-Abhängigkeit mehr.
+2. **`WEBHOOK_CRON_SECRET`** (64 Hex-Chars) in `/app/backend/.env`.
+3. **`_parse_llm_json`-Robustness** in `news_synthesizer.py`:
+   - Stufe 1: `json.loads` strict auf erstes `{...}`-Match.
+   - Stufe 2: `json.loads(strict=False)` (erlaubt Steuerzeichen in String-Literalen).
+   - Stufe 3: Manueller Escape-Repair-Pass für unescaped C0-Control-Chars.
+   - Bei allen Fehlschlägen: strukturierte Warning-Logs + `None`; kein Cluster-Loss anderer Artikel.
+4. **`.emergent/crons.yml`** komplett neu (Skill-konform):
+   - 2 valide Einträge (news-fetch-feeds `0 * * * *`, news-synthesize `10 * * * *`).
+   - Kein `auth`-Feld mehr, `{{BASE_URL}}`-Prefix, POST, Ack-Contract-Kommentar.
+   - Die früheren `stock-research-*` / `social-content-*` / `newsletter-*` / `image-sweep` / `price-alerts-*` sind entfernt — sie hatten dieselbe `auth: admin`-Invalidität und liefen nie via Cron. Bleiben als `/admin/*`-Endpoints für manuelle/post-deploy-Trigger vorhanden.
+
+**Preview-Verifikation**
+- Auth: no bearer → 401 „missing bearer" ✓; wrong bearer → 401 „invalid bearer" ✓; valid bearer → 202 mit run_id ✓.
+- Ack-Zeit: 98–318 ms für alle Bearer-Calls → weit unter 5 s Cron-Deadline.
+- Lauf 1 (11:45 UTC, run_id `be9058…`): 25 published, 0 llm_failed.
+- Lauf 2 (11:47 UTC, run_id `ea5d5f…`): 18 weitere published, 0 llm_failed.
+- Preview-Feed: 44 Items, 43 im 48h-Fenster, newest `2026-09-02 11:47:02`, 0 demo, 0 null_source.
+- JSON-Unit-Tests: strict/non-strict/wrapped-prose/broken/nul-bytes/empty → alle korrekt (Parse gelingt oder saubere `None`-Rückgabe).
+
+**Nächster Schritt**
+- Deploy an Emergent-Deployer übergeben. Nach Deploy: warten auf ersten regulären Prod-Cron-Fire (`0 * * * *` für Fetch, `10 * * * *` für Synth), verifizieren dass `articles_last_24h > 0` ohne manuellen Trigger.
+
+## Session News-Reliability — Deploy nach Prod erfolgreich (02.09.2026, 12:04 UTC)
+
+**Deploy-Status**: Live. Backend-Änderungen ausgerollt, Frontend-Bundle unverändert (`main.c268e3cc.js`) — erwartetes Verhalten bei backend-only Deploy.
+
+**Prod-Endpoint-Verifikation**
+- `POST /api/cron/news-synthesize` unauth → `401 missing bearer` ✓
+- `POST /api/cron/news-synthesize` mit korrektem `WEBHOOK_CRON_SECRET` → `202 {accepted, run_id, job, started_at}` ✓
+- **`WEBHOOK_CRON_SECRET` ist auf Prod synchronisiert** (Emergent Deploy-Pipeline hat `backend/.env` übernommen — keine manuelle Env-Var-Einstellung nötig).
+
+**Prod-Effekt Manuell-Trigger** (12:04:15 UTC, run_id `c3a0746b26da371b`)
+- `content.newest_published_at`: 11:28 → **12:04:16** UTC
+- `content.articles_last_24h`: 16 → **29**
+- `content.articles_last_7d`: 116 → **136**
+- Feed liefert 29 Artikel im 48h-Fenster, aktuelle Titel („Steigende Ölpreise…", „Israels Notenbank überrascht mit Leitzinssenkung", „EZB unter Druck: Inflation im Euroraum auf Dreijahreshoch") — echte Handelsblatt/Bloomberg-Cluster synthetisiert.
+
+**Nächster Beobachtungspunkt**: Erster autonomer Platform-Cron-Fire (`0 * * * *` Fetch bzw. `10 * * * *` Synth). Sichtbar wird das als neuer `last_started_at`-Timestamp mit `trigger_source ≠ post_deploy/manual`.

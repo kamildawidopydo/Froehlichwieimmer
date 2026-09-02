@@ -66,6 +66,9 @@ from server import (
     _admin_news_image_sweep,
     _admin_purge_demo,
     _admin_news_status,
+    # /cron/* — Emergent-Platform webhook triggers (Bearer auth)
+    _cron_news_fetch_feeds,
+    _cron_news_synthesize,
     # /news/nachrichten* + /news/publishers
     news_nachrichten_list,
     news_publishers_list,
@@ -124,6 +127,14 @@ _add("/news/admin/list", _admin_news_list, methods=["GET"], summary="Admin: alle
 _add("/news/admin/image-sweep", _admin_news_image_sweep, methods=["POST"], summary="Admin: alle publizierten Bild-URLs revalidieren")
 _add("/news/admin/purge-demo", _admin_purge_demo, methods=["POST"], summary="Admin: DEMO-Nachrichten aus DB entfernen")
 _add("/news/admin/status", _admin_news_status, methods=["GET"], summary="Admin: News-Pipeline Freshness & Health")
+
+
+# --- /cron/* — Emergent-Platform webhook triggers -----------------------------
+# Bearer-Auth via WEBHOOK_CRON_SECRET; endpoints ack 2xx sofort und feuern
+# die Arbeit im Hintergrund via asyncio.create_task. Damit ist der stündliche
+# Lauf unabhängig von HTTP-/Cloudflare-Timeouts und der ~5s Cron-Ack-Deadline.
+_add("/cron/news-fetch-feeds", _cron_news_fetch_feeds, methods=["POST"], summary="Cron: RSS-Feeds fetch (Bearer)")
+_add("/cron/news-synthesize", _cron_news_synthesize, methods=["POST"], summary="Cron: News-Synthese (Bearer)")
 
 
 # --- /news/nachrichten* + /news/publishers (public) --------------------------
