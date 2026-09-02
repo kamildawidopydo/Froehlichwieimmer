@@ -221,6 +221,158 @@ def _yf_fundamentals_sync(yf_sym: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+# ---- News matching (Session 80.73) -----------------------------------------
+# `news_articles` has no `related_symbols` field. We use a strict alias
+# dictionary with word boundaries and per-field scoring (title=3, subtitle=2,
+# summary=1) to avoid false positives like a generic DAX article merely
+# mentioning "Siemens" in passing.
+
+import re
+
+NEWS_ALIASES: Dict[str, List[str]] = {
+    "NVDA":  ["NVIDIA", "Nvidia", "NVDA"],
+    "AAPL":  ["Apple", "AAPL"],
+    "MSFT":  ["Microsoft", "MSFT"],
+    "GOOGL": ["Alphabet", "Google", "GOOGL"],
+    "AMZN":  ["Amazon", "AMZN"],
+    "SAP":   ["SAP SE", "SAP-Kurs", "SAP-Aktie", "SAP-Konzern", "SAP-Chef", "SAP-Gewinn", "SAP-Umsatz", "SAP-Prognose"],
+    "SIE":   ["Siemens AG", "Siemens-Aktie", "Siemens-Konzern", "Siemens-Chef"],
+    "ALV":   ["Allianz SE", "Allianz-Aktie", "Allianz-Konzern"],
+    "DBK":   ["Deutsche Bank"],
+    "IFX":   ["Infineon"],
+    "RHM":   ["Rheinmetall"],
+}
+# Company display names for the section headline.
+COMPANY_LABELS: Dict[str, str] = {
+    "NVDA": "NVIDIA", "AAPL": "Apple", "MSFT": "Microsoft", "GOOGL": "Alphabet",
+    "AMZN": "Amazon", "SAP": "SAP", "SIE": "Siemens", "ALV": "Allianz",
+    "DBK": "Deutsche Bank", "IFX": "Infineon", "RHM": "Rheinmetall",
+}
+NEWS_TTL_S = 30 * 60  # 30 min cache
+
+_ALIAS_PATTERNS: Dict[str, re.Pattern] = {
+    sym: re.compile(r"\b(" + "|".join(re.escape(a) for a in aliases) + r")\b")
+    for sym, aliases in NEWS_ALIASES.items()
+}
+
+
+def _score_article(doc: dict, pat: re.Pattern) -> int:
+    """Match strength: title=3, subtitle=2, summary=1. Return 0 if no hit."""
+    score = 0
+    for field, weight in (("title", 3), ("subtitle", 2), ("summary", 1)):
+        v = doc.get(field) or ""
+        if isinstance(v, str) and pat.search(v):
+            score += weight
+    return score
+
+
+def _published_at(doc: dict) -> Optional[datetime]:
+    v = doc.get("published_at")
+    if isinstance(v, datetime):
+        return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+    if isinstance(v, str):
+        try:
+            dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
+            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    return None
+
+
+@router.get("/stocks/{symbol}/news")
+async def stock_news(symbol: str, limit: int = Query(default=5, ge=1, le=10)) -> Dict[str, Any]:
+    sym = _check(symbol)
+    cache_key = f"{sym}:{limit}"
+    cached = await _db.stock_public_news_cache.find_one({"_id": cache_key})
+    if cached and cached.get("expires_at") and cached["expires_at"] > _now():
+        return {
+            "symbol": sym,
+            "company_label": COMPANY_LABELS[sym],
+            "articles": cached.get("articles", []),
+            "total": len(cached.get("articles", [])),
+            "data_source": cached.get("data_source", "cache"),
+            "cached_until": cached["expires_at"].isoformat(),
+        }
+
+    pat = _ALIAS_PATTERNS[sym]
+    now = _now()
+    cutoff = now - timedelta(days=7)
+
+    # Only consider published, non-archived, non-demo articles.
+    projection = {
+        "slug": 1, "title": 1, "subtitle": 1, "summary": 1, "category": 1,
+        "published_at": 1, "source_names": 1, "source_urls": 1,
+        "hero_image_url": 1, "image_url": 1,
+    }
+    cursor = _db.news_articles.find(
+        {"status": {"$in": ["published", None]}, "is_archived": {"$ne": True}},
+        projection,
+    ).sort("published_at", -1).limit(400)
+    docs = await cursor.to_list(400)
+
+    matches = []
+    for d in docs:
+        pub = _published_at(d)
+        if not pub or pub < cutoff:
+            continue
+        score = _score_article(d, pat)
+        if score <= 0:
+            continue
+        matches.append((score, pub, d))
+
+    # Sort: score desc, pub desc.
+    matches.sort(key=lambda t: (-t[0], -t[1].timestamp()))
+
+    articles = []
+    seen_slugs = set()
+    seen_title_stems = set()
+    for score, pub, d in matches:
+        slug = d.get("slug")
+        if not slug or slug in seen_slugs:
+            continue
+        title = (d.get("title") or "").strip()
+        # Dedup near-duplicate stories that share the same first 40 chars.
+        stem = re.sub(r"[\W_]+", " ", title.lower())[:28].strip()
+        if stem and stem in seen_title_stems:
+            continue
+        seen_slugs.add(slug)
+        if stem:
+            seen_title_stems.add(stem)
+        articles.append({
+            "slug": slug,
+            "title": d.get("title") or "",
+            "subtitle": d.get("subtitle") or "",
+            "summary": d.get("summary") or "",
+            "category": d.get("category"),
+            "published_at": pub.isoformat(),
+            "source_name": (d.get("source_names") or [None])[0],
+            "source_url": (d.get("source_urls") or [None])[0],
+            "hero_image_url": d.get("hero_image_url") or d.get("image_url"),
+            "match_score": score,
+        })
+        if len(articles) >= limit:
+            break
+
+    expires_at = now + timedelta(seconds=NEWS_TTL_S)
+    await _db.stock_public_news_cache.update_one(
+        {"_id": cache_key},
+        {"$set": {
+            "_id": cache_key, "symbol": sym, "articles": articles,
+            "data_source": "news_articles",
+            "cached_at": now, "expires_at": expires_at,
+        }},
+        upsert=True,
+    )
+    return {
+        "symbol": sym,
+        "company_label": COMPANY_LABELS[sym],
+        "articles": articles,
+        "total": len(articles),
+        "data_source": "news_articles",
+        "cached_until": expires_at.isoformat(),
+    }
+
+
 @router.get("/stocks/{symbol}/fundamentals")
 async def stock_fundamentals(symbol: str) -> Dict[str, Any]:
     sym = _check(symbol)

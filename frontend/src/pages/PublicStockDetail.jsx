@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 const StockPriceChart = lazy(() => import('@/components/stock/StockPriceChart'));
 const StockFundamentals = lazy(() => import('@/components/stock/StockFundamentals'));
+const StockNews = lazy(() => import('@/components/stock/StockNews'));
 
 const API_BASE = process.env.REACT_APP_BACKEND_URL;
 
@@ -212,6 +213,7 @@ function StockContent({ stock }) {
       <Suspense fallback={null}>
         <StockPriceChart symbol={stock.ticker} />
         <StockFundamentals symbol={stock.ticker} currentPrice={current} />
+        <StockNews symbol={stock.ticker} />
       </Suspense>
 
       {/* DISCLAIMER */}
