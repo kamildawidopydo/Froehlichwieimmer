@@ -1943,3 +1943,28 @@ Phase 0-3: DONE. Phase 4-5: BACKLOG.
 - Investments-Routen extrahieren
 - News Retention Archive (>90 Tage)
 - Phase 4/5
+
+## Session 80.63 / 80.64 — CLS-Analyse Startseite (CLOSED · NO-GO)
+
+**Datum**: 02.09.2026
+**Status**: **NICHT weiterverfolgt** — Synthetic CLS im CRA-Client-Mount technisch analysiert — keine lokale, risikoarme Verbesserung gefunden. Architekturwechsel derzeit nicht gerechtfertigt.
+
+**Gemessene Baseline** (Median aus 5 Cold Loads, Preview):
+- Desktop 1920: CLS ≈ 0.321
+- Mobile 390: CLS ≈ 1.340
+- Mobile Slow 4G: CLS ≈ 1.339
+
+**Getestete Ansätze — alle revertiert**:
+1. Skeleton-Höhen matched an finalen Content (MarketStrip, Secondary-Cards, ExtendedTopics 3-Section): kein signifikanter Effekt.
+2. `min-h-[480px]` / stabiler Slot-Wrapper um Loading/Empty/Top-News-States: erhöht sogar den First-Mount-Shift.
+3. `min-h` auf `<section>`: kein Effekt, potenziell großer Leergap bei langsamer Verbindung.
+4. Statischer Pre-React-HTML-Placeholder in `public/index.html` (`#root` mit responsivem CSS-only Skeleton): kein Effekt, da `createRoot().render()` `#root`-Kinder komplett ersetzt und Chrome die durch React neu eingefügten Elemente separat als Shift trackt.
+
+**Root Cause**: Alle Shifts entstehen zwischen t=848–872 ms nach FCP durch das First-Mount-Insert der `HomeNewsPreview`-Sektion und ihres `home-news-top-empty`-Kindelements (previousRect `[0,0]` → currentRect `[y, h]`). Chrome trackt DOM-Elemente, nicht Container.
+
+**Bewusste Entscheidung — nicht verfolgt**: Next.js/SSR-Migration, `hydrateRoot()`-Umbau, Routing-Refactor, weitere clientseitige Workarounds. Real gemessener Nutzer-CLS in der Google Search Console kann durch `hadRecentInput=true` (Cookie-Banner-Interaktion) deutlich niedriger sein als der synthetische Wert.
+
+**Betroffene Files (post-revert, unverändert)**:
+- `/app/frontend/public/index.html` — clean
+- `/app/frontend/src/components/home/HomeNewsPreview.jsx` — Original-Heights (`h-[420px]`, `h-[280px]`, `h-16`, `h-[220px]`)
+- `/app/frontend/src/pages/Home.js` — unverändert
