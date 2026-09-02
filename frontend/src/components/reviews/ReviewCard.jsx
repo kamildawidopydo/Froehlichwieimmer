@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, MessageCircle } from 'lucide-react';
 import { StarsDisplay } from '@/components/reviews/RatingStars';
 import { formatReviewDate } from '@/services/reviewsApi';
 
@@ -24,6 +24,25 @@ const ReviewCard = ({ review, dark = false }) => {
       </div>
 
       <p className={`text-[15px] leading-relaxed ${textCol}`}>„{review.text}"</p>
+
+      {review.admin_response && (
+        <div
+          className={`rounded-xl border-l-2 px-4 py-3 ${
+            dark
+              ? 'border-bank-gold/60 bg-white/[0.04]'
+              : 'border-bank-primary bg-bank-primary/[0.04]'
+          }`}
+          data-testid="review-admin-response"
+        >
+          <p className={`flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.22em] ${dark ? 'text-bank-gold' : 'text-bank-primary'}`}>
+            <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.6} />
+            Antwort von Fröhlich Vermögensberatung
+          </p>
+          <p className={`mt-1.5 text-[13.5px] leading-relaxed ${dark ? 'text-white/85' : 'text-bank-text'}`}>
+            {review.admin_response}
+          </p>
+        </div>
+      )}
 
       <div className="mt-auto flex items-center gap-3 border-t pt-4" style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : undefined }}>
         <span

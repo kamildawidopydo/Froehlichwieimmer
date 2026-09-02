@@ -6,6 +6,31 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.67 (Sep 02 2026) — **25 Preview-Test-Reviews + Antworten (nur PREVIEW)**:
+
+  **User-Wunsch**: 25 zusätzliche Bewertungen inkl. jeweiliger Admin-Antwort für Layout-Test des Kundenstimmen-Bereichs. Mischung ~68 % 5★, 24 % 4★, 8 % 3★-konstruktiv. Keine echten Kundenbewertungen — reine Preview-Testdaten. Kein Deploy.
+
+  **Datenquelle identifiziert**: MongoDB `db.reviews`, öffentlicher Endpoint `GET /api/reviews/public` (nur `status=approved`, `is_demo≠true`). Pagination existiert bereits: `/bewertungen`-Seite lädt PAGE_SIZE=9 pro Batch mit „Weitere laden"-Button — HomeCustomerReviews zeigt nur 3 auf der Startseite.
+
+  **Umsetzung**:
+  1. Neues Seed-Skript `backend/scripts/seed_preview_reviews_25.py` mit 25 einzigartigen Reviews (unterschiedliche Länge 1–7 Sätze, Themen aus REVIEW_TOPIC_SLUGS, wechselnde Einstiege, Verteilung 17/6/2 auf 5★/4★/3★).
+  2. Jede Bewertung hat eine individuelle `admin_response` — keine „Vielen Dank für Ihre Bewertung"-Wiederholung. Antworten auf 3★-Kritik greifen die Kritik sachlich auf (Onboarding-Timeline, KYC-Einführungs­dokument).
+  3. Datenfelder pro Eintrag: `status="approved"`, `is_demo=False`, `is_verified=False` (explizit unverifiziert), `content_origin="preview_test_v1"`, `admin_note="preview test 25 entries — do NOT deploy to prod"`, `email` mit Suffix `@preview-test.local` (eindeutig identifizierbar für spätere Cleanup-Filter), `created_at` verteilt über die letzten ~90 Tage, `admin_response` + `responded_at` gesetzt.
+  4. Idempotent per Email (Rerun aktualisiert statt duplizieren).
+  5. **Frontend-Fix `ReviewCard.jsx`**: Die auf `/bewertungen` verwendete Card zeigte bisher `admin_response` NICHT — Home (`CompactReviewCard`) und Testimonials (`TestimonialCard`) hingegen schon. Reply-Block ergänzt (Green-Left-Border, Label „Antwort von Fröhlich Vermögensberatung"), designkonsistent mit den anderen Card-Varianten.
+
+  **QA (Playwright-verifiziert)**:
+  - Preview-DB vorher: 137 approved public Reviews → nachher: **162** (exakt +25) ✅
+  - Preview-Test-Rows total: 25 · alle mit `admin_response` ✅
+  - Text-Duplicate-Check: 25 einzigartige Texte, 25 einzigartige Antworten, 0 Kollisionen mit bestehenden Reviews ✅
+  - Desktop 1920: 3-Spalten-Grid ✅, Reply-Box mit korrektem Green-Left-Border und „Antwort von Fröhlich Vermögensberatung"-Label ✅, kein Horizontal-Overflow ✅
+  - „Weitere laden" (PAGE_SIZE=9): funktioniert — 9 → 18 Cards, 6 → 12 Replies (ältere Reviews ohne Response bleiben ohne Reply-Box) ✅
+  - Mobile Grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` — Cards stapeln sauber ✅
+  - Keine Console-Errors ✅
+
+  **Data-Governance**: Vor einem echten Prod-Deploy müssen entweder (a) freigegebene echte Kundenbewertungen die Preview-Testdaten ersetzen, oder (b) das Cleanup-Filter `db.reviews.delete_many({"email": {"$regex": "@preview-test\\.local$"}})` einmalig auf der Prod-DB ausgeführt werden. Preview- und Prod-DB sind separat — automatischer Übertrag findet nicht statt.
+
+
 - 80.66 (Sep 02 2026) — **Dark Mode Refresh — Graphit-Palette (nur PREVIEW)**:
 
   **User-Wunsch**: „Überarbeite ausschließlich den Dark Mode. Warmes Graphit statt Deep-Navy: Body #24282D, Sections #292E34, Cards #30363D, elevated #363D45, Header #202429, Border #4A5159, Text #F5F2EA / #D7D8D5 / #AEB4B8 / #8F979D. Grün + Gold bleiben. Nicht deployen."
