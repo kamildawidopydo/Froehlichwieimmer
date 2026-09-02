@@ -6,6 +6,23 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.70 (Sep 02 2026) — **Batch 4: weitere 25 Preview-Test-Reviews + Antworten (nur PREVIEW)**:
+
+  **Umsetzung**: `backend/scripts/seed_preview_reviews_25_batch4.py`, Email-Suffix `@preview-test-b4.local`, `content_origin="preview_test_v4"`. Neue Themen: Trennung/Konto­trennung · Erbschaft (Immobilie+Depot) · Vertretung bei Krankheit · WhatsApp-Verzicht · Provisions-Klartext · Insider-Kennzeichnung · Video vs. Telefon für Senioren · E-Signatur · Steuer­ausländer · Job-Verlust-Umschichtung · ESG-Filterregeln · Gemeinschafts­depot · SMS-Erinnerung (Kritik) · ICS-Kalender (Kritik) · Regional­termin Hamburg · Digitale Ablage · Bar­einzahlungs-Ablehnung · Papier­formular (Kritik) · Räum­lichkeiten · Elternzeit-Termin · Stiftung angerissen · Sperr­minuten-Erklärung · Konkurrenz-Angebot fair verglichen · Nachbetreuung Baby.
+
+  **QA-Report**:
+  - Vor Batch 4: 212 → Nach Batch 4: **237** (delta = +25 ✅)
+  - Batch-4-Rows: 25 · Unique Texte 25/25 · Unique Antworten 25/25
+  - Text/Antwort-Kollisionen gesamte DB: 0 · Cross B4↔B1/B2/B3: 0
+  - Rating: 18×5★ · 5×4★ · 2×3★-konstruktiv (fehlende SMS-Erinnerung, fehlender ICS-Kalender)
+  - Desktop 1920: 3-Spalten-Grid ✅, Load-More funktioniert, keine Overflow, keine Console-Errors
+
+  **Kumulativer Stand Preview-Test-Reviews**: B1 (25) + B2 (25) + B3 (25) + B4 (25) = **100** Preview-Test-Einträge · Bestand echte+Templates: 137 · Gesamt approved public: 237.
+
+  **Vor Prod-Deploy (kombinierter Cleanup B1+B2+B3+B4):**
+  `db.reviews.delete_many({"email": {"$regex": "@preview-test(-b[234])?\\.local$"}})`
+
+
 - 80.68 (Sep 02 2026) — **Batch 2: weitere 25 Preview-Test-Reviews + Antworten (nur PREVIEW)**:
 
   **User-Wunsch**: Weitere 25 Kommentare + je eine individuelle Antwort. Keine Wiederholungen zu Batch 1. Themen breiter mischen (Zins­vergleich, Prospekt, Depot-Übergabe, Video-Termin, Portal-App, Vor­sorge, Bau­sparen, Frei­stellungs­auftrag, Sprach­rücksicht, Voll­macht, Paar-Beratung, Not­groschen, Um­schichtung, Rendite-Realismus, Sperr­frist etc.). Realistische Sterne­verteilung mit vereinzelter Kritik. Nur Preview.
