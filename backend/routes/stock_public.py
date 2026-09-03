@@ -1057,6 +1057,291 @@ async def stock_earnings(symbol: str) -> Dict[str, Any]:
             "cached_until": expires_at.isoformat(), **payload}
 
 
+# ---- Research suite (Session 80.79 · Tool-Paket 5) -------------------------
+
+RESEARCH_TTL_S = 6 * 60 * 60
+
+# Rule thresholds for the compact research-summary strip.
+# Documented here so the classification is fully reproducible.
+_TAG_THRESHOLDS = {
+    "valuation": {"low": 15.0, "high": 25.0},        # trailing_pe cutoffs
+    "growth": {"low": 0.0, "high": 15.0},            # revenue_growth in %
+    "profitability": {"low": 10.0, "high": 25.0},    # operating_margin in %
+    "dividend": {"low": 1.0, "high": 3.0},            # dividend_yield in %
+    "risk": {"low": 25.0, "high": 40.0},              # annualised vol in %
+}
+
+
+def _yf_financials_sync(yf_sym: str) -> Optional[Dict[str, Any]]:
+    """Real 5-year annual income statement + cash flow. Returns per-fiscal-year
+    rows with revenue, net_income, eps, free_cashflow, operating_margin_pct."""
+    try:
+        import yfinance as yf  # type: ignore
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        t = yf.Ticker(yf_sym)
+        try:
+            inc = t.income_stmt
+        except Exception:  # noqa: BLE001
+            inc = None
+        try:
+            cf = t.cashflow
+        except Exception:  # noqa: BLE001
+            cf = None
+
+        def _row(df, key):
+            if df is None:
+                return {}
+            try:
+                if key in df.index:
+                    return df.loc[key].to_dict()
+            except Exception:  # noqa: BLE001
+                pass
+            return {}
+
+        rev = _row(inc, "Total Revenue")
+        ni = _row(inc, "Net Income")
+        op = _row(inc, "Operating Income")
+        eps = _row(inc, "Basic EPS") or _row(inc, "Diluted EPS")
+        fcf = _row(cf, "Free Cash Flow")
+
+        cols = set()
+        for d in (rev, ni, op, eps, fcf):
+            cols.update(d.keys())
+        if not cols:
+            return None
+
+        def _num(v):
+            try:
+                if v is None:
+                    return None
+                v = float(v)
+                return v if v == v else None
+            except (TypeError, ValueError):
+                return None
+
+        rows: List[Dict[str, Any]] = []
+        for ts in sorted(cols):
+            fy = getattr(ts, "year", None) or (ts.year if hasattr(ts, "year") else None)
+            fy_iso = ts.date().isoformat() if hasattr(ts, "date") else str(ts)
+            rev_v = _num(rev.get(ts))
+            op_v = _num(op.get(ts))
+            op_margin = None
+            if rev_v and rev_v > 0 and op_v is not None:
+                op_margin = round((op_v / rev_v) * 100.0, 4)
+            rows.append({
+                "fiscal_year": fy,
+                "fiscal_period_end": fy_iso,
+                "revenue": rev_v,
+                "net_income": _num(ni.get(ts)),
+                "eps": _num(eps.get(ts)),
+                "free_cashflow": _num(fcf.get(ts)),
+                "operating_margin_pct": op_margin,
+            })
+        # Keep last 5 completed fiscal years, chronological order.
+        return {"annual": rows[-5:]}
+    except Exception as exc:  # noqa: BLE001
+        logger.info("yfinance financials %s error: %s", yf_sym, str(exc)[:120])
+        return None
+
+
+def _compute_drawdown_series(closes: List[float], dates: List[str]) -> Dict[str, Any]:
+    if not closes or len(closes) < 2:
+        return {"current_dd_pct": None, "max_dd_pct": None, "series": []}
+    series: List[Dict[str, Any]] = []
+    running = closes[0]
+    max_dd = 0.0
+    for d, c in zip(dates, closes):
+        if c > running:
+            running = c
+        dd = (c / running - 1.0) if running > 0 else 0.0
+        if dd < max_dd:
+            max_dd = dd
+        series.append({"t": d, "dd": round(dd * 100.0, 4)})
+    cur_dd = series[-1]["dd"]
+    return {"current_dd_pct": cur_dd, "max_dd_pct": round(max_dd * 100.0, 4), "series": series}
+
+
+def _tag(value: Optional[float], key: str, invert: bool = False) -> Optional[str]:
+    """Return 'niedrig' / 'mittel' / 'hoch' based on the documented thresholds.
+    invert=True flips the mapping (higher raw value → lower label; used for risk
+    only via caller). Missing value → None (not rendered)."""
+    if value is None:
+        return None
+    t = _TAG_THRESHOLDS.get(key)
+    if not t:
+        return None
+    lo, hi = t["low"], t["high"]
+    if value < lo:
+        base = "niedrig"
+    elif value > hi:
+        base = "hoch"
+    else:
+        base = "mittel"
+    return base
+
+
+def _build_investment_case(fin_rows, prof, div, risk, next_earn):
+    ops, risks, watch = [], [], []
+    # Growth from financials — need at least 2 completed years with revenue.
+    revs = [r["revenue"] for r in (fin_rows or []) if r.get("revenue")]
+    if len(revs) >= 3:
+        if revs[-1] > revs[-3]:
+            ops.append({"text": f"Umsatz über die letzten drei Geschäftsjahre gewachsen (von {revs[-3]/1e9:.1f} Mrd auf {revs[-1]/1e9:.1f} Mrd).", "source": "financials"})
+        elif revs[-1] < revs[-3]:
+            risks.append({"text": f"Umsatz über die letzten drei Geschäftsjahre rückläufig (von {revs[-3]/1e9:.1f} Mrd auf {revs[-1]/1e9:.1f} Mrd).", "source": "financials"})
+    # Profitability
+    if isinstance(prof, dict) and prof.get("operating_margin") is not None:
+        om = prof["operating_margin"]
+        if om >= 25:
+            ops.append({"text": f"Operative Marge liegt bei {om:.1f} %.", "source": "fundamentals"})
+        elif om < 5:
+            risks.append({"text": f"Operative Marge liegt bei nur {om:.1f} %.", "source": "fundamentals"})
+    # Risk from vola vs threshold
+    if isinstance(risk, dict) and risk.get("volatility_annual_pct") is not None:
+        v = risk["volatility_annual_pct"]
+        if v > 40:
+            risks.append({"text": f"Historische annualisierte Volatilität liegt bei {v:.1f} % (1J).", "source": "history"})
+    # Max drawdown context
+    if isinstance(risk, dict) and risk.get("max_drawdown_pct") is not None:
+        mdd = risk["max_drawdown_pct"]
+        if mdd < -30:
+            risks.append({"text": f"Größter historischer Rückschlag im betrachteten Zeitraum: {mdd:.1f} %.", "source": "history"})
+    # Dividend
+    if isinstance(div, dict) and div.get("dividend_yield_pct") is not None:
+        dy = div["dividend_yield_pct"]
+        if dy >= 3:
+            ops.append({"text": f"Dividendenrendite bei {dy:.2f} %.", "source": "dividends"})
+        elif dy == 0 or dy is None:
+            pass  # neither pro nor con
+    # Next earnings — always watchable if known.
+    if next_earn and next_earn.get("date"):
+        watch.append({"text": f"Nächster Earnings-Termin am {next_earn['date']}.", "source": "earnings"})
+    return {"opportunities": ops[:5], "risks": risks[:5], "watch": watch[:3]}
+
+
+@router.get("/stocks/{symbol}/research")
+async def stock_research(symbol: str) -> Dict[str, Any]:
+    """Bundled research payload: 5y financials, drawdown series (1y/3y/5y),
+    rule-based investment case, transparency block and summary tags."""
+    sym = _check(symbol)
+    cached = await _db.stock_public_research_cache.find_one({"_id": sym})
+    if cached and cached.get("expires_at") and cached["expires_at"] > _now():
+        payload = cached.get("data") or {}
+        return {"symbol": sym, "data_source": cached.get("data_source", "cache"),
+                "data_updated_at": cached.get("cached_at").isoformat() if cached.get("cached_at") else None,
+                "cached_until": cached["expires_at"].isoformat(), **payload}
+
+    yf_sym = ALLOWED[sym]
+    # Concurrent fetch: financials, fundamentals meta, dividends summary,
+    # earnings next block, and three history ranges for drawdowns.
+    fin_task = asyncio.to_thread(_yf_financials_sync, yf_sym)
+    meta_task = asyncio.to_thread(_yf_compare_meta_sync, yf_sym)
+    div_task = asyncio.to_thread(_yf_dividends_sync, yf_sym)
+    earn_task = asyncio.to_thread(_yf_earnings_sync, yf_sym)
+    h1_task = asyncio.to_thread(_yf_history_sync, yf_sym, "1y", "1d")
+    h3_task = asyncio.to_thread(_yf_history_sync, yf_sym, "3y", "1d")
+    h5_task = asyncio.to_thread(_yf_history_sync, yf_sym, "5y", "1d")
+    fin, meta, div, earn, h1, h3, h5 = await asyncio.gather(
+        fin_task, meta_task, div_task, earn_task, h1_task, h3_task, h5_task,
+        return_exceptions=True,
+    )
+    fin = fin if isinstance(fin, dict) else None
+    meta = meta if isinstance(meta, dict) else {}
+    div_data = div if isinstance(div, dict) else None
+    earn_data = earn if isinstance(earn, dict) else None
+
+    def _dd_for(h):
+        if isinstance(h, Exception) or not h:
+            return {"current_dd_pct": None, "max_dd_pct": None, "series": []}
+        closes = [p["c"] for p in h if p.get("c")]
+        dates = [p["t"][:10] for p in h if p.get("c")]
+        return _compute_drawdown_series(closes, dates)
+
+    drawdown = {"1y": _dd_for(h1), "3y": _dd_for(h3), "5y": _dd_for(h5)}
+
+    # Risk from 1y history for tags & investment case
+    risk_1y: Dict[str, Any] = {}
+    if not isinstance(h1, Exception) and h1:
+        closes = [p["c"] for p in h1 if p.get("c")]
+        risk_1y = _compute_risk(closes, 252)
+
+    # Summary tags — only if underlying data available
+    tags: Dict[str, Optional[str]] = {}
+    tags["valuation"] = _tag(meta.get("trailing_pe"), "valuation")
+    tags["growth"] = _tag(meta.get("revenue_growth_pct"), "growth")
+    tags["profitability"] = _tag(meta.get("profit_margin_pct"), "profitability")
+    div_yield = (div_data or {}).get("summary", {}).get("dividend_yield_pct") if div_data else None
+    tags["dividend"] = _tag(div_yield, "dividend") if div_yield is not None else None
+    tags["risk"] = _tag(risk_1y.get("volatility_annual_pct"), "risk")
+
+    # Investment case
+    prof_hint = {"operating_margin": None}
+    if fin and fin.get("annual"):
+        # Use most recent op margin from real financials
+        last = fin["annual"][-1] if fin["annual"] else {}
+        prof_hint["operating_margin"] = last.get("operating_margin_pct")
+    case = _build_investment_case(
+        (fin or {}).get("annual"),
+        prof_hint,
+        {"dividend_yield_pct": div_yield},
+        risk_1y,
+        (earn_data or {}).get("next") if earn_data else None,
+    )
+
+    # Data quality block
+    exch = None
+    price_at = None
+    try:
+        import yfinance as yf  # type: ignore
+        fi = yf.Ticker(yf_sym).fast_info
+        exch = getattr(fi, "exchange", None)
+    except Exception:  # noqa: BLE001
+        pass
+    data_quality = {
+        "price_source": "yfinance",
+        "fundamentals_source": "yfinance",
+        "exchange": exch,
+        "currency": meta.get("currency"),
+        "is_delayed_notice": "Kurse können zeitverzögert sein.",
+        "history_start": (h5[0]["t"] if not isinstance(h5, Exception) and h5 else None),
+        "benchmark": BENCHMARK_FOR.get(sym, "NDX"),
+    }
+
+    payload = {
+        "currency": meta.get("currency"),
+        "financials": (fin or {}).get("annual", []),
+        "drawdown": drawdown,
+        "investment_case": case,
+        "summary_tags": tags,
+        "data_quality": data_quality,
+        "risk_1y": risk_1y,
+        "valuation_snapshot": {
+            "trailing_pe": meta.get("trailing_pe"),
+            "forward_pe": meta.get("forward_pe"),
+            "price_to_sales": meta.get("price_to_sales"),
+            "price_to_book": meta.get("price_to_book"),
+        },
+    }
+
+    now = _now()
+    expires_at = now + timedelta(seconds=RESEARCH_TTL_S)
+    await _db.stock_public_research_cache.update_one(
+        {"_id": sym},
+        {"$set": {"_id": sym, "symbol": sym, "yf_symbol": yf_sym,
+                  "data_source": "yfinance", "data": payload,
+                  "cached_at": now, "expires_at": expires_at,
+                  "thresholds": _TAG_THRESHOLDS}},
+        upsert=True,
+    )
+    return {"symbol": sym, "data_source": "yfinance",
+            "data_updated_at": now.isoformat(),
+            "cached_until": expires_at.isoformat(),
+            "thresholds": _TAG_THRESHOLDS, **payload}
+
+
+
 
 # ---- Compare & Risk (Session 80.78 · Tool-Paket 4/4) -----------------------
 

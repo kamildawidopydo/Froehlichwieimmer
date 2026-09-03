@@ -6,6 +6,46 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.79 (Sep 03 2026) — **Tool-Paket 5 · Professional Research Suite (nur PREVIEW)**:
+
+  **Umsetzung**:
+  1. Neuer gebündelter Backend-Endpunkt `GET /api/stocks/{symbol}/research` (`stock_public.py`) — 7 parallele yfinance-Calls per `asyncio.gather` (Financials, Meta, Dividends, Earnings, 3× Daily-History). Berechnet serverseitig: 5J-Financials (Umsatz/Nettogewinn/EPS/FCF/OpMarge), Drawdown-Zeitreihen für 1y/3y/5y, regelbasierte Investment-Case-Punkte (Chancen/Risiken/Watch), Summary-Tags (5 Kategorien mit dokumentierten Schwellwerten), Data-Quality-Block. Cache 6 h in `stock_public_research_cache` inkl. Thresholds-Dokumentation.
+  2. Neue Frontend-Komponente `StockResearch.jsx` (lazy) — 5 farb-codierte Summary-Tags (Bewertung/Wachstum/Profitabilität/Dividende/Risiko mit „niedrig/mittel/hoch"), 3-Spalten Investment-Case (Chancen grün / Risiken rot / Watch gold), 5×5J-Financials-Balken (Umsatz, Nettogewinn, EPS, FCF, OpMarge), Bewertungs-Snapshot (KGV/Fwd/PS/PB) mit expliziter Transparenz-Notiz, Drawdown-Chart mit 1y/3y/5y-Tabs, Data-Quality-Panel inkl. aufklappbarer Schwellwert-Legende.
+  3. Integration in `PublicStockDetail.jsx` — Research-Komponente ganz **oben** (nach Hero, vor Kurschart). Alle Tool-Pakete 1-4 unangetastet.
+
+  **QA — 7 Test-Aktien Backend Smoke**:
+  | Symbol | Ccy | Tags (val/growth/prof/div/risk) | 5J Financials | Latest Rev | Op Marge | MDD 5y | Case |
+  |--------|-----|--------------------------------|---------------|------------|----------|--------|------|
+  | NVDA   | USD | hoch/hoch/hoch/niedrig/mittel | 2022-2026 | 215,94 Mrd $ | 60,4% | −66,36% | 2 Opp / 0 Risk / 1 Watch |
+  | AAPL   | USD | hoch/hoch/hoch/niedrig/niedrig | 2021-2025 | 416,16 Mrd $ | 32,0% | −33,43% | 2/0/1 |
+  | MSFT   | USD | hoch/mittel/hoch/niedrig/niedrig | 2021-2025 | 281,72 Mrd $ | 45,0% | −34,91% | 2/0/1 |
+  | SAP    | EUR | hoch/mittel/mittel/mittel/hoch | 2021-2025 | 36,80 Mrd € | 26,1% | −54,22% | 2/2/1 |
+  | RHM    | EUR | hoch/hoch/niedrig/mittel/hoch | 2021-2025 | 9,94 Mrd € | 17,1% | −52,40% | 1/2/1 |
+  | ALV    | EUR | niedrig/mittel/niedrig/hoch/niedrig | 2021-2025 | 137,45 Mrd € | — (n.v.) | −31,18% | 2/0/1 |
+  | AMZN   | USD | mittel/hoch/mittel/**null**/mittel | 2021-2025 | 716,92 Mrd $ | 11,2% | −55,73% | 1/0/1 |
+
+  **Math-Kontroll-Tests (Python unabhängig vs API)**:
+  - NVDA 5y MaxDD: **−66,3621% ≡ −66,36%** ✅
+  - NVDA 5y CurrentDD: **−4,8061% ≡ −4,81%** ✅
+  - SAP 5y MaxDD: **−54,2205% ≡ −54,22%** ✅
+  - SAP 5y CurrentDD: **−34,0564% ≡ −34,04%** ✅ (kleine Diff <0,02% durch neuen Close)
+
+  **Regression**: alle 8 bestehenden Endpunkte weiter 200: `/history`, `/fundamentals`, `/analyst`, `/dividends`, `/earnings`, `/news`, `/compare`, `/compare/peers`.
+
+  **Design/Mobile/A11y**:
+  - Mobile 390 body-overflow: `scrollWidth 390 == clientWidth 390` ✅
+  - Console-Errors: **0**
+  - Semantische Überschriften, `<time>`-Tags, ARIA-Labels für alle Charts (Drawdown, Financials-Bars), Farbe niemals einziger Informationsträger (Tags haben Text + Farbe, Case-Items haben Präfix-Bar + Text)
+
+  **Bewusst zurückgestellt**: Watchlist (kein persistenter User-Context vorhanden — keine localStorage-Pseudo-Lösung gebaut). DCF / Bull-Base-Bear / KI-Empfehlung / Portfolio → separate Pakete.
+
+  **Provider-Caveats**:
+  - NVDA FY2022 revenue = NaN im Provider → automatisch als „—" gerendert
+  - ALV Op-Marge n.v. (Versicherer-Ausweisformat) → ausgeblendet
+  - AMZN dividendYield null → Dividend-Tag null (nicht als „niedrig" fabriziert)
+
+  **Ready for deploy: JA** — strikt **nur PREVIEW**. **Kein Prod-Deploy ohne ausdrückliche Freigabe.**
+
 - 80.78 (Sep 03 2026) — **Tool-Paket 4/4 · Aktienvergleich + Risikoanalyse (nur PREVIEW)**:
 
   **Umsetzung**:

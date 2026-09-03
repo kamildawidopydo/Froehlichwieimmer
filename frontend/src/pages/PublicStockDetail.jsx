@@ -13,6 +13,7 @@ const StockAnalystConsensus = lazy(() => import('@/components/stock/StockAnalyst
 const StockDividends = lazy(() => import('@/components/stock/StockDividends'));
 const StockEarnings = lazy(() => import('@/components/stock/StockEarnings'));
 const StockCompare = lazy(() => import('@/components/stock/StockCompare'));
+const StockResearch = lazy(() => import('@/components/stock/StockResearch'));
 
 const API_BASE = process.env.REACT_APP_BACKEND_URL;
 
@@ -218,6 +219,7 @@ function StockContent({ stock }) {
            → Dividenden → Earnings → Fundamentals → News. Alle Sektionen zeigen
            nur echte yfinance-Daten und blenden fehlende Felder aus. */}
       <Suspense fallback={null}>
+        <StockResearch symbol={stock.ticker} />
         <StockPriceChart symbol={stock.ticker} />
         <StockInvestmentCalculator symbol={stock.ticker} currency={currency} />
         <StockAnalystConsensus symbol={stock.ticker} />
