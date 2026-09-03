@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, FileText, Printer, RefreshCw, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, FileText, Printer, RefreshCw, X, Users } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { Button } from '@/components/ui/button';
+import BeratungDialog from '@/components/groessere-vermoegen/BeratungDialog';
 
 /**
  * Session 80.87 · Phase 3 „Größere Vermögen" — Vermögensreport (Preview + Print/PDF)
@@ -115,6 +116,20 @@ export default function ReportBuilder({ phase1, phase2, struct, ladder, scenario
   const [snapshot, setSnapshot] = useState(null);
   const [open, setOpen] = useState(false);
   const [contact, setContact] = useState({ vorname: '', nachname: '', email: '' });
+  const [beratOpen, setBeratOpen] = useState(false);
+  const [beratMode, setBeratMode] = useState('full');
+  // Aus Snapshot ableitbare Themen (nur Vorschlag, nicht vorausgewählt)
+  const relevantBeratTopics = useMemo(() => {
+    if (!snapshot) return [];
+    const t = [];
+    if (snapshot.liquidHints?.length || snapshot.phase1?.liquiditaet) t.push('liquiditaet');
+    if (snapshot.ladder || snapshot.phase2?.verzinsBetrag > 0) t.push('zins_laufzeit');
+    if (snapshot.phase2?.wertpapierPct > 0) t.push('wertpapiere');
+    if (snapshot.clusterHints?.length) t.push('portfolio_check');
+    if (snapshot.phase2?.institute > 0) t.push('einlagensicherung');
+    if ((snapshot.phase1?.betrag || 0) > 0) t.push('vermoegen_strukturieren');
+    return t;
+  }, [snapshot]);
 
   usePrintIsolation(open);
 
@@ -468,9 +483,33 @@ export default function ReportBuilder({ phase1, phase2, struct, ladder, scenario
               <p className="mt-10 border-t border-bank-border pt-4 text-[10.5px] leading-relaxed text-bank-text-soft">{DISCLAIMER}</p>
               <p className="mt-6 text-[10.5px] text-bank-text-soft">Letzte Seite · {dateStr}</p>
             </section>
+
+            {/* Phase-4 CTA am Ende des Reports — nicht im Druck */}
+            <section data-print-hide data-testid="gv-report-berat-cta" className="mt-14 border-t border-bank-border pt-8">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">Persönliches Gespräch</p>
+              <h3 className="mt-3 font-display text-[1.5rem] font-light leading-snug tracking-[-0.015em] text-bank-text">Persönliches Vermögensgespräch anfragen</h3>
+              <p className="mt-3 text-[14px] leading-[1.8] text-bank-text-muted">Besprechen Sie Ihre Ausgangssituation und die für Sie relevanten Themen persönlich mit uns.</p>
+              <p className="mt-2 text-[12px] text-bank-text-soft">Ihre Angaben aus dem Vermögensreport werden nur übermittelt, wenn Sie dies ausdrücklich auswählen.</p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Button type="button" variant="primary" onClick={() => { setBeratMode('full'); setBeratOpen(true); }} data-testid="gv-report-berat-open">
+                  <Users className="mr-2 h-4 w-4" strokeWidth={1.8} aria-hidden /> Vermögensgespräch anfragen
+                </Button>
+                <button type="button" onClick={() => { setBeratMode('contact-only'); setBeratOpen(true); }} data-testid="gv-report-berat-contact-only" className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-bank-border bg-white px-6 py-3 text-[14px] font-medium text-bank-text hover:border-bank-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2">
+                  Nur Kontakt aufnehmen
+                </button>
+              </div>
+            </section>
           </article>
         </div>
       )}
+
+      <BeratungDialog
+        open={beratOpen}
+        onClose={() => setBeratOpen(false)}
+        snapshot={snapshot}
+        relevantTopics={relevantBeratTopics}
+        mode={beratMode}
+      />
     </>
   );
 }
