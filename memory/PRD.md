@@ -6,6 +6,41 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.80 (Sep 03 2026) — **Watchlist-Integration auf Stock-Detail + Event-Badges (nur PREVIEW)**:
+
+  **Umsetzung**: Bestehende Watchlist-Infrastruktur (`/api/watchlist` GET/POST/DELETE + Mongo-Collection `watchlists`) integriert:
+  1. Neue Komponente `frontend/src/components/stock/StockWatchButton.jsx` — nutzt `useWatchlist` aus `services/watchlistApi.js`, ruft `/api/watchlist` POST/DELETE. Bei nicht eingeloggtem User → `/login?next=/aktien/:symbol`. Editorial-Pill mit Herz-Icon, Light+Dark, min-44px Tap-Target, `aria-pressed`.
+  2. Integration in `PublicStockDetail.jsx` in der Hero-Sektion unter Datenstand-Hinweis.
+  3. Neuer gebündelter Backend-Endpunkt `GET /api/watchlist/events?symbols=A,B,C` (`server.py`) — reused vorhandene Caches (`stock_public_earnings_cache` + `stock_public_dividends_cache`), macht **keine** yfinance-Calls. Filtert Termine >heute, liefert `next_earnings_days` / `ex_dividend_days` / `dividend_payment_days`.
+  4. `WatchlistPage.jsx` erweitert: batch-Fetch `/watchlist/events` beim Mount, zeigt Event-Badges pro Row: „Earnings in 5 Tagen", „Ex-Dividende in 12 Tagen". Range-Formulierung „voraussichtlich" wenn Provider Zeitfenster liefert.
+
+  **QA-Ergebnisse (curl-Flow als `patron@…`)**:
+  - Unauth `/api/watchlist/events` → **401** ✅
+  - Add NVDA/AAPL/SAP → alle 201, Symbol Server-validiert ✅
+  - Duplicate NVDA → **kein Duplikat** (Unique-Constraint `user_id+symbol`) ✅
+  - List: 3 items in korrekter Sortierung ✅
+  - Events bundle: NVDA (Earnings 75d, Ex-Div **7d**, Pay 28d), AAPL (Earnings 56d), SAP (Earnings 48d) — alle aus echten yfinance-Cache-Rohdaten ✅
+  - Remove SAP → 200, List: 2 items ✅
+  - **User-Isolation**: 2. User (`admin@kapitalmitte.com`) sieht count=0 (isolated) ✅
+  - Regression: alle 7 Stock-Endpunkte (`history/fundamentals/analyst/dividends/earnings/news/research`) → **200** ✅
+
+  **UI-QA**:
+  - Desktop NVDA: „IN WATCHLIST · ENTFERNEN" Chip (aktiver State) mit gefülltem grünem Herz ✅
+  - Desktop NVDA nach Click: Chip flippt zu „ZUR WATCHLIST HINZUFÜGEN", Toast „aus der Watchlist entfernt" ✅
+  - Mobile Dark AAPL: Chip lesbar mit Herz-Icon, kein Body-Overflow (sw=cw=390) ✅
+  - WatchlistPage AAPL: „EARNINGS IN 56 TAGEN" Badge sichtbar ✅
+  - `aria-pressed` toggle: true → false nach Click ✅
+  - Console-Errors: **0**
+
+  **Security**:
+  - `user_id` serverseitig aus `Depends(get_current_user)` (kein Client-Override möglich)
+  - Symbol wird via `_clean_symbol()` sanitised (`[^A-Za-z0-9.\-_/]` gefiltert, max 20 chars)
+  - 401 für alle Watchlist-Endpunkte ohne Session
+  - `_UNIVERSE_BY_SYMBOL` als Curated-Allowlist bei Add
+  - Fremde `user_id` in Body ignoriert (aus Session abgeleitet, kein Mass-Assignment)
+
+  **Ready for deploy: JA** — strikt **nur PREVIEW**. **Kein Prod-Deploy ohne ausdrückliche Freigabe.**
+
 - 80.79 (Sep 03 2026) — **Tool-Paket 5 · Professional Research Suite (nur PREVIEW)**:
 
   **Umsetzung**:

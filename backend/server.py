@@ -3364,6 +3364,71 @@ async def watchlist_search(q: str = "", limit: int = 12, user: dict = Depends(ge
     }
 
 
+@api.get("/watchlist/events")
+async def watchlist_events(symbols: str = "", user: dict = Depends(get_current_user)):
+    """Bundled next-earnings + ex-dividend dates for a list of tickers.
+    Reads from the existing per-symbol Mongo caches (stock_public_earnings_cache
+    + stock_public_dividends_cache) — no yfinance calls here. Session 80.80."""
+    del user  # auth-only
+    syms = [_clean_symbol(s) for s in (symbols or "").split(",") if _clean_symbol(s)]
+    if not syms:
+        return {"items": [], "as_of": _now_utc().isoformat()}
+    if len(syms) > 50:
+        syms = syms[:50]
+
+    now = _now_utc()
+    today = now.date()
+    earn_docs = await db.stock_public_earnings_cache.find({"_id": {"$in": syms}}).to_list(50)
+    div_docs = await db.stock_public_dividends_cache.find({"_id": {"$in": syms}}).to_list(50)
+    earn_by = {d["_id"]: (d.get("data") or {}) for d in earn_docs}
+    div_by = {d["_id"]: (d.get("data") or {}) for d in div_docs}
+
+    def _parse_date(s):
+        if not s:
+            return None
+        try:
+            return datetime.strptime(str(s)[:10], "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            return None
+
+    items = []
+    for sym in syms:
+        edata = earn_by.get(sym) or {}
+        ddata = div_by.get(sym) or {}
+        important = edata.get("important_dates") or {}
+        next_earn_iso = important.get("next_earnings_date")
+        next_earn_is_range = bool(important.get("next_earnings_is_range"))
+        next_earn_end_iso = important.get("next_earnings_date_end") or next_earn_iso
+        ex_div_iso = ((ddata.get("summary") or {}).get("next_ex_dividend_date")
+                      or important.get("ex_dividend_date"))
+        pay_iso = important.get("dividend_payment_date")
+
+        earn_d = _parse_date(next_earn_iso)
+        ex_d = _parse_date(ex_div_iso)
+        pay_d = _parse_date(pay_iso)
+
+        def _days(d):
+            return (d - today).days if d else None
+
+        # Only surface upcoming (or today) events; drop stale past dates.
+        earn_days = _days(earn_d) if earn_d and earn_d >= today else None
+        ex_days = _days(ex_d) if ex_d and ex_d >= today else None
+        pay_days = _days(pay_d) if pay_d and pay_d >= today else None
+
+        items.append({
+            "symbol": sym,
+            "next_earnings_date": next_earn_iso if earn_days is not None else None,
+            "next_earnings_is_range": next_earn_is_range if earn_days is not None else False,
+            "next_earnings_date_end": next_earn_end_iso if earn_days is not None else None,
+            "next_earnings_days": earn_days,
+            "ex_dividend_date": ex_div_iso if ex_days is not None else None,
+            "ex_dividend_days": ex_days,
+            "dividend_payment_date": pay_iso if pay_days is not None else None,
+            "dividend_payment_days": pay_days,
+        })
+    return {"items": items, "as_of": now.isoformat()}
+
+
 # --- Sparklines ------------------------------------------------------------
 
 # Alle Symbole, für die der Provider (yfinance primär, Alpha Vantage optional)

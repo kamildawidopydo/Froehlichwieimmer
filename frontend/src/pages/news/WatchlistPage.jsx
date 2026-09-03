@@ -17,6 +17,10 @@ import SymbolNews from '@/components/watchlist/SymbolNews';
 import { watchlistApi, useWatchlist } from '@/services/watchlistApi';
 import { symbolNewsApi } from '@/services/symbolNewsApi';
 import { formatDisplayPrice, formatChangePct, formatLastUpdated } from '@/services/marketService';
+import axios from 'axios';
+
+const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const eventsClient = axios.create({ baseURL: `${API_BASE}/api`, withCredentials: true });
 
 const SPARKLINE_SYMBOLS = new Set(['DAX', 'SPX', 'NDX', 'DJI']);
 const ASSET_LABEL = {
@@ -141,7 +145,7 @@ const SearchPanel = ({ existingSymbols, onAdded }) => {
 
 // ---------------------------- Sortable Row ---------------------------------
 
-const SortableWatchlistItem = ({ item, onRemove, newsData }) => {
+const SortableWatchlistItem = ({ item, onRemove, newsData, eventInfo }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.symbol });
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 30 : 'auto' };
 
@@ -149,6 +153,24 @@ const SortableWatchlistItem = ({ item, onRemove, newsData }) => {
   const positive = (q?.change_percent ?? 0) >= 0;
   const Icon = positive ? TrendingUp : TrendingDown;
   const changeColor = positive ? 'text-emerald-700' : 'text-rose-700';
+
+  const eventBadges = [];
+  if (eventInfo) {
+    if (typeof eventInfo.next_earnings_days === 'number' && eventInfo.next_earnings_days >= 0 && eventInfo.next_earnings_days <= 60) {
+      const label = eventInfo.next_earnings_is_range && eventInfo.next_earnings_date_end !== eventInfo.next_earnings_date
+        ? `voraussichtlich Earnings in ${eventInfo.next_earnings_days} Tagen`
+        : eventInfo.next_earnings_days === 0
+          ? 'Earnings heute'
+          : `Earnings in ${eventInfo.next_earnings_days} Tag${eventInfo.next_earnings_days === 1 ? '' : 'en'}`;
+      eventBadges.push({ label, tone: 'primary' });
+    }
+    if (typeof eventInfo.ex_dividend_days === 'number' && eventInfo.ex_dividend_days >= 0 && eventInfo.ex_dividend_days <= 60) {
+      const label = eventInfo.ex_dividend_days === 0
+        ? 'Ex-Dividende heute'
+        : `Ex-Dividende in ${eventInfo.ex_dividend_days} Tag${eventInfo.ex_dividend_days === 1 ? '' : 'en'}`;
+      eventBadges.push({ label, tone: 'gold' });
+    }
+  }
 
   return (
     <article
@@ -182,6 +204,23 @@ const SortableWatchlistItem = ({ item, onRemove, newsData }) => {
             {ASSET_LABEL[item.asset_type] || 'Wertpapier'}
             {q?.data_source === 'fallback' && ' · Fallback-Kurs'}
           </p>
+
+          {eventBadges.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5" data-testid={`watchlist-events-${item.symbol}`}>
+              {eventBadges.map((b, i) => (
+                <span
+                  key={i}
+                  className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.14em] ${
+                    b.tone === 'primary'
+                      ? 'border-bank-primary/40 bg-bank-primary/10 text-bank-primary-strong'
+                      : 'border-bank-gold/40 bg-bank-gold/10 text-bank-gold'
+                  }`}
+                >
+                  {b.label}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Detailed news — 3 items */}
           <SymbolNews symbol={item.symbol} displayName={item.display_name} limit={3} variant="detailed" data={newsData} />
@@ -236,6 +275,7 @@ const WatchlistPage = () => {
   const navigate = useNavigate();
   const existingSymbols = useMemo(() => new Set(items.map((i) => i.symbol)), [items]);
   const [newsBySymbol, setNewsBySymbol] = useState({});
+  const [eventsBySymbol, setEventsBySymbol] = useState({});
 
   useEffect(() => {
     if (!loading && !isAuthed) navigate('/login?next=/news/watchlist', { replace: true });
@@ -249,6 +289,22 @@ const WatchlistPage = () => {
       .batch(items.map((i) => i.symbol))
       .then((d) => { if (alive) setNewsBySymbol(d.by_symbol || {}); })
       .catch(() => { if (alive) setNewsBySymbol({}); });
+    return () => { alive = false; };
+  }, [items]);
+
+  // Batch events fetch (earnings / ex-div) — one request, reuses server cache.
+  useEffect(() => {
+    if (items.length === 0) { setEventsBySymbol({}); return; }
+    let alive = true;
+    const syms = items.map((i) => i.symbol).join(',');
+    eventsClient.get('/watchlist/events', { params: { symbols: syms } })
+      .then((r) => {
+        if (!alive) return;
+        const by = {};
+        for (const it of (r.data?.items || [])) { by[it.symbol] = it; }
+        setEventsBySymbol(by);
+      })
+      .catch(() => { if (alive) setEventsBySymbol({}); });
     return () => { alive = false; };
   }, [items]);
 
@@ -328,6 +384,7 @@ const WatchlistPage = () => {
                       item={item}
                       onRemove={remove}
                       newsData={newsBySymbol[item.symbol]}
+                      eventInfo={eventsBySymbol[item.symbol]}
                     />
                   ))}
                 </div>
