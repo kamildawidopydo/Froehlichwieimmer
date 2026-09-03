@@ -13,6 +13,7 @@ import {
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { Button } from '@/components/ui/button';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import ReportBuilder from '@/components/groessere-vermoegen/ReportBuilder';
 
 /**
  * Session 80.86 · Phase 2 „Größere Vermögen" — Vermögensstruktur-Simulator.
@@ -845,6 +846,20 @@ export default function VermoegensStrukturSimulator({ phase1 }) {
             })}
           </div>
         </section>
+
+        {/* ── 8b) Phase-3 · Vermögensreport ─────────────────────── */}
+        <ReportBuilder
+          phase1={phase1}
+          phase2={{ entnahmen, bestReserve, wertpapierPct, verzinsBetrag, reserveBetrag, institute }}
+          struct={struct}
+          ladder={ladder}
+          scenarios={scenarios}
+          activeScenario={activeScenario}
+          clusterHints={clusterHints}
+          liquidHints={liquidHints}
+          zinsGroups={zinsLoad === 'ready' ? zinsGroups : null}
+          zinsLoadedAt={zinsLoad === 'ready' ? new Date().toISOString() : null}
+        />
 
         {/* ── 9) CTA & Hinweise ──────────────────────────────────── */}
         <section className="mt-16 border-t border-bank-border pt-12" aria-labelledby="gv-sim-cta-title">
