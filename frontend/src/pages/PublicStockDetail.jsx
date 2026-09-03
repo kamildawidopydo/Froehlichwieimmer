@@ -12,6 +12,7 @@ const StockInvestmentCalculator = lazy(() => import('@/components/stock/StockInv
 const StockAnalystConsensus = lazy(() => import('@/components/stock/StockAnalystConsensus'));
 const StockDividends = lazy(() => import('@/components/stock/StockDividends'));
 const StockEarnings = lazy(() => import('@/components/stock/StockEarnings'));
+const StockCompare = lazy(() => import('@/components/stock/StockCompare'));
 
 const API_BASE = process.env.REACT_APP_BACKEND_URL;
 
@@ -223,6 +224,7 @@ function StockContent({ stock }) {
         <StockDividends symbol={stock.ticker} />
         <StockEarnings symbol={stock.ticker} />
         <StockFundamentals symbol={stock.ticker} currentPrice={current} />
+        <StockCompare baseSymbol={stock.ticker} />
         <StockNews symbol={stock.ticker} />
       </Suspense>
 

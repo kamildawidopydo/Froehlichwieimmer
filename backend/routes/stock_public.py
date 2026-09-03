@@ -68,6 +68,16 @@ FUNDAMENTALS_TTL_S = 6 * 60 * 60
 ANALYST_TTL_S = 6 * 60 * 60
 DIVIDENDS_TTL_S = 12 * 60 * 60
 EARNINGS_TTL_S = 3 * 60 * 60
+COMPARE_TTL_S = 60 * 60
+
+# Compare ranges use daily bars so we can compute daily-return-based volatility
+# and drawdowns. `max` falls back to weekly to keep payload size reasonable.
+COMPARE_RANGE_MAP: Dict[str, Dict[str, Any]] = {
+    "1y":  {"period": "1y",  "interval": "1d",  "trading_days": 252},
+    "3y":  {"period": "3y",  "interval": "1d",  "trading_days": 252},
+    "5y":  {"period": "5y",  "interval": "1d",  "trading_days": 252},
+    "max": {"period": "max", "interval": "1wk", "trading_days": 52},
+}
 
 
 def _now() -> datetime:
@@ -1045,3 +1055,300 @@ async def stock_earnings(symbol: str) -> Dict[str, Any]:
     return {"symbol": sym, "data_source": source,
             "data_updated_at": now.isoformat(),
             "cached_until": expires_at.isoformat(), **payload}
+
+
+
+# ---- Compare & Risk (Session 80.78 · Tool-Paket 4/4) -----------------------
+
+# Peers exposed to the compare selector — all ALLOWED equities except indices.
+COMPARE_PEERS: List[str] = ["NVDA", "AAPL", "MSFT", "GOOGL", "AMZN",
+                            "SAP", "SIE", "ALV", "DBK", "IFX", "RHM"]
+COMPARE_BENCHMARKS: Dict[str, str] = {"NDX": "Nasdaq-100", "DAX": "DAX", "SPX": "S&P 500"}
+# S&P is not yet in ALLOWED; keep a private mapping only for compare.
+_COMPARE_BENCHMARK_YF: Dict[str, str] = {"NDX": "^NDX", "DAX": "^GDAXI", "SPX": "^GSPC"}
+
+
+def _compute_risk(closes: List[float], trading_days: int) -> Dict[str, Any]:
+    """Volatility (annualised), max drawdown, total & annualised return.
+    Uses simple daily returns. Returns None fields when data is insufficient."""
+    if not closes or len(closes) < 5:
+        return {"volatility_annual_pct": None, "max_drawdown_pct": None,
+                "total_return_pct": None, "annual_return_pct": None,
+                "period_high": None, "period_low": None}
+    import math
+    rets = []
+    prev = closes[0]
+    for c in closes[1:]:
+        if prev and prev > 0:
+            rets.append(c / prev - 1.0)
+        prev = c
+    if not rets:
+        return {"volatility_annual_pct": None, "max_drawdown_pct": None,
+                "total_return_pct": None, "annual_return_pct": None,
+                "period_high": None, "period_low": None}
+    mean = sum(rets) / len(rets)
+    var = sum((r - mean) ** 2 for r in rets) / max(1, len(rets) - 1)
+    std_daily = math.sqrt(var)
+    vol_ann = std_daily * math.sqrt(trading_days) * 100.0
+
+    running_max = closes[0]
+    max_dd = 0.0
+    for c in closes:
+        if c > running_max:
+            running_max = c
+        if running_max > 0:
+            dd = c / running_max - 1.0
+            if dd < max_dd:
+                max_dd = dd
+
+    total_ret = (closes[-1] / closes[0] - 1.0) * 100.0 if closes[0] > 0 else None
+    years = max(len(closes) / float(trading_days), 1 / 12)
+    ann_ret = None
+    if closes[0] > 0 and closes[-1] > 0:
+        ann_ret = ((closes[-1] / closes[0]) ** (1 / years) - 1.0) * 100.0
+
+    return {
+        "volatility_annual_pct": round(vol_ann, 4),
+        "max_drawdown_pct": round(max_dd * 100.0, 4),
+        "total_return_pct": round(total_ret, 4) if total_ret is not None else None,
+        "annual_return_pct": round(ann_ret, 4) if ann_ret is not None else None,
+        "period_high": round(max(closes), 4),
+        "period_low": round(min(closes), 4),
+    }
+
+
+def _compute_beta(sym_rets: List[float], bench_rets: List[float]) -> Optional[float]:
+    """cov(sym, bench) / var(bench). Requires len >= 20. None otherwise."""
+    n = min(len(sym_rets), len(bench_rets))
+    if n < 20:
+        return None
+    s = sym_rets[-n:]
+    b = bench_rets[-n:]
+    ms = sum(s) / n
+    mb = sum(b) / n
+    cov = sum((s[i] - ms) * (b[i] - mb) for i in range(n)) / max(1, n - 1)
+    var_b = sum((b[i] - mb) ** 2 for i in range(n)) / max(1, n - 1)
+    if var_b <= 0:
+        return None
+    return round(cov / var_b, 4)
+
+
+def _yf_daily_closes_sync(yf_sym: str, period: str, interval: str) -> Optional[List[dict]]:
+    """Daily (or weekly for max) close series for compare & risk math."""
+    return _yf_history_sync(yf_sym, period, interval)
+
+
+def _yf_compare_meta_sync(yf_sym: str) -> Dict[str, Any]:
+    """One-shot yfinance meta pull used for the fundamentals row + 52w high/low."""
+    try:
+        import yfinance as yf  # type: ignore
+    except Exception:  # noqa: BLE001
+        return {}
+    try:
+        t = yf.Ticker(yf_sym)
+        try:
+            info = t.get_info() or {}
+        except Exception:  # noqa: BLE001
+            info = getattr(t, "info", None) or {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+    def _num(v):
+        try:
+            if v is None:
+                return None
+            v = float(v)
+            return v if v == v else None
+        except (TypeError, ValueError):
+            return None
+
+    def _pct(v):
+        n = _num(v)
+        return round(n * 100.0, 4) if n is not None else None
+
+    dy = _num(info.get("dividendYield"))
+    if dy is not None and 0 < dy < 0.02:
+        dy = round(dy * 100.0, 4)
+    if dy is not None and dy > 30:
+        dy = None
+    payout = _num(info.get("payoutRatio"))
+    return {
+        "company_name": info.get("longName") or info.get("shortName"),
+        "currency": info.get("currency"),
+        "current_price": _num(info.get("currentPrice")) or _num(info.get("regularMarketPrice")),
+        "market_cap": _num(info.get("marketCap")),
+        "trailing_pe": _num(info.get("trailingPE")),
+        "forward_pe": _num(info.get("forwardPE")),
+        "price_to_sales": _num(info.get("priceToSalesTrailing12Months")),
+        "price_to_book": _num(info.get("priceToBook")),
+        "dividend_yield_pct": dy,
+        "payout_ratio_pct": round(payout * 100.0, 4) if payout is not None else None,
+        "revenue_growth_pct": _pct(info.get("revenueGrowth")),
+        "earnings_growth_pct": _pct(info.get("earningsGrowth")),
+        "profit_margin_pct": _pct(info.get("profitMargins")),
+        "return_on_equity_pct": _pct(info.get("returnOnEquity")),
+        "debt_to_equity": _num(info.get("debtToEquity")),
+        "beta_provider": _num(info.get("beta")),
+        "fifty_two_week_high": _num(info.get("fiftyTwoWeekHigh")),
+        "fifty_two_week_low": _num(info.get("fiftyTwoWeekLow")),
+    }
+
+
+@router.get("/stocks/compare")
+async def stock_compare(
+    symbols: str = Query(..., description="Comma-separated tickers (2-4)"),
+    range: str = Query(default="1y"),
+    benchmark: Optional[str] = Query(default=None),
+) -> Dict[str, Any]:
+    # ---- Validate input ---------------------------------------------------
+    raw = [s.strip().upper() for s in (symbols or "").split(",") if s.strip()]
+    if not (2 <= len(raw) <= 4):
+        raise HTTPException(400, detail="Bitte 2 bis 4 Ticker angeben.")
+    syms: List[str] = []
+    for s in raw:
+        if s not in ALLOWED or s in {"NDX", "DAX"}:
+            raise HTTPException(404, detail=f"Ticker {s} nicht freigeschaltet für Vergleich.")
+        if s not in syms:
+            syms.append(s)
+    rk = (range or "1y").lower()
+    if rk not in COMPARE_RANGE_MAP:
+        raise HTTPException(400, detail=f"Ungültiger Zeitraum: {range}")
+
+    # Auto-benchmark: NDX if any US equity is in the mix, else DAX.
+    bm = (benchmark or "").upper().strip() or None
+    if bm and bm not in _COMPARE_BENCHMARK_YF:
+        raise HTTPException(400, detail=f"Ungültiger Benchmark: {benchmark}")
+    if not bm:
+        base = syms[0]
+        bm = BENCHMARK_FOR.get(base, "NDX")
+
+    # ---- Cache lookup -----------------------------------------------------
+    cache_key = f"{','.join(sorted(syms))}|{rk}|{bm}"
+    cached = await _db.stock_public_compare_cache.find_one({"_id": cache_key})
+    if cached and cached.get("expires_at") and cached["expires_at"] > _now():
+        return {**cached.get("data", {}),
+                "data_source": cached.get("data_source", "cache"),
+                "data_updated_at": cached.get("cached_at").isoformat() if cached.get("cached_at") else None,
+                "cached_until": cached["expires_at"].isoformat()}
+
+    cfg = COMPARE_RANGE_MAP[rk]
+    period, interval, tdays = cfg["period"], cfg["interval"], cfg["trading_days"]
+
+    # ---- Parallel yfinance fetch -----------------------------------------
+    yf_symbols = [ALLOWED[s] for s in syms]
+    yf_bench = _COMPARE_BENCHMARK_YF[bm] if bm else None
+    tasks = [asyncio.to_thread(_yf_daily_closes_sync, yfs, period, interval) for yfs in yf_symbols]
+    if yf_bench:
+        tasks.append(asyncio.to_thread(_yf_daily_closes_sync, yf_bench, period, interval))
+    meta_tasks = [asyncio.to_thread(_yf_compare_meta_sync, yfs) for yfs in yf_symbols]
+    results = await asyncio.gather(*tasks, *meta_tasks, return_exceptions=True)
+
+    histories = results[: len(yf_symbols) + (1 if yf_bench else 0)]
+    metas = results[len(histories):]
+    bench_hist = histories[-1] if yf_bench else None
+    stock_hists = histories[: len(yf_symbols)]
+
+    # ---- Align on common trading days ------------------------------------
+    def _dkey(iso: str) -> str: return (iso or "")[:10]
+    day_maps: List[Dict[str, float]] = []
+    for h in stock_hists:
+        if isinstance(h, Exception) or not h:
+            day_maps.append({})
+        else:
+            day_maps.append({_dkey(p["t"]): p["c"] for p in h})
+    bench_map: Dict[str, float] = {}
+    if bench_hist and not isinstance(bench_hist, Exception):
+        bench_map = {_dkey(p["t"]): p["c"] for p in bench_hist}
+
+    # common days = intersection across stock symbols
+    common: Optional[set] = None
+    for m in day_maps:
+        if not m:
+            common = set()
+            break
+        common = set(m.keys()) if common is None else (common & set(m.keys()))
+    common_days = sorted(common) if common else []
+
+    # ---- Build indexed series --------------------------------------------
+    series: List[Dict[str, Any]] = []
+    risk_out: List[Dict[str, Any]] = []
+    bench_daily_returns: List[float] = []
+    if bench_map and common_days:
+        prev_b = None
+        for d in common_days:
+            if d in bench_map:
+                cur = bench_map[d]
+                if prev_b and prev_b > 0:
+                    bench_daily_returns.append(cur / prev_b - 1.0)
+                prev_b = cur
+
+    for i, sym in enumerate(syms):
+        m = day_maps[i]
+        if not m or not common_days:
+            series.append({"symbol": sym, "points": []})
+            risk_out.append({"symbol": sym})
+            continue
+        closes = [m[d] for d in common_days if d in m]
+        risk = _compute_risk(closes, tdays)
+        # daily returns for beta
+        sym_returns: List[float] = []
+        prev = None
+        for c in closes:
+            if prev and prev > 0:
+                sym_returns.append(c / prev - 1.0)
+            prev = c
+        beta = _compute_beta(sym_returns, bench_daily_returns) if bench_daily_returns else None
+        base_val = closes[0]
+        points = [{"t": d, "v": round((c / base_val) * 100.0, 4)} for d, c in zip(common_days, closes)]
+        series.append({"symbol": sym, "points": points})
+        risk_out.append({"symbol": sym, "beta": beta, **risk})
+
+    # Benchmark series (indexed to same anchor day)
+    bench_series: Optional[Dict[str, Any]] = None
+    if bench_map and common_days:
+        base_day = common_days[0]
+        b0 = bench_map.get(base_day)
+        if b0 and b0 > 0:
+            b_pts = [{"t": d, "v": round((bench_map[d] / b0) * 100.0, 4)} for d in common_days if d in bench_map]
+            bench_series = {"symbol": bm, "label": COMPARE_BENCHMARKS.get(bm, bm), "points": b_pts}
+
+    # ---- Fundamentals table + 52w hints ----------------------------------
+    fundamentals: List[Dict[str, Any]] = []
+    for i, sym in enumerate(syms):
+        meta = metas[i] if not isinstance(metas[i], Exception) else {}
+        meta = meta or {}
+        fundamentals.append({"symbol": sym, **meta})
+
+    payload = {
+        "symbols": syms,
+        "range": rk,
+        "benchmark": {"symbol": bm, "label": COMPARE_BENCHMARKS.get(bm, bm)} if bm else None,
+        "common_days": len(common_days),
+        "series": series,
+        "benchmark_series": bench_series,
+        "risk_metrics": risk_out,
+        "fundamentals": fundamentals,
+    }
+
+    now = _now()
+    expires_at = now + timedelta(seconds=COMPARE_TTL_S)
+    await _db.stock_public_compare_cache.update_one(
+        {"_id": cache_key},
+        {"$set": {"_id": cache_key, "data": payload,
+                  "data_source": "yfinance" if common_days else "unavailable",
+                  "cached_at": now, "expires_at": expires_at}},
+        upsert=True,
+    )
+    return {**payload,
+            "data_source": "yfinance" if common_days else "unavailable",
+            "data_updated_at": now.isoformat(),
+            "cached_until": expires_at.isoformat()}
+
+
+@router.get("/stocks/compare/peers")
+async def stock_compare_peers() -> Dict[str, Any]:
+    """Static list of allowed peers + benchmarks for the compare selector."""
+    return {
+        "peers": [{"symbol": s, "label": COMPANY_LABELS.get(s, s)} for s in COMPARE_PEERS],
+        "benchmarks": [{"symbol": k, "label": v} for k, v in COMPARE_BENCHMARKS.items()],
+    }

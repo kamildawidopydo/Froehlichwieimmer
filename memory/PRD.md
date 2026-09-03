@@ -6,6 +6,50 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.78 (Sep 03 2026) — **Tool-Paket 4/4 · Aktienvergleich + Risikoanalyse (nur PREVIEW)**:
+
+  **Umsetzung**:
+  1. Neuer gebündelter Backend-Endpunkt `GET /api/stocks/compare?symbols=A,B[,C,D]&range=1y|3y|5y|max&benchmark=NDX|DAX|SPX` (`stock_public.py`) — validiert 2-4 ALLOWED-Ticker, fetcht Daily-Historie + Fundamentals-Meta **parallel** via `asyncio.gather` (kein N+1), berechnet serverseitig: indexierte Kurs-Serien (Start = 100), annualisierte Volatilität, Max Drawdown, Beta gegen Benchmark, Gesamt- + annualisierte Rendite pro Symbol. Auto-Benchmark: NDX für US-Base, DAX für DE-Base. Cache 1 h in `stock_public_compare_cache` (Key = sortierte Symbols|range|benchmark).
+  2. Zusätzlicher Support-Endpunkt `GET /api/stocks/compare/peers` — statische Peer-Liste + verfügbare Benchmarks (S&P 500, Nasdaq-100, DAX) für den Selektor.
+  3. Neue Frontend-Komponente `StockCompare.jsx` (lazy) — Peer-Autocomplete-Suche (Ticker- + Name-Match), Chip-Selektion (max 3 zusätzlich, Base gepinnt), Zeitraum-Tabs (1J/3J/5J), Benchmark-Toggle, SVG-Chart mit bis zu 4 Aktien-Linien + dashed Benchmark-Linie, Legende mit End-Delta-Anzeige, Risiko-/Rendite-Scatter, Risiko-Tabelle (Vola/MDD/Beta/Rendite p.a./Gesamtrendite), Fundamental-Vergleichs-Tabelle (14 Kennzahlen). Auf Mobile: Tabellen horizontal scrollbar **innerhalb Container**, kein Body-Overflow.
+  4. Integration in `PublicStockDetail.jsx` als letzte Sektion vor News (Reihenfolge: Chart → Rechner → Analysten → Dividenden → Earnings → Fundamentals → **Vergleich** → News).
+
+  **QA-Ergebnisse — 3 Vergleiche live**:
+  | Vergleich | Range | Common Days | Vola | MDD | Beta | Ann. Rendite | Benchmark |
+  |-----------|-------|-------------|------|-----|------|--------------|-----------|
+  | **AAPL vs MSFT** | 1y | 252 | AAPL 24.95% / MSFT 32.41% | AAPL −13.82% / MSFT −34.91% | AAPL 0.32 / MSFT 0.56 | AAPL +36.27% / MSFT −1.69% | Nasdaq-100 |
+  | **NVDA vs MSFT vs AAPL** | 3y | 752 | NVDA 46.96% / MSFT 26.20% / AAPL 26.87% | NVDA −36.89% / MSFT −34.91% / AAPL −33.43% | NVDA 1.70 / MSFT 0.73 / AAPL 0.73 | NVDA +67.03% / MSFT +14.28% / AAPL +19.77% | Nasdaq-100 |
+  | **SAP vs RHM vs ALV** | 5y | 1.274 | SAP 28.87% / RHM 43.32% / ALV 19.65% | SAP −54.22% / RHM −52.40% / ALV −31.18% | SAP 1.00 / RHM 0.69 / ALV 0.84 | SAP +7.84% / RHM +66.56% / ALV +17.82% | DAX (auto) |
+
+  **Mathematische Kontrolltests** (Python unabhängig vs API):
+  | Metrik | API-Wert | Kontrolle | Match |
+  |--------|----------|-----------|-------|
+  | NVDA 1y Vola | 38.1485% | 38.1485% | ✅ |
+  | NVDA 1y Max Drawdown | −20.2231% | −20.2231% | ✅ |
+  | NVDA 1y Total Return | 31.5262% | 31.5262% | ✅ |
+  | NVDA 1y Annual Return | 31.5262% | 31.5262% | ✅ |
+
+  **Formeln**:
+  - Daily return: `p_t / p_{t-1} - 1`
+  - Vola annualisiert: `stdev(daily_returns) × √252 × 100`
+  - Max Drawdown: `min(p_t / running_max_p - 1) × 100`
+  - Beta: `cov(sym_returns, bench_returns) / var(bench_returns)` (Mindestlänge 20 Datenpunkte)
+  - Annual return: `((end / start)^(1/years) − 1) × 100`, years = `len(closes) / 252`
+  - Indexierung: `p_t / p_0 × 100` je Symbol, alle Symbole auf **gemeinsame Handelstage** intersect
+
+  **QA**:
+  - Backend regression: `/history`, `/fundamentals`, `/analyst`, `/dividends`, `/earnings`, `/news` → **6× 200** ✅
+  - Desktop 1440 Light: Chart 4 Linien mit unterschiedlichen Farben, Scatter mit Achsen, 2 Tabellen ✅
+  - Desktop 1440 Dark: bank-surface, keine Deep-Navy-Hardcodings ✅
+  - Mobile 390 Dark (NVDA + MSFT + AAPL): scrollWidth=390 == clientWidth=390, **0 Body-Overflow** ✅
+  - Console-Errors: **0** · Network-Errors: **0**
+  - 0 NaN · 0 undefined · 0 Fake-Daten ✅
+  - Auto-Benchmark greift: NVDA→NDX, SAP→DAX ✅
+
+  **Nicht in diesem Paket** (per User): Watchlist, Kursalarm, Portfolio, DCF, News-Sentiment, Insider-Trading, Kauf/Verkauf-Aktion.
+
+  **Ready for deploy: JA** — jedoch strikt **nur PREVIEW** gemäß User-Vorgabe. **Kein Prod-Deploy ohne ausdrückliche Freigabe.**
+
 - 80.77 (Sep 03 2026) — **Tool-Paket 3/4 · Dividenden + Earnings + Unternehmensereignisse (nur PREVIEW)**:
 
   **Umsetzung**:
