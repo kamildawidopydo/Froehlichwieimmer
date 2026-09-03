@@ -8,6 +8,7 @@ import HomeSavingsFaqSection from '@/components/home/HomeSavingsFaqSection';
 import HomeTestimonials from '@/components/home/HomeTestimonials';
 import HomeTrustLine from '@/components/home/HomeTrustLine';
 import HomePlatformShowcase from '@/components/home/HomePlatformShowcase';
+import HomeGroessereVermoegenBand from '@/components/home/HomeGroessereVermoegenBand';
 import HomeCreditOffersSection from '@/components/home/HomeCreditOffersSection';
 import HomeSavingsOffersSection from '@/components/home/HomeSavingsOffersSection';
 import { mapCreditOffersForCarousel } from '@/lib/creditOfferDisplay';
@@ -204,6 +205,9 @@ const Home = () => {
       <HomeTrustLine />
 
       <HomePlatformShowcase />
+
+      {/* ── Größere Vermögen — Sekundär-Einstieg (Session 80.85) ────── */}
+      <HomeGroessereVermoegenBand />
 
       {/* ── Sparangebote (Cover-Flow, Daten aus savings_offers) ───────── */}
       <HomeSavingsOffersSection offers={savingsOffers} />
