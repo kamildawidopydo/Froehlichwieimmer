@@ -6,6 +6,23 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.83 (Sep 03 2026) — **Watchlist Professional 4/4 · Cron + E-Mail + Meine Alarme (nur PREVIEW)**:
+  1. Bestehende Alert-Engine `_sa_evaluate_once()` **unverändert wiederverwendet** — nur ein E-Mail-Delivery-Layer nachgeschaltet: nach `insert_many` bulk-loads `users.email` + `stock_alerts.channel`; für Alerts mit `channel="in_app_email"` wird via `_send_email_via_emergent` eine editorial-HTML-Mail versendet. `stock_alert_email_log` dedupliziert per `event_key` → **niemals Doppelmail** bei Re-Runs.
+  2. Neuer Cron-Endpoint `POST /api/cron/stock-alerts-evaluate` (Bearer `WEBHOOK_CRON_SECRET`, ackt 2xx sofort, feuert `asyncio.create_task(_sa_evaluate_once())`). `.emergent/crons.yml` erweitert um Eintrag `*/15 * * * *`.
+  3. Kanal-Enum `in_app` / `in_app_email` in `_sa_validate` (statt nur `in_app`).
+  4. Neue Frontend-Seite `MeineAlarmePage.jsx` (`/meine-alarme`) mit Filter-Tabs (Alle/Aktiv/Pausiert/Kurs/Termine/News), CRUD-Aktionen (Pause/Start/Löschen/Aktie öffnen), Notifications-Liste mit „Als gelesen markieren" + „Alle als gelesen".
+  5. Route registriert in `App.js` (`/meine-alarme`, lazy).
+
+  **QA**: unauth cron=401 · autorisierter cron=200 (enqueued) · in_app_email=201 · invalid channel=400 · alle 9 bestehenden Endpunkte weiter 200 · Compile OK.
+
+  **Cron-QA**: aktuelle `crons.yml`-Eintrag `stock-alerts-evaluate` mit `*/15 * * * *` (nur Preview aktiv, wird beim Prod-Deploy synchron übernommen).
+
+  **Provider-/Mongo-Requests pro Cron-Run** — bei N Symbolen mit Alerts: 3 Mongo-Aggregat-Reads (fund/earn/div) via `asyncio.gather` + optionale N news-Queries (nur wenn News-Alerts existieren) + 1 users-Bulk-Read + 1 alerts-Bulk-Read für Kanal-Lookup + optional 1 email-log-Check pro versendeter Mail. **0 yfinance-Calls**.
+
+  **Bewusst zurückgestellt (Regressions-Sicherheit)**: Notification-Bell im Header und dezenter Alert-Indikator in Watchlist-Row — beides würde bestehende Layout-Komponenten anfassen. Verfügbar über `/meine-alarme` und den Watchlist-Row-Toolbar-Slot bereits vorhanden. Kann in einem gezielten Micro-Update ergänzt werden.
+
+  **Ready for deploy: JA** — strikt **nur PREVIEW**. **Kein Prod-Deploy ohne ausdrückliche Freigabe.**
+
 - 80.82 (Sep 03 2026) — **Watchlist Professional 3/4 · Persönliche Alarme (nur PREVIEW)**:
 
   **Umsetzung**:

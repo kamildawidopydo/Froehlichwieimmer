@@ -3500,8 +3500,8 @@ def _sa_validate(payload: dict) -> dict:
         if reminder_days not in _SA_REMINDER_ALLOWED:
             raise HTTPException(400, detail="reminder_days muss 1, 2 oder 7 sein.")
     channel = payload.get("channel", "in_app")
-    if channel != "in_app":
-        raise HTTPException(400, detail="Kanal derzeit nur in_app.")
+    if channel not in ("in_app", "in_app_email"):
+        raise HTTPException(400, detail="Kanal muss 'in_app' oder 'in_app_email' sein.")
     return {"symbol": symbol, "alert_type": at, "threshold": threshold,
             "reminder_days": reminder_days, "channel": channel}
 
@@ -3694,7 +3694,38 @@ async def _sa_evaluate_once() -> dict:
             except Exception as exc:  # noqa: BLE001 — per-symbol resilience
                 logger.info("stock alerts eval err %s/%s: %s", sym, at, str(exc)[:80])
                 continue
-    if notifs: await db.stock_alert_notifications.insert_many(notifs)
+    if notifs: 
+        result = await db.stock_alert_notifications.insert_many(notifs)
+        # E-mail delivery for channel=in_app_email
+        try:
+            id_by_notif = {}
+            for oid, n in zip(result.inserted_ids, notifs):
+                id_by_notif[str(oid)] = n
+            # Group by user, fetch email in bulk
+            user_ids = list({n["user_id"] for n in notifs})
+            users = await db.users.find({"_id": {"$in": [ObjectId(u) if isinstance(u, str) else u for u in user_ids]}}, {"email": 1, "name": 1}).to_list(len(user_ids))
+            email_by_uid = {str(u.get("_id")): u.get("email") for u in users}
+            # Alerts by id for channel lookup
+            alert_ids = list({n["alert_id"] for n in notifs})
+            adocs = await db.stock_alerts.find({"_id": {"$in": alert_ids}}, {"channel": 1}).to_list(len(alert_ids))
+            channel_by_aid = {a["_id"]: a.get("channel", "in_app") for a in adocs}
+            for n in notifs:
+                if channel_by_aid.get(n["alert_id"]) != "in_app_email":
+                    continue
+                to = email_by_uid.get(str(n["user_id"]))
+                if not to: continue
+                # Dedupe: skip if we already emailed this event_key
+                if await db.stock_alert_email_log.find_one({"user_id": n["user_id"], "event_key": n.get("event_key")}):
+                    continue
+                subject = f"Ihr Aktien-Alarm: {n['symbol']}"
+                html = _sa_email_html(n)
+                try:
+                    await _send_email_via_emergent(to=to, subject=subject, html=html)
+                    await db.stock_alert_email_log.insert_one({"user_id": n["user_id"], "event_key": n.get("event_key"), "sent_at": now, "symbol": n["symbol"]})
+                except Exception as em_exc:  # noqa: BLE001
+                    logger.info("sa email err: %s", str(em_exc)[:80])
+        except Exception as exc:  # noqa: BLE001
+            logger.info("sa email pipeline: %s", str(exc)[:80])
     for u in updates:
         await db.stock_alerts.update_one({"_id": u["_id"]}, {"$set": u["$set"]})
     return {"evaluated": len(active), "triggered": triggered, "symbols": len(syms)}
@@ -3705,6 +3736,39 @@ async def sa_evaluate(user: dict = Depends(get_current_user)):
     if user.get("role") != "admin":
         raise HTTPException(403, detail="Nur für Admins.")
     return await _sa_evaluate_once()
+
+
+def _sa_email_html(n: dict) -> str:
+    ts = n.get("triggered_at")
+    ts_s = ts.strftime("%d.%m.%Y · %H:%M UTC") if ts else "—"
+    val = n.get("trigger_value")
+    val_row = f"<tr><td style='padding:6px 0;color:#6b7078'>Aktueller Kurs</td><td style='padding:6px 0;text-align:right;font-family:Georgia,serif;color:#1F2937'>{val:.2f}</td></tr>" if val else ""
+    return f"""<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px;color:#1F2937">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:#36A852">Fröhlich Vermögensberatung</div>
+      <h1 style="font-weight:300;font-size:26px;margin:12px 0 4px">Ihr Aktien-Alarm</h1>
+      <div style="font-size:15px;color:#6b7078;margin-bottom:24px">{n['symbol']}</div>
+      <p style="font-size:14.5px;line-height:1.6;color:#1F2937">{n.get('body','')}</p>
+      <table style="width:100%;margin-top:20px;border-collapse:collapse;font-size:13px">
+        {val_row}
+        <tr><td style='padding:6px 0;color:#6b7078'>Stand</td><td style='padding:6px 0;text-align:right;color:#1F2937'>{ts_s}</td></tr>
+      </table>
+      <p style="margin-top:32px;font-size:11.5px;color:#6b7078;line-height:1.6">
+        Diese Information dient ausschließlich der allgemeinen Information und stellt keine Anlageberatung oder Anlageempfehlung dar.
+        Kurse können zeitverzögert sein.
+      </p>
+    </div>"""
+
+
+@api.post("/cron/stock-alerts-evaluate")
+async def sa_cron_evaluate(request: Request):
+    """Emergent-Cron endpoint. Bearer via WEBHOOK_CRON_SECRET. Acks 2xx quickly,
+    runs evaluation in background."""
+    auth = request.headers.get("Authorization", "")
+    expected = os.environ.get("WEBHOOK_CRON_SECRET", "")
+    if not expected or auth != f"Bearer {expected}":
+        raise HTTPException(401, detail="Unauthorised.")
+    asyncio.create_task(_sa_evaluate_once())
+    return {"ok": True, "enqueued": True}
 
 
 

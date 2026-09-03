@@ -17,3 +17,11 @@ crons:
     endpoint: "{{BASE_URL}}/api/cron/news-synthesize"
     method: POST
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+
+  # 15-Minute-Auswertung der Aktien-Alarme (Session 80.83 · Watchlist Pro 4/4).
+  # Endpoint acked 2xx sofort und feuert die Auswertung via asyncio.create_task.
+  - name: stock-alerts-evaluate
+    description: "Alle 15 Min persönliche Aktien-Alarme evaluieren (background)"
+    cron: "*/15 * * * *"
+    endpoint: "{{BASE_URL}}/api/cron/stock-alerts-evaluate"
+    method: POST
