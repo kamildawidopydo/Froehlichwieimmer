@@ -145,7 +145,7 @@ const SearchPanel = ({ existingSymbols, onAdded }) => {
 
 // ---------------------------- Sortable Row ---------------------------------
 
-const SortableWatchlistItem = ({ item, onRemove, newsData, eventInfo }) => {
+const SortableWatchlistItem = ({ item, onRemove, newsData, eventInfo, selected, onToggleCompare }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.symbol });
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 30 : 'auto' };
 
@@ -170,17 +170,37 @@ const SortableWatchlistItem = ({ item, onRemove, newsData, eventInfo }) => {
         : `Ex-Dividende in ${eventInfo.ex_dividend_days} Tag${eventInfo.ex_dividend_days === 1 ? '' : 'en'}`;
       eventBadges.push({ label, tone: 'gold' });
     }
+    if (typeof eventInfo.dividend_yield_pct === 'number') {
+      eventBadges.push({ label: `Div-Yield ${eventInfo.dividend_yield_pct.toFixed(2)} %`, tone: 'muted' });
+    }
+    if (typeof eventInfo.distance_from_52w_high_pct === 'number') {
+      const d = eventInfo.distance_from_52w_high_pct;
+      eventBadges.push({ label: `${d >= 0 ? '+' : ''}${d.toFixed(1)} % vom 52W-Hoch`, tone: 'muted' });
+    }
+    if (typeof eventInfo.news_count_24h === 'number' && eventInfo.news_count_24h > 0) {
+      eventBadges.push({ label: `${eventInfo.news_count_24h} neue Meldung${eventInfo.news_count_24h === 1 ? '' : 'en'} (24 h)`, tone: 'primary' });
+    }
   }
 
   return (
     <article
       ref={setNodeRef}
       style={style}
-      className={`group border-b border-bank-border/60 bg-white px-4 py-4 transition-shadow sm:px-5 ${isDragging ? 'shadow-lg' : ''}`}
+      className={`group border-b border-bank-border/60 bg-white px-4 py-4 transition-shadow sm:px-5 ${isDragging ? 'shadow-lg' : ''} ${selected ? 'ring-2 ring-bank-primary/40 ring-inset' : ''}`}
       data-testid={`watchlist-full-row-${item.symbol}`}
       aria-roledescription="Sortierbares Element"
     >
       <div className="flex items-start gap-3">
+        {/* Session 80.81 — compare checkbox */}
+        <label className="mt-1 inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-bank-text-muted hover:bg-bank-bg/60 focus-within:ring-2 focus-within:ring-bank-primary/40" aria-label={`${item.display_name} zum Vergleich auswählen`}>
+          <input
+            type="checkbox"
+            checked={!!selected}
+            onChange={onToggleCompare}
+            className="h-4 w-4 accent-bank-primary"
+            data-testid={`watchlist-compare-check-${item.symbol}`}
+          />
+        </label>
         {/* Drag handle */}
         <button
           type="button"
@@ -213,7 +233,9 @@ const SortableWatchlistItem = ({ item, onRemove, newsData, eventInfo }) => {
                   className={`inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.14em] ${
                     b.tone === 'primary'
                       ? 'border-bank-primary/40 bg-bank-primary/10 text-bank-primary-strong'
-                      : 'border-bank-gold/40 bg-bank-gold/10 text-bank-gold'
+                      : b.tone === 'gold'
+                        ? 'border-bank-gold/40 bg-bank-gold/10 text-bank-gold'
+                        : 'border-bank-border bg-neutral-50 text-bank-text-muted'
                   }`}
                 >
                   {b.label}
@@ -276,6 +298,8 @@ const WatchlistPage = () => {
   const existingSymbols = useMemo(() => new Set(items.map((i) => i.symbol)), [items]);
   const [newsBySymbol, setNewsBySymbol] = useState({});
   const [eventsBySymbol, setEventsBySymbol] = useState({});
+  const [sortMode, setSortMode] = useState('manual');
+  const [selectedForCompare, setSelectedForCompare] = useState([]);
 
   useEffect(() => {
     if (!loading && !isAuthed) navigate('/login?next=/news/watchlist', { replace: true });
@@ -331,6 +355,43 @@ const WatchlistPage = () => {
 
   const sortableIds = useMemo(() => items.map((i) => i.symbol), [items]);
 
+  // Session 80.81 — client-side sort presets; "manual" preserves DnD order.
+  const displayedItems = useMemo(() => {
+    if (sortMode === 'manual') return items;
+    const arr = [...items];
+    if (sortMode === 'recent') return arr.reverse();
+    if (sortMode === 'alpha') return arr.sort((a, b) => (a.display_name || a.symbol).localeCompare(b.display_name || b.symbol, 'de'));
+    if (sortMode === 'day-up' || sortMode === 'day-down') {
+      return arr.sort((a, b) => {
+        const av = a.quote?.change_percent ?? -Infinity;
+        const bv = b.quote?.change_percent ?? -Infinity;
+        return sortMode === 'day-up' ? bv - av : av - bv;
+      });
+    }
+    return arr;
+  }, [items, sortMode]);
+
+  const toggleCompare = (sym) => {
+    setSelectedForCompare((cur) => {
+      if (cur.includes(sym)) return cur.filter((x) => x !== sym);
+      if (cur.length >= 4) {
+        toast.error('Maximal 4 Aktien vergleichbar.');
+        return cur;
+      }
+      return [...cur, sym];
+    });
+  };
+
+  const openCompare = () => {
+    if (selectedForCompare.length < 2) {
+      toast.error('Bitte mindestens 2 Aktien auswählen.');
+      return;
+    }
+    const [base, ...peers] = selectedForCompare;
+    const qs = peers.length ? `?compare=${peers.join(',')}` : '';
+    navigate(`/aktien/${encodeURIComponent(base)}${qs}#compare`);
+  };
+
   return (
     <div className="bg-white" data-testid="watchlist-page">
       <PageMeta
@@ -360,6 +421,50 @@ const WatchlistPage = () => {
 
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 sm:px-10 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="min-w-0">
+          {/* Session 80.81 — sort presets */}
+          {items.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3" data-testid="watchlist-toolbar">
+              <label className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-bank-text-muted">
+                Sortieren
+                <select
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value)}
+                  data-testid="watchlist-sort-select"
+                  className="min-h-[36px] rounded-full border border-bank-border bg-white px-3 py-1.5 text-[12px] text-bank-text focus:outline-none focus:ring-2 focus:ring-bank-primary/40"
+                >
+                  <option value="manual">Manuell (Drag &amp; Drop)</option>
+                  <option value="recent">Zuletzt hinzugefügt</option>
+                  <option value="alpha">Alphabetisch</option>
+                  <option value="day-up">Stärkste Tagesperformance</option>
+                  <option value="day-down">Schwächste Tagesperformance</option>
+                </select>
+              </label>
+              {selectedForCompare.length > 0 && (
+                <div className="inline-flex items-center gap-3 rounded-full border border-bank-primary/50 bg-bank-primary/5 px-4 py-2" data-testid="watchlist-compare-bar">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-bank-primary-strong">
+                    {selectedForCompare.length}/4 · {selectedForCompare.join(' · ')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={openCompare}
+                    disabled={selectedForCompare.length < 2}
+                    data-testid="watchlist-compare-cta"
+                    className="inline-flex min-h-[36px] items-center rounded-full bg-bank-primary px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-white hover:bg-bank-primary-strong disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Ausgewählte vergleichen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedForCompare([])}
+                    aria-label="Auswahl zurücksetzen"
+                    className="rounded-full p-1 text-bank-text-muted hover:bg-neutral-100"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           {loading ? (
             <div className="border border-bank-border bg-white">
               {[0, 1, 2, 3].map((i) => (
@@ -378,13 +483,15 @@ const WatchlistPage = () => {
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
                 <div className="border border-bank-border bg-white" data-testid="watchlist-full-list">
-                  {items.map((item) => (
+                  {displayedItems.map((item) => (
                     <SortableWatchlistItem
                       key={item.symbol}
                       item={item}
                       onRemove={remove}
                       newsData={newsBySymbol[item.symbol]}
                       eventInfo={eventsBySymbol[item.symbol]}
+                      selected={selectedForCompare.includes(item.symbol)}
+                      onToggleCompare={() => toggleCompare(item.symbol)}
                     />
                   ))}
                 </div>

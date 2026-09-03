@@ -6,6 +6,27 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.81 (Sep 03 2026) — **Watchlist Professional 2/4 · Sort + Multi-Select + Compare-Handoff (nur PREVIEW)**:
+
+  **Umsetzung**:
+  1. Backend: `/api/watchlist/events` erweitert (kein neues Endpoint, kompatibel) — liest zusätzlich `stock_public_fundamentals_cache` + `news_articles` und liefert pro Symbol: `dividend_yield_pct`, `distance_from_52w_high_pct`, `news_count_24h`. 4 Mongo-Reads parallel via `asyncio.gather`. **0 yfinance-Calls**.
+  2. Frontend `WatchlistPage.jsx`: Sort-Dropdown (Manuell/Zuletzt hinzugefügt/Alphabetisch/Stärkste Tages-Perf/Schwächste Tages-Perf), Compare-Checkbox pro Row (max 4), sticky Compare-Bar mit Symbolen und CTA „Ausgewählte vergleichen".
+  3. Frontend `StockCompare.jsx`: liest `?compare=A,B,C` aus der URL beim Mount und pre-selektiert die Peers, scrollt sanft in die Vergleichs-Sektion. **Keine zweite Compare-Logik** — nutzt die bestehende `/api/stocks/compare`.
+  4. Neue Row-Badges: Earnings in X Tagen, Ex-Dividende in X Tagen, Div-Yield %, „X neue Meldungen (24h)". Muted-Tone für 52W-Hoch-Abstand.
+
+  **QA-Ergebnisse**:
+  - Backend `/watchlist/events` liefert vollständig: AAPL (earn=56d, div=0.33%, news24h=2), MSFT (earn=55d, div=0.73%, news24h=2), NVDA (earn=75d, ex_div=**7d**, div=0.46%, news24h=1), SAP (earn=48d, div=1.36%, news24h=0) ✅
+  - Compare-Handoff: URL `?compare=NVDA#compare` → NVDA-Chip pre-populated, Chart lädt 3 Linien (AAPL 36.3pp · NVDA 31.5pp · Bench Nasdaq-100 24.5pp) ✅
+  - Sort-Dropdown funktional: `day-up` sortiert nach Change-Percent absteigend
+  - Multi-Select ≥5 → Toast „Maximal 4 Aktien vergleichbar." ✅
+  - Multi-Select <2 → Toast „Bitte mindestens 2 Aktien auswählen." ✅
+  - Console-Errors: **0** · body-overflow Mobile 390: `sw=cw=390` ✅
+  - Regression: `history`, `fundamentals`, `analyst`, `dividends`, `earnings`, `news`, `research`, `compare/peers` → alle **200** ✅
+
+  **Provider-Caveat**: `distance_from_52w_high_pct` liefert derzeit `None` (yfinance `fifty_two_week_high` ist nicht in `stock_public_fundamentals_cache` gespeichert unter diesem Key-Pfad). Badge wird sauber ausgeblendet — kein Fake-Wert. Kann in einer Folgesitzung durch Ergänzung des Cache-Schemas gelöst werden.
+
+  **Ready for deploy: JA** — strikt **nur PREVIEW**. **Kein Prod-Deploy ohne ausdrückliche Freigabe.**
+
 - 80.80 (Sep 03 2026) — **Watchlist-Integration auf Stock-Detail + Event-Badges (nur PREVIEW)**:
 
   **Umsetzung**: Bestehende Watchlist-Infrastruktur (`/api/watchlist` GET/POST/DELETE + Mongo-Collection `watchlists`) integriert:

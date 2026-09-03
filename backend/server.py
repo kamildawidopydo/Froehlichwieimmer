@@ -3366,9 +3366,9 @@ async def watchlist_search(q: str = "", limit: int = 12, user: dict = Depends(ge
 
 @api.get("/watchlist/events")
 async def watchlist_events(symbols: str = "", user: dict = Depends(get_current_user)):
-    """Bundled next-earnings + ex-dividend dates for a list of tickers.
-    Reads from the existing per-symbol Mongo caches (stock_public_earnings_cache
-    + stock_public_dividends_cache) — no yfinance calls here. Session 80.80."""
+    """Bundled overview payload (renamed 80.81): next-earnings + ex-div + div
+    yield + 52w distance + 24h relevant news count. All values pulled from
+    existing per-symbol caches — no yfinance calls, no N+1."""
     del user  # auth-only
     syms = [_clean_symbol(s) for s in (symbols or "").split(",") if _clean_symbol(s)]
     if not syms:
@@ -3378,10 +3378,27 @@ async def watchlist_events(symbols: str = "", user: dict = Depends(get_current_u
 
     now = _now_utc()
     today = now.date()
-    earn_docs = await db.stock_public_earnings_cache.find({"_id": {"$in": syms}}).to_list(50)
-    div_docs = await db.stock_public_dividends_cache.find({"_id": {"$in": syms}}).to_list(50)
+    cutoff_24h = now - timedelta(hours=24)
+
+    # Parallel Mongo reads over the four existing caches + news
+    earn_docs, div_docs, fund_docs, news_docs = await asyncio.gather(
+        db.stock_public_earnings_cache.find({"_id": {"$in": syms}}).to_list(50),
+        db.stock_public_dividends_cache.find({"_id": {"$in": syms}}).to_list(50),
+        db.stock_public_fundamentals_cache.find({"_id": {"$in": syms}}).to_list(50),
+        db.news_articles.find(
+            {"related_symbols": {"$in": syms}, "published_at": {"$gte": cutoff_24h}},
+            {"related_symbols": 1, "_id": 0},
+        ).to_list(500),
+    )
     earn_by = {d["_id"]: (d.get("data") or {}) for d in earn_docs}
     div_by = {d["_id"]: (d.get("data") or {}) for d in div_docs}
+    fund_by = {d["_id"]: (d.get("data") or {}) for d in fund_docs}
+    news_count: dict = {}
+    for n in news_docs:
+        for s in (n.get("related_symbols") or []):
+            key = str(s).upper()
+            if key in syms:
+                news_count[key] = news_count.get(key, 0) + 1
 
     def _parse_date(s):
         if not s:
@@ -3391,10 +3408,19 @@ async def watchlist_events(symbols: str = "", user: dict = Depends(get_current_u
         except (TypeError, ValueError):
             return None
 
+    def _num(v):
+        try:
+            if v is None: return None
+            v = float(v)
+            return v if v == v else None
+        except (TypeError, ValueError):
+            return None
+
     items = []
     for sym in syms:
         edata = earn_by.get(sym) or {}
         ddata = div_by.get(sym) or {}
+        fdata = fund_by.get(sym) or {}
         important = edata.get("important_dates") or {}
         next_earn_iso = important.get("next_earnings_date")
         next_earn_is_range = bool(important.get("next_earnings_is_range"))
@@ -3410,10 +3436,18 @@ async def watchlist_events(symbols: str = "", user: dict = Depends(get_current_u
         def _days(d):
             return (d - today).days if d else None
 
-        # Only surface upcoming (or today) events; drop stale past dates.
         earn_days = _days(earn_d) if earn_d and earn_d >= today else None
         ex_days = _days(ex_d) if ex_d and ex_d >= today else None
         pay_days = _days(pay_d) if pay_d and pay_d >= today else None
+
+        # 52w high distance + dividend yield from existing caches
+        fw_high = _num(fdata.get("fifty_two_week_high"))
+        fw_low = _num(fdata.get("fifty_two_week_low"))
+        current = _num(fdata.get("current_price"))
+        dist_high_pct = None
+        if fw_high and fw_high > 0 and current is not None:
+            dist_high_pct = round((current / fw_high - 1.0) * 100.0, 4)
+        div_yield_pct = _num((ddata.get("summary") or {}).get("dividend_yield_pct"))
 
         items.append({
             "symbol": sym,
@@ -3425,6 +3459,11 @@ async def watchlist_events(symbols: str = "", user: dict = Depends(get_current_u
             "ex_dividend_days": ex_days,
             "dividend_payment_date": pay_iso if pay_days is not None else None,
             "dividend_payment_days": pay_days,
+            "dividend_yield_pct": div_yield_pct,
+            "distance_from_52w_high_pct": dist_high_pct,
+            "fifty_two_week_high": fw_high,
+            "fifty_two_week_low": fw_low,
+            "news_count_24h": news_count.get(sym, 0),
         })
     return {"items": items, "as_of": now.isoformat()}
 

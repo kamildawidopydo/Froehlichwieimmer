@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { X, Plus } from 'lucide-react';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
@@ -51,6 +52,9 @@ export default function StockCompare({ baseSymbol }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState('');
+  const location = useLocation();
+  const sectionRef = useRef(null);
+  const appliedUrlRef = useRef(false);
 
   // Load peer list once (static). Fetch runs only when component is on the page.
   useEffect(() => {
@@ -61,6 +65,24 @@ export default function StockCompare({ baseSymbol }) {
       .catch(() => { /* keep empty */ });
     return () => { alive = false; };
   }, []);
+
+  // Session 80.81 — preselect peers from `?compare=A,B,C` handed over from watchlist.
+  useEffect(() => {
+    if (appliedUrlRef.current) return;
+    const params = new URLSearchParams(location.search);
+    const raw = (params.get('compare') || '').trim();
+    if (!raw) return;
+    appliedUrlRef.current = true;
+    const wanted = raw.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+    const cleaned = wanted.filter((s) => s !== baseSymbol).slice(0, 3);
+    if (cleaned.length > 0) {
+      setSelected(cleaned);
+      // Scroll into the compare section on the next tick.
+      requestAnimationFrame(() => {
+        sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, [location.search, baseSymbol]);
 
   // Symbols we send to /compare = base + up to 3 selected. Deduped, base always first.
   const symbols = useMemo(() => {
@@ -97,6 +119,7 @@ export default function StockCompare({ baseSymbol }) {
 
   return (
     <section
+      ref={sectionRef}
       className="mt-12 rounded-2xl border border-bank-border bg-white p-6 dark:bg-bank-surface sm:p-10"
       data-testid="stock-compare"
     >
