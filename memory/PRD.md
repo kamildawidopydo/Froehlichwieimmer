@@ -6,6 +6,16 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.84 (Sep 03 2026) — **Watchlist Professional Final · Notification-Bell im Header (nur PREVIEW)**:
+  1. Neue Komponente `frontend/src/components/StockNotificationBell.jsx` — dezente Glocke mit Badge (`unseen_count`), Popover mit 5 neuesten Notifs (Escape schließt, Click-outside schließt, Focus-States, min-44px Tap-Target, `aria-label="Benachrichtigungen, X ungelesen"`), Aktionen „Aktie ansehen"/„Als gelesen markieren"/„Alle Benachrichtigungen" → `/meine-alarme`.
+  2. Integration in `frontend/src/components/Navigation.js` **neben** dem bestehenden `NotificationCenter` (das für allgemeine System-Notifs zuständig ist). Header-Höhe unverändert.
+  3. **Kein Polling** — laden 1× beim Mount und beim Öffnen des Popovers. Kein N+1. Kein zusätzlicher Notification-Layer im Backend.
+  4. Nicht-eingeloggte Nutzer: Komponente rendert `null`, keine `/api/stock-notifications`-Requests.
+  5. Watchlist-Row Alert-Indikator bewusst zurückgestellt: um `SortableWatchlistItem`-Layout nicht zu beschädigen. Kunden nutzen weiter den Watchlist-Chip → Aktien-Detailseite → `StockAlertButton`. Als gezielter Micro-Follow-up dokumentiert.
+
+  **Auth-QA**: `/api/stock-notifications` für unauth → **401** ✅ (kein Client-Fetch); patron eingeloggt → `unseen=6, items=5` ✅.
+  **Regression**: 6 Stock-Endpunkte + `/meine-alarme` + `/news/watchlist` alle **200** ✅.
+
 - 80.83 (Sep 03 2026) — **Watchlist Professional 4/4 · Cron + E-Mail + Meine Alarme (nur PREVIEW)**:
   1. Bestehende Alert-Engine `_sa_evaluate_once()` **unverändert wiederverwendet** — nur ein E-Mail-Delivery-Layer nachgeschaltet: nach `insert_many` bulk-loads `users.email` + `stock_alerts.channel`; für Alerts mit `channel="in_app_email"` wird via `_send_email_via_emergent` eine editorial-HTML-Mail versendet. `stock_alert_email_log` dedupliziert per `event_key` → **niemals Doppelmail** bei Re-Runs.
   2. Neuer Cron-Endpoint `POST /api/cron/stock-alerts-evaluate` (Bearer `WEBHOOK_CRON_SECRET`, ackt 2xx sofort, feuert `asyncio.create_task(_sa_evaluate_once())`). `.emergent/crons.yml` erweitert um Eintrag `*/15 * * * *`.

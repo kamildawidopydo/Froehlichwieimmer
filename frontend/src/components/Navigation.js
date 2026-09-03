@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import CommandPalette from '@/components/CommandPalette';
 import NotificationCenter from '@/components/NotificationCenter';
+import StockNotificationBell from '@/components/StockNotificationBell';
 import ThemeToggle from '@/components/ThemeToggle';
 import BrandLogo from '@/components/BrandLogo';
 import siteCopy from '@/data/siteCopy';
@@ -319,6 +320,7 @@ const Navigation = () => {
                 <ThemeToggle compact tone="light" />
               </div>
               {user && !hideAuthenticatedNavWidgets && <NotificationCenter chrome="light" />}
+              {user && !hideAuthenticatedNavWidgets && <StockNotificationBell chrome="light" />}
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
