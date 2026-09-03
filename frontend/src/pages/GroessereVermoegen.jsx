@@ -16,6 +16,7 @@ import {
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { Button } from '@/components/ui/button';
+import VermoegensStrukturSimulator from '@/components/groessere-vermoegen/VermoegensStrukturSimulator';
 
 /**
  * Session 80.85 · Premium-Bereich „Größere Vermögen" — Phase 1
@@ -639,6 +640,18 @@ export default function GroessereVermoegen() {
           </form>
         </div>
       </section>
+
+      {/* ── VERTRAUEN ───────────────────────────────────────────────── */}
+      {/* Phase-2-Simulator vor dem Vertrauensbereich mounten. */}
+      <VermoegensStrukturSimulator
+        phase1={{
+          betrag: currentBetrag,
+          horizont: HORIZONT_OPTIONS.find((o) => o.value === horizont)?.label,
+          liquiditaet: LIQUIDITAET_OPTIONS.find((o) => o.value === liquiditaet)?.label,
+          risiko: RISIKO_OPTIONS.find((o) => o.value === risiko)?.label,
+          ziele,
+        }}
+      />
 
       {/* ── VERTRAUEN ───────────────────────────────────────────────── */}
       <section className="border-b border-bank-border bg-bank-surface-elev/40 py-16 sm:py-20" aria-labelledby="gv-vertrauen-title">
