@@ -6,6 +6,45 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.76 (Sep 03 2026) — **Tool-Paket 2/4 · Analystenkonsens + Kursziele + Bewertungs-Check (nur PREVIEW)**:
+
+  **Umsetzung**:
+  1. Neuer Backend-Endpunkt `GET /api/stocks/{symbol}/analyst` (`stock_public.py`) — liefert `recommendations` (strong_buy/buy/hold/sell/strong_sell, total, mean, key, period), `price_target` (mean, median, high, low, current, upside_pct), `valuation` (trailing_pe, forward_pe, price_to_sales, price_to_book, ev_to_ebitda, peg_ratio, market_cap, enterprise_value, dividend_yield), `profitability` (revenue/earnings growth, operating/profit margin, ROE, free cashflow, debt_to_equity). Mongo-Cache 6 h in `stock_public_analyst_cache`.
+  2. Nur echte yfinance-Werte: `t.get_info()` + `t.recommendations`. Fehlende Felder bleiben `null` (kein Fake). `dividend_yield`-Normalisierung: nur `<0.02` → ×100 (Decimal-Fallback), sonst durchreichen. Guard >30 % → `null`.
+  3. Frontend `StockAnalystConsensus.jsx` — neue Sektion unterhalb Investment-Rechner, vor News. Zeigt: Analystenverteilung (Balken Buy/Hold/Sell), detaillierte Provider-Kategorien (details/summary), horizontale Kursziel-Range (LOW · AKTUELL · Ø ZIEL · HOCH) mit mathematisch berechneten Positionen, Bewertungskennzahlen, Profitabilität, neutrale Einordnung (regelbasiert, keine Kaufempfehlung).
+  4. Integration in `PublicStockDetail.jsx` via `Suspense` (lazy-load).
+
+  **QA — Test-Aktien**:
+  | Symbol | Ccy | Aktuell | Ø Ziel | Tief | Hoch | Analysten | Upside % (API) | Upside % (Kontrolle) |
+  |--------|-----|---------|--------|------|------|-----------|-----------------|-----------------------|
+  | NVDA   | USD | 224,41  | 325,99 | 180,00 | 515,00 | 57 (9/48/2/1/0) | +45,26 % | +45,26 % ✅ |
+  | AAPL   | USD | 324,96  | 324,53 | 215,00 | 400,00 | 39 (6/19/13/3/3) | −0,13 % | −0,13 % ✅ |
+  | SAP    | EUR | 183,50  | 207,77 | 160,00 | 290,00 | 26 (3/21/4/0/0) | +13,23 % | +13,23 % ✅ |
+  | RHM    | EUR | 1.080,80 | 1.679,38 | 1.050,00 | 2.380,00 | 21 (4/14/3/0/0) | +55,38 % | +55,38 % ✅ |
+  | MSFT   | USD | 496,82  | 571,38 | 400,00 | 870,00 | 52 (14/38/3/0/0) | +15,01 % | +15,01 % ✅ |
+  | ALV    | EUR | 450,90  | 434,02 | 325,00 | 684,00 | 15 (2/5/7/0/2) | −3,74 % | −3,74 % ✅ |
+
+  **Bewertungskennzahlen** (NVDA-Beispiel): KGV 27,47 · Forward-KGV 14,57 · P/S 17,89 · P/B 23,66 · EV/EBITDA 26,75 · PEG 0,56 · MC 5,42 Bio $ · EV 5,38 Bio $ · Div-Yield null (yfinance leer). NVDA/AAPL/MSFT haben kein `dividendYield` in dieser yfinance-Antwort → korrekt ausgeblendet. SAP 1,36 %, RHM 1,07 %, ALV 3,78 %.
+
+  **Profitabilität** (NVDA): Umsatzwachstum +105,9 % · Gewinnwachstum +127,8 % · Op-Marge 66,2 % · Netto-Marge 63,7 % · ROE 117,2 % · FCF 41,81 Mrd $ · D/E 16,97.
+
+  **QA**:
+  - Backend regression: `/history` ✅ · `/fundamentals` ✅ · `/news` ✅ (unverändert)
+  - Desktop 1920 Light: Layout sauber, Range-Grafik 4 Marker positionsgenau, Bewertung 4-Spalten-Grid, Profitabilität 4-Spalten-Grid, Einordnung Bullet-Liste ✅
+  - Desktop Dark: Graphit-Palette, Gold für Ø Ziel, Green für Buy, Rot für Sell, keine alten Deep-Navy-Hardcodings ✅
+  - Mobile 390 Light+Dark (RHM): kein Horizontal-Overflow, Range-Visualisierung sichtbar, Kennzahlen 2-spaltig, Analysten-Balken lesbar ✅
+  - Console-Errors: 0 · Network-Errors: 0
+  - Regression Tool-Paket 1 (Rendite-Rechner): Chart & Benchmark-Vergleich weiter voll funktionsfähig ✅
+
+  **Formeln**:
+  - Upside: `(targetMeanPrice / currentPrice - 1) × 100`
+  - Range-Position: `((v - min(low,mean,high,current)) / (max - min)) × 100 %`
+  - Distribution %: `(bucketCount / sumBuckets) × 100`
+
+  **Kein DCF, kein Fair Value, kein KI-Kursziel** — bewusst weggelassen.
+
+  **Ready for deploy: JA** — aber gemäß User-Vorgabe **nur PREVIEW**. Kein Prod-Deploy ohne ausdrückliche Freigabe.
+
 - 80.71 (Sep 02 2026) — **Batch 5: weitere 25 Preview-Test-Reviews + Antworten (nur PREVIEW)**:
 
   **Umsetzung**: `backend/scripts/seed_preview_reviews_25_batch5.py`, Email-Suffix `@preview-test-b5.local`, `content_origin="preview_test_v5"`. Neue Themen: Rohstoffe · Anleihen-Basics · Testaments­fragen im Depot · Vorruhestand · Auszahlplan · Junior-Depot Ausbildung mit BAFöG · Fondswechsel-Kosten beider Seiten · Handels­platzwahl-Hinweis · Live vs. verzögerte Kurse · Portal-Volltext­suche (Kritik) · Nachhaltigkeits-Report (Kritik) · Kontaktformular ohne Empfangs­bestätigung (Kritik) · Rendite-Historie inkl. Rückschläge · Freibetrags­übertrag Ehepaar · Skepsis-Erst­besuch · eID-Verifikation · DSGVO-Auskunft · Bevoll­mächtigten-Einsicht mit Widerruf · 2FA-Login (Kritik) · Renten­aufschub-Rechnung · Zeit­zone Asien · CHF-Konto (Kritik) · Angebots­sortierung nach Prioritäten · Beratungs­protokoll · Notariats-Koordination.

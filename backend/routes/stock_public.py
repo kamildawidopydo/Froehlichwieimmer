@@ -42,6 +42,15 @@ ALLOWED: Dict[str, str] = {
     "DBK": "DBK.DE",
     "IFX": "IFX.DE",
     "RHM": "RHM.DE",
+    # Benchmark indices — Session 80.75 (Investment-Calculator).
+    "NDX": "^NDX",     # Nasdaq-100
+    "DAX": "^GDAXI",   # DAX 40
+}
+
+# Benchmark mapping for each equity → index symbol used above.
+BENCHMARK_FOR: Dict[str, str] = {
+    "NVDA": "NDX", "AAPL": "NDX", "MSFT": "NDX", "GOOGL": "NDX", "AMZN": "NDX",
+    "SAP": "DAX", "SIE": "DAX", "ALV": "DAX", "DBK": "DAX", "IFX": "DAX", "RHM": "DAX",
 }
 
 # range → (yfinance period, interval, cache TTL seconds)
@@ -56,6 +65,7 @@ RANGE_MAP: Dict[str, Dict[str, Any]] = {
 }
 
 FUNDAMENTALS_TTL_S = 6 * 60 * 60
+ANALYST_TTL_S = 6 * 60 * 60
 
 
 def _now() -> datetime:
@@ -125,7 +135,10 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
     points = [{"timestamp": p["t"], "close": p["c"]} for p in (pts or [])]
 
     # currency heuristic from ticker suffix
-    currency = "EUR" if yf_sym.endswith(".DE") else "USD"
+    if yf_sym.startswith("^"):
+        currency = "USD" if yf_sym in {"^NDX", "^GSPC", "^DJI", "^IXIC"} else "EUR"
+    else:
+        currency = "EUR" if yf_sym.endswith(".DE") else "USD"
 
     expires_at = _now() + timedelta(seconds=cfg["ttl"])
     await _db.stock_public_history_cache.update_one(
@@ -388,6 +401,217 @@ async def stock_news(symbol: str, limit: int = Query(default=5, ge=1, le=10)) ->
         "total": len(articles),
         "data_source": "news_articles",
         "cached_until": expires_at.isoformat(),
+    }
+
+
+# ---- Analyst consensus + valuation + profitability (Session 80.76) ---------
+
+def _yf_analyst_sync(yf_sym: str) -> Optional[Dict[str, Any]]:
+    """Return analyst consensus, price targets, valuation and profitability
+    metrics using yfinance only. Missing keys stay `None` — never fabricated."""
+    try:
+        import yfinance as yf  # type: ignore
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        t = yf.Ticker(yf_sym)
+        info: Dict[str, Any] = {}
+        try:
+            info = t.get_info() or {}
+        except Exception:  # noqa: BLE001
+            try:
+                info = getattr(t, "info", None) or {}
+            except Exception:  # noqa: BLE001
+                info = {}
+
+        def _num(v):
+            try:
+                if v is None:
+                    return None
+                v = float(v)
+                return v if v == v else None  # NaN check
+            except (TypeError, ValueError):
+                return None
+
+        def _int(v):
+            n = _num(v)
+            return int(n) if n is not None else None
+
+        # ---- Consensus buckets ---------------------------------------------
+        buckets = {"strongBuy": None, "buy": None, "hold": None, "sell": None, "strongSell": None}
+        rec_period: Optional[str] = None
+        try:
+            rec_df = t.recommendations
+        except Exception:  # noqa: BLE001
+            rec_df = None
+        if rec_df is not None:
+            try:
+                if not rec_df.empty:
+                    # yfinance now returns a period-indexed dataframe: pick the
+                    # latest period row where every bucket key is present.
+                    row = rec_df.iloc[0].to_dict()
+                    rec_period = str(row.get("period") or rec_df.index[0])
+                    for k in list(buckets.keys()):
+                        if k in row:
+                            buckets[k] = _int(row.get(k))
+            except Exception:  # noqa: BLE001
+                pass
+
+        total_from_buckets = sum(v for v in buckets.values() if isinstance(v, int))
+        num_analysts = _int(info.get("numberOfAnalystOpinions")) or (total_from_buckets or None)
+
+        recommendations = {
+            "strong_buy": buckets["strongBuy"],
+            "buy": buckets["buy"],
+            "hold": buckets["hold"],
+            "sell": buckets["sell"],
+            "strong_sell": buckets["strongSell"],
+            "total": num_analysts,
+            "mean": _num(info.get("recommendationMean")),
+            "key": info.get("recommendationKey"),
+            "period": rec_period,
+        }
+        # If yfinance has zero buckets AND no mean, treat as unavailable.
+        has_any_bucket = any(isinstance(v, int) and v > 0 for v in buckets.values())
+        has_consensus = has_any_bucket or recommendations["mean"] is not None
+
+        # ---- Price targets --------------------------------------------------
+        current_price = _num(info.get("currentPrice")) or _num(info.get("regularMarketPrice"))
+        target_mean = _num(info.get("targetMeanPrice"))
+        target_median = _num(info.get("targetMedianPrice"))
+        target_high = _num(info.get("targetHighPrice"))
+        target_low = _num(info.get("targetLowPrice"))
+        upside = None
+        if current_price and current_price > 0 and target_mean is not None:
+            upside = round(((target_mean / current_price) - 1.0) * 100.0, 4)
+        has_target = any(v is not None for v in (target_mean, target_median, target_high, target_low))
+        price_target = {
+            "mean": target_mean,
+            "median": target_median,
+            "high": target_high,
+            "low": target_low,
+            "current": current_price,
+            "upside_pct": upside,
+        }
+
+        currency = info.get("currency")
+
+        # ---- Valuation ------------------------------------------------------
+        dividend_yield = _num(info.get("dividendYield"))
+        if dividend_yield is not None:
+            # yfinance today returns already-percentage values (SAP 1.36, NVDA 0.46).
+            # Older mirrors returned decimals (0.0136). Only treat *very* small
+            # values (<0.02 → below 2 %-decimal cutoff) as decimals to avoid
+            # silently dropping legitimate low yields (e.g. NVDA 0.46 %).
+            if 0 < dividend_yield < 0.02:
+                dividend_yield = round(dividend_yield * 100.0, 4)
+            # Guard against implausible values (>30 %) which are always upstream artefacts.
+            if dividend_yield > 30:
+                dividend_yield = None
+        valuation = {
+            "trailing_pe": _num(info.get("trailingPE")),
+            "forward_pe": _num(info.get("forwardPE")),
+            "price_to_sales": _num(info.get("priceToSalesTrailing12Months")),
+            "price_to_book": _num(info.get("priceToBook")),
+            "ev_to_ebitda": _num(info.get("enterpriseToEbitda")),
+            "peg_ratio": _num(info.get("pegRatio") or info.get("trailingPegRatio")),
+            "market_cap": _num(info.get("marketCap")),
+            "enterprise_value": _num(info.get("enterpriseValue")),
+            "dividend_yield": dividend_yield,
+        }
+
+        # ---- Profitability / Quality ---------------------------------------
+        def _pct(v):
+            n = _num(v)
+            return round(n * 100.0, 4) if n is not None else None
+
+        profitability = {
+            "revenue_growth": _pct(info.get("revenueGrowth")),
+            "earnings_growth": _pct(info.get("earningsGrowth")),
+            "operating_margin": _pct(info.get("operatingMargins")),
+            "profit_margin": _pct(info.get("profitMargins")),
+            "return_on_equity": _pct(info.get("returnOnEquity")),
+            "free_cashflow": _num(info.get("freeCashflow")),
+            "debt_to_equity": _num(info.get("debtToEquity")),
+        }
+
+        return {
+            "currency": currency,
+            "recommendations": recommendations,
+            "price_target": price_target,
+            "valuation": valuation,
+            "profitability": profitability,
+            "has_consensus": has_consensus,
+            "has_target": has_target,
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.info("yfinance analyst %s error: %s", yf_sym, str(exc)[:120])
+        return None
+
+
+@router.get("/stocks/{symbol}/analyst")
+async def stock_analyst(symbol: str) -> Dict[str, Any]:
+    """Session 80.76 — Analyst consensus, price targets, valuation & profitability.
+
+    Only real yfinance values. Missing fields stay `null`. Cached 6 h in Mongo.
+    """
+    sym = _check(symbol)
+
+    cached = await _db.stock_public_analyst_cache.find_one({"_id": sym})
+    if cached and cached.get("expires_at") and cached["expires_at"] > _now():
+        payload = cached.get("data") or {}
+        return {
+            "symbol": sym,
+            "data_source": cached.get("data_source", "cache"),
+            "data_updated_at": cached.get("cached_at").isoformat() if cached.get("cached_at") else None,
+            "cached_until": cached["expires_at"].isoformat(),
+            **payload,
+        }
+
+    yf_sym = ALLOWED[sym]
+    data = await asyncio.to_thread(_yf_analyst_sync, yf_sym)
+    source = "yfinance" if data else "unavailable"
+    payload = data or {
+        "currency": None,
+        "recommendations": {
+            "strong_buy": None, "buy": None, "hold": None, "sell": None, "strong_sell": None,
+            "total": None, "mean": None, "key": None, "period": None,
+        },
+        "price_target": {
+            "mean": None, "median": None, "high": None, "low": None,
+            "current": None, "upside_pct": None,
+        },
+        "valuation": {
+            "trailing_pe": None, "forward_pe": None, "price_to_sales": None,
+            "price_to_book": None, "ev_to_ebitda": None, "peg_ratio": None,
+            "market_cap": None, "enterprise_value": None, "dividend_yield": None,
+        },
+        "profitability": {
+            "revenue_growth": None, "earnings_growth": None,
+            "operating_margin": None, "profit_margin": None, "return_on_equity": None,
+            "free_cashflow": None, "debt_to_equity": None,
+        },
+        "has_consensus": False,
+        "has_target": False,
+    }
+
+    now = _now()
+    expires_at = now + timedelta(seconds=ANALYST_TTL_S)
+    await _db.stock_public_analyst_cache.update_one(
+        {"_id": sym},
+        {"$set": {
+            "_id": sym, "symbol": sym, "yf_symbol": yf_sym,
+            "data_source": source, "data": payload,
+            "cached_at": now, "expires_at": expires_at,
+        }},
+        upsert=True,
+    )
+    return {
+        "symbol": sym,
+        "data_source": source,
+        "data_updated_at": now.isoformat(),
+        "cached_until": expires_at.isoformat(),
+        **payload,
     }
 
 
