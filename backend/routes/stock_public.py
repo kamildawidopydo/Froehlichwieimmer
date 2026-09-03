@@ -1479,6 +1479,112 @@ def _yf_compare_meta_sync(yf_sym: str) -> Dict[str, Any]:
     }
 
 
+@router.get("/stocks/bundle")
+async def stocks_bundle(
+    symbols: str = Query(..., description="Comma-separated tickers"),
+    include_dividends: bool = Query(default=False, description="Include dividend summary + history"),
+) -> Dict[str, Any]:
+    """Session 80.99/81.00 — Batched Fundamentals+Dividends-Bundle.
+
+    Ein einziger HTTP-Request liefert Fundamentals (und optional Dividenden-
+    Kennzahlen inkl. bis zu 12-Jahres-Historie) für bis zu 12 Ticker.
+    Wiederverwendet die bestehenden Caches:
+      * `stock_public_fundamentals_cache` (TTL 6h)
+      * `stock_public_dividends_cache` via `stock_dividends()` (TTL 12h)
+    Kein Live-yfinance-Call pro Ticker sobald warm — auch bei
+    `include_dividends=true` bleibt das Request-Budget konstant.
+    """
+    raw = [s.strip().upper() for s in (symbols or "").split(",") if s.strip()]
+    if not raw:
+        raise HTTPException(400, detail="Keine Symbole angegeben.")
+    if len(raw) > 12:
+        raise HTTPException(400, detail="Maximal 12 Symbole pro Bundle.")
+    accepted = [s for s in raw if s in ALLOWED and s not in {"NDX", "DAX"}]
+    unknown = [s for s in raw if s not in ALLOWED or s in {"NDX", "DAX"}]
+
+    items: List[Dict[str, Any]] = []
+    for sym in accepted:
+        try:
+            fdata = await stock_fundamentals(sym)
+        except HTTPException:
+            continue
+        price = fdata.get("previous_close")
+        high = fdata.get("fifty_two_week_high")
+        try:
+            dist = (float(price) / float(high) - 1.0) * 100.0 if price and high and float(high) > 0 else None
+        except (TypeError, ValueError, ZeroDivisionError):
+            dist = None
+        item = {
+            "symbol": fdata.get("symbol"),
+            "company_name": fdata.get("company_name"),
+            "exchange": fdata.get("exchange"),
+            "currency": fdata.get("currency"),
+            "sector": fdata.get("sector"),
+            "market_cap": fdata.get("market_cap"),
+            "trailing_pe": fdata.get("trailing_pe"),
+            "forward_pe": fdata.get("forward_pe"),
+            "dividend_yield": fdata.get("dividend_yield"),
+            "previous_close": fdata.get("previous_close"),
+            "day_high": fdata.get("day_high"),
+            "day_low": fdata.get("day_low"),
+            "fifty_two_week_high": fdata.get("fifty_two_week_high"),
+            "fifty_two_week_low": fdata.get("fifty_two_week_low"),
+            "distance_from_high_pct": dist,
+            "data_source": fdata.get("data_source"),
+            "cached_until": fdata.get("cached_until"),
+        }
+
+        if include_dividends:
+            try:
+                ddata = await stock_dividends(sym)
+            except HTTPException:
+                ddata = None
+            if ddata and (ddata.get("has_dividends") or (ddata.get("history") or [])):
+                summary = ddata.get("summary") or {}
+                growth = ddata.get("growth") or {}
+                history = ddata.get("history") or []
+                # „Stabile/steigende Jahre" — nur aus complete years mit total>0
+                complete = [h for h in history if h.get("complete") and (h.get("total") or 0) > 0]
+                # Serie ab dem letzten Rückgang oder Nullpunkt zählen
+                rising_years = 0
+                stable_or_rising_years = 0
+                prev = None
+                for h in complete:
+                    tot = float(h["total"])
+                    if prev is not None:
+                        if tot > prev - 1e-9:
+                            stable_or_rising_years += 1
+                            if tot > prev + 1e-9:
+                                rising_years += 1
+                            else:
+                                # stable — still counts toward stable_or_rising
+                                pass
+                        else:
+                            stable_or_rising_years = 0
+                            rising_years = 0
+                    prev = tot
+                item["dividends"] = {
+                    "has_dividends": bool(ddata.get("has_dividends")),
+                    "dividend_yield_pct": summary.get("dividend_yield_pct"),
+                    "dividend_rate_annual": summary.get("dividend_rate_annual"),
+                    "payout_ratio_pct": summary.get("payout_ratio_pct"),
+                    "five_year_avg_yield_pct": summary.get("five_year_avg_yield_pct"),
+                    "last_dividend_value": summary.get("last_dividend_value"),
+                    "last_dividend_date": summary.get("last_dividend_date"),
+                    "next_ex_dividend_date": summary.get("next_ex_dividend_date"),
+                    "one_year_growth_pct": growth.get("one_year_pct"),
+                    "cagr_3y_pct": growth.get("cagr_3y_pct"),
+                    "cagr_5y_pct": growth.get("cagr_5y_pct"),
+                    "history_5y": history[-6:] if history else [],
+                    "stable_or_rising_years": stable_or_rising_years,
+                    "rising_years": rising_years,
+                }
+            else:
+                item["dividends"] = None
+        items.append(item)
+    return {"items": items, "unknown": unknown, "count": len(items)}
+
+
 @router.get("/stocks/compare")
 async def stock_compare(
     symbols: str = Query(..., description="Comma-separated tickers (2-4)"),

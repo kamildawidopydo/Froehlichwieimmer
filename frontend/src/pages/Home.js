@@ -13,6 +13,9 @@ import HomeCreditOffersSection from '@/components/home/HomeCreditOffersSection';
 import HomeSavingsOffersSection from '@/components/home/HomeSavingsOffersSection';
 import { mapCreditOffersForCarousel } from '@/lib/creditOfferDisplay';
 import StockResearchSection from '@/components/home/StockResearchSection';
+import MarktMonitor from '@/components/home/MarktMonitor';
+import DeutschlandFokus from '@/components/home/DeutschlandFokus';
+import DividendenBlick from '@/components/home/DividendenBlick';
 import HomeProductWizardSection from '@/components/home/HomeProductWizardSection';
 import HomeFinanceNews from '@/components/home/HomeFinanceNews';
 import NewsletterSignup from '@/components/home/NewsletterSignup';
@@ -227,6 +230,15 @@ const Home = () => {
 
       {/* ── Aktien mit Potenzial — Editorial Research-Bereich (Session 78.2) ── */}
       <StockResearchSection />
+
+      {/* ── Deutschland im Fokus — Investment Cockpit Phase 3 (Session 80.99) ─ */}
+      <DeutschlandFokus />
+
+      {/* ── Dividenden im Blick — Investment Cockpit Phase 3 (Session 80.99) ── */}
+      <DividendenBlick />
+
+      {/* ── Märkte im Überblick — Investment-Marktmonitor (Session 80.97) ─── */}
+      <MarktMonitor />
 
       {/* ── Große Inline-Produkt-Section (Session 72) ─────────────────── */}
       <HomeProductWizardSection onOpenWizard={openProductInquiry} />

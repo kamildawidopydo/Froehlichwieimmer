@@ -56,13 +56,13 @@ const InvestmentRadar = ({ items = [], loading }) => (
                   </td>
                   <td className="py-5">
                     {it.related_slug ? (
-                      <a href={`https://kapital-direkt24.de/news/${it.related_slug}`}
-                         target="_blank" rel="noopener noreferrer"
+                      <Link to={`/news/${it.related_slug}`}
+                         data-testid={`radar-meldung-link-${it.related_slug}`}
                          className="inline-flex items-center gap-1 text-[12.5px] text-bank-accent-strong hover:underline">
                         Meldung
                         <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.4} />
-                      </a>
-                    ) : <span className="text-neutral-300">—</span>}
+                      </Link>
+                    ) : <span className="text-neutral-300" data-testid="radar-meldung-hidden">—</span>}
                   </td>
                 </tr>
               ))}

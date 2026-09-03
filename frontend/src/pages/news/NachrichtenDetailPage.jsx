@@ -112,7 +112,16 @@ const NachrichtenDetailPage = () => {
 
           {state === 'loading' && <div className="mt-8 h-8 w-2/3 animate-pulse bg-neutral-100" />}
           {state === 'notfound' && (
-            <p className="mt-8 text-[14px] text-bank-text-muted" data-testid="news-detail-not-found">Meldung nicht gefunden.</p>
+            <div className="mt-10 border-t border-bank-border pt-10" data-testid="news-detail-not-found">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">Nicht verfügbar</p>
+              <h1 className="mt-4 font-serif text-2xl leading-tight text-bank-text sm:text-[32px]">Diese Meldung ist derzeit nicht verfügbar.</h1>
+              <p className="mt-4 max-w-2xl text-[14.5px] leading-[1.8] text-bank-text-muted">Die gesuchte Nachricht konnte weder im aktuellen Feed noch im internen Archiv gefunden werden. Bitte kehren Sie zur Nachrichten-Übersicht zurück oder wählen Sie eine aktuelle Meldung aus.</p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link to="/news/nachrichten" data-testid="news-detail-empty-back" className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-bank-primary px-5 py-2 text-[13px] font-semibold text-white hover:bg-bank-primary/90">Zurück zu Nachrichten</Link>
+                <Link to="/news" data-testid="news-detail-empty-current" className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-bank-border bg-white px-5 py-2 text-[13px] font-medium text-bank-text hover:border-bank-primary/50">Aktuelle Nachrichten</Link>
+              </div>
+              <p className="mt-8 border-l-2 border-bank-gold pl-4 text-[12.5px] leading-relaxed text-bank-text-muted"><strong className="mr-2 font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">Hinweis</strong>Diese Meldung dient der allgemeinen Information. Eine individuelle Einordnung Ihrer Anlagesituation erhalten Sie im Rahmen unserer persönlichen Anlageberatung.</p>
+            </div>
           )}
           {state === 'error' && (
             <p className="mt-8 text-[14px] text-rose-700">Meldung konnte nicht geladen werden.</p>
@@ -304,12 +313,11 @@ const NachrichtenDetailPage = () => {
             </div>
           )}
 
-          <div className="mt-10 border-t border-bank-border pt-6 text-[13px] leading-relaxed text-bank-text-muted">
-            <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted">Hinweis</p>
-            <p className="mt-2">
-              Diese Meldung wird zu Ihrer Information dargestellt und ist keine redaktionelle Einschätzung
-              der Fröhlich Vermögensberatung GmbH. Sie stellt keine Anlageempfehlung dar. Unsere eigene
-              Einordnung finden Sie in der Rubrik „Fröhlich Vermögensberatung — Unsere Einordnung".
+          <div className="mt-10 border-t border-bank-border pt-6 text-[13px] leading-relaxed text-bank-text-muted" data-testid="news-detail-disclaimer">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-gold">Hinweis</p>
+            <p className="mt-2 border-l-2 border-bank-gold pl-4">
+              Diese Meldung dient der allgemeinen Information. Eine individuelle Einordnung Ihrer
+              Anlagesituation erhalten Sie im Rahmen unserer persönlichen Anlageberatung.
             </p>
           </div>
 

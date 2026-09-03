@@ -519,7 +519,12 @@ async def get_news_by_slug(slug: str):
     erwarteten Felder: source, source_url, content, summary, views, is_archived,
     content_origin.
     """
-    doc = await db.news_articles.find_one({"slug": slug})
+    # Session 80.94 (E2E-Gate FIX-A companion) — Live-Draft-Leak schließen:
+    # Öffentliches Detail liefert nur veröffentlichte Live-Artikel aus. Nicht-
+    # veröffentlichte (Draft / Admin-Unpublish) fallen anschließend NICHT auf
+    # den Archiv-Fallback zurück, weil `find_article_by_slug` das Archiv nur
+    # mit `archive_reason == retention_90d` freigibt.
+    doc = await db.news_articles.find_one({"slug": slug, "is_published": True})
     from_archive = False
     if not doc:
         from news_retention import find_article_by_slug as _find_article
@@ -1110,8 +1115,292 @@ async def list_anlagetrends():
     } for d in docs]
 
 
+
+# ---------------------------------------------------------------------------
+# Session 80.96 — Investment-Radar News-Linking (Phase 2)
+# ---------------------------------------------------------------------------
+# Deterministische Zuordnung von Radar-Themen zu real vorhandenen internen
+# News-Artikeln. Kein LLM, kein Random, keine erfundenen Slugs. Nur wenn ein
+# Artikel wirklich zum Thema passt, wird der „Meldung"-CTA gerendert.
+#
+# Matching-Tiers (in Reihenfolge, deterministisch):
+#   1. investment_topic_slug ∈ theme.topic_slugs
+#   2. related_symbols ∩ theme.symbols ≠ ∅
+#   3. category ∈ theme.categories UND (Titel|Summary matcht ein Keyword)
+#   4. Titel matcht Keyword ODER Summary matcht Keyword
+# Bei Gleichstand innerhalb eines Tiers: neuester `published_at` gewinnt.
+# `negative_keywords` schließen semantisch andere Themen aus (z. B. „Sabotage
+# gegen Stromnetz" darf nicht als Verteidigungs-Match durchgehen).
+_INVESTMENT_RADAR_THEME_MATCHERS: dict[str, dict] = {
+    "Halbleiter-Wertschöpfungskette": {
+        "topic_slugs": [],
+        "symbols": ["NVDA", "AMD", "INTC", "ASML", "IFX.DE", "TSM", "AVGO"],
+        "categories": ["technologie", "unternehmen", "maerkte"],
+        "keywords": [
+            r"\bHalbleiter\b", r"\bChip(?:s|industrie)?\b", r"\bNvidia\b", r"\bTSMC\b",
+            r"\bASML\b", r"\bInfineon\b", r"\bBroadcom\b", r"\bAMD\b",
+        ],
+        "negative_keywords": [],
+    },
+    "Europäische Verteidigungswerte": {
+        "topic_slugs": [],
+        "symbols": ["RHM.DE", "HAG.DE", "AIR.PA", "LDO.MI", "BA.L"],
+        "categories": ["sicherheit", "industrie", "politik", "unternehmen"],
+        "keywords": [
+            r"\bVerteidigung(?:s\w*)?\b", r"\bRüstung(?:s\w*)?\b", r"\bNATO\b",
+            r"\bRheinmetall\b", r"\bHensoldt\b", r"\bAirbus Defen\w+\b",
+        ],
+        # Sabotage-Artikel gegen Stromnetz/Kritis sind nicht Rüstungs-Investmentthema.
+        "negative_keywords": [r"Stromnetz", r"kritische Infrastruktur"],
+    },
+    "Netzinfrastruktur & Grids": {
+        "topic_slugs": [],
+        "symbols": ["ENR.DE", "SIE.DE", "PRY.MI", "NEE"],
+        "categories": ["energie", "industrie", "wirtschaft"],
+        "keywords": [
+            r"\bStromnetz(?:e|es)?\b", r"\bNetzausbau\b", r"\bÜbertragungsnetz\w*\b",
+            r"\bNetzinfrastruktur\b", r"\bElektrifizierung\b", r"\bNetzbetreiber\b",
+            r"\bNetzentgelt\w*\b",
+        ],
+        "negative_keywords": [],
+    },
+    "Goldbestände als Absicherung": {
+        "topic_slugs": [],
+        "symbols": ["XAU", "GLD"],
+        "categories": ["rohstoffe", "waehrungen", "maerkte", "wirtschaft"],
+        # Wort-Grenze verhindert False-Positives wie „Golem" (Nachrichtenquelle).
+        "keywords": [
+            r"\bGold\b", r"\bGoldpreis\b", r"\bEdelmetall\w*\b",
+            r"\bZentralbank\w*\b.{0,80}\bGold\w*\b", r"\bNotenbank\w*\b.{0,80}\bGold\w*\b",
+        ],
+        "negative_keywords": [r"Golem"],
+    },
+    "Strategische Metalle": {
+        "topic_slugs": [],
+        "symbols": [],
+        "categories": ["rohstoffe", "industrie"],
+        "keywords": [
+            r"\bKupfer\b", r"\bLithium\b", r"\b[Ss]eltene[ -]?Erden\b",
+            r"\bkritische Rohstoffe\b", r"\bstrategische Metalle\b",
+            r"\bNickel\b", r"\bKobalt\b",
+        ],
+        "negative_keywords": [],
+    },
+    "Hochwertige Unternehmensanleihen": {
+        "topic_slugs": ["anleihen"],
+        "symbols": [],
+        "categories": ["maerkte", "zinsen"],
+        "keywords": [
+            r"\bUnternehmensanleihen?\b", r"\bCorporate Bond\w*\b",
+            r"\bInvestment[- ]?Grade\b", r"\bIG[- ]Anleih\w*\b", r"\bFirmenbonds?\b",
+            r"\bCredit[- ]?Spread\w*\b",
+        ],
+        "negative_keywords": [],
+    },
+}
+
+# TTL-Cache (10 Min). Struktur: {"ts": epoch, "data": [ {row}, ... ]}.
+_INVESTMENT_RADAR_CACHE: dict = {"ts": 0.0, "data": None}
+_INVESTMENT_RADAR_CACHE_TTL_SECONDS = 600
+
+
+def _compile_theme_matchers() -> dict[str, dict]:
+    """Kompiliert die Regex-Patterns einmalig (bei jeder Cache-Neubefüllung)."""
+    compiled: dict[str, dict] = {}
+    for theme_key, cfg in _INVESTMENT_RADAR_THEME_MATCHERS.items():
+        compiled[theme_key] = {
+            **cfg,
+            "kw_re": [re.compile(p, re.IGNORECASE) for p in cfg.get("keywords", [])],
+            "neg_re": [re.compile(p, re.IGNORECASE) for p in cfg.get("negative_keywords", [])],
+        }
+    return compiled
+
+
+def _score_article_for_theme(article: dict, matcher: dict) -> int:
+    """Deterministisches Scoring. Höherer Score = besserer Match.
+
+    Tier-Basis-Werte lassen sich nicht überschreiten (Range-Trennung), sodass
+    ein Tier-1-Match immer über einem Tier-4-Match liegt — unabhängig von der
+    Anzahl Keyword-Treffer.
+    """
+    title = (article.get("title") or "")
+    summary = (article.get("summary") or "")
+    haystack = f"{title}\n{summary}"
+
+    # Negativ-Filter: sofortiger Ausschluss.
+    for neg in matcher["neg_re"]:
+        if neg.search(haystack):
+            return 0
+
+    kw_hits = sum(1 for r in matcher["kw_re"] if r.search(haystack))
+    title_hits = sum(1 for r in matcher["kw_re"] if r.search(title))
+
+    # Tier 1: Topic-Slug (exakter Match).
+    topic = article.get("investment_topic_slug")
+    if topic and matcher.get("topic_slugs") and topic in matcher["topic_slugs"]:
+        return 400 + min(kw_hits, 20)  # feiner Tie-Breaker via Keyword-Count
+
+    # Tier 2: related_symbols-Schnitt.
+    art_syms = set(article.get("related_symbols") or [])
+    theme_syms = set(matcher.get("symbols") or [])
+    if art_syms and theme_syms and (art_syms & theme_syms):
+        return 300 + min(kw_hits, 20)
+
+    # Tier 3: Kategorie-Hint + mindestens ein Keyword-Treffer irgendwo.
+    if kw_hits > 0 and article.get("category") in (matcher.get("categories") or []):
+        return 200 + min(kw_hits, 20)
+
+    # Tier 4: Reiner Keyword-Match. Titel-Treffer zählen doppelt (relevanter).
+    if kw_hits > 0:
+        return 100 + min(kw_hits, 10) + min(title_hits, 10)
+
+    return 0
+
+
+async def _resolve_radar_matches() -> dict[str, Optional[str]]:
+    """Löst pro Radar-Thema den besten realen internen Artikel-Slug auf.
+
+    Rückgabe: `{ theme_key: slug_or_None }`. Ein einziger DB-Roundtrip für
+    alle Themen zusammen (keine N+1). Keine externen Provider-Requests.
+    """
+    matchers = _compile_theme_matchers()
+
+    # Ein einziger Sweep: alle veröffentlichten Artikel der letzten 60 Tage +
+    # Fallback-Sweep über die Retention-Archiv-Whitelist. Wir laden nur die
+    # benötigten Felder — Volltext bleibt draußen (Performance).
+    projection = {
+        "slug": 1, "title": 1, "summary": 1, "category": 1,
+        "investment_topic_slug": 1, "tags": 1, "related_symbols": 1,
+        "published_at": 1, "is_published": 1,
+    }
+    cutoff_recent = datetime.now(timezone.utc) - timedelta(days=60)
+    live_cursor = db.news_articles.find(
+        {"is_published": True, "published_at": {"$gte": cutoff_recent}},
+        projection,
+    ).sort("published_at", -1).limit(500)
+    live_docs: list[dict] = await live_cursor.to_list(500)
+
+    # Fallback: falls für ein Thema kein Live-Match zustande kommt, dürfen
+    # Retention-Archiv-Docs (whitelistet) übernehmen.
+    arch_docs: list[dict] = []
+
+    async def _ensure_arch_loaded():
+        nonlocal arch_docs
+        if arch_docs:
+            return
+        cursor = db.news_articles_archive.find(
+            {"archive_reason": "retention_90d"},
+            projection,
+        ).sort("published_at", -1).limit(500)
+        arch_docs = await cursor.to_list(500)
+
+    result: dict[str, Optional[str]] = {}
+    used_slugs: set[str] = set()  # verhindert unnötige Doppelverwendung
+
+    for theme_key, matcher in matchers.items():
+        best: tuple[int, datetime, str] | None = None  # (score, published_at, slug)
+
+        def _consider(pool: list[dict]):
+            nonlocal best
+            for doc in pool:
+                slug = doc.get("slug")
+                if not slug:
+                    continue
+                score = _score_article_for_theme(doc, matcher)
+                if score <= 0:
+                    continue
+                pub = doc.get("published_at") or datetime.min.replace(tzinfo=timezone.utc)
+                if not isinstance(pub, datetime):
+                    pub = datetime.min.replace(tzinfo=timezone.utc)
+                # Nicht bereits bei einem anderen Radar-Thema als Erstwahl
+                # verwenden — außer der Score wäre höher (dann würde spätere
+                # Iteration das Feld später überschreiben, was wir hier
+                # vermeiden, indem wir used_slugs erst nach der Wahl markieren).
+                candidate = (score, pub, slug)
+                if best is None or candidate > best:
+                    best = candidate
+
+        _consider(live_docs)
+        if best is None:
+            await _ensure_arch_loaded()
+            _consider(arch_docs)
+
+        chosen: Optional[str] = None
+        if best is not None:
+            _, _, chosen = best
+            # Doppelverwendung nur zulassen, wenn Artikel wirklich mehreren
+            # Themen semantisch entspricht — hier: wir nehmen den Match trotzdem,
+            # markieren aber, damit Nachfolge-Themen ein anderes bevorzugen können
+            # (siehe zweiter Durchlauf unten).
+        result[theme_key] = chosen
+        if chosen:
+            used_slugs.add(chosen)
+
+    # Zweiter Durchlauf: prüfe, ob ein Thema denselben Slug wie ein anderes
+    # Thema gewählt hat, und suche für das jüngere Thema (später in der Radar-
+    # Reihenfolge) einen alternativen, real passenden Artikel. Nur wenn der
+    # Alternativ-Score > 0 ist — sonst bleibt es bei None.
+    for theme_key_2, matcher_2 in matchers.items():
+        chosen = result.get(theme_key_2)
+        if not chosen:
+            continue
+        collisions = [k for k, v in result.items() if v == chosen and k != theme_key_2]
+        if not collisions:
+            continue
+        # Aktuelles Thema behält den Artikel, wenn es zuerst kam.
+        earlier_themes = list(matchers.keys())
+        if earlier_themes.index(theme_key_2) < min(earlier_themes.index(c) for c in collisions):
+            continue
+        # Suche Alternative.
+        best_alt: tuple[int, datetime, str] | None = None
+        for doc in live_docs:
+            slug = doc.get("slug")
+            if not slug or slug in used_slugs:
+                continue
+            score = _score_article_for_theme(doc, matcher_2)
+            if score <= 0:
+                continue
+            pub = doc.get("published_at") or datetime.min.replace(tzinfo=timezone.utc)
+            if not isinstance(pub, datetime):
+                pub = datetime.min.replace(tzinfo=timezone.utc)
+            cand = (score, pub, slug)
+            if best_alt is None or cand > best_alt:
+                best_alt = cand
+        if best_alt is not None:
+            result[theme_key_2] = best_alt[2]
+            used_slugs.add(best_alt[2])
+
+    return result
+
+
+async def _resolve_radar_matches_cached() -> dict[str, Optional[str]]:
+    now = time.time()
+    if (
+        _INVESTMENT_RADAR_CACHE.get("data") is not None
+        and (now - _INVESTMENT_RADAR_CACHE.get("ts", 0.0)) < _INVESTMENT_RADAR_CACHE_TTL_SECONDS
+    ):
+        return _INVESTMENT_RADAR_CACHE["data"]
+    fresh = await _resolve_radar_matches()
+    _INVESTMENT_RADAR_CACHE["data"] = fresh
+    _INVESTMENT_RADAR_CACHE["ts"] = now
+    return fresh
+
+
 async def list_investment_radar():
+    """Investment-Radar mit deterministischem, real-artikel-basiertem News-Linking.
+
+    Session 80.96 (Phase 2) — die alten hardcodierten `related_slug`-Werte im
+    Seed werden ignoriert. Statt dessen wird pro Thema ein wirklich passender,
+    veröffentlichter Artikel via `_INVESTMENT_RADAR_THEME_MATCHERS` (Tier 1–4)
+    aufgelöst. Keine Fake-News, keine erfundenen Slugs, keine LLM-Auswahl.
+
+    - 1 Sweep in `news_articles` (letzte 60 Tage, projected fields).
+    - Archiv-Fallback (retention_90d) nur wenn Live nichts liefert.
+    - 10-min TTL-Cache verhindert wiederholte DB-Sweeps bei kurzen Refreshes.
+    - Wenn kein Artikel sauber passt → `related_slug = None` → UI zeigt „—".
+    """
     docs = await db.investment_radar.find({}).sort("order", 1).to_list(50)
+    matches = await _resolve_radar_matches_cached()
     return [{
         "id": str(d["_id"]),
         "theme": d.get("theme"),
@@ -1119,7 +1408,7 @@ async def list_investment_radar():
         "why": d.get("why"),
         "horizon": d.get("horizon"),
         "tag": d.get("tag"),
-        "related_slug": d.get("related_slug"),
+        "related_slug": matches.get(d.get("theme")),
     } for d in docs]
 
 

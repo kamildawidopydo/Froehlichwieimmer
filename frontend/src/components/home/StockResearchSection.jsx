@@ -163,8 +163,14 @@ const ResearchTable = ({ rows }) => (
                   <span className="font-mono text-[11.5px] uppercase tracking-[0.16em] text-bank-text-muted">
                     {formatDate(row.asOfDate)}
                   </span>
+                  <span
+                    className="hidden font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-primary-strong opacity-70 transition-opacity group-hover:opacity-100 lg:inline"
+                    data-testid={`stock-research-open-analysis-${row.ticker.toLowerCase()}`}
+                  >
+                    Analyse öffnen
+                  </span>
                   <ArrowRight
-                    className="h-3.5 w-3.5 shrink-0 text-bank-text-muted opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100"
+                    className="h-3.5 w-3.5 shrink-0 text-bank-primary-strong opacity-40 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100"
                     strokeWidth={LUCIDE_STROKE}
                     aria-hidden
                   />
@@ -229,7 +235,10 @@ const ResearchTable = ({ rows }) => (
                   {formatDate(row.asOfDate)}
                 </dd>
               </div>
-              <ArrowRight className="h-4 w-4 text-bank-text-muted" strokeWidth={LUCIDE_STROKE} aria-hidden />
+              <span className="inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-primary-strong">
+                Analyse öffnen
+                <ArrowRight className="h-3.5 w-3.5" strokeWidth={LUCIDE_STROKE} aria-hidden />
+              </span>
             </div>
           </dl>
           </Link>
@@ -395,10 +404,23 @@ const StockResearchSection = ({ rows: rowsProp }) => {
 
         {/* Data provenance line (only with real data) */}
         {hasData ? (
-          <p className="mt-5 text-center font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted" data-testid="stock-research-as-of">
-            {asOf ? `Datenstand: ${new Date(asOf).toLocaleString('de-DE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ` : ''}
-            Quellen: Analysten-/Research-Angaben der jeweils genannten Anbieter
-          </p>
+          <>
+            <p className="mt-5 text-center font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted" data-testid="stock-research-as-of">
+              {asOf ? `Datenstand: ${new Date(asOf).toLocaleString('de-DE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ` : ''}
+              Quellen: Analysten-/Research-Angaben der jeweils genannten Anbieter
+            </p>
+            {/* Session 80.98 — Compare-Handoff aus Investment-Cockpit */}
+            <div className="mt-8 flex justify-center">
+              <Link
+                to="/comparison"
+                data-testid="stock-research-compare-cta"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-bank-border bg-white px-5 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-bank-text transition-colors hover:border-bank-primary/60 hover:text-bank-primary-strong"
+              >
+                Aktien vergleichen
+                <ArrowRight className="h-3.5 w-3.5" strokeWidth={LUCIDE_STROKE} aria-hidden />
+              </Link>
+            </div>
+          </>
         ) : null}
       </div>
     </section>

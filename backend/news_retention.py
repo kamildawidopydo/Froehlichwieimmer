@@ -234,9 +234,17 @@ async def find_article_by_slug(db, slug: str, *, include_archive: bool = True):
         return live_doc
     if not include_archive:
         return None
-    # Archiv: `is_published` wurde beim Verschieben mitkopiert. Wir erlauben
-    # nur ehemals veröffentlichte Artikel als Fallback (nie Drafts freigeben).
-    arch_doc = await db[ARCHIVE_COLLECTION].find_one({"slug": slug, "is_published": True})
+    # Fix-A (Session 80.94): Archivierte Retention-Docs auch dann direkt am
+    # bekannten Slug ausliefern, wenn `is_published` beim Verschieben nicht
+    # True war. Wir whitelisten ausschließlich `archive_reason == retention_90d`
+    # (bzw. den aktuellen Konstantenwert) — dadurch bleiben bewusst gesperrte
+    # Inhalte (Compliance/Admin-Unpublish/rechtlich entfernt), die typischerweise
+    # gar nicht durch Retention verschoben werden oder einen anderen
+    # `archive_reason` tragen würden, weiterhin geschützt.
+    arch_doc = await db[ARCHIVE_COLLECTION].find_one({
+        "slug": slug,
+        "archive_reason": ARCHIVE_REASON,
+    })
     if arch_doc:
         arch_doc["_from_archive"] = True
     return arch_doc
