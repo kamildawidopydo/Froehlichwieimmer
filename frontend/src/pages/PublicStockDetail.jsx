@@ -15,6 +15,7 @@ const StockEarnings = lazy(() => import('@/components/stock/StockEarnings'));
 const StockCompare = lazy(() => import('@/components/stock/StockCompare'));
 const StockResearch = lazy(() => import('@/components/stock/StockResearch'));
 const StockWatchButton = lazy(() => import('@/components/stock/StockWatchButton'));
+const StockAlertButton = lazy(() => import('@/components/stock/StockAlertButton'));
 
 const API_BASE = process.env.REACT_APP_BACKEND_URL;
 
@@ -155,9 +156,10 @@ function StockContent({ stock }) {
           Kurse können zeitverzögert sein. Angabe basiert auf dem letzten Datenstand des Research-Providers.
         </p>
 
-        <div className="mt-6">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <Suspense fallback={null}>
             <StockWatchButton symbol={stock.ticker} displayName={stock.company_name} />
+            <StockAlertButton symbol={stock.ticker} displayName={stock.company_name} currency={currency} />
           </Suspense>
         </div>
       </header>

@@ -3468,6 +3468,247 @@ async def watchlist_events(symbols: str = "", user: dict = Depends(get_current_u
     return {"items": items, "as_of": now.isoformat()}
 
 
+# --- Stock Alerts v2 (Session 80.82 · Watchlist Professional 3/4) ----------
+# Own namespace `/api/stock-alerts` to avoid colliding with the legacy
+# `/api/alerts` module (target_price-based). Uses only real cache data,
+# no yfinance calls in the engine.
+
+_SA_TYPES = {"price_above", "price_below", "earnings_reminder",
+             "ex_dividend_reminder", "news_new"}
+_SA_REMINDER_ALLOWED = {1, 2, 7}
+
+
+def _sa_validate(payload: dict) -> dict:
+    at = str(payload.get("alert_type", "")).strip()
+    if at not in _SA_TYPES:
+        raise HTTPException(400, detail=f"Ungültiger alert_type: {at}")
+    symbol = _clean_symbol(payload.get("symbol", ""))
+    if not symbol or symbol not in _UNIVERSE_BY_SYMBOL:
+        raise HTTPException(400, detail=f"Symbol {symbol!r} nicht im Aktien-Universum.")
+    threshold = None
+    if at in ("price_above", "price_below"):
+        try:
+            threshold = float(payload.get("threshold"))
+            if threshold != threshold or threshold <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise HTTPException(400, detail="threshold muss > 0 sein.")
+    reminder_days = None
+    if at in ("earnings_reminder", "ex_dividend_reminder"):
+        try: reminder_days = int(payload.get("reminder_days", 2))
+        except (TypeError, ValueError): reminder_days = None
+        if reminder_days not in _SA_REMINDER_ALLOWED:
+            raise HTTPException(400, detail="reminder_days muss 1, 2 oder 7 sein.")
+    channel = payload.get("channel", "in_app")
+    if channel != "in_app":
+        raise HTTPException(400, detail="Kanal derzeit nur in_app.")
+    return {"symbol": symbol, "alert_type": at, "threshold": threshold,
+            "reminder_days": reminder_days, "channel": channel}
+
+
+def _sa_out(d: dict) -> dict:
+    return {
+        "id": str(d.get("_id")),
+        "symbol": d.get("symbol"),
+        "alert_type": d.get("alert_type"),
+        "threshold": d.get("threshold"),
+        "reminder_days": d.get("reminder_days"),
+        "channel": d.get("channel", "in_app"),
+        "is_active": bool(d.get("is_active", True)),
+        "created_at": (d.get("created_at") or _now_utc()).isoformat(),
+        "updated_at": (d.get("updated_at") or _now_utc()).isoformat(),
+        "last_triggered_at": d.get("last_triggered_at").isoformat() if d.get("last_triggered_at") else None,
+        "last_trigger_value": d.get("last_trigger_value"),
+    }
+
+
+@api.post("/stock-alerts", status_code=201)
+async def sa_create(payload: dict, user: dict = Depends(get_current_user)):
+    v = _sa_validate(payload)
+    now = _now_utc()
+    doc = {"user_id": user["id"], **v, "is_active": True,
+           "created_at": now, "updated_at": now, "last_triggered_at": None,
+           "last_trigger_value": None, "last_event_key": None, "last_arm_side": None}
+    res = await db.stock_alerts.insert_one(doc)
+    doc["_id"] = res.inserted_id
+    return _sa_out(doc)
+
+
+@api.get("/stock-alerts")
+async def sa_list(symbol: str = "", user: dict = Depends(get_current_user)):
+    q = {"user_id": user["id"]}
+    if symbol:
+        s = _clean_symbol(symbol)
+        if s: q["symbol"] = s
+    docs = await db.stock_alerts.find(q).sort([("created_at", -1)]).to_list(200)
+    return {"items": [_sa_out(d) for d in docs], "count": len(docs)}
+
+
+@api.patch("/stock-alerts/{alert_id}")
+async def sa_update(alert_id: str, payload: dict, user: dict = Depends(get_current_user)):
+    try: oid = ObjectId(alert_id)
+    except Exception: raise HTTPException(400, detail="Ungültige Alert-ID.")
+    doc = await db.stock_alerts.find_one({"_id": oid, "user_id": user["id"]})
+    if not doc: raise HTTPException(404, detail="Alert nicht gefunden.")
+    upd = {"updated_at": _now_utc()}
+    if "is_active" in payload:
+        upd["is_active"] = bool(payload["is_active"])
+        upd["last_arm_side"] = None
+    if "threshold" in payload and doc["alert_type"] in ("price_above", "price_below"):
+        try:
+            upd["threshold"] = float(payload["threshold"])
+            upd["last_arm_side"] = None
+        except (TypeError, ValueError):
+            raise HTTPException(400, detail="threshold ungültig.")
+    if "reminder_days" in payload and doc["alert_type"] in ("earnings_reminder", "ex_dividend_reminder"):
+        try: rd = int(payload["reminder_days"])
+        except (TypeError, ValueError): rd = None
+        if rd not in _SA_REMINDER_ALLOWED:
+            raise HTTPException(400, detail="reminder_days ungültig.")
+        upd["reminder_days"] = rd
+    await db.stock_alerts.update_one({"_id": oid}, {"$set": upd})
+    return _sa_out(await db.stock_alerts.find_one({"_id": oid}))
+
+
+@api.delete("/stock-alerts/{alert_id}")
+async def sa_delete(alert_id: str, user: dict = Depends(get_current_user)):
+    try: oid = ObjectId(alert_id)
+    except Exception: raise HTTPException(400, detail="Ungültige Alert-ID.")
+    res = await db.stock_alerts.delete_one({"_id": oid, "user_id": user["id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(404, detail="Alert nicht gefunden.")
+    return {"ok": True, "id": alert_id}
+
+
+@api.get("/stock-notifications")
+async def sn_list(limit: int = 50, user: dict = Depends(get_current_user)):
+    limit = max(1, min(int(limit or 50), 200))
+    docs = await db.stock_alert_notifications.find({"user_id": user["id"]}).sort([("triggered_at", -1)]).to_list(limit)
+    return {
+        "items": [{
+            "id": str(d.get("_id")), "symbol": d.get("symbol"),
+            "alert_type": d.get("alert_type"), "title": d.get("title"), "body": d.get("body"),
+            "triggered_at": d.get("triggered_at").isoformat() if d.get("triggered_at") else None,
+            "trigger_value": d.get("trigger_value"), "provider_timestamp": d.get("provider_timestamp"),
+            "seen": bool(d.get("seen", False)),
+        } for d in docs],
+        "unseen_count": await db.stock_alert_notifications.count_documents({"user_id": user["id"], "seen": False}),
+    }
+
+
+@api.post("/stock-notifications/{nid}/seen")
+async def sn_seen(nid: str, user: dict = Depends(get_current_user)):
+    try: oid = ObjectId(nid)
+    except Exception: raise HTTPException(400, detail="Ungültige ID.")
+    await db.stock_alert_notifications.update_one(
+        {"_id": oid, "user_id": user["id"]}, {"$set": {"seen": True}})
+    return {"ok": True}
+
+
+async def _sa_evaluate_once() -> dict:
+    active = await db.stock_alerts.find({"is_active": True}).to_list(5000)
+    if not active: return {"evaluated": 0, "triggered": 0}
+    now = _now_utc(); today = now.date()
+    by_sym: dict = {}
+    for a in active: by_sym.setdefault(a["symbol"], []).append(a)
+    syms = list(by_sym.keys())
+    fund_docs, earn_docs, div_docs = await asyncio.gather(
+        db.stock_public_fundamentals_cache.find({"_id": {"$in": syms}}).to_list(len(syms)),
+        db.stock_public_earnings_cache.find({"_id": {"$in": syms}}).to_list(len(syms)),
+        db.stock_public_dividends_cache.find({"_id": {"$in": syms}}).to_list(len(syms)),
+    )
+    fund_by = {d["_id"]: (d.get("data") or {}) for d in fund_docs}
+    earn_by = {d["_id"]: (d.get("data") or {}) for d in earn_docs}
+    div_by = {d["_id"]: (d.get("data") or {}) for d in div_docs}
+    triggered = 0; notifs: list = []; updates: list = []
+    for sym, alerts in by_sym.items():
+        fdata = fund_by.get(sym) or {}; edata = earn_by.get(sym) or {}; ddata = div_by.get(sym) or {}
+        price = fdata.get("current_price")
+        pts_iso = fdata.get("data_updated_at")
+        for a in alerts:
+            at = a["alert_type"]
+            try:
+                if at in ("price_above", "price_below") and isinstance(price, (int, float)):
+                    thr = a.get("threshold")
+                    if thr is None: continue
+                    side = "above" if price > thr else "below"
+                    prev = a.get("last_arm_side"); should = False
+                    if at == "price_above" and side == "above" and prev != "above": should = True
+                    if at == "price_below" and side == "below" and prev != "below": should = True
+                    updates.append({"_id": a["_id"], "$set": {"last_arm_side": side}})
+                    if should:
+                        notifs.append({"user_id": a["user_id"], "alert_id": a["_id"], "symbol": sym,
+                            "alert_type": at, "title": f"{sym}: Kursalarm ausgelöst",
+                            "body": f"{sym} hat Ihren Kursalarm von {thr:.2f} {'über' if at=='price_above' else 'unter'}schritten. Aktueller Kurs: {price:.2f}.",
+                            "triggered_at": now, "trigger_value": price, "provider_timestamp": pts_iso,
+                            "seen": False, "event_key": f"{sym}|{at}|{thr}|{now.date().isoformat()}"})
+                        triggered += 1
+                elif at == "earnings_reminder":
+                    d_iso = (edata.get("important_dates") or {}).get("next_earnings_date")
+                    if not d_iso: continue
+                    try: ed_d = datetime.strptime(d_iso[:10], "%Y-%m-%d").date()
+                    except ValueError: continue
+                    rd = a.get("reminder_days") or 2
+                    if (ed_d - today).days != rd: continue
+                    ekey = f"{sym}|earnings|{d_iso}|{rd}"
+                    if a.get("last_event_key") == ekey: continue
+                    notifs.append({"user_id": a["user_id"], "alert_id": a["_id"], "symbol": sym,
+                        "alert_type": at, "title": f"{sym}: Earnings-Termin in {rd} Tag{'' if rd==1 else 'en'}",
+                        "body": f"{sym} veröffentlicht voraussichtlich am {d_iso} Quartalszahlen.",
+                        "triggered_at": now, "trigger_value": None, "provider_timestamp": pts_iso,
+                        "seen": False, "event_key": ekey})
+                    updates.append({"_id": a["_id"], "$set": {"last_event_key": ekey, "last_triggered_at": now}})
+                    triggered += 1
+                elif at == "ex_dividend_reminder":
+                    d_iso = (ddata.get("summary") or {}).get("next_ex_dividend_date")
+                    if not d_iso: continue
+                    try: ed_d = datetime.strptime(d_iso[:10], "%Y-%m-%d").date()
+                    except ValueError: continue
+                    rd = a.get("reminder_days") or 2
+                    if (ed_d - today).days != rd: continue
+                    ekey = f"{sym}|ex_div|{d_iso}|{rd}"
+                    if a.get("last_event_key") == ekey: continue
+                    notifs.append({"user_id": a["user_id"], "alert_id": a["_id"], "symbol": sym,
+                        "alert_type": at, "title": f"{sym}: Ex-Dividende in {rd} Tag{'' if rd==1 else 'en'}",
+                        "body": f"{sym}: Ex-Dividenden-Tag am {d_iso}.",
+                        "triggered_at": now, "trigger_value": None, "provider_timestamp": pts_iso,
+                        "seen": False, "event_key": ekey})
+                    updates.append({"_id": a["_id"], "$set": {"last_event_key": ekey, "last_triggered_at": now}})
+                    triggered += 1
+                elif at == "news_new":
+                    cutoff = now - timedelta(hours=24)
+                    news = await db.news_articles.find(
+                        {"related_symbols": sym, "published_at": {"$gte": cutoff}},
+                        {"slug": 1, "title": 1, "published_at": 1}).sort([("published_at", -1)]).to_list(10)
+                    for n in news:
+                        slug = n.get("slug") or str(n.get("_id"))
+                        ekey = f"{sym}|news|{slug}"
+                        if await db.stock_alert_notifications.find_one({"user_id": a["user_id"], "alert_id": a["_id"], "event_key": ekey}): continue
+                        notifs.append({"user_id": a["user_id"], "alert_id": a["_id"], "symbol": sym,
+                            "alert_type": at, "title": f"{sym}: Neue Meldung",
+                            "body": n.get("title") or f"Neue Meldung zu {sym}.",
+                            "triggered_at": now, "trigger_value": None,
+                            "provider_timestamp": (n.get("published_at").isoformat() if n.get("published_at") else None),
+                            "seen": False, "event_key": ekey})
+                        triggered += 1
+            except Exception as exc:  # noqa: BLE001 — per-symbol resilience
+                logger.info("stock alerts eval err %s/%s: %s", sym, at, str(exc)[:80])
+                continue
+    if notifs: await db.stock_alert_notifications.insert_many(notifs)
+    for u in updates:
+        await db.stock_alerts.update_one({"_id": u["_id"]}, {"$set": u["$set"]})
+    return {"evaluated": len(active), "triggered": triggered, "symbols": len(syms)}
+
+
+@api.post("/stock-alerts/evaluate")
+async def sa_evaluate(user: dict = Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(403, detail="Nur für Admins.")
+    return await _sa_evaluate_once()
+
+
+
+
 # --- Sparklines ------------------------------------------------------------
 
 # Alle Symbole, für die der Provider (yfinance primär, Alpha Vantage optional)

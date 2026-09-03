@@ -6,6 +6,52 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.82 (Sep 03 2026) — **Watchlist Professional 3/4 · Persönliche Alarme (nur PREVIEW)**:
+
+  **Umsetzung**:
+  1. Neues Backend-Namespace **`/api/stock-alerts`** in `server.py` (kollisionsfrei zum bestehenden `alerts.py`-Modul). Endpoints:
+     - `POST /api/stock-alerts` create
+     - `GET /api/stock-alerts?symbol=…` list
+     - `PATCH /api/stock-alerts/{id}` update (toggle/threshold/reminder_days)
+     - `DELETE /api/stock-alerts/{id}` delete
+     - `POST /api/stock-alerts/evaluate` engine-run (admin-only)
+     - `GET /api/stock-notifications` in-app inbox
+     - `POST /api/stock-notifications/{id}/seen`
+  2. Alert-Engine `_sa_evaluate_once()` mit **Crossing-Logik** für Kursalarme (`last_arm_side` state) und **Event-Dedupe** für Earnings/Ex-Div/News (`last_event_key`, `event_key` in Notifications). Reused vorhandene Caches: `stock_public_fundamentals_cache`, `stock_public_earnings_cache`, `stock_public_dividends_cache`, `news_articles`. **0 yfinance-Calls im Run**.
+  3. Symbol-Allowlist: strikt gegen `_UNIVERSE_BY_SYMBOL` (nicht nur `_clean_symbol`). Fake-Ticker → 400.
+  4. Neue Frontend-Komponente `StockAlertButton.jsx` (Bell-Icon-Pill, editorial Modal-Dialog) auf `/aktien/:symbol` Hero — CRUD, Toggle, Löschen, alle 5 Alert-Typen (`price_above/below`, `earnings_reminder`, `ex_dividend_reminder`, `news_new`), Kanal fest auf `in_app` (E-Mail bewusst zurückgestellt).
+
+  **QA (curl E2E, patron+admin)**:
+  | Test | Ergebnis |
+  |------|----------|
+  | Unauth POST | **401** ✅ |
+  | Fake-Symbol ZZZZFAKE | **400** ✅ „nicht im Aktien-Universum" |
+  | reminder_days=3 (invalid) | **400** ✅ „muss 1, 2 oder 7 sein" |
+  | Create NVDA>200, NVDA<150, AAPL earnings 2d, SAP ex-div 7d, MSFT news_new | **201×5** ✅ |
+  | Body-Injection `{"user_id":"OTHER_USER"}` | Server ignoriert ✅ |
+  | Cross-User PATCH/DELETE | **404** ✅ (User-Isolation) |
+  | Toggle off → on | **is_active** flippt korrekt ✅ |
+  | Evaluate als Non-Admin | **403** ✅ |
+  | Evaluate als Admin | `{evaluated:6, triggered:0, symbols:4}` ✅ |
+  | Re-Evaluate (Dedupe-Test) | `{evaluated:6, triggered:0, symbols:4}` — kein Doppelversand ✅ |
+  | Notifications patron | 2× MSFT (2 echte News-Meldungen) ✅ |
+  | Notifications admin | 0 (Isolation) ✅ |
+  | Regression: 7 Stock-Endpunkte + Watchlist + Legacy `/alerts` | **alle 200** ✅ |
+
+  **Formeln/Regeln**:
+  - Kurs-Crossing: Trigger nur wenn `last_arm_side != current_side` (Übergang von below→above bzw. above→below). `last_arm_side` wird bei jedem Eval-Lauf aktualisiert → keine Wiederholung.
+  - Event-Dedupe: `event_key = "{sym}|{type}|{date_iso}|{reminder_days}"` als eindeutiger Key pro Alert; wird auf `last_event_key` gespeichert.
+  - News-Dedupe: `event_key = "{sym}|news|{slug}"`, geprüft via `find_one` in `stock_alert_notifications` — pro User+Alert+Article max. eine Notification.
+  - Reminder-Trigger nur exakt am Tag `event_date − reminder_days` (kein Fenster, kein Rückwärts-Trigger).
+
+  **Provider-/Cache**: 100 User × NVDA-Alert = **1 Mongo-Fund-Cache-Lookup** (keine yfinance-Calls). Grouping by symbol vor der Auswertung.
+
+  **Failure-Handling**: `try/except` pro Symbol+AlertType → ein defekter Datensatz blockt nicht den ganzen Run. Fehlender Kurs → skip statt Fehler. E-Mail bewusst nicht aktiviert (Kanal-Enum akzeptiert nur `in_app`).
+
+  **Bewusst zurückgestellt** (für 4/4): E-Mail-Zustellung, Emergent-Cron-Yaml (`_sa_evaluate_once` aktuell manuell via Endpoint triggerbar), In-App-Notification-Bell im Header, dedizierte „Meine Alarme"-Übersichtsseite, Alert-Aktion in Watchlist-Row.
+
+  **Ready for deploy: JA** — strikt **nur PREVIEW**. **Kein Prod-Deploy ohne ausdrückliche Freigabe.**
+
 - 80.81 (Sep 03 2026) — **Watchlist Professional 2/4 · Sort + Multi-Select + Compare-Handoff (nur PREVIEW)**:
 
   **Umsetzung**:
