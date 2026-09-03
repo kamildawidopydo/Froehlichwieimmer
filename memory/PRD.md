@@ -6,6 +6,64 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 80.77 (Sep 03 2026) — **Tool-Paket 3/4 · Dividenden + Earnings + Unternehmensereignisse (nur PREVIEW)**:
+
+  **Umsetzung**:
+  1. Zwei neue Backend-Endpunkte in `stock_public.py`:
+     - `GET /api/stocks/{symbol}/dividends` — echte `t.dividends` Zeitreihe (Jahresausschüttung, count, complete-Flag), Summary (`dividendYield`, `dividendRate`, `payoutRatio`, `fiveYearAvgDividendYield`, `lastDividendValue/Date`, `exDividendDate`) plus CAGR-Berechnung (1J/3J/5J) auf Basis vollständiger Jahre. Cache 12 h in `stock_public_dividends_cache`.
+     - `GET /api/stocks/{symbol}/earnings` — echte `t.get_earnings_dates(limit=12)` (bis zu 8 vergangene Quartale) plus `t.calendar` (nächster Earnings-Termin, Dividend Payment Date, Ex-Dividenden-Tag, EPS-/Umsatz-Schätzungen high/low/avg). Cache 3 h in `stock_public_earnings_cache`.
+  2. Zwei neue Frontend-Komponenten (lazy-loaded):
+     - `StockDividends.jsx` — Summary-Kennzahlen (4-Spalten-Grid), horizontaler Balkenchart der letzten 10 Jahre (aktuelles Jahr in gedämpfter Farbe + Label „bislang"), Dividenden­wachstum (1J/3J/5J CAGR) mit ▲/▼ und Basisjahr-Fußnote.
+     - `StockEarnings.jsx` — Sub-Sektion „Wichtige Termine" (Earnings, Ex-Div, Div-Payment), Nächstes-Quartal-Schätzung (EPS Avg + Range, Umsatz Avg + Range), Earnings-Historie 8 Quartale (Desktop-Grid / Mobile-Card-Layout mit Zeilenumbruch) inkl. Surprise-%.
+  3. Reihenfolge auf der Detailseite neu geordnet (`PublicStockDetail.jsx`): Hero → Analystenkursziel (Research) → Kurschart → Investment-Rechner → Analystenkonsens → **Dividenden** → **Earnings** → Fundamentals → News.
+
+  **Daten-Audit yfinance (6 Titel + 1 Sonderfall)**:
+  | Symbol | Div-Historie | Yield | Rate/Jahr | Payout | 5J-Avg | Ex-Tag | Nächster Earnings | EPS-Historie |
+  |--------|-------------|-------|-----------|--------|--------|--------|-------------------|--------------|
+  | NVDA | 55 Zahlungen (2012→2026) | 0.46% | 1,00 $ | 3.5% | 0.05% | 10.09.2026 | 17.11.2026 | 8/8 ✅ |
+  | AAPL | 92 Zahlungen (1987→2026) | 0.33% | 1,08 $ | 12.0% | 0.50% | 10.08.2026 | 29.10.2026 | 8/8 ✅ |
+  | MSFT | 91 Zahlungen (2003→2026) | 0.73% | 3,64 $ | 19.8% | 0.79% | 20.08.2026 | 28.10.2026 | 8/8 ✅ |
+  | SAP  | 28 Zahlungen (1999→2026) | 1.36% | 2,50 € | 37.4% | 1.46% | 06.05.2026 | 21.10.2026 | 8/8 ✅ |
+  | RHM  | 27 Zahlungen (2000→2026) | 1.07% | 11,50 € | 44.1% | 1.29% | 13.05.2026 | 05.11.2026 | 8/8 ✅ |
+  | ALV  | 27 Zahlungen (2000→2026) | 3.78% | 17,10 € | 56.1% | 4.80% | 08.05.2026 | 12.11.2026 | 8/8 ✅ |
+  | **AMZN (Sonderfall)** | **keine** | — | — | — | — | — | 29.10.2026 | 8/8 ✅ |
+
+  **CAGR-Mathematik-QA (API vs. manuelle Python-Kontrolle)**:
+  | Symbol | 1J % (API) | 3J CAGR (API) | 5J CAGR (API) | 1J (Kontrolle) | 3J (Kontrolle) | 5J (Kontrolle) |
+  |--------|-----------|---------------|---------------|----------------|----------------|----------------|
+  | AAPL   | +4.04 | +4.22 | +4.99 | +4.04 ✅ | +4.22 ✅ | +4.99 ✅ |
+  | MSFT   | +10.39 | +10.21 | +10.22 | +10.39 ✅ | +10.21 ✅ | +10.22 ✅ |
+  | SAP    | +6.82 | −1.38 | +8.26 | +6.82 ✅ | −1.38 ✅ | +8.26 ✅ |
+  | ALV    | +11.59 | +12.56 | +9.91 | +11.59 ✅ | +12.56 ✅ | +9.91 ✅ |
+  | NVDA   | +17.65 | +35.72 | +20.11 | +17.65 ✅ | +35.72 ✅ | +20.11 ✅ |
+
+  **Provider-Caveats (transparent dokumentiert)**:
+  - **Umsatz „gemeldet" (Actual)**: yfinance liefert im Equity-Endpoint keinen zuverlässigen Rohumsatz je Quartal → bewusst nicht dargestellt. Wir zeigen ausschließlich die **Umsatz-Schätzung** (avg/high/low) aus `t.calendar` für das kommende Quartal.
+  - `dividend_payment_date` fehlt für SAP/RHM/ALV im aktuellen `calendar`-Response → sauber ausgeblendet (nicht als Fake-Datum eingesetzt).
+  - Earnings-Termin für Kalender ist ein einzelnes Datum (kein Range im aktuellen yfinance-Response); die Range-Formulierung ist implementiert und aktiv, sobald der Provider `[start, end]` liefert.
+  - AMZN: `dividendRate=None` → Sektion zeigt neutralen Empty-State: „Für diese Aktie ist derzeit keine regelmäßige Dividendenzahlung hinterlegt." ✅
+
+  **QA**:
+  - Backend regression: `/history` ✅ · `/fundamentals` ✅ · `/analyst` ✅ · `/news` ✅ (200 auf allen)
+  - Desktop 1440 Light: 4-Spalten-Kennzahlen, Balkenchart 10 Jahre, Earnings 4-Spalten-Grid, Termin-Sektion 3-Spalten ✅
+  - Desktop 1440 Dark: bank-surface + bank-primary Balken, keine Deep-Navy-Hardcodings ✅
+  - Mobile 390 Light+Dark (RHM): Chart passt in 390 px, Earnings-Zeilen brechen 2-spaltig mit Zeilenlabels („Termin / Erwartet / Gemeldet / Abweichung") um, kein Horizontal-Overflow ✅
+  - Console-Errors: 0 · Network-Errors: 0
+  - Regression Tool-Paket 1 (Rendite-Rechner + Benchmark) und 2 (Analystenkonsens): weiter voll funktionsfähig ✅
+  - Sonderfall AMZN: kein NaN, kein `undefined`, kein `01.01.1970` — Empty-State greift sauber ✅
+  - Alle Datumsangaben mit semantischem `<time dateTime="...">`-Tag für a11y
+  - Positive/negative Abweichung sowohl über Farbe **als auch** ▲/▼-Zeichen (nicht rein farbabhängig)
+
+  **Formeln**:
+  - CAGR: `(base_end / base_start)^(1/N) − 1) × 100` mit `base_start > 0` und **N vollständige Kalenderjahre** (2026 bislang wird explizit ausgeschlossen)
+  - Surprise %: Providerwert `Surprise(%)` durchgereicht (nicht selbst berechnet)
+  - Jahresdividende: `groupby(year).sum()` über echte Zahlungstermine
+  - `complete=false` wenn `year == current_year` und letztes Zahldatum vor Dezember → als „bislang" gerendert und aus CAGR ausgeschlossen
+
+  **Nicht in diesem Paket**: DCF, Fair Value, Peer-Vergleich, Watchlist, Kursalarm, Insider-Trading, News-Sentiment. Kommt in Tool-Paket 4 oder später.
+
+  **Ready for deploy: JA** — jedoch strikt **nur PREVIEW** gemäß User-Vorgabe. **Kein Prod-Deploy ohne ausdrückliche Freigabe.**
+
 - 80.76 (Sep 03 2026) — **Tool-Paket 2/4 · Analystenkonsens + Kursziele + Bewertungs-Check (nur PREVIEW)**:
 
   **Umsetzung**:

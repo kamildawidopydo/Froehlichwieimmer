@@ -66,6 +66,8 @@ RANGE_MAP: Dict[str, Dict[str, Any]] = {
 
 FUNDAMENTALS_TTL_S = 6 * 60 * 60
 ANALYST_TTL_S = 6 * 60 * 60
+DIVIDENDS_TTL_S = 12 * 60 * 60
+EARNINGS_TTL_S = 3 * 60 * 60
 
 
 def _now() -> datetime:
@@ -659,3 +661,387 @@ async def stock_fundamentals(symbol: str) -> Dict[str, Any]:
         "cached_until": expires_at.isoformat(),
         **payload,
     }
+
+
+# ---- Dividends (Session 80.77 · Tool-Paket 3/4) ----------------------------
+
+def _ts_to_iso_date(ts) -> Optional[str]:
+    """UNIX seconds timestamp → ISO date string (YYYY-MM-DD). None on failure."""
+    if ts is None:
+        return None
+    try:
+        n = float(ts)
+        if not (n == n) or n <= 0:
+            return None
+        return datetime.fromtimestamp(n, tz=timezone.utc).date().isoformat()
+    except (TypeError, ValueError, OSError):
+        return None
+
+
+def _yf_dividends_sync(yf_sym: str) -> Optional[Dict[str, Any]]:
+    """Real dividend history + summary via yfinance. No fabrication."""
+    try:
+        import yfinance as yf  # type: ignore
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        t = yf.Ticker(yf_sym)
+        try:
+            info = t.get_info() or {}
+        except Exception:  # noqa: BLE001
+            info = getattr(t, "info", None) or {}
+
+        def _num(v):
+            try:
+                if v is None:
+                    return None
+                v = float(v)
+                return v if v == v else None
+            except (TypeError, ValueError):
+                return None
+
+        # ---- Dividend time series ------------------------------------------
+        series = None
+        try:
+            series = t.dividends
+        except Exception:  # noqa: BLE001
+            series = None
+
+        history: List[Dict[str, Any]] = []
+        has_any = False
+        latest_year: Optional[int] = None
+        latest_pay_iso: Optional[str] = None
+        if series is not None:
+            try:
+                if series is not None and not series.empty:
+                    has_any = True
+                    yearly = series.groupby(series.index.year).agg(["sum", "count"])
+                    now_year = _now().year
+                    now_date = _now().date()
+                    latest_pay_dt = series.index[-1]
+                    latest_pay_iso = latest_pay_dt.date().isoformat()
+                    latest_year = int(latest_pay_dt.year)
+                    for year, row in yearly.tail(12).iterrows():
+                        total = float(row["sum"])
+                        count = int(row["count"])
+                        complete = True
+                        if int(year) == now_year:
+                            # Current calendar year — if we haven't crossed the
+                            # last observed pay date yet or if more quarters are
+                            # still due, mark as incomplete.
+                            complete = (latest_pay_dt.date() < now_date and now_date.month >= 12)
+                            if not complete:
+                                # Heuristic: if the ticker paid quarterly last year
+                                # and count so far < 4 this year, incomplete.
+                                pass
+                        history.append({
+                            "year": int(year),
+                            "total": round(total, 4),
+                            "count": count,
+                            "complete": complete,
+                        })
+            except Exception as exc:  # noqa: BLE001
+                logger.info("yfinance dividends series %s error: %s", yf_sym, str(exc)[:120])
+
+        # ---- Info-level summary --------------------------------------------
+        div_yield_raw = _num(info.get("dividendYield"))
+        # yfinance today returns pct (e.g. 1.36 for SAP). Only <0.02 → decimal.
+        if div_yield_raw is not None and 0 < div_yield_raw < 0.02:
+            div_yield_raw = round(div_yield_raw * 100.0, 4)
+        if div_yield_raw is not None and div_yield_raw > 30:
+            div_yield_raw = None
+
+        payout_raw = _num(info.get("payoutRatio"))
+        payout_pct = round(payout_raw * 100.0, 4) if payout_raw is not None else None
+
+        fivey_avg = _num(info.get("fiveYearAvgDividendYield"))
+        # fiveYearAvgDividendYield is returned already in % (e.g. 0.5, 1.29, 4.8).
+        # Only normalize if suspiciously fractional (<0.02).
+        if fivey_avg is not None and 0 < fivey_avg < 0.02:
+            fivey_avg = round(fivey_avg * 100.0, 4)
+
+        summary = {
+            "dividend_rate_annual": _num(info.get("dividendRate")),
+            "dividend_yield_pct": div_yield_raw,
+            "payout_ratio_pct": payout_pct,
+            "trailing_annual_rate": _num(info.get("trailingAnnualDividendRate")),
+            "five_year_avg_yield_pct": fivey_avg,
+            "last_dividend_value": _num(info.get("lastDividendValue")),
+            "last_dividend_date": _ts_to_iso_date(info.get("lastDividendDate")),
+            "next_ex_dividend_date": _ts_to_iso_date(info.get("exDividendDate")),
+        }
+
+        # ---- Growth / CAGR --------------------------------------------------
+        growth = {"one_year_pct": None, "cagr_3y_pct": None, "cagr_5y_pct": None, "base_end_year": None}
+        if history:
+            # Only use *completed* years (exclude current-year partial if present).
+            complete_years = [h for h in history if h["complete"] and h["total"] > 0]
+            if len(complete_years) >= 2:
+                base = complete_years[-1]
+                growth["base_end_year"] = base["year"]
+                # 1Y growth
+                if len(complete_years) >= 2:
+                    y0 = complete_years[-2]
+                    if y0["total"] > 0:
+                        growth["one_year_pct"] = round((base["total"] / y0["total"] - 1.0) * 100.0, 2)
+                # 3Y CAGR
+                if len(complete_years) >= 4:
+                    y3 = complete_years[-4]
+                    if y3["total"] > 0:
+                        growth["cagr_3y_pct"] = round(((base["total"] / y3["total"]) ** (1 / 3) - 1.0) * 100.0, 2)
+                # 5Y CAGR
+                if len(complete_years) >= 6:
+                    y5 = complete_years[-6]
+                    if y5["total"] > 0:
+                        growth["cagr_5y_pct"] = round(((base["total"] / y5["total"]) ** (1 / 5) - 1.0) * 100.0, 2)
+
+        currency = info.get("currency")
+        # Decide "has_dividends": any historic payment OR non-null rate/yield.
+        has_dividends = bool(
+            has_any or (summary["dividend_rate_annual"] and summary["dividend_rate_annual"] > 0)
+            or (summary["dividend_yield_pct"] and summary["dividend_yield_pct"] > 0)
+        )
+
+        return {
+            "currency": currency,
+            "has_dividends": has_dividends,
+            "summary": summary,
+            "history": history,
+            "growth": growth,
+            "latest_pay_date": latest_pay_iso,
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.info("yfinance dividends %s error: %s", yf_sym, str(exc)[:120])
+        return None
+
+
+@router.get("/stocks/{symbol}/dividends")
+async def stock_dividends(symbol: str) -> Dict[str, Any]:
+    sym = _check(symbol)
+    cached = await _db.stock_public_dividends_cache.find_one({"_id": sym})
+    if cached and cached.get("expires_at") and cached["expires_at"] > _now():
+        payload = cached.get("data") or {}
+        return {
+            "symbol": sym,
+            "data_source": cached.get("data_source", "cache"),
+            "data_updated_at": cached.get("cached_at").isoformat() if cached.get("cached_at") else None,
+            "cached_until": cached["expires_at"].isoformat(),
+            **payload,
+        }
+    yf_sym = ALLOWED[sym]
+    data = await asyncio.to_thread(_yf_dividends_sync, yf_sym)
+    source = "yfinance" if data else "unavailable"
+    payload = data or {
+        "currency": None, "has_dividends": False,
+        "summary": {
+            "dividend_rate_annual": None, "dividend_yield_pct": None, "payout_ratio_pct": None,
+            "trailing_annual_rate": None, "five_year_avg_yield_pct": None,
+            "last_dividend_value": None, "last_dividend_date": None, "next_ex_dividend_date": None,
+        },
+        "history": [], "growth": {"one_year_pct": None, "cagr_3y_pct": None, "cagr_5y_pct": None, "base_end_year": None},
+        "latest_pay_date": None,
+    }
+    now = _now()
+    expires_at = now + timedelta(seconds=DIVIDENDS_TTL_S)
+    await _db.stock_public_dividends_cache.update_one(
+        {"_id": sym},
+        {"$set": {"_id": sym, "symbol": sym, "yf_symbol": yf_sym,
+                  "data_source": source, "data": payload,
+                  "cached_at": now, "expires_at": expires_at}},
+        upsert=True,
+    )
+    return {"symbol": sym, "data_source": source,
+            "data_updated_at": now.isoformat(),
+            "cached_until": expires_at.isoformat(), **payload}
+
+
+# ---- Earnings + important dates (Session 80.77 · Tool-Paket 3/4) -----------
+
+def _yf_earnings_sync(yf_sym: str) -> Optional[Dict[str, Any]]:
+    """Real earnings history + next-earnings estimate + calendar via yfinance."""
+    try:
+        import yfinance as yf  # type: ignore
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        t = yf.Ticker(yf_sym)
+        try:
+            info = t.get_info() or {}
+        except Exception:  # noqa: BLE001
+            info = getattr(t, "info", None) or {}
+
+        def _num(v):
+            try:
+                if v is None:
+                    return None
+                v = float(v)
+                return v if v == v else None
+            except (TypeError, ValueError):
+                return None
+
+        currency = info.get("currency")
+        history: List[Dict[str, Any]] = []
+        next_row: Optional[Dict[str, Any]] = None
+
+        try:
+            edf = t.get_earnings_dates(limit=12)
+        except Exception:  # noqa: BLE001
+            edf = None
+
+        if edf is not None:
+            try:
+                if not edf.empty:
+                    now_utc = _now()
+                    # Sort by index desc (most recent first) — yfinance already does this.
+                    for idx, row in edf.iterrows():
+                        try:
+                            dt = idx.to_pydatetime() if hasattr(idx, "to_pydatetime") else idx
+                            if getattr(dt, "tzinfo", None) is None:
+                                dt = dt.replace(tzinfo=timezone.utc)
+                            date_iso = dt.astimezone(timezone.utc).date().isoformat()
+                        except Exception:  # noqa: BLE001
+                            continue
+                        est = _num(row.get("EPS Estimate"))
+                        act = _num(row.get("Reported EPS"))
+                        surp = _num(row.get("Surprise(%)"))
+                        rec = {
+                            "date": date_iso,
+                            "eps_estimate": est,
+                            "eps_actual": act,
+                            "surprise_pct": surp,
+                        }
+                        if act is None and dt > now_utc:
+                            # Future quarter — take the most recent (closest) as next.
+                            if next_row is None or (dt < datetime.fromisoformat(next_row["_dt"])):
+                                next_row = {**rec, "_dt": dt.astimezone(timezone.utc).isoformat()}
+                        elif act is not None:
+                            history.append(rec)
+            except Exception as exc:  # noqa: BLE001
+                logger.info("yfinance earnings_dates %s error: %s", yf_sym, str(exc)[:120])
+
+        # Keep only 8 most-recent completed quarters (already desc).
+        history = history[:8]
+
+        # ---- Calendar (next earnings + dividend + ex-div) ------------------
+        important: Dict[str, Any] = {
+            "next_earnings_date": None,
+            "next_earnings_date_end": None,
+            "next_earnings_is_range": False,
+            "dividend_payment_date": None,
+            "ex_dividend_date": None,
+        }
+        est_pack: Dict[str, Any] = {
+            "eps_estimate_avg": None, "eps_estimate_high": None, "eps_estimate_low": None,
+            "revenue_estimate_avg": None, "revenue_estimate_high": None, "revenue_estimate_low": None,
+        }
+        try:
+            cal = t.calendar
+        except Exception:  # noqa: BLE001
+            cal = None
+        if isinstance(cal, dict) and cal:
+            ed = cal.get("Earnings Date")
+            if isinstance(ed, list) and ed:
+                first, last = ed[0], ed[-1]
+                try:
+                    important["next_earnings_date"] = first.isoformat() if hasattr(first, "isoformat") else str(first)
+                    important["next_earnings_date_end"] = last.isoformat() if hasattr(last, "isoformat") else str(last)
+                    important["next_earnings_is_range"] = (important["next_earnings_date"] != important["next_earnings_date_end"])
+                except Exception:  # noqa: BLE001
+                    pass
+            for src, dst in (
+                ("Dividend Date", "dividend_payment_date"),
+                ("Ex-Dividend Date", "ex_dividend_date"),
+            ):
+                v = cal.get(src)
+                if v is not None:
+                    try:
+                        important[dst] = v.isoformat() if hasattr(v, "isoformat") else str(v)
+                    except Exception:  # noqa: BLE001
+                        pass
+            est_pack["eps_estimate_avg"] = _num(cal.get("Earnings Average"))
+            est_pack["eps_estimate_high"] = _num(cal.get("Earnings High"))
+            est_pack["eps_estimate_low"] = _num(cal.get("Earnings Low"))
+            est_pack["revenue_estimate_avg"] = _num(cal.get("Revenue Average"))
+            est_pack["revenue_estimate_high"] = _num(cal.get("Revenue High"))
+            est_pack["revenue_estimate_low"] = _num(cal.get("Revenue Low"))
+
+        # Fallback for next-earnings date from info earnings timestamps.
+        if not important["next_earnings_date"]:
+            ts_start = info.get("earningsTimestampStart")
+            ts_end = info.get("earningsTimestampEnd")
+            ds = _ts_to_iso_date(ts_start)
+            de = _ts_to_iso_date(ts_end)
+            if ds:
+                important["next_earnings_date"] = ds
+                important["next_earnings_date_end"] = de or ds
+                important["next_earnings_is_range"] = bool(de and de != ds)
+
+        # ---- Merge next-quarter estimate into next_row --------------------
+        next_out: Optional[Dict[str, Any]] = None
+        if next_row or important["next_earnings_date"]:
+            date_v = (next_row or {}).get("date") or important["next_earnings_date"]
+            next_out = {
+                "date": date_v,
+                "date_end": important["next_earnings_date_end"] or date_v,
+                "is_range": important["next_earnings_is_range"],
+                "eps_estimate": (next_row or {}).get("eps_estimate") if next_row else est_pack["eps_estimate_avg"],
+                "estimate_avg": est_pack["eps_estimate_avg"],
+                "estimate_high": est_pack["eps_estimate_high"],
+                "estimate_low": est_pack["eps_estimate_low"],
+                "revenue_estimate_avg": est_pack["revenue_estimate_avg"],
+                "revenue_estimate_high": est_pack["revenue_estimate_high"],
+                "revenue_estimate_low": est_pack["revenue_estimate_low"],
+            }
+
+        # Provider caveat: yfinance does NOT reliably return REPORTED quarterly
+        # revenue on the equity endpoints we already query. We deliberately
+        # expose only the estimate (average/high/low), never a fabricated actual.
+        return {
+            "currency": currency,
+            "history": history,
+            "next": next_out,
+            "important_dates": important,
+            "revenue_reported_available": False,
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.info("yfinance earnings %s error: %s", yf_sym, str(exc)[:120])
+        return None
+
+
+@router.get("/stocks/{symbol}/earnings")
+async def stock_earnings(symbol: str) -> Dict[str, Any]:
+    sym = _check(symbol)
+    cached = await _db.stock_public_earnings_cache.find_one({"_id": sym})
+    if cached and cached.get("expires_at") and cached["expires_at"] > _now():
+        payload = cached.get("data") or {}
+        return {
+            "symbol": sym,
+            "data_source": cached.get("data_source", "cache"),
+            "data_updated_at": cached.get("cached_at").isoformat() if cached.get("cached_at") else None,
+            "cached_until": cached["expires_at"].isoformat(),
+            **payload,
+        }
+    yf_sym = ALLOWED[sym]
+    data = await asyncio.to_thread(_yf_earnings_sync, yf_sym)
+    source = "yfinance" if data else "unavailable"
+    payload = data or {
+        "currency": None, "history": [], "next": None,
+        "important_dates": {
+            "next_earnings_date": None, "next_earnings_date_end": None,
+            "next_earnings_is_range": False,
+            "dividend_payment_date": None, "ex_dividend_date": None,
+        },
+        "revenue_reported_available": False,
+    }
+    now = _now()
+    expires_at = now + timedelta(seconds=EARNINGS_TTL_S)
+    await _db.stock_public_earnings_cache.update_one(
+        {"_id": sym},
+        {"$set": {"_id": sym, "symbol": sym, "yf_symbol": yf_sym,
+                  "data_source": source, "data": payload,
+                  "cached_at": now, "expires_at": expires_at}},
+        upsert=True,
+    )
+    return {"symbol": sym, "data_source": source,
+            "data_updated_at": now.isoformat(),
+            "cached_until": expires_at.isoformat(), **payload}

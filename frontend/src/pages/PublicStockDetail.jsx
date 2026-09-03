@@ -10,6 +10,8 @@ const StockFundamentals = lazy(() => import('@/components/stock/StockFundamental
 const StockNews = lazy(() => import('@/components/stock/StockNews'));
 const StockInvestmentCalculator = lazy(() => import('@/components/stock/StockInvestmentCalculator'));
 const StockAnalystConsensus = lazy(() => import('@/components/stock/StockAnalystConsensus'));
+const StockDividends = lazy(() => import('@/components/stock/StockDividends'));
+const StockEarnings = lazy(() => import('@/components/stock/StockEarnings'));
 
 const API_BASE = process.env.REACT_APP_BACKEND_URL;
 
@@ -211,12 +213,16 @@ function StockContent({ stock }) {
         </div>
       </section>
 
-      {/* CHART & FUNDAMENTALS — real yfinance data only, hidden when unavailable */}
+      {/* Reihenfolge (Session 80.77): Chart → Investment-Rechner → Analystenkonsens
+           → Dividenden → Earnings → Fundamentals → News. Alle Sektionen zeigen
+           nur echte yfinance-Daten und blenden fehlende Felder aus. */}
       <Suspense fallback={null}>
         <StockPriceChart symbol={stock.ticker} />
-        <StockFundamentals symbol={stock.ticker} currentPrice={current} />
         <StockInvestmentCalculator symbol={stock.ticker} currency={currency} />
         <StockAnalystConsensus symbol={stock.ticker} />
+        <StockDividends symbol={stock.ticker} />
+        <StockEarnings symbol={stock.ticker} />
+        <StockFundamentals symbol={stock.ticker} currentPrice={current} />
         <StockNews symbol={stock.ticker} />
       </Suspense>
 
