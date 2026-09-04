@@ -8,6 +8,7 @@ import DepotHero from '@/components/mein-depot/DepotHero';
 import DepotKpiRail from '@/components/mein-depot/DepotKpiRail';
 import DepotPerformance from '@/components/mein-depot/DepotPerformance';
 import DepotStructure from '@/components/mein-depot/DepotStructure';
+import MeinePositionen from '@/components/mein-depot/MeinePositionen';
 
 /**
  * /mein-depot — Public-Layout-Wrapper um bestehende DepotPage.
@@ -44,9 +45,10 @@ const MeinDepotContent = () => (
       <DepotKpiRail />
       <DepotPerformance />
       <DepotStructure />
+      <MeinePositionen />
     </div>
 
-    <DepotPage showTopSummary={false} />
+    <DepotPage showTopSummary={false} showLegacyPositionCards={false} />
   </>
 );
 

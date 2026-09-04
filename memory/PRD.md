@@ -6,6 +6,38 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 81.06 Schritt 3/7 (Sep 04 2026) — **Depot-Professionalisierung · „Meine Positionen" Aktien + Anleihen (nur PREVIEW)**:
+
+  **Kontext**: Portfolio-Backend-Migration Supabase → FastAPI bleibt eingefroren. Reine UI-Sektion auf Basis vorhandener DashboardDataContext-Daten (`stockMetrics`, `bondPositions`, `stockPriceMap`, `computeBondMetrics`, `gesamtvermoegen`). 0 zusätzliche Backend-Requests.
+
+  **Neu**: `frontend/src/components/mein-depot/MeinePositionen.jsx` (~380 Zeilen).
+  - **Aktien** (Desktop-Tabelle 11 Spalten / Mobile-Cards): Unternehmen · Ticker · Stück · Einstand · Kurs · Marktwert · G/V € · G/V % · Gewichtung · Heute · Details →. Aktien-Kurs & Marktwert in ORIGINAL-Währung (`priceFmt(v, r.currency)`) — kein FX-Layer, kein EUR-Zwang.
+  - **Anleihen** (separater Block, Desktop-Tabelle 11 Spalten / Mobile-Cards): Emittent/Titel · Nominal · Kaufkurs · Kurs · Marktwert · Kupon · Fälligkeit · G/V · Current Yield · YTM · Gewichtung. Fach-Standard EUR.
+  - Tabs `Alle / Aktien / Anleihen` — nur wenn Daten für den Typ existieren (kein leerer Anleihen-Tab).
+  - Client-side Suche (Ticker/Name) + Sortierung (Marktwert desc default · G/V % · Gewichtung · Name A–Z). Δ0 Requests.
+  - Gewichtung = `marktwert / gesamtvermoegen * 100` **nur wenn** `currency==='EUR'` (Aktien) oder immer für Anleihen (EUR). Bei USD-Positionen: `—` mit `title="Bezugsgröße nicht eindeutig (Fremdwährungsposition)"`. Kein FX-Improvisieren.
+  - G/V immer als `+123,45 €` / `−123,45 €` + `+/−1,23 %` + Farbe + Icon + Textlabel — nie farb-only.
+  - Details-Link **nur Aktien** → bestehende Public-Route `/aktien/${symbol}`. **Keine** neue Detail-Seite. Anleihen haben keine dedizierte Public-Detail-Route → kein „Details"-Link (weder improvisiert noch verlinkt zu Dashboard).
+  - Empty-State editorial (Section 12), Error-State separat (Section 18): unterscheidet echten Fetch-Fehler von leerem Depot per `dashboardFetchHadFailure`.
+  - Loading: Skeleton (kein „0 Positionen"-Zwischenzustand).
+
+  **Geändert**:
+  - `frontend/src/pages/MeinDepotPage.jsx` — importiert und mountet `<MeinePositionen/>` zwischen `DepotStructure` und `<DepotPage/>`, DepotPage jetzt mit `showLegacyPositionCards={false}` (Duplikat-Vermeidung).
+  - `frontend/src/pages/dashboard/DepotPage.jsx` — neuer Prop `showLegacyPositionCards` (Default `true`). Auf `/dashboard/vermoegen` unverändert; auf `/mein-depot` unterdrückt die Legacy-Top-5-Aktien+Anleihen-Cards, sodass die neue Positionen-Sektion nicht doppelt erscheint.
+
+  **QA (Preview, demo.kunde ohne Positionen, 1920 & 390)**:
+  - testids YES: `mein-depot-hero` (Step-2-Regression), `mein-depot-positionen`, `mein-depot-positionen-error`. Empty/Tabs/Search/Sort/Stocks-Block/Bonds-Block = korrekt `no` im FastAPI-only-Zustand.
+  - Copy Error-State: „Ihre Positionen konnten momentan nicht geladen werden. Bitte laden Sie die Seite später erneut. Ein technischer Fehler bedeutet nicht, dass Ihr Depot leer ist." ✓
+  - Body-Overflow 1920: `sw=vw=1920` ✓.
+  - Watchlist bleibt strikt getrennt: `user_stock_watchlist` wird nicht gelesen; `stockMetrics` + `bondPositions` sind ausschließlich Depotbestand.
+  - Regressionsschutz: `/dashboard/vermoegen` unverändert (Default-Props greifen), Auth/Onboarding/Migration/Snapshot/Supabase/FastAPI unangetastet.
+
+  **E2E mit realem Positionsbestand nicht möglich**: Preview-Testkunden (demo.kunde) sind FastAPI-only → Supabase-RLS liefert 0 Rows → Positionen-Sektion zeigt Error-State (nicht Empty). Positionen-DOM ist deshalb im Preview nicht mit echten Daten getestet — die Logik ist per Code-Review + testid-Präsenz verifiziert.
+
+  **Nicht deployed** — strikt Preview.
+
+
+
 - 81.06 Schritt 2/7 (Sep 04 2026) — **Depot-Professionalisierung · /mein-depot Hero + KPI-Rail + Vermögensentwicklung + Depotstruktur (nur PREVIEW)**:
 
   **Kontext**: Portfolio-Backend-Migration Supabase → FastAPI bleibt EINGEFROREN (Phase 12 hat Identity-Mapping-Blocker + fehlenden Service-Role dokumentiert). Dieser Schritt verbessert ausschließlich die obere Hälfte der Public-Route `/mein-depot` **auf Basis vorhandener DashboardDataContext-Daten**. Keine neue Business-Logik, keine neuen Requests.

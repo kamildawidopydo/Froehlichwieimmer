@@ -46,7 +46,7 @@ const EmptyHint = ({ children, to, label }) => (
   </div>
 );
 
-const DepotPage = ({ showTopSummary = true } = {}) => {
+const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true } = {}) => {
   const {
     cashBalance,
     depotWert,
@@ -343,9 +343,12 @@ const DepotPage = ({ showTopSummary = true } = {}) => {
         </div>
         )}
 
+        {showLegacyPositionCards && (
         <div className="mb-3">
           <h2 className="dashboard-page-title text-[1.05rem] font-semibold text-bank-text">Wertpapiere</h2>
         </div>
+        )}
+        {showLegacyPositionCards && (
         <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="rounded-lg border border-bank-border bg-white p-5 shadow-sm">
             <SectionTitle
@@ -469,6 +472,7 @@ const DepotPage = ({ showTopSummary = true } = {}) => {
             )}
           </div>
         </div>
+        )}
 
         <div className="rounded-lg border border-bank-border bg-white p-5 shadow-sm">
           <SectionTitle
