@@ -13,6 +13,9 @@ import AnlageklassenDetail from '@/components/mein-depot/AnlageklassenDetail';
 import Zinsanlagen from '@/components/mein-depot/Zinsanlagen';
 import Faelligkeiten from '@/components/mein-depot/Faelligkeiten';
 import LiquiditaetBanken from '@/components/mein-depot/LiquiditaetBanken';
+import Aktivitaet from '@/components/mein-depot/Aktivitaet';
+import Ertraege from '@/components/mein-depot/Ertraege';
+import Steuerübersicht from '@/components/mein-depot/Steuerübersicht';
 
 /**
  * /mein-depot — Public-Layout-Wrapper um bestehende DepotPage.
@@ -54,6 +57,9 @@ const MeinDepotContent = () => (
       <Zinsanlagen />
       <Faelligkeiten />
       <LiquiditaetBanken />
+      <Aktivitaet />
+      <Ertraege />
+      <Steuerübersicht />
     </div>
 
     <DepotPage showTopSummary={false} showLegacyPositionCards={false} showLegacyContractsSection={false} />

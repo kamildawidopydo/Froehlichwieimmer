@@ -6,6 +6,35 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 81.06 Schritt 5/7 (Sep 04 2026) — **Depot-Professionalisierung · „Aktivität · Erträge · Steuerübersicht" (nur PREVIEW)**:
+
+  **Kontext**: Portfolio-Migration bleibt eingefroren. Alle drei neuen Sektionen konsumieren bereits geladene DashboardDataContext-Daten. 0 zusätzliche Requests.
+
+  **Neu (3 Komponenten)**:
+  - `frontend/src/components/mein-depot/Aktivitaet.jsx` — vereinheitlichte Timeline aus `cashHistory` + `cashSettlements` + `stockOrders` + `bondPurchaseRequests` + `ipoSubscriptionRequests`. Kategorien: Einzahlung/Auszahlung/Zinsgutschrift/Aktien-Kauf/-Verkauf/Settlement/Anleihe-Anfrage/IPO-Zeichnung (nur aus vorhandenen `kind`- bzw. `side`-Feldern abgeleitet). Filter (Alle/Cash/Orders/Zinsen/Anfragen) + Zeitraum (30T/90T/1J/Alle) rein clientseitig, mit adaptivem Anzeigen (nur wenn Daten vorhanden). Beträge in EUR (Broker-Cash-Konto fach-Standard); realisierter P&L pro Order als Sub-Zeile bei Ausführung. Empty-, Loading-, Error-States getrennt (§13/14/15).
+  - `frontend/src/components/mein-depot/Ertraege.jsx` — 3 KPI-Cards: (1) Aufgelaufene Zinsen aus `portfolioAggregate.accruedGrossTotal`, (2) Kupons p.a. brutto (Σ `nominal_betrag × kupon_rate / 100` über `activeBonds`), (3) Realisierte Ergebnisse aus `realizedPnlTotal`. **Dividenden bewusst nicht dargestellt** — keine user-bezogenen Dividendendaten vorhanden (§7). Kupon-Card ist explizit als „geplant p.a., brutto" gelabelt, keine Verwechslung mit Ist-Ausschüttung.
+  - `frontend/src/components/mein-depot/Steuerübersicht.jsx` — editorial Version von `TaxSummaryWidget`. Zeigt `allowanceEur`, `allowanceUsedEur`, `remaining`, `pct`, `churchTaxEnabled`+`churchTaxRate`. Steuerwohnsitz aktuell NICHT ausgewiesen (Feld nicht in `taxPrefs`-Mapping — Vorgabe §13 verbietet Default-Werte). Kein Freibetrags-Empfehlungstext.
+
+  **Geändert**: `frontend/src/pages/MeinDepotPage.jsx` — mountet die 3 neuen Sektionen zwischen `LiquiditaetBanken` und der delegierten `<DepotPage/>`.
+
+  **Datenherkunft je Ereignis**:
+  - Datum: `executed_at ?? created_at ?? settlement_date`, formatiert `de-DE` mit Tag/Monat/Jahr (+ Uhrzeit falls Timestamp).
+  - Status: `pending → In Ausführung`, `executed → Ausgeführt`, `rejected → Abgelehnt`, `cancelled → Storniert`, Anfragen entsprechend.
+  - Betrag-Vorzeichen: Cash-Käufe/-Auszahlungen negativ, Cash-Verkäufe/-Einzahlungen positiv; farbcodiert (grün/rot) **plus** `+/−`-Zeichen **plus** `sr-only` „Zufluss/Abfluss".
+
+  **QA (Preview, demo.kunde, 1920 & 390)**:
+  - testids YES: `mein-depot-aktivitaet`, `mda-error` (FastAPI-only → Fetch-Fehler korrekt getrennt vom Empty-State); `mein-depot-ertraege`, `mde-accrued`+`mde-kupons`+`mde-realized`; `mein-depot-tax`+`mdt-empty`.
+  - Regression Step 2/3/4: `mein-depot-hero`, `mein-depot-positionen`, `mein-depot-anlageklassen`, `mein-depot-zinsanlagen`, `mein-depot-liq-banken` alle YES.
+  - Ertraege-Copy: „AUFGELAUFENE ZINSEN — Noch keine Zinsanlagen | KUPONS P.A. — Noch keine Anleihen | REALISIERTE ERGEBNISSE 0,00 € — Aus ausgeführten Verkaufs-Orders" ✓
+  - Steuer-Empty-Copy: „Noch keine Steuerinformationen hinterlegt. Freistellungsauftrag und Kirchensteuer können im Profil hinterlegt werden." ✓
+  - Body-Overflow 1920 `sw=vw=1920`, 390 `sw=vw=390`, `overflow=[]`. Keine Runtime-Errors.
+
+  **E2E mit realer Aktivität nicht möglich** — Preview-demo.kunde ist FastAPI-only → Supabase-RLS blockt → Error-States greifen. Logik der Timeline/Filter/Zeitraum-Adaption ist via Code-Review + testid-Präsenz verifiziert.
+
+  **Nicht deployed** — strikt Preview.
+
+
+
 - 81.06 Schritt 4/7 (Sep 04 2026) — **Depot-Professionalisierung · „Anlageklassen · Zinsanlagen · Fälligkeiten · Liquidität & Banken" (nur PREVIEW)**:
 
   **Kontext**: Portfolio-Backend-Migration bleibt eingefroren. Neue Sektionen nutzen ausschließlich bereits geladene DashboardDataContext-Daten und den bestehenden `computeContractMetrics()`. 0 zusätzliche Requests, keine neue Business-Logik.
