@@ -30,6 +30,8 @@ router = APIRouter(prefix="/api", tags=["stocks-public"])
 
 
 # Allowlist — tickers currently visible on /Aktien-mit-Potenzial → yfinance symbol.
+# Session 81.03 — DE-Universe erweitert für Dividendenkalender + Deutschland im Fokus.
+# Nur Symbole mit realem yfinance-Coverage aufnehmen (Public-Symbol = XETRA-Kürzel).
 ALLOWED: Dict[str, str] = {
     "NVDA": "NVDA",
     "AAPL": "AAPL",
@@ -42,6 +44,23 @@ ALLOWED: Dict[str, str] = {
     "DBK": "DBK.DE",
     "IFX": "IFX.DE",
     "RHM": "RHM.DE",
+    # DE-Universe-Erweiterung (Session 81.03) — XETRA-Kürzel → yfinance .DE
+    "DTE":  "DTE.DE",   # Deutsche Telekom
+    "MUV2": "MUV2.DE",  # Münchener Rück
+    "BAS":  "BAS.DE",   # BASF
+    "MBG":  "MBG.DE",   # Mercedes-Benz Group
+    "BMW":  "BMW.DE",   # BMW
+    "VOW3": "VOW3.DE",  # Volkswagen Vz.
+    "EOAN": "EOAN.DE",  # E.ON
+    "RWE":  "RWE.DE",   # RWE
+    "HEN3": "HEN3.DE",  # Henkel Vz.
+    "BEI":  "BEI.DE",   # Beiersdorf
+    "ENR":  "ENR.DE",   # Siemens Energy
+    "DHL":  "DHL.DE",   # DHL Group (ex Deutsche Post)
+    "VNA":  "VNA.DE",   # Vonovia
+    "FRE":  "FRE.DE",   # Fresenius
+    "CBK":  "CBK.DE",   # Commerzbank
+    "ADS":  "ADS.DE",   # Adidas
     # Benchmark indices — Session 80.75 (Investment-Calculator).
     "NDX": "^NDX",     # Nasdaq-100
     "DAX": "^GDAXI",   # DAX 40
@@ -51,6 +70,10 @@ ALLOWED: Dict[str, str] = {
 BENCHMARK_FOR: Dict[str, str] = {
     "NVDA": "NDX", "AAPL": "NDX", "MSFT": "NDX", "GOOGL": "NDX", "AMZN": "NDX",
     "SAP": "DAX", "SIE": "DAX", "ALV": "DAX", "DBK": "DAX", "IFX": "DAX", "RHM": "DAX",
+    # DE-Universe-Erweiterung → alle DAX-Benchmark
+    "DTE": "DAX", "MUV2": "DAX", "BAS": "DAX", "MBG": "DAX", "BMW": "DAX",
+    "VOW3": "DAX", "EOAN": "DAX", "RWE": "DAX", "HEN3": "DAX", "BEI": "DAX",
+    "ENR": "DAX", "DHL": "DAX", "VNA": "DAX", "FRE": "DAX", "CBK": "DAX", "ADS": "DAX",
 }
 
 # range → (yfinance period, interval, cache TTL seconds)
@@ -1497,8 +1520,8 @@ async def stocks_bundle(
     raw = [s.strip().upper() for s in (symbols or "").split(",") if s.strip()]
     if not raw:
         raise HTTPException(400, detail="Keine Symbole angegeben.")
-    if len(raw) > 12:
-        raise HTTPException(400, detail="Maximal 12 Symbole pro Bundle.")
+    if len(raw) > 30:
+        raise HTTPException(400, detail="Maximal 30 Symbole pro Bundle.")
     accepted = [s for s in raw if s in ALLOWED and s not in {"NDX", "DAX"}]
     unknown = [s for s in raw if s not in ALLOWED or s in {"NDX", "DAX"}]
 

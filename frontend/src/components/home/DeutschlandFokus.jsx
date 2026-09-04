@@ -9,7 +9,13 @@ import { fetchHomepageStockBundle } from '@/services/stockBundleService';
  * Nutzt jetzt den gemeinsamen Homepage-Bundle (deduped, 1× pro Session).
  */
 
-const DE_SYMBOLS = ['SAP', 'SIE', 'ALV', 'DBK', 'IFX', 'RHM'];
+// Session 81.03 — erweitertes DE-Universe (21 Titel, aus HOMEPAGE_BUNDLE_SYMBOLS).
+const DE_SYMBOLS = [
+  'SAP', 'SIE', 'ALV', 'DBK', 'IFX', 'RHM',
+  'DTE', 'MUV2', 'BAS', 'MBG', 'BMW', 'VOW3',
+  'EOAN', 'RWE', 'HEN3', 'BEI', 'ENR', 'DHL',
+  'VNA', 'CBK', 'ADS',
+];
 
 const emDash = '—';
 const fmtNumber = (n, digits = 2) =>

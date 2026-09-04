@@ -15,7 +15,12 @@ import { fetchHomepageStockBundle } from '@/services/stockBundleService';
  */
 
 const REGIONS = [
-  { id: 'DE', label: 'Deutschland', symbols: ['SAP', 'SIE', 'ALV', 'DBK', 'IFX', 'RHM'] },
+  { id: 'DE', label: 'Deutschland', symbols: [
+    'SAP', 'SIE', 'ALV', 'DBK', 'IFX', 'RHM',
+    'DTE', 'MUV2', 'BAS', 'MBG', 'BMW', 'VOW3',
+    'EOAN', 'RWE', 'HEN3', 'BEI', 'ENR', 'DHL',
+    'VNA', 'CBK', 'ADS',
+  ] },
   { id: 'EU', label: 'Europa',      symbols: [] },   // aktuell keine im Universe
   { id: 'US', label: 'USA',         symbols: ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN'] },
 ];

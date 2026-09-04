@@ -22,7 +22,12 @@ import { fetchHomepageStockBundle } from '@/services/stockBundleService';
  */
 
 const REGIONS = {
-  DE: { label: 'Deutschland', currency: 'EUR', symbols: ['SAP', 'SIE', 'ALV', 'DBK', 'IFX', 'RHM'] },
+  DE: { label: 'Deutschland', currency: 'EUR', symbols: [
+    'SAP', 'SIE', 'ALV', 'DBK', 'IFX', 'RHM',
+    'DTE', 'MUV2', 'BAS', 'MBG', 'BMW', 'VOW3',
+    'EOAN', 'RWE', 'HEN3', 'BEI', 'ENR', 'DHL',
+    'VNA', 'CBK', 'ADS',
+  ] },
   EU: { label: 'Europa',      currency: null,  symbols: [] },
   US: { label: 'USA',         currency: 'USD', symbols: ['NVDA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN'] },
 };
