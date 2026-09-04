@@ -6,6 +6,43 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 81.06 Schritt 4/7 (Sep 04 2026) — **Depot-Professionalisierung · „Anlageklassen · Zinsanlagen · Fälligkeiten · Liquidität & Banken" (nur PREVIEW)**:
+
+  **Kontext**: Portfolio-Backend-Migration bleibt eingefroren. Neue Sektionen nutzen ausschließlich bereits geladene DashboardDataContext-Daten und den bestehenden `computeContractMetrics()`. 0 zusätzliche Requests, keine neue Business-Logik.
+
+  **Neu (4 Komponenten)**:
+  - `frontend/src/components/mein-depot/AnlageklassenDetail.jsx` — horizontale Balken-Aufteilung (Aktien / Anleihen / Zinsanlagen / Liquidität), Anteil = classValue/gesamtvermoegen. Text + Betrag + Prozent immer sichtbar (Farbe nicht einziger Info-Träger).
+  - `frontend/src/components/mein-depot/Zinsanlagen.jsx` — gruppierte Vertragskarten pro Produkt-Typ (Tagesgeld / Festgeld / Flexgeld), pro Vertrag: Bank, Zinssatz p.a., Anlagebetrag, aufgel. Zinsen, Start, Fälligkeit/Lock-Ende, Laufzeit-Fortschritt, Early-Withdrawal-Wert (nur wenn `computeContractMetrics` liefert). Zinssatz-Anzeige via `de-DE`-Locale.
+  - `frontend/src/components/mein-depot/Faelligkeiten.jsx` — Timeline mit drei Buckets (`≤30`, `31–90`, `später`). Nutzt `computeContractMetrics.daysRemaining` + `bonds.faelligkeitsdatum`. Tagesgeld exkludiert (keine harte Fälligkeit). Section blendet sich aus bei 0 Items (Vorgabe §15).
+  - `frontend/src/components/mein-depot/LiquiditaetBanken.jsx` — zweispaltig: (A) Liquidität mit `cashBalance`, `cashAvailable`, `cashUnsettled`, `contractsTotal` — separat gelabelt, NICHT summiert; Sublabel dokumentiert Teilmengen-Semantik. (B) Bank-Konzentration: Client-Gruppierung von `activeContracts` nach `bank_id`, Anteil an Zinsanlagen, hinterlegte Sicherungsinformation neutral als „bis X €" (keine Sicherheitsaussage).
+
+  **Geändert**:
+  - `frontend/src/pages/MeinDepotPage.jsx` — mountet die 4 neuen Sektionen zwischen `MeinePositionen` und `<DepotPage/>`; DepotPage-Prop `showLegacyContractsSection={false}` unterdrückt die alte „Größte Verträge"-Kachel auf `/mein-depot`.
+  - `frontend/src/pages/dashboard/DepotPage.jsx` — neuer Prop `showLegacyContractsSection` (Default `true` → `/dashboard/vermoegen` unverändert).
+
+  **FX/Währung**: Aktien-Marktwert wird für den Klassen-Anteil AS-IS aus `depotWert` genommen; Anteil ist intern konsistent, weil sowohl Klassenwert als auch `gesamtvermoegen` denselben FX-Bias tragen. Kein neuer FX-Layer, keine geänderten Bestandswerte. Bei `gesamtvermoegen <= 0` zeigt jede Zeile `—`.
+
+  **Duplikatvermeidung**: Schritt 2 (`DepotStructure` Donut) bleibt kompakt; Schritt 4 (`AnlageklassenDetail`) ist die Detailansicht. Keine konkurrierende Berechnung.
+
+  **Einlagensicherung** (§9): Feld `banks.deposit_protection_amount` wird als „hinterlegte Sicherungsinformation: bis X €" gerendert. KEINE Aussagen wie „vollständig sicher" / „100 % abgesichert".
+
+  **Bank-Konzentration** (§10): reine Datenanzeige (Gesamtbetrag, Anzahl Verträge, Anteil %). Keine Bewertung („zu viel"/„zu riskant"/etc.).
+
+  **Early Withdrawal** (§11): reine Anzeige des bereits von `computeContractMetrics` gelieferten `earlyWithdrawalPayoutTodayNet` + `earlyWithdrawalPenaltyEur`. Keine neue Berechnung.
+
+  **QA (Preview, demo.kunde ohne Positionen, 1920 & 390)**:
+  - testids YES: `mein-depot-hero` (Step-2-Regression), `mein-depot-positionen` (Step-3-Regression), `mein-depot-anlageklassen`+`mdk-empty`, `mein-depot-zinsanlagen`+`mdz-error`, `mein-depot-liq-banken`+`mdb-empty`.
+  - `mein-depot-faelligkeiten` = `no` — korrekt via §15 ausgeblendet (0 Fälligkeiten).
+  - Liquiditäts-DUMP: "CASH-GUTHABEN 0,00 € · VERFÜGBAR 0,00 € · NOCH NICHT VERFÜGBAR 0,00 € · GEBUNDEN IN ZINSANLAGEN 0,00 €" — echte Nullwerte gemäß §14 Step-2.
+  - Body-Overflow: 1920 `sw=vw=1920`, 390 `sw=vw=390`, `overflow=[]`.
+  - Keine Runtime-Errors (frontend.err.log clean).
+
+  **E2E mit echtem Zinsproduktbestand nicht möglich** — Preview-Testkunde (demo.kunde) ist FastAPI-only → Supabase-RLS blockt → Error-/Empty-States greifen. Logik der Vertragskarten/Fälligkeiten/Bank-Gruppierung ist via Code-Review verifiziert.
+
+  **Nicht deployed** — strikt Preview.
+
+
+
 - 81.06 Schritt 3/7 (Sep 04 2026) — **Depot-Professionalisierung · „Meine Positionen" Aktien + Anleihen (nur PREVIEW)**:
 
   **Kontext**: Portfolio-Backend-Migration Supabase → FastAPI bleibt eingefroren. Reine UI-Sektion auf Basis vorhandener DashboardDataContext-Daten (`stockMetrics`, `bondPositions`, `stockPriceMap`, `computeBondMetrics`, `gesamtvermoegen`). 0 zusätzliche Backend-Requests.

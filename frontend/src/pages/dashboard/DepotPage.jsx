@@ -46,7 +46,7 @@ const EmptyHint = ({ children, to, label }) => (
   </div>
 );
 
-const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true } = {}) => {
+const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true, showLegacyContractsSection = true } = {}) => {
   const {
     cashBalance,
     depotWert,
@@ -474,6 +474,7 @@ const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true } = {
         </div>
         )}
 
+        {showLegacyContractsSection && (
         <div className="rounded-lg border border-bank-border bg-white p-5 shadow-sm">
           <SectionTitle
             kicker="Verträge"
@@ -513,6 +514,7 @@ const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true } = {
             </ul>
           )}
         </div>
+        )}
 
         <div className="mt-6 rounded-lg border border-bank-border bg-white p-5 shadow-sm">
           <SectionTitle

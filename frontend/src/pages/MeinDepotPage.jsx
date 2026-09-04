@@ -9,6 +9,10 @@ import DepotKpiRail from '@/components/mein-depot/DepotKpiRail';
 import DepotPerformance from '@/components/mein-depot/DepotPerformance';
 import DepotStructure from '@/components/mein-depot/DepotStructure';
 import MeinePositionen from '@/components/mein-depot/MeinePositionen';
+import AnlageklassenDetail from '@/components/mein-depot/AnlageklassenDetail';
+import Zinsanlagen from '@/components/mein-depot/Zinsanlagen';
+import Faelligkeiten from '@/components/mein-depot/Faelligkeiten';
+import LiquiditaetBanken from '@/components/mein-depot/LiquiditaetBanken';
 
 /**
  * /mein-depot — Public-Layout-Wrapper um bestehende DepotPage.
@@ -46,9 +50,13 @@ const MeinDepotContent = () => (
       <DepotPerformance />
       <DepotStructure />
       <MeinePositionen />
+      <AnlageklassenDetail />
+      <Zinsanlagen />
+      <Faelligkeiten />
+      <LiquiditaetBanken />
     </div>
 
-    <DepotPage showTopSummary={false} showLegacyPositionCards={false} />
+    <DepotPage showTopSummary={false} showLegacyPositionCards={false} showLegacyContractsSection={false} />
   </>
 );
 
