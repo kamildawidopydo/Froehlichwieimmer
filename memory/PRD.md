@@ -6,6 +6,40 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 81.06 Schritt 7/7 (Sep 04 2026) — **Depot-Professionalisierung · Final Polish · E2E-Gate (nur PREVIEW)**:
+
+  **Kontext**: Kein neuer Feature-Code. Reine Konsistenz-, Regressions- und Master-QA-Runde über die 13 neuen Sektionen aus Schritten 2–6.
+
+  **Geänderte Dateien in Step 7**: **keine** — Design-Konsistenz wurde bereits durch einheitliche Token-Nutzung in Schritten 2–6 hergestellt (kicker `font-mono text-[10.5px] uppercase tracking-[0.28em]`, h2 `font-display text-[1.4rem] font-light`, Section-Rhythmus `mb-14`, Border `border-bank-border`, Empty-/Error-States gleicher Ästhetik). Keine Nachjustierungen erforderlich.
+
+  **E2E-Gate-Ergebnisse (Preview, demo.kunde, empty depot)**:
+  - **13/13 Sektionen present** auf `/mein-depot`: hero, kpi-rail, performance, structure, positionen, anlageklassen, zinsanlagen, liq-banken, aktivitaet, ertraege, tax, dokumente, service.
+  - **Body-Overflow**: 1920 `sw=vw=1920`, 390 `sw=vw=390`, `overflow=[]` — **PASS**.
+  - **Legacy-Regression** `/dashboard/vermoegen`: rendert unverändert („Mein Vermögen" H1 + Anlageprodukte / Wertpapiere / Top Aktien-Positionen / Top Anleihen-Positionen H2s), `sw=vw=1920` — **PASS**.
+  - **Auth-Schutz**: `/api/auth/me` ohne Cookie → `Not authenticated`; ProtectedRoute-Redirect auf `/login` bei `/mein-depot`-Direktzugriff — **PASS**.
+  - **Storage-Privacy**: LocalStorage enthält nur `dashboard_recent_pages_v1` + `app_language` + Cookie-Consent + Visitor-Profile — **keine Finanz-/Depotdaten geleakt** — **PASS**.
+  - **Request-Budget**: 108 total, 8 API-Requests, 53 Supabase (bestehende Legacy-Kette aus `DashboardDataContext`, kein Step-2–7-Delta), 0 `stocks_bundle` (empty depot). Kein N+1, kein neuer Fetch-Pfad — **PASS**.
+  - **Runtime-Errors**: 0 in `frontend.err.log` (nur Deprecation-Warnings) — **PASS**.
+  - **Empty-Depot-Master-Test**: alle Sektionen zeigen sauber Empty- bzw. Error-States (positionen/aktivitaet/zinsanlagen → Fetch-Error klar getrennt vom Empty; anlageklassen/structure/liq-banks → Empty; ertraege → „—/—/0,00 €"; tax → Empty; dokumente → 4 statische PDFs; service → 3 CTA-Karten). **Kein Fake-Content, kein Crash**.
+
+  **Nicht durchgeführt (per Schritt-7-Vorgabe)**:
+  - Long-Value-QA mit persistierten Testdaten (keine DB-Writes zulässig)
+  - E2E mit Preview-Positionsbestand (kein realer Kunde mit Supabase-Depot verfügbar)
+  - Dark-Mode-Screenshots (der Screenshot-Tool liefert nur Light-Auto-Snapshots; Dark-Mode-Klassen sind aber pro Komponente konsistent via CSS-Variablen `bank-*`)
+  - Reduced-Motion-Test (keine neuen Motion-Komponenten mit Nutzeranimationen)
+
+  **Deklarationen**:
+  - Fake-/Demo-Daten: **NEIN**
+  - Neue Business-Logik: **NEIN**
+  - Portfolio-Migration verändert: **NEIN** (weiterhin eingefroren)
+  - Neue Trading-Funktionen / Dividendenhistorie / Anleihen-Detail / Snapshot-Backfill / FX-Layer: **NEIN**
+  - PRODUCTION-DEPLOY EMPFEHLUNG: **NEIN** — bleibt strikt Preview bis zur ausdrücklichen Freigabe
+  - READY FOR CUSTOMER TRAFFIC: **NEIN** — bevor `/mein-depot` produktiv geht, müssen (a) Portfolio-Migration + Identity-Mapping (Phase 12+) abgeschlossen sein, sonst zeigt jeder FastAPI-native Kunde systemisch Error-States, weil Supabase-`user_id` nicht matcht; (b) individuelle Dokumente (Orderabrechnungen, Kontoauszüge) müssen als Datenquelle existieren.
+
+  **Nicht deployed** — strikt Preview, wie vorgegeben.
+
+
+
 - 81.06 Schritt 6/7 (Sep 04 2026) — **Depot-Professionalisierung · „Dokumente & Service" (nur PREVIEW)**:
 
   **Kontext**: Portfolio-Migration bleibt eingefroren. Dokumente kommen ausschließlich aus dem bestehenden `/app/frontend/src/data/customerDocuments.js` (4 statische Firmen-PDFs unter `/assets/documents/`: Kundendokumente, Risiken der Kapitalanlage, Freistellungsauftrag, Informationsbogen Einlagenlösungen). KEIN neuer Storage, kein PDF-Generator, kein user-spezifisches Dokumenten-Backend.
