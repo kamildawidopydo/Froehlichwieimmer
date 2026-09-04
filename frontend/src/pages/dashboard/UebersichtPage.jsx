@@ -33,8 +33,12 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import useWidgetPrefs from '@/hooks/useWidgetPrefs';
 import TaxSummaryWidget from '@/components/dashboard/TaxSummaryWidget';
-import DashboardOnboarding, { isOnboardingCompleted } from '@/components/dashboard/DashboardOnboarding';
+import DashboardOnboarding, {
+  isOnboardingCompleted,
+  markOnboardingCompleted,
+} from '@/components/dashboard/DashboardOnboarding';
 import DashboardTabPanel from '@/components/dashboard/motion/DashboardTabPanel';
+import { useAuth } from '@/context/AuthContext';
 
 const GesamtuebersichtSection = lazy(() => import('@/components/dashboard/GesamtuebersichtSection'));
 const UnifiedPositionsTable = lazy(() => import('@/components/dashboard/portfolio/UnifiedPositionsTable'));
@@ -59,6 +63,7 @@ const TX_META = {
 export default function UebersichtPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') || 'dashboard';
   const setTab = (id) => setSearchParams({ tab: id }, { replace: true });
@@ -85,8 +90,21 @@ export default function UebersichtPage() {
   const compact = prefs.compactMode;
 
   useEffect(() => {
-    if (loaded && !isOnboardingCompleted()) setShowOnboarding(true);
-  }, [loaded]);
+    if (!loaded) return;
+    // Session 81.07 — Bugfix „tote Links Nachrichten/Einstellungen".
+    // Das Willkommens-Modal fängt Sidebar-Klicks ab und ignorierte bisher komplett
+    // den Backend-Flag `user.onboarding_completed`. User, die den Onboarding-Wizard
+    // bereits fertig haben, sahen dieses Modal in jedem neuen Browser-Session-Kontext
+    // erneut und ihre Klicks auf „Nachrichten", „Profil" etc. schienen tot, weil
+    // stattdessen der Modal-Backdrop-Auto-Skip getriggert wurde.
+    if (user?.onboarding_completed) {
+      // Idempotent den lokalen Flag setzen, damit das Modal in dieser Session
+      // sicher nicht mehr geöffnet wird — selbst wenn andere Codepfade prüfen.
+      if (!isOnboardingCompleted()) markOnboardingCompleted();
+      return;
+    }
+    if (!isOnboardingCompleted()) setShowOnboarding(true);
+  }, [loaded, user?.onboarding_completed]);
 
   const maturityRows = useMemo(
     () => buildMaturityTimeline(activeContracts || [], { taxPrefs }),
