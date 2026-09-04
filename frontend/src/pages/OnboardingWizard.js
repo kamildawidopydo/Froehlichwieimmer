@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { CheckCircle2, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import PageMeta from '@/components/PageMeta';
@@ -24,6 +24,39 @@ import { combinePhoneNumber, phoneFormFromProfile, validatePhoneLocal } from '@/
 import { validatePersonName } from '@/lib/personName';
 import { sanitizeFormField } from '@/lib/formInputSanitize';
 import { cn } from '@/lib/utils';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const api = axios.create({ baseURL: `${BACKEND_URL}/api`, withCredentials: true });
+
+/**
+ * Session 81.05 — Address-Form-Payload für FastAPI-Onboarding (Mongo-Felder).
+ * Der Legacy-Helper `addressFormToDbPayload` liefert Supabase-Column-Namen
+ * (address_street, address_house_number, ...). Für FastAPI mappen wir sie
+ * auf die schlanken Mongo-Feldnamen (street, house_number, ...).
+ */
+const addressFormToFastApiPayload = (form) => {
+  const legacy = addressFormToDbPayload(form) || {};
+  return {
+    street: legacy.address_street || null,
+    house_number: legacy.address_house_number || null,
+    address_addition: legacy.address_line_2 || null,
+    postal_code: legacy.address_postal_code || null,
+    city: legacy.address_city || null,
+  };
+};
+
+/** Feld-Validation-Errors aus 422 zu einem lesbaren Toast-Text zusammenfassen. */
+const humanizeAxiosError = (err) => {
+  const detail = err?.response?.data?.detail;
+  if (Array.isArray(detail)) {
+    const first = detail[0];
+    if (first?.msg) return String(first.msg);
+  }
+  if (typeof detail === 'string') return detail;
+  const status = err?.response?.status;
+  if (status === 401 || status === 403) return 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.';
+  return 'Ihre Angaben konnten nicht gespeichert werden. Bitte versuchen Sie es erneut.';
+};
 
 const STEPS = [
   {
@@ -132,29 +165,23 @@ const OnboardingWizard = () => {
     if (!profileForm.country) { toast.error('Bitte wählen Sie Ihr Land'); return false; }
     const addressCheck = validateAddressForm(profileForm);
     if (!addressCheck.ok) { toast.error(addressCheck.message); return false; }
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        first_name: firstNameCheck.value,
-        last_name: lastNameCheck.value,
-        phone: nextPhone,
-        country: profileForm.country,
-        ...addressFormToDbPayload(profileForm),
-      })
-      .eq('id', user.id);
-    if (error) throw error;
+    // Session 81.05 — FastAPI-Persistierung. `user_id` server-seitig aus JWT-Cookie
+    // (`Depends(get_current_user)` in backend/routes/users.py) — nicht aus Payload.
+    await api.patch('/users/onboarding', {
+      first_name: firstNameCheck.value,
+      last_name: lastNameCheck.value,
+      phone: nextPhone,
+      country: profileForm.country,
+      ...addressFormToFastApiPayload(profileForm),
+    });
     return true;
   };
 
   const saveNotificationStep = async () => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        notification_prefs: notificationPrefs,
-        email_digest_enabled: notificationPrefs.weekly_digest,
-      })
-      .eq('id', user.id);
-    if (error) throw error;
+    await api.patch('/users/onboarding', {
+      notification_prefs: notificationPrefs,
+      email_digest_enabled: notificationPrefs.weekly_digest,
+    });
     return true;
   };
 
@@ -172,14 +199,10 @@ const OnboardingWizard = () => {
       }
       const nextSteps = Array.from(new Set([...doneKeys, stepKey]));
       const isDone = nextSteps.length >= STEPS.length;
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          onboarding_completed_steps: nextSteps,
-          onboarding_completed: isDone,
-        })
-        .eq('id', user.id);
-      if (error) throw error;
+      await api.patch('/users/onboarding', {
+        onboarding_completed_steps: nextSteps,
+        onboarding_completed: isDone,
+      });
       await refreshUser();
       if (isDone) {
         toast.success('Onboarding abgeschlossen');
@@ -188,8 +211,8 @@ const OnboardingWizard = () => {
       }
       setCurrentStep((v) => Math.min(v + 1, STEPS.length - 1));
     } catch (err) {
-      toast.error('Onboarding konnte nicht gespeichert werden');
-      console.error('onboarding save failed', err);
+      toast.error(humanizeAxiosError(err));
+      console.error('onboarding save failed', err?.response?.status || err?.message);
     } finally {
       setSaving(false);
     }

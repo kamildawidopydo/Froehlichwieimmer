@@ -99,7 +99,20 @@ async def logout(response: Response, _user: dict = Depends(get_current_user)):
 
 @router.get("/auth/me")
 async def me(user: dict = Depends(get_current_user)):
-    return user
+    # Session 81.05 — enrich `/api/auth/me` mit Onboarding-Feldern aus Mongo,
+    # damit AuthContext den Redirect zu /onboarding auf Basis der FastAPI-Identität
+    # steuern kann (nicht mehr auf Supabase-Profil angewiesen).
+    doc = await db.users.find_one({"_id": ObjectId(user["id"])}) if user.get("id") else None
+    enriched = dict(user)
+    if doc:
+        for k in ("first_name", "last_name", "phone", "country",
+                  "street", "house_number", "address_addition",
+                  "postal_code", "city",
+                  "notification_prefs", "email_digest_enabled",
+                  "onboarding_completed_steps", "onboarding_completed"):
+            if k in doc:
+                enriched[k] = doc[k]
+    return enriched
 
 
 @router.patch("/auth/me")

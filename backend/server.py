@@ -4990,6 +4990,9 @@ app.include_router(_social_content_routes.router)
 # Session 80.90 · Phase 4 „Größere Vermögen" — Vermögensgespräch-Anfragen.
 from routes import wealth_consultation as _wealth_consultation_routes  # noqa: E402
 app.include_router(_wealth_consultation_routes.router)
+
+from routes import users as _users_routes  # noqa: E402
+app.include_router(_users_routes.router)
 from social_content import ensure_indexes as _social_content_ensure_indexes  # noqa: E402
 
 
