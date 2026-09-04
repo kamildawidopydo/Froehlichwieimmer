@@ -1,10 +1,11 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Download, ArrowRight, Sparkles, BookOpen, MessageSquare } from 'lucide-react';
 import { trackInvestmentEvent } from '@/lib/investmentAnalytics';
 import { rankNewsForTopic } from '@/data/strategyNewsMap';
 
-const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : '/api';
+const API = getApiBase() ? `${getApiBase()}/api` : '/api';
 
 /**
  * Berechnet grobe Lesedauer (Wörter/220, min. 3 Min., ganze Minuten).

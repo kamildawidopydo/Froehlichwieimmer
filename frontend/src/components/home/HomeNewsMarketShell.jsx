@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -62,7 +63,7 @@ const Sparkline = ({ points, width = 96, height = 26, positive }) => {
  * - Bei fehlenden Bildern greift SafeNewsImage (bestehender SVG-Fallback)
  */
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
 
 const CATEGORY_LABEL = {

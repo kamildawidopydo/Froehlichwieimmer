@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { ArrowLeft, ArrowRight, Check, ShieldCheck, X, Sparkles } from 'lucide-react';
@@ -10,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
  * Finanzdaten werden NUR bei ausdrücklicher Zustimmung übermittelt.
  */
 
-const API = process.env.REACT_APP_BACKEND_URL;
+const API = getApiBase();
 
 const TOPIC_OPTIONS = [
   { key: 'vermoegen_strukturieren', label: 'Vermögen strukturieren' },

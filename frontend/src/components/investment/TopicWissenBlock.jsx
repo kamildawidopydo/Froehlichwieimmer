@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -6,7 +7,7 @@ import Eyebrow from '@/components/editorial/Eyebrow';
 import SafeNewsImage from '@/components/news/SafeNewsImage';
 import { trackInvestmentEvent, InvestmentEvents } from '@/lib/investmentAnalytics';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
 
 const fmtDate = (iso) => {

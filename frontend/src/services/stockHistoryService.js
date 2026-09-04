@@ -1,10 +1,11 @@
+import { getApiBase } from '@/lib/apiBase';
 // Historical price series for sparklines / detail charts.
 // Uses the FastAPI backend (`/api/news-markte/market/sparkline/{symbol}`),
 // which serves a 15-min cached hourly series with deterministic synthetic
 // fallback for unsupported symbols. Never touches the deprecated Supabase
 // stock-history edge function anymore.
 
-const API_ROOT = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
+const API_ROOT = (getApiBase() || '').replace(/\/$/, '');
 
 // Backend `_SPARKLINE_SUPPORTED` = {"DAX", "SPX", "NDX", "DJI"}. Alle anderen
 // Symbole (Einzelaktien, Anleihen, ETFs, Rohstoffe mit Sonderzeichen) sind

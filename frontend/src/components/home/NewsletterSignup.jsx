@@ -1,10 +1,11 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Send, Check, Loader2 } from 'lucide-react';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false, timeout: 12000 });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;

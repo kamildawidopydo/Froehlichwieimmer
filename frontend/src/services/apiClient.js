@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 /**
  * Central HTTP client for the Fröhlich Vermögensberatung FastAPI backend.
  * - Uses REACT_APP_BACKEND_URL (never localhost)
@@ -9,7 +10,7 @@
 
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+const BACKEND_URL = getApiBase() || '';
 export const API_BASE = `${BACKEND_URL}/api`;
 
 const client = axios.create({

@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PlayCircle, ArrowUpRight, ArrowLeft, ShieldCheck } from 'lucide-react';
@@ -10,7 +11,7 @@ import WissenBridge from '@/components/newsroom/WissenBridge';
 import { pickTopThree } from '@/lib/news/editorialRelevance';
 import { relativeTimeLabel } from '@/lib/news/relativeTime';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
 
 import { buildTopicWorlds } from '@/data/newsTopicWorlds';

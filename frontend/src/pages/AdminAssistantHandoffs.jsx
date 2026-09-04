@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -18,7 +19,7 @@ import {
 } from '@/components/admin/AdminSubpageChrome';
 
 const API = axios.create({
-  baseURL: `${process.env.REACT_APP_BACKEND_URL}/api`,
+  baseURL: `${getApiBase()}/api`,
   withCredentials: true,
 });
 

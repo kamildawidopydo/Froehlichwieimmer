@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -25,7 +26,7 @@ import { validatePersonName } from '@/lib/personName';
 import { sanitizeFormField } from '@/lib/formInputSanitize';
 import { cn } from '@/lib/utils';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = getApiBase();
 const api = axios.create({ baseURL: `${BACKEND_URL}/api`, withCredentials: true });
 
 /**

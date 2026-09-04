@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useMemo, useState } from 'react';
 import { Download, FileText } from 'lucide-react';
 import { listPremiumTopics } from '@/data/strategyNewsMap';
@@ -5,7 +6,7 @@ import { findPremium } from '@/data/strategiePremiumContent';
 import { computeReadingMinutes } from './_StrategyKnowledgeCenter';
 import { trackInvestmentEvent } from '@/lib/investmentAnalytics';
 
-const API = process.env.REACT_APP_BACKEND_URL ? `${process.env.REACT_APP_BACKEND_URL}/api` : '/api';
+const API = getApiBase() ? `${getApiBase()}/api` : '/api';
 
 const FEATURED_SLUGS = ['vermoegensaufbau', 'inflationsschutz', 'private-rentenvorsorge', 'value-investing'];
 

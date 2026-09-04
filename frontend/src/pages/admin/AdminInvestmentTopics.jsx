@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -5,7 +6,7 @@ import { toast } from 'sonner';
 import { Loader2, CheckCircle2, CircleSlash } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 
 const useAuthedApi = () => {
   return React.useMemo(() => {

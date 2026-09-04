@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -7,7 +8,7 @@ import Eyebrow from '@/components/editorial/Eyebrow';
 import NewsletterSignup from '@/components/home/NewsletterSignup';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false, timeout: 12000 });
 
 const CATEGORY_LABEL = {

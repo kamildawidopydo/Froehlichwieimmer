@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
@@ -13,7 +14,7 @@ import axios from 'axios';
  * hardcoded UI-Werte, keine Marktannahmen. Bei Fehlern wird nur der
  * bekannte Teil gerendert (graceful).
  */
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api` });
 
 const fmtRate = (r) => (r == null ? '—' : `${Number(r).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`);

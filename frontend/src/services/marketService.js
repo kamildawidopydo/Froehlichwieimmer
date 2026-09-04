@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 // Market data — FastAPI-backed (Alpha Vantage) with legacy shape preserved.
 //
 // This module used to call Supabase Edge Functions. It now calls the FastAPI
@@ -8,7 +9,7 @@
 
 import axios from 'axios';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
 
 // --- Public config kept for backwards compatibility with existing charts ------

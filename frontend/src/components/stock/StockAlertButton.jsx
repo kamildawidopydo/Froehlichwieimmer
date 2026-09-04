@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Bell, X } from 'lucide-react';
@@ -7,7 +8,7 @@ import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
-const client = axios.create({ baseURL: `${process.env.REACT_APP_BACKEND_URL}/api`, withCredentials: true });
+const client = axios.create({ baseURL: `${getApiBase()}/api`, withCredentials: true });
 
 /**
  * StockAlertButton — Session 80.82 Watchlist Professional 3/4.

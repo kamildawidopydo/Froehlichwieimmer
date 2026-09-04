@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -17,7 +18,7 @@ const StockResearch = lazy(() => import('@/components/stock/StockResearch'));
 const StockWatchButton = lazy(() => import('@/components/stock/StockWatchButton'));
 const StockAlertButton = lazy(() => import('@/components/stock/StockAlertButton'));
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 
 const formatPrice = (value, currency = 'EUR') => {
   if (typeof value !== 'number' || Number.isNaN(value)) return '—';

@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -13,7 +14,7 @@ import { AdminSubpageLayout, AdminSubpageHeader, AdminSurfaceCard } from '@/comp
 import PageMeta from '@/components/PageMeta';
 import { EINORDNUNG_CATEGORY_LABEL } from '@/services/einordnungApi';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
 
 const STATUS_LABEL = { draft: 'Entwurf', scheduled: 'Geplant', published: 'Veröffentlicht', archived: 'Archiviert' };

@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 /**
  * Watchlist API + React hook. Server-side persistence (MongoDB) via
  * /api/watchlist. Unauthenticated callers get an empty list — the UI shows
@@ -8,7 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useDisplayCurrency } from '@/context/DisplayCurrencyContext';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
 const unwrap = (r) => r.data;
 

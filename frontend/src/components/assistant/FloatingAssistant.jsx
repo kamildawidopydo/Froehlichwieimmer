@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { MessageCircle, X, Send, ArrowUpRight, UserRoundCheck } from 'lucide-react';
@@ -10,7 +11,7 @@ import axios from 'axios';
  * - Antworten von /api/assistant/chat.
  * - Session 80.40: Inline-Handoff-Formular mit Honeypot, Consent, Datensparsam.
  */
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api` });
 
 const QUICK = [

@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -9,7 +10,7 @@ import { resolveAccentPair } from '@/design-system/accents';
 import { matchWissenBridge } from '@/design-system/newsroom';
 import FormatBadge from '@/components/newsroom/FormatBadge';
 
-const api = axios.create({ baseURL: `${process.env.REACT_APP_BACKEND_URL}/api`, withCredentials: false });
+const api = axios.create({ baseURL: `${getApiBase()}/api`, withCredentials: false });
 
 /* ------------------------------------------------------------------ *
  * Safety Framework — reusable data model (Session 80.49).

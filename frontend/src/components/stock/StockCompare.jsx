@@ -1,10 +1,11 @@
+import { getApiBase } from '@/lib/apiBase';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { X, Plus } from 'lucide-react';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 
 const RANGES = [
   { key: '1y', label: '1 Jahr' },

@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 /**
  * Session 80.29 Phase 2 — Inline „Fröhlich Einordnung" auf News-Detail.
  * Session 80.30 — strengeres Relevanz-Gating: reine Kategorie-Matches werden
@@ -17,7 +18,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { isPublicEinordnung } from '@/services/einordnungApi';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api` });
 
 // simpler Modul-Cache: pro Session 1× einordnung-Liste laden

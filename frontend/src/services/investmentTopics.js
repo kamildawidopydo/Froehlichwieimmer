@@ -1,6 +1,7 @@
+import { getApiBase } from '@/lib/apiBase';
 import axios from 'axios';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const client = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
 
 export async function fetchActiveInvestmentTopics() {

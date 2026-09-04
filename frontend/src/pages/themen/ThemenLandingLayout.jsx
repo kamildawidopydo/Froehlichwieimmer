@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -28,7 +29,7 @@ import { isPublicEinordnung } from '@/services/einordnungApi';
  *   7. Related Topics — max. 2 kleine Links
  */
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
 
 const ThemenLandingLayout = ({

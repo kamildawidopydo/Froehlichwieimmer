@@ -1,8 +1,9 @@
+import { getApiBase } from '@/lib/apiBase';
 // Batch sparkline fetch backed by the FastAPI market API.
 // Falls back to empty series for any symbol the backend does not support
 // (only DAX/SPX/NDX/DJI have real intraday data; the rest returns 404 fast).
 
-const API_ROOT = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
+const API_ROOT = (getApiBase() || '').replace(/\/$/, '');
 
 // Backend `_SPARKLINE_SUPPORTED` = {"DAX", "SPX", "NDX", "DJI"}. Frontend-
 // Allowlist verhindert 404-Rundtrips für Einzelaktien/Anleihen/ETFs.

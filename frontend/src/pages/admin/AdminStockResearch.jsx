@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const EMPTY_FORM = {
   id: null,
   company_name: '',

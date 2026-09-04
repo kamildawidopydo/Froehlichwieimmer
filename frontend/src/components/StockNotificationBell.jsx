@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -6,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
 
-const client = axios.create({ baseURL: `${process.env.REACT_APP_BACKEND_URL}/api`, withCredentials: true });
+const client = axios.create({ baseURL: `${getApiBase()}/api`, withCredentials: true });
 
 /**
  * StockNotificationBell — Session 80.84.

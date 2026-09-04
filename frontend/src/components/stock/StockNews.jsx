@@ -1,9 +1,10 @@
+import { getApiBase } from '@/lib/apiBase';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 
 const fmtPublished = (iso) => {
   if (!iso) return null;

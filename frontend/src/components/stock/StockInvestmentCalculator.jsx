@@ -1,7 +1,8 @@
+import { getApiBase } from '@/lib/apiBase';
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 
 const BENCHMARK_LABEL = { NDX: 'Nasdaq-100', DAX: 'DAX' };
 const TICKER_TO_BENCHMARK = {

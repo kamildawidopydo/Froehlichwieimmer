@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowUpRight, PlayCircle, Archive } from 'lucide-react';
@@ -16,7 +17,7 @@ import { buildKeyTakeaways } from '@/lib/news/keyTakeaways';
 import { relativeTimeLabel, updatedLabel } from '@/lib/news/relativeTime';
 import { resolveKnowledgeLinks } from '@/lib/news/crosslinkResolver';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
 
 const CAT_LABEL = {

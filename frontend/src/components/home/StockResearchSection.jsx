@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -8,7 +9,7 @@ import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
 
 const EASE = [0.22, 1, 0.36, 1];
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 
 /**
  * @typedef {Object} StockResearchRow

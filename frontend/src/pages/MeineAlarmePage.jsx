@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -7,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
 
-const client = axios.create({ baseURL: `${process.env.REACT_APP_BACKEND_URL}/api`, withCredentials: true });
+const client = axios.create({ baseURL: `${getApiBase()}/api`, withCredentials: true });
 
 const TYPE_LABEL = {
   price_above: 'Kurs über',

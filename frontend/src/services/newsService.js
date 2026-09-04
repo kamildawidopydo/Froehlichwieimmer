@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 // Supabase access layer for the Nachrichten module. All reads target
 // `public.news_articles`; writes are restricted to the service role used by
 // the Edge Function and are not exposed here.
@@ -116,7 +117,7 @@ export async function listArticles({
 
 export async function getArticleBySlug(slug, { signal } = {}) {
   // Session 80.23 — News-Detail über MongoDB-Endpoint (Feed & Detail konsistent).
-  const base = process.env.REACT_APP_BACKEND_URL || '';
+  const base = getApiBase() || '';
   const url = `${base}/api/content/news/${encodeURIComponent(slug)}`;
   const res = await fetch(url, { signal });
   if (res.status === 404) return null;
@@ -127,7 +128,7 @@ export async function getArticleBySlug(slug, { signal } = {}) {
 export async function incrementArticleView(slug) {
   // Session 80.24 — Mongo view-counter (fire-and-forget).
   if (!slug) return;
-  const base = process.env.REACT_APP_BACKEND_URL || '';
+  const base = getApiBase() || '';
   try {
     await fetch(`${base}/api/content/news/${encodeURIComponent(slug)}/view`, {
       method: 'POST',

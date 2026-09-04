@@ -1,8 +1,9 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { RefreshCw, PlayCircle, CheckCircle2, XCircle, Clock, Edit3, Send, ShieldCheck, ShieldAlert, ExternalLink, PlaySquare } from 'lucide-react';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
 
 const STATUS_TONE = {

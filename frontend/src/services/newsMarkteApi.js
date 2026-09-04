@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 /**
  * Client + hooks for News & Märkte endpoints.
  * All requests go through REACT_APP_BACKEND_URL (proxied to FastAPI via /api).
@@ -6,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useDisplayCurrency } from '@/context/DisplayCurrencyContext';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
 
 const unwrap = (res) => res.data;

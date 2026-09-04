@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Heart, ArrowLeft, GripVertical, TrendingUp, TrendingDown, X, Plus } from 'lucide-react';
@@ -19,7 +20,7 @@ import { symbolNewsApi } from '@/services/symbolNewsApi';
 import { formatDisplayPrice, formatChangePct, formatLastUpdated } from '@/services/marketService';
 import axios from 'axios';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 const eventsClient = axios.create({ baseURL: `${API_BASE}/api`, withCredentials: true });
 
 const SPARKLINE_SYMBOLS = new Set(['DAX', 'SPX', 'NDX', 'DJI']);

@@ -1,7 +1,8 @@
+import { getApiBase } from '@/lib/apiBase';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 
 const RANGES = [
   { key: '1d', label: '1T' },

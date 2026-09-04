@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -7,7 +8,7 @@ import SafeNewsImage from '@/components/news/SafeNewsImage';
 import { einordnungApi, EINORDNUNG_CATEGORY_LABEL, isPublicEinordnung } from '@/services/einordnungApi';
 import { fetchMarketOverview, formatDisplayPrice, formatChangePct } from '@/services/marketService';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
 
 const CAT_LABEL = {

@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import {
@@ -5,7 +6,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
 
 const REFRESH_MS = 60 * 1000;

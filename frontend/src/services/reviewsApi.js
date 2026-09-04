@@ -1,10 +1,11 @@
+import { getApiBase } from '@/lib/apiBase';
 /**
  * API client for customer reviews with moderation workflow.
  */
 import axios from 'axios';
 import { useCallback, useEffect, useState } from 'react';
 
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
 const unwrap = (r) => r.data;
 

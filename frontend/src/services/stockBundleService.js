@@ -1,3 +1,4 @@
+import { getApiBase } from '@/lib/apiBase';
 import axios from 'axios';
 
 /**
@@ -9,7 +10,7 @@ import axios from 'axios';
  * separaten Bundle-Requests aus Phase 3.
  */
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 
 // Vereinigte Symbol-Menge aller Homepage-Aktien-Module.
 // Session 81.03 — DE-Universe erweitert (nur Titel mit realer yfinance-Coverage):
