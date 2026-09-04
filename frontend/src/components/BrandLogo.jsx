@@ -4,15 +4,13 @@ import { BRAND_LOGO_PNG_SRC } from '@/lib/brand';
 
 /**
  * Fröhlich Vermögensberatung lockup — echt transparent, kein weißer Karten-Hintergrund.
- * - Light / auto (light theme): Original-Blau auf transparent.
- * - onDark / auto (dark theme): transparente PNG-Variante; per CSS-Filter zu Weiß
- *   gefärbt (funktioniert nur mit echt transparentem Hintergrund).
- * Session 80.26 fix-pass: switched dark variant source from opaque `frohlich-logo.png`
- * to `frohlich-logo-transparent.png` — Test-Agent reported the invert filter produced
- * a solid white rectangle instead of a white wordmark.
+ * Session 80.66: single-source PNG mit echter Alpha-Kanal-Transparenz
+ * (`frohlich-logo-clear.png`, generiert via alpha-threshold + Anti-Alias-Ramp aus
+ * dem Original-Palette-PNG). Vorher: opake Varianten erzeugten einen weißen
+ * "Card"-Hintergrund auf warm-cream Flächen.
+ *   - Light / auto (light theme): navy Wortmarke auf transparent.
+ *   - Dark / onDark: gleiche Datei + `brand-logo-invertible` CSS-Hook färbt zu Weiß.
  */
-const BRAND_LOGO_TRANSPARENT_SRC = '/assets/logo/frohlich-logo-transparent.png?v=4';
-
 export default function BrandLogo({
   alt = 'Fröhlich Vermögensberatung',
   className,
@@ -25,17 +23,15 @@ export default function BrandLogo({
     imgClassName,
   );
 
-  // Farbfilter macht die (transparent gelieferte) Wortmarke auf dunklen Flächen weiß.
-  // Stabiler Class-Hook `brand-logo-invertible` gestattet CSS-Overrides (siehe index.css
-  // Session 80.26 fix-pass: mix-blend-mode: screen für nicht-transparente PNGs).
-  const invertToWhite = 'brand-logo-invertible [filter:brightness(0)_invert(1)]';
+  // Class-Hook für Dark-Mode-Invert (siehe index.css: `:root.dark img.brand-logo-invertible`).
+  const invertHook = 'brand-logo-invertible';
 
   if (variant === 'onDark') {
     return (
       <img
-        src={BRAND_LOGO_TRANSPARENT_SRC}
+        src={BRAND_LOGO_PNG_SRC}
         alt={alt}
-        className={cn(imgCls, invertToWhite, className)}
+        className={cn(imgCls, invertHook, 'dark-force-invert', className)}
         {...props}
       />
     );
@@ -52,22 +48,13 @@ export default function BrandLogo({
     );
   }
 
-  // auto: helles Theme → Original, dunkles Theme → transparente PNG + Invert
+  // auto: einmalige `<img>`-Instanz, Dark-Mode wird via CSS-Klasse gehandhabt.
   return (
-    <>
-      <img
-        src={BRAND_LOGO_PNG_SRC}
-        alt={alt}
-        className={cn(imgCls, className, 'dark:hidden')}
-        {...props}
-      />
-      <img
-        src={BRAND_LOGO_TRANSPARENT_SRC}
-        alt=""
-        aria-hidden="true"
-        className={cn(imgCls, invertToWhite, className, 'hidden dark:inline-block')}
-        {...props}
-      />
-    </>
+    <img
+      src={BRAND_LOGO_PNG_SRC}
+      alt={alt}
+      className={cn(imgCls, invertHook, className)}
+      {...props}
+    />
   );
 }

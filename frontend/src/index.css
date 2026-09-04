@@ -648,15 +648,15 @@
   :root:not(.dark) :where(.bg-green-50:not(.keep-raw), .bg-green-100:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-tint)); }
   :root:not(.dark) :where(.border-green-100:not(.keep-raw), .border-green-200:not(.keep-raw), .border-green-300:not(.keep-raw)) { border-color: rgb(var(--bank-petrol-border)); }
 
-  /* Session 80.26 fix-pass: BrandLogo PNG is opaque (RGB, no alpha). The naive
-     `brightness(0) invert(1)` pipeline paints a solid white rectangle in dark mode
-     because it collapses every pixel to a single luminance. Replace it with a filter
-     chain that preserves the text↔background luminance delta and then screen-blend
-     onto the dark canvas so the white background vanishes and the wordmark reads
-     as light-gray/white. */
-  :root.dark img.brand-logo-invertible {
-    filter: invert(1) grayscale(1) brightness(1.6) contrast(2) !important;
-    mix-blend-mode: screen;
+  /* Session 80.66: BrandLogo is now `frohlich-logo-clear.png` — RGBA mit echter
+     Alpha-Kanal-Transparenz (Hintergrund entfernt via Alpha-Threshold + Anti-Alias-
+     Ramp). Filter darf jetzt einfach sein: `brightness(0) invert(1)` färbt die
+     Navy-Wortmarke sauber zu Weiß, ohne dass ein Hintergrund-Rechteck übrig bleibt.
+     Kein `mix-blend-mode: screen` mehr nötig (verhinderte vorher, dass der weiße
+     PNG-Hintergrund als Kasten sichtbar wurde). */
+  :root.dark img.brand-logo-invertible,
+  img.brand-logo-invertible.dark-force-invert {
+    filter: brightness(0) invert(1) !important;
   }
 
   /* Neutrals (gray/slate/zinc/neutral/stone -50) → warm bank surface tint,
