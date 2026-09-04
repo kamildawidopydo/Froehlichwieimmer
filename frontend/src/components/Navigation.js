@@ -265,6 +265,17 @@ const Navigation = () => {
               </Link>
               {user ? (
                 <>
+                  {/* Session 81.04 — CTA "Mein Depot" für eingeloggte Kunden.
+                      Nur wenn Onboarding abgeschlossen (Admin muss Depot nicht sehen). */}
+                  {user.role !== 'admin' && user.onboarding_completed && (
+                    <Link
+                      to="/mein-depot"
+                      data-testid="nav-mein-depot-btn"
+                      className={cn('shrink-0 rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200', linkMuted)}
+                    >
+                      Mein Depot
+                    </Link>
+                  )}
                   <Link
                     to={userHomePath}
                     data-testid="nav-dashboard-btn"

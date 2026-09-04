@@ -99,6 +99,7 @@ const AnleihenPage = lazy(() => import('@/pages/dashboard/AnleihenPage'));
 const AnleihenKaufenPage = lazy(() => import('@/pages/dashboard/AnleihenKaufenPage'));
 const AktienPage = lazy(() => import('@/pages/dashboard/AktienPage'));
 const DividendenkalenderPage = lazy(() => import('@/pages/aktien/DividendenkalenderPage'));
+const MeinDepotPage = lazy(() => import('@/pages/MeinDepotPage'));
 const IpoPage = lazy(() => import('@/pages/dashboard/IpoPage'));
 const DashboardHandelnPage = lazy(() => import('@/pages/dashboard/DashboardHandelnPage'));
 const DashboardStockDetailPage = lazy(() => import('@/pages/dashboard/DashboardStockDetailPage'));
@@ -750,6 +751,14 @@ function App() {
                     }
                   />
                   <Route path="/handeln" element={<HandelnHub />} />
+                  <Route
+                    path="/mein-depot"
+                    element={
+                      <ProtectedRoute>
+                        <MeinDepotPage />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="/aktien/dividendenkalender" element={<DividendenkalenderPage />} />
                   <Route
                     path="/aktien/:symbol"
