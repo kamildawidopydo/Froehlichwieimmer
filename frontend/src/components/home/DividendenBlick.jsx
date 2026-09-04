@@ -174,17 +174,18 @@ const DividendenBlick = () => {
       className="relative border-t border-bank-border bg-bank-bg py-16 sm:py-20"
     >
       <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-12">
-        <header className="mx-auto max-w-3xl text-center">
+        <header className="max-w-3xl">
           <Eyebrow>Dividenden-Cockpit</Eyebrow>
           <h2
             id="home-dividenden-blick-heading"
-            className="mt-4 font-display text-[1.75rem] font-light leading-[1.15] tracking-tight text-bank-text sm:text-[2rem]"
+            className="mt-4 font-display text-[1.9rem] font-light leading-[1.1] tracking-tight text-bank-text sm:text-[2.25rem]"
           >
             Dividenden im Blick
           </h2>
-          <p className="mx-auto mt-4 max-w-[38rem] text-[14px] leading-relaxed text-bank-text-muted sm:text-[15px]">
+          <p className="mt-4 max-w-[42rem] text-[14.5px] leading-relaxed text-bank-text-muted sm:text-[15.5px]">
             Ausschüttungskennzahlen, Historie und kommende Termine — ausschließlich aus vorhandenen Providerdaten.
           </p>
+          <div className="mt-4 h-px w-16 bg-bank-gold/60" aria-hidden />
         </header>
 
         {loading ? (
@@ -198,7 +199,7 @@ const DividendenBlick = () => {
               <div
                 role="tablist"
                 aria-label="Regionen"
-                className="mt-10 flex justify-center gap-2 border-b border-bank-border"
+                className="mt-10 flex flex-wrap gap-2 border-b border-bank-border"
                 data-testid="dividenden-tablist"
               >
                 {availableTabs.map((t) => {
@@ -233,7 +234,7 @@ const DividendenBlick = () => {
             )}
 
             {/* Filter + Sort */}
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-4" data-testid="dividenden-filters">
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3" data-testid="dividenden-filters">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-text-muted">Rendite</span>
                 <div role="group" aria-label="Rendite-Filter" className="flex gap-1">
@@ -303,62 +304,66 @@ const DividendenBlick = () => {
                 <>
                   {/* Desktop */}
                   <div className="hidden overflow-x-auto md:block">
-                    <table className="w-full border-collapse text-left text-[13px]" data-testid="dividenden-table">
+                    <table className="w-full border-collapse text-left text-[14px]" data-testid="dividenden-table">
                       <caption className="sr-only">Aktien mit Dividendenkennzahlen — {currentTab?.label}</caption>
                       <thead className="border-b border-bank-border text-[10.5px] font-medium uppercase tracking-[0.2em] text-bank-text-muted">
                         <tr>
-                          <th scope="col" className="pb-3 pr-3 text-left font-medium">Unternehmen</th>
-                          <th scope="col" className="pb-3 pr-3 text-right font-medium">Kurs</th>
-                          <th scope="col" className="pb-3 pr-3 text-right font-medium">Div.-Rendite</th>
-                          <th scope="col" className="pb-3 pr-3 text-right font-medium">Div./Aktie</th>
-                          <th scope="col" className="pb-3 pr-3 text-right font-medium">Payout</th>
-                          <th scope="col" className="pb-3 pr-3 text-right font-medium">5J-CAGR</th>
-                          <th scope="col" className="pb-3 pr-3 text-right font-medium">Stab. Jahre</th>
-                          <th scope="col" className="pb-3 pr-3 text-right font-medium">Nächstes Ex</th>
-                          <th scope="col" className="pb-3 pr-3 text-right font-medium">5J-Verlauf</th>
-                          <th scope="col" className="pb-3 font-medium" aria-label="Analyse" />
+                          <th scope="col" className="pb-4 pr-5 text-left font-medium">Unternehmen</th>
+                          <th scope="col" className="pb-4 pr-5 text-right font-medium">Kurs</th>
+                          <th scope="col" className="pb-4 pr-5 text-right font-medium">Div.-Rendite</th>
+                          <th scope="col" className="pb-4 pr-5 text-right font-medium">Div./Aktie</th>
+                          <th scope="col" className="pb-4 pr-5 text-right font-medium">Payout</th>
+                          <th scope="col" className="pb-4 pr-5 text-right font-medium">5J-CAGR</th>
+                          <th scope="col" className="pb-4 pr-5 text-right font-medium">Stab. Jahre</th>
+                          <th scope="col" className="pb-4 pr-5 text-right font-medium">Nächstes Ex</th>
+                          <th scope="col" className="pb-4 pr-5 text-right font-medium">5J-Verlauf</th>
+                          <th scope="col" className="pb-4 font-medium" aria-label="Analyse" />
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-bank-border/60">
-                        {visibleItems.map((r) => {
+                        {visibleItems.map((r, idx) => {
                           const d = r.dividends || {};
                           return (
-                            <tr key={r.symbol} data-testid={`div-row-${r.symbol}`}>
-                              <td className="py-4 pr-3">
+                            <tr
+                              key={r.symbol}
+                              className={`group transition-colors hover:bg-bank-mint/25 ${idx % 2 === 1 ? 'bg-bank-surface-elev/40' : ''}`}
+                              data-testid={`div-row-${r.symbol}`}
+                            >
+                              <td className="py-5 pr-5">
                                 <Link to={`/aktien/${r.symbol}`} className="block">
-                                  <p className="font-serif text-[14.5px] text-bank-text">{r.company_name || r.symbol}</p>
-                                  <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-text-muted">{r.symbol}</p>
+                                  <p className="font-serif text-[16px] text-bank-text">{r.company_name || r.symbol}</p>
+                                  <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.2em] text-bank-text-muted">{r.symbol}</p>
                                 </Link>
                               </td>
-                              <td className="py-4 pr-3 text-right font-mono tabular-nums text-bank-text">
+                              <td className="py-5 pr-5 text-right font-mono tabular-nums text-[14.5px] text-bank-text">
                                 {fmtNum(r.previous_close)} {r.currency || ''}
                               </td>
-                              <td className="py-4 pr-3 text-right font-mono tabular-nums text-bank-primary-strong">
+                              <td className="py-5 pr-5 text-right font-mono tabular-nums text-[15px] text-bank-primary-strong">
                                 {fmtPct(d.dividend_yield_pct)}
                               </td>
-                              <td className="py-4 pr-3 text-right font-mono tabular-nums text-bank-text-muted">
+                              <td className="py-5 pr-5 text-right font-mono tabular-nums text-[14px] text-bank-text">
                                 {fmtNum(d.dividend_rate_annual)} {r.currency || ''}
                               </td>
-                              <td className="py-4 pr-3 text-right font-mono tabular-nums text-bank-text-muted">
+                              <td className="py-5 pr-5 text-right font-mono tabular-nums text-[14px] text-bank-text">
                                 {fmtPct(d.payout_ratio_pct, 1)}
                               </td>
-                              <td className="py-4 pr-3 text-right font-mono tabular-nums text-bank-text-muted">
+                              <td className="py-5 pr-5 text-right font-mono tabular-nums text-bank-text-muted">
                                 {fmtSignedPct(d.cagr_5y_pct)}
                               </td>
-                              <td className="py-4 pr-3 text-right font-mono tabular-nums text-bank-text-muted">
+                              <td className="py-5 pr-5 text-right font-mono tabular-nums text-bank-text-muted">
                                 {d.stable_or_rising_years != null ? d.stable_or_rising_years : emDash}
                               </td>
-                              <td className="py-4 pr-3 text-right font-mono tabular-nums text-bank-text-muted">
+                              <td className="py-5 pr-5 text-right font-mono tabular-nums text-bank-text-muted">
                                 {fmtDate(d.next_ex_dividend_date)}
                               </td>
-                              <td className="py-4 pr-3 text-right">
+                              <td className="py-5 pr-5 text-right">
                                 <DivSparkline history={d.history_5y} />
                               </td>
-                              <td className="py-4 text-right">
+                              <td className="py-5 text-right">
                                 <Link
                                   to={`/aktien/${r.symbol}`}
                                   data-testid={`div-analyse-${r.symbol}`}
-                                  className="inline-flex items-center gap-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-primary-strong hover:underline"
+                                  className="inline-flex items-center gap-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-primary-strong opacity-70 transition-opacity hover:underline group-hover:opacity-100"
                                 >
                                   <ArrowRight className="h-3 w-3" strokeWidth={1.6} aria-hidden />
                                 </Link>
@@ -403,31 +408,65 @@ const DividendenBlick = () => {
               )}
             </div>
 
-            {/* Kommende Dividendentermine */}
+            {/* Kommende Dividendentermine — Card-Grid statt Textliste */}
             {upcoming.length > 0 && (
               <div className="mt-14" data-testid="dividenden-upcoming">
-                <h3 className="flex items-center justify-center gap-2 font-serif text-[16px] text-bank-text">
+                <div className="flex items-center gap-2 border-b border-bank-border pb-3">
                   <CalendarDays className="h-4 w-4 text-bank-gold" strokeWidth={1.6} aria-hidden />
-                  Kommende Dividendentermine
-                </h3>
-                <p className="mx-auto mt-1 max-w-md text-center text-[12px] text-bank-text-muted">
+                  <h3 className="font-serif text-[18px] leading-tight text-bank-text">
+                    Kommende Dividendentermine
+                  </h3>
+                </div>
+                <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-bank-text-muted">
                   Chronologisch nach nächstem Ex-Dividenden-Datum, aus dem vorhandenen Datenbestand.
                 </p>
-                <ul className="mx-auto mt-5 max-w-[720px] divide-y divide-bank-border/70 border-y border-bank-border/70">
+                <ul
+                  className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  aria-label="Liste kommender Ex-Dividenden-Termine"
+                >
                   {upcoming.map((r) => {
                     const d = r.dividends || {};
                     return (
-                      <li key={r.symbol} className="flex items-baseline justify-between gap-4 py-3" data-testid={`div-upcoming-${r.symbol}`}>
-                        <Link to={`/aktien/${r.symbol}`} className="min-w-0 flex-1">
-                          <p className="font-serif text-[14px] text-bank-text truncate">{r.company_name || r.symbol}</p>
-                          <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-text-muted">{r.symbol}</p>
+                      <li key={r.symbol}>
+                        <Link
+                          to={`/aktien/${r.symbol}`}
+                          data-testid={`div-upcoming-${r.symbol}`}
+                          className="group flex h-full flex-col border border-bank-border bg-white p-4 transition-colors hover:border-bank-gold/50 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bank-gold"
+                        >
+                          <div className="flex items-baseline justify-between gap-3">
+                            <p className="font-serif text-[15px] leading-tight text-bank-text group-hover:text-bank-primary">
+                              {r.company_name || r.symbol}
+                            </p>
+                            <p className="shrink-0 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-text-muted">
+                              {r.symbol}
+                            </p>
+                          </div>
+                          <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
+                            <div>
+                              <dt className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-bank-text-muted">Ex-Dividende</dt>
+                              <dd className="mt-0.5 font-mono tabular-nums text-[13.5px] text-bank-text">
+                                {fmtDate(d.next_ex_dividend_date)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-bank-text-muted">Zahlung</dt>
+                              <dd className="mt-0.5 font-mono tabular-nums text-[13.5px] text-bank-text">
+                                {fmtDate(d.next_payment_date)}
+                              </dd>
+                            </div>
+                            <div className="col-span-2">
+                              <dt className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-bank-text-muted">Dividende je Aktie</dt>
+                              <dd className="mt-0.5 font-mono tabular-nums text-[13.5px] text-bank-primary-strong">
+                                {d.dividend_rate_annual != null
+                                  ? `${fmtNum(d.dividend_rate_annual)} ${r.currency || ''}`
+                                  : emDash}
+                              </dd>
+                            </div>
+                          </dl>
+                          <span className="mt-4 inline-flex items-center gap-1 self-start font-mono text-[10px] uppercase tracking-[0.2em] text-bank-primary-strong opacity-70 transition-opacity group-hover:opacity-100">
+                            Analyse öffnen <ArrowRight className="h-3 w-3" strokeWidth={1.6} aria-hidden />
+                          </span>
                         </Link>
-                        <div className="text-right">
-                          <p className="font-mono tabular-nums text-[13px] text-bank-text">{fmtDate(d.next_ex_dividend_date)}</p>
-                          <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-text-muted">
-                            {d.dividend_rate_annual != null ? `${fmtNum(d.dividend_rate_annual)} ${r.currency || ''} · Jahresdividende` : emDash}
-                          </p>
-                        </div>
                       </li>
                     );
                   })}
@@ -435,7 +474,7 @@ const DividendenBlick = () => {
               </div>
             )}
 
-            <p className="mt-8 text-center font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted" data-testid="dividenden-provenance">
+            <p className="mt-8 text-left font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted" data-testid="dividenden-provenance">
               Datenstand yfinance-Cache · Kurse und Termine können zeitverzögert sein
             </p>
           </>
