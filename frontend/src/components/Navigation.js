@@ -148,23 +148,33 @@ const Navigation = () => {
           className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-bank-primary/25 to-transparent opacity-80"
         />
 
-        <div className="mx-auto flex min-h-[5rem] w-full max-w-[1600px] items-center gap-3 overflow-visible px-5 sm:min-h-[5.25rem] lg:gap-5 lg:px-12 xl:px-16">
+        <div className="mx-auto flex min-h-[5rem] w-full max-w-[1600px] items-center gap-4 overflow-visible px-5 sm:min-h-[5.25rem] lg:gap-6 lg:px-12 xl:gap-8 xl:px-16">
           <Link
             to="/"
             data-testid="nav-logo"
             className="relative z-40 flex shrink-0 items-center overflow-visible py-1.5 transition-opacity duration-200 hover:opacity-90"
           >
+            {/* Session 81.11 — Header-Overlap-Fix: Logo darf ab lg nicht mehr in die
+                Main-Nav-Zone hineinragen. Vorher: max-w-[26rem] lg / [28rem] xl
+                (bis 448 px), was bei 1440 zusammen mit dem zentrierten Menu-Bar
+                zu Overlap zwischen Logo und „Angebote" führte. Neu: schlanker
+                gestuft, damit alle 4 Zonen (Brand · MainNav · Account · Icons)
+                nebeneinander atmen und nichts überschneidet. */}
             <BrandLogo
-              imgClassName="h-[42px] w-auto max-w-[min(75vw,18rem)] object-contain object-left sm:h-[46px] sm:max-w-[20rem] md:h-[50px] md:max-w-[22rem] lg:h-[58px] lg:max-w-[26rem] xl:h-[60px] xl:max-w-[28rem]"
+              imgClassName="h-[42px] w-auto max-w-[min(75vw,15rem)] object-contain object-left sm:h-[46px] sm:max-w-[16rem] md:h-[50px] md:max-w-[17rem] lg:h-[52px] lg:max-w-[17rem] xl:h-[56px] xl:max-w-[19rem]"
             />
           </Link>
 
-          {/* Desktop — compact dropdown navigation */}
+          {/* Desktop — compact dropdown navigation.
+              Session 81.11 — flex-1 entfernt: sonst kollidiert die Main-Nav
+              horizontal mit der Actions-Zone rechts, weil beide `shrink-0`-
+              Inhalte tragen. Actions-Zone verwendet stattdessen `ml-auto`
+              (siehe unten) und wird sauber rechts geankert. */}
           <div
-            className="relative z-30 hidden min-w-0 flex-1 justify-center overflow-visible lg:flex"
+            className="relative z-30 hidden min-w-0 items-center overflow-visible lg:flex"
             role="menubar"
           >
-            <div className="flex items-center gap-x-1 overflow-visible xl:gap-x-2">
+            <div className="flex items-center gap-x-0.5 overflow-visible xl:gap-x-1">
               {navGroups.map((group) => {
                 const hasActiveChild = group.links.some((l) => isNavLinkActive(l));
                 return (
@@ -240,8 +250,12 @@ const Navigation = () => {
             </div>
           </div>
 
-          <div className="relative z-40 flex shrink-0 items-center gap-1 sm:gap-1.5 lg:gap-2">
-            <div className="hidden items-center gap-1 lg:flex xl:gap-1.5">
+          {/* Session 81.11 — Account+Icon-Zone: ml-auto ankert rechtsbündig,
+              gap großzügig, damit „Formular", „Upload", „Mein Depot",
+              „Dashboard", „Abmelden" und rechte Icon-Gruppe optisch getrennt
+              bleiben. */}
+          <div className="relative z-40 ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-2.5">
+            <div className="hidden items-center gap-1.5 lg:flex xl:gap-2">
               <Link
                 to="/formular"
                 data-testid="nav-formular-btn"
