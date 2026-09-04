@@ -72,7 +72,14 @@ const DepotKpiRail = () => {
     cashBalance,
     stockMetrics,
     activeBonds,
+    dashboardFetchHadFailure,
   } = useDashboardData();
+  // Wenn technischer Fetch-Fehler UND alle Bestandswerte 0 → Werte als „—"
+  // anzeigen statt suggestive „0,00 €" — differenziert von echtem leeren Depot.
+  const uncertain = !!dashboardFetchHadFailure &&
+    Number(cashBalance || 0) === 0 &&
+    (stockMetrics || []).length === 0 &&
+    (activeBonds || []).length === 0;
 
   const kpis = useMemo(() => {
     const wpEinstand = Number(depotEinstand || 0) + Number(bondsEinstand || 0);
@@ -129,14 +136,17 @@ const DepotKpiRail = () => {
       },
       // 4. Liquidität
       cash: {
-        primary: formatEUR(cashBalance || 0),
-        secondary: 'Verfügbares Cash-Guthaben',
+        primary: uncertain ? '—' : formatEUR(cashBalance || 0),
+        tone: uncertain ? 'muted' : 'neutral',
+        secondary: uncertain ? 'Wert derzeit nicht verfügbar' : 'Verfügbares Cash-Guthaben',
       },
       // 5. Positionen (Aktien + Anleihen; Watchlist ausgeschlossen)
       positionen: {
-        primary: posTotal.toLocaleString('de-DE'),
-        secondary:
-          posTotal === 0
+        primary: uncertain ? '—' : posTotal.toLocaleString('de-DE'),
+        tone: uncertain ? 'muted' : 'neutral',
+        secondary: uncertain
+          ? 'Wert derzeit nicht verfügbar'
+          : posTotal === 0
             ? 'Noch keine Wertpapiere im Depot'
             : `${stockCount} Aktien · ${bondCount} Anleihen`,
       },
@@ -179,8 +189,8 @@ const DepotKpiRail = () => {
       <KpiCell label="Investiert" primary={kpis.investiert.primary} secondary={kpis.investiert.secondary} testId="kpi-investiert" />
       <KpiCell label="Gesamt G/V" primary={kpis.gv.primary} secondary={kpis.gv.secondary} tone={kpis.gv.tone} testId="kpi-gv" />
       <KpiCell label="Heute" primary={kpis.heute.primary} secondary={kpis.heute.secondary} tone={kpis.heute.tone} testId="kpi-heute" />
-      <KpiCell label="Liquidität" primary={kpis.cash.primary} secondary={kpis.cash.secondary} testId="kpi-liquidity" />
-      <KpiCell label="Positionen" primary={kpis.positionen.primary} secondary={kpis.positionen.secondary} testId="kpi-positionen" />
+      <KpiCell label="Liquidität" primary={kpis.cash.primary} secondary={kpis.cash.secondary} tone={kpis.cash.tone} testId="kpi-liquidity" />
+      <KpiCell label="Positionen" primary={kpis.positionen.primary} secondary={kpis.positionen.secondary} tone={kpis.positionen.tone} testId="kpi-positionen" />
     </section>
   );
 };

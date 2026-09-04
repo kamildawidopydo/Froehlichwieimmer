@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { DashboardDataProvider } from '@/context/DashboardDataContext';
 import DepotPage from '@/pages/dashboard/DepotPage';
 import PageMeta from '@/components/PageMeta';
+import GlobalNotice from '@/components/mein-depot/GlobalNotice';
 import DepotHero from '@/components/mein-depot/DepotHero';
 import DepotKpiRail from '@/components/mein-depot/DepotKpiRail';
 import DepotPerformance from '@/components/mein-depot/DepotPerformance';
@@ -32,7 +33,7 @@ import Service from '@/components/mein-depot/Service';
 
 const MeinDepotContent = () => (
   <>
-    <div className="mx-auto max-w-[1200px] px-5 pt-8 sm:px-8 sm:pt-10 lg:px-12">
+    <div className="mx-auto max-w-[1440px] px-5 pt-8 sm:px-8 sm:pt-10 lg:px-12">
       <Link
         to="/"
         data-testid="mein-depot-back"
@@ -43,7 +44,8 @@ const MeinDepotContent = () => (
       </Link>
     </div>
 
-    <div className="mx-auto mt-6 max-w-[1200px] px-5 sm:px-8 lg:px-12">
+    <div className="mx-auto mt-6 max-w-[1440px] px-5 sm:px-8 lg:px-12">
+      <GlobalNotice />
       {/* Neue editorial Portfolio-Sektion (Session 81.06 Schritt 2/7).
           Empty-States sind pro Komponente sauber implementiert (Section 17):
           bei fehlenden Bezugsdaten wird "—" gerendert, nicht "0,00 €". Technische

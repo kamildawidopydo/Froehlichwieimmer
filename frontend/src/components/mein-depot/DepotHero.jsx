@@ -36,8 +36,11 @@ const formatUpdated = (iso) => {
 };
 
 const DepotHero = () => {
-  const { gesamtvermoegen, stockPricesUpdatedAt, loading } = useDashboardData();
+  const { gesamtvermoegen, stockPricesUpdatedAt, loading, dashboardFetchHadFailure } = useDashboardData();
   const updated = formatUpdated(stockPricesUpdatedAt);
+  const value = Number(gesamtvermoegen) || 0;
+  // Bei technischem Fetch-Fehler UND Wert 0 → nicht wie „echtes leeres Depot" wirken
+  const showMissing = dashboardFetchHadFailure && value === 0;
 
   return (
     <motion.section
@@ -68,17 +71,27 @@ const DepotHero = () => {
             data-testid="mein-depot-hero-value-skeleton"
             className="mt-1 h-[42px] w-[280px] animate-pulse rounded-sm bg-bank-border/40 sm:h-[56px] sm:w-[360px]"
           />
+        ) : showMissing ? (
+          <p
+            data-testid="mein-depot-hero-value"
+            className="rate-figure mt-1 text-[2.4rem] leading-[1.02] tabular-nums text-bank-text-muted sm:text-[3rem]"
+            aria-live="polite"
+          >
+            —
+          </p>
         ) : (
           <p
             data-testid="mein-depot-hero-value"
             className="rate-figure mt-1 text-[2.4rem] leading-[1.02] tabular-nums text-bank-text sm:text-[3rem]"
             aria-live="polite"
           >
-            <AnimatedNumber value={Number(gesamtvermoegen) || 0} format={formatEUR} />
+            <AnimatedNumber value={value} format={formatEUR} />
           </p>
         )}
         <p className="mt-2 text-[13px] leading-relaxed text-bank-text-muted">
-          Gesamtwert Ihres hinterlegten Portfolios.
+          {showMissing
+            ? 'Einige Depotdaten konnten momentan nicht geladen werden.'
+            : 'Gesamtwert Ihres hinterlegten Portfolios.'}
         </p>
         {updated && (
           <p className="mt-1 font-mono text-[10.5px] uppercase tracking-[0.2em] text-bank-text-muted/85">
