@@ -474,9 +474,18 @@ const DividendenBlick = () => {
               </div>
             )}
 
-            <p className="mt-8 text-left font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted" data-testid="dividenden-provenance">
-              Datenstand yfinance-Cache · Kurse und Termine können zeitverzögert sein
-            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted" data-testid="dividenden-provenance">
+                Datenstand yfinance-Cache · Kurse und Termine können zeitverzögert sein
+              </p>
+              <Link
+                to="/aktien/dividendenkalender"
+                data-testid="dividenden-kalender-cta"
+                className="inline-flex min-h-[44px] items-center gap-2 border-b border-bank-primary/60 pb-0.5 font-mono text-[11px] uppercase tracking-[0.18em] text-bank-primary-strong transition-colors hover:border-bank-primary hover:text-bank-primary-hover focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-bank-gold"
+              >
+                Zum Dividendenkalender <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden />
+              </Link>
+            </div>
           </>
         )}
       </div>
