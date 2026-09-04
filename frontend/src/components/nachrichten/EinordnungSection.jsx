@@ -79,8 +79,19 @@ const EinordnungSection = () => {
 
   useEffect(() => {
     let alive = true;
-    einordnungApi.list({ limit: 3 })
-      .then((d) => { if (alive) setState({ items: (d.items || []).slice(0, 3), loading: false, error: false }); })
+    // Größerer Fetch (Buffer), damit nach Demo-Filter bis zu 3 echte Beiträge
+    // übrig bleiben können, sobald Redaktion produktive Einordnungen einstellt.
+    einordnungApi.list({ limit: 25 })
+      .then((d) => {
+        if (!alive) return;
+        // Session 80.68 — Produktions-Filter: nur echte, publizierte Beiträge.
+        // Demo-/Seed-Datensätze (`is_demo === true`) werden aus der öffentlichen
+        // Section entfernt, damit produktiv keine Testinhalte sichtbar sind.
+        const real = (d.items || []).filter(
+          (p) => p && p.is_demo !== true && (p.status ? p.status === 'published' : true),
+        );
+        setState({ items: real.slice(0, 3), loading: false, error: false });
+      })
       .catch(() => { if (alive) setState({ items: [], loading: false, error: true }); });
     return () => { alive = false; };
   }, []);
@@ -138,10 +149,28 @@ const EinordnungSection = () => {
           </div>
         )}
 
-        {!state.loading && !state.error && count === 0 && (
-          <p className="mt-10 text-[13px] text-bank-text-muted" data-testid="einordnung-empty">
-            Aktuell noch keine veröffentlichten Beiträge.
-          </p>
+        {!state.loading && count === 0 && (
+          /* Session 80.68 — Editorial Empty-State ohne „noch keine Beiträge"-
+             Formulierung. Wird sichtbar, wenn (a) API-Fehler oder (b) keine
+             echten, non-demo Beiträge veröffentlicht sind. */
+          <div
+            className="mt-10 border border-bank-border bg-white px-6 py-10 sm:px-10 sm:py-12"
+            data-testid="einordnung-empty-state"
+          >
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="max-w-2xl text-[14.5px] leading-relaxed text-bank-text-muted">
+                Hier veröffentlichen wir unsere Einordnung zu aktuellen Entwicklungen an
+                den Kapitalmärkten, Zinsen und ausgewählten Anlagethemen.
+              </p>
+              <Link
+                to="/news/nachrichten"
+                data-testid="einordnung-empty-cta"
+                className="mt-6 inline-flex items-center gap-1.5 border-b border-bank-primary/60 pb-0.5 font-mono text-[11px] uppercase tracking-[0.22em] text-bank-primary transition-colors hover:border-bank-primary hover:text-bank-primary-hover focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-bank-gold"
+              >
+                Aktuelle Marktnachrichten ansehen <ArrowRight size={13} strokeWidth={1.9} />
+              </Link>
+            </div>
+          </div>
         )}
 
         {!state.loading && count > 0 && (
