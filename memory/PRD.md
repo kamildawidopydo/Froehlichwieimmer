@@ -6,6 +6,39 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 81.06 Schritt 2/7 (Sep 04 2026) — **Depot-Professionalisierung · /mein-depot Hero + KPI-Rail + Vermögensentwicklung + Depotstruktur (nur PREVIEW)**:
+
+  **Kontext**: Portfolio-Backend-Migration Supabase → FastAPI bleibt EINGEFROREN (Phase 12 hat Identity-Mapping-Blocker + fehlenden Service-Role dokumentiert). Dieser Schritt verbessert ausschließlich die obere Hälfte der Public-Route `/mein-depot` **auf Basis vorhandener DashboardDataContext-Daten**. Keine neue Business-Logik, keine neuen Requests.
+
+  **Neue Dateien**:
+  - `frontend/src/components/mein-depot/DepotHero.jsx` — editorial Portfolio-Hero (H1 „Ihr Vermögen im Überblick" + Depotwert `gesamtvermoegen` als primäre Zahl 2.4rem→3rem + optionaler Kursdaten-Stand).
+  - `frontend/src/components/mein-depot/DepotKpiRail.jsx` — 5-KPI-Rail (Investiert · Gesamt G/V · Heute · Liquidität · Positionen) mit strikter Null-vs.-Missing-Regel (echter 0€ → „0,00 €"; fehlende Bezugsgröße → „—").
+  - `frontend/src/components/mein-depot/DepotPerformance.jsx` — Recharts-AreaChart auf `heroSnapshots` (400d), Zeitraum-Tabs 1M/3M/6M/1J/MAX **nur wenn ≥2 Punkte im Range**, Empty-State „Noch keine Vermögensentwicklung verfügbar".
+  - `frontend/src/components/mein-depot/DepotStructure.jsx` — bestehender `AssetAllocationDonut` (Cash/Aktien/Anleihen/Verträge), Empty-State bei total=0.
+
+  **Geänderte Dateien**:
+  - `frontend/src/pages/MeinDepotPage.jsx` — mountet neue Komponenten oben, delegiert Rest an `<DepotPage showTopSummary={false}/>`.
+  - `frontend/src/pages/dashboard/DepotPage.jsx` — neuer Prop `showTopSummary` (Default `true` = Legacy-Verhalten auf `/dashboard/vermoegen`). Wenn `false`: PageHeader, StatTile-Grid, AnlageprodukteSection+Donut werden unterdrückt.
+
+  **Bestandsaufnahme (Kategorie A = vorhanden, B = ableitbar, C = fehlt)**:
+  - A: `gesamtvermoegen`, `cashBalance`, `depotWert`, `bondsMarktwert`, `contractsTotal`, `stockPricesUpdatedAt`, `heroSnapshots`, `dailyPortfolioPnl` (nur Aktien-Delta).
+  - B: Wertpapier-Einstand (`depotEinstand+bondsEinstand`), Gesamt-G/V €+% (`depotGV+bondsGV`), Positionen (`stockMetrics.length + activeBonds.length`).
+  - C (bewusst weggelassen): Ausschüttungen — keine dedizierte Dividenden-/Kupon-Historie pro User verfügbar; `realizedPnlTotal` ist Handels-P&L, nicht Ausschüttung.
+
+  **Watchlist strikt getrennt**: Nicht in Positionen-Count, nicht in Depotwert, nicht in Struktur, nicht in Performance.
+
+  **Request-Delta**: 0 zusätzliche Backend-/Supabase-Requests. Alle KPIs aus bereits geladenem DashboardDataContext-State abgeleitet.
+
+  **QA (Preview, demo.kunde@kapital-direkt24.de, Session 81.06)**:
+  - Alle testids `mein-depot-hero`, `mein-depot-hero-value`, `mein-depot-kpi-rail`, `kpi-investiert/gv/heute/liquidity/positionen`, `mein-depot-performance`, `mein-depot-structure`, `mein-depot-performance-empty`, `mein-depot-structure-empty`, `mein-depot-back` = **YES**.
+  - DUMP: hero=`0,00 €`, investiert=`—/Noch keine Wertpapiere im Depot`, gv=`—/Kein Wertpapier-Einstand hinterlegt`, heute=`—/Keine Aktien-Positionen im Depot`, cash=`0,00 €/Verfügbares Cash-Guthaben`, pos=`0/Noch keine Wertpapiere im Depot`. Empty-States für Performance + Structure aktiv.
+  - Desktop 1920: `sw=vw=1920`, kein Body-Overflow.
+  - Login+Onboarding-Gate: `onboarding_completed=true` für demo.kunde in Preview-Mongo gesetzt (dies ist reine QA-Vorbereitung; kein Prod-Datenkontakt).
+
+  **NICHT deployed** — strikt Preview.
+
+
+
 - 80.84 (Sep 03 2026) — **Watchlist Professional Final · Notification-Bell im Header (nur PREVIEW)**:
   1. Neue Komponente `frontend/src/components/StockNotificationBell.jsx` — dezente Glocke mit Badge (`unseen_count`), Popover mit 5 neuesten Notifs (Escape schließt, Click-outside schließt, Focus-States, min-44px Tap-Target, `aria-label="Benachrichtigungen, X ungelesen"`), Aktionen „Aktie ansehen"/„Als gelesen markieren"/„Alle Benachrichtigungen" → `/meine-alarme`.
   2. Integration in `frontend/src/components/Navigation.js` **neben** dem bestehenden `NotificationCenter` (das für allgemeine System-Notifs zuständig ist). Header-Höhe unverändert.

@@ -46,7 +46,7 @@ const EmptyHint = ({ children, to, label }) => (
   </div>
 );
 
-const DepotPage = () => {
+const DepotPage = ({ showTopSummary = true } = {}) => {
   const {
     cashBalance,
     depotWert,
@@ -263,7 +263,8 @@ const DepotPage = () => {
   return (
     <PageContainer>
       <PortfolioPageLayout>
-        <VermoegenSubNav />
+        {showTopSummary && <VermoegenSubNav />}
+        {showTopSummary && (
         <PageHeader
           eyebrow="Vermögen"
           title="Mein Vermögen"
@@ -291,7 +292,9 @@ const DepotPage = () => {
             </>
           }
         />
+        )}
 
+        {showTopSummary && (
         <DashboardStagger className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-4">
           <DashboardStaggerItem>
           <StatTile
@@ -326,7 +329,9 @@ const DepotPage = () => {
           />
           </DashboardStaggerItem>
         </DashboardStagger>
+        )}
 
+        {showTopSummary && (
         <div className="mb-8 grid grid-cols-1 gap-4 xl:grid-cols-[1fr_minmax(320px,380px)]">
           <AnlageprodukteSection groups={productGroups} totalValue={gesamtvermoegen} />
           <AssetAllocationDonut
@@ -336,6 +341,7 @@ const DepotPage = () => {
             contracts={contractsTotal}
           />
         </div>
+        )}
 
         <div className="mb-3">
           <h2 className="dashboard-page-title text-[1.05rem] font-semibold text-bank-text">Wertpapiere</h2>
