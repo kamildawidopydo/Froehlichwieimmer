@@ -148,14 +148,14 @@ const Navigation = () => {
           className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-bank-primary/25 to-transparent opacity-80"
         />
 
-        <div className="mx-auto flex min-h-[4.75rem] w-full max-w-[1600px] items-center gap-3 overflow-visible px-5 sm:min-h-[5rem] lg:gap-5 lg:px-12 xl:px-16">
+        <div className="mx-auto flex min-h-[5rem] w-full max-w-[1600px] items-center gap-3 overflow-visible px-5 sm:min-h-[5.25rem] lg:gap-5 lg:px-12 xl:px-16">
           <Link
             to="/"
             data-testid="nav-logo"
             className="relative z-40 flex shrink-0 items-center overflow-visible py-1.5 transition-opacity duration-200 hover:opacity-90"
           >
             <BrandLogo
-              imgClassName="h-9 w-auto max-w-[min(70vw,18rem)] object-contain object-left sm:h-10 sm:max-w-[20rem] md:h-11 md:max-w-[22rem] lg:h-12 lg:max-w-[24rem] xl:h-[3.25rem] xl:max-w-[26rem]"
+              imgClassName="h-[42px] w-auto max-w-[min(75vw,18rem)] object-contain object-left sm:h-[46px] sm:max-w-[20rem] md:h-[50px] md:max-w-[22rem] lg:h-[58px] lg:max-w-[26rem] xl:h-[60px] xl:max-w-[28rem]"
             />
           </Link>
 
