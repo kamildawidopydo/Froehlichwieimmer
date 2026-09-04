@@ -1,81 +1,55 @@
 # PRD — Fröhlich Vermögensberatung / Kapital-Direkt24 · FastAPI + MongoDB
 
-Sprache: **Deutsch** (Antworten an den User immer auf Deutsch).
+Sprache: **Deutsch**.
 
 ## Original problem statement
-Migration eines bestehenden Supabase + React Repositories zu FastAPI + MongoDB auf Emergent, mit
-Rebranding auf **Fröhlich Vermögensberatung GmbH** und einem editorialen Private-Banking-Design.
-
-Phasen:
-- Phase 0: 1:1 Import
-- Phase 1: FastAPI-Skeleton + Auth + Public Content APIs
-- Phase 2: Market Data & Watchlist APIs
-- Phase 3: PDF Generation & Emails
-- Phase 4: Content Automation
-- Phase 5: Sentry, Rate Limiting, Deploy Hardening
+Migration eines bestehenden Supabase + React Repositories zu FastAPI + MongoDB auf
+Emergent, mit Rebranding auf **Fröhlich Vermögensberatung GmbH** und einem
+editorialen Private-Banking-Design.
 
 ## Aktueller Stand (Feb 2026)
-Highly polished FastAPI + React Application mit „Graphite"-Dark-Mode und editorialem Private-Banking-Look.
-`/mein-depot` Dashboard ist in Schritten 1–7 vollständig professionalisiert.
+- Prod-URL: `https://finance-platform-v2.emergent.host` — LIVE.
+- Preview-URL: `https://finance-platform-v2.preview.emergentagent.com`.
+- Portfolio-Migration bleibt eingefroren (SUPABASE_SERVICE_ROLE_KEY fehlt).
 
-## Session 81.07 · Feb 4 2026 · Depot Bugfix — tote Links „Nachrichten"/„Einstellungen"
+## Sessions
+### Session 81.07 (deployed) · Dashboard Navigation Bugfix
+- Root Cause: `DashboardOnboarding`-Modal ignoriert Backend-Flag → fängt Sidebar-Klicks ab.
+- Fix in `/app/frontend/src/pages/dashboard/UebersichtPage.jsx`: `useAuth`-Guard.
+- Verifiziert Preview (19 Sidebar-Anker PASS) und Prod (Bundle-Signatur in
+  `9517.b3891b20.chunk.js`).
+- Status: LIVE auf Prod, Commit `a77622c`.
 
-### Root Cause (bewiesen via Runtime-Test mit Playwright, `demo.kunde@kapital-direkt24.de`)
-- Auf `/mein-depot` gibt es **KEINE** Links „Nachrichten" oder „Einstellungen"
-  (DOM-Enum aller 25 Test-IDs bestätigt).
-- Die Beschwerde bezog sich auf den **Dashboard-Kontext** (`/dashboard/uebersicht`), erreicht via
-  Sidebar oder Topnav-Buttons.
-- Auf `/dashboard/uebersicht` rendert `UebersichtPage.jsx` das `DashboardOnboarding`-Willkommens-Modal
-  als Vollbild-Overlay (`fixed inset-0 z-modal`). Das Modal:
-  - fängt Sidebar-Klicks ab (Klick auf „Nachrichten" schließt den Modal-Backdrop, feuert aber den
-    Link nicht) — für User erscheint der Link „tot".
-  - ignorierte bisher komplett den Backend-Flag `user.onboarding_completed` und triggerte
-    ausschließlich per localStorage-Flag `dashboard_onboarding_v1_completed`.
-    → Selbst voll onboardete User sahen dieses Marketing-Modal in jedem frischen Browser-Kontext.
-
-### Fix (minimal, ohne neue Seiten oder Regressionen)
-Datei: `/app/frontend/src/pages/dashboard/UebersichtPage.jsx`
-- `useAuth` importiert
-- `markOnboardingCompleted` zusätzlich importiert
-- useEffect-Hook so umgestellt, dass das Modal **nicht** öffnet, wenn `user.onboarding_completed === true`.
-  Zusätzlich wird der localStorage-Flag idempotent gesetzt, damit das Modal in dieser Session sicher
-  nicht wiederkehrt.
-
-### Verifikation (Playwright, alle PASS)
-- Desktop 1920: MODAL_HIDDEN_FOR_ONBOARDED_USER · NACHRICHTEN_CLICK · EINSTELLUNGEN_CLICK
-  (Topbar-Popover „Profil & Einstellungen") · SIDEBAR_PROFIL · MEIN_DEPOT_SUPPORT (Regressions-
-  smoke auf `/mein-depot` Service-Karten) · LOGOUT
-- Mobile 390: MOBILE_MODAL_HIDDEN · MOBILE_NACHRICHTEN · MOBILE_ESC_CLOSES_MENU
-- Keine Console-Errors, keine unerwarteten Network-Errors
-- **Nicht-onboardete User** sehen das Modal weiterhin (Regressionsschutz)
-
-### Betroffene Routen (bestehend, unverändert)
-- Sidebar „Nachrichten" → `/dashboard/news` (App.js Zeile 794) ✓
-- Topbar-Popover „Profil & Einstellungen" → `/dashboard/profil` (App.js Zeile 797) ✓
-- Sidebar „Profil" → `/dashboard/profil` ✓
-
-### Nicht geändert (Regressionsschutz)
-- Depot-Berechnungen, DashboardDataContext, Supabase/FastAPI-Schnittstellen, Auth-Architektur,
-  Onboarding-Wizard, Portfolio-Migration, Watchlist-Logik, News-Datenlogik, Dokumentenlogik.
+### Session 81.08 (Preview) · Hot-News Detailseite leer
+- Root Cause: `HotNewsCarousel` linkt Slugs aus Supabase-Feed auf interne
+  Detail-Endpunkte (FastAPI/Mongo), die diese aggregierten Slugs nicht kennen
+  → HTTP 404 → „Meldung nicht verfügbar".
+- Fix in `/app/frontend/src/components/dashboard/HotNewsCarousel.jsx`:
+  Wenn `source_url` vorhanden → externe Originalquelle in neuem Tab. Sonst
+  Fröhlich-eigen → interne kanonische Route `/news/nachrichten/:slug`. Sonst
+  kein Link.
+- Regel identisch zur bestehenden `linkPropsFor`-Konvention in
+  `NachrichtenPage.jsx` / `HomeNewsPreview.jsx` / `HomeFinanceNews.jsx`.
+- Kein Fake-Content, keine erfundenen Inhalte, keine neuen Detail-Seiten.
+- Status: NUR PREVIEW. Freigabe für Prod ausstehend.
 
 ## Blocker
-- **Portfolio Backend Migration (P0)** — blockiert, `SUPABASE_SERVICE_ROLE_KEY` fehlt in Preview-Container.
-  User hat Emergent-Support-Ticket offen. Nichts anfassen bis User grünes Licht gibt.
+- **Portfolio Backend Migration (P0)** — blockiert, `SUPABASE_SERVICE_ROLE_KEY`
+  fehlt weiterhin.
 
-## Backlog / Roadmap
+## Backlog
 - P1: Session 80.63 Morning/Closing Brief
-- P2: `stock-research-sync` Cronjob in `.emergent/crons.yml`
+- P2: `stock-research-sync` Cronjob
 - P2: Research-Daten für 15 DE-Aktien
 - P2: WebP/AVIF Refactoring
 - P3: Payment/Frequency Provider für Dividenden
-- Phase 4: Admin-Frontend UI für Wealth Consultations
-- Phase 4: Social Media Automation (blocked auf LinkedIn-Keys)
+- Phase 4: Admin-Frontend für Wealth Consultations
+- Phase 4: Social Media Automation (LinkedIn-Keys)
 - Phase 5: Sentry, Rate Limiting, Deploy Hardening
 
-## Test Credentials (Preview)
-Siehe `/app/memory/test_credentials.md` — unverändert.
+## Test Credentials
+Siehe `/app/memory/test_credentials.md`.
 
 ## Environment
-- Frontend: `REACT_APP_BACKEND_URL` (aktuell `https://finance-platform-v2.preview.emergentagent.com`)
-- Backend: `MONGO_URL`, `DB_NAME` — via .env
-- Sprache: **immer Deutsch antworten**
+- Frontend: `REACT_APP_BACKEND_URL=https://finance-platform-v2.preview.emergentagent.com`
+- Backend: `MONGO_URL`, `DB_NAME` via `.env`
