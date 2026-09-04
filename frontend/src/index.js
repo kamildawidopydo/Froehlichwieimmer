@@ -1,3 +1,7 @@
+// Session 81.09 — MUST be the very first import so that the axios.create
+// monkey-patch is installed before any service module (marketService,
+// watchlistApi, apiClient, etc.) creates its axios instance at module load.
+import "@/lib/apiBaseFix";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
