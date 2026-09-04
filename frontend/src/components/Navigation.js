@@ -171,7 +171,7 @@ const Navigation = () => {
               Inhalte tragen. Actions-Zone verwendet stattdessen `ml-auto`
               (siehe unten) und wird sauber rechts geankert. */}
           <div
-            className="relative z-30 hidden min-w-0 items-center overflow-visible lg:flex"
+            className="relative z-30 hidden min-w-0 items-center overflow-visible min-[1600px]:flex"
             role="menubar"
           >
             <div className="flex items-center gap-x-0.5 overflow-visible xl:gap-x-1">
@@ -255,7 +255,7 @@ const Navigation = () => {
               „Dashboard", „Abmelden" und rechte Icon-Gruppe optisch getrennt
               bleiben. */}
           <div className="relative z-40 ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-2.5">
-            <div className="hidden items-center gap-1.5 lg:flex xl:gap-2">
+            <div className="hidden items-center gap-1.5 min-[1600px]:flex min-[1600px]:gap-2">
               <Link
                 to="/formular"
                 data-testid="nav-formular-btn"
@@ -349,7 +349,7 @@ const Navigation = () => {
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
-                className="flex h-11 w-11 items-center justify-center text-bank-text-muted transition-colors hover:text-bank-text lg:hidden"
+                className="flex h-11 w-11 items-center justify-center text-bank-text-muted transition-colors hover:text-bank-text min-[1600px]:hidden"
                 aria-label="Suche öffnen"
               >
                 <Search className="h-[20px] w-[20px]" strokeWidth={1.32} />
@@ -357,7 +357,7 @@ const Navigation = () => {
               <button
                 type="button"
                 onClick={() => setMobileOpen(true)}
-                className="flex h-11 w-11 items-center justify-center text-bank-text transition-colors hover:text-bank-primary lg:hidden"
+                className="flex h-11 w-11 items-center justify-center text-bank-text transition-colors hover:text-bank-primary min-[1600px]:hidden"
                 data-testid="mobile-menu-toggle"
                 aria-expanded={mobileOpen}
                 aria-controls="mobile-nav-drawer"
@@ -379,7 +379,7 @@ const Navigation = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[120] bg-bank-ink/50 backdrop-blur-[2px] lg:hidden"
+              className="fixed inset-0 z-[120] bg-bank-ink/50 backdrop-blur-[2px] min-[1600px]:hidden"
               aria-label="Menü schließen"
               onClick={() => setMobileOpen(false)}
             />
@@ -389,7 +389,7 @@ const Navigation = () => {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'tween', duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed inset-y-0 right-0 z-[130] flex w-full max-w-[min(100%,22rem)] flex-col border-l border-bank-border bg-bank-surface shadow-editorial-lg lg:hidden dark:bg-bank-surface"
+              className="fixed inset-y-0 right-0 z-[130] flex w-full max-w-[min(100%,22rem)] flex-col border-l border-bank-border bg-bank-surface shadow-editorial-lg min-[1600px]:hidden dark:bg-bank-surface"
             >
               <div className="flex items-center justify-between border-b border-bank-border px-6 py-4">
                 <span className="text-lg font-semibold text-bank-text">{navActions.menu}</span>
