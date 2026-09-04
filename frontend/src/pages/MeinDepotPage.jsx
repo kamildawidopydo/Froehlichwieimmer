@@ -16,6 +16,8 @@ import LiquiditaetBanken from '@/components/mein-depot/LiquiditaetBanken';
 import Aktivitaet from '@/components/mein-depot/Aktivitaet';
 import Ertraege from '@/components/mein-depot/Ertraege';
 import Steuerübersicht from '@/components/mein-depot/Steuerübersicht';
+import Dokumente from '@/components/mein-depot/Dokumente';
+import Service from '@/components/mein-depot/Service';
 
 /**
  * /mein-depot — Public-Layout-Wrapper um bestehende DepotPage.
@@ -60,6 +62,8 @@ const MeinDepotContent = () => (
       <Aktivitaet />
       <Ertraege />
       <Steuerübersicht />
+      <Dokumente />
+      <Service />
     </div>
 
     <DepotPage showTopSummary={false} showLegacyPositionCards={false} showLegacyContractsSection={false} />

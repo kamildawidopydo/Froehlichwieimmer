@@ -6,6 +6,28 @@ FastAPI + MongoDB news/finance portal, light editorial private-banking aesthetic
 ## Roadmap
 Phase 0-3: DONE. Phase 4-5: BACKLOG.
 
+- 81.06 Schritt 6/7 (Sep 04 2026) — **Depot-Professionalisierung · „Dokumente & Service" (nur PREVIEW)**:
+
+  **Kontext**: Portfolio-Migration bleibt eingefroren. Dokumente kommen ausschließlich aus dem bestehenden `/app/frontend/src/data/customerDocuments.js` (4 statische Firmen-PDFs unter `/assets/documents/`: Kundendokumente, Risiken der Kapitalanlage, Freistellungsauftrag, Informationsbogen Einlagenlösungen). KEIN neuer Storage, kein PDF-Generator, kein user-spezifisches Dokumenten-Backend.
+
+  **Neu (2 Komponenten)**:
+  - `frontend/src/components/mein-depot/Dokumente.jsx` — 2-Spalten-Grid mit den 4 Kundendokumenten (Kompakt-Cards: Titel · Beschreibung · Dateityp PDF · Download-Button + Öffnen-Button). Download über bestehenden `fetchPdfBlob` + `downloadFile`-Flow. „Alle Dokumente ansehen →" CTA → `/dashboard/dokumente`. Neutrale Hinweiszeile: „Individuelle Unterlagen wie Orderabrechnungen, Kontoauszüge oder Jahressteuerbescheinigungen werden — sobald verfügbar — in Ihrem Dokumenten-Bereich bereitgestellt." (§8/§9/§10: keine Synthese).
+  - `frontend/src/components/mein-depot/Service.jsx` — 3-Spalten-Grid: Support (mit `supportUnread`-Badge falls > 0 → `/dashboard/support`), Kontakt (persönliche Beratung → `/contact`), Rückruf (`/contact#rueckruf`). Keine Aussage über zugewiesenen persönlichen Berater (§13).
+
+  **Geändert**: `frontend/src/pages/MeinDepotPage.jsx` — mountet `Dokumente` + `Service` nach `Steuerübersicht`.
+
+  **User-Isolation**: Die 4 Kundendokumente sind Firmen-PDFs, gleich für alle Nutzer — kein per-User-Filter, keine `user_id`-Übergabe in URL/Query. Download-Endpoint (statisches Asset) hat keine Authentifizierungsanforderung; für individuelle Dokumente würde der bestehende `/dashboard/dokumente`-Flow greifen (unverändert).
+
+  **QA (Preview, demo.kunde, 1920 & 390)**:
+  - Alle 17 relevanten testids YES: `mein-depot-dokumente`, `mdd-alle`, 4× `mdd-doc-*`, Download/Öffnen für Freistellungsauftrag, `mein-depot-service`, `mds-support/contact/callback`. `mdd-empty` = no (4 Dokumente vorhanden).
+  - Regressionen Step 2–5: `mein-depot-hero`, `mein-depot-positionen`, `mein-depot-aktivitaet`, `mein-depot-ertraege`, `mein-depot-tax` alle YES.
+  - Body-Overflow: 1920 `sw=vw=1920`, 390 `sw=vw=390`, `overflow=[]`.
+  - Keine Runtime-Errors.
+
+  **Nicht deployed** — strikt Preview.
+
+
+
 - 81.06 Schritt 5/7 (Sep 04 2026) — **Depot-Professionalisierung · „Aktivität · Erträge · Steuerübersicht" (nur PREVIEW)**:
 
   **Kontext**: Portfolio-Migration bleibt eingefroren. Alle drei neuen Sektionen konsumieren bereits geladene DashboardDataContext-Daten. 0 zusätzliche Requests.
