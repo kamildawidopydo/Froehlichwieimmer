@@ -4,7 +4,7 @@ import axios from 'axios';
 import { ArrowRight, ArrowUpRight, TrendingUp, TrendingDown } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import SafeNewsImage from '@/components/news/SafeNewsImage';
-import { einordnungApi, EINORDNUNG_CATEGORY_LABEL } from '@/services/einordnungApi';
+import { einordnungApi, EINORDNUNG_CATEGORY_LABEL, isPublicEinordnung } from '@/services/einordnungApi';
 import { fetchMarketOverview, formatDisplayPrice, formatChangePct } from '@/services/marketService';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
@@ -207,7 +207,7 @@ const HomeNewsPreview = () => {
       // Fetch both in parallel; keep existing content on error → no flicker.
       const [newsRes, einRes] = await Promise.allSettled([
         api.get('/news/nachrichten', { params: { limit: 5 } }),
-        einordnungApi.list({ limit: 3 }),
+        einordnungApi.list({ limit: 25 }),
       ]);
       if (!alive) return;
       if (newsRes.status === 'fulfilled') {
@@ -221,7 +221,11 @@ const HomeNewsPreview = () => {
         setNewsState((s) => ({ items: s.items, loading: false })); // preserve
       }
       if (einRes.status === 'fulfilled') {
-        setEinState({ items: einRes.value.items || [], loading: false });
+        // Session 80.69 — zentraler Public-Filter: keine Demo-/Test-Einordnungen
+        // in der öffentlichen Homepage-Sidebar. Buffer-Fetch (limit=25), damit
+        // nach Filter bis zu 3 echte Beiträge übrig bleiben können.
+        const real = (einRes.value.items || []).filter(isPublicEinordnung);
+        setEinState({ items: real.slice(0, 3), loading: false });
       } else {
         setEinState((s) => ({ items: s.items, loading: false }));
       }
@@ -358,28 +362,61 @@ const HomeNewsPreview = () => {
             <div className="flex items-center justify-between">
               <Eyebrow>Fröhlich — Unsere Einordnung</Eyebrow>
             </div>
-            <div className="mt-4 space-y-3">
-              {(einState.loading ? Array.from({ length: 3 }) : einState.items.slice(0, 3)).map((post, idx) => (
-                post ? (
-                  <Link key={post.slug} to={`/news/einordnung/${post.slug}`} className="group flex gap-3 border border-bank-border bg-white p-3 transition-colors hover:border-bank-gold/60" data-testid={`home-einordnung-${post.slug}`}>
-                    <div className="h-16 w-20 shrink-0 overflow-hidden">
-                      <SafeNewsImage src={post.image_url} category={post.category} alt="" className="h-full w-full object-cover" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="line-clamp-2 font-serif text-[13.5px] leading-snug text-bank-text group-hover:text-bank-primary">{post.title}</h4>
-                      <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-bank-text-muted">
-                        {dateFmt(post.published_at)} · Unsere Einordnung
-                      </p>
-                    </div>
-                  </Link>
-                ) : (
-                  <div key={idx} className="h-[90px] animate-pulse border border-bank-border bg-white/70" />
-                )
-              ))}
-            </div>
-            <Link to="/news/nachrichten#einordnung-section" className="mt-4 inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.18em] text-bank-primary hover:underline" data-testid="home-einordnung-all">
-              Alle Einordnungen lesen <ArrowRight size={12} strokeWidth={1.8} />
-            </Link>
+            {einState.loading ? (
+              <div className="mt-4 space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-[90px] animate-pulse border border-bank-border bg-white/70" />
+                ))}
+              </div>
+            ) : einState.items.length > 0 ? (
+              <>
+                <div className="mt-4 space-y-3">
+                  {einState.items.slice(0, 3).map((post) => (
+                    <Link
+                      key={post.slug}
+                      to={`/news/einordnung/${post.slug}`}
+                      className="group flex gap-3 border border-bank-border bg-white p-3 transition-colors hover:border-bank-gold/60"
+                      data-testid={`home-einordnung-${post.slug}`}
+                    >
+                      <div className="h-16 w-20 shrink-0 overflow-hidden">
+                        <SafeNewsImage src={post.image_url} category={post.category} alt="" className="h-full w-full object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="line-clamp-2 font-serif text-[13.5px] leading-snug text-bank-text group-hover:text-bank-primary">{post.title}</h4>
+                        <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-bank-text-muted">
+                          {dateFmt(post.published_at)} · Unsere Einordnung
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                <Link to="/news/nachrichten#einordnung-section" className="mt-4 inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.18em] text-bank-primary hover:underline" data-testid="home-einordnung-all">
+                  Alle Einordnungen lesen <ArrowRight size={12} strokeWidth={1.8} />
+                </Link>
+              </>
+            ) : (
+              /* Session 80.69 — Editorial Fallback ohne „keine Beiträge"-Wording,
+                 falls (a) API-Fehler oder (b) noch keine echten Einordnungen
+                 veröffentlicht sind (aktueller Zustand: alle DB-Einträge is_demo). */
+              <div
+                className="mt-4 border border-bank-border bg-white p-5"
+                data-testid="home-einordnung-fallback"
+              >
+                <h3 className="font-serif text-[17px] leading-snug text-bank-text">
+                  Unsere Einordnung
+                </h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-bank-text-muted">
+                  Unsere Einschätzungen zu Kapitalmärkten, Zinsen und ausgewählten Anlagethemen.
+                </p>
+                <Link
+                  to="/news/nachrichten#einordnung-section"
+                  data-testid="home-einordnung-fallback-cta"
+                  className="mt-4 inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.18em] text-bank-primary hover:underline"
+                >
+                  Unsere Einordnungen entdecken <ArrowRight size={12} strokeWidth={1.8} />
+                </Link>
+              </div>
+            )}
           </aside>
         </div>
 

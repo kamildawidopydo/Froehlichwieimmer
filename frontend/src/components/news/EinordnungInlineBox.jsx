@@ -15,6 +15,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { isPublicEinordnung } from '@/services/einordnungApi';
 
 const BASE = process.env.REACT_APP_BACKEND_URL;
 const api = axios.create({ baseURL: `${BASE}/api` });
@@ -38,7 +39,10 @@ const EinordnungInlineBox = ({ article }) => {
     let alive = true;
     loadEinordnungen().then((posts) => {
       if (!alive || !posts.length) return;
-      const published = posts.filter((p) => !p.status || p.status === 'published');
+      // Session 80.69 — zentraler Public-Filter (statt lokalem status-Guard).
+      // Verhindert, dass Demo-/Test-Einordnungen als redaktionelle Fröhlich-
+      // Einordnung unter einer öffentlichen News-Detailseite erscheinen.
+      const published = posts.filter(isPublicEinordnung);
       // 1. exakter Backlink über related_news_slug (stärkster Bezug)
       let m = published.find((p) => p.related_news_slug && p.related_news_slug === article.slug);
       // 2. gemeinsames investment_topic_slug (thematischer Bezug)

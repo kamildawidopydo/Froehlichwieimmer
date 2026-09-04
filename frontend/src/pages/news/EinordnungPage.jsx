@@ -50,6 +50,7 @@ const EinordnungPage = () => {
         title={post ? `${post.title} — Unsere Einordnung` : 'Unsere Einordnung'}
         description={post?.teaser || ''}
         path={`/news/einordnung/${slug}`}
+        noIndex={!!post?.is_demo}
       />
 
       <section className="border-b border-bank-border bg-gradient-to-b from-bank-cream/40 to-white">

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, ArrowRight } from 'lucide-react';
 import SafeNewsImage from '@/components/news/SafeNewsImage';
-import { einordnungApi, EINORDNUNG_CATEGORY_LABEL } from '@/services/einordnungApi';
+import { einordnungApi, EINORDNUNG_CATEGORY_LABEL, isPublicEinordnung } from '@/services/einordnungApi';
 
 /**
  * Session 80.67 — „Unsere Einordnung" auf 3 gleichwertige Editorial-Cards umgestellt.
@@ -84,12 +84,9 @@ const EinordnungSection = () => {
     einordnungApi.list({ limit: 25 })
       .then((d) => {
         if (!alive) return;
-        // Session 80.68 — Produktions-Filter: nur echte, publizierte Beiträge.
-        // Demo-/Seed-Datensätze (`is_demo === true`) werden aus der öffentlichen
-        // Section entfernt, damit produktiv keine Testinhalte sichtbar sind.
-        const real = (d.items || []).filter(
-          (p) => p && p.is_demo !== true && (p.status ? p.status === 'published' : true),
-        );
+        // Session 80.69 — zentraler Public-Filter aus `einordnungApi`
+        // (verhindert Demo-Leaks und Nicht-published-Status).
+        const real = (d.items || []).filter(isPublicEinordnung);
         setState({ items: real.slice(0, 3), loading: false, error: false });
       })
       .catch(() => { if (alive) setState({ items: [], loading: false, error: true }); });

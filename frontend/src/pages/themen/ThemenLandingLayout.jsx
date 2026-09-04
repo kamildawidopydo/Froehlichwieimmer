@@ -6,6 +6,7 @@ import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { relativeTimeLabel } from '@/lib/news/relativeTime';
 import { resolveAccentPair } from '@/design-system/accents';
+import { isPublicEinordnung } from '@/services/einordnungApi';
 
 /**
  * Session 80.35 — Geteiltes Layout für Themen-Landingpages.
@@ -57,7 +58,9 @@ const ThemenLandingLayout = ({
         ]);
         if (!alive) return;
         setNews(newsRes.data?.items || []);
-        const posts = (einoRes.data?.items || []).filter((p) => !p.status || p.status === 'published');
+        // Session 80.69 — zentraler Public-Filter (verhindert Demo-Leaks
+        // auf Themen-Landingpages, auch falls Demos später `investment_topic_slug` erhalten).
+        const posts = (einoRes.data?.items || []).filter(isPublicEinordnung);
         setEinordnungen(posts.filter((p) => p.investment_topic_slug === slug).slice(0, 2));
       } catch {
         if (alive) { setNews([]); setEinordnungen([]); }
