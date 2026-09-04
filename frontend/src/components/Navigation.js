@@ -148,7 +148,7 @@ const Navigation = () => {
           className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-bank-primary/25 to-transparent opacity-80"
         />
 
-        <div className="mx-auto flex min-h-[5rem] w-full max-w-[1600px] items-center gap-4 overflow-visible px-5 sm:min-h-[5.25rem] lg:gap-6 lg:px-12 xl:gap-8 xl:px-16">
+        <div className="mx-auto flex min-h-[5rem] w-full max-w-[1600px] items-center gap-4 overflow-visible px-5 sm:min-h-[5.25rem] lg:gap-6 lg:px-12 xl:gap-4 xl:px-8">
           <Link
             to="/"
             data-testid="nav-logo"
@@ -171,7 +171,7 @@ const Navigation = () => {
               Inhalte tragen. Actions-Zone verwendet stattdessen `ml-auto`
               (siehe unten) und wird sauber rechts geankert. */}
           <div
-            className="relative z-30 hidden min-w-0 items-center overflow-visible min-[1600px]:flex"
+            className="relative z-30 hidden shrink-0 items-center overflow-visible min-[1600px]:flex"
             role="menubar"
           >
             <div className="flex items-center gap-x-0.5 overflow-visible xl:gap-x-1">

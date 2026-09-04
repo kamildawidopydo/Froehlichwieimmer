@@ -97,7 +97,7 @@ export const CustomerServiceTopBar = ({ className }) => {
         className,
       )}
     >
-      <div className="mx-auto flex h-11 max-w-[1600px] items-center justify-between gap-4 px-5 sm:h-12 lg:px-12 xl:px-16">
+      <div className="mx-auto flex h-11 max-w-[1600px] items-center justify-between gap-4 px-5 sm:h-12 lg:px-12 xl:px-8">
         <NavCustomerServiceContact variant="topbar" />
         <a
           href={`mailto:${siteContact.email}`}
