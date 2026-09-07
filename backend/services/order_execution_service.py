@@ -386,8 +386,31 @@ async def _execute_order_locked(
                 "updated_at": now2,
             }},
         )
-        # Order kann schon executed sein (falls Vorgänger-Retry so weit kam) —
-        # ok, idempotent.
+        if upd.matched_count == 0:
+            # Cancel-Race: Order könnte zwischenzeitlich cancelled sein
+            # (obwohl `cancel_order` einen Guard hat — Sicherheitsnetz).
+            fresh_order = await db.stock_orders.find_one({"_id": order_id})
+            fresh_status = (fresh_order or {}).get("status")
+            if fresh_status == "cancelled":
+                # Kritischer Zustand: Cash debited + Position applied + Order cancelled.
+                # Compensation ist erforderlich (Cash-Reversal); Position bleibt
+                # bestehen (Kunde hat Anspruch auf gebuchte Stücke), aber der
+                # Ops-Flag markiert die Order zur manuellen Klärung.
+                await db.order_executions.update_one(
+                    {"_id": exec_doc["_id"]},
+                    {"$set": {
+                        "status": "compensation_required",
+                        "last_error": "CANCEL_RACE: order cancelled after cash+position",
+                        "updated_at": now2,
+                    }},
+                )
+                raise ExecutionError(
+                    "CANCEL_RACE",
+                    "Order wurde während der Ausführung storniert — compensation_required.",
+                    409,
+                )
+            # Andernfalls: Order ist bereits executed durch parallelen Lauf — OK.
+        # order_settled auch dann setzen, wenn CAS 0 traf, aber Order executed ist.
         await db.order_executions.update_one(
             {"_id": exec_doc["_id"]},
             {"$set": {"status": "order_settled", "updated_at": now2}},

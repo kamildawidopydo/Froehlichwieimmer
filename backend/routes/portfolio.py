@@ -73,6 +73,11 @@ from services.order_execution_service import (  # noqa: E402
     ensure_indexes as ensure_execution_indexes,
 )
 
+# Session 82.27 · Depot P0 — Auto-Matching-Service
+from services.order_matching_service import (  # noqa: E402
+    run_pending_limit_buy_matching,
+)
+
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 admin_router = APIRouter(prefix="/api/admin/portfolio", tags=["admin-portfolio"])
@@ -805,11 +810,29 @@ async def cancel_order(
         return _serialize_stock_order(order)  # idempotent
     if order.get("status") != "pending":
         raise HTTPException(status_code=409, detail="Order ist nicht mehr stornierbar")
+    # Session 82.27 · Cancel-Race-Guard: wenn eine Execution bereits Cash
+    # gebucht ODER die Position angewendet hat, dürfen wir die Order nicht
+    # mehr canceln — sonst hätten wir cash_debited + position_applied +
+    # cancelled (finanziell inkonsistent).
+    exec_running = await db.order_executions.find_one({
+        "order_id": oid,
+        "status": {"$in": ["cash_debited", "position_applied", "order_settled", "completed"]},
+    })
+    if exec_running:
+        raise HTTPException(
+            status_code=409,
+            detail="Order befindet sich bereits in Ausführung und kann nicht mehr storniert werden.",
+        )
     now = datetime.now(timezone.utc)
-    await db.stock_orders.update_one(
+    # CAS: nur setzen, solange Status pending ist UND keine Execution kritisch läuft.
+    res = await db.stock_orders.update_one(
         {"_id": oid, "user_id": uid, "status": "pending"},
         {"$set": {"status": "cancelled", "cancelled_at": now, "updated_at": now}},
     )
+    if res.modified_count == 0:
+        # Zwischenzeitlich ausgeführt → aktueller Zustand zurückgeben.
+        fresh = await db.stock_orders.find_one({"_id": oid})
+        raise HTTPException(status_code=409, detail=f"Order ist nicht mehr stornierbar (Status: {fresh.get('status') if fresh else 'unbekannt'})")
     fresh = await db.stock_orders.find_one({"_id": oid})
     return _serialize_stock_order(fresh)
 
@@ -888,6 +911,19 @@ async def admin_execute_order(
     except ExecutionError as exc:
         raise HTTPException(status_code=exc.http_status, detail=f"{exc.code}: {exc.detail}")
     return result
+
+
+# ─── ADMIN Order-Matching (Session 82.27 · Depot P0) ────────────────────
+@admin_router.post("/orders/match")
+async def admin_match_orders(
+    _admin: dict = Depends(require_admin),
+):
+    """
+    Startet den Auto-Matching-Lauf für pending Limit-Buy-Orders.
+    Delegiert an `services.order_matching_service.run_pending_limit_buy_matching`
+    und liefert einen kompakten Report zurück. Preview-only Trigger.
+    """
+    return await run_pending_limit_buy_matching(db, trigger="admin-manual")
 
 
 # ─── Indizes ─────────────────────────────────────────────────────────────

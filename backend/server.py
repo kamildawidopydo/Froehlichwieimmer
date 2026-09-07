@@ -4580,6 +4580,45 @@ api.add_api_route(
 )
 
 
+# Session 82.27 — Auto-Matcher-Cron (alle 15 Min).
+# Prüft pending Limit-Buy-Orders gegen echte Quotes und ruft für jede
+# erfüllte Limit-Bedingung die bestehende Execution-Saga aus 82.26 auf.
+# Kein Echtzeit-Order-Matching — läuft periodisch. UI kommuniziert das.
+async def _cron_portfolio_matcher(request: Request):
+    _verify_cron_bearer(request.headers.get("authorization"))
+    run_id = _secrets.token_hex(8)
+    started = datetime.now(timezone.utc).isoformat()
+
+    async def _job() -> None:
+        try:
+            from services.order_matching_service import (  # lazy import
+                run_pending_limit_buy_matching,
+            )
+            report = await run_pending_limit_buy_matching(db, trigger="cron")
+            logger.info(
+                "cron_portfolio_matcher ok run_id=%s report=%s",
+                run_id,
+                {k: report.get(k) for k in
+                 ("orders_seen", "orders_executed", "orders_limit_not_reached",
+                  "orders_quote_stale", "orders_quote_unavailable",
+                  "orders_cancelled_during_run", "insufficient_cash",
+                  "orders_failed", "duration_ms")},
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("cron_portfolio_matcher failed run_id=%s", run_id)
+
+    asyncio.create_task(_job())
+    return {"accepted": True, "run_id": run_id, "job": "portfolio-matcher", "started_at": started}
+
+
+api.add_api_route(
+    "/cron/portfolio-matcher",
+    _cron_portfolio_matcher,
+    methods=["POST"],
+    include_in_schema=False,
+)
+
+
 
 
 async def _admin_news_list(_user: dict = Depends(require_admin), status: Optional[str] = None, limit: int = 50):

@@ -53,3 +53,15 @@ crons:
     endpoint: "{{BASE_URL}}/api/cron/portfolio-snapshots"
     method: POST
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+
+  # 15-Minuten-Matcher für pending Limit-Buy-Orders (Session 82.27).
+  # Verwendet dieselbe Execution-Saga wie der Admin-Endpoint (82.26).
+  # KEIN Echtzeit-Matching — reine periodische Prüfung; die UI kommuniziert
+  # das entsprechend ("Wird automatisch geprüft" statt "sofort ausgeführt").
+  # Endpoint acked 2xx sofort und startet den Matcher als asyncio-Background-Task.
+  - name: portfolio-matcher
+    description: "Alle 15 Min pending Limit-Buy-Orders gegen echte Quotes matchen"
+    cron: "*/15 * * * *"
+    endpoint: "{{BASE_URL}}/api/cron/portfolio-matcher"
+    method: POST
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.

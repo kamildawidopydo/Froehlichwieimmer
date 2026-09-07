@@ -2,6 +2,28 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.27 (Preview) · Depot P0 — Auto-Limit-Order Matching Worker
+- **Neuer Service** `services/order_matching_service.py` — `run_pending_limit_buy_matching(db)` iteriert pending Limit-Buy-Orders (Priority: `created_at ASC`), bündelt Quote-Fetch, prüft `real_price <= limit_price` UND `price_status='fresh'`, und delegiert JEDE Ausführung an die **bestehende** Saga `execute_order` aus Session 82.26. Kein Dual-Codepfad.
+- **Neuer Admin-Endpoint** `POST /api/admin/portfolio/orders/match` (require_admin) — Manual-Trigger für Preview-QA.
+- **Neuer Cron** `.emergent/crons.yml` + `POST /api/cron/portfolio-matcher` (`*/15 * * * *`, Bearer-Auth). KEIN Echtzeit-Matching — die UI kommuniziert das entsprechend („Wird bei Erreichen des Limits geprüft").
+- **Race-Fixes (kritisch)**:
+  - `cancel_order`: neuer Guard — 409 wenn eine Execution bereits `cash_debited/position_applied/order_settled/completed` ist. Verhindert cash+position mit cancelled Order.
+  - `order_execution_service` settle-step: prüft `matched_count` des CAS-Updates. Wenn 0 UND Order zwischenzeitlich cancelled → Execution `compensation_required`, `ExecutionError(CANCEL_RACE, 409)`. Sicherheitsnetz falls Cancel-Guard umgangen würde.
+- **QA Preview (verifiziert)**:
+  - Auth: Unauth → 401, Customer → 403 ✅
+  - Match-Run: `seen=6 · eligible=1 · executed=1 · limit_not_reached=2 · unavailable=3 · fresh=1` ✅
+  - Second Match Run: `seen=5 · eligible=0 · executed=0` (executed Order ignoriert) ✅
+  - Multi-Order Cash-Race: 2. Order beim Anlegen abgelehnt (`available=1972.66` < `3600.00`) — kein Negativ-Cash ✅
+  - Admin+Matcher parallel für dieselbe Order: 1× executed, matcher liefert `action=executed` (resumed=true intern) ✅
+  - Cancel-Race: POST-FIX Retest: Execution completed, Cancel-Response 409 „Order ist nicht mehr stornierbar" ✅
+- **Financial Invariants (Aggregation gegen Mongo, demo-Kunde)**:
+  - `DOUBLE_CASH_DEBITS=0 · DUPLICATE_EXECUTIONS=0 · EXECUTED_CANCELLED_ORDERS=0 · EXECUTED_ABOVE_LIMIT=0 · NEGATIVE_CASH=false`
+  - EXECUTIONS_TOTAL/COMPLETED, STOCK_PURCHASE_EVENTS, ORDERS_EXECUTED und APPLIED_EXECUTION_IDS bleiben konsistent (1:1-Verhältnis).
+- **Snapshot nach Matching**: Snapshot upsertet neuen Zustand mit korrigiertem Cash-Balance und Stock-MV. Kein zweites Dokument.
+
+### Constraints
+Kein Prod-Deploy · Nur Limit-Buy · Kein Market/Sell/IPO/Bond · Kein Fake-Preis · Kein Supabase-Write · Kein Cron-Slot-Zwang (falls Plattform-Limit greift → BLOCKED-Fallback dokumentiert).
+
 ## Session 82.26 (Preview) · Depot P0 — Limit-Order-Execution Saga + Quote-Integrity-Gate
 - **Phase 0 (Quote-Integrity-Fix)**: `services/portfolio_state.py` — bei fehlender Quote fällt der Einstand NICHT mehr in `market_value`. Stattdessen: `market_value` summiert ausschließlich bepreiste Positionen, `unpriced_symbols` transparent gelistet, `valuation_complete=false`. Neu: `stocks.priced_cost_basis` (nur bepreiste) neben `stocks.cost_basis` (alle). P/L nur über bepreiste Positionen. Position-Serializer (portfolio.py `_serialize_position` / `_num`) korrigiert für `Decimal128`.
 - **Neuer Service** `services/order_execution_service.py` — persistente Saga für **Limit-Buy** Order-Execution auf Standalone Mongo (keine Multi-Document-Transaktion). Schritte: QUOTE-GATE → CASH-DEBIT → POSITION-APPLY → ORDER-SETTLE → COMPLETE. Deterministische Idempotency-Keys `execution:{order_id}:{cash|position|settle|cash-reversal}`.
