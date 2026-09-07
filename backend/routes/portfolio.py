@@ -28,10 +28,15 @@ Performance.
 
 from __future__ import annotations
 
-from datetime import datetime
+import asyncio
+import re
+from collections import defaultdict
+from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_EVEN, InvalidOperation
 from typing import Optional
 
 from bson import ObjectId
+from bson.decimal128 import Decimal128
 from fastapi import APIRouter, Depends, HTTPException, Body
 from pydantic import BaseModel, Field
 
@@ -106,17 +111,30 @@ def _serialize_position(doc: dict, kind: str) -> dict:
 
 
 def _serialize_order(doc: dict) -> dict:
+    def _amt(v):
+        if v is None:
+            return None
+        if isinstance(v, Decimal128):
+            return format(v.to_decimal(), "f")
+        return str(v)
     return {
         "id": str(doc["_id"]),
         "symbol": doc.get("symbol"),
         "side": doc.get("side"),
+        "order_type": doc.get("order_type"),
         "quantity": _num(doc.get("quantity")),
-        "requested_price": _num(doc.get("requested_price")) if doc.get("requested_price") is not None else None,
-        "executed_price": _num(doc.get("executed_price")) if doc.get("executed_price") is not None else None,
+        "requested_price": _amt(doc.get("limit_price")) if doc.get("limit_price") is not None else (
+            _amt(doc.get("requested_price")) if doc.get("requested_price") is not None else None
+        ),
+        "limit_price": _amt(doc.get("limit_price")) if doc.get("limit_price") is not None else None,
+        "executed_price": _amt(doc.get("executed_price")) if doc.get("executed_price") is not None else None,
+        "reserved_cash": _amt(doc.get("reserved_cash")) if doc.get("reserved_cash") is not None else None,
         "status": doc.get("status", "pending"),
         "currency": doc.get("currency") or "EUR",
         "created_at": _iso(doc.get("created_at")),
+        "updated_at": _iso(doc.get("updated_at")),
         "executed_at": _iso(doc.get("executed_at")),
+        "cancelled_at": _iso(doc.get("cancelled_at")),
     }
 
 
@@ -439,6 +457,332 @@ async def admin_cash_summary_for_user(
     return await get_cash_summary(db, fake_user)
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# SESSION 82.19 · Phase 3 — Write-Layer: Watchlist / Alerts / Orders
+# ═══════════════════════════════════════════════════════════════════════
+
+_SYMBOL_RE = re.compile(r"^[A-Z0-9.\-]{1,12}$")
+
+# Per-User Order-Lock (Same-Instance-Serialization für parallele Buy-Orders).
+_order_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+
+
+def _norm_symbol(s: str) -> str:
+    return (s or "").strip().upper()
+
+
+def _validate_symbol(sym: str) -> str:
+    s = _norm_symbol(sym)
+    if not _SYMBOL_RE.match(s):
+        raise HTTPException(status_code=422, detail="ungültiges Symbol")
+    return s
+
+
+def _to_decimal_strict(value, field: str) -> Decimal:
+    if value is None:
+        raise HTTPException(status_code=422, detail=f"{field} fehlt")
+    if isinstance(value, float):
+        raise HTTPException(status_code=422, detail=f"{field} muss als String übergeben werden (keine Floats)")
+    try:
+        d = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+    except (InvalidOperation, TypeError):
+        raise HTTPException(status_code=422, detail=f"{field} ist kein gültiger Betrag")
+    if d != d:
+        raise HTTPException(status_code=422, detail=f"{field} ist NaN")
+    return d
+
+
+# ─── WATCHLIST ─────────────────────────────────────────────────────────
+class WatchlistCreateIn(BaseModel):
+    symbol: str = Field(..., min_length=1, max_length=12)
+    display_name: Optional[str] = Field(default=None, max_length=100)
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+    model_config = {"extra": "forbid"}
+
+
+@router.post("/watchlist", status_code=201)
+async def add_watchlist(
+    payload: WatchlistCreateIn = Body(...),
+    user: dict = Depends(get_current_user),
+):
+    sym = _validate_symbol(payload.symbol)
+    uid = ObjectId(user["id"])
+    now = datetime.now(timezone.utc)
+    # sort_order = current count + 1
+    count = await db.watchlists.count_documents({"user_id": uid})
+    doc = {
+        "user_id": uid,
+        "symbol": sym,
+        "asset_type": "stock",
+        "display_name": (payload.display_name or sym)[:100],
+        "notes": (payload.notes or None),
+        "sort_order": count + 1,
+        "created_at": now,
+    }
+    try:
+        res = await db.watchlists.insert_one(doc)
+        doc["_id"] = res.inserted_id
+        return _serialize_watchlist(doc)
+    except Exception as exc:
+        if getattr(exc, "code", None) == 11000 or "duplicate key" in str(exc).lower():
+            existing = await db.watchlists.find_one({"user_id": uid, "symbol": sym})
+            if existing:
+                return _serialize_watchlist(existing)
+        raise HTTPException(status_code=500, detail=f"watchlist insert failed: {exc}")
+
+
+@router.delete("/watchlist/{symbol}", status_code=204)
+async def delete_watchlist(
+    symbol: str,
+    user: dict = Depends(get_current_user),
+):
+    sym = _validate_symbol(symbol)
+    uid = ObjectId(user["id"])
+    res = await db.watchlists.delete_one({"user_id": uid, "symbol": sym})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Watchlist-Eintrag nicht gefunden")
+    return None
+
+
+# ─── ALERTS ─────────────────────────────────────────────────────────────
+_ALERT_DIRECTIONS = frozenset({"above", "below"})
+
+
+class AlertCreateIn(BaseModel):
+    symbol: str = Field(..., min_length=1, max_length=12)
+    target_price: str = Field(..., description="Positiver Dezimalbetrag")
+    direction: str = Field(..., description="'above' | 'below'")
+    note: Optional[str] = Field(default=None, max_length=500)
+    channel: Optional[str] = Field(default="app", max_length=50)
+
+    model_config = {"extra": "forbid"}
+
+
+@router.post("/alerts", status_code=201)
+async def create_alert(
+    payload: AlertCreateIn = Body(...),
+    user: dict = Depends(get_current_user),
+):
+    sym = _validate_symbol(payload.symbol)
+    direction = payload.direction.lower()
+    if direction not in _ALERT_DIRECTIONS:
+        raise HTTPException(status_code=422, detail="direction muss 'above' oder 'below' sein")
+    price = _to_decimal_strict(payload.target_price, "target_price")
+    if price <= Decimal("0.00"):
+        raise HTTPException(status_code=422, detail="target_price muss > 0 sein")
+
+    uid = ObjectId(user["id"])
+    # Duplicate-Guard: gleicher aktiver Alert (Symbol + Direction + Preis)
+    existing = await db.stock_alerts.find_one({
+        "user_id": uid,
+        "symbol": sym,
+        "alert_type": f"price_{direction}",
+        "threshold": Decimal128(price),
+        "is_active": True,
+    })
+    if existing:
+        return _serialize_alert(existing)
+
+    now = datetime.now(timezone.utc)
+    doc = {
+        "user_id": uid,
+        "symbol": sym,
+        "alert_type": f"price_{direction}",
+        "threshold": Decimal128(price),
+        "channel": (payload.channel or "app")[:50],
+        "note": (payload.note or None),
+        "is_active": True,
+        "last_triggered_at": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    res = await db.stock_alerts.insert_one(doc)
+    doc["_id"] = res.inserted_id
+    return _serialize_alert(doc)
+
+
+@router.delete("/alerts/{alert_id}", status_code=204)
+async def delete_alert(
+    alert_id: str,
+    user: dict = Depends(get_current_user),
+):
+    try:
+        oid = ObjectId(alert_id)
+    except Exception:
+        raise HTTPException(status_code=422, detail="ungültige alert_id")
+    uid = ObjectId(user["id"])
+    res = await db.stock_alerts.delete_one({"_id": oid, "user_id": uid})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Alert nicht gefunden")
+    return None
+
+
+# ─── ORDERS ─────────────────────────────────────────────────────────────
+_ORDER_SIDES = frozenset({"buy", "sell"})
+_ORDER_TYPES = frozenset({"market", "limit"})
+
+
+class OrderCreateIn(BaseModel):
+    symbol: str = Field(..., min_length=1, max_length=12)
+    side: str = Field(...)
+    order_type: str = Field(...)
+    quantity: str = Field(..., description="Ganzzahliger Positive-Stückzahl-String")
+    limit_price: Optional[str] = Field(default=None)
+    idempotency_key: str = Field(..., min_length=8, max_length=200)
+    client_reference: Optional[str] = Field(default=None, max_length=200)
+
+    model_config = {"extra": "forbid"}
+
+
+def _serialize_stock_order(doc: dict) -> dict:
+    def _amt(v):
+        if v is None:
+            return None
+        if isinstance(v, Decimal128):
+            return format(v.to_decimal(), "f")
+        return str(v)
+    return {
+        "id": str(doc["_id"]),
+        "symbol": doc.get("symbol"),
+        "side": doc.get("side"),
+        "order_type": doc.get("order_type"),
+        "quantity": int(doc.get("quantity") or 0),
+        "limit_price": _amt(doc.get("limit_price")),
+        "reserved_cash": _amt(doc.get("reserved_cash")),
+        "currency": doc.get("currency") or "EUR",
+        "status": doc.get("status", "pending"),
+        "source": doc.get("source"),
+        "created_at": _iso(doc.get("created_at")),
+        "updated_at": _iso(doc.get("updated_at")),
+        "cancelled_at": _iso(doc.get("cancelled_at")),
+    }
+
+
+@router.post("/orders", status_code=201)
+async def create_order(
+    payload: OrderCreateIn = Body(...),
+    user: dict = Depends(get_current_user),
+):
+    side = payload.side.lower()
+    order_type = payload.order_type.lower()
+    if side not in _ORDER_SIDES:
+        raise HTTPException(status_code=422, detail="side muss 'buy' oder 'sell' sein")
+    if order_type not in _ORDER_TYPES:
+        raise HTTPException(status_code=422, detail="order_type muss 'market' oder 'limit' sein")
+
+    sym = _validate_symbol(payload.symbol)
+    try:
+        qty = int(payload.quantity)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=422, detail="quantity muss eine positive Ganzzahl sein")
+    if qty <= 0:
+        raise HTTPException(status_code=422, detail="quantity muss > 0 sein")
+
+    if order_type == "market":
+        # Keine verlässliche Preisquelle in Phase 3 — verhindere Fake-Preis-Reservierung.
+        raise HTTPException(
+            status_code=400,
+            detail="Market-Orders sind derzeit noch nicht verfügbar.",
+        )
+
+    limit_price = _to_decimal_strict(payload.limit_price, "limit_price")
+    if limit_price <= Decimal("0.00"):
+        raise HTTPException(status_code=422, detail="limit_price muss > 0 sein")
+
+    uid = ObjectId(user["id"])
+    reserved = (limit_price * Decimal(qty)).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+
+    lock = _order_locks[str(uid)]
+    async with lock:
+        # Idempotency-Check
+        existing = await db.stock_orders.find_one({
+            "user_id": uid,
+            "idempotency_key": payload.idempotency_key,
+        })
+        if existing:
+            return _serialize_stock_order(existing)
+
+        if side == "buy":
+            summary = await get_cash_summary(db, user)
+            available = Decimal(summary["available"])
+            if reserved > available:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Nicht genügend verfügbare Liquidität (benötigt {reserved} EUR, verfügbar {summary['available']} EUR).",
+                )
+        else:  # sell
+            pos = await db.stock_positions.find_one({
+                "$or": [{"user_id": uid}, {"user_id": str(uid)}],
+                "symbol": sym,
+            })
+            avail_qty = int(pos.get("quantity") or 0) if pos else 0
+            if avail_qty < qty:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Nicht genügend Stücke im Bestand (benötigt {qty}, verfügbar {avail_qty}).",
+                )
+            reserved = Decimal("0.00")  # Sell reserviert kein Cash
+
+        now = datetime.now(timezone.utc)
+        doc = {
+            "user_id": uid,
+            "symbol": sym,
+            "side": side,
+            "order_type": order_type,
+            "quantity": qty,
+            "limit_price": Decimal128(limit_price),
+            "reserved_cash": Decimal128(reserved),
+            "currency": "EUR",
+            "status": "pending",
+            "idempotency_key": payload.idempotency_key,
+            "source": "customer",
+            "client_reference": payload.client_reference,
+            "created_at": now,
+            "updated_at": now,
+            "cancelled_at": None,
+        }
+        try:
+            res = await db.stock_orders.insert_one(doc)
+            doc["_id"] = res.inserted_id
+            return _serialize_stock_order(doc)
+        except Exception as exc:
+            if getattr(exc, "code", None) == 11000 or "duplicate key" in str(exc).lower():
+                existing = await db.stock_orders.find_one({
+                    "user_id": uid,
+                    "idempotency_key": payload.idempotency_key,
+                })
+                if existing:
+                    return _serialize_stock_order(existing)
+            raise HTTPException(status_code=500, detail=f"order insert failed: {exc}")
+
+
+@router.post("/orders/{order_id}/cancel")
+async def cancel_order(
+    order_id: str,
+    user: dict = Depends(get_current_user),
+):
+    try:
+        oid = ObjectId(order_id)
+    except Exception:
+        raise HTTPException(status_code=422, detail="ungültige order_id")
+    uid = ObjectId(user["id"])
+    order = await db.stock_orders.find_one({"_id": oid, "user_id": uid})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order nicht gefunden")
+    if order.get("status") == "cancelled":
+        return _serialize_stock_order(order)  # idempotent
+    if order.get("status") != "pending":
+        raise HTTPException(status_code=409, detail="Order ist nicht mehr stornierbar")
+    now = datetime.now(timezone.utc)
+    await db.stock_orders.update_one(
+        {"_id": oid, "user_id": uid, "status": "pending"},
+        {"$set": {"status": "cancelled", "cancelled_at": now, "updated_at": now}},
+    )
+    fresh = await db.stock_orders.find_one({"_id": oid})
+    return _serialize_stock_order(fresh)
+
+
 # ─── Indizes ─────────────────────────────────────────────────────────────
 async def ensure_indexes():
     """
@@ -467,7 +811,12 @@ async def ensure_indexes():
     await db.bond_positions.create_index(
         [("user_id", 1), ("updated_at", -1)], name="user_updated_desc",
     )
-    # Orders
+    # Orders (Session 82.19)
+    await db.stock_orders.create_index(
+        [("user_id", 1), ("idempotency_key", 1)],
+        unique=True,
+        name="user_idem_unique",
+    )
     await db.stock_orders.create_index(
         [("user_id", 1), ("created_at", -1)], name="user_created_desc",
     )
@@ -478,27 +827,25 @@ async def ensure_indexes():
     await db.cash_transactions.create_index(
         [("user_id", 1), ("created_at", -1)], name="user_created_desc",
     )
-    await db.cash_ledger.create_index(
-        [("user_id", 1), ("created_at", -1)], name="user_created_desc",
-    )
-    # Watchlist / Alerts
+    # Watchlist / Alerts (Session 82.19 — nach Normalisierung)
     await db.watchlists.create_index(
         [("user_id", 1), ("symbol", 1)],
         unique=True,
-        sparse=True,
         name="user_symbol_unique",
     )
     await db.stock_alerts.create_index(
         [("user_id", 1), ("created_at", -1)], name="user_created_desc",
     )
-    # Snapshots (per Tag ein Doc/User)
+    # Snapshots
     await db.portfolio_snapshots.create_index(
         [("user_id", 1), ("snapshot_date", 1)],
         unique=True,
         sparse=True,
         name="user_date_unique",
     )
-    # Depot-Verträge
     await db.depot_contracts.create_index(
         [("user_id", 1), ("is_active", -1)], name="user_active",
     )
+
+
+# ─── ADMIN Cash Endpoints (Session 82.18 · Phase 2) ─────────────────────

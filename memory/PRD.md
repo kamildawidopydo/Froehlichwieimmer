@@ -2,6 +2,22 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.19 (Preview) · Depot Phase 3 — Watchlist/Alerts/Orders Write-Layer + Cash-Reservation
+- **User-ID-Normalisierung** (Phase B): 3 `watchlists` + 6 `stock_alerts` von String → `ObjectId` konvertiert (script-basiert, idempotent, nur valide 24-hex Werte). `$or`-Compat-Filter im Portfolio-Read-Layer bleibt defensiv erhalten für zukünftige Legacy-Rows.
+- **Watchlist Write**: `POST /api/portfolio/watchlist` (idempotent bei Duplikat), `DELETE /api/portfolio/watchlist/{symbol}`. Symbol serverseitig uppercase+validate (`[A-Z0-9.\-]{1,12}`). Unique-Index `(user_id, symbol)`.
+- **Alerts Write**: `POST /api/portfolio/alerts` (Preis + Direction above/below, `Decimal128`), `DELETE /api/portfolio/alerts/{id}`. Duplicate-Guard über `(user_id, symbol, alert_type, threshold, is_active)`.
+- **Orders Write**: neue Collection-Nutzung `stock_orders`, `POST /api/portfolio/orders` + `POST /api/portfolio/orders/{id}/cancel`. Pydantic `extra=forbid` blockt `status`/`reserved_cash`/`executed_price`/`user_id` Injection (HTTP 422).
+- **Order-Reservation** (Phase I): Buy-Limit reserviert `qty*limit_price` als `reserved_cash` **im Order-Dokument** — kein Ledger-Event, damit Mongo-Standalone-sicher (Single-Doc-Write).
+- **Cash-Service** (Phase J): `get_cash_summary` liest `open_buy_reservations` aus `stock_orders (side=buy, status=pending)` und rechnet in `available = balance - unsettled - open_buy_reservations`.
+- **Insufficient-Funds-Guard**: Buy-Order-Reservation > `available` → HTTP 400 vor Insert. Per-User `asyncio.Lock` serialisiert parallele Buy-Orders (Preview-Race-Schutz auf Standalone-Mongo).
+- **Sell-Guard**: Sell nur mit vorhandener Position (`quantity <= available_qty`), sonst 400. Keine Short-Sells, keine synthetischen Positionen.
+- **Market-Order**: 400 „Market-Orders sind derzeit noch nicht verfügbar." — keine Fake-Preisannahme ohne verlässlichen Preisfeed.
+- **Indizes**: `stock_orders (user_id, idempotency_key)` UNIQUE, `(user_id, created_at DESC)`, `(user_id, status)`.
+- **QA Preview (18 Tests grün)**: Deposit → Watchlist Add/Reload/Delete → Alert Add/Duplicate/Delete → Buy 1 000 EUR reserviert → available 9 000 → Duplicate-Idem → Insufficient-Funds 400 → Cancel → available 10 000 → Double-Cancel idempotent → Sell-Without-Position 400 → Market 400 → Injection 422 → Cross-User-Cancel 404 → Cross-User-Delete 404 → Unauth 401 → Reversal Netto 0.00.
+
+### Constraints
+Kein Prod-Deploy · Keine Order-Execution · Keine Position-Erzeugung · Keine IPO-Zuteilung · Keine Bond-Ausführung · Keine Multi-Collection-Financial-Writes · Keine Fake-Preise · Portfolio-Read-Layer/Cash-Ledger/Bond/IPO unverändert.
+
 ## Session 82.18 (Preview) · Depot Phase 2 — Cash-Ledger Mongo-native
 - **Neuer Service** `backend/services/cash_service.py` — append-only Ledger, BSON `Decimal128` mit `ROUND_HALF_EVEN`, Präzision auf 2 Dezimalen. Validation-Guard verbietet `float`, negative Beträge, unbekannte Währungen und reservierte Event-Types.
 - **Neue Collection** `cash_ledger` — Source of Truth für Cash. Balance-Berechnung: `Σ settled credits − Σ settled debits`. `available = balance − pending_debits − open_buy_reservations` (letzteres in Phase 3, aktuell 0).

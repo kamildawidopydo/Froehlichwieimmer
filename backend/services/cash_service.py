@@ -213,9 +213,11 @@ async def create_cash_event(db, **kwargs) -> dict:
 
 
 # ─── Read / Aggregation ──────────────────────────────────────────────────
-async def _aggregate_balances(db, user: dict) -> tuple[Decimal, Decimal, Decimal]:
+async def _aggregate_balances(db, user: dict) -> tuple[Decimal, Decimal, Decimal, Decimal]:
     """
-    Berechnet (settled_credits, settled_debits, pending_debits) für einen User.
+    Berechnet (settled_credits, settled_debits, pending_debits, open_buy_reservations).
+    Session 82.19: Buy-Order-Reservations werden aus `stock_orders` gelesen
+    (Order-State, KEIN Ledger-Event) und in `available` einberechnet.
     """
     ownership = _ownership(user)
     pipeline = [
@@ -238,8 +240,16 @@ async def _aggregate_balances(db, user: dict) -> tuple[Decimal, Decimal, Decimal
             settled_debit += amt
         elif st == "pending" and dr == "debit":
             pending_debit += amt
-        # pending credits + cancelled/reserve/release fließen NICHT in Balance
-    return settled_credit, settled_debit, pending_debit
+
+    # Session 82.19: open Buy-Order Reservations
+    open_buy = Decimal("0.00")
+    res_pipe = [
+        {"$match": {**ownership, "side": "buy", "status": "pending"}},
+        {"$group": {"_id": None, "total": {"$sum": "$reserved_cash"}}},
+    ]
+    async for row in db.stock_orders.aggregate(res_pipe):
+        open_buy = _decimal_from_bson(row.get("total"))
+    return settled_credit, settled_debit, pending_debit, open_buy
 
 
 async def get_cash_summary(db, user: dict) -> dict:
@@ -247,13 +257,12 @@ async def get_cash_summary(db, user: dict) -> dict:
     Aggregierter Cash-Zustand:
       balance   = settled_credits - settled_debits
       unsettled = pending_debits
-      available = balance - unsettled - open_buy_reservations   (Phase 3 → 0)
+      available = balance - unsettled - open_buy_reservations
     """
-    credits, debits, pending = await _aggregate_balances(db, user)
+    credits, debits, pending, open_buy = await _aggregate_balances(db, user)
     balance = (credits - debits).quantize(_MONEY_QUANT, rounding=ROUND_HALF_EVEN)
     unsettled = pending.quantize(_MONEY_QUANT, rounding=ROUND_HALF_EVEN)
-    # Order-Reservierung kommt in Phase 3 (siehe Report ORDER_RESERVATION_INTEGRATION=PENDING)
-    open_buy_reservations = Decimal("0.00")
+    open_buy_reservations = open_buy.quantize(_MONEY_QUANT, rounding=ROUND_HALF_EVEN)
     available = (balance - unsettled - open_buy_reservations).quantize(
         _MONEY_QUANT, rounding=ROUND_HALF_EVEN,
     )
