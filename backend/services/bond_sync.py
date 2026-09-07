@@ -329,11 +329,6 @@ def _has_material_change(existing: dict, incoming: dict) -> bool:
 async def _apply_upserts(
     db, kept: list[dict], existing_map: dict[str, dict], now: datetime,
 ) -> dict:
-    """
-    Führt Bulk-Upsert aus. Nutzt UpdateOne mit upsert=True.
-    Manual-Override-Schutz: fachliche Felder werden bei
-    is_manual_override=true NICHT gepatcht.
-    """
     inserted = 0
     updated = 0
     unchanged = 0
@@ -427,6 +422,83 @@ def _detect_missing(kept: list[dict], existing_map: dict[str, dict]) -> int:
     return missing
 
 
+# ─── History-Telemetrie (Session 82.17) ─────────────────────────────────
+_HISTORY_MAX = 30
+
+
+def _classify_run_status(report: dict) -> str:
+    """Klassifiziert einen Sync-Run (Single-Source-Modell: nur success/failed)."""
+    if report.get("errors"):
+        # Bei fetch/parse-Fehler bereits explicit gesetzt; hier defensiv
+        return "failed"
+    return "success"
+
+
+async def _persist_run_history(
+    db, report: dict, started_at: datetime,
+    status_override: Optional[str] = None,
+) -> None:
+    """Schreibt genau EIN History-Doc pro Run, retention max. 30."""
+    finished = datetime.now(timezone.utc)
+    status = status_override or _classify_run_status(report)
+    errors_summary = [str(e)[:200] for e in (report.get("errors") or [])][:5]
+    doc = {
+        "trigger": report.get("trigger"),
+        "status": status,
+        "source": report.get("source") or _SOURCE_ID,
+        "started_at": started_at,
+        "finished_at": finished,
+        "duration_ms": report.get("duration_ms", 0),
+        "raw_rows": report.get("raw_rows", 0),
+        "eur_bond_rows": report.get("eur_bond_rows", 0),
+        "eligible_before_cap": report.get("eligible_before_cap", 0),
+        "imported_after_cap": report.get("imported_after_cap", 0),
+        "inserted": report.get("inserted", 0),
+        "updated": report.get("updated", 0),
+        "unchanged": report.get("unchanged", 0),
+        "skipped_manual_override": report.get("skipped_manual_override", 0),
+        "skipped_due_to_cap": report.get("skipped_due_to_cap", 0),
+        "skipped_invalid": report.get("skipped_invalid", 0),
+        "skipped_expired": report.get("skipped_expired", 0),
+        "skipped_wrong_prefix": report.get("skipped_wrong_prefix", 0),
+        "skipped_inactive": report.get("skipped_inactive", 0),
+        "skipped_curated_out": report.get("skipped_curated_out", 0),
+        "missing_from_source": report.get("missing_from_source", 0),
+        "max_import_cap": report.get("max_import_cap", MAX_IMPORT_ROWS),
+        "error_count": len(report.get("errors") or []),
+        "errors_summary": errors_summary,
+        "created_at": finished,
+    }
+    await db.bond_sync_runs.insert_one(doc)
+    # Retention: nur 30 neueste Rows behalten
+    total = await db.bond_sync_runs.count_documents({})
+    if total > _HISTORY_MAX:
+        cursor = db.bond_sync_runs.find({}).sort("created_at", 1).limit(total - _HISTORY_MAX)
+        old_ids = [d["_id"] async for d in cursor]
+        if old_ids:
+            await db.bond_sync_runs.delete_many({"_id": {"$in": old_ids}})
+
+
+async def get_recent_sync_runs(db, limit: int = 30) -> list[dict]:
+    """Letzte N Runs (max 30) für Admin-Timeline. Newest first."""
+    limit = max(1, min(int(limit or 30), _HISTORY_MAX))
+    cursor = db.bond_sync_runs.find({}).sort("created_at", -1).limit(limit)
+    out: list[dict] = []
+    async for d in cursor:
+        d["id"] = str(d.pop("_id"))
+        for k in ("started_at", "finished_at", "created_at"):
+            v = d.get(k)
+            if isinstance(v, datetime):
+                d[k] = v.isoformat()
+        out.append(d)
+    return out
+
+
+async def ensure_history_index(db) -> None:
+    """Idempotenter Index auf created_at DESC."""
+    await db.bond_sync_runs.create_index([("created_at", -1)], name="created_desc")
+
+
 # ─── Public: Sync-Orchestrator ───────────────────────────────────────────
 async def sync_bond_catalog(db, trigger: str = "manual") -> dict:
     """
@@ -473,6 +545,11 @@ async def sync_bond_catalog(db, trigger: str = "manual") -> dict:
         base_report["status"] = "already_running"
         base_report["errors"].append("already-running: another sync in progress")
         base_report["finished_at"] = datetime.now(timezone.utc).isoformat()
+        # History-Failure-Isolation: Sync-Ack darf durch History nicht kippen
+        try:
+            await _persist_run_history(db, base_report, started, "already_running")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("bond_sync history (already_running) persist failed: %s", exc)
         return base_report
 
     async with _sync_lock:
@@ -485,6 +562,10 @@ async def sync_bond_catalog(db, trigger: str = "manual") -> dict:
             base_report["duration_ms"] = int(
                 (datetime.now(timezone.utc) - started).total_seconds() * 1000
             )
+            try:
+                await _persist_run_history(db, base_report, started, "failed")
+            except Exception as h_exc:  # noqa: BLE001
+                logger.warning("bond_sync history (fetch-fail) persist failed: %s", h_exc)
             return base_report
 
         base_report["fetched"] = len(csv_text)
@@ -499,6 +580,10 @@ async def sync_bond_catalog(db, trigger: str = "manual") -> dict:
             base_report["duration_ms"] = int(
                 (datetime.now(timezone.utc) - started).total_seconds() * 1000
             )
+            try:
+                await _persist_run_history(db, base_report, started, "failed")
+            except Exception as h_exc:  # noqa: BLE001
+                logger.warning("bond_sync history (parse-fail) persist failed: %s", h_exc)
             return base_report
 
         base_report.update({
@@ -529,6 +614,10 @@ async def sync_bond_catalog(db, trigger: str = "manual") -> dict:
             base_report["duration_ms"] = int(
                 (datetime.now(timezone.utc) - started).total_seconds() * 1000
             )
+            try:
+                await _persist_run_history(db, base_report, started, "failed")
+            except Exception as h_exc:  # noqa: BLE001
+                logger.warning("bond_sync history (upsert-fail) persist failed: %s", h_exc)
             return base_report
 
         base_report.update(upsert_stats)
@@ -536,6 +625,12 @@ async def sync_bond_catalog(db, trigger: str = "manual") -> dict:
         base_report["finished_at"] = finished.isoformat()
         base_report["duration_ms"] = int((finished - started).total_seconds() * 1000)
         base_report["status"] = "success"
+
+        # History-Persistenz — Failure-isoliert (Phase 7).
+        try:
+            await _persist_run_history(db, base_report, started, "success")
+        except Exception as h_exc:  # noqa: BLE001
+            logger.warning("bond_sync history persist failed: %s", h_exc)
 
         logger.info(
             "bond_sync trigger=%s duration=%dms raw=%d eur=%d eligible=%d "

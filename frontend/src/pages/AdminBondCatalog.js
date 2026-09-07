@@ -63,6 +63,17 @@ const AdminBondCatalog = () => {
   const [loadError, setLoadError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [showAllHistory, setShowAllHistory] = useState(false);
+
+  const loadHistory = async () => {
+    try {
+      const h = await fetchJson('/api/admin/bonds/catalog/sync/history?limit=30');
+      setHistory(h?.runs || []);
+    } catch {
+      // best-effort
+    }
+  };
 
   const runSync = async () => {
     if (syncing) return;
@@ -85,8 +96,10 @@ const AdminBondCatalog = () => {
         }
         toast.success(msg);
         await load();
+        await loadHistory();
       } else {
         toast.error('Sync fehlgeschlagen: ' + (report.errors?.[0] || 'unbekannter Fehler'));
+        await loadHistory();
       }
     } catch (err) {
       toast.error('Sync-Fehler: ' + err.message);
@@ -114,6 +127,7 @@ const AdminBondCatalog = () => {
 
   useEffect(() => {
     load();
+    loadHistory();
   }, []);
 
   const openAdd = () => {
@@ -346,6 +360,95 @@ const AdminBondCatalog = () => {
           </div>
         </AdminSurfaceCard>
       )}
+
+      {/* Session 82.17 — Synchronisierungsverlauf */}
+      <AdminSurfaceCard className="mt-6 p-4" data-testid="bond-sync-history">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-bank-text">Synchronisierungsverlauf</h3>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const resp = await fetch('/api/admin/bonds/catalog/sync/history.csv', {
+                    credentials: 'include',
+                    headers: { Accept: 'text/csv' },
+                  });
+                  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                  const blob = await resp.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  const d = new Date().toISOString().slice(0, 10);
+                  a.download = `bond-sync-history-${d}.csv`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                } catch {
+                  toast.error('Synchronisierungsverlauf konnte nicht exportiert werden.');
+                }
+              }}
+              className="text-[11px] text-bank-text-muted hover:text-bank-text hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
+              data-testid="bond-history-csv-btn"
+              disabled={history.length === 0}
+            >
+              CSV exportieren
+            </button>
+            {history.length > 5 && (
+              <button
+                type="button"
+                onClick={() => setShowAllHistory((v) => !v)}
+                className="text-[11px] text-bank-accent hover:underline"
+                data-testid="bond-history-toggle"
+              >
+                {showAllHistory ? 'Weniger anzeigen' : `Alle anzeigen (${history.length})`}
+              </button>
+            )}
+          </div>
+        </div>
+        {history.length === 0 ? (
+          <p className="text-xs text-bank-text-muted" data-testid="bond-history-empty">
+            Noch keine Sync-Läufe erfasst.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {(showAllHistory ? history : history.slice(0, 5)).map((run) => {
+              const statusLabel = {
+                success: { text: 'Erfolgreich', cls: 'text-emerald-700' },
+                partial_success: { text: 'Teilweise erfolgreich', cls: 'text-amber-700' },
+                failed: { text: 'Fehlgeschlagen', cls: 'text-rose-700' },
+                already_running: { text: 'Bereits aktiv', cls: 'text-bank-text-muted' },
+              }[run.status] || { text: run.status || '—', cls: 'text-bank-text-muted' };
+              return (
+                <li
+                  key={run.id}
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-bank-border/40 py-1.5 text-[12px]"
+                  data-testid={`bond-history-row-${run.id}`}
+                >
+                  <span className="tabular-nums text-bank-text-muted">
+                    {run.created_at ? new Date(run.created_at).toLocaleString('de-DE') : '—'}
+                  </span>
+                  <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted">
+                    {run.trigger === 'cron' ? 'Cron' : run.trigger === 'admin' ? 'Manuell' : (run.trigger || '—')}
+                  </span>
+                  <span className={`font-medium ${statusLabel.cls}`}>{statusLabel.text}</span>
+                  {run.status !== 'already_running' && (
+                    <span className="tabular-nums text-bank-text">
+                      {run.raw_rows ?? 0} geprüft · {run.eligible_before_cap ?? 0} geeignet ·{' '}
+                      {run.imported_after_cap ?? 0} importiert · {run.inserted ?? 0} neu ·{' '}
+                      {run.updated ?? 0} aktualisiert · {run.unchanged ?? 0} unverändert
+                      {run.skipped_manual_override > 0 && (
+                        <> · {run.skipped_manual_override} geschützt</>
+                      )}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </AdminSurfaceCard>
 
       {showModal && (
         <div

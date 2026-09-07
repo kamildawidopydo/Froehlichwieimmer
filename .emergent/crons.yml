@@ -30,9 +30,14 @@ crons:
   # source-isoliert (Nasdaq-Fail bricht Euronext nicht ab), Manual-Override
   # geschützt. Endpoint acked 2xx sofort und startet den Sync als
   # asyncio-Background-Task. 04:30 UTC (~ 06:30 Europe/Berlin Sommer / 05:30 Winter).
-  - name: ipo-catalog-sync
-    description: "Täglich IPO-Katalog aus Euronext + Nasdaq synchronisieren"
-    cron: "30 4 * * *"
-    endpoint: "{{BASE_URL}}/api/cron/ipo-catalog-sync"
+  # Täglicher Bond-Katalog-Sync gegen Deutsche Börse XFRA-BF (Session 82.17).
+  # 05:35 UTC — nach IPO-Cron und nach Deutsche-Börse-Datei-Refresh.
+  # Kuratiert 1000 EUR/DE-EU-ISIN-Bonds mit Cap-Sort DE/AT/FR/NL/BE/LU → XS →
+  # Rest. Manual-Override geschützt. Endpoint acked 2xx sofort und startet
+  # den Sync als asyncio-Background-Task. History in `bond_sync_runs` (30).
+  - name: bond-catalog-sync
+    description: "Täglich Bond-Katalog aus Deutsche Börse XFRA-BF synchronisieren"
+    cron: "35 5 * * *"
+    endpoint: "{{BASE_URL}}/api/cron/bond-catalog-sync"
     method: POST
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.

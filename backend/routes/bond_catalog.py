@@ -23,8 +23,12 @@ from pydantic import BaseModel, Field, field_validator
 
 from server import get_current_user, db, require_admin  # type: ignore[attr-defined]
 
-# Session 82.16 — Sync-Service (Deutsche Börse XFRA-BF → Mongo)
-from services.bond_sync import sync_bond_catalog  # noqa: E402
+# Session 82.16/82.17 — Sync-Service + Run-History (Deutsche Börse XFRA-BF → Mongo)
+from services.bond_sync import (  # noqa: E402
+    sync_bond_catalog,
+    get_recent_sync_runs,
+    ensure_history_index,
+)
 
 
 public_router = APIRouter(prefix="/api/bonds", tags=["bond-catalog"])
@@ -267,6 +271,93 @@ async def admin_sync_bond_catalog(_admin: dict = Depends(require_admin)):
     Idempotent, source-isoliert, Manual-Override wird respektiert.
     """
     return await sync_bond_catalog(db, trigger="admin")
+
+
+# ─── HISTORY · Run-Timeline + CSV-Export (Session 82.17) ────────────────
+@admin_router.get("/catalog/sync/history")
+async def admin_bond_sync_history(
+    limit: int = 30,
+    _admin: dict = Depends(require_admin),
+):
+    """Letzte N Sync-Runs (max 30) für Admin-Timeline."""
+    await ensure_history_index(db)  # idempotent
+    return {"runs": await get_recent_sync_runs(db, limit=limit)}
+
+
+@admin_router.get("/catalog/sync/history.csv")
+async def admin_bond_sync_history_csv(
+    limit: int = 30,
+    _admin: dict = Depends(require_admin),
+):
+    """CSV-Export der letzten Sync-Runs (analog IPO-CSV). Read-only, injection-safe."""
+    import csv
+    import io
+    from datetime import date as _dt_date
+    from fastapi.responses import StreamingResponse
+
+    limit = max(1, min(int(limit or 30), 30))
+    runs = await get_recent_sync_runs(db, limit=limit)
+
+    def _csv_safe(value):
+        """CSV-Injection-Protection: prefixe Formeln mit Apostroph."""
+        if value is None:
+            return ""
+        s = str(value)
+        if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return "'" + s
+        return s
+
+    headers = [
+        "run_id", "trigger", "status",
+        "started_at", "finished_at", "duration_ms",
+        "source",
+        "raw_rows", "eur_bond_rows",
+        "eligible_before_cap", "imported_after_cap",
+        "inserted", "updated", "unchanged",
+        "skipped_manual_override", "skipped_due_to_cap",
+        "skipped_invalid", "skipped_expired",
+        "skipped_wrong_prefix", "skipped_inactive",
+        "skipped_curated_out", "missing_from_source",
+        "error_count", "errors_summary",
+    ]
+    buf = io.StringIO()
+    buf.write("\ufeff")  # BOM für Excel-DE
+    writer = csv.writer(buf, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(headers)
+    for r in runs:
+        writer.writerow([
+            _csv_safe(r.get("id")),
+            _csv_safe(r.get("trigger")),
+            _csv_safe(r.get("status")),
+            _csv_safe(r.get("started_at")),
+            _csv_safe(r.get("finished_at")),
+            _csv_safe(r.get("duration_ms")),
+            _csv_safe(r.get("source")),
+            _csv_safe(r.get("raw_rows")),
+            _csv_safe(r.get("eur_bond_rows")),
+            _csv_safe(r.get("eligible_before_cap")),
+            _csv_safe(r.get("imported_after_cap")),
+            _csv_safe(r.get("inserted")),
+            _csv_safe(r.get("updated")),
+            _csv_safe(r.get("unchanged")),
+            _csv_safe(r.get("skipped_manual_override")),
+            _csv_safe(r.get("skipped_due_to_cap")),
+            _csv_safe(r.get("skipped_invalid")),
+            _csv_safe(r.get("skipped_expired")),
+            _csv_safe(r.get("skipped_wrong_prefix")),
+            _csv_safe(r.get("skipped_inactive")),
+            _csv_safe(r.get("skipped_curated_out")),
+            _csv_safe(r.get("missing_from_source")),
+            _csv_safe(r.get("error_count")),
+            _csv_safe(" | ".join((r.get("errors_summary") or [])[:5])),
+        ])
+    filename = f"bond-sync-history-{_dt_date.today().isoformat()}.csv"
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 async def ensure_indexes():

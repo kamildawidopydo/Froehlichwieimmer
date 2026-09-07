@@ -4507,6 +4507,42 @@ api.add_api_route(
 )
 
 
+# Session 82.17 — Bond-Katalog-Sync als Scheduled Cron (täglich, 05:35 UTC).
+# Zeitpunkt nach IPO-Cron (04:30) und nach Veröffentlichung der Deutsche-Börse-
+# Referenzdatei. Bearer-Auth analog IPO; Background-Task hält 2xx-Ack-Deadline.
+async def _cron_bond_catalog_sync(request: Request):
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    _verify_cron_bearer(request.headers.get("authorization"))
+    run_id = _secrets.token_hex(8)
+    started = datetime.now(timezone.utc).isoformat()
+
+    async def _job() -> None:
+        try:
+            from services.bond_sync import sync_bond_catalog  # lazy import
+            report = await sync_bond_catalog(db, trigger="cron")
+            logger.info(
+                "cron_bond_catalog_sync ok run_id=%s report=%s",
+                run_id, {k: report.get(k) for k in
+                         ("raw_rows", "eligible_before_cap", "imported_after_cap",
+                          "inserted", "updated", "unchanged",
+                          "skipped_manual_override", "skipped_due_to_cap",
+                          "status", "duration_ms")},
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("cron_bond_catalog_sync failed run_id=%s", run_id)
+
+    asyncio.create_task(_job())
+    return {"accepted": True, "run_id": run_id, "job": "bond-catalog-sync", "started_at": started}
+
+
+api.add_api_route(
+    "/cron/bond-catalog-sync",
+    _cron_bond_catalog_sync,
+    methods=["POST"],
+    include_in_schema=False,
+)
+
+
 
 
 async def _admin_news_list(_user: dict = Depends(require_admin), status: Optional[str] = None, limit: int = 50):
@@ -5086,6 +5122,13 @@ async def _init_ipo_indexes():
     except Exception as exc:  # pragma: no cover
         import logging
         logging.getLogger(__name__).warning("bond_requests indexes: %s", exc)
+    # Session 82.17 — Bond-Sync History Index
+    try:
+        from services.bond_sync import ensure_history_index as _ensure_bond_sync_history_index
+        await _ensure_bond_sync_history_index(db)
+    except Exception as exc:  # pragma: no cover
+        import logging
+        logging.getLogger(__name__).warning("bond_sync_runs indexes: %s", exc)
 from social_content import ensure_indexes as _social_content_ensure_indexes  # noqa: E402
 
 
