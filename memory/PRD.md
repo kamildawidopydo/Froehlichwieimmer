@@ -2,6 +2,37 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.30 (Preview) · Depot P0 — Bond-Execution Saga
+- **cash_service**: `bond_purchase` in `_ACTIVE_TYPES` freigegeben.
+- **Neuer Service** `services/bond_execution_service.py` — Saga für approved Bond-Requests. States: `created → cash_debited → position_applied → request_settled → completed` (+ `failed`, `compensation_required`).
+- **Neue Collection** `bond_executions` (Unique-Index `bond_request_id`).
+- **Bond-Positionen** `bond_positions.(user_id,isin)` unique; Retry-Guard über `applied_execution_ids`; Weighted-Average `avg_purchase_price_pct` und `cost_basis` mit Decimal.
+- **Idempotency-Keys** `bond-execution:{request_id}:{cash|position|settle|cash-reversal}`.
+- **Katalog-basierte Validierung**: `is_available=True`, `faelligkeitsdatum > today`, `denomination`-Vielfaches, `nominal_amount ≤ requested_nominal`, ISIN aus Katalog.
+- **Admin-Endpoint** `POST /api/admin/bonds/requests/{request_id}/execute` (`require_admin`). Body: `{nominal_amount, execution_price_pct, decision_note?, fail_after?}`.
+- **Response-Schema** um `executed_nominal / execution_price_pct / gross_amount / executed_at / execution_id / position_id` erweitert (Customer `GET /api/bonds/requests/me`).
+- **Kein Fake-Bond-Marktwert**: `portfolio_state.py` unverändert — Bond-Bewertung kommt aus `aktueller_kurs` im Katalog (falls vorhanden) oder bleibt `bonds.valuation_complete=false`, kein Fake-Preis.
+
+### QA Preview (verifiziert)
+- **T1 NORMAL** (PT_BOND_01, 500 nom @ 98% → gross 490): request→executed, cash 9420.36→8930.36, position 500 @ 98 ✅
+- **T2 DOUBLE EXECUTE**: resumed=true, gleiche exec_id ✅
+- **T3 CONCURRENT**: 2× parallel → SAME_ID ✅
+- **T4-9 CRASH after cash/position/settle + RETRY**: alle attempt=2 → completed ✅
+- **T10 INSUFFICIENT CASH**: 400 ✅
+- **T11 OVER-NOMINAL**: 422 ✅
+- **T12 INVALID DENOMINATION** (150 vs denom 100): 422 ✅
+- **T13 EXPIRED BOND**: create → 400 ✅
+- **T14 UNAVAILABLE BOND**: create → 400 ✅
+- **T15 PENDING BLOCKED**: 409 ✅
+- **T16 REJECTED BLOCKED**: 409 ✅
+- **T18 CUSTOMER → 403 · UNAUTH → 401** ✅
+
+### Financial Invariants (Mongo-Aggregation, demo-Kunde)
+`EX_COMPLETED=5 · REQUESTS_EXECUTED=5 · BOND_PURCHASE_EVENTS=5 · DOUBLE_CASH_DEBITS=0 · DUPLICATE_EXECUTIONS=0 · EXECUTED_WITHOUT_CASH=0 · EXECUTED_WITHOUT_POSITION=0 · NEGATIVE_CASH=false`
+
+### Constraints
+Kein Prod-Deploy · Kein Fake-Bond-Preis · Kein Fake-Rating · Keine Supabase-Writes · Keine Mongo-Transaktionen.
+
 ## Session 82.29 (Preview) · Depot P0 — IPO Allocation Saga
 - **cash_service**: `ipo_purchase` in `_ACTIVE_TYPES` freigegeben.
 - **Neuer Service** `services/ipo_allocation_service.py` — Saga für approved IPO-Requests. States: `created → cash_debited → position_applied → request_settled → completed` (+ `failed`, `compensation_required`).

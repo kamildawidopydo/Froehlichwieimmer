@@ -61,6 +61,13 @@ def _serialize(doc: dict) -> dict:
     ca = doc.get("created_at")
     ua = doc.get("updated_at")
     ha = doc.get("handled_at")
+    ex_at = doc.get("executed_at")
+
+    def _dec(v):
+        if v is None: return None
+        if hasattr(v, "to_decimal"): return str(v.to_decimal())
+        return v
+
     return {
         "id": str(doc["_id"]),
         "user_id": str(doc.get("user_id", "")),
@@ -78,6 +85,13 @@ def _serialize(doc: dict) -> dict:
         "handled_by": str(doc["handled_by"]) if doc.get("handled_by") else None,
         "created_at": ca.isoformat() if isinstance(ca, datetime) else ca,
         "updated_at": ua.isoformat() if isinstance(ua, datetime) else ua,
+        # Session 82.30 · Execution-Metadaten (nur gesetzt bei status='executed')
+        "executed_nominal": _dec(doc.get("executed_nominal")),
+        "execution_price_pct": _dec(doc.get("execution_price_pct")),
+        "gross_amount": _dec(doc.get("gross_amount")),
+        "executed_at": ex_at.isoformat() if isinstance(ex_at, datetime) else ex_at,
+        "execution_id": str(doc.get("execution_id")) if doc.get("execution_id") else None,
+        "position_id": str(doc.get("position_id")) if doc.get("position_id") else None,
     }
 
 
@@ -259,6 +273,58 @@ async def admin_reject_bond(
     return await _transition_status(request_id, admin_user, "rejected", body)
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# Session 82.30 · Bond Execution
+# ═══════════════════════════════════════════════════════════════════════
+from decimal import Decimal, InvalidOperation  # noqa: E402
+from services.bond_execution_service import (  # noqa: E402
+    execute_bond_request, BondExecError, BondExecCrash,
+    ensure_indexes as ensure_bond_exec_indexes,
+)
+
+
+class AdminExecuteBondBody(BaseModel):
+    nominal_amount: str = Field(..., description="Nominal als Dezimal-String")
+    execution_price_pct: str = Field(..., description="Ausführungskurs in %, Dezimal-String")
+    decision_note: Optional[str] = Field(default=None, max_length=500)
+    fail_after: Optional[str] = Field(default=None)
+
+    model_config = {"extra": "forbid"}
+
+
+def _parse_dec(v: str, field: str) -> Decimal:
+    try:
+        d = Decimal(str(v))
+    except (InvalidOperation, TypeError):
+        raise HTTPException(status_code=422, detail=f"{field} ist kein gültiger Betrag")
+    return d
+
+
+@admin_router.post("/requests/{request_id}/execute")
+async def admin_execute_bond(
+    request_id: str,
+    body: AdminExecuteBondBody,
+    admin_user: dict = Depends(require_admin),
+):
+    """approved → executed (Session 82.30 · Saga)."""
+    if not ObjectId.is_valid(request_id):
+        raise HTTPException(status_code=400, detail="Invalid request id")
+    nom = _parse_dec(body.nominal_amount, "nominal_amount")
+    px = _parse_dec(body.execution_price_pct, "execution_price_pct")
+    try:
+        return await execute_bond_request(
+            db, ObjectId(request_id),
+            nominal_amount=nom, execution_price_pct=px,
+            decision_note=body.decision_note,
+            admin_id=str(admin_user.get("id")),
+            fail_after=body.fail_after,
+        )
+    except BondExecCrash as exc:
+        raise HTTPException(status_code=555, detail=f"[injected-crash] {exc}")
+    except BondExecError as exc:
+        raise HTTPException(status_code=exc.http_status, detail=f"{exc.code}: {exc.detail}")
+
+
 async def ensure_indexes():
     """Partial-Unique-Index für Duplicate-Guard + Query-Indizes."""
     await db.bond_purchase_requests.create_index(
@@ -275,3 +341,5 @@ async def ensure_indexes():
         [("status", 1), ("created_at", -1)],
         name="status_created_desc",
     )
+    # Session 82.30 · Bond-Execution-Saga Indizes
+    await ensure_bond_exec_indexes(db)
