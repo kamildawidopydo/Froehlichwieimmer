@@ -145,7 +145,7 @@ const AdminIpoRequests = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [reqRes, ipoRes, profRes, ratesRes] = await Promise.all([
+      const [reqRes, ipoRes, profRes, ratesRes, mongoRes] = await Promise.all([
         supabase.from('ipo_subscription_requests').select(IPO_SELECT).order('created_at', { ascending: false }),
         supabase
           .from('ipo_catalog')
@@ -153,19 +153,61 @@ const AdminIpoRequests = () => {
           .order('company_name'),
         supabase.from('profiles').select('id, email, first_name, last_name').order('first_name'),
         fetchEurBasedRates().catch(() => ({ EUR: 1 })),
+        // Session 82.03 (Schritt 5) — Mongo-native Customer-Requests parallel laden.
+        // Fällt bei Fehler nicht die ganze Seite, sondern nur die Mongo-Sektion.
+        fetch('/api/admin/ipo/requests', { credentials: 'include' })
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+          .catch(() => null),
       ]);
       setEurRates(ratesRes || { EUR: 1 });
 
+      const legacyItems = [];
       if (reqRes.error) {
         if (reqRes.error.code === '42P01' || reqRes.error.message?.toLowerCase().includes('relation')) {
           setTableMissing(true);
         } else {
           toast.error('Fehler: ' + reqRes.error.message);
         }
-        setItems([]);
       } else {
-        setItems(reqRes.data || []);
+        (reqRes.data || []).forEach((r) => legacyItems.push({ ...r, source: 'supabase', _rowKey: `supabase:${r.id}` }));
       }
+
+      // Mongo-Requests in Legacy-Schema normalisieren.
+      const mongoItems = Array.isArray(mongoRes)
+        ? mongoRes.map((m) => ({
+            id: m.id,
+            _rowKey: `mongo:${m.id}`,
+            source: 'mongo',
+            user_id: m.user_id,
+            ipo_id: m.ipo_id,
+            company_name: m.company_name,
+            ticker: m.ticker,
+            amount_eur: m.amount_eur,
+            shares_requested: m.shares_requested,
+            status: m.status,
+            notes: m.notes,
+            decision_note: m.decision_note,
+            approved_at: m.status === 'approved' ? m.handled_at : null,
+            rejected_at: m.status === 'rejected' ? m.handled_at : null,
+            created_at: m.created_at,
+            profiles: {
+              email: m.customer_email,
+              first_name: m.customer_name?.split(' ')?.[0],
+              last_name: m.customer_name?.split(' ')?.slice(1).join(' '),
+            },
+          }))
+        : [];
+      if (mongoRes === null) {
+        toast.error('Neue Kundenportal-Anfragen konnten derzeit nicht geladen werden.');
+      }
+
+      // Merge + sort DESC nach created_at
+      const merged = [...mongoItems, ...legacyItems].sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return tb - ta;
+      });
+      setItems(merged);
       setIpoCatalog(ipoRes.data || []);
       setProfilesList(profRes.data || []);
     } finally {
@@ -368,16 +410,65 @@ const AdminIpoRequests = () => {
   const reject = async (row) => {
     const reason = window.prompt('Ablehnungsgrund (optional):', '') || null;
     setProcessingId(row.id);
-    const { error } = await supabase.rpc('reject_ipo_subscription_request', {
-      p_request_id: row.id,
-      p_decision_note: reason,
-    });
+    // Session 82.03 — Source-Routing: Mongo-Requests via FastAPI, Legacy via Supabase-RPC.
+    let error = null;
+    if (row.source === 'mongo') {
+      try {
+        const resp = await fetch(`/api/admin/ipo/requests/${row.id}/reject`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ decision_note: reason }),
+        });
+        if (!resp.ok) {
+          const body = await resp.json().catch(() => ({}));
+          error = { message: body?.detail || `HTTP ${resp.status}` };
+        }
+      } catch (err) {
+        error = { message: err?.message || 'Netzwerkfehler' };
+      }
+    } else {
+      const res = await supabase.rpc('reject_ipo_subscription_request', {
+        p_request_id: row.id,
+        p_decision_note: reason,
+      });
+      error = res.error;
+    }
     setProcessingId(null);
     if (error) {
       toast.error('Ablehnung fehlgeschlagen: ' + error.message);
       return;
     }
     toast.success('IPO-Anfrage abgelehnt');
+    load();
+  };
+
+  // Session 82.03 — Mongo-Approve (ohne Valuation-Dialog; Position-Creation
+  // ist Portfolio-Migration-Blocker und wird nicht ausgelöst).
+  const approveMongo = async (row) => {
+    if (!window.confirm(`IPO-Zeichnungsanfrage von ${customerLabel(row.profiles) || row.user_id} freigeben?`)) return;
+    setProcessingId(row.id);
+    let error = null;
+    try {
+      const resp = await fetch(`/api/admin/ipo/requests/${row.id}/approve`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        error = { message: body?.detail || `HTTP ${resp.status}` };
+      }
+    } catch (err) {
+      error = { message: err?.message || 'Netzwerkfehler' };
+    }
+    setProcessingId(null);
+    if (error) {
+      toast.error('Freigabe fehlgeschlagen: ' + error.message);
+      return;
+    }
+    toast.success('IPO-Zeichnungsanfrage freigegeben');
     load();
   };
 
@@ -490,14 +581,24 @@ const AdminIpoRequests = () => {
                         : 'border-amber-300 bg-amber-50 text-amber-700';
                     const up = (val?.profitAbsEur ?? val?.profitAbs ?? 0) >= 0;
                     return (
-                      <tr key={row.id} className={`border-b border-bank-border ${adminRowHover}`}>
+                      <tr key={row._rowKey || row.id} className={`border-b border-bank-border ${adminRowHover}`}>
                         <td className="px-4 py-3 font-mono text-[11px]">
                           {row.created_at
                             ? new Date(row.created_at).toLocaleString('de-DE')
                             : '–'}
                         </td>
                         <td className="px-4 py-3 text-[13px]">
-                          {customerLabel(row.profiles)}
+                          <div className="flex items-center gap-2">
+                            <span>{customerLabel(row.profiles)}</span>
+                            {row.source === 'mongo' && (
+                              <span
+                                className="inline-flex items-center rounded-full border border-sky-300 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700"
+                                title="Neue Kundenportal-Anfrage (FastAPI/Mongo)"
+                              >
+                                Kundenportal
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-[13px]">
                           <div>{row.company_name || '–'}</div>
@@ -571,8 +672,8 @@ const AdminIpoRequests = () => {
                                 size="sm"
                                 variant="outline"
                                 disabled={processingId === row.id}
-                                onClick={() => openApprove(row)}
-                                title="Freigeben"
+                                onClick={() => (row.source === 'mongo' ? approveMongo(row) : openApprove(row))}
+                                title={row.source === 'mongo' ? 'Freigeben (Kundenportal)' : 'Freigeben'}
                               >
                                 <Check size={14} />
                               </Button>
