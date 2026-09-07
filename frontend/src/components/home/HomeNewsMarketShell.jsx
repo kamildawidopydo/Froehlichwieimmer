@@ -5,7 +5,7 @@ import axios from 'axios';
 import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import SafeNewsImage from '@/components/news/SafeNewsImage';
-import { fetchMarketOverview, formatDisplayPrice, formatChangePct } from '@/services/marketService';
+import { fetchMarketOverview, fetchSidebarStockGroups, formatDisplayPrice, formatChangePct, formatMarketPrice } from '@/services/marketService';
 
 /* ── Sparkline: real backend points, module-level cache, one fetch per symbol ── */
 const SPARKLINE_CACHE = new Map(); // symbol → { points, interval, ts }
@@ -155,9 +155,87 @@ const MarketRow = ({ tile, sparkline, prominent }) => {
   );
 };
 
+/* ─── Stock-Gruppen-Sektion (Beliebte / Gewinner / Verlierer) ─────────── */
+const StockGroupRow = ({ row, direction }) => {
+  const pct = Number(row.changePct);
+  const hasPct = Number.isFinite(pct);
+  const up = hasPct && pct >= 0;
+  const pctColor = !hasPct
+    ? 'text-bank-text-muted'
+    : up ? 'text-emerald-700' : 'text-red-700';
+  const priceText = row.price != null && Number.isFinite(Number(row.price))
+    ? `${formatMarketPrice(row.price)} ${row.currency || 'EUR'}`
+    : '—';
+  const pctText = hasPct
+    ? `${up ? '+' : '−'}${Math.abs(pct).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
+    : '—';
+  const Icon = direction === 'up' ? TrendingUp : direction === 'down' ? TrendingDown : null;
+
+  return (
+    <li
+      className="flex items-baseline justify-between gap-3 py-2.5"
+      data-testid={`home-market-stock-row-${row.symbol}`}
+    >
+      <Link
+        to={`/aktien/${encodeURIComponent(row.symbol)}`}
+        className="min-w-0 flex-1 truncate font-serif text-[14px] leading-tight text-bank-text-strong hover:text-bank-primary hover:underline"
+        title={row.name}
+      >
+        {row.name || row.symbol}
+      </Link>
+      <span
+        className="shrink-0 tabular-nums text-[12.5px] text-bank-text"
+        data-testid={`home-market-stock-price-${row.symbol}`}
+      >
+        {priceText}
+      </span>
+      <span
+        className={`inline-flex w-[62px] shrink-0 items-center justify-end gap-0.5 tabular-nums text-[12px] font-medium ${pctColor}`}
+        data-testid={`home-market-stock-change-${row.symbol}`}
+      >
+        {Icon && hasPct ? <Icon size={11} strokeWidth={2} aria-hidden /> : null}
+        <span>{pctText}</span>
+      </span>
+    </li>
+  );
+};
+
+const StockGroupSection = ({ eyebrow, title, rows, direction, loading, error, testid, emptyText }) => (
+  <section
+    className="mt-10 border-t border-bank-border/50 pt-6"
+    aria-label={title}
+    data-testid={testid}
+  >
+    <Eyebrow>{eyebrow}</Eyebrow>
+    <h3 className="mt-3 font-serif text-[22px] leading-tight text-bank-text">{title}</h3>
+    {loading ? (
+      <ul className="mt-4 space-y-2" aria-hidden>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <li key={i} className="flex items-center gap-3 py-1.5">
+            <div className="h-3.5 w-32 animate-pulse bg-neutral-100" />
+            <div className="ml-auto h-3.5 w-14 animate-pulse bg-neutral-100" />
+            <div className="h-3.5 w-12 animate-pulse bg-neutral-100" />
+          </li>
+        ))}
+      </ul>
+    ) : error ? (
+      <p className="mt-4 text-[13px] text-bank-text-muted">Marktdaten derzeit nicht verfügbar.</p>
+    ) : rows.length === 0 ? (
+      <p className="mt-4 text-[13px] text-bank-text-muted">{emptyText || 'Keine Werte verfügbar.'}</p>
+    ) : (
+      <ul className="mt-4 divide-y divide-bank-border/50" data-testid={`${testid}-list`}>
+        {rows.map((row) => (
+          <StockGroupRow key={row.symbol} row={row} direction={direction} />
+        ))}
+      </ul>
+    )}
+  </section>
+);
+
 const MarketSidebar = () => {
   const [state, setState] = useState({ loading: true, tiles: [], lastUpdated: null, isDelayed: true, error: false });
   const [sparks, setSparks] = useState({}); // symbol → entry
+  const [groups, setGroups] = useState({ loading: true, error: false, popular: [], gainers: [], losers: [], lastUpdated: null });
 
   useEffect(() => {
     let alive = true;
@@ -174,6 +252,21 @@ const MarketSidebar = () => {
         setState({ loading: false, tiles, lastUpdated: oldest, isDelayed: !!o.isDelayed, error: false });
       })
       .catch(() => { if (alive) setState({ loading: false, tiles: [], lastUpdated: null, isDelayed: true, error: true }); });
+    return () => { alive = false; };
+  }, []);
+
+  // Stock-Gruppen (Beliebte / Gewinner / Verlierer) — EIN Fetch, drei Listen.
+  // Backend: /api/news-markte/market/stocks. Keine N+1: alle 3 Module speisen
+  // sich aus derselben Antwort (client-seitige Ableitung im Service).
+  useEffect(() => {
+    let alive = true;
+    fetchSidebarStockGroups('EUR')
+      .then((g) => {
+        if (!alive) return;
+        const stamp = g.popular[0]?.lastUpdated || g.gainers[0]?.lastUpdated || g.losers[0]?.lastUpdated || null;
+        setGroups({ loading: false, error: g.total === 0, popular: g.popular, gainers: g.gainers, losers: g.losers, lastUpdated: stamp });
+      })
+      .catch(() => { if (alive) setGroups((s) => ({ ...s, loading: false, error: true })); });
     return () => { alive = false; };
   }, []);
 
@@ -234,6 +327,43 @@ const MarketSidebar = () => {
             Zum Marktüberblick <ArrowRight size={12} strokeWidth={1.8} />
           </Link>
         </>
+      )}
+
+      {/* ── Ergänzungsmodule: Beliebte Aktien · Gewinner · Verlierer ── */}
+      <StockGroupSection
+        eyebrow="Beliebte Aktien"
+        title="Meistgehandelte Werte."
+        rows={groups.popular}
+        loading={groups.loading}
+        error={groups.error}
+        testid="home-market-stocks-popular"
+      />
+      <StockGroupSection
+        eyebrow="Top-Gewinner"
+        title="Stärkste Kursgewinne."
+        rows={groups.gainers}
+        direction="up"
+        loading={groups.loading}
+        error={groups.error}
+        testid="home-market-stocks-gainers"
+        emptyText="Aktuell keine markanten Gewinner."
+      />
+      <StockGroupSection
+        eyebrow="Top-Verlierer"
+        title="Stärkste Kursverluste."
+        rows={groups.losers}
+        direction="down"
+        loading={groups.loading}
+        error={groups.error}
+        testid="home-market-stocks-losers"
+        emptyText="Aktuell keine markanten Verlierer."
+      />
+      {!groups.loading && !groups.error && groups.lastUpdated && (
+        <p className="mt-4 text-[10.5px] leading-relaxed text-bank-text-muted" data-testid="home-market-stocks-timestamp">
+          <span className="text-bank-text-strong">Aktienstand:</span>{' '}
+          <time dateTime={groups.lastUpdated} className="tabular-nums">{fmtStamp(groups.lastUpdated)}</time>
+          <br />Kurse können zeitverzögert sein
+        </p>
       )}
     </aside>
   );

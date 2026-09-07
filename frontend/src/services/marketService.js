@@ -176,6 +176,33 @@ export async function fetchFrankfurtWinners(limit = 12, displayCurrency) {
     .slice(0, limit);
 }
 
+/** Top % losers — sorted by changePct asc, negatives only. */
+export async function fetchFrankfurtLosers(limit = 12, displayCurrency) {
+  const rows = await _fetchStocks(displayCurrency);
+  return rows
+    .filter((r) => Number(r.changePct) < 0)
+    .sort((a, b) => Number(a.changePct) - Number(b.changePct))
+    .slice(0, limit);
+}
+
+/**
+ * Batched sidebar movers — ONE fetch, returns {popular, gainers, losers}.
+ * Prevents N+1 across the extra sidebar modules.
+ */
+export async function fetchSidebarStockGroups(displayCurrency) {
+  const rows = await _fetchStocks(displayCurrency);
+  const popular = rows.slice(0, 5);
+  const gainers = rows
+    .filter((r) => Number(r.changePct) > 0)
+    .sort((a, b) => Number(b.changePct) - Number(a.changePct))
+    .slice(0, 5);
+  const losers = rows
+    .filter((r) => Number(r.changePct) < 0)
+    .sort((a, b) => Number(a.changePct) - Number(b.changePct))
+    .slice(0, 5);
+  return { popular, gainers, losers, total: rows.length };
+}
+
 /** Curated "Aktien im Fokus" — insertion order. */
 export async function fetchFeaturedStocks(limit = 12, displayCurrency) {
   const rows = await _fetchStocks(displayCurrency);
