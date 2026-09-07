@@ -4993,6 +4993,18 @@ app.include_router(_wealth_consultation_routes.router)
 
 from routes import users as _users_routes  # noqa: E402
 app.include_router(_users_routes.router)
+
+# Session 82.02 — IPO Customer Requests (Mongo-native, FastAPI-authenticated).
+from routes.ipo_requests import router as _ipo_requests_router, ensure_indexes as _ensure_ipo_indexes  # noqa: E402
+app.include_router(_ipo_requests_router)
+
+@app.on_event("startup")
+async def _init_ipo_indexes():
+    try:
+        await _ensure_ipo_indexes()
+    except Exception as exc:  # pragma: no cover — soft-fail damit Server startet
+        import logging
+        logging.getLogger(__name__).warning("ipo_requests indexes: %s", exc)
 from social_content import ensure_indexes as _social_content_ensure_indexes  # noqa: E402
 
 

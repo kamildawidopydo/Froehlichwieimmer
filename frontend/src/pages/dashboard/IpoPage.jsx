@@ -210,20 +210,45 @@ const IpoPage = () => {
     }
 
     setSubmitting(true);
-    const { error } = await supabase.from('ipo_subscription_requests').insert({
-      user_id: user.id,
-      ipo_id: selected.id,
-      company_name: selected.company_name,
-      ticker: selected.ticker_proposed,
-      amount_eur: amount,
-      shares_requested: isOpen ? shares : shares >= 1 ? shares : 1,
-      status: 'pending',
-      notes: investNotes.trim() || (isOpen ? 'Zeichnungsanfrage' : 'Investitionsanfrage'),
-    });
+    // Session 82.02 — FastAPI/Mongo-native Customer-Write (statt direktem
+    // Supabase-INSERT). Auth via Cookie; user_id/status/source werden
+    // serverseitig gesetzt und dürfen im Payload nicht auftauchen.
+    let error = null;
+    try {
+      const resp = await fetch('/api/ipo/requests', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ipo_id: selected.id,
+          amount_eur: amount,
+          shares_requested: isOpen ? shares : shares >= 1 ? shares : 1,
+          notes:
+            investNotes.trim() ||
+            (isOpen ? 'Zeichnungsanfrage' : 'Investitionsanfrage'),
+        }),
+      });
+      if (!resp.ok) {
+        let detail = 'Anfrage konnte nicht gespeichert werden.';
+        try {
+          const body = await resp.json();
+          if (body?.detail) detail = String(body.detail);
+        } catch { /* ignore */ }
+        if (resp.status === 409) {
+          error = { code: 'duplicate', message: detail };
+        } else if (resp.status === 401) {
+          error = { code: 'unauth', message: 'Sitzung abgelaufen. Bitte neu anmelden.' };
+        } else {
+          error = { code: 'server', message: detail };
+        }
+      }
+    } catch (err) {
+      error = { code: 'network', message: 'Netzwerkfehler — bitte erneut versuchen.' };
+    }
     setSubmitting(false);
 
     if (error) {
-      toast.error('Anfrage konnte nicht gespeichert werden.');
+      toast.error(error.message);
       return;
     }
     if (typeof refreshIpoRequests === 'function') {
