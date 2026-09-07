@@ -2,6 +2,39 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.29 (Preview) · Depot P0 — IPO Allocation Saga
+- **cash_service**: `ipo_purchase` in `_ACTIVE_TYPES` freigegeben.
+- **Neuer Service** `services/ipo_allocation_service.py` — Saga für approved IPO-Requests. States: `created → cash_debited → position_applied → request_settled → completed` (+ `failed`, `compensation_required`).
+- **Neue Collection** `ipo_allocations` mit Unique-Index auf `ipo_request_id`.
+- **Position-Idempotenz** via `applied_allocation_ids` (separate Liste; kollidiert nicht mit Sell/Buy-`applied_execution_ids`).
+- **Idempotency-Keys**: `ipo-allocation:{request_id}:cash` (Cash-Ledger), Guard-Feld für Position, `ipo-allocation:{request_id}:cash-reversal` (Compensation).
+- **Symbol-Validation**: Ticker aus IPO-Katalog (nicht Client-Payload). `MISSING_SYMBOL` → 409, keine Fantasie-Symbole.
+- **Admin-Endpoint** `POST /api/admin/ipo/requests/{request_id}/allocate` (require_admin). Body: `{allocated_shares, subscription_price_per_share, listing_price_per_share?, decision_note?, fail_after?}`.
+- **IPO-Request-Model** um `allocated_shares/subscription_price_per_share/listing_price_per_share/allocation_gross_amount/allocation_date/allocation_id/position_id` erweitert; Customer `GET /api/ipo/requests/me` liefert diese Felder für `status="allocated"`.
+- **Cancel-Race-Safety** wie Buy/Sell: settle-CAS `{status: approved}` + `compensation_required`-Fallback bei Reject-Race.
+
+### QA Preview (verifiziert)
+- **T1 NORMAL**: PT1AG 20 sh @ 50.00 → allocated, cash 10652.46→9652.46, position 20 @ 50 ✅
+- **T2 DOUBLE ALLOCATE**: resumed=true, gleiche alloc_id ✅
+- **T3 CONCURRENT**: 2× parallel → SAME_ID=True, resumed differiert lokal (asyncio-Lock) ✅
+- **T4-9 CRASH cash/position/settle + RETRY**: alle attempt=2 → `completed` (nach 2. Fix) ✅
+- **T10 INSUFFICIENT CASH**: 400, allocation.status=failed ✅
+- **T11 OVER-ALLOCATION** (10 > requested 5): 422 ✅
+- **T12 REJECTED BLOCKED**: 409 `REQUEST_BAD_STATUS` ✅
+- **T13 PENDING BLOCKED**: 409 `REQUEST_BAD_STATUS` ✅
+- **T15 MISSING SYMBOL**: 409 `MISSING_SYMBOL`, kein Cash-Debit, keine Position ✅
+- **T20 CUSTOMER 403** & **UNAUTH 401** ✅
+- **Regression Stock Buy**: unverändert, `completed` ✅
+
+### Financial Invariants (Mongo-Aggregation, demo-Kunde)
+`ALLOC_COMPLETED=5 · REQUESTS_ALLOCATED=5 · IPO_PURCHASE_EVENTS=5 · DOUBLE_CASH_DEBITS=0 · DUPLICATE_ALLOCATIONS=0 · ALLOCATED_WITHOUT_CASH=0 · ALLOCATED_WITHOUT_POSITION=0 · NEGATIVE_CASH=false`
+
+### Summary/Snapshot
+Nach 5 Allocations: cash 9652.46 EUR (10652.46 − 1350 IPO-Käufe). `stocks.valuation_complete=false` da 5 IPO-Symbole (PT1AG, GDL, ALPER, ICOP, MLOBT) noch **kein Live-Quote-Feed** haben — market_value zeigt nur die eine gepreiste SAP-Position (232.10). Snapshot upsertet transparent mit `stocks_valuation_complete=false` + `unpriced_symbols` gelistet.
+
+### Constraints
+Kein Prod-Deploy · Kein Fake-Preis · Keine Fake-Symbole · Keine Supabase-Writes · Keine Mongo-Multi-Document-Transaktionen.
+
 ## Session 82.28 (Preview) · Depot P0 — Sell-Order Execution Saga
 - **cash_service**: `stock_sale` in `_ACTIVE_TYPES` freigegeben.
 - **order_execution_service**: neuer Sell-Zweig in `execute_order` mit spiegelbildlichen Saga-Steps `created → position_decremented → cash_credited → order_settled → completed`. Buy-Pfad unverändert. Persistiert `side`, `cost_basis_sold`, `realized_profit_loss` im Execution-Dokument.

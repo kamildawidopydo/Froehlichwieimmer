@@ -72,15 +72,24 @@ class IpoRequestOut(BaseModel):
     amount_eur: Optional[float]
     shares_requested: int
     notes: Optional[str]
-    status: Literal["pending", "approved", "rejected"]
+    status: Literal["pending", "approved", "rejected", "allocated"]
     source: str
     created_at: str
     updated_at: Optional[str]
+    # Session 82.29 · Allocation-Metadaten (nur gesetzt bei status='allocated')
+    allocated_shares: Optional[int] = None
+    subscription_price_per_share: Optional[str] = None
+    listing_price_per_share: Optional[str] = None
+    allocation_gross_amount: Optional[str] = None
+    allocation_date: Optional[str] = None
+    allocation_id: Optional[str] = None
+    position_id: Optional[str] = None
 
 
 def _serialize(doc: dict) -> dict:
     ca = doc.get("created_at")
     ua = doc.get("updated_at")
+    alloc_at = doc.get("allocation_date")
     return {
         "id": str(doc["_id"]),
         "user_id": str(doc.get("user_id", "")),
@@ -94,6 +103,26 @@ def _serialize(doc: dict) -> dict:
         "source": doc.get("source", "customer"),
         "created_at": ca.isoformat() if isinstance(ca, datetime) else (ca or ""),
         "updated_at": ua.isoformat() if isinstance(ua, datetime) else ua,
+        # Session 82.29 · Allocation-Metadaten (nur wenn gesetzt)
+        "allocated_shares": doc.get("allocated_shares"),
+        "subscription_price_per_share": (
+            str(doc["subscription_price_per_share"].to_decimal())
+            if hasattr(doc.get("subscription_price_per_share"), "to_decimal")
+            else doc.get("subscription_price_per_share")
+        ),
+        "listing_price_per_share": (
+            str(doc["listing_price_per_share"].to_decimal())
+            if hasattr(doc.get("listing_price_per_share"), "to_decimal")
+            else doc.get("listing_price_per_share")
+        ),
+        "allocation_gross_amount": (
+            str(doc["allocation_gross_amount"].to_decimal())
+            if hasattr(doc.get("allocation_gross_amount"), "to_decimal")
+            else doc.get("allocation_gross_amount")
+        ),
+        "allocation_date": alloc_at.isoformat() if isinstance(alloc_at, datetime) else alloc_at,
+        "allocation_id": str(doc.get("allocation_id")) if doc.get("allocation_id") else None,
+        "position_id": str(doc.get("position_id")) if doc.get("position_id") else None,
     }
 
 
@@ -239,6 +268,8 @@ async def ensure_indexes():
         name="uniq_pending_user_ipo",
     )
     await db.ipo_requests.create_index([("user_id", 1), ("created_at", -1)])
+    # Session 82.29 · IPO-Allocation-Indizes
+    await ensure_allocation_indexes(db)
 
 
 # ─── ADMIN ENDPOINTS (Schritt 4) ────────────────────────────────────────
@@ -372,3 +403,67 @@ async def admin_reject(
 ):
     """pending → rejected. Setzt Status + Audit-Felder. Keine Position."""
     return await _transition_status(request_id, admin_user, "rejected", body)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Session 82.29 · IPO Allocation
+# ═══════════════════════════════════════════════════════════════════════
+from decimal import Decimal, InvalidOperation  # noqa: E402
+from services.ipo_allocation_service import (  # noqa: E402
+    allocate_ipo_request, AllocationError, AllocationCrash,
+    ensure_indexes as ensure_allocation_indexes,
+)
+
+
+class AdminAllocateBody(BaseModel):
+    allocated_shares: int = Field(..., gt=0)
+    subscription_price_per_share: str = Field(..., description="Positiver Dezimalbetrag als String")
+    listing_price_per_share: Optional[str] = Field(default=None)
+    decision_note: Optional[str] = Field(default=None, max_length=500)
+    fail_after: Optional[str] = Field(default=None, description="test-only: 'cash'|'position'|'settle'")
+
+    model_config = {"extra": "forbid"}
+
+
+def _parse_dec(v: str, field: str) -> Decimal:
+    if v is None:
+        raise HTTPException(status_code=422, detail=f"{field} fehlt")
+    try:
+        d = Decimal(str(v))
+    except (InvalidOperation, TypeError):
+        raise HTTPException(status_code=422, detail=f"{field} ist kein gültiger Betrag")
+    if d != d:
+        raise HTTPException(status_code=422, detail=f"{field} ist NaN")
+    return d
+
+
+@admin_router.post("/requests/{request_id}/allocate")
+async def admin_allocate(
+    request_id: str,
+    body: AdminAllocateBody,
+    admin_user: dict = Depends(require_admin),
+):
+    """
+    approved → allocated (Session 82.29 · Saga).
+    Delegiert an `services.ipo_allocation_service.allocate_ipo_request`.
+    """
+    if not ObjectId.is_valid(request_id):
+        raise HTTPException(status_code=400, detail="Invalid request id")
+    sub = _parse_dec(body.subscription_price_per_share, "subscription_price_per_share")
+    listing = _parse_dec(body.listing_price_per_share, "listing_price_per_share") \
+        if body.listing_price_per_share is not None else None
+    try:
+        return await allocate_ipo_request(
+            db,
+            ObjectId(request_id),
+            allocated_shares=body.allocated_shares,
+            subscription_price_per_share=sub,
+            listing_price_per_share=listing,
+            decision_note=body.decision_note,
+            admin_id=str(admin_user.get("id")),
+            fail_after=body.fail_after,
+        )
+    except AllocationCrash as exc:
+        raise HTTPException(status_code=555, detail=f"[injected-crash] {exc}")
+    except AllocationError as exc:
+        raise HTTPException(status_code=exc.http_status, detail=f"{exc.code}: {exc.detail}")

@@ -33,16 +33,17 @@ from bson.decimal128 import Decimal128
 # ─── Konstanten ─────────────────────────────────────────────────────────
 ALLOWED_CURRENCIES = frozenset({"EUR", "USD"})
 
-# Event-Types (Session 82.28 · Order-Execution: stock_purchase + stock_sale freigegeben)
+# Event-Types (Session 82.29 · IPO-Allocation: ipo_purchase freigegeben)
 _ACTIVE_TYPES = frozenset({
     "deposit", "withdrawal", "adjustment", "reserve", "release",
-    "stock_purchase",  # Session 82.26 · Depot-P0 Order-Execution-Saga (Buy)
-    "stock_sale",      # Session 82.28 · Depot-P0 Sell-Execution-Saga
+    "stock_purchase",   # Session 82.26 · Buy-Saga
+    "stock_sale",       # Session 82.28 · Sell-Saga
+    "ipo_purchase",     # Session 82.29 · IPO-Allocation-Saga
 })
 
 # Reserviert für kommende Phasen (dokumentiert, aber nicht akzeptiert)
 _RESERVED_TYPES = frozenset({
-    "ipo_purchase", "bond_purchase",
+    "bond_purchase",
     "dividend", "interest", "fee", "tax",
 })
 
