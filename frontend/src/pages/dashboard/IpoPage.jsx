@@ -396,7 +396,7 @@ const IpoPage = () => {
               // SEARCH-EMPTY — Filter/Suche ohne Treffer (aber Katalog hat Daten).
               <SurfaceCard className="p-10 text-center text-bank-text-muted" data-testid="ipo-search-empty-state">
                 <ProductIcon product="ipo" size="empty" showBubble={false} className="mx-auto mb-3 opacity-40" />
-                <p className="text-[14px]">Keine IPOs entsprechen Ihrer Suche.</p>
+                <p className="text-[14px]">Keine Börsengänge entsprechen Ihrer Suche.</p>
                 <p className="mt-1 text-[12px]">Passen Sie Suchbegriff oder Status-Filter an.</p>
               </SurfaceCard>
             ) : (
