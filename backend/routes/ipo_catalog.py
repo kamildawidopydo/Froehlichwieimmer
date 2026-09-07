@@ -404,6 +404,73 @@ async def admin_ipo_sync_history(
     return {"runs": await get_recent_sync_runs(db, limit=limit)}
 
 
+@admin_router.get("/catalog/sync/history.csv")
+async def admin_ipo_sync_history_csv(
+    limit: int = 30,
+    _admin: dict = Depends(require_admin),
+):
+    """CSV-Export der letzten Sync-Runs (Session 82.15). Read-only."""
+    import csv
+    import io
+    from datetime import date as _dt_date
+    from fastapi.responses import StreamingResponse
+
+    limit = max(1, min(int(limit or 30), 30))
+    runs = await get_recent_sync_runs(db, limit=limit)
+
+    def _csv_safe(value):
+        """CSV-Injection-Protection: prefix Formeln mit Apostroph."""
+        if value is None:
+            return ""
+        s = str(value)
+        if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return "'" + s
+        return s
+
+    headers = [
+        "run_id", "started_at", "finished_at", "duration_ms", "trigger",
+        "status", "euronext_status", "nasdaq_status", "stockanalysis_status",
+        "us_source_used", "fetched", "inserted", "updated", "unchanged",
+        "skipped_manual_override", "skipped_duplicate", "skipped_conflict",
+        "skipped_invalid", "error_count", "errors_summary",
+    ]
+    buf = io.StringIO()
+    # BOM für Excel-DE + Semikolon-Separator
+    buf.write("\ufeff")
+    writer = csv.writer(buf, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(headers)
+    for r in runs:
+        writer.writerow([
+            _csv_safe(r.get("id")),
+            _csv_safe(r.get("started_at")),
+            _csv_safe(r.get("finished_at")),
+            _csv_safe(r.get("duration_ms")),
+            _csv_safe(r.get("trigger")),
+            _csv_safe(r.get("status")),
+            _csv_safe(r.get("euronext_status")),
+            _csv_safe(r.get("nasdaq_status")),
+            _csv_safe(r.get("stockanalysis_status")),
+            _csv_safe(r.get("us_source_used")),
+            _csv_safe(r.get("fetched")),
+            _csv_safe(r.get("inserted")),
+            _csv_safe(r.get("updated")),
+            _csv_safe(r.get("unchanged")),
+            _csv_safe(r.get("skipped_manual_override")),
+            _csv_safe(r.get("skipped_duplicate")),
+            _csv_safe(r.get("skipped_conflict") or 0),
+            _csv_safe(r.get("skipped_invalid")),
+            _csv_safe(r.get("error_count")),
+            _csv_safe(" | ".join((r.get("errors_summary") or [])[:5])),
+        ])
+    filename = f"ipo-sync-history-{_dt_date.today().isoformat()}.csv"
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 async def ensure_indexes():
     """
     Idempotente Indizes:

@@ -419,16 +419,47 @@ const AdminIpoCatalog = () => {
       <AdminSurfaceCard className="mt-6 p-4" data-testid="ipo-sync-history">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-bank-text">Synchronisierungsverlauf</h3>
-          {history.length > 5 && (
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setShowAllHistory((v) => !v)}
-              className="text-[11px] text-bank-accent hover:underline"
-              data-testid="ipo-history-toggle"
+              onClick={async () => {
+                try {
+                  const resp = await fetch('/api/admin/ipo/catalog/sync/history.csv', {
+                    credentials: 'include',
+                    headers: { Accept: 'text/csv' },
+                  });
+                  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                  const blob = await resp.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  const d = new Date().toISOString().slice(0, 10);
+                  a.download = `ipo-sync-history-${d}.csv`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                } catch {
+                  toast.error('Synchronisierungsverlauf konnte nicht exportiert werden.');
+                }
+              }}
+              className="text-[11px] text-bank-text-muted hover:text-bank-text hover:underline"
+              data-testid="ipo-history-csv-btn"
+              disabled={history.length === 0}
             >
-              {showAllHistory ? 'Weniger anzeigen' : `Alle anzeigen (${history.length})`}
+              CSV exportieren
             </button>
-          )}
+            {history.length > 5 && (
+              <button
+                type="button"
+                onClick={() => setShowAllHistory((v) => !v)}
+                className="text-[11px] text-bank-accent hover:underline"
+                data-testid="ipo-history-toggle"
+              >
+                {showAllHistory ? 'Weniger anzeigen' : `Alle anzeigen (${history.length})`}
+              </button>
+            )}
+          </div>
         </div>
         {history.length === 0 ? (
           <p className="text-xs text-bank-text-muted" data-testid="ipo-history-empty">
