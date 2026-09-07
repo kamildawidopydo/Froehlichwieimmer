@@ -111,11 +111,15 @@ const IpoPage = () => {
   const [subShares, setSubShares] = useState('1');
   const [submitting, setSubmitting] = useState(false);
 
+  const [reloadKey, setReloadKey] = useState(0);
+  const retry = () => setReloadKey((k) => k + 1);
+
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setLoadError('');
     (async () => {
       try {
-        setLoadError('');
         const { data, error } = await supabase
           .from('ipo_catalog')
           .select('*')
@@ -124,11 +128,18 @@ const IpoPage = () => {
           .order('display_order', { ascending: false })
           .order('ipo_date', { ascending: true, nullsFirst: false });
         if (error) throw error;
-        if (active) setIpos((data || []).map(normalizeIpoCatalogRow));
-      } catch {
+        // Session 81.08 — State-Modell-Fix: bei Erfolg Fehler explizit leeren.
         if (active) {
-          setLoadError('IPO-Daten konnten nicht geladen werden.');
-          setIpos([]);
+          setIpos((data || []).map(normalizeIpoCatalogRow));
+          setLoadError('');
+        }
+      } catch {
+        // Session 81.08 — Root-Cause-Fix: Error muss von Empty unterscheidbar
+        // bleiben. Wir setzen ipos NICHT auf [] — sonst rendert Empty-Card,
+        // die Error visuell überlagert. Render-Logik unten prüft `loadError`
+        // zuerst und rendert dedizierten Error-State mit Retry.
+        if (active) {
+          setLoadError('IPO-Daten konnten derzeit nicht geladen werden.');
         }
       } finally {
         if (active) setLoading(false);
@@ -137,7 +148,7 @@ const IpoPage = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   const filtered = useMemo(() => {
     let list = ipos.slice();
@@ -356,20 +367,35 @@ const IpoPage = () => {
           </SurfaceCard>
         </aside>
 
-        <div className="space-y-3">
-          {loadError && (
-            <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
-              {loadError}
-            </p>
-          )}
+        <div className="space-y-3" data-testid="ipo-content">
           <DashboardContentReveal
             loading={loading}
             skeleton={<CardListSkeleton count={4} />}
           >
-            {filtered.length === 0 ? (
-              <SurfaceCard className="p-10 text-center text-bank-text-muted">
+            {loadError ? (
+              // ERROR State — dedizierter Zustand mit Retry.
+              <SurfaceCard className="p-10 text-center" data-testid="ipo-error-state">
                 <ProductIcon product="ipo" size="empty" showBubble={false} className="mx-auto mb-3 opacity-40" />
-                <p className="text-[14px]">Derzeit keine IPOs in der Übersicht.</p>
+                <p className="text-[14px] text-rose-700">{loadError}</p>
+                <p className="mt-1 text-[12px] text-bank-text-muted">
+                  Der Server hat die IPO-Übersicht nicht beantwortet. Bitte versuchen Sie es erneut.
+                </p>
+                <Button variant="primary" size="sm" className="mt-4" onClick={retry} data-testid="ipo-retry-btn">
+                  Erneut laden
+                </Button>
+              </SurfaceCard>
+            ) : ipos.length === 0 ? (
+              // API SUCCESS + EMPTY — echt keine IPOs im Katalog.
+              <SurfaceCard className="p-10 text-center text-bank-text-muted" data-testid="ipo-empty-state">
+                <ProductIcon product="ipo" size="empty" showBubble={false} className="mx-auto mb-3 opacity-40" />
+                <p className="text-[14px]">Derzeit sind keine bevorstehenden Börsengänge verfügbar.</p>
+              </SurfaceCard>
+            ) : filtered.length === 0 ? (
+              // SEARCH-EMPTY — Filter/Suche ohne Treffer (aber Katalog hat Daten).
+              <SurfaceCard className="p-10 text-center text-bank-text-muted" data-testid="ipo-search-empty-state">
+                <ProductIcon product="ipo" size="empty" showBubble={false} className="mx-auto mb-3 opacity-40" />
+                <p className="text-[14px]">Keine IPOs entsprechen Ihrer Suche.</p>
+                <p className="mt-1 text-[12px]">Passen Sie Suchbegriff oder Status-Filter an.</p>
               </SurfaceCard>
             ) : (
               <DashboardStagger className="space-y-3">
