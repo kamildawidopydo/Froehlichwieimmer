@@ -2,6 +2,17 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.24 (Preview) · Depot Phase 4B-Final — DepotKpiRail Server-Summary-Cutover
+- **DepotKpiRail** ruft beim Mount `refreshPortfolioSummary()` und verwendet `portfolioSummary` als **primäre** Quelle für: `investiert = stocks.cost_basis + bondsEinstand`, `gv = profit_loss + bondsGV`, `positionen = stocks.positions + bonds.positions`. Frontend-Aggregation bleibt nur als Fallback wenn Backend-Summary noch nicht geladen ist.
+- **Valuation-Incomplete-Handling**: wenn `stocks.valuation_complete=false`, wird bei fehlendem G/V der Hinweis „Kurse teilweise nicht verfügbar" angezeigt statt „Kein Einstand hinterlegt".
+- **Cash-Semantik**: Cash-KPI verwendet weiterhin `cashBalance` (Ledger-Balance, nicht `available`) — Reservierungen reduzieren das Vermögen nicht künstlich.
+- **DepotHero**: unverändert (nutzt bereits `gesamtvermoegen`-Compound aus Context der auf serverseitigem Cash + berechneten Werten basiert).
+- **Legacy `stockPriceMap`**: bleibt vorhanden für Positionsliste (Sparklines/Legacy-Anzeige) und für Fallback-Aggregation. Cutover der detaillierten Positionsliste auf `/api/portfolio/stock-positions` Enrichment steht als eigener P1-Task an.
+- **QA Preview**: demo.kunde Empty-Depot zeigt weiterhin sauberen 0/„—"-Zustand; bei vorhandenen Positionen wird `stocks.market_value` aus realer Server-Summary bevorzugt.
+
+### Constraints
+Kein Prod-Deploy · Kein Order-Execution · Keine Position-Erzeugung · Keine Market-Order-Freigabe · Keine Bond-Preise erfinden · Snapshot-Cron nicht implementiert.
+
 ## Session 82.23 (Preview) · Depot Phase 4B — DashboardDataContext Portfolio-Summary
 - **Neuer Fetcher** `fetchPortfolioSummary` in `DashboardDataContext.jsx` — liest serverseitige `/api/portfolio/summary` und persistiert in `state.portfolioSummary`.
 - **Context exportiert** `portfolioSummary` (State) + `refreshPortfolioSummary` (Fetcher) → jede Depot-Komponente kann jetzt die serverseitigen Werte konsumieren, statt sie aus mehreren Frontend-Quellen zusammenzurechnen.

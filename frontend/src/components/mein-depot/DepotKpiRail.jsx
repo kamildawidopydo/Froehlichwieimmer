@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import { formatEUR, formatEURSigned } from '@/lib/dashboardFormatters';
@@ -73,7 +73,16 @@ const DepotKpiRail = () => {
     stockMetrics,
     activeBonds,
     dashboardFetchHadFailure,
+    portfolioSummary,
+    refreshPortfolioSummary,
   } = useDashboardData();
+
+  // Session 82.24 · Depot Phase 4B-Final — serverseitige Summary beim Mount ziehen.
+  useEffect(() => {
+    refreshPortfolioSummary?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Wenn technischer Fetch-Fehler UND alle Bestandswerte 0 → Werte als „—"
   // anzeigen statt suggestive „0,00 €" — differenziert von echtem leeren Depot.
   const uncertain = !!dashboardFetchHadFailure &&
@@ -82,18 +91,26 @@ const DepotKpiRail = () => {
     (activeBonds || []).length === 0;
 
   const kpis = useMemo(() => {
-    const wpEinstand = Number(depotEinstand || 0) + Number(bondsEinstand || 0);
-    const wpGV = Number(depotGV || 0) + Number(bondsGV || 0);
+    // Session 82.24 · Server-Summary als Source of Truth (Fallback: Frontend-Aggregation).
+    const s = portfolioSummary;
+    const useServer = !!s;
+    const stocksMV = useServer ? Number(s.stocks?.market_value ?? 0) : Number(depotGV || 0) + Number(depotEinstand || 0);
+    const stocksCost = useServer ? Number(s.stocks?.cost_basis ?? 0) : Number(depotEinstand || 0);
+    const bondsCost = Number(bondsEinstand || 0);
+    const wpEinstand = useServer ? stocksCost + bondsCost : Number(depotEinstand || 0) + bondsCost;
+    const wpGV = useServer ? Number(s.profit_loss ?? 0) + Number(bondsGV || 0) : Number(depotGV || 0) + Number(bondsGV || 0);
     const wpGVPct = wpEinstand > 0 ? (wpGV / wpEinstand) * 100 : null;
     const gvUp = wpGV >= 0;
 
-    const stockCount = (stockMetrics || []).length;
-    const bondCount = (activeBonds || []).length;
+    const stockCount = useServer ? Number(s.stocks?.positions ?? 0) : (stockMetrics || []).length;
+    const bondCount = useServer ? Number(s.bonds?.positions ?? 0) : (activeBonds || []).length;
     const posTotal = stockCount + bondCount;
 
     const dailyPnl = Number(dailyPortfolioPnl || 0);
-    const dailyKnown = stockCount > 0; // sonst keine Bezugsgröße
+    const dailyKnown = stockCount > 0;
     const dailyUp = dailyPnl >= 0;
+
+    const stocksValIncomplete = useServer && s.stocks?.valuation_complete === false;
 
     return {
       // 1. Investiert
@@ -110,7 +127,9 @@ const DepotKpiRail = () => {
         tone: wpEinstand > 0 ? (gvUp ? 'pos' : 'neg') : 'muted',
         secondary:
           wpGVPct == null ? (
-            'Kein Wertpapier-Einstand hinterlegt'
+            stocksValIncomplete
+              ? 'Kurse teilweise nicht verfügbar'
+              : 'Kein Wertpapier-Einstand hinterlegt'
           ) : (
             <span className="inline-flex items-center gap-1 tabular-nums">
               {gvUp ? (
