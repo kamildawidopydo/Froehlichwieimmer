@@ -2,6 +2,19 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.22 (Preview) · Depot Phase 4A — Mongo-native Stock-Price-Cache + Market Value
+- **Selected Source**: bestehende `/api/news-markte/market/quotes` (yfinance + Fallback-Provider, real, delayed).
+- **Neuer Service** `backend/services/stock_price_service.py` — Read-through Cache: fresh (≤15 Min) → direkt aus Mongo; stale/missing → Provider → persist → return; Provider-Fail + Cache → `stale`; kein Cache → `unavailable`. Kein Fake-Fallback.
+- **Neue Collection** `stock_prices_cache` (Mongo-native) — Felder: `symbol` UNIQUE, `price` (Decimal128), `currency`, `change`, `change_pct`, `as_of`, `source`, `fetched_at`. Index `symbol_unique` + `fetched_desc`.
+- **Neuer Endpoint** `GET /api/portfolio/quotes?symbols=SAP,NVDA,ORCL` — batch, auth-required.
+- **Position-Enrichment**: `GET /api/portfolio/stock-positions` liefert jetzt zusätzlich `price`, `market_value`, `cost_basis`, `profit_loss`, `profit_loss_pct`, `as_of`, `price_status`, `price_source` — mit `Decimal`-sicherer Berechnung. Bei fehlender Position: 200 [].
+- **Summary-Enrichment**: `GET /api/portfolio/summary` — `stocks.market_value` aus realen Quotes, `stocks.valuation_complete` + `stocks.unpriced_symbols`, `profit_loss/pct` aus market vs cost. Bond-Preise weiterhin `valuation_complete=false` (separater Task).
+- **QA Preview**: SAP real 232.10 EUR · NVDA real 119.37 EUR · ORCL → `unavailable` (nicht in Provider-Allowlist) — kein Fake-Fallback ✅. Cache-Hit auf 2. Call → `fresh` (kein Provider-Roundtrip). Summary leer bei demo.kunde (0 Positions, 0 Cash, valuation_complete=true). Unauth 401. Alle Regression-Endpoints 200.
+- **N+1 vermieden**: 1 Batch-Provider-Call pro Portfolio-Read, egal wie viele Symbole.
+
+### Constraints
+Kein Prod-Deploy · Keine Order-Execution · Keine Position-Erzeugung · Keine Market-Order-Freigabe · Provider-Secrets nur serverseitig · Kein SSRF (Symbol-Allowlist via Provider) · Cash-Ledger/Watchlist/Alerts/Orders/IPO/Bond unverändert.
+
 ## Session 82.21 (Preview) · Depot Phase 3C — Customer Order UI (Limit-Kauf + Storno)
 - **Neuer SDK** `services/portfolioOrderApi.js` — `createOrder/cancelOrder/listOrders/getCash` gegen `/api/portfolio/orders*` (credentials: include, error-typisiert).
 - **Neue Komponente** `components/portfolio/OrderCreateModal.jsx` — Limit-Buy-Modal: Instrument, Ordertyp (Market-Option disabled mit Hinweis), Seite=Kaufen, Stückzahl, Limitpreis, live berechneter Reservierungsbetrag, verfügbare Liquidität aus `/api/portfolio/cash`, stabiler `idempotency_key` pro Submit (`crypto.randomUUID`), Doppelklick-Schutz via `submitting`-State.

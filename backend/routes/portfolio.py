@@ -51,6 +51,12 @@ from services.cash_service import (  # noqa: E402
     ALLOWED_CURRENCIES,
 )
 
+# Session 82.22 · Depot Phase 4A — Stock-Price-Service (yfinance read-through cache)
+from services.stock_price_service import (  # noqa: E402
+    get_quotes as get_stock_quotes,
+    ensure_indexes as ensure_stock_price_indexes,
+)
+
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 admin_router = APIRouter(prefix="/api/admin/portfolio", tags=["admin-portfolio"])
@@ -185,10 +191,53 @@ def _serialize_snapshot(doc: dict) -> dict:
 
 
 # ─── Endpoints ───────────────────────────────────────────────────────────
+@router.get("/quotes")
+async def get_portfolio_quotes(
+    symbols: str = "",
+    user: dict = Depends(get_current_user),
+):
+    """
+    Session 82.22 · Batch-Quotes (Read-Through Cache). `symbols` = CSV.
+    Empty → `{}`. Real prices only; `price_status ∈ fresh|stale|unavailable`.
+    """
+    sym_list = [s.strip().upper() for s in (symbols or "").split(",") if s.strip()]
+    if not sym_list:
+        return {}
+    return await get_stock_quotes(db, sym_list)
+
+
 @router.get("/stock-positions")
 async def list_stock_positions(user: dict = Depends(get_current_user)):
     cursor = db.stock_positions.find(_user_filter(user)).sort("updated_at", -1)
-    return [_serialize_position(doc, "stock") async for doc in cursor]
+    positions = [_serialize_position(doc, "stock") async for doc in cursor]
+    # Session 82.22 — Enrichment mit realen Quotes.
+    symbols = list({p["symbol"] for p in positions if p.get("symbol")})
+    quotes = await get_stock_quotes(db, symbols) if symbols else {}
+    for p in positions:
+        q = quotes.get(p.get("symbol")) if p.get("symbol") else None
+        qty = float(p.get("quantity") or 0)
+        avg = float(p.get("avg_cost") or 0)
+        cost = qty * avg
+        p["cost_basis"] = round(cost, 2)
+        if q and q.get("price") is not None:
+            price = float(q["price"])
+            mv = round(qty * price, 2)
+            p["price"] = price
+            p["market_value"] = mv
+            p["profit_loss"] = round(mv - cost, 2)
+            p["profit_loss_pct"] = round((mv - cost) / cost * 100, 4) if cost > 0 else None
+            p["as_of"] = q.get("as_of")
+            p["price_status"] = q.get("price_status")
+            p["price_source"] = q.get("source")
+        else:
+            p["price"] = None
+            p["market_value"] = None
+            p["profit_loss"] = None
+            p["profit_loss_pct"] = None
+            p["as_of"] = None
+            p["price_status"] = q.get("price_status") if q else "unavailable"
+            p["price_source"] = None
+    return positions
 
 
 @router.get("/bond-positions")
@@ -284,23 +333,30 @@ async def get_summary(user: dict = Depends(get_current_user)):
     cash_available = float(cash_summary["available"])
     cash_unsettled = float(cash_summary["unsettled"])
 
-    # Stock-Wert = sum(quantity * avg_cost) — Preise-Bereich kommt in Phase 2.
-    stock_agg = db.stock_positions.aggregate([
-        {"$match": {**ownership, "is_active": {"$ne": False}}},
-        {"$group": {
-            "_id": None,
-            "einstand": {"$sum": {"$multiply": [
-                {"$ifNull": ["$quantity", 0]},
-                {"$ifNull": ["$avg_cost", 0]},
-            ]}},
-            "positions": {"$sum": 1},
-        }},
-    ])
+    # Session 82.22 — Stock Market-Value via echten Quotes (statt Einstand).
+    stock_position_docs = await db.stock_positions.find(
+        {**ownership, "is_active": {"$ne": False}}
+    ).to_list(500)
     stock_einstand = 0.0
+    stock_market_value = 0.0
     stock_positions_count = 0
-    async for row in stock_agg:
-        stock_einstand = _num(row.get("einstand"))
-        stock_positions_count = int(row.get("positions") or 0)
+    unpriced_symbols: list[str] = []
+    if stock_position_docs:
+        symbols = list({d.get("symbol") for d in stock_position_docs if d.get("symbol")})
+        quotes = await get_stock_quotes(db, symbols) if symbols else {}
+        for d in stock_position_docs:
+            stock_positions_count += 1
+            qty = float(d.get("quantity") or 0)
+            avg = float(d.get("avg_cost") or 0)
+            cost = qty * avg
+            stock_einstand += cost
+            q = quotes.get(d.get("symbol")) if d.get("symbol") else None
+            if q and q.get("price") is not None:
+                stock_market_value += qty * float(q["price"])
+            else:
+                stock_market_value += cost  # letzter bekannter Einstand als transparente Näherung
+                unpriced_symbols.append(d.get("symbol"))
+    stock_valuation_complete = len(unpriced_symbols) == 0
 
     # Bond-Wert
     bond_agg = db.bond_positions.aggregate([
@@ -321,15 +377,15 @@ async def get_summary(user: dict = Depends(get_current_user)):
         bond_positions_count = int(row.get("positions") or 0)
 
     # Empty-State fallback: keine market_value bekannt → market_value = einstand
-    stock_market_value = stock_einstand
+    stock_market_value = round(stock_market_value, 2)
     invested = stock_einstand + bond_wert
     total_value = cash_balance + stock_market_value + bond_wert
-    profit_loss = 0.0
-    profit_loss_pct = 0.0
+    profit_loss = round(stock_market_value - stock_einstand, 2)
+    profit_loss_pct = round(profit_loss / stock_einstand * 100, 4) if stock_einstand > 0 else 0.0
 
     return {
-        "total_value": total_value,
-        "invested": invested,
+        "total_value": round(total_value, 2),
+        "invested": round(invested, 2),
         "cash": {
             "balance": cash_balance,
             "available": cash_available,
@@ -337,16 +393,18 @@ async def get_summary(user: dict = Depends(get_current_user)):
         },
         "stocks": {
             "market_value": stock_market_value,
-            "cost_basis": stock_einstand,
+            "cost_basis": round(stock_einstand, 2),
             "positions": stock_positions_count,
+            "valuation_complete": stock_valuation_complete,
+            "unpriced_symbols": unpriced_symbols,
         },
         "bonds": {
             "market_value": bond_wert,
             "positions": bond_positions_count,
+            "valuation_complete": False,  # Session 82.22 · Bond-Preise separater Task
         },
         "profit_loss": profit_loss,
         "profit_loss_pct": profit_loss_pct,
-        # Phase 2 wird tagesbezogene Performance liefern.
         "day_change": 0.0,
         "day_change_pct": 0.0,
     }
@@ -791,6 +849,8 @@ async def ensure_indexes():
     """
     # Session 82.18 — Cash-Ledger-Indizes
     await ensure_cash_indexes(db)
+    # Session 82.22 — Stock-Price-Cache-Indizes
+    await ensure_stock_price_indexes(db)
     # Stock-Positions
     await db.stock_positions.create_index(
         [("user_id", 1), ("symbol", 1)],
