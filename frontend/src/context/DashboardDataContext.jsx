@@ -83,40 +83,32 @@ export const DashboardDataProvider = ({ children }) => {
     setState((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  // Session 82.17 · Depot Phase 1 — alle Portfolio-Reads Mongo-native via
+  // /api/portfolio/*. Same-Origin, httpOnly-Cookie-Auth, user_id serverseitig.
+  const fetchPortfolioJson = async (path) => {
+    const resp = await fetch(path, {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    });
+    if (!resp.ok) {
+      const err = new Error(`HTTP ${resp.status}`);
+      err.status = resp.status;
+      throw err;
+    }
+    return resp.json();
+  };
+
   const fetchCashBalance = useCallback(async () => {
     if (!user?.id) return true;
     try {
-      await supabase.rpc('process_cash_settlements', { p_user_id: user.id });
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(
-          'cash_balance, cash_available, cash_unsettled, tax_allowance_eur, tax_allowance_used_eur, church_tax_enabled, church_tax_rate, tax_residency_country',
-        )
-        .eq('id', user.id)
-        .single();
-      if (error) throw error;
-
-      const { data: bp, error: bpErr } = await supabase.rpc('get_user_buying_power', {
-        p_user_id: user.id,
-      });
-      if (bpErr) throw bpErr;
-
-      const { data: settlements, error: setErr } = await supabase
-        .from('user_cash_settlements')
-        .select('*')
-        .eq('user_id', user.id)
-        .is('settled_at', null)
-        .order('settlement_date', { ascending: true })
-        .limit(20);
-      if (setErr) throw setErr;
-
+      const cash = await fetchPortfolioJson('/api/portfolio/cash');
       update({
-        cashBalance: Number(data?.cash_balance || 0),
-        cashAvailable: Number(data?.cash_available ?? data?.cash_balance ?? 0),
-        cashUnsettled: Number(data?.cash_unsettled || 0),
-        buyingPower: Number(bp || 0),
-        cashSettlements: settlements || [],
-        taxPrefs: buildTaxPrefs(data),
+        cashBalance: Number(cash?.cash_balance || 0),
+        cashAvailable: Number(cash?.cash_available ?? cash?.cash_balance ?? 0),
+        cashUnsettled: Number(cash?.cash_unsettled || 0),
+        buyingPower: Number(cash?.buying_power || 0),
+        cashSettlements: cash?.settlements || [],
+        taxPrefs: buildTaxPrefs(user || {}),
       });
       return true;
     } catch (err) {
@@ -130,14 +122,8 @@ export const DashboardDataProvider = ({ children }) => {
     if (!user?.id) return;
     update({ cashHistoryLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('user_cash_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      update({ cashHistory: data || [] });
+      const cash = await fetchPortfolioJson('/api/portfolio/cash?history_limit=100');
+      update({ cashHistory: cash?.history || [] });
     } catch (err) {
       Sentry.captureException(err);
       console.error('cash history fetch failed', err);
@@ -150,16 +136,8 @@ export const DashboardDataProvider = ({ children }) => {
     if (!user?.id) return true;
     update({ depotLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('user_depot_contracts')
-        .select(
-          '*, banks:bank_id(id, name, country, logo_url, deposit_protection, deposit_protection_amount)',
-        )
-        .eq('user_id', user.id)
-        .order('is_active', { ascending: false })
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      update({ depotContracts: data || [] });
+      // Depot-Verträge in Phase 1 noch nicht Migrations-Scope: sauberer Empty-State.
+      update({ depotContracts: [] });
       return true;
     } catch (err) {
       Sentry.captureException(err);
@@ -174,14 +152,8 @@ export const DashboardDataProvider = ({ children }) => {
     if (!user?.id) return true;
     update({ bondsLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('user_bond_positions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('is_active', { ascending: false })
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      update({ bondPositions: data || [] });
+      const data = await fetchPortfolioJson('/api/portfolio/bond-positions');
+      update({ bondPositions: Array.isArray(data) ? data : [] });
       return true;
     } catch (err) {
       Sentry.captureException(err);
@@ -196,43 +168,18 @@ export const DashboardDataProvider = ({ children }) => {
     if (!user?.id) return true;
     update({ stocksLoading: true });
     try {
-      const [posRes, watchRes, ordersRes, cacheRes] = await Promise.all([
-        supabase.from('user_stock_positions').select('*, stocks(symbol, name, logo_url, exchange, is_active)').eq('user_id', user.id),
-        supabase
-          .from('user_stock_watchlist')
-          .select('*, stocks:symbol(*)')
-          .eq('user_id', user.id)
-          .order('added_at', { ascending: false }),
-        supabase
-          .from('user_stock_orders')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(50),
-        supabase.from('stock_prices_cache').select('*'),
+      const [positions, watchlist, orders] = await Promise.all([
+        fetchPortfolioJson('/api/portfolio/stock-positions'),
+        fetchPortfolioJson('/api/portfolio/watchlist'),
+        fetchPortfolioJson('/api/portfolio/orders?limit=50'),
       ]);
-      const qErr =
-        posRes.error || watchRes.error || ordersRes.error || cacheRes.error;
-      if (qErr) {
-        Sentry.captureException(qErr);
-        console.error('stock data fetch failed', qErr);
-        return false;
-      }
-      const map = {};
-      let latestFetchedAt = null;
-      (cacheRes.data || []).forEach((p) => {
-        map[p.symbol] = p;
-        if (p.fetched_at) {
-          const ts = new Date(p.fetched_at).getTime();
-          if (!latestFetchedAt || ts > latestFetchedAt) latestFetchedAt = ts;
-        }
-      });
+      // Preisdaten liefert Phase 2 (Mongo-native Preis-Feed). In Phase 1 leerer Map.
       update({
-        stockPositions: posRes.data || [],
-        watchlistItems: watchRes.data || [],
-        stockOrders: ordersRes.data || [],
-        stockPriceMap: map,
-        stockPricesUpdatedAt: latestFetchedAt ? new Date(latestFetchedAt).toISOString() : null,
+        stockPositions: Array.isArray(positions) ? positions : [],
+        watchlistItems: Array.isArray(watchlist) ? watchlist : [],
+        stockOrders: Array.isArray(orders) ? orders : [],
+        stockPriceMap: {},
+        stockPricesUpdatedAt: null,
       });
       return true;
     } catch (err) {
@@ -484,16 +431,8 @@ export const DashboardDataProvider = ({ children }) => {
   const fetchHeroSnapshots = useCallback(async () => {
     if (!user?.id) return true;
     try {
-      const from = new Date();
-      from.setDate(from.getDate() - 400);
-      const { data, error } = await supabase
-        .from('user_portfolio_snapshots')
-        .select('snapshot_date, total_value')
-        .eq('user_id', user.id)
-        .gte('snapshot_date', from.toISOString().slice(0, 10))
-        .order('snapshot_date', { ascending: true });
-      if (error) throw error;
-      update({ heroSnapshots: data || [] });
+      const data = await fetchPortfolioJson('/api/portfolio/snapshots?days=400');
+      update({ heroSnapshots: Array.isArray(data) ? data : [] });
       return true;
     } catch (err) {
       Sentry.captureException(err);

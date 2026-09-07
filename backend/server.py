@@ -5100,6 +5100,13 @@ app.include_router(_ipo_catalog_admin_router)
 app.include_router(_bond_requests_router)
 app.include_router(_bond_requests_admin_router)
 
+# Session 82.17 — Portfolio Read-Layer (Mongo-native, read-only).
+from routes.portfolio import (  # noqa: E402
+    router as _portfolio_router,
+    ensure_indexes as _ensure_portfolio_indexes,
+)
+app.include_router(_portfolio_router)
+
 @app.on_event("startup")
 async def _init_ipo_indexes():
     try:
@@ -5129,6 +5136,12 @@ async def _init_ipo_indexes():
     except Exception as exc:  # pragma: no cover
         import logging
         logging.getLogger(__name__).warning("bond_sync_runs indexes: %s", exc)
+    # Session 82.17 · Depot Phase 1 — Portfolio Ownership-Indizes
+    try:
+        await _ensure_portfolio_indexes()
+    except Exception as exc:  # pragma: no cover
+        import logging
+        logging.getLogger(__name__).warning("portfolio indexes: %s", exc)
 from social_content import ensure_indexes as _social_content_ensure_indexes  # noqa: E402
 
 

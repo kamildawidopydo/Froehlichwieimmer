@@ -2,6 +2,21 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.17 (Preview) · Depot Phase 1 — Portfolio Read-Layer Mongo-native
+- **Neuer Router** `backend/routes/portfolio.py` mit 8 Customer-Endpoints (Read-Only): `summary`, `stock-positions`, `bond-positions`, `orders`, `cash`, `watchlist`, `alerts`, `snapshots`. Alle require `get_current_user`, `user_id` serverseitig aus Mongo-Auth (kein Client-Injection).
+- **Empty-State-Vertrag**: 200 + `[]` bzw. mathematischer Zero-State; keine Fake-Daten, keine erfundenen Preise.
+- **Legacy-Kompat**: `_user_filter()` matcht sowohl `ObjectId` als auch `str` als `user_id` (bestehende `watchlists`/`stock_alerts` Rows aus Session 80.83 sind als String persistiert).
+- **Indizes idempotent** angelegt: `user_id`+Symbol/ISIN unique sparse, created_at DESC-Sortier-Indizes, snapshot_date unique.
+- **`DashboardDataContext.jsx` Cutover**: 6 Fetches (`fetchCashBalance`, `fetchCashHistory`, `fetchDepotContracts`, `fetchBondPositions`, `fetchStockData`, `fetchHeroSnapshots`) auf FastAPI umgestellt. Supabase-RPCs `process_cash_settlements` und `get_user_buying_power` sowie `.single()` auf `profiles` entfernt — keine UUID-Cast-Fehler mehr.
+- **`Statement.js` Cutover**: 8 direkte Supabase-Portfolio-Reads → FastAPI-Aggregat aus `/api/portfolio/cash|stock-positions|bond-positions|orders`.
+- **Banner-Trigger**: 200 + `[]` gilt als Success — der rote „Einige Dashboard-Daten…"-Banner triggert nur noch bei echten HTTP-Fehlern.
+- **Security**: unauth → 401 auf allen 8 Endpoints; Cross-User-Read technisch unmöglich (Query-Injection wie `?user_id=…` wird ignoriert); Server-Filter bindet strikt an eingeloggte Session.
+- **QA Preview**: alle 8 Endpoints 200 · Summary aggregiert korrekt (0/0/0 im Empty-State) · Cash 0 ohne Crash · Watchlist Legacy-String-Match funktioniert (Admin sieht 2 Rows) · IPO/Bond-Regression bestanden · Supabase-Portfolio-Reads-Zähler in beiden Frontend-Dateien = 0.
+- **Nicht in Scope**: Portfolio-Writes, Cash-Ledger, IPO/Bond-Allocation, Depot-Verträge (kommen in Phase 2/3).
+
+### Constraints
+Kein Prod-Deploy · Read-Only · Keine Cash-Buchungen · Keine Position-Erzeugung · Keine Migration historischer Supabase-Daten · Kein Service-Role · Kein RLS-Change · IPO/Bond Katalog/Requests/Sync/Cron unverändert.
+
 ## Session 82.17 (Preview) · Bond-Sync Cron + Run-History + CSV
 - **Cron**: `.emergent/crons.yml` neu `bond-catalog-sync` @ `35 5 * * *` UTC (nach IPO 04:30 + nach Deutsche-Börse-Refresh). Endpoint `POST /api/cron/bond-catalog-sync`, Bearer `WEBHOOK_CRON_SECRET`, acked 2xx sofort + `asyncio.create_task` — analog IPO-Cron.
 - **History-Collection** `bond_sync_runs` mit Index `created_at DESC`, Retention 30 (nur History-Docs).

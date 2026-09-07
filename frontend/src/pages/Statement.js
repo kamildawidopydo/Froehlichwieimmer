@@ -41,48 +41,34 @@ const Statement = ({ embedded = false }) => {
   }, [user?.id]);
 
   const fetchAll = async () => {
+    // Session 82.17 · Depot Phase 1 — Statement liest ausschließlich über
+    // /api/portfolio/* (Mongo-native, read-only). Kein Supabase mehr.
     setLoading(true);
+    const fetchJson = async (path) => {
+      const resp = await fetch(path, {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return resp.json();
+    };
     try {
-      const [
-        profileRes,
-        balanceRes,
-        positionsRes,
-        cacheRes,
-        bondsRes,
-        contractsRes,
-        txRes,
-        ordersRes,
-      ] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabase.from('profiles').select('cash_balance').eq('id', user.id).maybeSingle(),
-        supabase.from('user_stock_positions').select('*').eq('user_id', user.id),
-        supabase.from('stock_prices_cache').select('*'),
-        supabase.from('user_bond_positions').select('*').eq('user_id', user.id).eq('is_active', true),
-        supabase.from('user_depot_contracts').select('*').eq('user_id', user.id).eq('is_active', true),
-        supabase
-          .from('user_cash_transactions')
-          .select('id, amount, type, description, balance_after, created_at')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(50),
-        supabase
-          .from('user_stock_orders')
-          .select('id, symbol, side, quantity, requested_price, executed_price, status, created_at, executed_at, discount_percent_snapshot')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(50),
+      const [cash, positions, bondsData, ordersData] = await Promise.all([
+        fetchJson('/api/portfolio/cash?history_limit=50'),
+        fetchJson('/api/portfolio/stock-positions'),
+        fetchJson('/api/portfolio/bond-positions'),
+        fetchJson('/api/portfolio/orders?limit=50'),
       ]);
-
-      setProfile(profileRes.data);
-      setCashBalance(Number(balanceRes.data?.cash_balance || 0));
-      setPositions(positionsRes.data || []);
-      const map = {};
-      (cacheRes.data || []).forEach((p) => { map[p.symbol] = p; });
-      setPriceMap(map);
-      setBonds(bondsRes.data || []);
-      setContracts(contractsRes.data || []);
-      setTransactions(txRes.data || []);
-      setOrders(ordersRes.data || []);
+      // Profil aus /api/auth/me (bereits verfügbar via user-Prop; Empty-State ok)
+      setProfile(user || null);
+      setCashBalance(Number(cash?.cash_balance || 0));
+      setPositions(Array.isArray(positions) ? positions : []);
+      // Preisdaten kommen in Phase 2 — hier leere Preistabelle.
+      setPriceMap({});
+      setBonds(Array.isArray(bondsData) ? bondsData : []);
+      setContracts([]);
+      setTransactions(cash?.history || []);
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
     } catch (err) {
       console.error('Statement fetch failed', err);
     } finally {
