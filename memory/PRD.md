@@ -9,53 +9,67 @@ Sprache: **Deutsch**.
 
 ---
 
-## Session 82.05 (Preview) · IPO-Katalog Backend-Sync
+## Session 82.06 (Preview) · IPO-Sync als Scheduled Cron
 
 ### Was
-Neuer Admin-Endpoint `POST /api/admin/ipo/catalog/sync` fetcht Euronext
-(HTML-Scrape) + Nasdaq (JSON-API), normalisiert Rows auf das bestehende
-Mongo-`ipo_catalog`-Schema (Session 82.03), setzt Status via bewährter
-Legacy-Logik (date-based Euronext, bucket-based Nasdaq) und upsertet
-idempotent per `external_key`.
-
-### Regeln (identisch zur Legacy-Edge-Function)
-- `external_key = isin:{ISIN}` bevorzugt, sonst `{source}:{TICKER}:{DATE}`
-- Manual-Override-Rows (`is_manual_override=true`) werden **nie**
-  überschrieben (Report-Feld `skipped_manual_override`)
-- **Keine Löschung** — nur Status-Updates; `is_visible=false` für
-  `listed`/`cancelled`, damit Kunden sie nicht mehr sehen
-- Neue Auto-Rows: `is_manual_override=false`, `lot_size=1` default
-- Externe Fetches: 15s Timeout pro Source, source-isoliert (eine Quelle
-  down bricht die andere nicht)
-- Kein Secret/Payload — reine POST-Auth via Admin-Cookie
-- Kein Dual-Write nach Supabase; kein Delete
+IPO-Katalog wird jetzt automatisch täglich synchronisiert (04:30 UTC ≈
+06:30 Europe/Berlin Sommer / 05:30 Winter). Sync-Logik ist in
+wiederverwendbaren Service extrahiert; Admin-Button und Cron rufen
+dieselbe Funktion — keine Parallel-Implementierung.
 
 ### Files
-- `backend/routes/ipo_catalog.py` — Sync-Endpoint + Parser inline
-- `frontend/src/pages/AdminIpoCatalog.js` — „Sync jetzt"-Button auf
-  neuen Endpoint, kompakter Report-Toast
+- `backend/services/ipo_sync.py` (NEU) — Service `sync_ipo_catalog(db, trigger)`
+  mit Euronext + Nasdaq Fetchern, `asyncio.gather` parallel, Modul-Level
+  `asyncio.Lock` gegen Same-Instance-Doppelläufe. `get_last_sync_status(db)`
+  liefert Timestamp + kompakten Report.
+- `backend/routes/ipo_catalog.py` — Inline-Sync-Logik entfernt, Route
+  delegiert an Service. Neuer GET `/api/admin/ipo/catalog/sync/status`.
+- `backend/server.py` — Cron-Endpoint `POST /api/cron/ipo-catalog-sync`
+  (Bearer, ack 2xx sofort in ~20ms, `asyncio.create_task` für Sync).
+- `.emergent/crons.yml` — 4. Job `ipo-catalog-sync` mit `cron: "30 4 * * *"`.
+- `frontend/src/pages/AdminIpoCatalog.js` — „Letzte Synchronisierung"-
+  Anzeige im Header, geladen via GET /sync/status.
 
-### Cloudflare-Constraint (dokumentiert)
-Externe Fetches können zusammen >100s dauern. Cloudflare-Proxy hat
-100s-Grenze → **Preview-Aufrufe von außen können 524/502 liefern**,
-obwohl der Backend-Sync intern zu Ende läuft. Empfehlung: Sync lokal
-oder als Background-Cron. Für interaktive Admin-Nutzung reicht das
-15s-pro-Source-Timeout, um zumindest eine Quelle zu liefern.
+### Preview-Verifikation
+- Health 200 nach Restart; alle 4 Crons in YAML gelistet, korrektes 5-Feld-
+  Format, alle Namen ≤21 Zeichen.
+- Unauth Cron → 401 ✓ · Bad Bearer → 401 ✓ · Correct Bearer → 200 in ~20ms ✓
+- Job-Lock: 2. paralleler Admin-Sync gibt `already-running` zurück ✓
+- Cron-Log zeigt safe report (fetched/inserted/…), keine Secrets ✓
+- Public IPO GET unverändert, kein listed/cancelled leak ✓
+- IPO-Request-Flow gegen synced Katalog funktioniert weiter ✓
+- Log-Secret-Leakage: 0 ✓
+
+### Cron-Konfig
+- **Name**: `ipo-catalog-sync`
+- **Schedule**: `30 4 * * *` (UTC — Plattform-Default; dokumentiert für DST)
+- **Entrypoint**: `POST /api/cron/ipo-catalog-sync`
+- **Auth**: Bearer via `WEBHOOK_CRON_SECRET`
+- **Ack-Zeit**: ~20ms (weit unter 5s Dispatcher-Deadline)
+- **Retry**: keine (Plattform-Default; Idempotenz macht Retry unnötig)
+- **Timeout**: 15s pro externer Quelle (Euronext, Nasdaq getrennt)
 
 ### Constraints eingehalten
 - Kein Prod-Deploy · Keine Portfolio-Migration · Kein Service-Role
-- Keine RLS-Änderung · Keine Fake-Daten
-- Kein Dual-Write nach Supabase · Kein destructive delete
-- DashboardDataContext, Bond, News, Header, Auth, IPO-Catalog-Frontend
-  unverändert
+- Keine RLS-Änderung · Keine Fake-Daten · Kein Delete
+- Kein Dual-Write nach Supabase · Manual-Override P0 geschützt
+- DashboardDataContext, Bond, News, Header, Auth, Same-Origin, IPO Customer
+  Request Flow unverändert
+- Bestehende 3 Crons nicht verändert; nur 4. Job hinzugefügt
+
+### Prod-Betriebs-Notiz
+Deployed Apps discardieren Schedules faster than every 15 minutes. Unser
+Job läuft nur 1×/Tag → prod-tauglich. Cron-Sync für Prod ist bereit
+sobald Idempotency-Ticket freigegeben.
 
 ---
 
 ## Frühere Sessions
+- 82.05 — IPO-Katalog Backend-Sync-Endpoint (LIVE Preview)
 - 82.04 — Bond-Kaufanfragen Supabase → Mongo (LIVE Preview)
 - 82.03 — Bond + IPO Katalog Supabase → Mongo (LIVE Preview)
 - 82.02 — Mongo-native IPO-Requests + Admin-UI-Merge (LIVE Preview)
-- 81.09 — Prod-Backend-URL Hotfix via `apiBaseFix.js`
+- 81.09 — Prod-Backend-URL Hotfix
 - 81.08 (LIVE Prod) — Hot News Detail Fix
 - 81.07 (LIVE Prod) — Dashboard Nav Fix
 
@@ -64,7 +78,6 @@ oder als Background-Cron. Für interaktive Admin-Nutzung reicht das
 - Deploy Pipeline Idempotency Incident (P0) — Support-Ticket offen
 
 ## Backlog (P1/P2)
-- Sync als scheduled Cron in `.emergent/crons.yml` (weekly/daily)
 - Dashboard-Banner-Suppression für Mongo-Native-User
 - Portfolio-Migration Extract/Transform/Validate/Reconcile/Cutover
 - Sentry, Rate-Limiting, Deploy-Hardening

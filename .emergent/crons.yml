@@ -25,3 +25,14 @@ crons:
     cron: "*/15 * * * *"
     endpoint: "{{BASE_URL}}/api/cron/stock-alerts-evaluate"
     method: POST
+
+  # Täglicher IPO-Katalog-Sync gegen Euronext + Nasdaq (Session 82.06). Läuft
+  # source-isoliert (Nasdaq-Fail bricht Euronext nicht ab), Manual-Override
+  # geschützt. Endpoint acked 2xx sofort und startet den Sync als
+  # asyncio-Background-Task. 04:30 UTC (~ 06:30 Europe/Berlin Sommer / 05:30 Winter).
+  - name: ipo-catalog-sync
+    description: "Täglich IPO-Katalog aus Euronext + Nasdaq synchronisieren"
+    cron: "30 4 * * *"
+    endpoint: "{{BASE_URL}}/api/cron/ipo-catalog-sync"
+    method: POST
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.

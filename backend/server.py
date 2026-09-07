@@ -4472,6 +4472,43 @@ async def _cron_news_synthesize(request: Request):
     return {"accepted": True, "run_id": run_id, "job": "news-synthesize", "started_at": started}
 
 
+# Session 82.06 — IPO-Katalog-Sync als Scheduled Cron (~ täglich).
+# Bearer-Auth wie bei den anderen Crons; Background-Task hält die 2xx-Ack
+# unter der ~5s Dispatcher-Deadline. Delegiert an services/ipo_sync.
+async def _cron_ipo_catalog_sync(request: Request):
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    _verify_cron_bearer(request.headers.get("authorization"))
+    run_id = _secrets.token_hex(8)
+    started = datetime.now(timezone.utc).isoformat()
+
+    async def _job() -> None:
+        try:
+            from services.ipo_sync import sync_ipo_catalog  # lazy import
+            report = await sync_ipo_catalog(db, trigger="cron")
+            logger.info(
+                "cron_ipo_catalog_sync ok run_id=%s report=%s",
+                run_id, {k: report.get(k) for k in
+                         ("fetched", "inserted", "updated", "unchanged",
+                          "skipped_manual_override", "euronext_status",
+                          "nasdaq_status", "duration_ms")},
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("cron_ipo_catalog_sync failed run_id=%s", run_id)
+
+    asyncio.create_task(_job())
+    return {"accepted": True, "run_id": run_id, "job": "ipo-catalog-sync", "started_at": started}
+
+
+api.add_api_route(
+    "/cron/ipo-catalog-sync",
+    _cron_ipo_catalog_sync,
+    methods=["POST"],
+    include_in_schema=False,
+)
+
+
+
+
 async def _admin_news_list(_user: dict = Depends(require_admin), status: Optional[str] = None, limit: int = 50):
     query = {}
     if status:

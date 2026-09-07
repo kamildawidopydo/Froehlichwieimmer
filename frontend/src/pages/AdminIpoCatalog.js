@@ -78,6 +78,16 @@ const AdminIpoCatalog = () => {
   const [showModal, setShowModal] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null);
+
+  const loadSyncStatus = async () => {
+    try {
+      const s = await fetchJson('/api/admin/ipo/catalog/sync/status');
+      setSyncStatus(s);
+    } catch {
+      // best-effort, ignorieren
+    }
+  };
 
   const runSync = async () => {
     setSyncing(true);
@@ -89,7 +99,7 @@ const AdminIpoCatalog = () => {
       } else {
         toast.success(`Sync abgeschlossen: ${summary}`);
       }
-      await load();
+      await Promise.all([load(), loadSyncStatus()]);
     } catch (err) {
       toast.error('Sync fehlgeschlagen: ' + err.message);
     } finally {
@@ -116,6 +126,7 @@ const AdminIpoCatalog = () => {
 
   useEffect(() => {
     load();
+    loadSyncStatus();
   }, []);
 
   const openAdd = () => {
@@ -262,7 +273,11 @@ const AdminIpoCatalog = () => {
         eyebrow="Admin"
         title="IPO-Katalog"
         titleIcon={PRODUCT_ICONS.ipo}
-        description="Börsengänge vor dem Handelsstart — Mongo-native, mit Auto-Sync aus Euronext + Nasdaq."
+        description={
+          syncStatus?.last_run_at
+            ? `Letzte Synchronisierung: ${new Date(syncStatus.last_run_at).toLocaleString('de-DE')} · ${syncStatus.report?.trigger || 'manual'} · ${syncStatus.report?.fetched ?? 0} geprüft`
+            : 'Börsengänge vor dem Handelsstart — Mongo-native, mit täglichem Auto-Sync aus Euronext + Nasdaq.'
+        }
         actions={
           <div className="flex flex-wrap gap-2">
             <Button

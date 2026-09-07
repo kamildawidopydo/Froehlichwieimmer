@@ -14,17 +14,19 @@ verwendet — Admin pflegt manuell (Anforderung: „Admin Manual CRUD reicht").
 
 from __future__ import annotations
 
-import re
-from datetime import datetime, timezone, date as _date, timedelta
+from datetime import datetime, timezone, date as _date
 from typing import Optional, Literal
 
-import httpx
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pymongo.errors import DuplicateKeyError
 
 from server import get_current_user, db, require_admin  # type: ignore[attr-defined]
+
+# Session 82.06 — Sync-Logik in wiederverwendbare Service-Funktion extrahiert,
+# damit Admin-Route und Cron-Endpoint dieselbe Implementierung nutzen.
+from services.ipo_sync import sync_ipo_catalog, get_last_sync_status  # noqa: E402
 
 
 public_router = APIRouter(prefix="/api/ipo", tags=["ipo-catalog"])
@@ -363,252 +365,28 @@ async def admin_delete_ipo(
     return None
 
 
-# ─── SYNC · Externe Quellen → Mongo (Session 82.05) ─────────────────────
+# ─── SYNC · Externe Quellen → Mongo (Session 82.05 · refactor 82.06) ─────
 #
-# Bewusst kompakter Python-native Port der Legacy-Deno-Edge-Function.
-# Nur Euronext + Nasdaq (User-Anforderung Phase 3). Kein Delete, kein
-# Overwrite von is_manual_override, kein Dual-Write nach Supabase.
+# Die Fetch-, Parsing-, Upsert- und Manual-Override-Logik lebt jetzt in
+# `services/ipo_sync.py`. Diese Route delegiert lediglich — Cron und Admin
+# rufen dieselbe Funktion auf. Keine Parallel-Implementierung.
 #
-_USER_AGENT = "kapitalmitte-ipobot/1.0 (+https://finance-platform-v2.emergent.host)"
-
-
-def _build_external_key(source: str, isin: Optional[str], ticker: Optional[str],
-                        ipo_date: Optional[str]) -> str:
-    """Identische Regel wie Legacy: isin:{ISIN} bevorzugt, sonst source:ticker:date."""
-    if isin:
-        return f"isin:{isin.upper()}"
-    t = (ticker or "unknown").upper()
-    d = ipo_date or "nodate"
-    return f"{source}:{t}:{d}"
-
-
-def _derive_euronext_status(ipo_date: Optional[str]) -> str:
-    """Euronext liefert nur Datum → date-based Ableitung, wie im Legacy-Parser."""
-    if not ipo_date:
-        return "upcoming"
-    try:
-        d = _date.fromisoformat(ipo_date)
-    except ValueError:
-        return "upcoming"
-    cutoff = _date.today() - timedelta(days=30)
-    return "listed" if d <= cutoff else "upcoming"
-
-
-def _derive_nasdaq_status(bucket: str, ipo_date: Optional[str]) -> str:
-    """Nasdaq bucket → Status. Unbekannte bucket-Werte werden geskippt."""
-    if bucket == "filed":
-        return "filed"
-    if bucket == "withdrawn":
-        return "cancelled"
-    if bucket == "priced":
-        return "priced"
-    if bucket == "upcoming":
-        return _derive_euronext_status(ipo_date)
-    return "__skip__"  # unknown bucket → caller skipt Record
-
-
-def _parse_euronext_date(raw: str) -> Optional[str]:
-    m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", raw.strip())
-    if not m:
-        return None
-    d, mo, y = m.groups()
-    return f"{y}-{mo.zfill(2)}-{d.zfill(2)}"
-
-
-def _strip_html(s: str) -> str:
-    return re.sub(r"<[^>]+>", "", s).strip()
-
-
-async def _fetch_euronext() -> list[dict]:
-    url = "https://live.euronext.com/en/ipo-showcase"
-    async with httpx.AsyncClient(timeout=15.0, headers={"User-Agent": _USER_AGENT}) as c:
-        r = await c.get(url)
-        if r.status_code != 200:
-            raise RuntimeError(f"euronext HTTP {r.status_code}")
-        html = r.text
-    rows = []
-    for tr in re.findall(r"<tr[^>]*>([\s\S]*?)</tr>", html, re.IGNORECASE):
-        cells = [_strip_html(td) for td in re.findall(r"<td[^>]*>([\s\S]*?)</td>", tr, re.IGNORECASE)]
-        if len(cells) < 6:
-            continue
-        date_raw, company, ticker, isin, location, market = cells[:6]
-        if not company or company.lower() == "company name":
-            continue
-        if not re.match(r"^\d{1,2}/\d{1,2}/\d{4}$", date_raw):
-            continue
-        ipo_date = _parse_euronext_date(date_raw)
-        rows.append({
-            "external_key": _build_external_key("euronext", isin if len(isin) >= 10 else None,
-                                                ticker or None, ipo_date),
-            "source": "euronext",
-            "company_name": company,
-            "ticker_proposed": ticker or None,
-            "isin": isin.upper() if len(isin) >= 10 else None,
-            "exchange": location or None,
-            "market": market or None,
-            "ipo_date": ipo_date,
-            "price_currency": "EUR",
-            "auto_status": _derive_euronext_status(ipo_date),
-        })
-    return rows
-
-
-def _parse_nasdaq_price(raw: Optional[str]) -> tuple[Optional[float], Optional[float]]:
-    if not raw:
-        return None, None
-    cleaned = re.sub(r"[$,\s]", " ", str(raw)).strip()
-    parts = [p.strip() for p in re.split(r"[-–—]", cleaned) if p.strip()]
-    try:
-        if len(parts) >= 2:
-            return float(parts[0]), float(parts[1])
-        single = float(cleaned)
-        return single, single
-    except ValueError:
-        return None, None
-
-
-def _month_periods_around_now() -> list[str]:
-    today = _date.today()
-    ps = []
-    for delta in (-30, 0, 30, 60):
-        d = today + timedelta(days=delta)
-        ps.append(f"{d.year}-{str(d.month).zfill(2)}")
-    return list(dict.fromkeys(ps))
-
-
-async def _fetch_nasdaq() -> list[dict]:
-    headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; kapitalmitte-ipobot/1.0)",
-        "Accept": "application/json, text/plain, */*",
-        "Referer": "https://www.nasdaq.com/market-activity/ipos",
-        "Origin": "https://www.nasdaq.com",
-    }
-    seen: dict[str, dict] = {}
-    period_errors: list[str] = []
-    async with httpx.AsyncClient(timeout=15.0, headers=headers) as c:
-        for period in _month_periods_around_now():
-            try:
-                r = await c.get(f"https://api.nasdaq.com/api/ipo/calendar?date={period}")
-                if r.status_code != 200:
-                    period_errors.append(f"{period}:HTTP{r.status_code}")
-                    continue
-                data = (r.json() or {}).get("data") or {}
-                for bucket in ("priced", "upcoming", "filed", "withdrawn"):
-                    payload = data.get(bucket) or {}
-                    rows = payload.get("rows") if isinstance(payload, dict) else payload
-                    if not isinstance(rows, list):
-                        continue
-                    for row in rows:
-                        status = _derive_nasdaq_status(bucket, None)
-                        company = str(row.get("companyName") or row.get("company_name") or "").strip()
-                        if not company:
-                            continue
-                        ticker = str(row.get("proposedTickerSymbol") or row.get("symbol") or "").strip() or None
-                        raw_date = row.get("pricedDate") or row.get("expectedPriceDate") or row.get("ipoDate")
-                        ipo_date = None
-                        if raw_date:
-                            s = str(raw_date).strip()
-                            m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", s)
-                            if m:
-                                mo, d, y = m.groups()
-                                ipo_date = f"{y}-{mo.zfill(2)}-{d.zfill(2)}"
-                            else:
-                                iso = re.match(r"^(\d{4})-(\d{2})-(\d{2})", s)
-                                if iso:
-                                    ipo_date = f"{iso.group(1)}-{iso.group(2)}-{iso.group(3)}"
-                        if bucket == "upcoming":
-                            status = _derive_euronext_status(ipo_date)
-                        if status == "__skip__":
-                            continue
-                        low, high = _parse_nasdaq_price(row.get("proposedSharePrice") or row.get("sharePrice"))
-                        key = _build_external_key("nasdaq", None, ticker, ipo_date)
-                        seen.setdefault(key, {
-                            "external_key": key,
-                            "source": "nasdaq",
-                            "company_name": company,
-                            "ticker_proposed": ticker,
-                            "isin": None,
-                            "exchange": str(row.get("proposedExchange") or row.get("exchange") or "US").strip() or "US",
-                            "market": None,
-                            "ipo_date": ipo_date,
-                            "price_range_low": low,
-                            "price_range_high": high,
-                            "price_currency": "USD",
-                            "auto_status": status,
-                        })
-            except Exception as exc:  # pragma: no cover — per-period isolation
-                period_errors.append(f"{period}:{exc}")
-    if not seen and period_errors:
-        raise RuntimeError("; ".join(period_errors))
-    return list(seen.values())
 
 
 @admin_router.post("/catalog/sync")
 async def admin_sync_ipo_catalog(_admin: dict = Depends(require_admin)):
     """
-    Fetcht Euronext + Nasdaq und upsertet in Mongo `ipo_catalog`.
-
-    Idempotent via external_key. Rows mit is_manual_override=true werden
-    NIE überschrieben. Kein Delete. Kein Payload — Konfiguration server-side.
+    Manueller Admin-Sync (Trigger=admin). Idempotent, source-isoliert,
+    Manual-Override wird respektiert. Delegiert an services/ipo_sync.
     """
-    report = {
-        "fetched": 0, "inserted": 0, "updated": 0, "unchanged": 0,
-        "skipped_manual_override": 0, "skipped_invalid": 0, "errors": [],
-        "sources": {"euronext": 0, "nasdaq": 0},
-    }
+    return await sync_ipo_catalog(db, trigger="admin")
 
-    rows: list[dict] = []
-    for name, fetcher in (("euronext", _fetch_euronext), ("nasdaq", _fetch_nasdaq)):
-        try:
-            r = await fetcher()
-            report["sources"][name] = len(r)
-            rows.extend(r)
-        except Exception as exc:
-            report["errors"].append(f"{name}: {exc}")
 
-    report["fetched"] = len(rows)
-    now = datetime.now(timezone.utc)
-
-    for row in rows:
-        key = row.get("external_key")
-        if not key or not row.get("company_name"):
-            report["skipped_invalid"] += 1
-            continue
-
-        existing = await db.ipo_catalog.find_one({"external_key": key})
-        auto_status = row.pop("auto_status", "upcoming")
-        # Nicht pauschal sichtbar schalten: nur wenn Status nicht listed/cancelled.
-        is_visible = auto_status not in ("listed", "cancelled")
-
-        if existing and existing.get("is_manual_override"):
-            report["skipped_manual_override"] += 1
-            continue
-
-        payload = {k: v for k, v in row.items() if v is not None}
-        payload["status"] = auto_status
-        payload["is_visible"] = is_visible
-        payload["updated_at"] = now
-
-        if not existing:
-            payload["created_at"] = now
-            payload["is_manual_override"] = False
-            payload.setdefault("lot_size", 1)
-            try:
-                await db.ipo_catalog.insert_one(payload)
-                report["inserted"] += 1
-            except DuplicateKeyError:
-                report["skipped_invalid"] += 1
-        else:
-            # Delete-Policy: kein Löschen. Nur Status/Fields aktualisieren.
-            # Wenn Werte identisch: unchanged.
-            changed = any(existing.get(k) != v for k, v in payload.items() if k != "updated_at")
-            if changed:
-                await db.ipo_catalog.update_one({"_id": existing["_id"]}, {"$set": payload})
-                report["updated"] += 1
-            else:
-                report["unchanged"] += 1
-
-    return report
+@admin_router.get("/catalog/sync/status")
+async def admin_ipo_sync_status(_admin: dict = Depends(require_admin)):
+    """Timestamp + kompakter Report des letzten Sync-Laufs."""
+    result = await get_last_sync_status(db)
+    return result or {"last_run_at": None, "report": None}
 
 
 async def ensure_indexes():
