@@ -161,28 +161,44 @@ const AnleihenKaufenPage = () => {
       toast.error('Bitte geben Sie ein gültiges Ordervolumen an.');
       return;
     }
-    // NOTE (Session 82.03): Kunden-Kaufanfrage schreibt weiterhin nach
-    // Supabase `bond_purchase_requests`. Bekannter Blocker: Mongo-Native User
-    // (ObjectId) schlägt gegen Supabase-RLS auf user_id (uuid) fehl. Fix
-    // separater Arbeitsschritt, außerhalb des Bond-KATALOG-Cutovers.
-    const { error } = await supabase.from('bond_purchase_requests').insert({
-      user_id: user.id,
-      isin: bond.isin || null,
-      bond_name: bond.bond_name || null,
-      kupon_rate: bond.kupon_rate || null,
-      amount_eur: amount,
-      status: 'pending',
-      notes: 'Created from Neue Anleihe kaufen',
-    });
-    if (error) {
-      toast.error('Anfrage konnte nicht gespeichert werden.');
+    // Session 82.04 — FastAPI/Mongo-native Customer-Write (kein Supabase mehr).
+    // Auth via Cookie; user_id/status/source werden serverseitig gesetzt und
+    // dürfen im Payload nicht auftauchen. bond_id ist die Mongo-Katalog-_id.
+    try {
+      const resp = await fetch('/api/bonds/requests', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          bond_id: bond.id,
+          amount_eur: amount,
+          notes: 'Created from Neue Anleihe kaufen',
+        }),
+      });
+      if (!resp.ok) {
+        let detail = 'Anfrage konnte nicht gespeichert werden.';
+        try {
+          const body = await resp.json();
+          if (body?.detail) detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+        } catch { /* ignore */ }
+        if (resp.status === 409) {
+          toast.error('Für diese Anleihe besteht bereits eine offene Kaufanfrage.');
+        } else if (resp.status === 401) {
+          toast.error('Sitzung abgelaufen. Bitte neu anmelden.');
+        } else {
+          toast.error(detail);
+        }
+        return;
+      }
+    } catch (err) {
+      toast.error('Netzwerkfehler — bitte erneut versuchen.');
       return;
     }
     if (typeof refreshBondRequests === 'function') {
       await refreshBondRequests();
     }
     toast.success(
-      `Anfrage für "${bond.bond_name || bond.isin}" gesendet. Unser Team meldet sich bei Ihnen. Den Status sehen Sie unter «Aufträge».`,
+      `Ihre Anleihe-Kaufanfrage für "${bond.bond_name || bond.isin}" wurde erfolgreich übermittelt.`,
     );
   };
 

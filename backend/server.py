@@ -5014,10 +5014,18 @@ from routes.ipo_catalog import (  # noqa: E402
     admin_router as _ipo_catalog_admin_router,
     ensure_indexes as _ensure_ipo_catalog_indexes,
 )
+# Session 82.04 — Bond-Kaufanfragen (Mongo-native, ersetzt Legacy-Supabase-RPC).
+from routes.bond_requests import (  # noqa: E402
+    router as _bond_requests_router,
+    admin_router as _bond_requests_admin_router,
+    ensure_indexes as _ensure_bond_requests_indexes,
+)
 app.include_router(_bond_public_router)
 app.include_router(_bond_admin_router)
 app.include_router(_ipo_catalog_public_router)
 app.include_router(_ipo_catalog_admin_router)
+app.include_router(_bond_requests_router)
+app.include_router(_bond_requests_admin_router)
 
 @app.on_event("startup")
 async def _init_ipo_indexes():
@@ -5036,6 +5044,11 @@ async def _init_ipo_indexes():
     except Exception as exc:  # pragma: no cover
         import logging
         logging.getLogger(__name__).warning("ipo_catalog indexes: %s", exc)
+    try:
+        await _ensure_bond_requests_indexes()
+    except Exception as exc:  # pragma: no cover
+        import logging
+        logging.getLogger(__name__).warning("bond_requests indexes: %s", exc)
 from social_content import ensure_indexes as _social_content_ensure_indexes  # noqa: E402
 
 

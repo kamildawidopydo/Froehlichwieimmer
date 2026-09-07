@@ -376,15 +376,16 @@ export const DashboardDataProvider = ({ children }) => {
     if (!user?.id) return true;
     update({ bondRequestsLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('bond_purchase_requests')
-        .select(
-          'id, isin, bond_name, kupon_rate, amount_eur, status, notes, created_at, decision_note, approved_at, rejected_at',
-        )
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      update({ bondPurchaseRequests: data || [] });
+      // Session 82.04 — FastAPI/Mongo-native. Der Supabase-Read wurde ersetzt,
+      // damit neue Mongo-Requests direkt sichtbar sind. Nur diese eine
+      // Fetch-Funktion wurde geändert — Portfolio/Cash/Depot bleiben Supabase.
+      const resp = await fetch('/api/bonds/requests/me', {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      update({ bondPurchaseRequests: Array.isArray(data) ? data : [] });
       return true;
     } catch (err) {
       Sentry.captureException(err);

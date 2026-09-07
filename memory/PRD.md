@@ -9,91 +9,85 @@ Sprache: **Deutsch**.
 
 ---
 
-## Session 82.03 (Preview) · Bond + IPO Katalog-Migration Supabase → Mongo
+## Session 82.04 (Preview) · Bond-Kaufanfragen Supabase → Mongo
 
 ### Root Cause
-Legacy-Supabase-Tabellen `bond_catalog` und `ipo_catalog` liefern Anon-Reads
-mit **0 Zeilen** (Content-Range `*/0`). Ohne `SUPABASE_SERVICE_ROLE_KEY`
-kann der Admin-Editor ebenfalls nicht schreiben. Kunden sehen daher weder
-Anleihen noch bevorstehende IPOs.
+Kunden-INSERT auf Supabase `bond_purchase_requests` schlug für alle
+Mongo-Native User fehl (ObjectId vs. UUID im RLS-Filter `user_id`). Admin-
+Approve/Reject nutzt Supabase-RPCs, die ohne Service-Role blockierten.
 
-### Fix — Fix A + Fix B (Katalog-only, ohne Portfolio-Migration)
-Neue Mongo-Native-Endpunkte + Frontend-Umstellung:
+### Fix (Session 82.04)
+**Backend (1 neues Modul + Router-Reg):**
+- `backend/routes/bond_requests.py` — Customer POST/GET-me + Admin GET/
+  approve/reject; Duplicate-Guard (partial-unique-Index user+bond+pending);
+  Bond-Validierung gegen Mongo `bond_catalog` (existiert, is_available,
+  nicht abgelaufen, ≥ min_order_eur); Stammdaten (bond_name/isin/
+  kupon_rate) **nur** aus Katalog, nie aus Client-Payload; `extra=forbid`
+  gegen Mass-Assignment; atomarer `find_one_and_update` mit `status=pending`
+  Filter (verhindert Double-Approve).
+- `backend/server.py` — Router `router` und `admin_router` registriert,
+  `ensure_indexes` idempotent im Startup.
 
-**Backend (2 neue Module, 1 Registrierung, 1 Refactor):**
-- `backend/routes/bond_catalog.py` — public read + admin CRUD, Pydantic
-  `extra=forbid`, ISIN-Validation, Datums-/Finite-Checks, sparse ISIN-Index.
-- `backend/routes/ipo_catalog.py` — public read (`is_visible=true AND status
-  NOT IN listed,cancelled`) + admin CRUD, cross-field-Sanity (price_range,
-  subscription_window), `external_key`-Unique-Sparse.
-- `backend/server.py` — Router registriert, `ensure_indexes` idempotent an
-  `startup`-Event angebunden.
-- `backend/routes/ipo_requests.py` — Katalog-Lookup jetzt via Mongo
-  (`get_investable_ipo_by_id`) statt Supabase-REST-Anon-Call. `httpx` +
-  Supabase-URL/Anon-Key aus dem Modul entfernt.
-
-**Frontend (4 Files):**
-- `pages/dashboard/AnleihenKaufenPage.jsx` — `supabase.from('bond_catalog')`
-  entfernt, `fetch('/api/bonds/catalog', {credentials:'include'})`.
-  Empty/Error/SearchEmpty klar getrennt, Retry-CTA im Error-State.
-- `pages/dashboard/IpoPage.jsx` — Supabase-Katalog-Read entfernt,
-  Mongo-native Fetch. IPO-Request-Submit (Session 82.02) unverändert; sendet
-  jetzt Mongo-`_id`-String als `ipo_id` (validiert serverseitig gegen Mongo).
-- `pages/AdminBondCatalog.js` — komplett auf FastAPI-CRUD; Template-Vorlagen
-  entfernt (waren Supabase-basiert), Toggle-Switch, Modal-Layout beibehalten.
-- `pages/AdminIpoCatalog.js` — komplett auf FastAPI-CRUD; Legacy-Sync-Button
-  entfernt (rief Supabase-Edge-Function auf).
+**Frontend (3 Files):**
+- `pages/dashboard/AnleihenKaufenPage.jsx:requestPurchase` — Supabase-INSERT
+  entfernt, `POST /api/bonds/requests` mit `bond_id` (Mongo-_id),
+  klare Fehler-States (409, 401, generisch).
+- `context/DashboardDataContext.jsx:fetchBondPurchaseRequests` — Supabase-
+  Read entfernt (RLS-blockiert für Mongo-User), FastAPI `/api/bonds/
+  requests/me`. **Nur dieser eine Fetch** wurde geändert; alle anderen
+  Portfolio-Reads (Cash, Positions, Depot, Watchlist, Orders) bleiben
+  unverändert.
+- `pages/AdminBondRequests.js` — Merge Mongo + Legacy-Supabase:
+  Promise.allSettled → Mongo-Requests via FastAPI-Admin, Legacy-Rows
+  best-effort. Approve/Reject nach `backend`-Tag geroutet. Hinweistext:
+  „Genehmigen erzeugt derzeit KEINE Depotposition".
 
 ### Preview-Verifikation (Backend, alle grün)
-- `/api/health` → 200; keine Startup-Fehler; Indizes für `bond_catalog`
-  (`is_available+kupon`, `isin_sparse`) und `ipo_catalog`
-  (`external_key_unique_sparse`, `visible_status_order`) ensured.
-- Unauth: `/api/bonds/catalog` `/api/ipo/catalog` `/api/admin/*` → 401 ✓
-- Customer: `/api/admin/*` → 403 ✓
-- Admin CRUD: Bond CREATE 201, PATCH toggle 200, DELETE 204;
-  IPO CREATE 201, Toggle 200, external_key-Duplicate 409 ✓
-- Cross-Field-Sanity: price_low > price_high → 422; sub_start > sub_end →
-  422 ✓
-- Mass-Assignment-Protection: `user_id`, `role`, `created_at` im Payload →
-  422 `extra_forbidden` ✓
-- End-to-End: Admin legt IPO an → Customer sieht IPO → POST
-  `/api/ipo/requests` mit Mongo-`_id` → 201; Duplicate 409; Admin sieht
-  Request via `/api/admin/ipo/requests` ✓
-- Visibility-Kette: `is_available=false` bzw. `is_visible=false` →
-  Customer-Public-List `[]` ✓
-- 404-Handling: ungültige/nichtvorhandene ObjectId → 404 ✓
-
-### Phase-10-Audit: Referenz-Konsistenz
-- Alte Supabase-UUIDs in `ipo_requests.ipo_id`: **0** (Preview-DB sauber)
-- Neue Mongo-ObjectId-Referenzen: 1 (Test), danach Cleanup → 0
-- Kein stilles ID-Rewrite; keine historischen Requests verändert.
+- Startup: alle 4 Index-Ensures (ipo_requests, bond_catalog, ipo_catalog,
+  bond_purchase_requests) ohne Fehler
+- Routen registriert: `/api/bonds/requests` (POST) · `/me` (GET) ·
+  `/api/admin/bonds/requests` (GET) · `/approve` · `/reject`
+- Unauth → 401 (alle 3); Customer → 403 auf Admin
+- Customer POST 201 mit Katalog-abgeleiteten Stammdaten
+- Customer GET `/me` liefert eigenen Request; Reload persistent
+- Duplicate POST → 409
+- Mass-Assignment: `user_id`, `status`, `source` → 422 `extra_forbidden`
+- Numeric: `amount_eur <= 0` → 422 `greater_than`
+- `bond_id` invalid/unbekannt → 404; `is_available=false` blockiert;
+  `min_order_eur` unterschritten → 400
+- Admin sieht Request mit `customer_email`, `customer_name`, `backend=mongo`
+- Admin Approve → Customer sieht `status=approved`; erneutes Approve → 409
+  (idempotenter Übergang)
+- User-Isolation: Admin-Login (anderer user_id) sieht **eigene** 0 Requests
+  via `/me` — Filter greift auf user_id-Ebene
+- Legacy UUID-Refs in `bond_purchase_requests`: 0 nach Cleanup (Test-Daten
+  restlos gelöscht)
 
 ### Constraints eingehalten
 - Kein Prod-Deploy
-- Keine Portfolio-Migration (User-scoped Reads unangetastet)
-- Kein Service-Role verwendet
-- Keine RLS-Deaktivierung
-- Keine Fake-Seed-Daten (Preview-Test-Einträge nach QA restlos gelöscht)
-- `DashboardDataContext` NICHT geändert (bleibt separater
-  Portfolio-Migrations-Blocker)
-- Kein Service-Role im Frontend
+- Keine Portfolio-Migration (User-scoped Portfolio-Reads unverändert)
+- Kein Service-Role verwendet · keine RLS-Deaktivierung
+- Keine Fake-Seed-Daten
+- Kein Dual-Write (Legacy-INSERT entfernt; Legacy-Realtime-Sub bleibt
+  passiv — feuert nie mehr für neue Rows, kein Impact)
+- Bestehende historische Supabase-Rows unverändert
+- APPROVE erzeugt KEINE Depotposition (Portfolio bleibt blockiert)
 
-### Bekannte Nebenbefunde (außerhalb Scope)
-- `AnleihenKaufenPage.requestPurchase` schreibt weiter nach Supabase
-  `bond_purchase_requests` (RLS-blockiert für Mongo-User). Bond-Request-Flow
-  ist eigener Migrationsschritt.
-- Dashboard-Fehler-Banner „Einige Dashboard-Daten konnten nicht geladen
-  werden" bleibt bestehen — verursacht durch die ~10 User-scoped
-  Supabase-Reads in `DashboardDataContext` (ObjectId↔UUID-Mismatch). Behebung
-  benötigt Portfolio-Migration → blockiert durch fehlenden Service-Role.
+### Bekannte Nebenbefunde
+- Dashboard-Fehler-Banner „Einige Dashboard-Daten…" bleibt (kommt aus
+  anderen `DashboardDataContext`-Reads mit ObjectId-Filter gegen UUID-
+  Tabellen; separater Portfolio-Migrations-Blocker).
+- `NotificationCenter.js:86` und Realtime-Subscription in
+  `DashboardDataContext:600` lauschen weiter auf `bond_purchase_requests`
+  in Supabase — dort kommen keine Events mehr, sind aber ungefährlich
+  (kein Toast-Spam, kein Fehler).
 
 ---
 
 ## Frühere Sessions
-- 82.02 — Mongo-native IPO-Requests + Admin-UI-Merge (Legacy-Supabase-
-  Requests unangetastet). LIVE Preview.
-- 81.09 (Preview) · P0 Prod-Backend-URL Hotfix — `apiBaseFix.js` patcht
-  axios global gegen Legacy-Domain-Injection.
+- 82.03 — Bond + IPO Katalog Supabase → Mongo (LIVE Preview)
+- 82.02 — Mongo-native IPO-Requests + Admin-UI-Merge (LIVE Preview)
+- 81.09 — Prod-Backend-URL Hotfix via `apiBaseFix.js` (LIVE Preview)
 - 81.08 (LIVE Prod, Commit `d03c60b`) — Hot News Detail Fix
 - 81.07 (LIVE Prod, Commit `a77622c`) — Dashboard Nav Fix
 
@@ -104,10 +98,9 @@ Neue Mongo-Native-Endpunkte + Frontend-Umstellung:
   neuen Prod-Deploys.
 
 ## Backlog (P1/P2)
-- Bond-Purchase-Request-Flow auf FastAPI/Mongo (analog IPO-Requests).
-- Dashboard-Banner-Suppression für Mongo-Native-User (Sofortlösung, ohne
-  Full-Migration) — offen zur Freigabe.
-- Optionaler Backend-Sync für IPO-Katalog (Euronext/Nasdaq → Mongo).
+- Dashboard-Banner-Suppression für Mongo-Native-User (Sofortmaßnahme).
+- Optionaler Backend-Sync IPO-Katalog (Euronext/Nasdaq → Mongo).
 - Portfolio-Migration Extract/Transform/Validate/Reconcile/Cutover.
 - `stock-research-sync` Cron in `.emergent/crons.yml`.
 - Sentry, Rate-Limiting, Deploy-Hardening.
+- Bond-Approve → Depotposition (blockiert durch Portfolio-Migration).
