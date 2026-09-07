@@ -2,6 +2,27 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.25 (Preview) · Depot P0 — Portfolio-Snapshot-Service + Vermögensverlauf
+- **Neuer Service** `backend/services/portfolio_snapshot_service.py` — idempotenter Tages-Snapshot per Upsert auf `(user_id, snapshot_date)`. Erneuter Lauf am gleichen Tag aktualisiert das bestehende Dokument in-place (kein zweites Doc). Batch-Runner `run_daily_snapshots_for_all_users` iteriert aktive User (Non-ObjectId-Legacy-Rows werden übersprungen und geloggt).
+- **Neuer Service** `backend/services/portfolio_state.py` — extrahierte Kern-Berechnung; wird gleichzeitig von `/api/portfolio/summary` UND vom Snapshot-Service genutzt (Summary↔Snapshot-Match mathematisch garantiert).
+- **Snapshot-Schema**: `user_id (ObjectId), snapshot_date (ISO YYYY-MM-DD), total_value, cash_value, stock_value, bond_value, invested, profit_loss, profit_loss_pct, stocks_valuation_complete, bonds_valuation_complete, unpriced_symbols, currency (EUR), created_at, updated_at, trigger`. `cash_value = cash.balance` (nicht `available`) — offene Order-Reservations reduzieren Vermögen nicht künstlich.
+- **Endpoint-Erweiterung** `GET /api/portfolio/snapshots` akzeptiert jetzt `range ∈ {7d,30d,90d,1y,max}` (Backwards-Compat mit `days`). Invalid-Range → 422. Response enthält Valuation-Flags.
+- **Admin-Trigger** `POST /api/admin/portfolio/snapshots/run` — ohne Body: Batch über alle User; mit `{"user_id":"..."}`: nur ein User.
+- **Cron** `POST /api/cron/portfolio-snapshots` (`.emergent/crons.yml` → `0 22 * * *`, 22:00 UTC nach US-Market-Close). Bearer-Auth via `WEBHOOK_CRON_SECRET`, Ack 2xx sofort, Ausführung als Background-Task.
+- **Frontend**: `DepotPerformance.jsx` Zeitraum-Tabs auf 7T/30T/90T/1J/MAX aktualisiert (konsumiert unverändert `heroSnapshots` aus Context). `PortfolioHistoryChart.js` (bisher direkte Supabase-Reads, im UI nicht mehr eingebunden) auf `/api/portfolio/snapshots?range=…` Mongo-native umgestellt — inkl. Empty-State bei <2 Datenpunkten. Neuer Helper `services/portfolioApi.js` (extrahiert aus DashboardDataContext).
+- **QA Preview (verifiziert)**:
+  - Range-Validation `bogus` → 422 ✅
+  - Cron ohne Bearer → 401, mit Bearer → 202 (accepted) ✅
+  - Admin-Batch: 23 Users, 23 success, 0 errors, 73 ms ✅
+  - Idempotenz: 2× Trigger pro User → identische Snapshot-ID, kein zweites Dokument ✅
+  - Summary↔Snapshot-Match: `total_value / cash / stocks / bonds / valuation_flags` alle identisch nach Cash-Deposit `1234,56 €` ✅
+  - Customer-Isolation: demo-Kunde sieht ausschließlich eigenen Snapshot ✅
+  - `unpriced_symbols` transparent im Snapshot (kein Fake-Preis, keine 100%-Bond-Schätzung) ✅
+  - Kein Supabase-Snapshot-Write ✅
+
+### Constraints
+Kein Prod-Deploy · Kein historischer Fake-Backfill · Kein Fake-Bond-Preis (kein Live-Feed) · Keine Order-Execution · Keine Position-Erzeugung · Keine IPO-/Bond-Allocation.
+
 ## Session 82.24 (Preview) · Depot Phase 4B-Final — DepotKpiRail Server-Summary-Cutover
 - **DepotKpiRail** ruft beim Mount `refreshPortfolioSummary()` und verwendet `portfolioSummary` als **primäre** Quelle für: `investiert = stocks.cost_basis + bondsEinstand`, `gv = profit_loss + bondsGV`, `positionen = stocks.positions + bonds.positions`. Frontend-Aggregation bleibt nur als Fallback wenn Backend-Summary noch nicht geladen ist.
 - **Valuation-Incomplete-Handling**: wenn `stocks.valuation_complete=false`, wird bei fehlendem G/V der Hinweis „Kurse teilweise nicht verfügbar" angezeigt statt „Kein Einstand hinterlegt".

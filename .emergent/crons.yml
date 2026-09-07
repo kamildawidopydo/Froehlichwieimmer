@@ -41,3 +41,15 @@ crons:
     endpoint: "{{BASE_URL}}/api/cron/bond-catalog-sync"
     method: POST
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+
+  # Täglicher Portfolio-Snapshot pro Kunde (Session 82.25 · Vermögensverlauf).
+  # 22:00 UTC — nach US-Market-Close, damit die Tages-Bewertung stabil ist.
+  # Idempotent per (user_id, snapshot_date): erneuter Lauf am gleichen Tag
+  # aktualisiert den bestehenden Snapshot, statt einen zweiten zu erzeugen.
+  # Endpoint acked 2xx sofort und startet den Batch als asyncio-Background-Task.
+  - name: portfolio-snapshots
+    description: "Täglich pro Kunde einen Portfolio-Snapshot upserten"
+    cron: "0 22 * * *"
+    endpoint: "{{BASE_URL}}/api/cron/portfolio-snapshots"
+    method: POST
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.

@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 /**
  * DepotPerformance — Vermögensentwicklung auf /mein-depot (Schritt 2/7).
  *
- * Datenquelle: `heroSnapshots` aus DashboardDataContext (`user_portfolio_snapshots`,
- * letzte 400 Tage). KEINE Neuberechnung, kein zusätzlicher Backend-Request.
+ * Datenquelle: `heroSnapshots` aus DashboardDataContext (Mongo-Collection
+ * `portfolio_snapshots`, Endpoint `/api/portfolio/snapshots?days=400`).
  *
  * Zeitraum-Tabs erscheinen NUR, wenn tatsächlich genug Snapshot-Punkte im
  * jeweiligen Zeitfenster liegen (>=2 Datenpunkte im Range). Kein Tab, das nur
@@ -18,10 +18,11 @@ import { cn } from '@/lib/utils';
  * Empty-State: <2 Snapshots → Text-Empty (kein Fake-Chart, keine Fake-Linie).
  */
 
+// Session 82.25 — Zeitraum-Achse: 7T / 30T / 90T / 1J / MAX (Mongo-Snapshot-Feed).
 const RANGES = [
-  { key: '1M', days: 30 },
-  { key: '3M', days: 90 },
-  { key: '6M', days: 180 },
+  { key: '7T', days: 7 },
+  { key: '30T', days: 30 },
+  { key: '90T', days: 90 },
   { key: '1J', days: 365 },
   { key: 'MAX', days: Infinity },
 ];

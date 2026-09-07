@@ -4543,6 +4543,43 @@ api.add_api_route(
 )
 
 
+# Session 82.25 — Portfolio-Snapshot-Cron (täglich 22:00 UTC).
+# Erzeugt/aktualisiert EINEN Snapshot pro aktivem User (Idempotenz per
+# `(user_id, snapshot_date)`). Bearer-Auth via WEBHOOK_CRON_SECRET; die
+# Ausführung läuft als Background-Task, damit die 2xx-Ack-Deadline für
+# Emergent-Crons eingehalten wird.
+async def _cron_portfolio_snapshots(request: Request):
+    _verify_cron_bearer(request.headers.get("authorization"))
+    run_id = _secrets.token_hex(8)
+    started = datetime.now(timezone.utc).isoformat()
+
+    async def _job() -> None:
+        try:
+            from services.portfolio_snapshot_service import (  # lazy import
+                run_daily_snapshots_for_all_users,
+            )
+            report = await run_daily_snapshots_for_all_users(db, trigger="cron")
+            logger.info(
+                "cron_portfolio_snapshots ok run_id=%s report=%s",
+                run_id,
+                {k: report.get(k) for k in
+                 ("users_total", "success", "errors", "duration_ms", "snapshot_date")},
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("cron_portfolio_snapshots failed run_id=%s", run_id)
+
+    asyncio.create_task(_job())
+    return {"accepted": True, "run_id": run_id, "job": "portfolio-snapshots", "started_at": started}
+
+
+api.add_api_route(
+    "/cron/portfolio-snapshots",
+    _cron_portfolio_snapshots,
+    methods=["POST"],
+    include_in_schema=False,
+)
+
+
 
 
 async def _admin_news_list(_user: dict = Depends(require_admin), status: Optional[str] = None, limit: int = 50):

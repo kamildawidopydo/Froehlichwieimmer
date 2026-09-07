@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import * as Sentry from '@sentry/react';
 import { toast } from 'sonner';
 import { checkPriceAlerts } from '@/services/priceAlertService';
+import { fetchPortfolioJson } from '@/services/portfolioApi';
 import {
   computeBondMetrics,
   computeContractMetrics,
@@ -84,19 +85,8 @@ export const DashboardDataProvider = ({ children }) => {
   }, []);
 
   // Session 82.17 · Depot Phase 1 — alle Portfolio-Reads Mongo-native via
-  // /api/portfolio/*. Same-Origin, httpOnly-Cookie-Auth, user_id serverseitig.
-  const fetchPortfolioJson = async (path) => {
-    const resp = await fetch(path, {
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-    });
-    if (!resp.ok) {
-      const err = new Error(`HTTP ${resp.status}`);
-      err.status = resp.status;
-      throw err;
-    }
-    return resp.json();
-  };
+  // /api/portfolio/*. Session 82.25 — Helper in `services/portfolioApi.js` extrahiert.
+  // (fetchPortfolioJson wird direkt aus dem Service-Import verwendet.)
 
   const fetchCashBalance = useCallback(async () => {
     if (!user?.id) return true;

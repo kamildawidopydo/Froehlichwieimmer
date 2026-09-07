@@ -57,6 +57,14 @@ from services.stock_price_service import (  # noqa: E402
     ensure_indexes as ensure_stock_price_indexes,
 )
 
+# Session 82.25 · Depot Phase 5 — Portfolio-State & Snapshot-Services
+from services.portfolio_state import compute_portfolio_state  # noqa: E402
+from services.portfolio_snapshot_service import (  # noqa: E402
+    create_or_update_daily_snapshot,
+    run_daily_snapshots_for_all_users,
+    ensure_indexes as ensure_snapshot_indexes,
+)
+
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 admin_router = APIRouter(prefix="/api/admin/portfolio", tags=["admin-portfolio"])
@@ -187,7 +195,23 @@ def _serialize_snapshot(doc: dict) -> dict:
         "cash_value": _num(doc.get("cash_value")),
         "stock_value": _num(doc.get("stock_value")),
         "bond_value": _num(doc.get("bond_value")),
+        "invested": _num(doc.get("invested")),
+        "profit_loss": _num(doc.get("profit_loss")),
+        "profit_loss_pct": _num(doc.get("profit_loss_pct")),
+        "stocks_valuation_complete": bool(doc.get("stocks_valuation_complete", False)),
+        "bonds_valuation_complete": bool(doc.get("bonds_valuation_complete", False)),
+        "currency": doc.get("currency", "EUR"),
     }
+
+
+# Range-Mapping für /api/portfolio/snapshots (Session 82.25).
+_SNAPSHOT_RANGE_DAYS: dict[str, Optional[int]] = {
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+    "1y": 365,
+    "max": None,  # keine Cut-off
+}
 
 
 # ─── Endpoints ───────────────────────────────────────────────────────────
@@ -299,21 +323,38 @@ async def list_alerts(user: dict = Depends(get_current_user)):
 
 @router.get("/snapshots")
 async def list_snapshots(
-    days: int = 400,
+    range: Optional[str] = None,
+    days: Optional[int] = None,
     user: dict = Depends(get_current_user),
 ):
     """
-    Portfolio-Snapshots (Mongo-native). Aktuell keine Generator-Implementierung —
-    liefert bestehende Rows, falls Historie existiert; sonst leere Liste.
+    Portfolio-Snapshots (Mongo-native · Session 82.25).
+
+    Parameter:
+      * `range` ∈ 7d | 30d | 90d | 1y | max  (bevorzugt)
+      * `days`  fallback (int, 1..730) — bleibt für Backwards-Compat.
+
+    Rückgabe: chronologisch aufsteigende Liste realer Tages-Snapshots.
+    Kein Fake-Backfill, keine synthetischen Zwischenpunkte. Bei 0 Punkten
+    reine leere Liste, damit die UI einen Empty-State rendern kann.
     """
-    days = max(1, min(int(days or 400), 730))
-    # Cut-off als ISO YYYY-MM-DD gegen `snapshot_date` (String) matchen
     from datetime import date, timedelta
-    from_date = (date.today() - timedelta(days=days)).isoformat()
+
+    cutoff_days: Optional[int]
+    if range:
+        r = range.strip().lower()
+        if r not in _SNAPSHOT_RANGE_DAYS:
+            raise HTTPException(status_code=422, detail="range muss 7d|30d|90d|1y|max sein")
+        cutoff_days = _SNAPSHOT_RANGE_DAYS[r]
+    else:
+        cutoff_days = max(1, min(int(days or 400), 730))
+
     ownership = _user_filter(user)
-    query = {**ownership, "snapshot_date": {"$gte": from_date}} if "$or" not in ownership else {
-        "$and": [ownership, {"snapshot_date": {"$gte": from_date}}]
-    }
+    if cutoff_days is None:
+        query = ownership
+    else:
+        from_date = (date.today() - timedelta(days=cutoff_days)).isoformat()
+        query = {"$and": [ownership, {"snapshot_date": {"$gte": from_date}}]}
     cursor = db.portfolio_snapshots.find(query).sort("snapshot_date", 1)
     return [_serialize_snapshot(doc) async for doc in cursor]
 
@@ -322,92 +363,10 @@ async def list_snapshots(
 async def get_summary(user: dict = Depends(get_current_user)):
     """
     Aggregierter Depot-Zustand aus Mongo-nativen Quellen.
-    Bei fehlenden Daten mathematisch korrekter Zero-State.
+    Delegiert an `services.portfolio_state.compute_portfolio_state` — Snapshot-
+    Service konsumiert exakt dieselbe Berechnung (Session 82.25).
     """
-    uid = _oid(user)
-    ownership = _user_filter(user)
-
-    # Cash aus Ledger (Session 82.18 — single Source of Truth)
-    cash_summary = await get_cash_summary(db, user)
-    cash_balance = float(cash_summary["balance"])
-    cash_available = float(cash_summary["available"])
-    cash_unsettled = float(cash_summary["unsettled"])
-
-    # Session 82.22 — Stock Market-Value via echten Quotes (statt Einstand).
-    stock_position_docs = await db.stock_positions.find(
-        {**ownership, "is_active": {"$ne": False}}
-    ).to_list(500)
-    stock_einstand = 0.0
-    stock_market_value = 0.0
-    stock_positions_count = 0
-    unpriced_symbols: list[str] = []
-    if stock_position_docs:
-        symbols = list({d.get("symbol") for d in stock_position_docs if d.get("symbol")})
-        quotes = await get_stock_quotes(db, symbols) if symbols else {}
-        for d in stock_position_docs:
-            stock_positions_count += 1
-            qty = float(d.get("quantity") or 0)
-            avg = float(d.get("avg_cost") or 0)
-            cost = qty * avg
-            stock_einstand += cost
-            q = quotes.get(d.get("symbol")) if d.get("symbol") else None
-            if q and q.get("price") is not None:
-                stock_market_value += qty * float(q["price"])
-            else:
-                stock_market_value += cost  # letzter bekannter Einstand als transparente Näherung
-                unpriced_symbols.append(d.get("symbol"))
-    stock_valuation_complete = len(unpriced_symbols) == 0
-
-    # Bond-Wert
-    bond_agg = db.bond_positions.aggregate([
-        {"$match": {**ownership, "is_active": {"$ne": False}}},
-        {"$group": {
-            "_id": None,
-            "wert": {"$sum": {"$multiply": [
-                {"$ifNull": ["$nominal_betrag", 0]},
-                {"$divide": [{"$ifNull": ["$aktueller_kurs", 100]}, 100]},
-            ]}},
-            "positions": {"$sum": 1},
-        }},
-    ])
-    bond_wert = 0.0
-    bond_positions_count = 0
-    async for row in bond_agg:
-        bond_wert = _num(row.get("wert"))
-        bond_positions_count = int(row.get("positions") or 0)
-
-    # Empty-State fallback: keine market_value bekannt → market_value = einstand
-    stock_market_value = round(stock_market_value, 2)
-    invested = stock_einstand + bond_wert
-    total_value = cash_balance + stock_market_value + bond_wert
-    profit_loss = round(stock_market_value - stock_einstand, 2)
-    profit_loss_pct = round(profit_loss / stock_einstand * 100, 4) if stock_einstand > 0 else 0.0
-
-    return {
-        "total_value": round(total_value, 2),
-        "invested": round(invested, 2),
-        "cash": {
-            "balance": cash_balance,
-            "available": cash_available,
-            "unsettled": cash_unsettled,
-        },
-        "stocks": {
-            "market_value": stock_market_value,
-            "cost_basis": round(stock_einstand, 2),
-            "positions": stock_positions_count,
-            "valuation_complete": stock_valuation_complete,
-            "unpriced_symbols": unpriced_symbols,
-        },
-        "bonds": {
-            "market_value": bond_wert,
-            "positions": bond_positions_count,
-            "valuation_complete": False,  # Session 82.22 · Bond-Preise separater Task
-        },
-        "profit_loss": profit_loss,
-        "profit_loss_pct": profit_loss_pct,
-        "day_change": 0.0,
-        "day_change_pct": 0.0,
-    }
+    return await compute_portfolio_state(db, _oid(user))
 
 
 # ─── ADMIN Cash Endpoints (Session 82.18 · Phase 2) ─────────────────────
@@ -841,6 +800,40 @@ async def cancel_order(
     return _serialize_stock_order(fresh)
 
 
+# ─── ADMIN Portfolio-Snapshots (Session 82.25) ──────────────────────────
+class AdminSnapshotRunIn(BaseModel):
+    user_id: Optional[str] = Field(default=None, description="Optional: nur ein User")
+    limit: Optional[int] = Field(default=None, ge=1, le=10000)
+
+    model_config = {"extra": "forbid"}
+
+
+@admin_router.post("/snapshots/run")
+async def admin_run_snapshots(
+    payload: AdminSnapshotRunIn = Body(default_factory=AdminSnapshotRunIn),
+    _admin: dict = Depends(require_admin),
+):
+    """
+    Manueller Trigger für den Portfolio-Snapshot-Service (Session 82.25).
+
+    Ohne `user_id` → alle aktiven Kunden werden verarbeitet.
+    Mit `user_id`  → Snapshot nur für diesen einen Kunden.
+    Idempotent: pro Kunde und Tag genau EIN Snapshot; erneuter Lauf am
+    gleichen Tag aktualisiert den bestehenden Snapshot in-place.
+    """
+    if payload.user_id:
+        try:
+            target = ObjectId(payload.user_id)
+        except Exception:
+            raise HTTPException(status_code=400, detail="ungültige user_id")
+        exists = await db.users.find_one({"_id": target}, projection={"_id": 1})
+        if not exists:
+            raise HTTPException(status_code=404, detail="User existiert nicht")
+        snap = await create_or_update_daily_snapshot(db, target, trigger="admin-manual")
+        return {"mode": "single", "user_id": str(target), "snapshot_date": snap["snapshot_date"]}
+    return await run_daily_snapshots_for_all_users(db, trigger="admin-manual", limit=payload.limit)
+
+
 # ─── Indizes ─────────────────────────────────────────────────────────────
 async def ensure_indexes():
     """
@@ -896,13 +889,8 @@ async def ensure_indexes():
     await db.stock_alerts.create_index(
         [("user_id", 1), ("created_at", -1)], name="user_created_desc",
     )
-    # Snapshots
-    await db.portfolio_snapshots.create_index(
-        [("user_id", 1), ("snapshot_date", 1)],
-        unique=True,
-        sparse=True,
-        name="user_date_unique",
-    )
+    # Snapshots (Session 82.25 — konsolidiert im Snapshot-Service)
+    await ensure_snapshot_indexes(db)
     await db.depot_contracts.create_index(
         [("user_id", 1), ("is_active", -1)], name="user_active",
     )

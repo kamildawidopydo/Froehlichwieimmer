@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import {
   ResponsiveContainer,
@@ -25,23 +24,37 @@ import {
   compactEur,
   positiveNegativeColor,
 } from '@/components/dashboard/charts/chartTheme';
+import { fetchPortfolioJson } from '@/services/portfolioApi';
+
+/**
+ * PortfolioHistoryChart — Vermögensverlauf (Session 82.25 · Mongo-native).
+ *
+ * Datenquelle: `GET /api/portfolio/snapshots?range={7d|30d|90d|1y|max}`.
+ * Ausschließlich reale, persistierte Tages-Snapshots aus MongoDB. Kein
+ * historischer Fake-Backfill, keine synthetischen Zwischenpunkte.
+ *
+ * Empty/One/Multi Point State:
+ *   0 Punkte → ChartEmpty
+ *   1 Punkt  → ChartEmpty (Verlauf braucht mindestens zwei Punkte)
+ *   2+ Punkte → echte Verlaufslinie
+ */
 
 const RANGES = [
-  { key: 7, label: '7T' },
-  { key: 30, label: '30T' },
-  { key: 90, label: '90T' },
-  { key: 365, label: '1J' },
-  { key: 9999, label: 'Alle' },
+  { key: '7d', label: '7T' },
+  { key: '30d', label: '30T' },
+  { key: '90d', label: '90T' },
+  { key: '1y', label: '1J' },
+  { key: 'max', label: 'Alle' },
 ];
 
 const BREAKDOWN_SERIES = [
   { key: 'cash', name: 'Guthaben', color: CHART_COLORS.success },
   { key: 'stocks', name: 'Aktien', color: CHART_COLORS.primary },
   { key: 'bonds', name: 'Anleihen', color: CHART_COLORS.gold },
-  { key: 'contracts', name: 'Festgeld', color: CHART_COLORS.secondary },
 ];
 
-const formatEURFull = (v) => Number(v || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+const formatEURFull = (v) =>
+  Number(v || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
 const formatDateLabel = (d) =>
   new Date(d).toLocaleDateString('de-DE', {
@@ -80,45 +93,47 @@ const PortfolioHistoryChart = () => {
   const { user } = useAuth();
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [rangeDays, setRangeDays] = useState(30);
+  const [rangeKey, setRangeKey] = useState('30d');
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   useEffect(() => {
-    if (user) fetchSnapshots();
-  }, [user, rangeDays]);
-
-  const fetchSnapshots = async () => {
-    setLoading(true);
-    try {
-      let q = supabase
-        .from('user_portfolio_snapshots')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('snapshot_date', { ascending: true });
-      if (rangeDays < 9999) {
-        const fromDate = new Date();
-        fromDate.setDate(fromDate.getDate() - rangeDays);
-        q = q.gte('snapshot_date', fromDate.toISOString().slice(0, 10));
+    let cancelled = false;
+    const load = async () => {
+      if (!user?.id) {
+        setSnapshots([]);
+        setLoading(false);
+        return;
       }
-      const { data, error } = await q;
-      if (error) throw error;
-      setSnapshots(data || []);
-    } catch (err) {
-      console.error('Failed to fetch snapshots:', err);
-      setSnapshots([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoading(true);
+      try {
+        const data = await fetchPortfolioJson(`/api/portfolio/snapshots?range=${rangeKey}`);
+        if (!cancelled) setSnapshots(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (!cancelled) setSnapshots([]);
+        // Kein toast — Empty-State ist der korrekte UI-Fall.
+        // eslint-disable-next-line no-console
+        console.error('portfolio snapshots fetch failed', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, rangeKey]);
 
-  const chartData = useMemo(() => snapshots.map((s) => ({
-    date: s.snapshot_date,
-    total: Number(s.total_value || 0),
-    cash: Number(s.cash_balance || 0),
-    stocks: Number(s.stocks_value || 0),
-    bonds: Number(s.bonds_value || 0),
-    contracts: Number(s.contracts_value || 0),
-  })), [snapshots]);
+  const chartData = useMemo(
+    () =>
+      snapshots.map((s) => ({
+        date: s.snapshot_date,
+        total: Number(s.total_value || 0),
+        cash: Number(s.cash_value || 0),
+        stocks: Number(s.stock_value || 0),
+        bonds: Number(s.bond_value || 0),
+      })),
+    [snapshots],
+  );
 
   const first = chartData[0];
   const last = chartData[chartData.length - 1];
@@ -129,25 +144,31 @@ const PortfolioHistoryChart = () => {
 
   const formatXAxis = (d) => {
     const date = new Date(d);
-    if (rangeDays <= 30) return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-    if (rangeDays <= 365) return date.toLocaleDateString('de-DE', { month: 'short', day: '2-digit' });
+    if (rangeKey === '7d' || rangeKey === '30d')
+      return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+    if (rangeKey === '90d' || rangeKey === '1y')
+      return date.toLocaleDateString('de-DE', { month: 'short', day: '2-digit' });
     return date.toLocaleDateString('de-DE', { month: 'short', year: '2-digit' });
   };
 
+  const canRenderChart = chartData.length >= 2;
+
   return (
-    <div className="bg-white border border-bank-border rounded-xl p-5 shadow-sm">
+    <div className="bg-white border border-bank-border rounded-xl p-5 shadow-sm" data-testid="portfolio-history-chart">
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <h3 className="text-base font-semibold text-bank-text flex items-center gap-2">
             <TrendingUp size={16} className="text-bank-primary" />
-            Vermögen-Verlauf
+            Vermögensverlauf
           </h3>
           {last && (
             <p className="text-xs text-bank-text-muted mt-0.5">
               Aktuell: <strong className="text-bank-text">{formatEURFull(last.total)}</strong>
-              {first && first.snapshot_date !== last.snapshot_date && (
+              {first && first.date !== last.date && (
                 <span className={`ml-2 font-medium ${up ? 'text-emerald-600' : 'text-bank-error'}`}>
-                  {up ? '+' : ''}{formatEURFull(diff)} ({up ? '+' : ''}{diffPct.toFixed(2)}%)
+                  {up ? '+' : ''}
+                  {formatEURFull(diff)} ({up ? '+' : ''}
+                  {diffPct.toFixed(2)}%)
                 </span>
               )}
             </p>
@@ -155,20 +176,26 @@ const PortfolioHistoryChart = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
+            data-testid="portfolio-history-toggle-breakdown"
             onClick={() => setShowBreakdown(!showBreakdown)}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${showBreakdown
-              ? 'bg-bank-ink text-white border-bank-ink'
-              : 'bg-white text-bank-text-muted border-bank-border hover:bg-bank-bg'}`}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+              showBreakdown
+                ? 'bg-bank-ink text-white border-bank-ink'
+                : 'bg-white text-bank-text-muted border-bank-border hover:bg-bank-bg'
+            }`}
           >
             Aufschlüsselung
           </button>
           {RANGES.map((r) => (
             <button
               key={r.key}
-              onClick={() => setRangeDays(r.key)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${rangeDays === r.key
-                ? 'bg-bank-ink text-white border-bank-ink'
-                : 'bg-white text-bank-text-muted border-bank-border hover:bg-bank-bg'}`}
+              data-testid={`portfolio-history-range-${r.key}`}
+              onClick={() => setRangeKey(r.key)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                rangeKey === r.key
+                  ? 'bg-bank-ink text-white border-bank-ink'
+                  : 'bg-white text-bank-text-muted border-bank-border hover:bg-bank-bg'
+              }`}
             >
               {r.label}
             </button>
@@ -178,15 +205,20 @@ const PortfolioHistoryChart = () => {
 
       <div className="h-64">
         {loading ? (
-          <div className="h-full flex items-center justify-center">
+          <div className="h-full flex items-center justify-center" data-testid="portfolio-history-loading">
             <RefreshCw size={18} className="animate-spin text-bank-text-muted/70" />
           </div>
-        ) : chartData.length === 0 ? (
+        ) : !canRenderChart ? (
           <ChartEmpty
             height={256}
             icon={TrendingUp}
-            hint="Noch keine Verlaufsdaten verfügbar."
-            sub="Tägliche Momentaufnahmen werden automatisch erstellt."
+            hint={
+              chartData.length === 1
+                ? 'Erst ein Tages-Snapshot vorhanden.'
+                : 'Noch keine Verlaufsdaten verfügbar.'
+            }
+            sub="Tägliche Momentaufnahmen werden ab jetzt automatisch erstellt (22:00 UTC)."
+            data-testid="portfolio-history-empty"
           />
         ) : showBreakdown ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -230,7 +262,12 @@ const PortfolioHistoryChart = () => {
               </defs>
               <CartesianGrid stroke={CHART_GRID_STROKE} vertical={false} />
               <XAxis dataKey="date" tickFormatter={formatXAxis} {...chartXAxisProps} minTickGap={40} />
-              <YAxis tickFormatter={compactEur} {...chartYAxisProps} width={70} domain={['auto', 'auto']} />
+              <YAxis
+                tickFormatter={compactEur}
+                {...chartYAxisProps}
+                width={70}
+                domain={['auto', 'auto']}
+              />
               <Tooltip cursor={CHART_CURSOR_LINE} content={<TotalTooltip />} />
               <Area
                 type="monotone"
