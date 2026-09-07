@@ -93,7 +93,12 @@ const AdminIpoCatalog = () => {
     setSyncing(true);
     try {
       const rep = await fetchJson('/api/admin/ipo/catalog/sync', { method: 'POST' });
-      const summary = `${rep.fetched} geprüft · ${rep.inserted} neu · ${rep.updated} aktualisiert · ${rep.unchanged} unverändert · ${rep.skipped_manual_override} manuell geschützt`;
+      const usLabel = rep.us_source_used === 'stockanalysis'
+        ? ' · US-Quelle: StockAnalysis (Fallback)'
+        : rep.us_source_used === 'nasdaq'
+          ? ' · US-Quelle: Nasdaq'
+          : '';
+      const summary = `${rep.fetched} geprüft · ${rep.inserted} neu · ${rep.updated} aktualisiert · ${rep.unchanged} unverändert · ${rep.skipped_manual_override} manuell geschützt${usLabel}`;
       if (rep.errors?.length) {
         toast.warning(`Sync mit Hinweisen — ${summary}`);
       } else {

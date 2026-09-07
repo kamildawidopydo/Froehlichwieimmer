@@ -2,84 +2,54 @@
 
 Sprache: **Deutsch**.
 
-## Prod
-- URL: `https://finance-platform-v2.emergent.host`
-- Backend: FastAPI + Mongo, Health `/api/health = ok/db up`
+## Prod / Preview
 - Preview: `https://finance-platform-v2.preview.emergentagent.com`
+- Prod:    `https://finance-platform-v2.emergent.host`
+- Stack: React + FastAPI + MongoDB (7.0.42 standalone in Preview)
 
 ---
 
-## Session 82.06 (Preview) · IPO-Sync als Scheduled Cron
+## Session 82.13 (Preview) · IPO-Sync US-Fallback (StockAnalysis)
 
 ### Was
-IPO-Katalog wird jetzt automatisch täglich synchronisiert (04:30 UTC ≈
-06:30 Europe/Berlin Sommer / 05:30 Winter). Sync-Logik ist in
-wiederverwendbaren Service extrahiert; Admin-Button und Cron rufen
-dieselbe Funktion — keine Parallel-Implementierung.
+Der Mongo-native IPO-Sync bekommt eine 2. US-Quelle. Wenn Nasdaq fehlschlägt (Rate-Limit, HTTP-Fehler, leerer Body), fallbackt der Sync automatisch auf StockAnalysis (`stockanalysis.com/ipos/calendar/`). Cross-Source-Dedup via `(ticker_proposed, ipo_date)` verhindert Doppel-Rows.
 
 ### Files
-- `backend/services/ipo_sync.py` (NEU) — Service `sync_ipo_catalog(db, trigger)`
-  mit Euronext + Nasdaq Fetchern, `asyncio.gather` parallel, Modul-Level
-  `asyncio.Lock` gegen Same-Instance-Doppelläufe. `get_last_sync_status(db)`
-  liefert Timestamp + kompakten Report.
-- `backend/routes/ipo_catalog.py` — Inline-Sync-Logik entfernt, Route
-  delegiert an Service. Neuer GET `/api/admin/ipo/catalog/sync/status`.
-- `backend/server.py` — Cron-Endpoint `POST /api/cron/ipo-catalog-sync`
-  (Bearer, ack 2xx sofort in ~20ms, `asyncio.create_task` für Sync).
-- `.emergent/crons.yml` — 4. Job `ipo-catalog-sync` mit `cron: "30 4 * * *"`.
-- `frontend/src/pages/AdminIpoCatalog.js` — „Letzte Synchronisierung"-
-  Anzeige im Header, geladen via GET /sync/status.
+- `backend/services/ipo_sync.py` — Fallback-Fetcher `_fetch_stockanalysis()`, integriert in `sync_ipo_catalog()` als sequentieller Fallback (nur wenn `nasdaq_status != ok` oder Nasdaq leer). Report um `stockanalysis_status`, `us_source_used`, `skipped_duplicate` erweitert.
+- `frontend/src/pages/AdminIpoCatalog.js` — Report-Toast zeigt „US-Quelle: Nasdaq" oder „US-Quelle: StockAnalysis (Fallback)".
 
 ### Preview-Verifikation
-- Health 200 nach Restart; alle 4 Crons in YAML gelistet, korrektes 5-Feld-
-  Format, alle Namen ≤21 Zeichen.
-- Unauth Cron → 401 ✓ · Bad Bearer → 401 ✓ · Correct Bearer → 200 in ~20ms ✓
-- Job-Lock: 2. paralleler Admin-Sync gibt `already-running` zurück ✓
-- Cron-Log zeigt safe report (fetched/inserted/…), keine Secrets ✓
-- Public IPO GET unverändert, kein listed/cancelled leak ✓
-- IPO-Request-Flow gegen synced Katalog funktioniert weiter ✓
-- Log-Secret-Leakage: 0 ✓
-
-### Cron-Konfig
-- **Name**: `ipo-catalog-sync`
-- **Schedule**: `30 4 * * *` (UTC — Plattform-Default; dokumentiert für DST)
-- **Entrypoint**: `POST /api/cron/ipo-catalog-sync`
-- **Auth**: Bearer via `WEBHOOK_CRON_SECRET`
-- **Ack-Zeit**: ~20ms (weit unter 5s Dispatcher-Deadline)
-- **Retry**: keine (Plattform-Default; Idempotenz macht Retry unnötig)
-- **Timeout**: 15s pro externer Quelle (Euronext, Nasdaq getrennt)
+- Sync #1: fetched=21, inserted=1 (StockAnalysis-Row), unchanged=20 (Euronext), nasdaq=error, stockanalysis=ok, us_source_used=stockanalysis
+- Sync #2 (Idempotenz): fetched=21, inserted=0, unchanged=21
+- Cross-Source-Duplicates: 0 (aggregation-check)
+- Customer visible: 7 (6 Euronext + 1 StockAnalysis), keine listed/cancelled leak
+- IPO-Request gegen US-IPO (Siyata PTT): 201 ✓
+- Unauth 401, Customer 403, Admin 200
+- Manual-Override P0-Schutz unverändert
 
 ### Constraints eingehalten
-- Kein Prod-Deploy · Keine Portfolio-Migration · Kein Service-Role
-- Keine RLS-Änderung · Keine Fake-Daten · Kein Delete
-- Kein Dual-Write nach Supabase · Manual-Override P0 geschützt
-- DashboardDataContext, Bond, News, Header, Auth, Same-Origin, IPO Customer
-  Request Flow unverändert
-- Bestehende 3 Crons nicht verändert; nur 4. Job hinzugefügt
-
-### Prod-Betriebs-Notiz
-Deployed Apps discardieren Schedules faster than every 15 minutes. Unser
-Job läuft nur 1×/Tag → prod-tauglich. Cron-Sync für Prod ist bereit
-sobald Idempotency-Ticket freigegeben.
+- Kein Prod-Deploy · Keine Portfolio-Migration · Kein Service-Role · Keine RLS-Änderung · Keine Fake-Daten · Kein Dual-Write · Keine Cron-Änderung · Bond/DashboardDataContext unverändert
 
 ---
 
 ## Frühere Sessions
-- 82.05 — IPO-Katalog Backend-Sync-Endpoint (LIVE Preview)
-- 82.04 — Bond-Kaufanfragen Supabase → Mongo (LIVE Preview)
-- 82.03 — Bond + IPO Katalog Supabase → Mongo (LIVE Preview)
-- 82.02 — Mongo-native IPO-Requests + Admin-UI-Merge (LIVE Preview)
-- 81.09 — Prod-Backend-URL Hotfix
+- 82.12/82.11/82.10/82.09 — Infrastructure Blocker recheck (State unchanged, Support-Aktion offen)
+- 82.08 — Portfolio Migration Cutover-Plan (Design)
+- 82.07 — Approve→Depotposition Design
+- 82.06 — IPO-Sync Scheduled Cron (LIVE Preview)
+- 82.05 — IPO-Sync Endpoint (LIVE Preview)
+- 82.04 — Bond-Kaufanfragen Mongo (LIVE Preview)
+- 82.03 — Bond+IPO Katalog Mongo (LIVE Preview)
+- 82.02 — IPO-Requests Mongo (LIVE Preview)
 - 81.08 (LIVE Prod) — Hot News Detail Fix
-- 81.07 (LIVE Prod) — Dashboard Nav Fix
 
 ## Blocker
-- Portfolio Backend Migration (P0) — `SUPABASE_SERVICE_ROLE_KEY` fehlt
-- Deploy Pipeline Idempotency Incident (P0) — Support-Ticket offen
+- P0: `SUPABASE_SERVICE_ROLE_KEY` fehlt (Preview-Backend-Env) — Support-Ticket
+- P0: Preview-MongoDB standalone (keine Multi-Doc-Tx) — Atlas M0 empfohlen
+- P0: Deploy Pipeline Idempotency Incident — Support-Ticket
 
-## Backlog (P1/P2)
-- Dashboard-Banner-Suppression für Mongo-Native-User
-- Portfolio-Migration Extract/Transform/Validate/Reconcile/Cutover
-- Sentry, Rate-Limiting, Deploy-Hardening
-- Bond-Approve → Depotposition (blockiert durch Portfolio-Migration)
-- Approve-IPO → Depotposition analog
+## Backlog
+- Dashboard-Banner-Suppression für Mongo-Native-User (pro Datenbereich)
+- Portfolio-Migration Dry-Run (blockiert durch Service-Role + Atomic-Strategy)
+- Approve→Depotposition Implementation (blockiert durch Portfolio-Migration)
+- Snapshot-Generator Herkunftsklärung (blockiert extern)

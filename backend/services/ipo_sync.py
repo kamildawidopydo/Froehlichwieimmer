@@ -210,13 +210,92 @@ async def _fetch_nasdaq() -> list[dict]:
     return list(seen.values())
 
 
+# ─── StockAnalysis US-Fallback (Session 82.13) ──────────────────────────
+_SA_URL = "https://stockanalysis.com/ipos/calendar/"
+_SA_USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "Chrome/122.0.0.0 Safari/537.36")
+_SA_MONTHS = {"Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04",
+              "May": "05", "Jun": "06", "Jul": "07", "Aug": "08",
+              "Sep": "09", "Oct": "10", "Nov": "11", "Dec": "12"}
+
+
+def _parse_sa_date(raw: str) -> Optional[str]:
+    m = re.match(r"^([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})$", raw.strip())
+    if not m:
+        return None
+    mo = _SA_MONTHS.get(m.group(1))
+    if not mo:
+        return None
+    return f"{m.group(3)}-{mo}-{m.group(2).zfill(2)}"
+
+
+def _derive_sa_status(ipo_date: Optional[str]) -> str:
+    """StockAnalysis liefert nur zukünftige Rows im Calendar-Bucket."""
+    if not ipo_date:
+        return "upcoming"
+    try:
+        d = _date.fromisoformat(ipo_date)
+    except ValueError:
+        return "upcoming"
+    return "upcoming" if d >= _date.today() else "listed"
+
+
+async def _fetch_stockanalysis() -> list[dict]:
+    """Fallback für Nasdaq: HTML-Scrape stockanalysis.com/ipos/calendar/"""
+    headers = {"User-Agent": _SA_USER_AGENT, "Accept": "text/html"}
+    async with httpx.AsyncClient(timeout=15.0, headers=headers, follow_redirects=True) as c:
+        r = await c.get(_SA_URL)
+        if r.status_code != 200:
+            raise RuntimeError(f"stockanalysis HTTP {r.status_code}")
+        html = r.text
+
+    seen: dict[str, dict] = {}
+    today = _date.today().isoformat()
+    for tr in re.findall(r"<tr[^>]*>([\s\S]*?)</tr>", html, re.IGNORECASE):
+        cells = [_strip_html(td)
+                 for td in re.findall(r"<td[^>]*>([\s\S]*?)</td>", tr, re.IGNORECASE)]
+        if len(cells) < 4:
+            continue
+        first = cells[0].lower()
+        if "ipo date" in first or "symbol" in first or "company" in first:
+            continue
+        date_raw, ticker, company, exchange = cells[0], cells[1], cells[2], cells[3]
+        price_raw = cells[4] if len(cells) > 4 else None
+        if not company or not ticker:
+            continue
+        ipo_date = _parse_sa_date(date_raw)
+        # Filter historische Rows raus — Fallback soll nur upcoming liefern
+        if ipo_date and ipo_date < today:
+            continue
+        low, high = _parse_nasdaq_price(price_raw)
+        ticker_up = ticker.strip().upper()
+        key = _build_external_key("stockanalysis", None, ticker_up, ipo_date)
+        seen.setdefault(key, {
+            "external_key": key,
+            "source": "stockanalysis",
+            "company_name": company,
+            "ticker_proposed": ticker_up,
+            "isin": None,
+            "exchange": exchange or "US",
+            "market": exchange or "US",
+            "ipo_date": ipo_date,
+            "price_range_low": low,
+            "price_range_high": high,
+            "price_currency": "USD",
+            "auto_status": _derive_sa_status(ipo_date),
+        })
+    return list(seen.values())
+
+
 async def _persist_last_run(db, report: dict) -> None:
     """Persistiert Timestamp + kompakten Report für UI-Anzeige."""
     safe_report = {k: v for k, v in report.items()
                    if k in ("fetched", "inserted", "updated", "unchanged",
                             "skipped_manual_override", "skipped_invalid",
-                            "sources", "errors", "euronext_status", "nasdaq_status",
-                            "duration_ms", "trigger")}
+                            "skipped_duplicate",
+                            "sources", "errors", "euronext_status",
+                            "nasdaq_status", "stockanalysis_status",
+                            "us_source_used", "duration_ms", "trigger")}
     await db.system_config.update_one(
         {"key": "ipo_sync_last"},
         {"$set": {
@@ -254,18 +333,24 @@ async def sync_ipo_catalog(db, trigger: str = "manual") -> dict:
         report = {
             "fetched": 0, "inserted": 0, "updated": 0, "unchanged": 0,
             "skipped_manual_override": 0, "skipped_invalid": 0,
-            "sources": {"euronext": 0, "nasdaq": 0},
-            "euronext_status": "pending", "nasdaq_status": "pending",
+            "skipped_duplicate": 0,
+            "sources": {"euronext": 0, "nasdaq": 0, "stockanalysis": 0},
+            "euronext_status": "pending",
+            "nasdaq_status": "pending",
+            "stockanalysis_status": "not_needed",
+            "us_source_used": "none",
             "errors": [], "trigger": trigger,
         }
 
-        # Parallele Fetches — Nasdaq-Fail bricht Euronext nicht ab.
+        # Euronext + Nasdaq parallel; StockAnalysis nur bei Nasdaq-Fail.
         eu_task = asyncio.create_task(_fetch_euronext())
         na_task = asyncio.create_task(_fetch_nasdaq())
-        eu_result, na_result = await asyncio.gather(eu_task, na_task,
-                                                    return_exceptions=True)
+        eu_result, na_result = await asyncio.gather(
+            eu_task, na_task, return_exceptions=True)
 
         rows: list[dict] = []
+        us_rows: list[dict] = []
+
         if isinstance(eu_result, Exception):
             report["euronext_status"] = "error"
             report["errors"].append(f"euronext: {eu_result}")
@@ -274,14 +359,38 @@ async def sync_ipo_catalog(db, trigger: str = "manual") -> dict:
             report["sources"]["euronext"] = len(eu_result)
             rows.extend(eu_result)
 
+        nasdaq_ok = False
         if isinstance(na_result, Exception):
             report["nasdaq_status"] = "error"
             report["errors"].append(f"nasdaq: {na_result}")
+        elif not na_result:
+            # Leerer Body / 0 valide Rows → als Fehler behandeln (Fallback triggern).
+            report["nasdaq_status"] = "empty"
+            report["errors"].append("nasdaq: empty result")
         else:
             report["nasdaq_status"] = "ok"
             report["sources"]["nasdaq"] = len(na_result)
-            rows.extend(na_result)
+            us_rows = na_result
+            nasdaq_ok = True
+            report["us_source_used"] = "nasdaq"
 
+        if not nasdaq_ok:
+            # StockAnalysis Fallback nur wenn Nasdaq nicht nutzbar
+            try:
+                sa_result = await _fetch_stockanalysis()
+                report["stockanalysis_status"] = "ok"
+                report["sources"]["stockanalysis"] = len(sa_result)
+                us_rows = sa_result
+                if sa_result:
+                    report["us_source_used"] = "stockanalysis"
+            except Exception as exc:
+                report["stockanalysis_status"] = "error"
+                report["errors"].append(f"stockanalysis: {exc}")
+
+        # Cross-Source-Dedup: falls beide US-Quellen genutzt würden (theoretisch),
+        # bereits durch Fallback-Only-Design ausgeschlossen. Zusätzlich beim Upsert:
+        # Match (ticker, ipo_date) über Sources hinweg gegen bestehende Katalog-Rows.
+        rows.extend(us_rows)
         report["fetched"] = len(rows)
         now = datetime.now(timezone.utc)
 
@@ -298,6 +407,20 @@ async def sync_ipo_catalog(db, trigger: str = "manual") -> dict:
             if existing and existing.get("is_manual_override"):
                 report["skipped_manual_override"] += 1
                 continue
+
+            # Cross-Source-Dedup: gleicher Ticker+Datum aus anderer Quelle bereits da?
+            if not existing and row.get("ticker_proposed") and row.get("ipo_date"):
+                cross = await db.ipo_catalog.find_one({
+                    "ticker_proposed": row["ticker_proposed"],
+                    "ipo_date": row["ipo_date"],
+                    "external_key": {"$ne": key},
+                })
+                if cross:
+                    if cross.get("is_manual_override"):
+                        report["skipped_manual_override"] += 1
+                    else:
+                        report["skipped_duplicate"] += 1
+                    continue
 
             payload = {k: v for k, v in row.items() if v is not None}
             payload["status"] = auto_status
