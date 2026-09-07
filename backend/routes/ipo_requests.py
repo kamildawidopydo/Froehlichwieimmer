@@ -32,7 +32,7 @@ from pymongo.errors import DuplicateKeyError
 
 # get_current_user + db aus dem Haupt-Server-Modul; bewusst dynamisch importiert,
 # damit dieses Modul ohne Zirkular-Import registrierbar bleibt.
-from server import get_current_user, db  # type: ignore[attr-defined]
+from server import get_current_user, db, require_admin  # type: ignore[attr-defined]
 
 
 router = APIRouter(prefix="/api/ipo", tags=["ipo-requests"])
@@ -269,3 +269,136 @@ async def ensure_indexes():
         name="uniq_pending_user_ipo",
     )
     await db.ipo_requests.create_index([("user_id", 1), ("created_at", -1)])
+
+
+# ─── ADMIN ENDPOINTS (Schritt 4) ────────────────────────────────────────
+class AdminDecisionBody(BaseModel):
+    decision_note: Optional[str] = Field(default=None, max_length=2000)
+    model_config = {"extra": "forbid"}
+
+
+admin_router = APIRouter(prefix="/api/admin/ipo", tags=["admin-ipo-requests"])
+
+
+async def _serialize_with_customer(doc: dict) -> dict:
+    """Serialize inkl. serverseitig aufgelöster Kundendaten."""
+    base = _serialize(doc)
+    customer = {"customer_name": None, "customer_email": None}
+    try:
+        u = await db.users.find_one({"_id": doc["user_id"]})
+        if u:
+            name = " ".join(
+                x for x in (u.get("first_name"), u.get("last_name")) if x
+            ).strip() or u.get("name")
+            customer["customer_name"] = name
+            customer["customer_email"] = u.get("email")
+    except Exception:
+        pass
+    handled_by_name = None
+    if doc.get("handled_by"):
+        try:
+            hb = await db.users.find_one({"_id": doc["handled_by"]})
+            if hb:
+                handled_by_name = (
+                    " ".join(
+                        x for x in (hb.get("first_name"), hb.get("last_name")) if x
+                    ).strip()
+                    or hb.get("name")
+                    or hb.get("email")
+                )
+        except Exception:
+            pass
+    base.update(
+        {
+            **customer,
+            "decision_note": doc.get("decision_note"),
+            "handled_at": doc["handled_at"].isoformat()
+            if isinstance(doc.get("handled_at"), datetime)
+            else doc.get("handled_at"),
+            "handled_by": str(doc["handled_by"]) if doc.get("handled_by") else None,
+            "handled_by_name": handled_by_name,
+            "backend": "mongo",
+        }
+    )
+    return base
+
+
+@admin_router.get("/requests")
+async def admin_list_requests(_admin: dict = Depends(require_admin)):
+    """Alle Mongo-native IPO-Zeichnungsanfragen (customer-created)."""
+    cursor = db.ipo_requests.find({}).sort("created_at", -1)
+    return [await _serialize_with_customer(doc) async for doc in cursor]
+
+
+async def _transition_status(
+    request_id: str,
+    admin_user: dict,
+    to_status: str,
+    body: AdminDecisionBody,
+) -> dict:
+    """Atomarer pending→approved|rejected Übergang (idempotent per findOneAndUpdate)."""
+    if to_status not in ("approved", "rejected"):
+        raise HTTPException(status_code=400, detail="Invalid target status")
+    if not ObjectId.is_valid(request_id):
+        raise HTTPException(status_code=400, detail="Invalid request id")
+
+    now = datetime.now(timezone.utc)
+    stamp_field = "approved_at" if to_status == "approved" else "rejected_at"
+    update_doc = {
+        "$set": {
+            "status": to_status,
+            "handled_at": now,
+            "handled_by": ObjectId(admin_user["id"]),
+            "updated_at": now,
+            stamp_field: now,
+        }
+    }
+    if body.decision_note is not None:
+        update_doc["$set"]["decision_note"] = body.decision_note.strip() or None
+
+    # Atomar: nur wenn Request derzeit noch pending → verhindert Double-Approve/Reject.
+    result = await db.ipo_requests.find_one_and_update(
+        {"_id": ObjectId(request_id), "status": "pending"},
+        update_doc,
+        return_document=True,  # ReturnDocument.AFTER
+    )
+    if not result:
+        existing = await db.ipo_requests.find_one({"_id": ObjectId(request_id)})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Anfrage bereits '{existing.get('status')}' — kein weiterer Übergang möglich",
+        )
+    return await _serialize_with_customer(result)
+
+
+@admin_router.post("/requests/{request_id}/approve")
+async def admin_approve(
+    request_id: str,
+    body: AdminDecisionBody = AdminDecisionBody(),
+    admin_user: dict = Depends(require_admin),
+):
+    """
+    pending → approved. Setzt Status + Audit-Felder.
+
+    NOTE (Schritt 4 Blocker-Dokumentation): Die Erzeugung einer Depotposition
+    bei Approve ist in dieser Iteration NICHT vorgesehen, da das Portfolio-
+    Model derzeit in Supabase liegt und Position-Writes ohne Service-Role
+    RLS-blockiert wären. Die Depot-Position-Erstellung wird in einem
+    Folgeschritt (nach Portfolio-Migration / Service-Role) implementiert.
+    Der bestehende Legacy-Approve→Position-Trigger auf Supabase greift NICHT
+    für Mongo-native Requests, da diese nicht in ipo_subscription_requests
+    liegen.
+    """
+    return await _transition_status(request_id, admin_user, "approved", body)
+
+
+@admin_router.post("/requests/{request_id}/reject")
+async def admin_reject(
+    request_id: str,
+    body: AdminDecisionBody = AdminDecisionBody(),
+    admin_user: dict = Depends(require_admin),
+):
+    """pending → rejected. Setzt Status + Audit-Felder. Keine Position."""
+    return await _transition_status(request_id, admin_user, "rejected", body)
