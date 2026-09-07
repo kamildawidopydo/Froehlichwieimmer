@@ -65,6 +65,14 @@ from services.portfolio_snapshot_service import (  # noqa: E402
     ensure_indexes as ensure_snapshot_indexes,
 )
 
+# Session 82.26 · Depot P0 — Order-Execution-Saga
+from services.order_execution_service import (  # noqa: E402
+    execute_order,
+    ExecutionError,
+    ExecutionCrash,
+    ensure_indexes as ensure_execution_indexes,
+)
+
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 admin_router = APIRouter(prefix="/api/admin/portfolio", tags=["admin-portfolio"])
@@ -93,13 +101,19 @@ def _iso(v):
 
 
 def _num(v, default=0.0) -> float:
-    """Sicheres Float-Cast; None/NaN → default."""
+    """Sicheres Float-Cast; None/NaN/Decimal128 → korrekter Float."""
     if v is None:
         return default
-    try:
-        f = float(v)
-    except (TypeError, ValueError):
-        return default
+    if isinstance(v, Decimal128):
+        try:
+            f = float(v.to_decimal())
+        except Exception:
+            return default
+    else:
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return default
     if f != f:  # NaN
         return default
     return f
@@ -834,6 +848,48 @@ async def admin_run_snapshots(
     return await run_daily_snapshots_for_all_users(db, trigger="admin-manual", limit=payload.limit)
 
 
+# ─── ADMIN Order-Execution (Session 82.26 · Depot P0 · Limit-Buy) ───────
+class AdminExecuteOrderIn(BaseModel):
+    fail_after: Optional[str] = Field(
+        default=None,
+        description="test-only: crash-Punkt nach Saga-Schritt 'cash'|'position'|'settle'",
+    )
+
+    model_config = {"extra": "forbid"}
+
+
+@admin_router.post("/orders/{order_id}/execute")
+async def admin_execute_order(
+    order_id: str,
+    payload: AdminExecuteOrderIn = Body(default_factory=AdminExecuteOrderIn),
+    admin: dict = Depends(require_admin),
+):
+    """
+    Führt eine pending Limit-Buy-Order sicher aus (Saga).
+    Idempotent: erneuter Aufruf setzt den letzten unvollständigen Saga-Schritt
+    fort. Kein zweiter Cash-Debit, keine zweite Position, kein zweites Settlement.
+    """
+    try:
+        oid = ObjectId(order_id)
+    except Exception:
+        raise HTTPException(status_code=422, detail="ungültige order_id")
+
+    try:
+        result = await execute_order(
+            db,
+            oid,
+            admin_id=str(admin.get("id")),
+            fail_after=payload.fail_after,
+        )
+    except ExecutionCrash as exc:
+        # Test-Injection: DB-Zustand ist konsistent; wir signalisieren dem
+        # Aufrufer die simulierte Unterbrechung. Retry setzt sauber fort.
+        raise HTTPException(status_code=555, detail=f"[injected-crash] {exc}")
+    except ExecutionError as exc:
+        raise HTTPException(status_code=exc.http_status, detail=f"{exc.code}: {exc.detail}")
+    return result
+
+
 # ─── Indizes ─────────────────────────────────────────────────────────────
 async def ensure_indexes():
     """
@@ -891,6 +947,8 @@ async def ensure_indexes():
     )
     # Snapshots (Session 82.25 — konsolidiert im Snapshot-Service)
     await ensure_snapshot_indexes(db)
+    # Session 82.26 · Order-Executions
+    await ensure_execution_indexes(db)
     await db.depot_contracts.create_index(
         [("user_id", 1), ("is_active", -1)], name="user_active",
     )

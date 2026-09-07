@@ -21,6 +21,7 @@ from decimal import Decimal
 from typing import Optional
 
 from bson import ObjectId
+from bson.decimal128 import Decimal128
 
 from services.cash_service import get_cash_summary  # noqa: E402
 from services.stock_price_service import get_quotes as get_stock_quotes  # noqa: E402
@@ -29,10 +30,16 @@ from services.stock_price_service import get_quotes as get_stock_quotes  # noqa:
 def _num(v, default: float = 0.0) -> float:
     if v is None:
         return default
-    try:
-        f = float(v)
-    except (TypeError, ValueError):
-        return default
+    if isinstance(v, Decimal128):
+        try:
+            f = float(v.to_decimal())
+        except Exception:
+            return default
+    else:
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return default
     if f != f:  # NaN
         return default
     return f
@@ -62,8 +69,13 @@ async def compute_portfolio_state(db, user_oid: ObjectId) -> dict:
         {**ownership, "is_active": {"$ne": False}}
     ).to_list(500)
 
-    stock_einstand = 0.0
-    stock_market_value = 0.0
+    # Session 82.26 · Phase 0 — Quote-Integrity-Gate: bei fehlender Quote
+    # KEIN Einstand-als-Marktwert-Fake. Unpriced Positions tragen weder zum
+    # Marktwert noch zum P/L bei. Ihr Einstand fließt separat in
+    # `stocks.cost_basis` (Anzeige erlaubt), aber NICHT in `market_value`.
+    stock_total_einstand = 0.0        # ALLE Positionen (für cost_basis)
+    stock_priced_einstand = 0.0       # NUR bepreiste (für P/L-Referenz)
+    stock_market_value = 0.0          # NUR bepreiste (kein Fake)
     stock_positions_count = 0
     unpriced_symbols: list[str] = []
     if stock_position_docs:
@@ -71,16 +83,15 @@ async def compute_portfolio_state(db, user_oid: ObjectId) -> dict:
         quotes = await get_stock_quotes(db, symbols) if symbols else {}
         for d in stock_position_docs:
             stock_positions_count += 1
-            qty = float(d.get("quantity") or 0)
-            avg = float(d.get("avg_cost") or 0)
+            qty = _num(d.get("quantity"))
+            avg = _num(d.get("avg_cost"))
             cost = qty * avg
-            stock_einstand += cost
+            stock_total_einstand += cost
             q = quotes.get(d.get("symbol")) if d.get("symbol") else None
             if q and q.get("price") is not None:
                 stock_market_value += qty * float(q["price"])
+                stock_priced_einstand += cost
             else:
-                # Transparente Näherung: Einstand als Ersatz — KEIN Fake-Preis.
-                stock_market_value += cost
                 if d.get("symbol"):
                     unpriced_symbols.append(d["symbol"])
     stock_valuation_complete = len(unpriced_symbols) == 0
@@ -108,13 +119,20 @@ async def compute_portfolio_state(db, user_oid: ObjectId) -> dict:
         bond_positions_count = int(row.get("positions") or 0)
     bond_valuation_complete = False  # explizit — noch kein Live-Feed vorhanden.
 
+    # Session 82.26 · Phase 0 — P/L wird ausschließlich über bepreiste Positionen
+    # gerechnet. cost_basis bleibt Summe aller Positionen (Anzeige-Info),
+    # market_value ist nur echtes market der bepreisten Positionen.
     stock_market_value = round(stock_market_value, 2)
-    invested = stock_einstand + bond_wert
-    total_value = cash_balance + stock_market_value + bond_wert
-    profit_loss = round(stock_market_value - stock_einstand, 2)
+    invested = stock_total_einstand + bond_wert
+    profit_loss = round(stock_market_value - stock_priced_einstand, 2)
     profit_loss_pct = (
-        round(profit_loss / stock_einstand * 100, 4) if stock_einstand > 0 else 0.0
+        round(profit_loss / stock_priced_einstand * 100, 4)
+        if stock_priced_einstand > 0 else 0.0
     )
+    # total_value: Cash + echtes Stock-Marktwert (bepreist) + Bond-Wert.
+    # Unpriced-Positionen tragen NICHT zum total_value bei — UI erkennt
+    # das an valuation_complete=false.
+    total_value = cash_balance + stock_market_value + bond_wert
 
     return {
         "total_value": round(total_value, 2),
@@ -126,7 +144,8 @@ async def compute_portfolio_state(db, user_oid: ObjectId) -> dict:
         },
         "stocks": {
             "market_value": stock_market_value,
-            "cost_basis": round(stock_einstand, 2),
+            "cost_basis": round(stock_total_einstand, 2),
+            "priced_cost_basis": round(stock_priced_einstand, 2),
             "positions": stock_positions_count,
             "valuation_complete": stock_valuation_complete,
             "unpriced_symbols": unpriced_symbols,

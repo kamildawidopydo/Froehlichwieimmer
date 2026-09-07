@@ -2,6 +2,38 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.26 (Preview) · Depot P0 — Limit-Order-Execution Saga + Quote-Integrity-Gate
+- **Phase 0 (Quote-Integrity-Fix)**: `services/portfolio_state.py` — bei fehlender Quote fällt der Einstand NICHT mehr in `market_value`. Stattdessen: `market_value` summiert ausschließlich bepreiste Positionen, `unpriced_symbols` transparent gelistet, `valuation_complete=false`. Neu: `stocks.priced_cost_basis` (nur bepreiste) neben `stocks.cost_basis` (alle). P/L nur über bepreiste Positionen. Position-Serializer (portfolio.py `_serialize_position` / `_num`) korrigiert für `Decimal128`.
+- **Neuer Service** `services/order_execution_service.py` — persistente Saga für **Limit-Buy** Order-Execution auf Standalone Mongo (keine Multi-Document-Transaktion). Schritte: QUOTE-GATE → CASH-DEBIT → POSITION-APPLY → ORDER-SETTLE → COMPLETE. Deterministische Idempotency-Keys `execution:{order_id}:{cash|position|settle|cash-reversal}`.
+- **Neue Collection** `order_executions` (Unique: `order_id`). Statusmodell: `created / cash_debited / position_applied / order_settled / completed / failed / compensation_required`. Persistiert `execution_price`, `gross_amount`, `cash_event_id`, `position_id`, `quote_source`, `quote_as_of`, `attempt_count`, `last_error`.
+- **Position-Retry-Guard** persistent in `stock_positions.applied_execution_ids` (Liste). CAS-Update mit `$ne`-Filter + `$addToSet` verhindert doppelte Anwendung. Weighted-Average via `(old_qty*old_avg + new_qty*price)/(old_qty+new_qty)` mit `Decimal` und `ROUND_HALF_EVEN`.
+- **Cash-Debit** über bestehenden `cash_service.create_cash_event` (`stock_purchase` in `_ACTIVE_TYPES` freigegeben). Amount als `Decimal128`, keine Float-Arithmetik.
+- **Order-Settle** setzt `status=executed`, `executed_price`, `executed_quantity`, `executed_at`, `execution_id`, `reserved_cash=0.00` — Reservation verschwindet automatisch weil `status != 'pending'` (Cash-Available-Berechnung liest nur pending buys).
+- **Admin-Endpoint** `POST /api/admin/portfolio/orders/{order_id}/execute` (require_admin). Body optional: `{"fail_after":"cash"|"position"|"settle"}` als Test-Injection (HTTP 555 auf simulierten Crash). Kein Customer-Execute-Path.
+- **Concurrency**: Per-Order `asyncio.Lock` als Same-Instance-Serialisierung, primärer Schutz ist DB-Idempotenz (Unique-Index `order_id` + Cash-Ledger-Unique + `applied_execution_ids`).
+- **Saga-Resume**: Wenn Order bereits `executed` aber Execution nicht `completed` → Saga läuft nur den fehlenden Complete-Schritt. Idempotent bei jedem Retry.
+- **Frontend**: Keine Änderungen nötig. Customer-`OrdersPage.jsx` liest bereits `executed_price/quantity/at` aus `/api/portfolio/orders`. Kein Execute-Button für Customer.
+
+### QA Preview (verifiziert)
+- Normal Execution ✅ · Double Execute ✅ · Concurrent Execute (2× parallel) ✅
+- Crash after Cash + Retry → completed (attempt_count=2) ✅
+- Crash after Position + Retry → completed (attempt_count=2) ✅
+- Crash after Settle + Retry → completed (attempt_count=2) ✅
+- Insufficient Cash → 400 ✅ · Limit not reached → 409 ✅ · Unavailable Quote → 409 ✅ · Stale Quote → 409 ✅
+- Customer execute → 403 ✅ · Unauth → 401 ✅
+- Weighted-Average über 6 Buys @ 232.10 → qty=18, avg=232.1000 ✅
+- Financial Invariants (aggregation gegen Mongo, User demo-Kunde):
+  - `DOUBLE_CASH_DEBITS=0 · DUPLICATE_EXECUTIONS=0 · EXECUTED_WITHOUT_CASH=0 · EXECUTED_WITHOUT_POSITION=0 · COMPLETED_WITHOUT_SETTLED=0 · PENDING_RESERVATION_AFTER_EXECUTION=0 · NEGATIVE_CASH=false`
+- Phase 0 unpriced Position `NOFEED`: `price=null / market_value=null / profit_loss=null / summary.valuation_complete=false / unpriced_symbols=['NOFEED']`, `total_value` UNVERÄNDERT durch Unpriced-Add ✅
+- Snapshot nach Execution: `total_value=11234.56 · cash_value=8913.56 · stock_value=2321.00 · stocks_valuation_complete=true` — Summary↔Snapshot identisch, kein zweites Dokument.
+
+### Cleanup (Preview)
+- Test-Artefakt `NOFEED` (manuell eingefügt) und `STALEONLY`-Cache-Stub nach QA sauber entfernt.
+- Test-Executions/Cash-Debits/Positionen bleiben als Audit-Trail bestehen (Phase W: append-only Historie nicht antasten).
+
+### Constraints
+Kein Prod-Deploy · Nur Limit-Buy (keine Market-Orders, kein Sell, keine IPO/Bond-Ausführung) · Kein Fake-Preis · Kein Fake-Bond-NAV · Keine Supabase-Writes · Keine Mongo-Multi-Document-Transaction.
+
 ## Session 82.25 (Preview) · Depot P0 — Portfolio-Snapshot-Service + Vermögensverlauf
 - **Neuer Service** `backend/services/portfolio_snapshot_service.py` — idempotenter Tages-Snapshot per Upsert auf `(user_id, snapshot_date)`. Erneuter Lauf am gleichen Tag aktualisiert das bestehende Dokument in-place (kein zweites Doc). Batch-Runner `run_daily_snapshots_for_all_users` iteriert aktive User (Non-ObjectId-Legacy-Rows werden übersprungen und geloggt).
 - **Neuer Service** `backend/services/portfolio_state.py` — extrahierte Kern-Berechnung; wird gleichzeitig von `/api/portfolio/summary` UND vom Snapshot-Service genutzt (Summary↔Snapshot-Match mathematisch garantiert).
