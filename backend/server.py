@@ -5103,9 +5103,11 @@ app.include_router(_bond_requests_admin_router)
 # Session 82.17 — Portfolio Read-Layer (Mongo-native, read-only).
 from routes.portfolio import (  # noqa: E402
     router as _portfolio_router,
+    admin_router as _portfolio_admin_router,
     ensure_indexes as _ensure_portfolio_indexes,
 )
 app.include_router(_portfolio_router)
+app.include_router(_portfolio_admin_router)
 
 @app.on_event("startup")
 async def _init_ipo_indexes():

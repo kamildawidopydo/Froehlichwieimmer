@@ -2,6 +2,22 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.18 (Preview) · Depot Phase 2 — Cash-Ledger Mongo-native
+- **Neuer Service** `backend/services/cash_service.py` — append-only Ledger, BSON `Decimal128` mit `ROUND_HALF_EVEN`, Präzision auf 2 Dezimalen. Validation-Guard verbietet `float`, negative Beträge, unbekannte Währungen und reservierte Event-Types.
+- **Neue Collection** `cash_ledger` — Source of Truth für Cash. Balance-Berechnung: `Σ settled credits − Σ settled debits`. `available = balance − pending_debits − open_buy_reservations` (letzteres in Phase 3, aktuell 0).
+- **Indizes**: `(user_id, idempotency_key)` UNIQUE (Idempotenz-Guard) · `(user_id, effective_at DESC)` · `(user_id, created_at DESC)`.
+- **Event-Types aktiv**: `deposit`, `withdrawal`, `adjustment`, `reserve`, `release`. **Reserviert** (400 bei Nutzung): `stock_purchase`, `stock_sale`, `ipo_purchase`, `bond_purchase`, `dividend`, `interest`, `fee`, `tax`.
+- **Directions**: `credit` (erhöht) / `debit` (mindert). Amount immer > 0 (keine negativen Werte).
+- **Statuses**: `pending` (unsettled) / `settled` (wirksam) / `cancelled` (unwirksam).
+- **Admin-Endpoints**: `POST /api/admin/portfolio/cash/deposit` · `POST /api/admin/portfolio/cash/adjustment` · `GET /api/admin/portfolio/cash/summary?user_id=…`. `require_admin` auf allen dreien. Kein direkter Balance-Set — nur Ledger-Events.
+- **Customer-Endpoint**: `GET /api/portfolio/cash` liest jetzt aus Ledger (nicht mehr `users.cash_balance`). Customer hat **keinen** Deposit/Withdrawal-Write in dieser Phase.
+- **`/api/portfolio/summary`** bezieht Cash aus `cash_service.get_cash_summary()` — keine doppelte Berechnung.
+- **QA Preview (16 Tests grün)**: Unauth 401 · Customer→Admin 403 · Deposit 10 000 EUR success · Duplicate-Retry mit gleicher `idempotency_key` → `status=duplicate`, keine zweite Buchung · Präzision 10.99 + 0.01 + 0.10 = 10011.10 exakt · Reversal via Adjustment-Debit → balance=0.00, 5 Events append-only erhalten · Admin sieht Customer-Summary · Customer mit `?user_id=<foreign>` sieht eigenen Stand · Negatives Amount 400 · Unknown-Currency 400 · IPO/Bond/Auth-Regression grün.
+- **Preview-Testdaten**: 5 Ledger-Events für `demo.kunde` (4× deposit + 1× adjustment), Nettobalance 0.00 EUR — Append-Only-Prinzip gewahrt, kein DB-Delete.
+
+### Constraints
+Kein Prod-Deploy · Nur append-only Ledger-Inserts · Kein Customer-Write · Keine Multi-Collection-Financial-Writes · Keine Aktienkäufe/IPO-Zuteilungen/Bond-Ausführungen · Kein Service-Role · IPO/Bond-Katalog/Requests/Sync/Cron/Portfolio-Read-Layer unverändert.
+
 ## Session 82.17 (Preview) · Depot Phase 1 — Portfolio Read-Layer Mongo-native
 - **Neuer Router** `backend/routes/portfolio.py` mit 8 Customer-Endpoints (Read-Only): `summary`, `stock-positions`, `bond-positions`, `orders`, `cash`, `watchlist`, `alerts`, `snapshots`. Alle require `get_current_user`, `user_id` serverseitig aus Mongo-Auth (kein Client-Injection).
 - **Empty-State-Vertrag**: 200 + `[]` bzw. mathematischer Zero-State; keine Fake-Daten, keine erfundenen Preise.
