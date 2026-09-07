@@ -79,6 +79,8 @@ const AdminIpoCatalog = () => {
   const [loadError, setLoadError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const loadSyncStatus = async () => {
     try {
@@ -86,6 +88,15 @@ const AdminIpoCatalog = () => {
       setSyncStatus(s);
     } catch {
       // best-effort, ignorieren
+    }
+  };
+
+  const loadHistory = async () => {
+    try {
+      const h = await fetchJson('/api/admin/ipo/catalog/sync/history?limit=30');
+      setHistory(h?.runs || []);
+    } catch {
+      // best-effort
     }
   };
 
@@ -104,7 +115,7 @@ const AdminIpoCatalog = () => {
       } else {
         toast.success(`Sync abgeschlossen: ${summary}`);
       }
-      await Promise.all([load(), loadSyncStatus()]);
+      await Promise.all([load(), loadSyncStatus(), loadHistory()]);
     } catch (err) {
       toast.error('Sync fehlgeschlagen: ' + err.message);
     } finally {
@@ -132,6 +143,7 @@ const AdminIpoCatalog = () => {
   useEffect(() => {
     load();
     loadSyncStatus();
+    loadHistory();
   }, []);
 
   const openAdd = () => {
@@ -402,6 +414,67 @@ const AdminIpoCatalog = () => {
           </div>
         </AdminSurfaceCard>
       )}
+
+      {/* Session 82.14 — Synchronisierungsverlauf */}
+      <AdminSurfaceCard className="mt-6 p-4" data-testid="ipo-sync-history">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-bank-text">Synchronisierungsverlauf</h3>
+          {history.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setShowAllHistory((v) => !v)}
+              className="text-[11px] text-bank-accent hover:underline"
+              data-testid="ipo-history-toggle"
+            >
+              {showAllHistory ? 'Weniger anzeigen' : `Alle anzeigen (${history.length})`}
+            </button>
+          )}
+        </div>
+        {history.length === 0 ? (
+          <p className="text-xs text-bank-text-muted" data-testid="ipo-history-empty">
+            Noch keine Sync-Läufe erfasst.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {(showAllHistory ? history : history.slice(0, 5)).map((run) => {
+              const statusLabel = {
+                success: { text: 'Erfolgreich', cls: 'text-emerald-700' },
+                partial_success: { text: 'Teilweise erfolgreich', cls: 'text-amber-700' },
+                failed: { text: 'Fehlgeschlagen', cls: 'text-rose-700' },
+                already_running: { text: 'Parallel abgewiesen', cls: 'text-bank-text-muted' },
+              }[run.status] || { text: run.status || '—', cls: 'text-bank-text-muted' };
+              const usSrc = run.us_source_used === 'stockanalysis'
+                ? 'StockAnalysis (Fallback)'
+                : run.us_source_used === 'nasdaq'
+                  ? 'Nasdaq'
+                  : '—';
+              return (
+                <li
+                  key={run.id}
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-bank-border/40 py-1.5 text-[12px]"
+                  data-testid={`ipo-history-row-${run.id}`}
+                >
+                  <span className="tabular-nums text-bank-text-muted">
+                    {run.created_at ? new Date(run.created_at).toLocaleString('de-DE') : '—'}
+                  </span>
+                  <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted">
+                    {run.trigger === 'cron' ? 'Cron' : run.trigger === 'admin' ? 'Manuell' : (run.trigger || '—')}
+                  </span>
+                  <span className={`font-medium ${statusLabel.cls}`}>{statusLabel.text}</span>
+                  {run.status !== 'already_running' && (
+                    <>
+                      <span className="text-bank-text-muted">US-Quelle: {usSrc}</span>
+                      <span className="tabular-nums text-bank-text">
+                        {run.fetched ?? 0} geprüft · {run.inserted ?? 0} neu · {run.updated ?? 0} aktualisiert · {run.unchanged ?? 0} unverändert
+                      </span>
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </AdminSurfaceCard>
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="ipo-admin-modal">

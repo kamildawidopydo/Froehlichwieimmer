@@ -307,6 +307,78 @@ async def _persist_last_run(db, report: dict) -> None:
     )
 
 
+def _classify_run_status(report: dict) -> str:
+    """Klassifiziert einen abgeschlossenen Sync-Lauf."""
+    eu = report.get("euronext_status")
+    na = report.get("nasdaq_status")
+    sa = report.get("stockanalysis_status")
+    us_ok = (na == "ok") or (sa == "ok")
+    eu_ok = eu == "ok"
+    if eu_ok and us_ok:
+        return "success"
+    if eu_ok or us_ok:
+        return "partial_success"
+    return "failed"
+
+
+async def _persist_run_history(db, report: dict, started_at: datetime,
+                                status_override: Optional[str] = None) -> None:
+    """Schreibt genau EIN History-Doc pro Run, retention max. 30."""
+    finished = datetime.now(timezone.utc)
+    status = status_override or _classify_run_status(report)
+    # Errors kompakt (kein Raw-HTML/Response-Body).
+    errors_summary = [str(e)[:200] for e in (report.get("errors") or [])][:5]
+    doc = {
+        "trigger": report.get("trigger"),
+        "status": status,
+        "started_at": started_at,
+        "finished_at": finished,
+        "duration_ms": report.get("duration_ms", 0),
+        "euronext_status": report.get("euronext_status"),
+        "nasdaq_status": report.get("nasdaq_status"),
+        "stockanalysis_status": report.get("stockanalysis_status"),
+        "us_source_used": report.get("us_source_used"),
+        "fetched": report.get("fetched", 0),
+        "inserted": report.get("inserted", 0),
+        "updated": report.get("updated", 0),
+        "unchanged": report.get("unchanged", 0),
+        "skipped_manual_override": report.get("skipped_manual_override", 0),
+        "skipped_duplicate": report.get("skipped_duplicate", 0),
+        "skipped_invalid": report.get("skipped_invalid", 0),
+        "error_count": len(report.get("errors") or []),
+        "errors_summary": errors_summary,
+        "sources": report.get("sources") or {},
+        "created_at": finished,
+    }
+    await db.ipo_sync_runs.insert_one(doc)
+    # Retention: nur 30 neueste Rows behalten
+    total = await db.ipo_sync_runs.count_documents({})
+    if total > 30:
+        cursor = db.ipo_sync_runs.find({}).sort("created_at", 1).limit(total - 30)
+        old_ids = [d["_id"] async for d in cursor]
+        if old_ids:
+            await db.ipo_sync_runs.delete_many({"_id": {"$in": old_ids}})
+
+
+async def get_recent_sync_runs(db, limit: int = 30) -> list[dict]:
+    """Liefert die letzten N Runs (max 30) für Admin-Timeline."""
+    limit = max(1, min(limit, 30))
+    cursor = db.ipo_sync_runs.find({}).sort("created_at", -1).limit(limit)
+    out: list[dict] = []
+    async for d in cursor:
+        d["id"] = str(d.pop("_id"))
+        for k in ("started_at", "finished_at", "created_at"):
+            v = d.get(k)
+            if isinstance(v, datetime):
+                d[k] = v.isoformat()
+        out.append(d)
+    return out
+
+
+async def ensure_history_index(db) -> None:
+    await db.ipo_sync_runs.create_index([("created_at", -1)], name="created_desc")
+
+
 async def sync_ipo_catalog(db, trigger: str = "manual") -> dict:
     """
     Idempotenter Sync für Euronext + Nasdaq → Mongo `ipo_catalog`.
@@ -319,14 +391,21 @@ async def sync_ipo_catalog(db, trigger: str = "manual") -> dict:
       Report-Dict mit source-Statuses und Zählungen.
     """
     if _sync_lock.locked():
-        return {
+        started_ar = datetime.now(timezone.utc)
+        report = {
             "fetched": 0, "inserted": 0, "updated": 0, "unchanged": 0,
             "skipped_manual_override": 0, "skipped_invalid": 0,
             "sources": {"euronext": 0, "nasdaq": 0},
             "euronext_status": "skipped", "nasdaq_status": "skipped",
+            "stockanalysis_status": "skipped", "us_source_used": "none",
             "errors": ["already-running: another sync is in progress"],
-            "trigger": trigger,
+            "trigger": trigger, "duration_ms": 0,
         }
+        try:
+            await _persist_run_history(db, report, started_ar, "already_running")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("ipo_sync history (already_running) persistence failed: %s", exc)
+        return report
 
     async with _sync_lock:
         started = datetime.now(timezone.utc)
@@ -454,6 +533,11 @@ async def sync_ipo_catalog(db, trigger: str = "manual") -> dict:
             await _persist_last_run(db, report)
         except Exception as exc:  # pragma: no cover — persistence is best-effort
             logger.warning("ipo_sync last-run persistence failed: %s", exc)
+
+        try:
+            await _persist_run_history(db, report, started)
+        except Exception as exc:  # noqa: BLE001 — telemetry must not fail sync
+            logger.warning("ipo_sync history persistence failed: %s", exc)
 
         # Safe Logging — keine Secrets, keine Raw Responses
         logger.info(

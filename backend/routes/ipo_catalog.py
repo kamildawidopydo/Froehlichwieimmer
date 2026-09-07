@@ -26,7 +26,12 @@ from server import get_current_user, db, require_admin  # type: ignore[attr-defi
 
 # Session 82.06 — Sync-Logik in wiederverwendbare Service-Funktion extrahiert,
 # damit Admin-Route und Cron-Endpoint dieselbe Implementierung nutzen.
-from services.ipo_sync import sync_ipo_catalog, get_last_sync_status  # noqa: E402
+from services.ipo_sync import (
+    sync_ipo_catalog,
+    get_last_sync_status,
+    get_recent_sync_runs,
+    ensure_history_index,
+)  # noqa: E402
 
 
 public_router = APIRouter(prefix="/api/ipo", tags=["ipo-catalog"])
@@ -387,6 +392,16 @@ async def admin_ipo_sync_status(_admin: dict = Depends(require_admin)):
     """Timestamp + kompakter Report des letzten Sync-Laufs."""
     result = await get_last_sync_status(db)
     return result or {"last_run_at": None, "report": None}
+
+
+@admin_router.get("/catalog/sync/history")
+async def admin_ipo_sync_history(
+    limit: int = 30,
+    _admin: dict = Depends(require_admin),
+):
+    """Letzte N Sync-Runs (max 30) für Admin-Timeline. Session 82.14."""
+    await ensure_history_index(db)  # idempotent
+    return {"runs": await get_recent_sync_runs(db, limit=limit)}
 
 
 async def ensure_indexes():
