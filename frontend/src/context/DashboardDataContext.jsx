@@ -621,34 +621,40 @@ export const DashboardDataProvider = ({ children }) => {
   const cancelOrder = useCallback(
     async (orderId) => {
       if (!window.confirm('Auftrag wirklich stornieren?')) return;
-      const { error } = await supabase
-        .from('user_stock_orders')
-        .update({ status: 'cancelled' })
-        .eq('id', orderId);
-      if (error) {
+      try {
+        // Session 82.21 · Depot Phase 3C — Mongo-native via FastAPI.
+        const resp = await fetch(`/api/portfolio/orders/${encodeURIComponent(orderId)}/cancel`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        toast.success('Auftrag storniert');
+        fetchStockData();
+        fetchCashBalance();
+      } catch (err) {
         toast.error('Auftrag konnte nicht storniert werden.');
-        return;
       }
-      toast.success('Auftrag storniert');
-      fetchStockData();
     },
-    [fetchStockData],
+    [fetchStockData, fetchCashBalance],
   );
 
   const removeFromWatchlist = useCallback(
     async (symbol) => {
       if (!user?.id) return;
-      const { error } = await supabase
-        .from('user_stock_watchlist')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('symbol', symbol);
-      if (error) {
+      try {
+        // Session 82.20 · Depot Phase 3B — Mongo-native via FastAPI.
+        const sym = String(symbol || '').toUpperCase();
+        const resp = await fetch(`/api/watchlist/${encodeURIComponent(sym)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        toast.success('Aus Watchlist entfernt');
+        fetchStockData();
+      } catch (err) {
         toast.error('Symbol konnte nicht aus der Watchlist entfernt werden.');
-        return;
       }
-      toast.success('Aus Watchlist entfernt');
-      fetchStockData();
     },
     [user?.id, fetchStockData],
   );

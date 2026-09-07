@@ -2,6 +2,18 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.21 (Preview) · Depot Phase 3C — Customer Order UI (Limit-Kauf + Storno)
+- **Neuer SDK** `services/portfolioOrderApi.js` — `createOrder/cancelOrder/listOrders/getCash` gegen `/api/portfolio/orders*` (credentials: include, error-typisiert).
+- **Neue Komponente** `components/portfolio/OrderCreateModal.jsx` — Limit-Buy-Modal: Instrument, Ordertyp (Market-Option disabled mit Hinweis), Seite=Kaufen, Stückzahl, Limitpreis, live berechneter Reservierungsbetrag, verfügbare Liquidität aus `/api/portfolio/cash`, stabiler `idempotency_key` pro Submit (`crypto.randomUUID`), Doppelklick-Schutz via `submitting`-State.
+- **StockDetail-Cutover**: „Kaufen"-Button öffnet OrderCreateModal (statt Scroll zum Legacy-Form). Nach Erfolg: Toast + Dashboard-Refresh.
+- **OrdersPage `cancelOrder`**: von `supabase.from('user_stock_orders').update({status:cancelled})` → `portfolioOrderApi.cancelOrder(id)` (bereits FastAPI). Pending-Row zeigt Button „Stornieren", nach Erfolg Refresh von orders + cash.
+- **QA Preview (10 Tests grün)**: Deposit 10 000 → Limit-Buy 10×100=1000 reserviert → cash available 9 000 → Doppelklick idempotent (gleiche ID) → Overspend 400 mit klarer Fehlermeldung → Cancel → available 10 000 → Double-Cancel idempotent → Cross-User-Cancel 404 → Reversal Netto 0.
+- **Sell/Market**: Sell-CTA in StockDetail unverändert (Legacy-Verkaufsform bleibt); Market-Order-UI ist bewusst nur mit Hinweis „derzeit nicht verfügbar" sichtbar.
+- **Customer Supabase Order-Writes**: 0 nach Cutover.
+
+### Constraints
+Kein Prod-Deploy · Keine Order-Execution · Keine Position-Erzeugung · Keine Market-Order-Ausführung · Keine Short-Sells · Cash-Ledger/Watchlist/Alerts/IPO/Bond unverändert.
+
 ## Session 82.20 (Preview) · Depot Phase 3B — Frontend UI-Cutover Watchlist/Alerts/Orders
 - **Audit-Ergebnis**: Alerts (Customer) waren bereits vollständig Mongo-native via `/api/alerts` (`services/priceAlertService.js`). Watchlist-SDK `services/watchlistApi.js` gegen `/api/watchlist` bereits vorhanden. Nur 4 direkte Supabase-Watchlist-Writes in 2 Pages verblieben (Handeln.js, StockDetail.js).
 - **Watchlist-Cutover**: `toggleWatchlist` in beiden Pages von `supabase.from('user_stock_watchlist').insert/delete` → `watchlistApi.add/remove` umgestellt. Imports ergänzt. `.upper()`-Normalisierung serverseitig konsistent.

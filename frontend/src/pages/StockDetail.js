@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState, useRef, Suspense, laz
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { watchlistApi } from '@/services/watchlistApi';
+import OrderCreateModal from '@/components/portfolio/OrderCreateModal';
+import { useDashboardData } from '@/context/DashboardDataContext';
 import { useNewsList } from '@/hooks/useNewsList';
 import { fetchDividends } from '@/services/dividendService';
 import { fetchStockEvents } from '@/services/stockEventsService';
@@ -499,6 +501,9 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
     setCouponVerifiedPct(Number(row.percent));
     toast.success(`Gutschein gültig: ${Number(row.percent).toLocaleString('de-DE', { maximumFractionDigits: 2 })}% Rabatt`);
   };
+
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const { refreshAll: refreshDashboard } = useDashboardData();
 
   const toggleWatchlist = async () => {
     // Session 82.20 · Depot Phase 3B — Mongo-native via FastAPI (`/api/watchlist`).
@@ -1053,9 +1058,10 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                   type="button"
                   onClick={() => {
                     setSide('buy');
-                    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setShowOrderModal(true);
                   }}
                   className="h-11 rounded-md bg-emerald-600 text-[14px] font-semibold text-white transition-colors hover:bg-emerald-700"
+                  data-testid="stock-detail-buy-btn"
                 >
                   Kaufen
                 </button>
@@ -1370,6 +1376,15 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
           </DashboardStagger>
         </div>
       </div>
+      <OrderCreateModal
+        open={showOrderModal}
+        onClose={() => setShowOrderModal(false)}
+        symbol={symbol}
+        displayName={stock?.name || symbol}
+        onCreated={() => {
+          try { refreshDashboard?.(); } catch (_) {}
+        }}
+      />
     </div>
   );
 
