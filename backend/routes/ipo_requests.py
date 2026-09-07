@@ -20,11 +20,9 @@ Kontext:
 
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone, date
 from typing import Optional, Literal
 
-import httpx
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
@@ -34,17 +32,12 @@ from pymongo.errors import DuplicateKeyError
 # damit dieses Modul ohne Zirkular-Import registrierbar bleibt.
 from server import get_current_user, db, require_admin  # type: ignore[attr-defined]
 
+# Session 82.03 — Katalog-Lookup jetzt gegen Mongo-Native `ipo_catalog`,
+# nicht mehr gegen Supabase REST.
+from routes.ipo_catalog import get_investable_ipo_by_id  # type: ignore[attr-defined]
+
 
 router = APIRouter(prefix="/api/ipo", tags=["ipo-requests"])
-
-
-# ─── Konfiguration ──────────────────────────────────────────────────────
-SUPABASE_URL = os.environ.get("REACT_APP_SUPABASE_URL") or os.environ.get(
-    "SUPABASE_URL"
-)
-SUPABASE_ANON_KEY = os.environ.get("REACT_APP_SUPABASE_ANON_KEY") or os.environ.get(
-    "SUPABASE_ANON_KEY"
-)
 
 
 # ─── Pydantic-Models ────────────────────────────────────────────────────
@@ -104,51 +97,28 @@ def _serialize(doc: dict) -> dict:
     }
 
 
-# ─── Supabase READ-ONLY IPO-Lookup (anon-Key, RLS-safe) ──────────────────
+# ─── Katalog-Lookup (Session 82.03: Mongo-native, kein Supabase mehr) ────
 async def _fetch_ipo_from_catalog(ipo_id: str) -> dict:
     """
-    Read-only Lookup gegen Supabase `ipo_catalog` mit anon-Key.
-    Die RLS-Policy erlaubt SELECT für die anon-Rolle nur für is_visible=true —
-    das ist genau die fachliche Sichtbarkeitsprüfung, die wir brauchen.
+    Lookup gegen Mongo `ipo_catalog`. Delegiert an
+    `routes.ipo_catalog.get_investable_ipo_by_id`, das 404 wirft, wenn IPO
+    nicht existiert oder is_visible=false ist.
     """
-    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
-        raise HTTPException(status_code=503, detail="IPO-Katalog nicht erreichbar")
-
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        try:
-            resp = await client.get(
-                f"{SUPABASE_URL.rstrip('/')}/rest/v1/ipo_catalog",
-                params={
-                    "id": f"eq.{ipo_id}",
-                    "select": "id,company_name,ticker_proposed,status,is_visible,"
-                    "subscription_start,subscription_end,ipo_date,min_investment_eur,"
-                    "lot_size,price_currency",
-                    "limit": "1",
-                },
-                headers={
-                    "apikey": SUPABASE_ANON_KEY,
-                    "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
-                    "Accept": "application/json",
-                },
-            )
-        except httpx.HTTPError as exc:
-            raise HTTPException(
-                status_code=503, detail=f"IPO-Katalog nicht erreichbar: {exc}"
-            ) from exc
-
-    if resp.status_code != 200:
-        raise HTTPException(
-            status_code=502,
-            detail=f"IPO-Katalog Fehler ({resp.status_code})",
-        )
-    rows = resp.json() or []
-    if not rows:
-        # anon-RLS zeigt nur is_visible=true — 0 rows == existiert nicht ODER
-        # nicht sichtbar. Beides fachlich „nicht zeichenbar".
-        raise HTTPException(
-            status_code=404, detail="IPO nicht gefunden oder nicht sichtbar"
-        )
-    return rows[0]
+    doc = await get_investable_ipo_by_id(ipo_id)
+    # Normalisierung auf gleiches Schema wie zuvor (Supabase-Anon-JSON)
+    return {
+        "id": str(doc["_id"]),
+        "company_name": doc.get("company_name"),
+        "ticker_proposed": doc.get("ticker_proposed"),
+        "status": doc.get("status", "upcoming"),
+        "is_visible": bool(doc.get("is_visible", False)),
+        "subscription_start": doc.get("subscription_start"),
+        "subscription_end": doc.get("subscription_end"),
+        "ipo_date": doc.get("ipo_date"),
+        "min_investment_eur": doc.get("min_investment_eur"),
+        "lot_size": int(doc.get("lot_size", 1)),
+        "price_currency": doc.get("price_currency", "EUR"),
+    }
 
 
 # ─── Endpoints ──────────────────────────────────────────────────────────

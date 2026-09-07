@@ -3,7 +3,6 @@ import { Plus, Edit, Trash2, X, Save, RefreshCw } from 'lucide-react';
 import { PRODUCT_ICONS } from '@/lib/productIcons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { normalizeIpoCatalogRow } from '@/lib/decodeHtmlEntities';
 import {
@@ -13,6 +12,14 @@ import {
   adminTheadClass,
   adminRowHover,
 } from '@/components/admin/AdminSubpageChrome';
+
+/**
+ * IPO-Katalog Admin (Session 82.03) — vollständig FastAPI/Mongo-native.
+ * Der Legacy-Supabase-Edge-Function-„Sync"-Button wurde entfernt: der externe
+ * Feed schreibt direkt in Supabase und würde den Mongo-Katalog nicht befüllen.
+ * Katalogpflege erfolgt manuell via CRUD; ein späterer Backend-Sync ist als
+ * eigener Schritt geplant.
+ */
 
 const STATUS_OPTIONS = ['upcoming', 'open', 'priced', 'filed', 'listed', 'postponed', 'cancelled'];
 
@@ -39,32 +46,49 @@ const EMPTY = {
   is_visible: true,
 };
 
+const parseNum = (v) => {
+  if (v === '' || v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+const fetchJson = async (path, options = {}) => {
+  const resp = await fetch(path, {
+    credentials: 'include',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    ...options,
+  });
+  const isJson = (resp.headers.get('content-type') || '').includes('application/json');
+  const body = isJson && resp.status !== 204 ? await resp.json() : null;
+  if (!resp.ok) {
+    const detail = body?.detail || `HTTP ${resp.status}`;
+    const err = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    err.status = resp.status;
+    throw err;
+  }
+  return body;
+};
+
 const AdminIpoCatalog = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [tableMissing, setTableMissing] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const load = async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const { data, error } = await supabase
-        .from('ipo_catalog')
-        .select('*')
-        .order('ipo_date', { ascending: true, nullsFirst: false });
-      if (error) {
-        if (error.message?.toLowerCase().includes('relation') || error.code === '42P01') {
-          setTableMissing(true);
-        } else {
-          toast.error('Fehler beim Laden: ' + error.message);
-        }
-        setItems([]);
-      } else {
-        setItems((data || []).map(normalizeIpoCatalogRow));
+      const data = await fetchJson('/api/admin/ipo/catalog');
+      setItems((Array.isArray(data) ? data : []).map(normalizeIpoCatalogRow));
+    } catch (err) {
+      setLoadError(err.message || 'Laden fehlgeschlagen');
+      setItems([]);
+      if (err.status !== 401 && err.status !== 403) {
+        toast.error('Fehler beim Laden: ' + err.message);
       }
     } finally {
       setLoading(false);
@@ -74,26 +98,6 @@ const AdminIpoCatalog = () => {
   useEffect(() => {
     load();
   }, []);
-
-  const runSync = async () => {
-    setSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('ipo-sync', {
-        body: { force: true },
-      });
-      if (error) throw error;
-      if (data?.errors?.length) {
-        toast.warning(`Sync mit Hinweisen: ${data.errors.join('; ')}`);
-      } else {
-        toast.success(`IPO-Sync abgeschlossen (${data?.upserted ?? 0} aktualisiert)`);
-      }
-      await load();
-    } catch (err) {
-      toast.error('Sync fehlgeschlagen: ' + (err?.message || 'unbekannt'));
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const openAdd = () => {
     setEditing(null);
@@ -141,18 +145,12 @@ const AdminIpoCatalog = () => {
       toast.error('Firmenname ist erforderlich.');
       return;
     }
-    // Session 82.01 — Preis-Sanity: price_min <= price_max, wenn beide gesetzt.
-    const pLow = form.price_range_low ? Number(form.price_range_low) : null;
-    const pHigh = form.price_range_high ? Number(form.price_range_high) : null;
+    const pLow = parseNum(form.price_range_low);
+    const pHigh = parseNum(form.price_range_high);
     if (pLow != null && pHigh != null && pLow > pHigh) {
       toast.error('Preisspanne ungültig: „von" darf nicht größer als „bis" sein.');
       return;
     }
-    if ((pLow != null && !Number.isFinite(pLow)) || (pHigh != null && !Number.isFinite(pHigh))) {
-      toast.error('Preisspanne muss numerisch sein.');
-      return;
-    }
-    // Session 82.01 — Datums-Sanity: subscription_start <= subscription_end, wenn beide gesetzt.
     if (form.subscription_start && form.subscription_end && form.subscription_start > form.subscription_end) {
       toast.error('Zeichnungsfenster ungültig: „von" darf nicht nach „bis" liegen.');
       return;
@@ -170,59 +168,61 @@ const AdminIpoCatalog = () => {
       expected_ipo_window: form.expected_ipo_window || null,
       subscription_start: form.subscription_start || null,
       subscription_end: form.subscription_end || null,
-      price_range_low: form.price_range_low ? Number(form.price_range_low) : null,
-      price_range_high: form.price_range_high ? Number(form.price_range_high) : null,
+      price_range_low: pLow,
+      price_range_high: pHigh,
       price_currency: form.price_currency || 'EUR',
-      valuation_last_private: form.valuation_last_private
-        ? Number(form.valuation_last_private)
-        : null,
-      min_investment_eur: form.min_investment_eur ? Number(form.min_investment_eur) : null,
-      lot_size: Number(form.lot_size) || 1,
+      valuation_last_private: parseNum(form.valuation_last_private),
+      min_investment_eur: parseNum(form.min_investment_eur),
+      lot_size: Math.max(1, parseInt(form.lot_size, 10) || 1),
       prospectus_url: form.prospectus_url || null,
       description: form.description || null,
       is_visible: !!form.is_visible,
       is_manual_override: true,
     };
-    let error;
-    if (editing) {
-      ({ error } = await supabase.from('ipo_catalog').update(payload).eq('id', editing.id));
-      if (!error) toast.success('IPO aktualisiert');
-    } else {
-      const key = form.isin
-        ? `isin:${form.isin.toUpperCase()}`
-        : `manual:${form.ticker_proposed || 'x'}:${form.ipo_date || 'nodate'}`;
-      ({ error } = await supabase.from('ipo_catalog').insert({
-        ...payload,
-        external_key: key,
-        source: 'manual',
-      }));
-      if (!error) toast.success('IPO hinzugefügt');
-    }
-    if (error) toast.error('Fehler: ' + error.message);
-    else {
+    try {
+      if (editing) {
+        await fetchJson(`/api/admin/ipo/catalog/${editing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+        toast.success('IPO aktualisiert');
+      } else {
+        await fetchJson('/api/admin/ipo/catalog', {
+          method: 'POST',
+          body: JSON.stringify({ ...payload, source: 'manual' }),
+        });
+        toast.success('IPO hinzugefügt');
+      }
       await load();
       closeModal();
+    } catch (err) {
+      toast.error('Fehler: ' + err.message);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const remove = async (row) => {
     if (!window.confirm('IPO wirklich entfernen?')) return;
-    const { error } = await supabase.from('ipo_catalog').delete().eq('id', row.id);
-    if (error) toast.error('Fehler: ' + error.message);
-    else {
+    try {
+      await fetchJson(`/api/admin/ipo/catalog/${row.id}`, { method: 'DELETE' });
       toast.success('Entfernt');
-      load();
+      await load();
+    } catch (err) {
+      toast.error('Fehler: ' + err.message);
     }
   };
 
   const toggleVisible = async (row) => {
-    const { error } = await supabase
-      .from('ipo_catalog')
-      .update({ is_visible: !row.is_visible, is_manual_override: true })
-      .eq('id', row.id);
-    if (error) toast.error('Fehler: ' + error.message);
-    else load();
+    try {
+      await fetchJson(`/api/admin/ipo/catalog/${row.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_visible: !row.is_visible, is_manual_override: true }),
+      });
+      await load();
+    } catch (err) {
+      toast.error('Fehler: ' + err.message);
+    }
   };
 
   const statusBadge = (status) => {
@@ -243,31 +243,31 @@ const AdminIpoCatalog = () => {
         eyebrow="Admin"
         title="IPO-Katalog"
         titleIcon={PRODUCT_ICONS.ipo}
-        description="Börsengänge vor dem Handelsstart — Euronext, Nasdaq und manuelle Einträge."
+        description="Börsengänge vor dem Handelsstart — Manual CRUD (Mongo-native). Externer Sync in Vorbereitung."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={runSync} disabled={syncing}>
-              <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-              Sync jetzt
-            </Button>
-            <Button className="bg-bank-ink text-white hover:bg-bank-ink-elev" onClick={openAdd}>
-              <Plus size={16} />
-              IPO hinzufügen
-            </Button>
-          </div>
+          <Button
+            className="bg-bank-ink text-white hover:bg-bank-ink-elev"
+            onClick={openAdd}
+            data-testid="ipo-admin-add-btn"
+          >
+            <Plus size={16} />
+            IPO hinzufügen
+          </Button>
         }
       />
 
-      {tableMissing ? (
-        <AdminSurfaceCard className="p-6">
-          <p className="text-[13px] text-bank-text-muted">
-            Tabelle <code className="font-mono">ipo_catalog</code> fehlt — Migration anwenden.
-          </p>
+      {loadError && !loading ? (
+        <AdminSurfaceCard className="p-6 text-sm">
+          <p className="font-semibold text-bank-error">Katalog konnte nicht geladen werden.</p>
+          <p className="mt-1 text-bank-text-muted">{loadError}</p>
+          <Button variant="outline" size="sm" onClick={load} className="mt-3">
+            <RefreshCw size={14} className="mr-2" /> Erneut versuchen
+          </Button>
         </AdminSurfaceCard>
       ) : (
         <AdminSurfaceCard>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" data-testid="ipo-admin-table">
               <thead className={adminTheadClass}>
                 <tr>
                   <th className="px-4 py-3 text-left">Datum</th>
@@ -288,13 +288,17 @@ const AdminIpoCatalog = () => {
                   </tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-bank-text-muted">
-                      Keine IPOs — Sync starten oder manuell hinzufügen
+                    <td colSpan={7} className="py-12 text-center text-bank-text-muted" data-testid="ipo-admin-empty">
+                      Noch keine IPOs — manuell hinzufügen
                     </td>
                   </tr>
                 ) : (
                   items.map((row) => (
-                    <tr key={row.id} className={`border-b border-bank-border ${adminRowHover}`}>
+                    <tr
+                      key={row.id}
+                      className={`border-b border-bank-border ${adminRowHover}`}
+                      data-testid={`ipo-admin-row-${row.id}`}
+                    >
                       <td className="px-4 py-3 font-mono text-[11px] tabular-nums">
                         {row.ipo_date
                           ? new Date(row.ipo_date).toLocaleDateString('de-DE')
@@ -302,7 +306,7 @@ const AdminIpoCatalog = () => {
                       </td>
                       <td className="px-4 py-3 text-[13px] font-medium">{row.company_name}</td>
                       <td className="px-4 py-3 font-mono text-[12px]">{row.ticker_proposed || '–'}</td>
-                      <td className="px-4 py-3 text-[12px] text-bank-text-muted">{row.source}</td>
+                      <td className="px-4 py-3 text-[12px] text-bank-text-muted">{row.source || 'manual'}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase ${statusBadge(row.status)}`}
@@ -315,16 +319,27 @@ const AdminIpoCatalog = () => {
                           type="button"
                           onClick={() => toggleVisible(row)}
                           className={`text-[12px] ${row.is_visible ? 'text-emerald-600' : 'text-bank-text-muted'}`}
+                          data-testid={`ipo-admin-toggle-${row.id}`}
                         >
                           {row.is_visible ? 'Ja' : 'Nein'}
                         </button>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(row)}
+                            data-testid={`ipo-admin-edit-${row.id}`}
+                          >
                             <Edit size={14} />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => remove(row)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => remove(row)}
+                            data-testid={`ipo-admin-delete-${row.id}`}
+                          >
                             <Trash2 size={14} className="text-rose-600" />
                           </Button>
                         </div>
@@ -339,7 +354,7 @@ const AdminIpoCatalog = () => {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="ipo-admin-modal">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-bank-border bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold">{editing ? 'IPO bearbeiten' : 'Neues IPO'}</h3>
@@ -353,6 +368,7 @@ const AdminIpoCatalog = () => {
                 value={form.company_name}
                 onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))}
                 required
+                data-testid="ipo-admin-name-input"
               />
               <div className="grid grid-cols-2 gap-2">
                 <Input
@@ -385,6 +401,7 @@ const AdminIpoCatalog = () => {
                     className="mt-1 w-full rounded-md border border-bank-border px-2 py-2 text-[13px]"
                     value={form.status}
                     onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                    data-testid="ipo-admin-status-select"
                   >
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s} value={s}>
@@ -473,6 +490,7 @@ const AdminIpoCatalog = () => {
                   type="checkbox"
                   checked={form.is_visible}
                   onChange={(e) => setForm((f) => ({ ...f, is_visible: e.target.checked }))}
+                  data-testid="ipo-admin-visible-toggle"
                 />
                 Für Kunden sichtbar
               </label>
@@ -480,7 +498,7 @@ const AdminIpoCatalog = () => {
                 <Button type="button" variant="outline" onClick={closeModal}>
                   Abbrechen
                 </Button>
-                <Button type="submit" disabled={saving}>
+                <Button type="submit" disabled={saving} data-testid="ipo-admin-save-btn">
                   <Save size={16} />
                   {saving ? 'Speichern…' : 'Speichern'}
                 </Button>

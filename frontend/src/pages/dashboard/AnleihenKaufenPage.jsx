@@ -54,22 +54,32 @@ const AnleihenKaufenPage = () => {
   });
   const [sort, setSort] = useState('rest_asc');
   const [showFilters, setShowFilters] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const retry = () => setReloadKey((k) => k + 1);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setLoadError('');
     (async () => {
       try {
-        setLoadError('');
-        const { data, error } = await supabase
-          .from('bond_catalog')
-          .select('*')
-          .eq('is_available', true);
-        if (error) throw error;
-        if (active) setBonds(data || []);
+        // Session 82.03 — FastAPI/Mongo-native Katalog (kein Supabase mehr).
+        const resp = await fetch('/api/bonds/catalog', {
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        });
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}`);
+        }
+        const data = await resp.json();
+        if (active) {
+          setBonds(Array.isArray(data) ? data : []);
+          setLoadError('');
+        }
       } catch (err) {
         if (active) {
-          setLoadError('Daten konnten nicht geladen werden.');
-          setBonds([]);
+          setLoadError('Anleihen-Daten konnten derzeit nicht geladen werden.');
+          // ERROR bleibt vom EMPTY-State getrennt — bonds NICHT auf [] überschreiben.
         }
       } finally {
         if (active) setLoading(false);
@@ -78,7 +88,7 @@ const AnleihenKaufenPage = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   const bondKey = (b, idx = 0) => b.id || b.isin || `${b.bond_name || 'bond'}-${idx}`;
 
@@ -151,6 +161,10 @@ const AnleihenKaufenPage = () => {
       toast.error('Bitte geben Sie ein gültiges Ordervolumen an.');
       return;
     }
+    // NOTE (Session 82.03): Kunden-Kaufanfrage schreibt weiterhin nach
+    // Supabase `bond_purchase_requests`. Bekannter Blocker: Mongo-Native User
+    // (ObjectId) schlägt gegen Supabase-RLS auf user_id (uuid) fehl. Fix
+    // separater Arbeitsschritt, außerhalb des Bond-KATALOG-Cutovers.
     const { error } = await supabase.from('bond_purchase_requests').insert({
       user_id: user.id,
       isin: bond.isin || null,
@@ -200,6 +214,7 @@ const AnleihenKaufenPage = () => {
                 onClick={() => setShowFilters((v) => !v)}
                 className="inline-flex items-center gap-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-accent/35"
                 aria-expanded={showFilters}
+                data-testid="bonds-filter-toggle"
               >
                 {showFilters ? <ChevronUp size={12} strokeWidth={1.5} /> : <ChevronDown size={12} strokeWidth={1.5} />}
                 {showFilters ? 'Verbergen' : 'Anzeigen'}
@@ -221,6 +236,7 @@ const AnleihenKaufenPage = () => {
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Name, ISIN, Emittent…"
                     className="h-9 pl-8 text-sm"
+                    data-testid="bonds-search-input"
                   />
                 </div>
               </div>
@@ -235,6 +251,7 @@ const AnleihenKaufenPage = () => {
                     setFilters((p) => ({ ...p, issuer: e.target.value }))
                   }
                   className="h-9 w-full border border-bank-border bg-white px-2 text-sm focus:border-bank-gold/55 focus:outline-none focus:ring-2 focus:ring-bank-accent/35"
+                  data-testid="bonds-issuer-select"
                 >
                   {issuers.map((iss) => (
                     <option key={iss} value={iss}>
@@ -316,16 +333,17 @@ const AnleihenKaufenPage = () => {
           </div>
         </aside>
 
-        <div>
+        <div data-testid="bonds-content">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
             <div className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-text-muted">
               <Filter size={13} strokeWidth={1.5} className="text-bank-gold" />
-              <span className="tabular-nums text-bank-text">{filtered.length}</span> Anleihen gefunden
+              <span className="tabular-nums text-bank-text" data-testid="bonds-count">{filtered.length}</span> Anleihen gefunden
             </div>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
               className="h-9 border border-bank-border bg-white px-2 text-sm focus:border-bank-gold/55 focus:outline-none focus:ring-2 focus:ring-bank-accent/35"
+              data-testid="bonds-sort-select"
             >
               {SORT_OPTIONS.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -338,20 +356,25 @@ const AnleihenKaufenPage = () => {
           {loading ? (
             <CardListSkeleton count={4} />
           ) : loadError ? (
-            <SurfaceCard accent className="py-12 text-center">
+            <SurfaceCard accent className="py-12 text-center" data-testid="bonds-error-state">
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-bank-text-muted">
                 Marktdaten konnten nicht geladen werden
               </p>
               <p className="mt-2 text-[13px] text-bank-error">{loadError}</p>
+              <div className="mt-4">
+                <Button variant="outline-ink" size="sm" onClick={retry} data-testid="bonds-retry">
+                  Erneut laden
+                </Button>
+              </div>
             </SurfaceCard>
           ) : bonds.length === 0 ? (
-            <SurfaceCard accent className="py-12 text-center">
+            <SurfaceCard accent className="py-12 text-center" data-testid="bonds-empty-state">
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-bank-text-muted">
                 Aktuell keine Anleihen verfügbar
               </p>
             </SurfaceCard>
           ) : filtered.length === 0 ? (
-            <SurfaceCard accent className="py-12 text-center">
+            <SurfaceCard accent className="py-12 text-center" data-testid="bonds-search-empty-state">
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-bank-text-muted">
                 Keine Treffer mit den aktuellen Filtern
               </p>
@@ -369,6 +392,7 @@ const AnleihenKaufenPage = () => {
                   <div
                     key={key}
                     className="relative border border-bank-border bg-white p-5 transition-shadow duration-300 hover:shadow-editorial-sm"
+                    data-testid={`bond-card-${key}`}
                   >
                     <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-bank-gold/55 via-bank-gold/35 to-transparent" />
                     <div className="mb-4 flex items-start justify-between gap-3">
@@ -467,6 +491,7 @@ const AnleihenKaufenPage = () => {
                       size="lg"
                       className="w-full"
                       onClick={() => requestPurchase(b, idx)}
+                      data-testid={`bond-request-purchase-${key}`}
                     >
                       <ShoppingCart size={14} strokeWidth={1.5} /> Kaufanfrage senden
                     </Button>

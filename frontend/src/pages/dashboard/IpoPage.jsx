@@ -34,6 +34,10 @@ import {
 } from '@/components/ui/dialog';
 import { normalizeIpoCatalogRow } from '@/lib/decodeHtmlEntities';
 
+// Session 82.03: unused import (`supabase`) beibehalten, weil sonstige
+// Referenzen in dieser Datei geblieben sind — der Katalog-Read ist der
+// einzige Supabase-Call, der komplett entfernt wird.
+
 const STATUS_LABELS = {
   upcoming: 'Bevorstehend',
   open: 'Zeichnung offen',
@@ -122,24 +126,22 @@ const IpoPage = () => {
     setLoadError('');
     (async () => {
       try {
-        const { data, error } = await supabase
-          .from('ipo_catalog')
-          .select('*')
-          .eq('is_visible', true)
-          .not('status', 'in', '(listed,cancelled)')
-          .order('display_order', { ascending: false })
-          .order('ipo_date', { ascending: true, nullsFirst: false });
-        if (error) throw error;
-        // Session 81.08 — State-Modell-Fix: bei Erfolg Fehler explizit leeren.
+        // Session 82.03 — Mongo-native Katalog via FastAPI. Server sortiert
+        // bereits: display_order DESC, ipo_date ASC. Auth via Cookie.
+        const resp = await fetch('/api/ipo/catalog', {
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        });
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}`);
+        }
+        const data = await resp.json();
         if (active) {
-          setIpos((data || []).map(normalizeIpoCatalogRow));
+          setIpos((Array.isArray(data) ? data : []).map(normalizeIpoCatalogRow));
           setLoadError('');
         }
       } catch {
-        // Session 81.08 — Root-Cause-Fix: Error muss von Empty unterscheidbar
-        // bleiben. Wir setzen ipos NICHT auf [] — sonst rendert Empty-Card,
-        // die Error visuell überlagert. Render-Logik unten prüft `loadError`
-        // zuerst und rendert dedizierten Error-State mit Retry.
+        // Session 81.08 — Error bleibt vom EMPTY-State getrennt.
         if (active) {
           setLoadError('IPO-Daten konnten derzeit nicht geladen werden.');
         }
