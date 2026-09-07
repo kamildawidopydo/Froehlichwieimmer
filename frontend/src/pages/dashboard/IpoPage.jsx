@@ -126,7 +126,7 @@ const IpoPage = () => {
           .from('ipo_catalog')
           .select('*')
           .eq('is_visible', true)
-          .neq('status', 'listed')
+          .not('status', 'in', '(listed,cancelled)')
           .order('display_order', { ascending: false })
           .order('ipo_date', { ascending: true, nullsFirst: false });
         if (error) throw error;
