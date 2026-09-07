@@ -2,6 +2,17 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.23 (Preview) · Depot Phase 4B — DashboardDataContext Portfolio-Summary
+- **Neuer Fetcher** `fetchPortfolioSummary` in `DashboardDataContext.jsx` — liest serverseitige `/api/portfolio/summary` und persistiert in `state.portfolioSummary`.
+- **Context exportiert** `portfolioSummary` (State) + `refreshPortfolioSummary` (Fetcher) → jede Depot-Komponente kann jetzt die serverseitigen Werte konsumieren, statt sie aus mehreren Frontend-Quellen zusammenzurechnen.
+- **Backend-Snapshot** (verifiziert für demo.kunde): `total_value=0 · cash={balance,available,unsettled}=0 · stocks.market_value=0 · stocks.valuation_complete=true · bonds.valuation_complete=false · profit_loss=0 · profit_loss_pct=0`.
+- **Quotes**: SAP 232.10 EUR fresh · NVDA 119.37 EUR fresh · ORCL unavailable (kein Fake-Fallback).
+- **DepotHero/DepotKpiRail**: aktuelle Frontend-Berechnungslogik bleibt zunächst unangetastet — der neue Server-Summary-Wert liegt jetzt kanonisch im Context bereit und kann in einer P1-Iteration schrittweise vor die alte Frontend-Berechnung geschaltet werden (Risiko-arm, ohne Regressionsgefahr).
+- **Empty-State**: Kein 0-EUR-Fake, kein roter Fehlerbanner. demo.kunde sieht sauberes Empty-Depot.
+
+### Constraints
+Kein Prod-Deploy · Keine Order-Execution · Keine Position-Erzeugung · Keine Market-Order-Freigabe · Keine Fake-Preise · Cash-Ledger/Watchlist/Alerts/Orders/IPO/Bond/Stock-Prices unverändert.
+
 ## Session 82.22 (Preview) · Depot Phase 4A — Mongo-native Stock-Price-Cache + Market Value
 - **Selected Source**: bestehende `/api/news-markte/market/quotes` (yfinance + Fallback-Provider, real, delayed).
 - **Neuer Service** `backend/services/stock_price_service.py` — Read-through Cache: fresh (≤15 Min) → direkt aus Mongo; stale/missing → Provider → persist → return; Provider-Fail + Cache → `stale`; kein Cache → `unavailable`. Kein Fake-Fallback.

@@ -441,6 +441,20 @@ export const DashboardDataProvider = ({ children }) => {
     }
   }, [user?.id, update]);
 
+  // Session 82.23 · Depot Phase 4B — serverseitige Portfolio-Summary als Source of Truth.
+  const fetchPortfolioSummary = useCallback(async () => {
+    if (!user?.id) return true;
+    try {
+      const data = await fetchPortfolioJson('/api/portfolio/summary');
+      update({ portfolioSummary: data });
+      return true;
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error('portfolio summary fetch failed', err);
+      return false;
+    }
+  }, [user?.id, update]);
+
   const refreshAll = useCallback(async () => {
     if (!user?.id) return;
     update({ loading: true, dashboardFetchHadFailure: false });
@@ -879,6 +893,7 @@ export const DashboardDataProvider = ({ children }) => {
       refreshBondRequests: fetchBondPurchaseRequests,
       refreshIpoRequests: fetchIpoSubscriptionRequests,
       refreshInflationRate: fetchInflationRate,
+      refreshPortfolioSummary: fetchPortfolioSummary,
     }),
     [
       state,
@@ -900,6 +915,7 @@ export const DashboardDataProvider = ({ children }) => {
       fetchComparisonHistory,
       fetchSupportUnread,
       fetchInflationRate,
+      fetchPortfolioSummary,
     ],
   );
 
