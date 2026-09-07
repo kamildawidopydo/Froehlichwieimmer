@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileBarChart2, Plus, Edit, Trash2, X, Save, RefreshCw } from 'lucide-react';
+import { FileBarChart2, Plus, Edit, Trash2, X, Save, RefreshCw, DownloadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -61,6 +61,39 @@ const AdminBondCatalog = () => {
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
+
+  const runSync = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setLastSync(null);
+    try {
+      const report = await fetchJson('/api/admin/bonds/catalog/sync', { method: 'POST' });
+      setLastSync(report);
+      if (report.status === 'already_running') {
+        toast.info('Ein Sync läuft bereits — Bitte kurz warten.');
+      } else if (report.status === 'success') {
+        const checked = report.eligible_before_cap ?? 0;
+        const ins = report.inserted ?? 0;
+        const upd = report.updated ?? 0;
+        const un = report.unchanged ?? 0;
+        const skippedCap = report.skipped_due_to_cap ?? 0;
+        let msg = `${checked} Anleihen geprüft · ${ins} neu · ${upd} aktualisiert · ${un} unverändert`;
+        if (skippedCap > 0) {
+          msg += ` — Weitere ${skippedCap} geeignete Werte wurden aufgrund der Katalogbegrenzung nicht importiert.`;
+        }
+        toast.success(msg);
+        await load();
+      } else {
+        toast.error('Sync fehlgeschlagen: ' + (report.errors?.[0] || 'unbekannter Fehler'));
+      }
+    } catch (err) {
+      toast.error('Sync-Fehler: ' + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -169,16 +202,53 @@ const AdminBondCatalog = () => {
         titleIcon={FileBarChart2}
         description="Pflegen Sie das Universum kaufbarer Anleihen, das Kunden im Bereich „Neue Anleihe kaufen“ sehen."
         actions={
-          <Button
-            className="bg-bank-ink text-white hover:bg-bank-ink-elev"
-            onClick={openAdd}
-            data-testid="bond-admin-add-btn"
-          >
-            <Plus size={16} className="mr-2" />
-            Anleihe hinzufügen
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={runSync}
+              disabled={syncing}
+              data-testid="bond-admin-sync-btn"
+            >
+              {syncing ? (
+                <>
+                  <RefreshCw size={16} className="mr-2 animate-spin" /> Synchronisiere…
+                </>
+              ) : (
+                <>
+                  <DownloadCloud size={16} className="mr-2" /> Jetzt synchronisieren
+                </>
+              )}
+            </Button>
+            <Button
+              className="bg-bank-ink text-white hover:bg-bank-ink-elev"
+              onClick={openAdd}
+              data-testid="bond-admin-add-btn"
+            >
+              <Plus size={16} className="mr-2" />
+              Anleihe hinzufügen
+            </Button>
+          </div>
         }
       />
+      {lastSync && lastSync.status === 'success' && (
+        <div
+          className="mt-2 rounded-lg border border-bank-border/60 bg-bank-bg/40 px-4 py-3 text-sm text-bank-text-muted"
+          data-testid="bond-admin-sync-summary"
+        >
+          <span className="font-medium text-bank-text">Letzter Sync:</span>{' '}
+          {lastSync.eligible_before_cap} geprüft · {lastSync.inserted} neu ·{' '}
+          {lastSync.updated} aktualisiert · {lastSync.unchanged} unverändert
+          {lastSync.skipped_manual_override > 0 && (
+            <> · {lastSync.skipped_manual_override} geschützt (manuell gepflegt)</>
+          )}
+          {lastSync.skipped_due_to_cap > 0 && (
+            <> · {lastSync.skipped_due_to_cap} durch Katalogbegrenzung ausgeschlossen</>
+          )}
+          <span className="ml-2 text-[11px] opacity-70">
+            (Quelle: Deutsche Börse XFRA-BF · {Math.round((lastSync.duration_ms || 0) / 10) / 100}s)
+          </span>
+        </div>
+      )}
 
       {loadError && !loading ? (
         <AdminSurfaceCard className="p-6 text-sm">

@@ -23,6 +23,9 @@ from pydantic import BaseModel, Field, field_validator
 
 from server import get_current_user, db, require_admin  # type: ignore[attr-defined]
 
+# Session 82.16 — Sync-Service (Deutsche Börse XFRA-BF → Mongo)
+from services.bond_sync import sync_bond_catalog  # noqa: E402
+
 
 public_router = APIRouter(prefix="/api/bonds", tags=["bond-catalog"])
 admin_router = APIRouter(prefix="/api/admin/bonds", tags=["admin-bond-catalog"])
@@ -40,6 +43,13 @@ class BondCatalogBase(BaseModel):
     min_order_eur: Optional[float] = Field(default=None, ge=0)
     denomination: Optional[float] = Field(default=None, ge=0)
     is_available: bool = True
+    # Session 82.16 — Sync-Metadaten (additiv, alle optional)
+    currency: Optional[str] = Field(default=None, max_length=8)
+    country: Optional[str] = Field(default=None, max_length=8)
+    source: Optional[str] = Field(default=None, max_length=50)
+    external_key: Optional[str] = Field(default=None, max_length=200)
+    is_manual_override: bool = False
+    issue_date: Optional[str] = Field(default=None, description="ISO YYYY-MM-DD")
 
     model_config = {"extra": "forbid"}
 
@@ -91,6 +101,13 @@ class BondCatalogUpdate(BaseModel):
     min_order_eur: Optional[float] = Field(default=None, ge=0)
     denomination: Optional[float] = Field(default=None, ge=0)
     is_available: Optional[bool] = None
+    # Session 82.16 — Sync-Metadaten (additiv)
+    currency: Optional[str] = Field(default=None, max_length=8)
+    country: Optional[str] = Field(default=None, max_length=8)
+    source: Optional[str] = Field(default=None, max_length=50)
+    external_key: Optional[str] = Field(default=None, max_length=200)
+    is_manual_override: Optional[bool] = None
+    issue_date: Optional[str] = None
 
     model_config = {"extra": "forbid"}
 
@@ -140,6 +157,13 @@ def _serialize(doc: dict) -> dict:
         "min_order_eur": doc.get("min_order_eur"),
         "denomination": doc.get("denomination"),
         "is_available": bool(doc.get("is_available", True)),
+        # Session 82.16 — Sync-Metadaten
+        "currency": doc.get("currency"),
+        "country": doc.get("country"),
+        "source": doc.get("source"),
+        "external_key": doc.get("external_key"),
+        "is_manual_override": bool(doc.get("is_manual_override", False)),
+        "issue_date": doc.get("issue_date"),
         "created_at": ca.isoformat() if isinstance(ca, datetime) else ca,
         "updated_at": ua.isoformat() if isinstance(ua, datetime) else ua,
     }
@@ -154,8 +178,21 @@ def _oid_or_404(bond_id: str) -> ObjectId:
 # ─── Public: Customer Read ──────────────────────────────────────────────
 @public_router.get("/catalog")
 async def list_available_bonds(user: dict = Depends(get_current_user)):
-    """Liefert nur is_available=true. Sort: kupon_rate DESC (falls vorhanden)."""
-    cursor = db.bond_catalog.find({"is_available": True}).sort(
+    """
+    Liefert nur is_available=true UND (faelligkeitsdatum >= heute ODER null).
+    Session 82.16 · Phase 15 Maturity-Guard serverseitig.
+    Sort: kupon_rate DESC (falls vorhanden).
+    """
+    today = _date.today().isoformat()
+    query = {
+        "is_available": True,
+        "$or": [
+            {"faelligkeitsdatum": {"$gte": today}},
+            {"faelligkeitsdatum": None},
+            {"faelligkeitsdatum": {"$exists": False}},
+        ],
+    }
+    cursor = db.bond_catalog.find(query).sort(
         [("kupon_rate", -1), ("bond_name", 1)]
     )
     return [_serialize(doc) async for doc in cursor]
@@ -220,9 +257,32 @@ async def admin_delete_bond(
     return None
 
 
+# ─── SYNC · Deutsche Börse XFRA-BF → Mongo (Session 82.16) ──────────────
+@admin_router.post("/catalog/sync")
+async def admin_sync_bond_catalog(_admin: dict = Depends(require_admin)):
+    """
+    Manueller Admin-Sync (trigger=admin). Zieht die offizielle Deutsche-Börse
+    T7 XFRA-BF Referenzdatei, filtert kuratiert und upsertet in `bond_catalog`.
+
+    Idempotent, source-isoliert, Manual-Override wird respektiert.
+    """
+    return await sync_bond_catalog(db, trigger="admin")
+
+
 async def ensure_indexes():
-    """Idempotente Indizes: is_available für Public-Read, isin sparse für Suche."""
+    """
+    Idempotente Indizes.
+    Session 82.16: `external_key` als UNIQUE sparse für Sync-Upsert,
+    `isin` als UNIQUE sparse für Duplicate-Guard.
+    """
     await db.bond_catalog.create_index([("is_available", 1), ("kupon_rate", -1)])
+    # Duplicate-Guard: ein Bond nie zweimal
     await db.bond_catalog.create_index(
-        [("isin", 1)], sparse=True, name="isin_sparse"
+        [("isin", 1)], unique=True, sparse=True, name="isin_unique_sparse",
+    )
+    await db.bond_catalog.create_index(
+        [("external_key", 1)],
+        unique=True,
+        sparse=True,
+        name="external_key_unique_sparse",
     )
