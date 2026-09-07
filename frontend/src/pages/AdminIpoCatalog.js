@@ -77,6 +77,25 @@ const AdminIpoCatalog = () => {
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [syncing, setSyncing] = useState(false);
+
+  const runSync = async () => {
+    setSyncing(true);
+    try {
+      const rep = await fetchJson('/api/admin/ipo/catalog/sync', { method: 'POST' });
+      const summary = `${rep.fetched} geprüft · ${rep.inserted} neu · ${rep.updated} aktualisiert · ${rep.unchanged} unverändert · ${rep.skipped_manual_override} manuell geschützt`;
+      if (rep.errors?.length) {
+        toast.warning(`Sync mit Hinweisen — ${summary}`);
+      } else {
+        toast.success(`Sync abgeschlossen: ${summary}`);
+      }
+      await load();
+    } catch (err) {
+      toast.error('Sync fehlgeschlagen: ' + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -243,16 +262,27 @@ const AdminIpoCatalog = () => {
         eyebrow="Admin"
         title="IPO-Katalog"
         titleIcon={PRODUCT_ICONS.ipo}
-        description="Börsengänge vor dem Handelsstart — Manual CRUD (Mongo-native). Externer Sync in Vorbereitung."
+        description="Börsengänge vor dem Handelsstart — Mongo-native, mit Auto-Sync aus Euronext + Nasdaq."
         actions={
-          <Button
-            className="bg-bank-ink text-white hover:bg-bank-ink-elev"
-            onClick={openAdd}
-            data-testid="ipo-admin-add-btn"
-          >
-            <Plus size={16} />
-            IPO hinzufügen
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={runSync}
+              disabled={syncing}
+              data-testid="ipo-admin-sync-btn"
+            >
+              <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+              {syncing ? 'Sync läuft…' : 'Sync jetzt'}
+            </Button>
+            <Button
+              className="bg-bank-ink text-white hover:bg-bank-ink-elev"
+              onClick={openAdd}
+              data-testid="ipo-admin-add-btn"
+            >
+              <Plus size={16} />
+              IPO hinzufügen
+            </Button>
+          </div>
         }
       />
 
