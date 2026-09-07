@@ -91,6 +91,10 @@ def _cache_key_cash(order_id: ObjectId) -> str:
     return f"execution:{order_id}:cash"
 
 
+def _cache_key_cash_credit(order_id: ObjectId) -> str:
+    return f"execution:{order_id}:cash-credit"
+
+
 def _cache_key_reversal(order_id: ObjectId) -> str:
     return f"execution:{order_id}:cash-reversal"
 
@@ -111,10 +115,13 @@ def _serialize_execution(doc: dict) -> dict:
         "id": str(doc["_id"]),
         "order_id": str(doc.get("order_id")) if doc.get("order_id") else None,
         "user_id": str(doc.get("user_id")) if doc.get("user_id") else None,
+        "side": doc.get("side"),
         "symbol": doc.get("symbol"),
         "quantity": int(doc.get("quantity") or 0),
         "execution_price": _dec(doc.get("execution_price")),
         "gross_amount": _dec(doc.get("gross_amount")),
+        "cost_basis_sold": _dec(doc.get("cost_basis_sold")),
+        "realized_profit_loss": _dec(doc.get("realized_profit_loss")),
         "currency": doc.get("currency", "EUR"),
         "status": doc.get("status"),
         "cash_event_id": str(doc.get("cash_event_id")) if doc.get("cash_event_id") else None,
@@ -202,8 +209,9 @@ async def _execute_order_locked(
             "order": {"status": "executed", "id": str(order_id)},
         }
 
-    if (order.get("side") or "").lower() != "buy":
-        raise ExecutionError("ORDER_NOT_BUY", "Nur Buy-Orders werden ausgeführt", 409)
+    if (order.get("side") or "").lower() not in ("buy", "sell"):
+        raise ExecutionError("ORDER_BAD_SIDE", "Nur Buy/Sell-Orders werden ausgeführt", 409)
+    side = (order.get("side") or "").lower()
     if (order.get("order_type") or "").lower() != "limit":
         raise ExecutionError("ORDER_NOT_LIMIT", "Nur Limit-Orders werden ausgeführt", 409)
 
@@ -241,17 +249,39 @@ async def _execute_order_locked(
     if real_price <= 0:
         raise ExecutionError("QUOTE_NON_POSITIVE", "Quote-Preis <= 0", 409)
 
-    if real_price > limit_price:
+    # Limit-Match je nach Side (Session 82.28 · Sell spiegelbildlich):
+    #   Buy:  real_price <= limit_price
+    #   Sell: real_price >= limit_price
+    if side == "buy" and real_price > limit_price:
         raise ExecutionError(
             "LIMIT_NOT_REACHED",
             f"Marktpreis {real_price} > Limit {limit_price} — Order bleibt pending.",
+            409,
+        )
+    if side == "sell" and real_price < limit_price:
+        raise ExecutionError(
+            "LIMIT_NOT_REACHED",
+            f"Marktpreis {real_price} < Sell-Limit {limit_price} — Order bleibt pending.",
             409,
         )
 
     execution_price = real_price
     gross_amount = _q_money(execution_price * Decimal(qty))
 
-    # ── 3. Execution-Dokument laden/anlegen (UNIQUE order_id) ────────
+    # ── 3.a. Für SELL: Position-Availability erneut prüfen ───────────
+    if side == "sell":
+        pos = await db.stock_positions.find_one(
+            {"$or": [{"user_id": user_id}, {"user_id": str(user_id)}], "symbol": symbol}
+        )
+        avail_qty = int((pos or {}).get("quantity") or 0)
+        if avail_qty < qty:
+            raise ExecutionError(
+                "INSUFFICIENT_POSITION",
+                f"Bestand unzureichend: verfügbar={avail_qty}, benötigt={qty}",
+                400,
+            )
+
+    # ── 3.b. Execution-Dokument laden/anlegen (UNIQUE order_id) ──────
     exec_doc = await db.order_executions.find_one({"order_id": order_id})
     resumed = exec_doc is not None
     now = _now()
@@ -259,6 +289,7 @@ async def _execute_order_locked(
         new_doc = {
             "order_id": order_id,
             "user_id": user_id,
+            "side": side,
             "symbol": symbol,
             "quantity": qty,
             "execution_price": Decimal128(execution_price),
@@ -301,6 +332,133 @@ async def _execute_order_locked(
     persisted_gross = _decimal_from_bson(exec_doc["gross_amount"])
     persisted_qty = int(exec_doc["quantity"])
     persisted_symbol = exec_doc["symbol"]
+    persisted_side = (exec_doc.get("side") or side).lower()
+
+    # ═══════════════════════════════════════════════════════════════════
+    # SELL-PFAD (Session 82.28): created → position_decremented → cash_credited → order_settled → completed
+    # ═══════════════════════════════════════════════════════════════════
+    if persisted_side == "sell":
+        # Position zuerst reduzieren (verhindert Oversell bei Retry).
+        if exec_doc["status"] == "created":
+            position_id, cost_basis_sold, realized_pl = await _decrement_position(
+                db,
+                user_id=user_id,
+                symbol=persisted_symbol,
+                qty=persisted_qty,
+                execution_price=persisted_price,
+                order_id=order_id,
+            )
+            await db.order_executions.update_one(
+                {"_id": exec_doc["_id"]},
+                {"$set": {
+                    "status": "position_decremented",
+                    "position_id": position_id,
+                    "cost_basis_sold": Decimal128(cost_basis_sold),
+                    "realized_profit_loss": Decimal128(realized_pl),
+                    "updated_at": _now(),
+                }},
+            )
+            exec_doc["status"] = "position_decremented"
+            exec_doc["position_id"] = position_id
+            if fail_after == "position":
+                raise ExecutionCrash("simulated crash after position-decrement")
+
+        # Danach Cash-Credit (append-only).
+        if exec_doc["status"] == "position_decremented":
+            cash_res = await create_cash_event(
+                db,
+                user_id=str(user_id),
+                event_type="stock_sale",
+                direction="credit",
+                amount=str(persisted_gross),
+                currency="EUR",
+                status="settled",
+                idempotency_key=_cache_key_cash_credit(order_id),
+                description=f"Verkauf {persisted_qty} × {persisted_symbol} @ {persisted_price}",
+                source="order_execution",
+                source_reference_id=str(order_id),
+                created_by=admin_id,
+            )
+            cash_event_id = ObjectId(cash_res["event"]["id"])
+            await db.order_executions.update_one(
+                {"_id": exec_doc["_id"]},
+                {"$set": {
+                    "status": "cash_credited",
+                    "cash_event_id": cash_event_id,
+                    "updated_at": _now(),
+                }},
+            )
+            exec_doc["status"] = "cash_credited"
+            exec_doc["cash_event_id"] = cash_event_id
+            if fail_after == "cash":
+                raise ExecutionCrash("simulated crash after cash-credit")
+
+        # Order-Settle mit Cancel-Race-Detektion.
+        if exec_doc["status"] == "cash_credited":
+            now_s = _now()
+            upd = await db.stock_orders.update_one(
+                {"_id": order_id, "status": "pending"},
+                {"$set": {
+                    "status": "executed",
+                    "executed_price": Decimal128(persisted_price),
+                    "executed_quantity": persisted_qty,
+                    "executed_at": now_s,
+                    "execution_id": exec_doc["_id"],
+                    "updated_at": now_s,
+                }},
+            )
+            if upd.matched_count == 0:
+                fresh_order = await db.stock_orders.find_one({"_id": order_id})
+                if (fresh_order or {}).get("status") == "cancelled":
+                    await db.order_executions.update_one(
+                        {"_id": exec_doc["_id"]},
+                        {"$set": {
+                            "status": "compensation_required",
+                            "last_error": "CANCEL_RACE: sell order cancelled after position+cash",
+                            "updated_at": now_s,
+                        }},
+                    )
+                    raise ExecutionError(
+                        "CANCEL_RACE",
+                        "Sell-Order wurde während der Ausführung storniert — compensation_required.",
+                        409,
+                    )
+            await db.order_executions.update_one(
+                {"_id": exec_doc["_id"]},
+                {"$set": {"status": "order_settled", "updated_at": now_s}},
+            )
+            exec_doc["status"] = "order_settled"
+            if fail_after == "settle":
+                raise ExecutionCrash("simulated crash after order-settle")
+
+        if exec_doc["status"] == "order_settled":
+            now_c = _now()
+            await db.order_executions.update_one(
+                {"_id": exec_doc["_id"]},
+                {"$set": {"status": "completed", "completed_at": now_c, "updated_at": now_c}},
+            )
+            exec_doc["status"] = "completed"
+            exec_doc["completed_at"] = now_c
+
+        fresh = await db.order_executions.find_one({"_id": exec_doc["_id"]})
+        fresh_order = await db.stock_orders.find_one({"_id": order_id})
+        return {
+            "execution": _serialize_execution(fresh),
+            "resumed": resumed,
+            "order": {
+                "id": str(order_id),
+                "status": fresh_order.get("status") if fresh_order else None,
+                "executed_price": str(_decimal_from_bson(fresh_order.get("executed_price")))
+                    if fresh_order and fresh_order.get("executed_price") is not None else None,
+                "executed_quantity": fresh_order.get("executed_quantity") if fresh_order else None,
+                "executed_at": fresh_order["executed_at"].isoformat()
+                    if fresh_order and isinstance(fresh_order.get("executed_at"), datetime) else None,
+            },
+        }
+
+    # ═══════════════════════════════════════════════════════════════════
+    # BUY-PFAD (Session 82.26, unverändert)
+    # ═══════════════════════════════════════════════════════════════════
 
     # ── 4. Saga-Schritt: CASH-DEBIT ──────────────────────────────────
     if exec_doc["status"] == "created":
@@ -542,6 +700,87 @@ async def _apply_position(
         # Zwischenzeitlich angewendet → idempotent, gleiche Position-ID.
         return existing["_id"]
     return existing["_id"]
+
+
+async def _decrement_position(
+    db,
+    *,
+    user_id: ObjectId,
+    symbol: str,
+    qty: int,
+    execution_price: Decimal,
+    order_id: ObjectId,
+) -> tuple[ObjectId, Decimal, Decimal]:
+    """
+    Reduziert die Position auf `stock_positions` um `qty`. Idempotent per
+    `applied_execution_ids`. Kein Short-Sell. Bei quantity==0 wird die
+    Position auf `is_active=false, quantity=0` gesetzt (Audit erhalten).
+
+    Returns: (position_id, cost_basis_sold, realized_profit_loss)
+    """
+    order_id_str = str(order_id)
+    pos = await db.stock_positions.find_one(
+        {"user_id": user_id, "symbol": symbol}
+    )
+    if not pos:
+        pos = await db.stock_positions.find_one(
+            {"user_id": str(user_id), "symbol": symbol}
+        )
+        if pos:
+            await db.stock_positions.update_one(
+                {"_id": pos["_id"]}, {"$set": {"user_id": user_id}},
+            )
+            pos["user_id"] = user_id
+    if not pos:
+        raise ExecutionError("INSUFFICIENT_POSITION", f"Keine Position für {symbol}", 400)
+
+    old_qty = int(pos.get("quantity") or 0)
+    old_avg = _decimal_from_bson(pos.get("avg_cost"))
+    cost_basis_sold = _q_money(Decimal(qty) * old_avg)
+    proceeds = _q_money(Decimal(qty) * execution_price)
+    realized_pl = _q_money(proceeds - cost_basis_sold)
+
+    # Idempotent: bereits angewendet?
+    if order_id_str in (pos.get("applied_execution_ids") or []):
+        return pos["_id"], cost_basis_sold, realized_pl
+
+    new_qty = old_qty - qty
+    if new_qty < 0:
+        raise ExecutionError(
+            "INSUFFICIENT_POSITION",
+            f"Bestand unzureichend: verfügbar={old_qty}, benötigt={qty}",
+            400,
+        )
+
+    now = _now()
+    set_fields = {
+        "quantity": new_qty,
+        "updated_at": now,
+    }
+    if new_qty == 0:
+        # ZERO POSITION POLICY: is_active=false, avg_cost unverändert (Audit).
+        set_fields["is_active"] = False
+
+    upd = await db.stock_positions.update_one(
+        {
+            "_id": pos["_id"],
+            "applied_execution_ids": {"$ne": order_id_str},
+            "quantity": old_qty,  # CAS gegen concurrent decrement
+        },
+        {"$set": set_fields, "$addToSet": {"applied_execution_ids": order_id_str}},
+    )
+    if upd.matched_count == 0:
+        # Zwischenzeitliche Anwendung → wieder laden und idempotent zurückgeben.
+        pos2 = await db.stock_positions.find_one({"_id": pos["_id"]})
+        if pos2 and order_id_str in (pos2.get("applied_execution_ids") or []):
+            return pos["_id"], cost_basis_sold, realized_pl
+        # Position wurde zwischenzeitlich anderweitig verändert.
+        raise ExecutionError(
+            "POSITION_STATE_CHANGED",
+            "Positionsstand hat sich zwischen Read und Write geändert — bitte erneut versuchen.",
+            409,
+        )
+    return pos["_id"], cost_basis_sold, realized_pl
 
 
 async def _mark_failed(db, exec_id: ObjectId, code: str, detail: str) -> None:

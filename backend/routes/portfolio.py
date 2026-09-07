@@ -747,16 +747,28 @@ async def create_order(
                     status_code=400,
                     detail=f"Nicht genügend verfügbare Liquidität (benötigt {reserved} EUR, verfügbar {summary['available']} EUR).",
                 )
-        else:  # sell
+        else:  # sell (Session 82.28 · Position-Reservation aus pending Sell-Orders)
             pos = await db.stock_positions.find_one({
                 "$or": [{"user_id": uid}, {"user_id": str(uid)}],
                 "symbol": sym,
             })
-            avail_qty = int(pos.get("quantity") or 0) if pos else 0
+            total_qty = int(pos.get("quantity") or 0) if pos else 0
+            # Bereits reservierte Stücke aus offenen (pending) Sell-Orders zählen.
+            open_reserved = 0
+            async for o in db.stock_orders.find({
+                "user_id": uid, "symbol": sym,
+                "side": "sell", "order_type": "limit", "status": "pending",
+            }):
+                open_reserved += int(o.get("quantity") or 0)
+            avail_qty = total_qty - open_reserved
             if avail_qty < qty:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Nicht genügend Stücke im Bestand (benötigt {qty}, verfügbar {avail_qty}).",
+                    detail=(
+                        f"Nicht genügend verfügbare Stücke (Bestand {total_qty}, "
+                        f"bereits reserviert {open_reserved}, verfügbar {avail_qty}, "
+                        f"benötigt {qty})."
+                    ),
                 )
             reserved = Decimal("0.00")  # Sell reserviert kein Cash
 

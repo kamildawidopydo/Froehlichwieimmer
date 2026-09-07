@@ -53,20 +53,32 @@ async def run_pending_limit_buy_matching(
     """
     started_at = datetime.now(timezone.utc)
 
-    # ── 1. Pending Buy-Limit-Orders (ältere zuerst) ──────────────────
-    query = {"status": "pending", "side": "buy", "order_type": "limit"}
+    # ── 1. Pending Buy+Sell-Limit-Orders (ältere zuerst) ─────────────
+    query = {
+        "status": "pending",
+        "side": {"$in": ["buy", "sell"]},
+        "order_type": "limit",
+    }
     orders: list[dict] = await db.stock_orders.find(query).sort("created_at", 1).limit(max_orders).to_list(max_orders)
+
+    buy_seen = sum(1 for o in orders if o.get("side") == "buy")
+    sell_seen = sum(1 for o in orders if o.get("side") == "sell")
 
     counters = {
         "orders_seen": len(orders),
+        "buy_seen": buy_seen,
+        "sell_seen": sell_seen,
         "orders_eligible": 0,
         "orders_limit_not_reached": 0,
         "orders_quote_stale": 0,
         "orders_quote_unavailable": 0,
         "orders_executed": 0,
+        "buy_executed": 0,
+        "sell_executed": 0,
         "orders_failed": 0,
         "orders_cancelled_during_run": 0,
         "insufficient_cash": 0,
+        "insufficient_position": 0,
         "quotes_fresh": 0,
         "quotes_stale": 0,
         "quotes_unavailable": 0,
@@ -107,6 +119,7 @@ async def run_pending_limit_buy_matching(
     for o in orders:
         symbol = o.get("symbol")
         order_id = o["_id"]
+        side = (o.get("side") or "").lower()
         limit_price = _to_decimal(o.get("limit_price"))
         q = quotes.get(symbol) or {}
         status = q.get("price_status")
@@ -120,19 +133,21 @@ async def run_pending_limit_buy_matching(
             else:
                 counters["orders_quote_unavailable"] += 1
                 reason = "quote_unavailable"
-            results.append({"order_id": str(order_id), "symbol": symbol, "action": "skip", "reason": reason})
+            results.append({"order_id": str(order_id), "symbol": symbol, "side": side, "action": "skip", "reason": reason})
             continue
 
         real_price = _to_decimal(price_raw)
         if real_price <= 0:
             counters["orders_quote_unavailable"] += 1
-            results.append({"order_id": str(order_id), "symbol": symbol, "action": "skip", "reason": "quote_non_positive"})
+            results.append({"order_id": str(order_id), "symbol": symbol, "side": side, "action": "skip", "reason": "quote_non_positive"})
             continue
 
-        if real_price > limit_price:
+        # Limit-Match je nach Side (Buy: <=, Sell: >=)
+        limit_ok = (real_price <= limit_price) if side == "buy" else (real_price >= limit_price)
+        if not limit_ok:
             counters["orders_limit_not_reached"] += 1
             results.append({
-                "order_id": str(order_id), "symbol": symbol, "action": "skip",
+                "order_id": str(order_id), "symbol": symbol, "side": side, "action": "skip",
                 "reason": "limit_not_reached",
                 "real_price": str(real_price), "limit_price": str(limit_price),
             })
@@ -153,6 +168,9 @@ async def run_pending_limit_buy_matching(
                 action = "skip"
             elif code == "INSUFFICIENT_CASH":
                 counters["insufficient_cash"] += 1
+                action = "skip"
+            elif code == "INSUFFICIENT_POSITION":
+                counters["insufficient_position"] += 1
                 action = "skip"
             elif code == "LIMIT_NOT_REACHED":
                 # Kann durch Race zwischen Read und Saga-Recheck passieren.
@@ -186,8 +204,12 @@ async def run_pending_limit_buy_matching(
         order_status = (saga_result.get("order") or {}).get("status")
         if order_status == "executed":
             counters["orders_executed"] += 1
+            if side == "buy":
+                counters["buy_executed"] += 1
+            elif side == "sell":
+                counters["sell_executed"] += 1
             results.append({
-                "order_id": str(order_id), "symbol": symbol,
+                "order_id": str(order_id), "symbol": symbol, "side": side,
                 "action": "executed",
                 "execution_price": (saga_result.get("execution") or {}).get("execution_price"),
                 "execution_status": exec_status,

@@ -2,6 +2,31 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.28 (Preview) · Depot P0 — Sell-Order Execution Saga
+- **cash_service**: `stock_sale` in `_ACTIVE_TYPES` freigegeben.
+- **order_execution_service**: neuer Sell-Zweig in `execute_order` mit spiegelbildlichen Saga-Steps `created → position_decremented → cash_credited → order_settled → completed`. Buy-Pfad unverändert. Persistiert `side`, `cost_basis_sold`, `realized_profit_loss` im Execution-Dokument.
+- **Neuer Helper** `_decrement_position(db, user_id, symbol, qty, execution_price, order_id)` — Idempotenz via `applied_execution_ids` + CAS `quantity=old_qty`. Kein Short-Sell (NEGATIVE_POSITION Guard). Zero-Position-Policy: `quantity=0, is_active=false` (Audit-Trail bleibt erhalten, keine harte Löschung).
+- **Cash-Credit** via `create_cash_event(type="stock_sale", direction="credit")` mit deterministischem Key `execution:{order_id}:cash-credit`.
+- **Cancel-Race**: Sell-Settle-Step erkennt Cancel-Race via CAS-`matched_count=0` + `order.status=cancelled` → markiert Execution `compensation_required` + `ExecutionError(CANCEL_RACE, 409)`. Cancel-Guard in `cancel_order` blockiert Cancel bereits vorher.
+- **Position-Reservation** in `create_order` (Sell): `available = position.quantity - Σ pending sell orders(quantity)`. Verhindert Mehrfach-Verkauf identischer Stücke ohne neue Collection.
+- **Matcher** in `order_matching_service`: pending `side ∈ {buy, sell}` + Limit-Regel je nach Side (Buy `<=`, Sell `>=`) + neue Counters `buy_seen/sell_seen/buy_executed/sell_executed/insufficient_position`.
+
+### QA Preview
+- **Partial Sell** (10 SAP@225, mkt 232.10): executed, Position 36→26, Cash +2321.00, realized_pl=0 ✅
+- **Double Execute** derselben Order: resumed=true, gleiche exec_id ✅
+- **Limit not reached** (Sell@300 vs mkt 232.10): 409 ✅
+- **Oversell** (100 vs verfügbar 25): abgelehnt beim Create ✅
+- **Two pending sells exceed position** (Bestand 26, S3=20, S4=10 versucht): S4 abgelehnt (verfügbar 5) ✅
+- **Crash after position/cash/settle + Retry**: jeweils attempt_count=2 → completed ✅
+- **Matcher+Admin Race**: 1× execution, matcher meldet `sell_executed=2` (parallele Runs) ✅
+- **Full Exit**: quantity=0, is_active=false, Position bleibt als Historie ✅
+- **Customer execute → 403** ✅
+- **Financial Invariants**: DOUBLE_CASH_CREDITS=0 · DOUBLE_CASH_DEBITS=0 · DUPLICATE_EXECUTIONS=0 · EXECUTED_BELOW_SELL_LIMIT=0 · NEGATIVE_POSITION=0 · EXECUTED_SELL_WITHOUT_CASH_CREDIT=0 · NEGATIVE_CASH=false ✅
+- **Summary/Snapshot nach vollem Ex-Exit**: `total_value=11234.56 · cash=10770.36 · stock=464.20` — Snapshot upsertet konsistent, kein 2. Dokument.
+
+### Constraints
+Kein Prod-Deploy · Nur Limit-Sell (kein Market/Short) · Kein Fake-Preis · Keine Supabase-Writes · Keine Mongo-Transaktionen.
+
 ## Session 82.27 (Preview) · Depot P0 — Auto-Limit-Order Matching Worker
 - **Neuer Service** `services/order_matching_service.py` — `run_pending_limit_buy_matching(db)` iteriert pending Limit-Buy-Orders (Priority: `created_at ASC`), bündelt Quote-Fetch, prüft `real_price <= limit_price` UND `price_status='fresh'`, und delegiert JEDE Ausführung an die **bestehende** Saga `execute_order` aus Session 82.26. Kein Dual-Codepfad.
 - **Neuer Admin-Endpoint** `POST /api/admin/portfolio/orders/match` (require_admin) — Manual-Trigger für Preview-QA.
