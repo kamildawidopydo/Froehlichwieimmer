@@ -64,7 +64,10 @@ const Login = () => {
       }
       toast.success('Erfolgreich angemeldet');
       setAuthDecisionPending(false);
-      navigate(result?.nextPath || '/dashboard', { replace: true });
+      // Session 81.07 — nextParam-honoring redirect (statt result.nextPath).
+      // getPostLoginPath (lokal) berücksichtigt ?next=... aus dem Query-String,
+      // sodass Login mit next=/mein-depot direkt dorthin geht.
+      navigate(getPostLoginPath(result?.user || user), { replace: true });
     } catch (error) {
       if (error.status === 'pending') {
         setBlockedStatus('pending');

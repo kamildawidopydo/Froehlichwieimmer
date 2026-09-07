@@ -315,7 +315,18 @@ export const AuthProvider = ({ children }) => {
     // Try FastAPI first
     let fastMe = null;
     try {
-      fastMe = await authApi.login({ email, password });
+      const loginResp = await authApi.login({ email, password });
+      // Session 81.07 — Root-Cause-Fix: Login-Response enthält nur
+      // {id, email, name, role, avatar_url, created_at} — NICHT
+      // onboarding_completed. Wir holen daher direkt danach das
+      // vollständige /me-Profil (Source of Truth) und ignorieren die
+      // schmale Login-Response für die User-Konstruktion.
+      try {
+        fastMe = await authApi.me();
+      } catch {
+        // Falls /me fehlschlägt, nutzen wir die Login-Response als Fallback.
+        fastMe = loginResp;
+      }
     } catch (err) {
       const status = err?.response?.status;
       // 401 / 429 (rate limit) → try Supabase legacy fallback ONLY if 401
