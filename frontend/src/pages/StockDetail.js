@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef, Suspense, lazy } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { watchlistApi } from '@/services/watchlistApi';
 import { useNewsList } from '@/hooks/useNewsList';
 import { fetchDividends } from '@/services/dividendService';
 import { fetchStockEvents } from '@/services/stockEventsService';
@@ -500,17 +501,21 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   };
 
   const toggleWatchlist = async () => {
+    // Session 82.20 · Depot Phase 3B — Mongo-native via FastAPI (`/api/watchlist`).
     if (!user) { toast.error('Bitte einloggen'); return; }
-    if (watched) {
-      const { error } = await supabase.from('user_stock_watchlist').delete().eq('user_id', user.id).eq('symbol', symbol);
-      if (error) { toast.error('Watchlist konnte nicht aktualisiert werden.'); return; }
-      setWatched(false);
-      toast.success('Aus Watchlist entfernt');
-    } else {
-      const { error } = await supabase.from('user_stock_watchlist').insert({ user_id: user.id, symbol });
-      if (error) { toast.error('Watchlist konnte nicht aktualisiert werden.'); return; }
-      setWatched(true);
-      toast.success('Zur Watchlist hinzugefügt');
+    const sym = String(symbol || '').toUpperCase();
+    try {
+      if (watched) {
+        await watchlistApi.remove(sym);
+        setWatched(false);
+        toast.success('Aus Watchlist entfernt');
+      } else {
+        await watchlistApi.add({ symbol: sym });
+        setWatched(true);
+        toast.success('Zur Watchlist hinzugefügt');
+      }
+    } catch (err) {
+      toast.error('Watchlist konnte nicht aktualisiert werden.');
     }
   };
 

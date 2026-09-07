@@ -2,6 +2,16 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+## Session 82.20 (Preview) · Depot Phase 3B — Frontend UI-Cutover Watchlist/Alerts/Orders
+- **Audit-Ergebnis**: Alerts (Customer) waren bereits vollständig Mongo-native via `/api/alerts` (`services/priceAlertService.js`). Watchlist-SDK `services/watchlistApi.js` gegen `/api/watchlist` bereits vorhanden. Nur 4 direkte Supabase-Watchlist-Writes in 2 Pages verblieben (Handeln.js, StockDetail.js).
+- **Watchlist-Cutover**: `toggleWatchlist` in beiden Pages von `supabase.from('user_stock_watchlist').insert/delete` → `watchlistApi.add/remove` umgestellt. Imports ergänzt. `.upper()`-Normalisierung serverseitig konsistent.
+- **Alerts**: kein Cutover nötig — Frontend nutzt bereits `/api/alerts` via `apiClient` (SDK aus früherer Session).
+- **Orders**: `OrdersPage.jsx` hat keine Order-Create-UI (nur Anzeige). Der in Session 82.19 gebaute `POST /api/portfolio/orders` ist einsatzbereit, aber kundenseitig noch nicht angebunden — Order-Create-UI ist eigenständiger nächster Task (P0-Backlog).
+- **QA Preview**: `GET /api/watchlist` 200 · `POST /api/watchlist {MSFT}` 201 · `DELETE /api/watchlist/MSFT` 200 · `GET /api/alerts` 200 · Watchlist-Supabase-Customer-Writes AFTER = 0 · Alerts-Customer-Writes = 0 · Orders-Customer-Writes = 0.
+
+### Constraints
+Kein Prod-Deploy · Keine neuen Supabase-Writes · Keine Order-Execution · Keine Position-Erzeugung · Alerts/Watchlist-SDKs unverändert.
+
 ## Session 82.19 (Preview) · Depot Phase 3 — Watchlist/Alerts/Orders Write-Layer + Cash-Reservation
 - **User-ID-Normalisierung** (Phase B): 3 `watchlists` + 6 `stock_alerts` von String → `ObjectId` konvertiert (script-basiert, idempotent, nur valide 24-hex Werte). `$or`-Compat-Filter im Portfolio-Read-Layer bleibt defensiv erhalten für zukünftige Legacy-Rows.
 - **Watchlist Write**: `POST /api/portfolio/watchlist` (idempotent bei Duplikat), `DELETE /api/portfolio/watchlist/{symbol}`. Symbol serverseitig uppercase+validate (`[A-Z0-9.\-]{1,12}`). Unique-Index `(user_id, symbol)`.
