@@ -40,6 +40,7 @@ const STATUS_LABELS = {
   priced: 'Kurs festgelegt',
   filed: 'Bei SEC eingereicht',
   listed: 'Börsennotiert',
+  postponed: 'Verschoben',
   cancelled: 'Abgesagt',
 };
 
@@ -49,6 +50,7 @@ const STATUS_BADGE = {
   priced: 'bg-violet-50 text-violet-700 border-violet-200',
   filed: 'bg-amber-50 text-amber-800 border-amber-200',
   listed: 'bg-slate-100 text-slate-600 border-slate-200',
+  postponed: 'bg-orange-50 text-orange-700 border-orange-200',
   cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 

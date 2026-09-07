@@ -14,7 +14,7 @@ import {
   adminRowHover,
 } from '@/components/admin/AdminSubpageChrome';
 
-const STATUS_OPTIONS = ['upcoming', 'open', 'priced', 'filed', 'listed', 'cancelled'];
+const STATUS_OPTIONS = ['upcoming', 'open', 'priced', 'filed', 'listed', 'postponed', 'cancelled'];
 
 const EMPTY = {
   company_name: '',
@@ -139,6 +139,22 @@ const AdminIpoCatalog = () => {
     e.preventDefault();
     if (!form.company_name.trim()) {
       toast.error('Firmenname ist erforderlich.');
+      return;
+    }
+    // Session 82.01 — Preis-Sanity: price_min <= price_max, wenn beide gesetzt.
+    const pLow = form.price_range_low ? Number(form.price_range_low) : null;
+    const pHigh = form.price_range_high ? Number(form.price_range_high) : null;
+    if (pLow != null && pHigh != null && pLow > pHigh) {
+      toast.error('Preisspanne ungültig: „von" darf nicht größer als „bis" sein.');
+      return;
+    }
+    if ((pLow != null && !Number.isFinite(pLow)) || (pHigh != null && !Number.isFinite(pHigh))) {
+      toast.error('Preisspanne muss numerisch sein.');
+      return;
+    }
+    // Session 82.01 — Datums-Sanity: subscription_start <= subscription_end, wenn beide gesetzt.
+    if (form.subscription_start && form.subscription_end && form.subscription_start > form.subscription_end) {
+      toast.error('Zeichnungsfenster ungültig: „von" darf nicht nach „bis" liegen.');
       return;
     }
     setSaving(true);
