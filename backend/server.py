@@ -5171,6 +5171,10 @@ app.include_router(_news_routes.router)
 from routes import news_public as _news_public_routes  # noqa: E402
 app.include_router(_news_public_routes.router)
 
+# Session 82.86 — Forex public router (Supabase-Cutover): batch FX quotes.
+from routes import forex as _forex_routes  # noqa: E402
+app.include_router(_forex_routes.router)
+
 
 @app.on_event("startup")
 async def _news_public_indexes():

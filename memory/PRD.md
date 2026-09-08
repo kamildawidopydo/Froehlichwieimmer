@@ -3,6 +3,104 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.86 (Preview · VERIFIED) · Forex Service Supabase → FastAPI/Mongo Cutover
+
+**Auslöser:** `frontend/src/services/forexService.js` war der letzte verbliebene Supabase-Touch (`functions.invoke('stock-prices', { symbols: [EURUSD=X,…] })`).
+
+### Static Audit
+| Metrik | BEFORE (git HEAD) | AFTER |
+|---|---|---|
+| `supabase.functions` | **1** (Zeile 28) | **0** ✅ |
+| `supabase.from` | **0** | **0** ✅ |
+| `supabase.rpc` | **0** | **0** ✅ |
+| `@/lib/supabase` Import | **1** (Zeile 3) | **0** ✅ |
+| **FOREX_SUPABASE_TOUCHES** | **2** | **0** ✅ |
+
+### Neuer Backend-Endpoint (`/app/backend/routes/forex.py`)
+```
+GET /api/forex/quotes?pairs=EURUSD,GBPUSD,USDJPY,…
+```
+- Nutzt bestehenden `providers/fx_yfinance.get_fx_rate()`.
+- Parallel-Fetch via `asyncio.gather` — **kein N+1**.
+- Mongo-Cache `forex_rate_cache` (Read-Through, TTL 120 s fresh, bis 60 min stale).
+- Pair-Regex-Gate `^[A-Z]{6}$`. De-Dup vor `_MAX_PAIRS=25`.
+
+### Response-Shape
+```json
+{
+  "items": [
+    {
+      "pair": "EURUSD", "base": "EUR", "quote": "USD",
+      "rate": 1.1627907, "as_of": "2026-02-…",
+      "data_source": "yfinance",
+      "data_status": "fresh"
+    }
+  ],
+  "last_updated": "…",
+  "is_delayed": true
+}
+```
+- `data_status ∈ fresh | stale | unavailable`
+- Bei Provider-Ausfall + älterem Cache → `stale` mit echter alter Rate.
+- Bei keinen Daten → `rate: null, data_status: "unavailable"`.
+
+### E2E-Verifikation
+```
+EURUSD: rate=1.1627907 status=fresh    ✅
+EURGBP: rate=0.85871   status=fresh    ✅
+EURCHF: rate=0.94065   status=fresh    ✅
+EURJPY: rate=179.302   status=fresh    ✅
+EURCAD: rate=1.60278   status=fresh    ✅
+EURAUD: rate=1.61058   status=fresh    ✅
+USDJPY: rate=154.264   status=fresh    ✅
+INVALID / XX1 → data_status=unavailable, rate=null   ✅
+Empty pairs=  → 400 Bad Request                       ✅
+30 unique pairs → 400 (max 25)                        ✅
+Cache-Hit (2nd call, single pair): 95 ms              ✅
+Stale-Simulation (10min old + cache-lookup) → status=stale, rate=1.2345 ✅
+```
+
+### Safety Flags
+| Flag | Wert |
+|---|---|
+| `FOREX_SUPABASE_TOUCHES_BEFORE` | 2 |
+| `FOREX_SUPABASE_TOUCHES_AFTER` | 0 |
+| `FOREX_SOURCE_AFTER` | yfinance (via `providers/fx_yfinance`) |
+| `SUPPORTED_PAIRS` | Beliebige 6-Zeichen A–Z (Regex-Gate) · empfohlen EUR-basis + Majors |
+| `CACHE_STATUS` | Mongo `forex_rate_cache` · 120 s fresh · bis 60 min stale |
+| `FAKE_FX_RATES` | 0 |
+| `SYNTHETIC_CROSS_RATES` | 0 |
+| `N_PLUS_ONE` | NO (asyncio.gather Batch) |
+| `FINANCIAL_WRITES` | 0 |
+| `SUPABASE_WRITES` | 0 |
+| `REGRESSIONS` | 0 |
+| `FOREX_SERVICE_FASTAPI_NATIVE` | YES |
+| `READY_FOR_NEXT_TASK` | YES |
+| `READY_FOR_PROD` | NO (Preview-only, kein Prod-Deploy in dieser Session) |
+
+### Frontend-Rewrite (`forexService.js`)
+- `@/lib/supabase`-Import entfernt.
+- Public-API-Signaturen unverändert (`FX_CURRENCIES`, `fetchEurBasedRates`, `convertFx`, `formatFxAmount`, `formatFxInput`). Alle 4 Consumer-Files funktionieren unmodifiziert:
+  - `OrdersPage.jsx`
+  - `AdminIpoRequests.js`
+  - `CurrencyConverterCard.jsx`
+  - `lib/ipoValuation.js`
+- Nutzbar sind nur `fresh` und `stale` Werte; `unavailable` → `null` (Consumer zeigen `–` statt Fake).
+
+### Regression (grün wie gefordert)
+- Coupon 16/16 PASS ✅
+- Realized-PnL 5/5 PASS ✅
+- Kombiniert: `21 passed in 3.27s`
+
+### Verbleibende Blocker
+**Keine.**
+
+### Betroffene Dateien
+- **Neu:** `/app/backend/routes/forex.py`
+- **Geändert:** `/app/backend/server.py` (Router-Registrierung)
+- **Rewrite:** `/app/frontend/src/services/forexService.js`
+
+
 ## Session 82.85 (Preview · VERIFIED) · News Service Supabase → FastAPI/Mongo Cutover
 
 **Auslöser:** `frontend/src/services/newsService.js` war das letzte verbliebene Modul mit direkten Supabase-Touches (RPCs, Table-Reads, Edge-Function-Invoke).

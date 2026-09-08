@@ -1,47 +1,56 @@
-// Live FX rates for Währungsrechner (Yahoo via stock-prices edge function).
+// Live FX rates for Währungsrechner (FastAPI/yfinance native).
+// Session 82.86 — Supabase-Cutover: `functions.invoke('stock-prices')` durch
+// `GET /api/forex/quotes?pairs=…` ersetzt. Keine Supabase-Imports mehr.
 
-import { supabase } from '@/lib/supabase';
+import { getApiBase } from '@/lib/apiBase';
 
-/** Yahoo pair is always EUR{currency}=X → price = units of currency per 1 EUR. */
+/** EUR-basierte FX-Paare mit yahoo-Notation (nur informativ, kein Supabase-Call). */
 export const FX_CURRENCIES = [
   { code: 'EUR', label: 'Euro' },
-  { code: 'USD', label: 'Dollar', yahoo: 'EURUSD=X' },
-  { code: 'GBP', label: 'Britische Pfund', yahoo: 'EURGBP=X' },
-  { code: 'CHF', label: 'Schweizer Franken', yahoo: 'EURCHF=X' },
-  { code: 'JPY', label: 'Japanischer Yen', yahoo: 'EURJPY=X' },
-  { code: 'CAD', label: 'Kanadischer Dollar', yahoo: 'EURCAD=X' },
-  { code: 'AUD', label: 'Australischer Dollar', yahoo: 'EURAUD=X' },
+  { code: 'USD', label: 'Dollar', pair: 'EURUSD' },
+  { code: 'GBP', label: 'Britische Pfund', pair: 'EURGBP' },
+  { code: 'CHF', label: 'Schweizer Franken', pair: 'EURCHF' },
+  { code: 'JPY', label: 'Japanischer Yen', pair: 'EURJPY' },
+  { code: 'CAD', label: 'Kanadischer Dollar', pair: 'EURCAD' },
+  { code: 'AUD', label: 'Australischer Dollar', pair: 'EURAUD' },
 ];
 
-const PAIR_SYMBOLS = FX_CURRENCIES.map((c) => c.yahoo).filter(Boolean);
+const PAIR_LIST = FX_CURRENCIES.map((c) => c.pair).filter(Boolean);
 
 let ratesCache = null;
 let ratesCacheAt = 0;
 const RATES_TTL = 120_000;
 
-/** @returns {Record<string, number|null>} currency units received per 1 EUR */
+/**
+ * @returns {Record<string, number|null>} currency units received per 1 EUR
+ *   (Wert `null`, wenn Provider unavailable/stale ist — Consumer zeigen dann –).
+ */
 export async function fetchEurBasedRates() {
   if (ratesCache && Date.now() - ratesCacheAt < RATES_TTL) {
     return ratesCache;
   }
 
-  const { data, error } = await supabase.functions.invoke('stock-prices', {
-    body: { symbols: PAIR_SYMBOLS },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(String(data.error));
+  const base = getApiBase() || '';
+  const url = `${base}/api/forex/quotes?pairs=${encodeURIComponent(PAIR_LIST.join(','))}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`forex_api_${res.status}`);
+  const payload = await res.json();
 
-  const quoteMap = {};
-  (data?.quotes ?? []).forEach((q) => {
-    if (q?.symbol) quoteMap[String(q.symbol).toUpperCase()] = q;
-  });
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const byPair = {};
+  for (const it of items) {
+    if (it?.pair) byPair[String(it.pair).toUpperCase()] = it;
+  }
 
   const out = { EUR: 1 };
   for (const cur of FX_CURRENCIES) {
     if (cur.code === 'EUR') continue;
-    const q = quoteMap[cur.yahoo?.toUpperCase() ?? ''];
-    const price = q?.price != null ? Number(q.price) : null;
-    out[cur.code] = price != null && price > 0 ? price : null;
+    const it = byPair[cur.pair?.toUpperCase() ?? ''];
+    // Nur `fresh` und `stale`-Werte als nutzbar akzeptieren; `unavailable` → null.
+    // stale ist ein echter Provider-Wert, nur älter → für Konvertierung ok,
+    // aber wir vermeiden ihn nicht künstlich als "fresh" auszuweisen.
+    const isUsable = it && it.rate != null && (it.data_status === 'fresh' || it.data_status === 'stale');
+    out[cur.code] = isUsable && Number(it.rate) > 0 ? Number(it.rate) : null;
   }
 
   ratesCache = out;
