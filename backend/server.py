@@ -531,6 +531,18 @@ async def get_news_by_slug(slug: str):
         doc = await _find_article(db, slug, include_archive=True)
         from_archive = bool(doc and doc.get("_from_archive", False))
     if not doc:
+        # Session 82.45 · Fallback auf den RSS-/News-Provider (gleiche Quelle wie
+        # /api/news/nachrichten/:slug). Verhindert, dass Artikel aus der
+        # Nachrichten-Übersicht auf der Detailseite als „nicht verfügbar" erscheinen,
+        # nur weil sie nicht in der Synthesis-Kollektion sind.
+        try:
+            aggregator_item = await _news_provider.get_item(slug)
+        except Exception:  # noqa: BLE001
+            aggregator_item = None
+        if aggregator_item:
+            # Provider liefert bereits ein detail-taugliches Dict — direkt zurückgeben
+            # (Feld-Union ist mit dem Frontend-Client kompatibel).
+            return aggregator_item
         raise HTTPException(status_code=404, detail="not_found")
     published = doc.get("published_at")
     if isinstance(published, datetime):

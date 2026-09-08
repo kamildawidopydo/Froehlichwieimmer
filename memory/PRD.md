@@ -3,6 +3,21 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.45 (Preview) · Nachrichten-Detail-Bugfix (Provider-Fallback)
+
+**Root Cause:** `/api/content/news/:slug` (Konsument: `PublicNewsDetailPage` an Route `/news/:slug` via `useNewsArticle` → `newsService.getArticleBySlug`) suchte ausschließlich in der Synthesis-Kollektion `news_articles` (+ retention-Archive). Artikel aus dem RSS-/News-Aggregator (die in der Übersicht `/api/news/nachrichten` erscheinen) lieferten 404 → Frontend zeigt „Diese Meldung ist nicht mehr verfügbar. Sie wurde möglicherweise aus dem aktuellen Nachrichten-Feed entfernt."
+
+**Fix:** In `server.py::get_news_by_slug` einen finalen Fallback auf `_news_provider.get_item(slug)` ergänzt — dieselbe Quelle, die `/api/news/nachrichten/:slug` bereits erfolgreich nutzt. Reihenfolge: `news_articles(is_published=True)` → retention-live → retention-archive → RSS-/News-Provider → 404. Kein Design-Change, keine Änderung am Frontend, kein Löschen/Überschreiben von Artikeln.
+
+**QA verifiziert:** 8 Slugs aus `/api/news/nachrichten?limit=8` liefern über `/api/content/news/:slug` jetzt **8/8 200** (vorher 0/8 · 404 wegen Aggregator-Only). Response-Shape enthält alle nötigen Felder (title, summary, content, category, image_url, source, source_url, published_at). Archive-Bit + retention-90d-Fallback bleiben unverändert.
+
+**Keine Löschungen bei RSS-Sync:** Import-Pipeline schreibt in `news_articles` (`is_published=True`) — beim nächsten Sync werden alte Artikel nicht gelöscht, sondern über `news_retention` nach 90 Tagen ins Archiv verschoben; ihre Detail-Slugs bleiben gültig (`is_archived=true`-Badge in der UI).
+
+**Files Changed:** `backend/server.py` (get_news_by_slug), `memory/PRD.md`.
+
+---
+
+
 ## Session 82.44 (Preview) · Profile Notification Preferences Migration (Supabase → Mongo)
 
 **Phase A Audit — Consumer-Landkarte:**
