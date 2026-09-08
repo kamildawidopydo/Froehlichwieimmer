@@ -1,6 +1,69 @@
 # PRD — Fröhlich Vermögensberatung / Kapital-Direkt24 · FastAPI + MongoDB
 
-Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
+Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
+
+
+## Session 82.47 (Preview) · News SEO Consolidation (Canonical + Sitemap Refresh)
+
+**Ziel:** Die in 82.46 konsolidierten News-Detailrouten SEO-seitig sauber vereinheitlichen — genau EIN kanonisches `<link rel="canonical">` pro Seite, absolute Prod-Origin, Query/Hash-frei. **Kein Prod-Deploy.**
+
+**Phase A Audit (Ist-Zustand vor 82.47):**
+- `STATIC_INDEX_CANONICAL`: `<link rel="canonical" href="https://kapital-direkt24.de/">` + `<meta property="og:url" content="https://kapital-direkt24.de/">` fix in `public/index.html`
+- `DYNAMIC_CANONICAL`: `PageMeta.js` emittierte `href="#${path}"` (Anchor-Fragment, ohne Origin)
+- Effekt: **2 Canonical-Tags pro Seite** (statisch + Helmet) — Duplicate-Signal für Suchmaschinen
+- `PRODUCTION_ORIGIN`: `https://kapital-direkt24.de` (aus `data/siteContact.js::SITE_URL` — bestätigt als Prod-Domain)
+- `PREVIEW_SEO_POLICY`: `PublicNewsDetailPage` setzt bereits `noIndex,nofollow` → Preview-Safe
+- `SITEMAP_SOURCE`: Statisches `public/sitemap.xml` (kein dynamischer Generator vorhanden)
+- `LEGACY_NEWS_DETAIL_URLS_IN_SITEMAP`: **0** (Sitemap enthält keinerlei News-Detail-URLs)
+- `JSON-LD / NewsArticle`: nicht vorhanden auf News-Detail — `NOT PRESENT` (nur auf `StrategieDetail`/`_StrategieBreadcrumb`)
+
+**Phase B–D Canonical Strategy (Prod-Origin, Query/Hash-frei):**
+- `PageMeta.js` refactored: `CANONICAL_ORIGIN = 'https://kapital-direkt24.de'` (hart codiert). Neue Helper-Funktion `buildCanonicalUrl(path)` strippt Query & Hash und komponiert absolute URL: `https://kapital-direkt24.de/news/{slug}`.
+- `window.location.origin` wird **nicht** verwendet → Preview-Domain kann nie canonical werden.
+- OG-Image auf absolute URL normalisiert (externe URLs bleiben unangetastet).
+
+**Phase C index.html — Statische Duplicate-Tags entfernt:**
+- Statisches `<link rel="canonical">` und `<meta property="og:url">` aus `public/index.html` entfernt.
+- Weitere URL-spezifische Static-Tags gestrafft (nur noch Site-Level-Defaults: og:type, og:site_name, og:image, twitter:card, twitter:image).
+- Ergebnis: **CANONICAL_TAG_COUNT = 1** pro gerenderter Seite.
+
+**Phase E Legacy Redirects unverändert:** 82.46-Redirects `/nachrichten/:slug` und `/news/nachrichten/:slug` → `/news/:slug` bleiben aktiv, Query+Hash bleiben beim Redirect erhalten. Nach dem Redirect: Canonical zeigt korrekt auf `https://kapital-direkt24.de/news/{slug}` (kein Legacy-Canonical).
+
+**Phase F Euronews:** `/news/euronews/:slug` bleibt eigenständig; Canonical korrekt auf `https://kapital-direkt24.de/news/euronews/{slug}`; keine Kollision mit Root-Canonical.
+
+**Phase G OG / Structured Data:** og:url, og:title, og:description, og:image auf allen News-Detail-Seiten korrekt gesetzt (verifiziert). JSON-LD/NewsArticle nicht vorhanden → `NOT PRESENT` (kein Backwards-Add ohne Scope).
+
+**Phase H Sitemap:** `public/sitemap.xml` enthält weiterhin **keine** News-Detail-URLs (0 vor, 0 nach). Übersichtsrouten unverändert (`/nachrichten`, `/news/nachrichten` unangetastet). Fremd-Domain-URLs (`kapitalmitte.com`) außerhalb 82.47-Scope belassen.
+
+**Phase I Sitemap Validation:** XML valide · TOTAL=36 · Duplicates=0 · Legacy=0 · Preview=0 · Localhost=0 · Query=0 · Hash=0 · HTTP=0 ✅
+
+**Phase J Robots.txt:** Sitemap-Link von obsoletem `https://www.kapitalmitte.com/sitemap.xml` auf kanonische Prod-Origin `https://kapital-direkt24.de/sitemap.xml` korrigiert. Cloudflare-Managed-Content-Signals bleiben (Kein neues Preview-noindex, da Infra-Verhalten unklar — Policy eingehalten).
+
+**Phase K QA-Testmatrix (Preview verifiziert):**
+| Test | URL | Canonical | Pass |
+|---|---|---|---|
+| T1 kanonisch | `/news/{slug}` | `https://kapital-direkt24.de/news/{slug}` | ✅ 1 Tag |
+| T2 mit Query+Hash | `/news/{slug}?utm=test#anchor` | `https://kapital-direkt24.de/news/{slug}` (ohne ?/#) | ✅ 1 Tag |
+| T3 Legacy A → Redirect | `/nachrichten/{slug}?utm=t3` | `https://kapital-direkt24.de/news/{slug}` | ✅ 1 Tag |
+| T4 Legacy B → Redirect | `/news/nachrichten/{slug}?utm=t4` | `https://kapital-direkt24.de/news/{slug}` | ✅ 1 Tag |
+| T5 Euronews | `/news/euronews/{slug}` | `https://kapital-direkt24.de/news/euronews/{slug}` | ✅ 1 Tag |
+| T6 Archive-Artikel | via Legacy → Redirect → Detail | canonical `/news/{slug}` | ✅ |
+| T7 Provider-Fallback (82.45) | Slugs aus `/api/news/nachrichten` | canonical `/news/{slug}` | ✅ (T3/T4 nutzen genau diesen Slug) |
+| T8 Unknown slug | `/news/definitely-nonexistent-…` | canonical korrekt zur URL, `noindex,nofollow`, Not-Found-State | ✅ |
+| Regression Home | `/` | `https://kapital-direkt24.de/` | ✅ 1 Tag |
+| Regression News Overview | `/news` | `https://kapital-direkt24.de/news` | ✅ 1 Tag |
+
+**Phase L Regression:** 82.45 Provider-Fallback (`/api/content/news/:slug` = 200 für Aggregator-Slug) ✅ · 82.46 Redirects mit Query+Hash-Preservation ✅ · News Overview lädt ✅ · Home lädt ✅. Depot/Auth/Financial-Code nicht angefasst.
+
+**Files Changed:**
+- `frontend/public/index.html` (statisches Canonical + og:url + URL-Twitter-Tags entfernt, Defaults gestrafft)
+- `frontend/src/components/PageMeta.js` (rewrite: `CANONICAL_ORIGIN`, `buildCanonicalUrl`, absolute Prod-URLs, Query/Hash-Stripping, OG-Image-Normalisierung)
+- `frontend/public/robots.txt` (Sitemap-URL auf `kapital-direkt24.de` korrigiert)
+- `memory/PRD.md`
+
+**Constraints eingehalten:** Kein Prod-Deploy · Nur Preview · Keine News-Datenänderung · Keine Content-Löschung · Provider-Fallback (82.45) unverändert · Redirects (82.46) unverändert · Übersichtsrouten unverändert · `/news/euronews/:slug` unverändert · `window.location.origin` niemals als Canonical · Robots-Regeln nicht spekulativ erweitert · Depot/Auth/Financial-Code nicht angefasst.
+
+---
 
 
 ## Session 82.46 (Preview) · News-Detail-Route-Konsolidierung

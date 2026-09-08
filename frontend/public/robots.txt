@@ -2,4 +2,4 @@ User-agent: *
 Disallow: /admin
 Disallow: /register
 
-Sitemap: https://www.kapitalmitte.com/sitemap.xml
+Sitemap: https://kapital-direkt24.de/sitemap.xml
