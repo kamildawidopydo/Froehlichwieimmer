@@ -424,18 +424,34 @@ export const DashboardDataProvider = ({ children }) => {
     return () => window.clearInterval(id);
   }, []);
 
-  // Session 82.83 — 5-Sekunden-Polling für Realtime-Depot-Kurse.
-  // Backend-Cache-TTL 4 s stellt sicher, dass jeder Frontend-Poll frische
-  // yfinance-Daten holt (keine Fake-Preise; nur echte Provider-Antworten).
+  // Session 82.83c — 5s aktiv, 30s idle-Backoff nach 2 Min ohne Interaktion.
+  // Schützt Twelve-Data-Free-Quota (800 Calls/Tag).
   useEffect(() => {
     if (!user?.id) return undefined;
 
-    const STOCK_CACHE_POLL_MS = 5 * 1000;
-    const tick = () => {
-      if (typeof document !== 'undefined' && document.hidden) return;
-      fetchStockData();
+    const ACTIVE_MS = 5 * 1000;
+    const IDLE_MS = 30 * 1000;
+    const IDLE_AFTER_MS = 2 * 60 * 1000;
+    let lastActive = Date.now();
+    let currentDelay = ACTIVE_MS;
+    let timerId = null;
+
+    const markActive = () => { lastActive = Date.now(); };
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(
+      (evt) => window.addEventListener(evt, markActive, { passive: true }),
+    );
+
+    const schedule = () => {
+      const idle = Date.now() - lastActive > IDLE_AFTER_MS;
+      currentDelay = idle ? IDLE_MS : ACTIVE_MS;
+      timerId = window.setTimeout(async () => {
+        if (typeof document === 'undefined' || !document.hidden) {
+          try { await fetchStockData(); } catch { /* noop */ }
+        }
+        schedule();
+      }, currentDelay);
     };
-    const id = window.setInterval(tick, STOCK_CACHE_POLL_MS);
+    schedule();
 
     const onVisibility = () => {
       if (!document.hidden) fetchStockData();
@@ -443,7 +459,10 @@ export const DashboardDataProvider = ({ children }) => {
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
-      window.clearInterval(id);
+      if (timerId) window.clearTimeout(timerId);
+      ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(
+        (evt) => window.removeEventListener(evt, markActive),
+      );
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [user?.id, fetchStockData]);

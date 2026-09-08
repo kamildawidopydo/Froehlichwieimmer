@@ -3,6 +3,37 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.83c (Preview · IMPLEMENTED) · Poll-Backoff + Source-Badge + Realtime-Transparenz
+
+**Umgesetzt:**
+- **Poll-Backoff** in `DashboardDataContext.jsx` + `StockDetail.js`: 5 s bei aktivem Nutzer, **30 s** nach 2 Min ohne Interaktion (mouse/kbd/scroll/touch). Setzt bei jeder Interaktion auf 5 s zurück. Hidden-Tab pausiert weiterhin komplett. Schützt Twelve-Data-Free-Quota (800 Calls/Tag).
+- **Source-Badge** auf StockDetail neben „Aktueller Kurs": zeigt Provider (`twelvedata` grün mit Puls / `yfinance` amber statisch) + Tooltip mit Delay-Erklärung. Kunde sieht sofort ob der aktuelle Ticker realtime oder 15-Min-delayed ist.
+- `setPrice(...)` erweitert um `source, as_of, price_status` (Backend-Whitelist-Felder, keine Erfindung).
+
+**Verifikation:** Regression **21/21 PASS** · 0 Financial-Writes · 0 Fake-Preise · Poll pausiert korrekt in Hidden-Tab und Idle-Modus.
+
+### ⚠️ Ehrliche Datenquellen-Realität
+- **US-Aktien (NVDA, AAPL, MSFT, GOOGL, AMZN)**: bereits jetzt realtime — grüne pulsierende Badge
+- **Xetra/Frankfurt (SAP.DE, IFX.DE, ALV, DBK, ...)**: 15 Min delayed — amber Badge (Deutsche-Börse-Lizenz-Restriktion, nicht Softwarefehler)
+- **Stockholm/Paris (BOL.ST, VOLV-B.ST, ...)**: 15 Min delayed — amber Badge
+- **Anleihen**: kein Free-Provider — Cache-basiert (aus 82.79b)
+- **Kein Free-Tier** (weder Twelve Data Free, yfinance, Alpha Vantage, Finnhub Free) darf legal Xetra-Realtime liefern
+
+### Handlungs-Optionen für ECHTES Zero-Delay EU
+1. **Twelve Data Pro ($79/Mo)**: Xetra + LSE + Stockholm realtime; ich integriere ohne Code-Change (nur Tier-Upgrade in TD-Dashboard reicht)
+2. **Deutsche Börse Data Shop (~€50/Mo)**: reines Xetra-Realtime; benötigt neue Provider-Integration (2–3 h Arbeit)
+3. **Aktueller Stand belassen**: US realtime, EU 15-Min-delayed — legal und kostenlos
+
+### FINAL REPORT
+- FILES_CHANGED: `frontend/src/context/DashboardDataContext.jsx` (+Backoff-Logik), `frontend/src/pages/StockDetail.js` (+Backoff + Source-Badge + as_of/source im State), `memory/PRD.md`
+- POLL_ACTIVE_MS: **5000** · POLL_IDLE_MS: **30000** · IDLE_AFTER_MS: **120000** ✅
+- SOURCE_BADGE_VISIBLE: **YES** (twelvedata grün · yfinance amber · Tooltip mit Delay-Erklärung)
+- FAKE_QUOTES: **0** · SYNTHETIC_DATA: **0** · FINANCIAL_WRITES: **0**
+- READY_FOR_PROD: **NO** (Deploy-Blocker unverändert)
+
+---
+
+
 ## Session 82.83b (Preview · IMPLEMENTED) · Twelve Data als Realtime-Provider integriert
 
 **Owner-Token:** Twelve Data Free-Tier API-Key `d17efde84f4845e08d8a4dc4711b410a` (800 calls/Tag, 8 calls/min · aus `twelvedata.com/account/api-keys`). Persistiert in `backend/.env` als `TWELVEDATA_API_KEY`.

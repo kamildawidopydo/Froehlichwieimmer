@@ -360,13 +360,21 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
     loadMeta();
   }, [symbol]);
 
-  // Session 82.83 — 5-Sekunden-Live-Polling nur für den Kurs (nicht für die
-  // schwereren Metadaten). Backend-Cache-TTL 4 s ⇒ echte yfinance-Refreshes.
+  // Session 82.83c — Poll-Backoff (5s aktiv, 30s idle nach 2min) + Source-Tracking.
+  // Schützt Twelve-Data-Free-Quota (800 Calls/Tag).
   useEffect(() => {
     if (!symbol) return undefined;
-    const POLL_MS = 5 * 1000;
+    const ACTIVE_MS = 5 * 1000;
+    const IDLE_MS = 30 * 1000;
+    const IDLE_AFTER_MS = 2 * 60 * 1000;
     const sym = String(symbol).toUpperCase();
     let cancelled = false;
+    let lastActive = Date.now();
+    let timerId = null;
+    const markActive = () => { lastActive = Date.now(); };
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(
+      (evt) => window.addEventListener(evt, markActive, { passive: true }),
+    );
     const tick = async () => {
       if (typeof document !== 'undefined' && document.hidden) return;
       try {
@@ -383,12 +391,29 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
             ask: q.ask != null ? Number(q.ask) : null,
             bid_size: q.bid_size != null ? Number(q.bid_size) : null,
             ask_size: q.ask_size != null ? Number(q.ask_size) : null,
+            source: q.source || null,
+            as_of: q.as_of || null,
+            price_status: q.price_status || null,
           });
         }
-      } catch { /* silent — nächster Tick versucht es erneut */ }
+      } catch { /* silent */ }
     };
-    const id = window.setInterval(tick, POLL_MS);
-    return () => { cancelled = true; window.clearInterval(id); };
+    const schedule = () => {
+      const idle = Date.now() - lastActive > IDLE_AFTER_MS;
+      const delay = idle ? IDLE_MS : ACTIVE_MS;
+      timerId = window.setTimeout(async () => {
+        await tick();
+        if (!cancelled) schedule();
+      }, delay);
+    };
+    schedule();
+    return () => {
+      cancelled = true;
+      if (timerId) window.clearTimeout(timerId);
+      ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(
+        (evt) => window.removeEventListener(evt, markActive),
+      );
+    };
   }, [symbol]);
 
   useEffect(() => {
@@ -908,7 +933,31 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
             <div className="bg-white border border-bank-border rounded-xl p-4 sm:p-6 shadow-sm">
               <div className="flex items-end justify-between flex-wrap gap-3 sm:gap-4 mb-4 sm:mb-5">
                 <div>
-                  <p className="text-xs text-bank-text-muted mb-1">Aktueller Kurs</p>
+                  <p className="text-xs text-bank-text-muted mb-1 flex items-center gap-2">
+                    <span>Aktueller Kurs</span>
+                    {price?.source && (
+                      <span
+                        data-testid="price-source-badge"
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm font-mono text-[9px] uppercase tracking-wider border ${
+                          price.source === 'twelvedata'
+                            ? 'border-emerald-300/70 bg-emerald-50 text-emerald-700'
+                            : price.source === 'yfinance' || price.source === 'fallback'
+                            ? 'border-amber-300/70 bg-amber-50 text-amber-700'
+                            : 'border-bank-border bg-bank-bg text-bank-text-muted'
+                        }`}
+                        title={
+                          price.source === 'twelvedata'
+                            ? 'Twelve Data · US-Aktien realtime · EU-Aktien 15 Min delayed (Xetra-Lizenz)'
+                            : 'yfinance · US-Aktien realtime · EU-Aktien 15 Min delayed (Xetra-Lizenz)'
+                        }
+                      >
+                        <span className={`inline-block h-1.5 w-1.5 rounded-full ${
+                          price.source === 'twelvedata' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                        }`} />
+                        {price.source}
+                      </span>
+                    )}
+                  </p>
                   <p className="text-3xl sm:text-4xl font-bold text-bank-text">
                     {price?.price != null ? formatCurrency(price.price, currency) : '–'}
                   </p>
