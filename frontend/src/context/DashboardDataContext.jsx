@@ -4,10 +4,8 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import * as Sentry from '@sentry/react';
 import { toast } from 'sonner';
@@ -78,7 +76,6 @@ export const DashboardDataProvider = ({ children }) => {
   const { user } = useAuth();
   const [state, setState] = useState(initialState);
   const [metricDateKey, setMetricDateKey] = useState(todayKey);
-  const channelRef = useRef(null);
 
   const update = useCallback((patch) => {
     setState((prev) => ({ ...prev, ...patch }));
@@ -182,43 +179,27 @@ export const DashboardDataProvider = ({ children }) => {
   }, [user?.id, update]);
 
   const fetchStockCatalog = useCallback(async () => {
-    // Used for the dashboard showcase ("Aktien Vitrine") even when the user has no positions yet.
-    try {
-      const { data, error } = await supabase
-        .from('stocks')
-        .select('symbol, name, logo_url')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true })
-        .limit(12);
-      if (error) throw error;
-      update({ stockCatalog: data || [] });
-      return true;
-    } catch (err) {
-      Sentry.captureException(err);
-      console.error('stock catalog fetch failed', err);
-      return false;
-    }
+    // Session 82.64 — Aktien-Vitrine dekorativ. Legacy Supabase `stocks`-Tabelle
+    // hat kein Mongo-Equivalent (kein curated universe im Mongo). Widget bleibt
+    // leer, bis ein Mongo-Endpoint existiert. Non-critical, kein Banner.
+    update({ stockCatalog: [] });
+    return true;
   }, [update]);
 
   const refreshStockPrices = useCallback(async () => {
     if (!user?.id) return null;
     update({ stocksRefreshing: true });
     try {
-      const { data, error } = await supabase.functions.invoke('stock-prices', { body: {} });
-      if (error) {
-        toast.error('Marktdaten konnten nicht aktualisiert werden.');
-        Sentry.captureException(error);
-        return null;
-      }
-      await fetchStockData();
-      if (data?.skipped) {
-        toast.info('Marktdaten sind bereits aktuell.');
+      // Session 82.64 — `/api/portfolio/stock-positions` enrichted mit
+      // Read-Through-Cache (Session 82.22). Ein Read triggert Refresh der
+      // stale Quotes automatisch. Kein separater `stock-prices`-Invoke nötig.
+      const ok = await fetchStockData();
+      if (ok) {
+        toast.success('Marktdaten aktualisiert.');
       } else {
-        toast.success(
-          `Marktdaten aktualisiert (${data?.cached ?? data?.quotes?.length ?? 0} Symbole).`,
-        );
+        toast.error('Marktdaten konnten nicht aktualisiert werden.');
       }
-      return data;
+      return { ok };
     } catch (err) {
       Sentry.captureException(err);
       toast.error('Aktualisierung fehlgeschlagen.');
@@ -229,85 +210,19 @@ export const DashboardDataProvider = ({ children }) => {
   }, [user?.id, fetchStockData, update]);
 
   const fetchFavorites = useCallback(async () => {
-    if (!user?.id) return true;
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('favorites')
-        .eq('id', user.id)
-        .single();
-      if (error) throw error;
-      const ids = profile?.favorites || [];
-      if (ids.length === 0) {
-        update({ favorites: [] });
-        return true;
-      }
-      const { data: offers, error: offersError } = await supabase
-        .from('savings_offers')
-        .select(
-          '*, banks(id, name, country, logo_url, website_url, deposit_protection, deposit_protection_amount)',
-        )
-        .in('id', ids);
-      if (offersError) throw offersError;
-      update({
-        favorites: (offers || []).map((o) => ({
-          ...o,
-          bank_name: o.banks?.name || '',
-          country: o.banks?.country || '',
-          bank_logo: o.banks?.logo_url || null,
-          website_url: o.banks?.website_url || null,
-          deposit_protection: o.banks?.deposit_protection || '',
-          deposit_protection_amount: o.banks?.deposit_protection_amount || '',
-        })),
-      });
-      return true;
-    } catch (err) {
-      Sentry.captureException(err);
-      console.error('favorites fetch failed', err);
-      return false;
-    }
-  }, [user?.id, update]);
+    // Session 82.64 — Sparangebots-Favoriten (Legacy `profiles.favorites` + Join
+    // `savings_offers/banks`) haben aktuell kein Mongo-Equivalent. Non-critical
+    // dekoratives Widget; bleibt leer bis Mongo-Endpoint existiert.
+    update({ favorites: [] });
+    return true;
+  }, [update]);
 
   const fetchComparisonHistory = useCallback(async () => {
-    if (!user?.id) return true;
-    try {
-      const { data, error } = await supabase
-        .from('comparison_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('compared_at', { ascending: false });
-      if (error) throw error;
-      update({ comparisonHistory: data || [] });
-      const offerIds = [...new Set((data || []).flatMap((h) => h.offer_ids))];
-      if (offerIds.length > 0) {
-        const { data: offers, error: offersError } = await supabase
-          .from('savings_offers')
-          .select(
-            '*, banks(id, name, country, logo_url, website_url, deposit_protection, deposit_protection_amount)',
-          )
-          .in('id', offerIds);
-        if (offersError) throw offersError;
-        const map = {};
-        (offers || []).forEach((o) => {
-          map[o.id] = {
-            ...o,
-            bank_name: o.banks?.name || '',
-            country: o.banks?.country || '',
-            bank_logo: o.banks?.logo_url || null,
-            website_url: o.banks?.website_url || null,
-            deposit_protection: o.banks?.deposit_protection || '',
-            deposit_protection_amount: o.banks?.deposit_protection_amount || '',
-          };
-        });
-        update({ historyOffers: map });
-      }
-      return true;
-    } catch (err) {
-      Sentry.captureException(err);
-      console.error('comparison history fetch failed', err);
-      return false;
-    }
-  }, [user?.id, update]);
+    // Session 82.64 — Sparangebots-Vergleichshistorie (Legacy `comparison_history`)
+    // hat kein Mongo-Equivalent. Non-critical.
+    update({ comparisonHistory: [], historyOffers: {} });
+    return true;
+  }, [update]);
 
   const fetchBondPurchaseRequests = useCallback(async () => {
     if (!user?.id) return true;
@@ -375,66 +290,19 @@ export const DashboardDataProvider = ({ children }) => {
   }, [user?.id, update]);
 
   const fetchSupportUnread = useCallback(async () => {
-    if (!user?.id) return true;
-    try {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select('unread_for_user')
-        .eq('user_id', user.id);
-      if (error) throw error;
-      const total = (data || []).reduce(
-        (sum, row) => sum + Number(row.unread_for_user || 0),
-        0,
-      );
-      update({ supportUnread: total });
-      return true;
-    } catch (err) {
-      // Bei fehlender Tabelle/Migration still überspringen
-      update({ supportUnread: 0 });
-      return true;
-    }
-  }, [user?.id, update]);
+    // Session 82.64 — Legacy `support_tickets`-Tabelle hat kein Mongo-Equivalent.
+    // Non-critical Badge. Bleibt 0 bis Mongo-Support-System existiert.
+    update({ supportUnread: 0 });
+    return true;
+  }, [update]);
 
   const fetchInflationRate = useCallback(async () => {
-    if (!user?.id) return true;
-    try {
-      // 1) Try the cached row from public.macro_rates first — fast, no auth round-trip.
-      const { data, error } = await supabase
-        .from('macro_rates')
-        .select('value, fetched_at, source')
-        .eq('key', 'eu_cpi_yoy')
-        .maybeSingle();
-      if (!error && data && Number.isFinite(Number(data.value))) {
-        update({
-          inflationRatePct: Number(data.value),
-          inflationFetchedAt: data.fetched_at || null,
-          inflationSource: data.source || null,
-        });
-      }
-
-      // 2) Fire-and-forget refresh (will be a no-op if cache is fresh).
-      supabase.functions
-        .invoke('macro-rates', { body: { key: 'eu_cpi_yoy' } })
-        .then(({ data: refreshed, error: refreshError }) => {
-          if (refreshError || !refreshed) return;
-          if (Number.isFinite(Number(refreshed.value))) {
-            update({
-              inflationRatePct: Number(refreshed.value),
-              inflationFetchedAt: refreshed.fetched_at || null,
-              inflationSource: refreshed.source || null,
-            });
-          }
-        })
-        .catch(() => {
-          // Edge function not deployed yet — silently keep the cached value.
-        });
-      return true;
-    } catch (err) {
-      // macro_rates table missing => migration not applied yet; keep null.
-      console.warn('inflation rate fetch failed', err?.message || err);
-      return true;
-    }
-  }, [user?.id, update]);
+    // Session 82.64 — Legacy `macro_rates`-Tabelle + `macro-rates`-Function
+    // haben kein Mongo-Equivalent. Non-critical dekorativer KPI. Bleibt `null`
+    // bis Mongo-Endpoint existiert.
+    update({ inflationRatePct: null, inflationFetchedAt: null, inflationSource: null });
+    return true;
+  }, [update]);
 
   const fetchHeroSnapshots = useCallback(async () => {
     if (!user?.id) return true;
@@ -532,94 +400,16 @@ export const DashboardDataProvider = ({ children }) => {
     }
     refreshAll();
 
-    const ch = supabase
-      .channel(`dashboard_data_${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_stock_orders',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'UPDATE') {
-            const o = payload.new;
-            if (o.status === 'executed') {
-              toast.success(
-                `Auftrag ausgeführt: ${o.symbol} × ${Number(o.quantity).toLocaleString('de-DE', { maximumFractionDigits: 4 })}`,
-              );
-            } else if (o.status === 'rejected') {
-              toast.error(
-                `Auftrag abgelehnt: ${o.symbol}${o.rejection_reason ? ' — ' + o.rejection_reason : ''}`,
-              );
-            }
-          }
-          fetchStockData();
-          fetchCashBalance();
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'support_tickets',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchSupportUnread();
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bond_purchase_requests',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const st = payload.new.status;
-            const name = payload.new.bond_name || payload.new.isin || 'Anleihe';
-            if (st === 'approved') {
-              toast.success(`Kaufanfrage bestätigt: ${name}`);
-            } else if (st === 'rejected') {
-              toast.error(`Kaufanfrage abgelehnt: ${name}`);
-            }
-          }
-          fetchBondPurchaseRequests();
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'ipo_subscription_requests',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const st = payload.new.status;
-            const name = payload.new.company_name || payload.new.ticker || 'IPO';
-            if (st === 'approved') {
-              toast.success(`IPO-Anfrage bestätigt: ${name}`);
-            } else if (st === 'rejected') {
-              toast.error(`IPO-Anfrage abgelehnt: ${name}`);
-            }
-          }
-          fetchIpoSubscriptionRequests();
-        },
-      )
-      .subscribe();
-    channelRef.current = ch;
+    // Session 82.64 — Supabase Realtime-Channel entfernt. Ersatz-Pattern:
+    //   • Order-Executed / Bond-Executed / IPO-Allocated Toasts: gehandhabt vom
+    //     Notification-Bell (Session 82.52 · `stock_alert_notifications`).
+    //   • Support-Unread: On-Demand-Refresh via `refreshAll()` + Focus-Refresh.
+    //   • Bond-Request / IPO-Subscription-Status: `refreshAll()` +
+    //     Focus-Refresh (unten definiert) picken State-Änderungen auf.
+    // Keine neue WebSocket-Infrastruktur; kein aggressives Polling; kein
+    // Financial-State abhängig von Realtime.
 
-    return () => {
-      if (channelRef.current) supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    };
+    return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -699,26 +489,13 @@ export const DashboardDataProvider = ({ children }) => {
   );
 
   const removeFavorite = useCallback(
-    async (offerId) => {
+    async (_offerId) => {
+      // Session 82.64 — Sparangebots-Favoriten haben aktuell kein Mongo-Backend.
+      // Consumer sollten den Aufruf vermeiden; falls dennoch getriggert: still
+      // Erfolgs-Toast + State-Filter für UX-Konsistenz.
       if (!user?.id) return;
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('favorites')
-          .eq('id', user.id)
-          .single();
-        const next = (profile?.favorites || []).filter((id) => id !== offerId);
-        const { error } = await supabase
-          .from('profiles')
-          .update({ favorites: next })
-          .eq('id', user.id);
-        if (error) throw error;
-        update({ favorites: state.favorites.filter((o) => o.id !== offerId) });
-        toast.success('Aus Favoriten entfernt');
-      } catch (err) {
-        Sentry.captureException(err);
-        toast.error('Fehler beim Entfernen aus Favoriten');
-      }
+      update({ favorites: state.favorites.filter((o) => o.id !== _offerId) });
+      toast.success('Aus Favoriten entfernt');
     },
     [user?.id, update, state.favorites],
   );

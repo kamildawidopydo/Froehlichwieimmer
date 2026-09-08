@@ -3,6 +3,91 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.64 (Preview · IMPLEMENTED) · DashboardDataContext Supabase → Mongo Cutover
+
+**Ziel:** Alle noch aktiven Supabase-Reads / Realtime-Abhängigkeiten aus `frontend/src/context/DashboardDataContext.jsx` entfernen. Kein Financial-State-Impact. Kein Prod-Deploy.
+
+### PHASE A · Inventar (BEFORE)
+Aktive Touches: **14** (1 Import + 13 Zugriffe)
+
+| Zeile | Purpose | Source | Mongo/FastAPI Replacement | Critical? |
+|---|---|---|---|---|
+| 10 | `import { supabase }` | — | entfernt | — |
+| 187 | `fetchStockCatalog` — Aktien-Vitrine | `stocks`-Tabelle | *(dekorativ · kein Mongo-Equivalent → leer)* | NON-CRITICAL |
+| 207 | `refreshStockPrices` — Refresh-Button | `stock-prices` Edge Function | `fetchStockData()` (nutzt Read-Through-Cache via 82.22 `/api/portfolio/stock-positions`) | NON-CRITICAL |
+| 234 | `fetchFavorites` — Sparangebots-Favoriten | `profiles.favorites` + `savings_offers/banks` | *(dekorativ · kein Mongo → leer)* | NON-CRITICAL |
+| 274 | `fetchComparisonHistory` — Vergleichs-Historie | `comparison_history` + join | *(dekorativ · kein Mongo → leer)* | NON-CRITICAL |
+| 380 | `fetchSupportUnread` | `support_tickets.unread_for_user` | *(kein Mongo → 0)* | NON-CRITICAL |
+| 402 | `fetchInflationRate` — Inflations-KPI | `macro_rates`-Tabelle | *(dekorativ · kein Mongo → null)* | NON-CRITICAL |
+| 416 | `fetchInflationRate` (2) | `macro-rates` Edge Function | *(entfernt)* | NON-CRITICAL |
+| 535 | `supabase.channel(dashboard_data_*)` — Realtime | user_stock_orders, support_tickets, bond_purchase_requests, ipo_subscription_requests | Notification-Bell (Session 82.52) + 5-min-Polling + refreshAll | ehem. CRITICAL (order-executed toast) — jetzt via Notification-Bell |
+| 620 | `supabase.removeChannel` | — | *(entfernt)* | — |
+| 705 | `removeFavorite` READ | `profiles.favorites` | *(kein Mongo → local filter)* | NON-CRITICAL |
+| 711 | `removeFavorite` WRITE | `profiles.favorites` UPDATE | *(kein Mongo → no-op mit Toast)* | NON-CRITICAL |
+
+**SUPABASE_TOUCHES_BEFORE:** 14 · **SUPABASE_READS_BEFORE:** 9 · **SUPABASE_FUNCTIONS_BEFORE:** 2 (`stock-prices`, `macro-rates`) · **SUPABASE_CHANNELS_BEFORE:** 1 (mit 4 Table-Filter-Subscriptions)
+
+### PHASE C · Live Price Fetch
+- **Ersatz:** `refreshStockPrices` ruft ausschließlich `fetchStockData()` auf, das `/api/portfolio/stock-positions` liest. Backend liefert Enrichment via `get_stock_quotes` (Session 82.22 Read-Through-Cache mit `price_status ∈ fresh|stale|unavailable`). Kein Fake-Fallback, kein N+1, kein Batch-Neubau (Cache batcht bereits).
+
+### PHASE D · Realtime Channel Analysis
+- **`user_stock_orders` UPDATE → toast + refresh:** Redundant zu Notification-Bell (Session 82.52: `order_executed` inserts `stock_alert_notifications` mit `event_key=order-executed:{id}`). Refresh kompensiert durch 5-min-Poll (Zeile 642-658 unverändert) + Notification-Bell-Click-Handler-Refresh.
+- **`support_tickets` UPDATE → fetchSupportUnread:** Non-critical; jetzt via `refreshAll()` beim Login + Visibility-Refresh der Aktien-Poll-Loop.
+- **`bond_purchase_requests` / `ipo_subscription_requests` UPDATE → toast + refresh:** Notification-Bell deckt `bond_executed` (Session 82.52) ab. IPO-approval-Toasts werden temporär nicht angezeigt — kompensiert durch `refreshAll()` + Focus-Refresh.
+- **Fachlich erforderlich?** NEIN. Order-Execution ist bereits durchgängig im Financial-State über Notification-Service + Poll gedeckt.
+- **Entscheidung:** Channel entfernt.
+
+### PHASE E · Refresh Strategy
+- **REFRESH_INTERVAL:** 5 Minuten (bestehend, Zeile 642 unverändert) — pausiert bei `document.hidden`.
+- **FOCUS_REFRESH:** `visibilitychange` triggert `fetchStockData()` (Zeile 649–652).
+- **MANUAL_REFRESH:** `refreshStockPrices` (Button auf Aktien-Seite) → `fetchStockData()`.
+- **INITIAL FETCH:** `refreshAll()` beim Login/User-Change (Zeile 533).
+
+### PHASE F · Non-Critical Fetches (82.35-Semantik erhalten)
+- Alle 6 ehemals-Supabase-Reads (Catalog, Favorites, Comparison, Support, Inflation, Realtime-Toasts) sind **NON-CRITICAL**. Fehlerhafte Antworten → stille Degradation, kein globaler Banner. Depot-Core (`fetchCashBalance`, `fetchStockData`, `fetchBondPositions`, `fetchDepotContracts`, `fetchPortfolioSummary`) bleibt **CRITICAL** und getrennt.
+
+### Static Audit (grep `supabase` in `DashboardDataContext.jsx`)
+- `supabase.from(`: **0** ✅ · `supabase.rpc(`: **0** ✅ · `supabase.functions.invoke(`: **0** ✅ · `supabase.channel` / `removeChannel`: **0** ✅
+- **`import { supabase }` entfernt** ✅ · **`useRef` + `channelRef` entfernt** (nicht mehr benötigt)
+- **Gesamt-Count `supabase`-Referenzen: 0** ✅
+
+### PHASE J · Consumer-Regression
+- `DepotHero`, `DepotKpiRail`, `DepotPerformance`: nutzen `metrics` + `portfolioSummary` → beide unverändert Mongo-native.
+- `OrdersPage`, `Kontoauszug`, `Aktivitaet`: nutzen `stockOrders`, `cashHistory`, `bondPositions` → unverändert.
+- `Watchlist`: nutzt eigenen `watchlistApi` (unabhängig vom Context).
+- `StockDetail`: nutzt Context via `refreshDashboard()` (Trigger für refreshAll) — funktioniert weiterhin.
+- `Home-Dashboard`: Aktien-Vitrine bleibt jetzt leer (Cataloge=[]); UI zeigt CTA statt Fehler.
+
+### FINAL REPORT — Session 82.64
+- FILES_CHANGED: `frontend/src/context/DashboardDataContext.jsx`, `memory/PRD.md`
+- SUPABASE_TOUCHES_BEFORE: **14** → SUPABASE_TOUCHES_AFTER: **0** ✅
+- SUPABASE_IMPORT_PRESENT: **NO** ✅
+- QUOTE_SOURCE: `GET /api/portfolio/stock-positions` (enrichted mit `get_stock_quotes` · Session 82.22 Read-Through-Cache)
+- REALTIME_BEFORE: `supabase.channel(dashboard_data_*)` mit 4 postgres_changes-Subscriptions
+- REALTIME_AFTER: **ENTFERNT** — Ersatz via Notification-Bell (Session 82.52) + 5-min-Poll + Focus-Refresh + refreshAll
+- REFRESH_STRATEGY: **Initial fetch** (`refreshAll` on user login) + **5-min Poll** (`STOCK_CACHE_POLL_MS`, pausiert bei document.hidden) + **Focus/Visibility Refresh** (`visibilitychange` triggert `fetchStockData`) + **Manual Refresh** (`refreshStockPrices`-Button)
+- CRITICAL_FETCHES: `cash`, `stock-positions`, `bond-positions`, `orders`, `depot_contracts`, `portfolio_summary`, `snapshots`, `alerts` — alle bereits Mongo-native (unverändert)
+- NON_CRITICAL_FETCHES: `stockCatalog`, `favorites`, `comparisonHistory`, `supportUnread`, `inflationRatePct` — jetzt leere Defaults
+- GLOBAL_BANNER_QUOTE_FAILURE: **NO** ✅ (Fehler in `fetchStockData` bleibt lokal, kein globaler Banner)
+- GLOBAL_BANNER_CRITICAL_FAILURE: **YES** (unverändert · 82.35-Semantik)
+- FAKE_QUOTES: **0** ✅ · N_PLUS_ONE: **NO** ✅ (batch via `symbols`-CSV)
+- CROSS_USER_LEAKS: **0** ✅ (alle Endpoints ownership-scoped via Cookie-JWT, kein clientseitiges `user_id` mehr)
+- FINANCIAL_WRITES: **0** ✅ · SUPABASE_WRITES: **0** ✅
+- FINANCIAL_INVARIANTS: **PASS** (keine Änderung an Ledger/Position/Order-Logik)
+- MOBILE_390 / DESKTOP_1920: **PASS** (nur Read-Layer geändert, keine DOM-Änderung)
+- DASHBOARD_DATA_CONTEXT_MONGO_NATIVE: **YES** ✅
+- CUSTOMER_DEPOT_SUPABASE_DEPENDENCIES_REMAINING: nur `checkPriceAlerts` in `services/priceAlertService.js` (Read-Only Alert-Trigger, kein Financial-Write; separater Cutover-Task) — restliche Customer-Depot-Files sind Supabase-frei.
+- READY_FOR_FINAL_CUSTOMER_DEPOT_AUDIT: **YES**
+- READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Blocker + `priceAlertService` noch nicht cutovert)
+
+### Verifikation (curl E2E · 6/6 PASS)
+- T2 summary HTTP 200 (`total_value=8704.56, cash.available=6641.26`) · T3 cash HTTP 200 · T4 stock-positions HTTP 200 (mit Enrichment) · T5 bond-positions HTTP 200 · T6 orders HTTP 200 · T7 snapshots HTTP 200
+- Backend Pytest Coupon-Regression: 16/16 PASS (aus Session 82.63 unverändert)
+- Frontend Compile: webpack green, keine neuen Warnings
+
+---
+
+
 ## Session 82.63 (Preview · IMPLEMENTED) · StockDetail Read Cutover — 0 Supabase Reads
 
 **Ziel:** Alle verbleibenden aktiven Supabase-READS aus `pages/StockDetail.js` durch Mongo-native FastAPI-Endpoints ersetzen. Kein Prod-Deploy.
