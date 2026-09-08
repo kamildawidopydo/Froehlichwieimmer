@@ -3,6 +3,66 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.79 (Preview · IMPLEMENTED) · Admin-Stock-Coupons Supabase → FastAPI Cutover
+
+**Ziel:** `AdminStockCoupons.jsx` vollständig auf die bereits vorhandenen Mongo-native Admin-Coupon-Endpoints (`/api/admin/portfolio/coupons`) umstellen. Frontend-Only-Change. Kein Backend-Change, keine Coupon-Business-Logik verändert.
+
+### Was gebaut wurde
+- **`AdminStockCoupons.jsx` komplett neu geschrieben** (Overwrite):
+  - LIST_SOURCE_AFTER: `GET /api/admin/portfolio/coupons` (kein 3-fach-Supabase-Join mehr)
+  - CREATE_SOURCE_AFTER: `POST /api/admin/portfolio/coupons` (Body: `{percent, preview_only}` · nur backend-erlaubte Felder)
+  - REVOKE_SOURCE_AFTER: `POST /api/admin/portfolio/coupons/{id}/revoke` (lokale State-Aktualisierung mit Server-Response, plus Fallback-Refetch)
+  - Delete-Button entfernt (kein authoritatives Delete-Endpoint · per Session-Mandat „Kein neuer Backend-Endpoint")
+  - Enrichment `Kunde / Auftrag` → auf `Verwendung` (Order-ID + qa_session) reduziert, da Backend-Response keine `profiles`/`orders`-Joins liefert
+  - `data-testid` auf Refresh, Percent-Input, Create-Btn, Search, Table-Wrap, Loading, Empty, pro-Row (Copy, Revoke, Status) hinzugefügt
+
+### Audit (Phase A + B)
+- SUPABASE_TOUCHES_BEFORE: **7** (import + `from('stock_trade_coupons')`.select · `from('user_stock_orders')` · `from('profiles')` · 2× `rpc(...)` · `from().delete()`)
+- LIST_SOURCE_BEFORE: `supabase.from('stock_trade_coupons').select` + Joins
+- CREATE_SOURCE_BEFORE: `supabase.rpc('admin_create_stock_trade_coupon')`
+- REVOKE_SOURCE_BEFORE: `supabase.rpc('admin_revoke_stock_trade_coupon')`
+- Response-Shape verifiziert: `{id, code, percent, status, reserved_order_id, reserved_at, consumed_order_id, consumed_at, consumed_by_user_id, created_at, updated_at, preview_only, qa_session}` — direktes Frontend-Mapping möglich
+
+### Security & E2E Tests (Phase H · 8/8 PASS)
+| Test | Erwartet | Ergebnis |
+|---|---|---|
+| T1 unauth GET | 401 | **401** ✅ |
+| T2 customer GET | 403 | **403** ✅ |
+| T3 admin GET | 200 | **200** ✅ |
+| T4 admin POST valid (`{"percent":"5","preview_only":true}`) | 201 | **201** ✅ (`code=534A2F26405E`) |
+| T5 invalid payload (`percent="abc"`) | 4xx | **422** ✅ |
+| T6 mass-assignment (`status`, `reserved_order_id`) | blocked | **422 `extra_forbidden`** ✅ (Pydantic `extra=forbid`) |
+| T7 revoke valid coupon | 200 | **200** ✅ (`status=revoked`) |
+| T8 double revoke same coupon | State-Machine-Fehler | **409 `Coupon kann nicht widerrufen werden (Status: revoked)`** ✅ (backend-authoritative) |
+
+### Regression (Phase I · 21/21 PASS)
+- `test_coupon_flow.py`: **16/16 PASS** ✅ (peek/reserve/consume/release/idempotency/concurrency alle grün)
+- `test_realized_pnl_enrichment.py`: **5/5 PASS** ✅
+- Coupon-Business-Logik unverändert (peek/reserve/consume/release-Sagas nicht berührt)
+- Customer-Coupon-Flow aus Session 82.75 (E2E Buy→Match→Consume→Notification) bleibt grün — nur Frontend-Änderung
+
+### Responsive (Phase J)
+- **Desktop 1920×800**: Refresh-Btn, Percent-Input, Create-Btn, Search-Input, Table-Wrap alle sichtbar · Overflow=[] ✅
+- **Mobile 390×844**: Formular flexbox `flex-col md:flex-row` → Percent-Input + Create-Btn stapeln vertikal · Overflow=[] ✅ · alle Elemente reachable
+
+### FINAL REPORT Flags
+- FILES_CHANGED: `frontend/src/pages/AdminStockCoupons.jsx` (Rewrite · 341 → 293 Zeilen), `memory/PRD.md`
+- SUPABASE_TOUCHES_BEFORE: **7** · SUPABASE_TOUCHES_AFTER: **0** ✅
+- SUPABASE_IMPORT_PRESENT: **NO** ✅ (kein `from '@/lib/supabase'` mehr)
+- LIST_SOURCE_AFTER: `/api/admin/portfolio/coupons` · CREATE_SOURCE_AFTER: `POST /api/admin/portfolio/coupons` · REVOKE_SOURCE_AFTER: `POST /api/admin/portfolio/coupons/{id}/revoke`
+- BACKEND_CHANGED: **NO** ✅ · COUPON_BUSINESS_LOGIC_CHANGED: **NO** ✅
+- UNAUTH: **PASS** · CUSTOMER_ADMIN_ACCESS: **403** ✅ · ADMIN_ACCESS: **PASS**
+- CREATE: **PASS** · REVOKE: **PASS** · MASS_ASSIGNMENT: **PASS** (blocked via `extra_forbidden`)
+- SUPABASE_WRITES: **0** ✅ · FINANCIAL_WRITES: **0** ✅
+- COUPON_REGRESSION: **PASS (16/16)** · REALIZED_PNL_REGRESSION: **PASS (5/5)**
+- MOBILE_390: **PASS** (kein Overflow) · DESKTOP_1920: **PASS** (kein Overflow)
+- ADMIN_STOCK_COUPONS_MONGO_NATIVE: **YES** ✅
+- ADMIN_READY_COUNT_BEFORE: **30/40** · ADMIN_READY_COUNT_AFTER: **31/40** ✅
+- READY_FOR_NEXT_ADMIN_CUTOVER: **YES** ✅ (nächstes P1 Frontend-Only: `/admin/markt-daten`) · READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Deploy-Blocker unverändert)
+
+---
+
+
 ## Session 82.78 (Preview · READ-ONLY AUDIT) · Final Admin-Readiness + Depot/Auth/Support Roll-up
 
 **Ziel:** Die 10 PARTIAL-Admin-Seiten aus 82.77 einzeln nach EMPTY_BUT_READY / BACKEND_MISSING / DATA_SOURCE_MISSING / UI_INCOMPLETE klassifizieren. Anschließend finalen App-Status (Customer-Depot, Auth, Support, Admin) konsolidieren und offene P0/P1 exakt reporten. Keine Test-Daten geseedet · keine Financial-Writes · keine DB-Mutationen.
