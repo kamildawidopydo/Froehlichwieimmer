@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef, Suspense, lazy } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
 import { watchlistApi } from '@/services/watchlistApi';
 import { portfolioOrderApi } from '@/services/portfolioOrderApi';
+import { fetchPortfolioJson } from '@/services/portfolioApi';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import { useNewsList } from '@/hooks/useNewsList';
 import { fetchDividends } from '@/services/dividendService';
@@ -16,7 +16,6 @@ import {
 } from '@/components/dashboard/motion';
 import PriceAlertPanel from '@/components/dashboard/PriceAlertPanel';
 import InsufficientBuyingPowerAlert from '@/components/dashboard/InsufficientBuyingPowerAlert';
-import { logInsufficientBuyingPowerEvent } from '@/lib/logInsufficientBuyingPower';
 import InsufficientSharesAlert from '@/components/dashboard/InsufficientSharesAlert';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -368,58 +367,116 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
 
   const loadMeta = async () => {
     setLoadingMeta(true);
-    const tasks = [
-      supabase.from('stocks').select('*').eq('symbol', symbol).maybeSingle(),
-      supabase.from('stock_prices_cache').select('*').eq('symbol', symbol).maybeSingle(),
-    ];
-    if (user) {
-      tasks.push(supabase.from('user_stock_watchlist').select('id').eq('user_id', user.id).eq('symbol', symbol).maybeSingle());
-      tasks.push(supabase.from('user_stock_positions').select('*').eq('user_id', user.id).eq('symbol', symbol).maybeSingle());
-      tasks.push(supabase.from('profiles').select('cash_balance, cash_available').eq('id', user.id).maybeSingle());
-      tasks.push(
-        supabase
-          .from('user_stock_orders')
-          .select('realized_pnl')
-          .eq('user_id', user.id)
-          .eq('symbol', symbol)
-          .eq('side', 'sell')
-          .eq('status', 'executed'),
-      );
-      tasks.push(
-        supabase
-          .from('user_stock_orders')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('symbol', symbol)
-          .order('created_at', { ascending: false })
-          .limit(20),
-      );
-      tasks.push(
-        supabase
-          .from('user_stock_orders')
-          .select('quantity')
-          .eq('user_id', user.id)
-          .eq('symbol', symbol)
-          .eq('side', 'sell')
-          .eq('status', 'pending'),
-      );
+    const sym = String(symbol || '').toUpperCase();
+    // Session 82.63 — vollständig Mongo-native.
+    //   Quotes:    GET /api/portfolio/quotes?symbols=SYM  (auth-only)
+    //   Position:  GET /api/portfolio/stock-positions      → clientseitig filtern
+    //   Cash:      GET /api/portfolio/cash                 (buying_power == cash_available)
+    //   Orders:    GET /api/portfolio/orders?limit=200     → clientseitig filtern
+    //   Watchlist: watchlistApi.list()                     → clientseitig prüfen
+    //
+    // STOCK_METADATA_SOURCE=MINIMAL: `stocks`-Metadata (name/sector/exchange) hat
+    // aktuell keinen Mongo-Endpoint — dekoratives Fallback via {symbol, currency}
+    // aus dem Quote-Response, keine Erfindung von Sector/Exchange (Phase G).
+    // REALIZED_PNL_SOURCE=MISSING: `_serialize_order` liefert `realized_pnl` nicht;
+    // wir setzen `null` (Phase F Option 1 · „NICHT improvisieren").
+
+    // Non-auth: Quote reicht.
+    if (!user) {
+      try {
+        const quotes = await fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(sym)}`);
+        const q = (quotes || {})[sym];
+        if (q && q.price != null) {
+          setPrice({
+            price: Number(q.price),
+            change_abs: q.change_abs != null ? Number(q.change_abs) : null,
+            change_pct: q.change_pct != null ? Number(q.change_pct) : null,
+            currency: q.currency || 'USD',
+            bid: q.bid != null ? Number(q.bid) : null,
+            ask: q.ask != null ? Number(q.ask) : null,
+            bid_size: q.bid_size != null ? Number(q.bid_size) : null,
+            ask_size: q.ask_size != null ? Number(q.ask_size) : null,
+          });
+          setStock({ symbol: sym, name: sym, currency: q.currency || 'USD' });
+        } else {
+          setPrice(null);
+          setStock({ symbol: sym, name: sym, currency: 'USD' });
+        }
+      } catch {
+        setPrice(null);
+        setStock({ symbol: sym, name: sym, currency: 'USD' });
+      }
+      setLoadingMeta(false);
+      return;
     }
-    const results = await Promise.all(tasks);
-    setStock(results[0].data);
-    setPrice(results[1].data);
-    if (user) {
-      setWatched(!!results[2].data);
-      setPosition(results[3].data);
-      setCashBalance(Number(results[4].data?.cash_balance || 0));
-      setCashAvailable(Number(results[4].data?.cash_available ?? results[4].data?.cash_balance ?? 0));
-      const { data: bp } = await supabase.rpc('get_user_buying_power', { p_user_id: user.id });
-      setBuyingPower(Number(bp || results[4].data?.cash_available || 0));
-      const sells = results[5]?.data || [];
-      const rlzd = sells.reduce((s, o) => s + Number(o.realized_pnl || 0), 0);
-      setRealizedPnl(sells.length > 0 ? rlzd : null);
-      setSymbolOrders(results[6]?.data || []);
-      const pendingSells = results[7]?.data || [];
+
+    try {
+      const [quotesData, positions, cash, orders, watchlistResp] = await Promise.all([
+        fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(sym)}`).catch(() => ({})),
+        fetchPortfolioJson('/api/portfolio/stock-positions').catch(() => []),
+        fetchPortfolioJson('/api/portfolio/cash').catch(() => null),
+        fetchPortfolioJson('/api/portfolio/orders?limit=200').catch(() => []),
+        watchlistApi.list().catch(() => ({ items: [] })),
+      ]);
+
+      // Quote / Metadata
+      const q = (quotesData || {})[sym] || null;
+      if (q && q.price != null) {
+        setPrice({
+          price: Number(q.price),
+          change_abs: q.change_abs != null ? Number(q.change_abs) : null,
+          change_pct: q.change_pct != null ? Number(q.change_pct) : null,
+          currency: q.currency || 'USD',
+          bid: q.bid != null ? Number(q.bid) : null,
+          ask: q.ask != null ? Number(q.ask) : null,
+          bid_size: q.bid_size != null ? Number(q.bid_size) : null,
+          ask_size: q.ask_size != null ? Number(q.ask_size) : null,
+        });
+      } else {
+        setPrice(null);
+      }
+      const currency = (q && q.currency) || 'USD';
+      setStock({ symbol: sym, name: sym, currency });
+
+      // Position (aktuelles Symbol)
+      const pos = (positions || []).find((p) => String(p.symbol || '').toUpperCase() === sym) || null;
+      setPosition(pos ? {
+        id: pos.id,
+        symbol: pos.symbol,
+        quantity: Number(pos.quantity || 0),
+        avg_cost: Number(pos.avg_cost || 0),
+        cost_basis: Number(pos.cost_basis || 0),
+      } : null);
+
+      // Cash / Buying Power
+      if (cash) {
+        setCashBalance(Number(cash.cash_balance || 0));
+        setCashAvailable(Number(cash.cash_available || 0));
+        setBuyingPower(Number(cash.buying_power ?? cash.cash_available ?? 0));
+      } else {
+        setCashBalance(0);
+        setCashAvailable(0);
+        setBuyingPower(0);
+      }
+
+      // Orders (symbol client-side gefiltert)
+      const symOrders = (orders || []).filter(
+        (o) => String(o.symbol || '').toUpperCase() === sym,
+      );
+      setSymbolOrders(symOrders);
+      const pendingSells = symOrders.filter(
+        (o) => (o.side || '').toLowerCase() === 'sell' && (o.status || '').toLowerCase() === 'pending',
+      );
       setPendingSellQty(pendingSells.reduce((s, o) => s + Number(o.quantity || 0), 0));
+
+      // Realized P&L — Backend liefert Feld aktuell nicht → UI zeigt es nicht.
+      setRealizedPnl(null);
+
+      // Watchlist
+      const wlItems = (watchlistResp && watchlistResp.items) || [];
+      setWatched(wlItems.some((w) => String(w.symbol || '').toUpperCase() === sym));
+    } catch (err) {
+      console.warn('loadMeta failed:', err);
     }
     setLoadingMeta(false);
   };
@@ -484,11 +541,27 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   }, [symbol]);
 
   const refreshPrice = async () => {
+    // Session 82.63 — Mongo-native Quote-Refresh via Read-Through Cache.
+    // Backend liefert `price_status ∈ fresh|stale|unavailable` (kein Fake-Fallback).
     try {
-      await supabase.functions.invoke('stock-prices', { body: { symbols: [symbol] } });
-      const { data } = await supabase.from('stock_prices_cache').select('*').eq('symbol', symbol).maybeSingle();
-      setPrice(data);
-      toast.success('Kurs aktualisiert');
+      const sym = String(symbol || '').toUpperCase();
+      const quotes = await fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(sym)}`);
+      const q = (quotes || {})[sym];
+      if (q && q.price != null) {
+        setPrice({
+          price: Number(q.price),
+          change_abs: q.change_abs != null ? Number(q.change_abs) : null,
+          change_pct: q.change_pct != null ? Number(q.change_pct) : null,
+          currency: q.currency || 'USD',
+          bid: q.bid != null ? Number(q.bid) : null,
+          ask: q.ask != null ? Number(q.ask) : null,
+          bid_size: q.bid_size != null ? Number(q.bid_size) : null,
+          ask_size: q.ask_size != null ? Number(q.ask_size) : null,
+        });
+        toast.success('Kurs aktualisiert');
+      } else {
+        toast.error('Kein aktueller Kurs verfügbar.');
+      }
     } catch (err) {
       toast.error('Kurs konnte nicht aktualisiert werden.');
     }
@@ -558,16 +631,21 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   };
 
   const reportInsufficientBuyingPower = (net, qty) => {
-    void logInsufficientBuyingPowerEvent(supabase, {
-      userId: user.id,
-      symbol,
-      stockName: stock?.name,
-      requiredAmount: net,
-      availableAmount: buyingPower,
-      quantity: qty,
-      orderType,
-      currency: price?.currency || stock?.currency || 'USD',
-    });
+    // Session 82.63 — Supabase entfernt. Legacy-Telemetrie (best-effort log via
+    // Supabase-Table `insufficient_buying_power_events`) hat kein Mongo-Äquivalent;
+    // wird als Console-Warnung erhalten (kein Financial-Effect, kein User-Impact).
+    try {
+      console.info('[insufficient_buying_power]', {
+        userId: user?.id,
+        symbol,
+        stockName: stock?.name,
+        requiredAmount: net,
+        availableAmount: buyingPower,
+        quantity: qty,
+        orderType,
+        currency: price?.currency || stock?.currency || 'USD',
+      });
+    } catch { /* noop */ }
   };
 
   const submitOrder = async (e) => {

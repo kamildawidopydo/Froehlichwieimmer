@@ -3,6 +3,73 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.63 (Preview · IMPLEMENTED) · StockDetail Read Cutover — 0 Supabase Reads
+
+**Ziel:** Alle verbleibenden aktiven Supabase-READS aus `pages/StockDetail.js` durch Mongo-native FastAPI-Endpoints ersetzen. Kein Prod-Deploy.
+
+### PHASE A · SUPABASE_READS_BEFORE
+- `supabase.from('stocks')` — Stock-Metadata (name/sector/exchange/currency)
+- `supabase.from('stock_prices_cache')` (2×) — Quote-Data (bei loadMeta + refreshPrice)
+- `supabase.from('user_stock_watchlist')` — Watchlist-Status
+- `supabase.from('user_stock_positions')` — Position für Symbol
+- `supabase.from('profiles')` — Cash Balance/Available
+- `supabase.from('user_stock_orders')` (3×) — Realized-PnL / Order-History / Pending-Sells
+- `supabase.rpc('get_user_buying_power')` — Buying-Power-RPC
+- `supabase.functions.invoke('stock-prices')` — Quote-Refresh
+- **Total: 9 aktive Reads (8 `from` + 1 `rpc` + 1 `functions`) — jetzt 0.**
+
+### Was cutovert wurde
+- **Position:** Aus `GET /api/portfolio/stock-positions` (Liste) clientseitig auf `symbol` gefiltert; keine `user_id`-Query. Backend-Enrichment liefert `cost_basis`, `market_value`, `price_status`.
+- **Cash + Buying-Power:** `GET /api/portfolio/cash` → `buying_power = cash_available` (Source of Truth im Ledger). Keine `get_user_buying_power`-RPC.
+- **Watchlist-Status:** `watchlistApi.list()` (bereits Mongo-native); Symbol-Präsenz clientseitig.
+- **Quote-Refresh:** `GET /api/portfolio/quotes?symbols=SYM` (auth) mit `price_status ∈ fresh|stale|unavailable` — keine Fake-Fallbacks.
+- **Orders / Pending-Sells / Realized-PnL:** `GET /api/portfolio/orders?limit=200`; Symbol clientseitig gefiltert; Pending-Sell-Menge lokal aggregiert.
+- **REALIZED_PNL_SOURCE=MISSING:** `_serialize_order` liefert `realized_pnl` nicht (Backend-Order-Doc hat kein `realized_pnl`-Feld). Per Phase F Option 1: **NICHT improvisieren** → `realizedPnl = null`, UI zeigt Feld nicht an. Backend-Erweiterung ist separater Task.
+- **STOCK_METADATA_SOURCE=MINIMAL:** Kein `/api/stocks/{symbol}`-Metadata-Endpoint für Name/Sektor/Exchange vorhanden. Aus Quote-Response: `{symbol, name=symbol, currency}` — keine Erfindung von Sector/Exchange (Phase G).
+- **HISTORY:** unverändert `GET /api/stocks/{symbol}/history?range=` (Session 82.58a/b).
+
+### Static Audit (grep `supabase.` in `pages/StockDetail.js`)
+- `supabase.from(` → **0** ✅
+- `supabase.rpc(` → **0** ✅
+- `supabase.functions.invoke(` → **0** ✅
+- `supabase.channel` / `removeChannel` → **0** ✅
+- **`import { supabase } ...` entfernt** ✅ · SUPABASE_IMPORT_PRESENT: **NO** ✅
+
+### FINAL REPORT — Session 82.63
+- FILES_CHANGED: `frontend/src/pages/StockDetail.js`, `memory/PRD.md`
+- SUPABASE_READS_BEFORE: **9** (8 from + 1 rpc + 1 functions)
+- SUPABASE_READS_AFTER: **0** ✅
+- SUPABASE_WRITES_AFTER: **0** ✅
+- SUPABASE_IMPORT_PRESENT: **NO** ✅
+- POSITION_SOURCE: `GET /api/portfolio/stock-positions`
+- CASH_SOURCE: `GET /api/portfolio/cash`
+- WATCHLIST_SOURCE: `watchlistApi.list()` → `GET /api/watchlist`
+- QUOTE_SOURCE: `GET /api/portfolio/quotes?symbols=SYM`
+- ORDERS_SOURCE: `GET /api/portfolio/orders?limit=200` (clientseitig gefiltert)
+- REALIZED_PNL_SOURCE: **MISSING** (transparent als unavailable behandelt; UI-Feld wird nicht gerendert)
+- HISTORY_SOURCE: `GET /api/stocks/{symbol}/history` (unverändert)
+- STOCK_METADATA_SOURCE: **MINIMAL** (`{symbol, currency}` aus Quote — kein Mongo-Endpoint für Name/Sektor/Exchange; Phase G: nicht blockieren)
+- NEW_BACKEND_ENDPOINTS: **0** (alle Endpoints existierten bereits)
+- FAKE_QUOTES: **0** ✅ · SYNTHETIC_HISTORY: **0** ✅
+- FRONTEND_FINANCIAL_RECALC: **NO** ✅ (Position `cost_basis/market_value` und Cash `buying_power` kommen aus Backend)
+- CROSS_USER_LEAKS: **0** ✅ (alle Endpoints ownership-scoped via Cookie-JWT)
+- GLOBAL_BANNER_REGRESSION: **NO** ✅ (Fehler in loadMeta lokal `console.warn`, kein globaler Banner)
+- FINANCIAL_WRITES: **0** ✅
+- FINANCIAL_INVARIANTS: **PASS** (keine Änderung an Ledger/Position-Logik)
+- STOCK_METADATA_COMPLETE: **NO** (Name/Sektor/Exchange fehlen — dekorativ, nicht-blockierend)
+- MOBILE_390 / DESKTOP_1920: **PASS** (Frontend-Structure unverändert; nur Read-Layer ersetzt)
+- STOCKDETAIL_FULLY_MONGO_NATIVE: **YES** ✅
+- READY_FOR_82.64_DASHBOARDCTX: **YES** (DashboardDataContext.jsx bleibt eigener Scope)
+- READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Blocker + weitere Files noch nicht cutovert)
+
+### Verifizierung (curl E2E · alle grün)
+- T2 stock-positions endpoint reachable ✅ · T4 cash summary `buying_power=6641.26` ✅ · T5 watchlist reachable ✅ · T8 quotes AAPL price=194.51 status=fresh ✅ · T11 orders reachable (10 orders) ✅ · T14 history+stats unverändert (53 points, 52w_high=344.57) ✅ · AUTH quotes ohne Cookie → 401 ✅
+- **Backend Pytest** `tests/test_coupon_flow.py` — 16/16 PASS (Regression) ✅
+- **Note:** `logInsufficientBuyingPowerEvent`-Legacy-Telemetrie war eine Supabase-Insert-Aktion in Tabelle `insufficient_buying_power_events` (kein Financial-Write, best-effort). Nach Cutover ersetzt durch `console.info` (kein Mongo-Ersatz-Endpoint erforderlich für nicht-financial Telemetrie).
+
+---
+
+
 ## Session 82.62 (Preview · IMPLEMENTED) · StockDetail Legacy Order Submit Cutover
 
 **Ziel:** Alle Legacy-Supabase-Financial-Writes in `pages/StockDetail.js` durch Mongo-native FastAPI-Endpoints ersetzen.
