@@ -433,7 +433,7 @@ const CompactWithTabs = ({ items }) => {
           return (
             <li key={it.slug}>
               <Link
-                to={`/nachrichten/${it.slug}`}
+                to={`/news/${it.slug}`}
                 className="group grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70 sm:grid-cols-[76px_1fr_auto]"
                 data-testid={`home-news-compact-${it.slug}`}
               >
@@ -515,7 +515,7 @@ const NewsMain = () => {
           </>
         ) : heroItem ? (
           <Link
-            to={`/nachrichten/${heroItem.slug}`}
+            to={`/news/${heroItem.slug}`}
             data-testid="home-news-top"
             className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70"
           >
@@ -596,7 +596,7 @@ const NewsMain = () => {
                 return (
                   <li key={it.slug}>
                     <Link
-                      to={`/nachrichten/${it.slug}`}
+                      to={`/news/${it.slug}`}
                       className="group flex items-start gap-4 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70"
                       data-testid={`home-news-secondary-${it.slug}`}
                     >
@@ -641,7 +641,7 @@ const NewsMain = () => {
             return (
               <Link
                 key={it.slug}
-                to={`/nachrichten/${it.slug}`}
+                to={`/news/${it.slug}`}
                 className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/70"
                 data-testid={`home-news-editorial-${it.slug}`}
               >

@@ -110,7 +110,7 @@ const EinordnungPage = () => {
           {post.related_news_slug && (
             <div className="mt-12 border border-bank-border bg-bank-cream/30 p-5">
               <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">Bezug zu einer aktuellen Nachricht</p>
-              <Link to={`/news/nachrichten/${post.related_news_slug}`} className="mt-2 inline-flex items-center gap-1.5 text-[14px] text-bank-primary hover:underline">
+              <Link to={`/news/${post.related_news_slug}`} className="mt-2 inline-flex items-center gap-1.5 text-[14px] text-bank-primary hover:underline">
                 Externe Meldung ansehen <ArrowUpRight size={13} strokeWidth={1.8} />
               </Link>
             </div>

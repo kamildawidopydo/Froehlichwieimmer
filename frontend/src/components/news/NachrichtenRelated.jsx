@@ -28,7 +28,7 @@ const RelatedCard = ({ article }) => {
   const showImage = !!article.image_url && !imgHidden;
   return (
     <Link
-      to={`/news/nachrichten/${encodeURIComponent(article.slug)}`}
+      to={`/news/${encodeURIComponent(article.slug)}`}
       data-testid={`related-news-card-${article.slug}`}
       className="group flex flex-col border border-bank-border bg-white transition-colors hover:border-bank-primary"
     >

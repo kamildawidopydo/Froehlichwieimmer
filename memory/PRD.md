@@ -3,6 +3,52 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.46 (Preview) · News-Detail-Route-Konsolidierung
+
+**Ziel:** Parallele News-Detailrouten auf **eine kanonische Route `/news/:slug`** vereinheitlichen (SEO-Duplicate-Content beseitigen, konsistente UX, ein Detail-Renderer).
+
+**Redirects (SPA, `<Navigate replace>` — keine Doppel-History-Einträge, keine Loops):**
+- `/nachrichten/:slug` → `/news/:slug`
+- `/news/nachrichten/:slug` → `/news/:slug`
+- Query-Parameter (`?utm=…`) & Hash (`#…`) bleiben beim Redirect erhalten (Location-Objekt mit `pathname/search/hash`)
+
+**Unverändert (nicht Scope):**
+- `/news/euronews/:slug` bleibt als eigene Provider-Route auf `NachrichtenDetailPage`
+- Übersichtsrouten `/nachrichten` und `/news/nachrichten` bleiben auf `NachrichtenPage`
+- Backend `/api/content/news/:slug` inkl. Provider-Fallback aus Session 82.45 nicht angefasst
+- Backend-API `/api/news/nachrichten/:slug` (Aggregator-Endpoint) bleibt bestehen
+
+**Interne Link-Umstellung (22 Referenzen, Detail-Slug):** `NewsletterPage.jsx`, `pages/news/EinordnungPage.jsx`, `pages/news/NachrichtenPage.jsx` (3×), `pages/admin/AdminNewsArticles.jsx`, `pages/themen/ThemenLandingLayout.jsx`, `pages/wissen/SicherInvestierenHub.jsx`, `components/stock/StockNews.jsx`, `components/news/NachrichtenRelated.jsx`, `components/investment/TopicWissenBlock.jsx`, `components/home/HomeFinanceNews.jsx` (3×), `components/home/HomeHeroNewsPreview.jsx` (4×), `components/home/HomeNewsPreview.jsx` (2×), `components/home/HomeNewsMarketShell.jsx` (4×) → alle auf `/news/${slug}` umgestellt.
+
+**Canonical / OG-URL:**
+- `PublicNewsDetailPage` (Ziel-Renderer) verwendet bereits `PageMeta path={/news/${slug}}` → Helmet emittiert `<link rel="canonical" href="#/news/:slug">` und `og:url` identisch (Verifikation live).
+- `NachrichtenDetailPage` (jetzt nur noch Euronews-Provider-Route) → Canonical auf `/news/euronews/${slug}` korrigiert (vorher fälschlich `/news/nachrichten/${slug}`).
+
+**Testmatrix (Preview verifiziert):**
+| Test | Ergebnis |
+|---|---|
+| `/nachrichten/test?utm=x#frag` → Redirect | → `/news/test?utm=x#frag` ✅ Query+Hash erhalten |
+| `/news/nachrichten/test?utm=y` → Redirect | → `/news/test?utm=y` ✅ |
+| Legacy-URL mit realem Slug (`dax-faellt-unter-26000-punkte…`) | Redirect → `PublicNewsDetailPage` rendert H1 & Content ✅ |
+| Kanonische Route `/news/:slug` (realer Slug) | 200 · H1 gerendert ✅ |
+| Unbekannter Slug `/news/definitely-nonexistent-slug-xyz` | Not-Found-State (kein Redirect-Loop) ✅ |
+| `/news/euronews/:slug` (unverändert) | Route weiterhin auf `NachrichtenDetailPage` ✅ |
+| Canonical-Head (Helmet) an `/news/:slug` | `#/news/:slug` ✅ (statisches `index.html`-Canonical bleibt Legacy-Domain-Default, aus Scope) |
+| `replace`-Semantik | ja — Back-Button springt nicht auf Legacy-URL zurück ✅ |
+| API-Endpunkte `/api/news/nachrichten/*` | unverändert, RSS-Fetch weiter grün ✅ |
+
+**Files Changed:**
+- `frontend/src/pages/news/LegacyNewsDetailRedirect.jsx` (NEW)
+- `frontend/src/App.js` (lazy-Import + zwei Legacy-Routes auf Redirect umgemappt)
+- `frontend/src/pages/news/NachrichtenDetailPage.jsx` (Canonical-Path)
+- 15 weitere UI-Komponenten & Pages mit internen `<Link to>`-Umstellungen (siehe oben)
+- `memory/PRD.md`
+
+**Constraints eingehalten:** Kein Prod-Deploy · Nur Preview · Keine Änderung an `/api/content/news/:slug` oder Provider-Fallback (82.45) · Keine Übersichtsrouten angefasst · `/news/euronews/:slug` unverändert · Keine Redirect-Loops · Query & Hash erhalten · Archive-Artikel funktionieren über Legacy-URL → Redirect → kanonische Detail weiterhin (Archiv-Bit via `PublicNewsDetailPage`/`useNewsArticle` unverändert).
+
+---
+
+
 ## Session 82.45 (Preview) · Nachrichten-Detail-Bugfix (Provider-Fallback)
 
 **Root Cause:** `/api/content/news/:slug` (Konsument: `PublicNewsDetailPage` an Route `/news/:slug` via `useNewsArticle` → `newsService.getArticleBySlug`) suchte ausschließlich in der Synthesis-Kollektion `news_articles` (+ retention-Archive). Artikel aus dem RSS-/News-Aggregator (die in der Übersicht `/api/news/nachrichten` erscheinen) lieferten 404 → Frontend zeigt „Diese Meldung ist nicht mehr verfügbar. Sie wurde möglicherweise aus dem aktuellen Nachrichten-Feed entfernt."

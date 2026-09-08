@@ -73,7 +73,7 @@ const MetaLine = ({ item, showRelative = false, className }) => {
 /* ── Center: dominante Top-Story mit editorialer Overlay-Box ─────────────── */
 const TopStory = ({ item }) => (
   <Link
-    to={`/nachrichten/${item.slug}`}
+    to={`/news/${item.slug}`}
     data-testid="hero-news-top"
     aria-label={item.title || 'Top-Story lesen'}
     className="group relative block overflow-hidden rounded-lg border border-bank-border bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
@@ -114,7 +114,7 @@ const LeftStory = ({ item }) => (
       Aktuelle Nachrichten
     </p>
     <Link
-      to={`/nachrichten/${item.slug}`}
+      to={`/news/${item.slug}`}
       data-testid="hero-news-left"
       aria-label={item.title || 'Meldung lesen'}
       className="group flex flex-1 flex-col rounded-md p-1 -mx-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
@@ -154,7 +154,7 @@ const CompactItem = ({ item, testId, onCategoryClick }) => {
   return (
     <div className="group relative flex min-h-[80px] gap-3 py-3">
       <Link
-        to={`/nachrichten/${item.slug}`}
+        to={`/news/${item.slug}`}
         data-testid={testId}
         aria-label={item.title || 'Meldung lesen'}
         className="absolute inset-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40"
@@ -418,7 +418,7 @@ const HomeHeroNewsPreview = () => {
             </p>
           </div>
           <Link
-            to={`/nachrichten/${toast.slug}`}
+            to={`/news/${toast.slug}`}
             data-testid="hero-news-fresh-toast-cta"
             onClick={() => {
               try {

@@ -51,7 +51,7 @@ const linkPropsFor = (item) => {
   if (item?.content_type === 'aggregated' && item?.source_url) {
     return { as: 'a', href: item.source_url, target: '_blank', rel: 'noopener noreferrer' };
   }
-  return { as: 'link', to: `/news/nachrichten/${item.slug}` };
+  return { as: 'link', to: `/news/${item.slug}` };
 };
 
 const SmartLink = ({ item, children, className, testId }) => {
@@ -369,7 +369,7 @@ const NachrichtenPage = () => {
               {topThree.map((it, i) => (
                 <Link
                   key={it.slug}
-                  to={`/nachrichten/${it.slug}`}
+                  to={`/news/${it.slug}`}
                   data-testid={`heute-wichtig-card-${i}`}
                   className="card-accent-top card-accent-top-petrol group flex flex-col border border-bank-border bg-white p-5 transition-shadow hover:shadow-editorial-sm"
                 >
@@ -474,7 +474,7 @@ const NachrichtenPage = () => {
                   {world.articles.map((it) => (
                     <Link
                       key={it.slug}
-                      to={`/nachrichten/${it.slug}`}
+                      to={`/news/${it.slug}`}
                       data-testid={`themenwelt-${world.id}-card-${it.slug}`}
                       className={`card-accent-top card-accent-top-${world.color} group flex flex-col border border-bank-border bg-white p-4 transition-shadow hover:shadow-editorial-sm`}
                     >

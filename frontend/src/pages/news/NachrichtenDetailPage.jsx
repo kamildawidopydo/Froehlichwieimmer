@@ -97,7 +97,7 @@ const NachrichtenDetailPage = () => {
       <PageMeta
         title={item?.title || 'Nachricht'}
         description={item?.summary || item?.subtitle || ''}
-        path={`/news/nachrichten/${slug}`}
+        path={`/news/euronews/${slug}`}
         noIndex={!!item?.is_demo}
       />
 

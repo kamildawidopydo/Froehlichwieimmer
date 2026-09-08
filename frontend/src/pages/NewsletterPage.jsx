@@ -158,7 +158,7 @@ const NewsletterPage = () => {
                             </p>
                           ) : null}
                           <Link
-                            to={`/nachrichten/${a.slug}`}
+                            to={`/news/${a.slug}`}
                             data-testid={`newsletter-history-link-${a.slug}`}
                             className="mt-0.5 block text-[14px] leading-snug text-bank-ink transition-colors hover:text-bank-primary"
                           >

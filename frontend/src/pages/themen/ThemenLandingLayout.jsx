@@ -133,7 +133,7 @@ const ThemenLandingLayout = ({
               {news.map((n) => (
                 <li key={n.slug} className="py-4">
                   <Link
-                    to={`/news/nachrichten/${n.slug}`}
+                    to={`/news/${n.slug}`}
                     data-testid={`themen-news-${n.slug}`}
                     className="group flex flex-col gap-1.5"
                   >

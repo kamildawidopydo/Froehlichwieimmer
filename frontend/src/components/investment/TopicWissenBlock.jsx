@@ -37,7 +37,7 @@ const NewsCard = ({ article, index, topicSlug }) => {
   };
   return (
     <Link
-      to={`/news/nachrichten/${encodeURIComponent(article.slug)}`}
+      to={`/news/${encodeURIComponent(article.slug)}`}
       onClick={handleClick}
       data-testid={`related-news-item-${article.slug}`}
       className="group flex h-full flex-col border border-bank-border bg-white transition-colors hover:border-bank-primary"

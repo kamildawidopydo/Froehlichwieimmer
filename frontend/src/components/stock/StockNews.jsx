@@ -58,7 +58,7 @@ export default function StockNews({ symbol }) {
           {articles.map((a) => (
             <li key={a.slug} className="py-6 first:pt-0 last:pb-0">
               <Link
-                to={`/nachrichten/${encodeURIComponent(a.slug)}`}
+                to={`/news/${encodeURIComponent(a.slug)}`}
                 className="group block outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-bank-surface rounded"
                 data-testid={`public-stock-news-item-${a.slug}`}
               >

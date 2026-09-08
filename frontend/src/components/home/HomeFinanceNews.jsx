@@ -158,7 +158,7 @@ const CategoryTag = ({ category, className }) => (
 // ---------------------------------------------------------------------------
 const FeaturedCard = ({ item }) => (
   <Link
-    to={`/nachrichten/${item.slug}`}
+    to={`/news/${item.slug}`}
     data-testid="home-finance-news-featured"
     className="group flex h-full flex-col border border-bank-border bg-white shadow-[0_1px_0_rgb(255_255_255/0.9)_inset,0_36px_100px_-56px_rgb(9_33_66/0.16)] transition-shadow hover:shadow-[0_1px_0_rgb(255_255_255/0.9)_inset,0_44px_120px_-56px_rgb(9_33_66/0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/30"
   >
@@ -205,7 +205,7 @@ const FeaturedCard = ({ item }) => (
 // ---------------------------------------------------------------------------
 const SecondaryTeaser = ({ item, testId }) => (
   <Link
-    to={`/nachrichten/${item.slug}`}
+    to={`/news/${item.slug}`}
     data-testid={testId}
     className="group flex gap-4 py-6 first:pt-0 last:pb-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/30 sm:gap-5"
   >
@@ -243,7 +243,7 @@ const SecondaryTeaser = ({ item, testId }) => (
 // ---------------------------------------------------------------------------
 const GridCard = ({ item, testId }) => (
   <Link
-    to={`/nachrichten/${item.slug}`}
+    to={`/news/${item.slug}`}
     data-testid={testId}
     className="group flex h-full flex-col border-b border-bank-border pb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/30"
   >

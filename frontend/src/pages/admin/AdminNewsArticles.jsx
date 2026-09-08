@@ -205,7 +205,7 @@ const AdminNewsArticles = () => {
                   </td>
                   <td className="px-4 py-3">
                     <Link
-                      to={`/news/nachrichten/${encodeURIComponent(it.slug)}`}
+                      to={`/news/${encodeURIComponent(it.slug)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-[12px] uppercase tracking-[0.14em] text-bank-primary hover:text-bank-primary/80"

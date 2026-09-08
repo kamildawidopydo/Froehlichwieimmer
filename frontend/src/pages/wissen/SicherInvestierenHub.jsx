@@ -362,7 +362,7 @@ export default function SicherInvestierenHub() {
             <ul className="mt-8 divide-y divide-bank-border border-y border-bank-border">
               {news.slice(0, 4).map((n) => (
                 <li key={n.slug} className="py-5">
-                  <Link to={`/nachrichten/${n.slug}`} className="group flex items-start justify-between gap-6">
+                  <Link to={`/news/${n.slug}`} className="group flex items-start justify-between gap-6">
                     <div className="min-w-0">
                       <p className="font-serif text-[17px] leading-snug text-bank-text group-hover:text-bank-primary">{n.title}</p>
                       {n.excerpt && <p className="mt-1 line-clamp-2 text-[13.5px] text-bank-text-muted">{n.excerpt}</p>}

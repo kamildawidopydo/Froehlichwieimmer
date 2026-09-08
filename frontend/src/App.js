@@ -76,6 +76,7 @@ const MeineAlarmePage = lazy(() => import('@/pages/MeineAlarmePage'));
 const NachrichtenPage = lazy(() => import('@/pages/news/NachrichtenPage'));
 const EuronewsArticlePage = lazy(() => import('@/pages/news/EuronewsArticlePage'));
 const NachrichtenDetailPage = lazy(() => import('@/pages/news/NachrichtenDetailPage'));
+const LegacyNewsDetailRedirect = lazy(() => import('@/pages/news/LegacyNewsDetailRedirect'));
 const EinordnungPage = lazy(() => import('@/pages/news/EinordnungPage'));
 const Login = lazy(() => import('@/pages/Login'));
 const Register = lazy(() => import('@/pages/Register'));
@@ -282,9 +283,10 @@ function App() {
                   <Route path="/news/watchlist" element={<WatchlistPage />} />
                   <Route path="/meine-alarme" element={<MeineAlarmePage />} />
                   <Route path="/news/nachrichten" element={<NachrichtenPage />} />
-                  <Route path="/news/nachrichten/:slug" element={<NachrichtenDetailPage />} />
+                  {/* Session 82.46 — Legacy-Detailrouten → Redirect auf kanonische /news/:slug */}
+                  <Route path="/news/nachrichten/:slug" element={<LegacyNewsDetailRedirect />} />
                   <Route path="/nachrichten" element={<NachrichtenPage />} />
-                  <Route path="/nachrichten/:slug" element={<NachrichtenDetailPage />} />
+                  <Route path="/nachrichten/:slug" element={<LegacyNewsDetailRedirect />} />
                   <Route path="/newsletter" element={<NewsletterPage />} />
                   <Route path="/news/euronews/:slug" element={<NachrichtenDetailPage />} />
                   <Route path="/news/einordnung/:slug" element={<EinordnungPage />} />
