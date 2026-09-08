@@ -186,3 +186,31 @@ async def reset_password(payload: ResetInput):
     await db.users.update_one({"_id": rec["user_id"]}, {"$set": {"password_hash": new_hash}})
     await db.password_reset_tokens.update_one({"_id": rec["_id"]}, {"$set": {"used": True}})
     return {"status": "ok"}
+
+
+# Session 82.68 — Mongo-native Passwort-Änderung mit Current-Password-Verifikation.
+from pydantic import BaseModel, Field  # noqa: E402
+
+
+class ChangePasswordInput(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=200)
+    new_password: str = Field(..., min_length=8, max_length=200)
+
+    model_config = {"extra": "forbid"}
+
+
+@router.post("/auth/change-password")
+async def change_password(payload: ChangePasswordInput, user: dict = Depends(get_current_user)):
+    doc = await db.users.find_one({"_id": ObjectId(user["id"])})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Benutzer nicht gefunden.")
+    if not verify_password(payload.current_password, doc["password_hash"]):
+        raise HTTPException(status_code=400, detail="Aktuelles Passwort ist falsch.")
+    if payload.current_password == payload.new_password:
+        raise HTTPException(status_code=400, detail="Neues Passwort muss sich vom aktuellen unterscheiden.")
+    new_hash = hash_password(payload.new_password)
+    await db.users.update_one(
+        {"_id": doc["_id"]},
+        {"$set": {"password_hash": new_hash, "last_password_reset_at": datetime.now(timezone.utc)}},
+    )
+    return {"status": "ok"}

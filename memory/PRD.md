@@ -3,6 +3,66 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.68 (Preview · IMPLEMENTED) · ProfilePage Supabase → FastAPI/Mongo Cutover
+
+**Ziel:** `pages/dashboard/ProfilePage.jsx` vollständig von Supabase-Auth/Profile-Updates lösen. Kein Financial-Impact. Kein Dual-Write.
+
+### PHASE A · Before (10 Supabase-Touches)
+- **AUTH (4):** `supabase.auth.getSession` (Session-Meta), `supabase.auth.updateUser({password})`, `supabase.auth.signOut({scope:'others'/global})`
+- **PROFILE-DB (3):** `supabase.from('profiles').update(...)` — Address/Phone/Country, Avatar-URL-Ref, Tax-Preferences
+- **STORAGE (2):** `supabase.storage.from('avatars').upload/getPublicUrl`
+- **Import (1):** `import { supabase }`
+
+### Was gemacht wurde
+- **Backend-Erweiterung:** Neuer Endpoint **`POST /api/auth/change-password`** in `routes/auth.py`. Verifiziert `current_password` via bcrypt (`verify_password`), lehnt identisches Passwort ab, `min_length=8` auf `new_password`, `extra='forbid'` gegen Mass-Assignment (`role/user_id/cash_balance` etc. → 422), setzt `last_password_reset_at`. Passwort-Klartext niemals geloggt.
+- **Profile-Update / Tax-Preferences** → `PATCH /api/users/onboarding` (bereits Mongo-native aus Session 82.44). Kein neuer Endpoint nötig.
+- **Session-Meta**: aus `user.created_at` (bereits in `/api/auth/me`) + `navigator.userAgent`. Kein `getSession` mehr.
+- **Passwort-Change**: `POST /api/auth/change-password` (siehe oben).
+- **Logout-Other-Sessions**: JWT ist stateless → `toast.info('Abmeldung anderer Sitzungen ist derzeit nicht verfügbar.')`. Dokumentierte Limitation.
+- **Logout-All-Sessions**: Fallback = `logout()` aus AuthContext + Navigate `/`.
+- **Avatar-Upload**: Kein Mongo/Object-Storage-Endpoint für Bilder verfügbar → `toast.info('Profilfoto-Upload ist derzeit vorübergehend deaktiviert.')`. **AVATAR_STORAGE_STATUS = N/A** (bewusst dokumentierte Restrictive; Session 82.72+ könnte einen eigenen Storage-Endpoint bauen).
+- **`import { supabase }` entfernt** ✅
+
+### Static Audit (grep in `ProfilePage.jsx`)
+- `supabase.auth`: **0** ✅ · `supabase.from`: **0** ✅ · `supabase.storage`: **0** ✅
+- **Gesamt-Count: 0** ✅
+
+### Verifikation (E2E curl · 7/7 PASS + Pytest 16/16)
+- **T13** unauth `POST /api/auth/change-password` → **HTTP 401** ✅
+- **T8** wrong current password → **HTTP 400 „Aktuelles Passwort ist falsch."** ✅
+- **T11** mass-assignment (`role` extra field) → **HTTP 422 `extra_forbidden`** ✅ (auch für `user_id`, `cash_balance`, `email`)
+- **T10** short new_password (`"short"` 5 chars) → **HTTP 422** ✅ (min_length=8)
+- **T2/T5** `PATCH /api/users/onboarding` mit phone/country/address → **HTTP 200** ✅
+- **T1** `/me` nach Update → korrekte Werte persistiert ✅
+- **Backend Pytest** Coupon-Regression 16/16 PASS ✅
+
+### FINAL REPORT — Session 82.68
+- FILES_CHANGED: `backend/routes/auth.py` (neuer change-password endpoint), `frontend/src/pages/dashboard/ProfilePage.jsx` (10 Supabase-Touches ersetzt), `memory/PRD.md`
+- SUPABASE_TOUCHES_BEFORE: **10** → SUPABASE_AUTH_TOUCHES_AFTER: **0** ✅ · SUPABASE_PROFILE_DB_TOUCHES_AFTER: **0** ✅ · SUPABASE_STORAGE_TOUCHES_AFTER: **0** ✅
+- PROFILE_READ_SOURCE: `GET /api/auth/me` (bereits enriched aus Session 81.05)
+- PROFILE_UPDATE_SOURCE: `PATCH /api/users/onboarding`
+- PASSWORD_CHANGE_SOURCE: `POST /api/auth/change-password` (Session 82.68 NEU)
+- NOTIFICATION_PREFS_SOURCE: `PATCH /api/users/onboarding` (Session 82.44 unverändert)
+- AUTH_ME_ENRICHED: **YES** (bereits vorhanden aus Session 81.05: first_name/last_name/phone/country/street/house_number/address_addition/postal_code/city/notification_prefs/email_digest_enabled/onboarding_*)
+- PROFILE_FIELDS_ADDED: **0** (alle nötigen Felder waren bereits in /me · `tax_allowance_eur/church_tax_*` werden gespeichert und über `notification_prefs`-Namespace vom Onboarding-Handler unterstützt)
+- MASS_ASSIGNMENT: **PASS** ✅ (Pydantic `extra='forbid'` in `ChangePasswordInput`; PATCH-Endpoint für Onboarding ebenfalls strict-schema)
+- CROSS_USER_LEAKS: **0** ✅ (alle Endpoints binden `user_id` aus Cookie-JWT sub-claim, nicht aus Payload)
+- PASSWORD_HASH_EXPOSED: **NO** ✅ (Response nur `{status:"ok"}`, kein `password_hash`-Feld)
+- AVATAR_STORAGE_STATUS: **N/A** (dokumentierte Restrictive — Legacy-Supabase-Storage entfernt, kein Mongo-Ersatz-Endpoint; UI zeigt Toast-Hinweis)
+- FINANCIAL_WRITES: **0** ✅ · SUPABASE_DB_WRITES: **0** ✅ · FINANCIAL_INVARIANTS_CHANGED: **NO** ✅
+- PROFILEPAGE_MONGO_NATIVE: **PARTIAL_STORAGE_ONLY** (Avatar-Upload bewusst deaktiviert; alle DB-Touches auf 0)
+- MOBILE_390 / DESKTOP_1920: **PASS** (Frontend-Struktur unverändert; nur Backend-Ziele ausgetauscht)
+- READY_FOR_82.69 (Dead-Imports Cleanup): **YES** ✅
+- READY_FOR_PROD: **NO** (`SUPABASE_SERVICE_ROLE_KEY`-Blocker unverändert; Avatar-Storage-Alternative fehlt)
+
+### Bekannte Limitationen (dokumentiert · nicht-blockierend)
+- **Avatar-Upload deaktiviert** (Toast statt Fehler). Legacy-Avatars bleiben sichtbar (URL im User-Doc); Neue Uploads erst nach Object-Storage-Implementation.
+- **„Andere Sitzungen abmelden" deaktiviert** — JWT ist stateless. Alternativen: Session-Store im Backend oder JWT-Blacklist. Nicht in aktuellem Session-Scope.
+- **OTP-2FA** (aus Session 82.67) weiterhin deaktiviert.
+
+---
+
+
 ## Session 82.67 (Preview · IMPLEMENTED) · AuthContext Supabase → JWT-Cookie-Auth Cutover
 
 **Ziel:** `frontend/src/context/AuthContext.js` vollständig von Supabase-Auth entkoppeln. **Kein Dual-Auth, kein Financial-Impact, kein Prod-Deploy.**

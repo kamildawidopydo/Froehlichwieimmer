@@ -18,7 +18,6 @@ import * as Sentry from '@sentry/react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import i18n, { APP_LANG_STORAGE_KEY } from '@/i18n';
@@ -177,21 +176,17 @@ const ProfilePage = () => {
   ]);
 
   useEffect(() => {
+    // Session 82.68 — JWT-Cookie-Session hat keinen per-Session-Store; Session-Meta
+    // wird aus /api/auth/me (created_at) + Browser-Kontext abgeleitet.
     let active = true;
     (async () => {
       try {
-        const { data } = await supabase.auth.getSession();
         if (!active) return;
-        const sess = data?.session || null;
-        setSessionMeta(
-          sess
-            ? {
-                createdAt: sess.user?.created_at || null,
-                expiresAt: sess.expires_at ? new Date(sess.expires_at * 1000).toISOString() : null,
-                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-              }
-            : null,
-        );
+        setSessionMeta({
+          createdAt: user?.created_at || null,
+          expiresAt: null,
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        });
       } finally {
         if (active) setSessionLoading(false);
       }
@@ -199,7 +194,7 @@ const ProfilePage = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user?.created_at]);
 
   const sectionTabs = useMemo(
     () => [
@@ -242,15 +237,18 @@ const ProfilePage = () => {
 
     setProfileSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      // Session 82.68 — Mongo-native Profile-Update via PATCH /api/users/onboarding.
+      const resp = await fetch('/api/users/onboarding', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           phone: nextPhone,
           country: profileForm.country,
           ...addressFormToDbPayload(profileForm),
-        })
-        .eq('id', user.id);
-      if (error) throw error;
+        }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       await refreshUser();
       toast.success('Profil gespeichert');
     } catch (err) {
@@ -275,22 +273,9 @@ const ProfilePage = () => {
     }
     setAvatarUploading(true);
     try {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const filePath = `${user.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true, contentType: file.type });
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      const avatarUrl = `${urlData.publicUrl}?v=${Date.now()}`;
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: avatarUrl })
-        .eq('id', user.id);
-      if (updateError) throw updateError;
-      await refreshUser();
-      toast.success('Profilfoto aktualisiert');
+      // Session 82.68 — Avatar-Upload aktuell nicht verfügbar (kein Mongo/Object-Storage-
+      // Endpoint für Bilder). Legacy-Supabase-Storage entfernt. UI zeigt klaren Hinweis.
+      toast.info('Profilfoto-Upload ist derzeit vorübergehend deaktiviert.');
     } catch (err) {
       Sentry.captureException(err);
       toast.error('Profilfoto konnte nicht gespeichert werden');
@@ -381,45 +366,42 @@ const ProfilePage = () => {
     }
     setPasswordSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: nextPassword });
-      if (error) throw error;
+      // Session 82.68 — Mongo-native Passwort-Change via /api/auth/change-password
+      // (verifiziert current_password serverseitig, bcrypt-Hash, kein Klartext-Log).
+      const resp = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: currentPassword, new_password: nextPassword }),
+      });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body?.detail || `HTTP ${resp.status}`);
+      }
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       toast.success('Passwort wurde aktualisiert.');
     } catch (err) {
       Sentry.captureException(err);
-      toast.error('Passwort konnte nicht aktualisiert werden.');
+      toast.error(err?.message || 'Passwort konnte nicht aktualisiert werden.');
     } finally {
       setPasswordSaving(false);
     }
   };
 
   const logoutOtherSessions = async () => {
-    setSessionActionLoading(true);
-    try {
-      const { error } = await supabase.auth.signOut({ scope: 'others' });
-      if (error) throw error;
-      toast.success(
-        t('settings.security.logoutOthersDone', { defaultValue: 'Andere Sitzungen wurden abgemeldet.' }),
-      );
-    } catch (err) {
-      Sentry.captureException(err);
-      toast.error('Andere Sitzungen konnten nicht beendet werden.');
-    } finally {
-      setSessionActionLoading(false);
-    }
+    // Session 82.68 — JWT-Auth ist stateless; per-Session-Revocation nicht unterstützt.
+    toast.info('Abmeldung anderer Sitzungen ist derzeit nicht verfügbar.');
   };
 
   const logoutAllSessions = async () => {
+    // Session 82.68 — Fallback: aktuelle Session beenden.
     setSessionActionLoading(true);
     try {
-      await supabase.auth.signOut({ scope: 'global' });
-      toast.success(
-        t('settings.security.logoutAllDone', { defaultValue: 'Auf allen Geräten abgemeldet.' }),
-      );
+      await logout();
       navigate('/');
     } catch (err) {
       Sentry.captureException(err);
-      toast.error('Abmeldung auf allen Geräten fehlgeschlagen.');
+      toast.error('Abmeldung fehlgeschlagen.');
     } finally {
       setSessionActionLoading(false);
     }
@@ -448,17 +430,20 @@ const ProfilePage = () => {
     }
     setTaxSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      // Session 82.68 — Mongo-native Steuer-Präferenzen via PATCH /api/users/onboarding.
+      const resp = await fetch('/api/users/onboarding', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           tax_allowance_eur: allowance,
           tax_allowance_used_eur: allowanceUsed,
           church_tax_enabled: !!taxForm.church_tax_enabled,
           church_tax_rate: rate,
           tax_residency_country: taxForm.tax_residency_country || null,
-        })
-        .eq('id', user.id);
-      if (error) throw error;
+        }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       await refreshUser();
       toast.success('Steuer-Einstellungen gespeichert');
     } catch (err) {
