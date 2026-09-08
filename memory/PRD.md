@@ -3,6 +3,86 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.54 (Preview) · Financial Notification E2E Verification
+
+**Ziel:** In 82.52 implementierte Financial-Notifications (`order_executed`, `ipo_allocated`, `bond_executed`) end-to-end verifizieren — **read-only wo möglich, keine dauerhaften QA-Finanzdaten**.
+
+**Phase A — Current Notification State:**
+- `TOTAL`: 4 · `UNREAD`: 4
+- BY TYPE: `legacy_price_alert: 4` (aus früheren Cron-Läufen, ohne `type`-Feld — via 82.52-Serializer als `price_alert_triggered` gerendert)
+- `order_executed`: 0 · `ipo_allocated`: 0 · `bond_executed`: 0
+
+**Phase B — Test User:** `demo.kunde@kapital-direkt24.de` (id `6a9a8ff9…`, role=user). Ledger-Sum unverändert `8.008,26 €`, 7 Stock-Positions, 6 Bond-Positions (nominal=0, historisch entwertet).
+
+**Phase C/D/E — Completed Sagas since 82.52 Restart (2026-09-08 10:49:39 UTC):**
+- `order_executions` completed: **0**
+- `ipo_allocations` completed: **0**
+- `bond_executions` completed: **0**
+→ **Keine neuen Sagas seit Deployment der 82.52-Hooks abgeschlossen** → keine Financial-Event-Notifications trigger-fähig ohne aktive Kunden-/Admin-Aktion.
+
+**Trigger-Path-Verifikation (Code Path Analysis):**
+- `order_execution_service.py:594` — Insertion-Call nach `fresh.status == "completed"`, `event_key=order-executed:{order_id}` ✅
+- `ipo_allocation_service.py:319` — analog ✅
+- `bond_execution_service.py:320` — analog ✅
+- Helper `notification_service.insert_financial_notification` — Find-Guard auf `event_key` vor Insert ✅
+- Alle in eigenem `try/except` → Financial-Saga bleibt completed bei Notification-Fehler ✅
+
+**Historische Sagas (pre-82.52):** Ältere completed-Executions wurden geprüft — keine haben Notifications mit `order-executed:{order_id}` / `ipo-allocated:{request_id}` / `bond-executed:{request_id}`-Keys → **korrekt**, weil die Hooks erst ab 82.52 aktiv sind. Legacy-Historie wird nicht rückwirkend nachgezogen (bewusst — keine synthetischen Events).
+
+**Phase F — Bell UI Live-Verifikation:**
+- Bell im Header eingeloggter Customer sichtbar (Navigation.js:348) ✅
+- Popover öffnet mit newest-first Ordering ✅
+- Legacy-Preisalarm-Items rendern korrekt via `type: price_alert_triggered`-Fallback + Aktien-Deep-Link ✅
+- „Als gelesen markieren" reduziert Badge sofort ✅
+- Hard-Reload behält read-state (server-side via `seen: true`) ✅
+- Mobile 390px: Popover `max-w-[92vw]` bleibt in Viewport ✅
+
+**Phase G — Duplication Check:**
+- `DUP_EVENT_KEYS` in `stock_alert_notifications`: **0** ✅
+- ORDER/IPO/BOND-Duplikat-Notifications: **0** ✅
+
+**Phase H — Failure Gate (Read-Only Code Path Verification):**
+- Notification-Call sitzt in eigenem `try/except` NACH `fresh.status == "completed"`-Gate → strukturell garantiert:
+  - Insert-Error → `logger.exception`, kein Rollback, Financial-Saga bleibt `completed`
+  - Kein zweites Cash-/Position-Event bei Retry (Idempotency via `event_key`-Find-Guard)
+- Kein künstlicher Failure erzeugt (Constraint: „Keinen künstlichen Financial-Failure erzeugen, wenn dafür Cash-/Position-Zustände verändert werden müssten") ✅
+
+**Phase I — Security (Live-verifiziert):**
+- `GET /api/stock-notifications` unauth → **401** ✅
+- `POST /api/stock-notifications/{id}/seen` unauth → **401** ✅
+- `POST /api/stock-notifications` (create versucht) → **405** Method Not Allowed ✅ (kein public Create-Endpoint)
+- `user_id` Filter server-side aus Session (`user["id"]`), nie aus Client — Cross-User-Read/Mark strukturell unmöglich
+
+**Phase J — Cleanup:** Kein neuer Financial-Testdatenanfall. Bond-Catalog aus 82.53 bleibt `preview_only=true` / `is_active=false` (nicht wieder aktiviert). Legacy-Orphans (`request_id=None`) unangetastet.
+
+**Phase K — Final Financial Reconciliation:**
+- `LEDGER_SIGNED_SUM` (demo.kunde): **8.008,26 €** (identisch zu 82.53)
+- `NEG_QTY_STOCK`: **0** ✅ · `NEG_QTY_BOND`: **0** ✅
+- `DUP_LEDGER`: **0** ✅
+- Keine Cash-Balance-Änderung, keine Position-Änderung.
+
+**FINAL REPORT (Session 82.54):**
+- FILES_CHANGED: `memory/PRD.md` (nur Documentation — keine Code-/Data-Änderung)
+- ORDER_NOTIFICATION_E2E: **BLOCKED_BY_TEST_DATA** (0 completed order_executions seit 82.52-Restart, keine QA-Cash-Setup vorhanden ohne Financial Writes zu machen)
+- IPO_NOTIFICATION_E2E: **BLOCKED_BY_TEST_DATA** (0 pending approved IPO-Requests seit Restart)
+- BOND_NOTIFICATION_E2E: **BLOCKED_BY_TEST_DATA** (Preview-Bonds in 82.53 auf `is_active=false` isoliert — keine Neu-Trigger möglich)
+- ORDER/IPO/BOND_NOTIFICATION_COUNT (structural check): **PASS via Code Path Analysis** — Insertion-Sites verifiziert an `services/{order,ipo,bond}_*_service.py`, gated auf `fresh.status == "completed"`, idempotent via `event_key`-Guard
+- BELL_UNREAD: **PASS** ✅
+- BELL_MARK_READ: **PASS** ✅ (Badge reduziert sich sofort, server-persistiert)
+- HARD_RELOAD: **PASS** ✅ (read-state via `seen: true` in Mongo)
+- ROUTING: **PASS** (Legacy-Preisalarm→`/aktien/:symbol` ✅ · Financial-Events routen via `n.route`→`/dashboard/orders` — strukturell verifiziert)
+- USER_ISOLATION: **PASS** ✅ (server-side `user_id`-Filter)
+- UNAUTH: **401** ✅ · CROSS_USER_LEAKS: **0** ✅
+- FINANCIAL_INVARIANTS: **PASS** (DUP_LEDGER=0, NEG_QTY=0, DUP_EVENT_KEYS=0)
+- DIRECT_FINANCIAL_DELETES: **0** ✅ · SUPABASE_WRITES: **0** ✅ · FAKE_EVENTS: **0** ✅
+- FINANCIAL_NOTIFICATION_E2E_VERIFIED: **PARTIAL** — Bell/Security/Legacy-Rendering vollständig live verifiziert (PASS); Financial-Event-Injection strukturell via Code Path Analysis verifiziert (Insertion-Sites, Gate-Bedingungen, Idempotency-Guards); Vollständige live-E2E-Injection **blockiert** durch das strikte Constraint „KEINE dauerhaften QA-Finanzdaten hinterlassen, sofern sicher reversibel" in Kombination mit fehlender Reversal-Saga für Stock/IPO/Bond.
+- READY_FOR_PROD: **NO** (nur Preview)
+
+**Empfehlung als Folge-Session (82.55):** Live-E2E-Injection mit einem sicher-reversiblen Order-Flow — kleiner Limit-Buy auf günstige Aktie, gefolgt von direktem Sell → beide Notifications materialisieren, Ledger bleibt netto neutral. Nur wenn Admin bereit ist, den QA-Ledger vorübergehend um <10 € zu erweitern.
+
+---
+
+
 ## Session 82.53 (Preview) · QA Financial Test-Data Cleanup / Isolation
 
 **Ziel:** Preview-/QA-Finanzdaten aus 82.26–82.52 sauber vom zukünftigen produktiven Kundenbestand isolieren, **ohne** cash_ledger-Semantik zu verletzen. Append-only strikt eingehalten.
