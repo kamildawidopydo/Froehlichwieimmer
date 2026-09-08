@@ -96,14 +96,68 @@ async def _fetch_provider_batch(symbols: list[str]) -> dict[str, dict]:
     missing = [s for s in symbols if not items.get(s) or items.get(s, {}).get("price") in (None, 0)]
     if missing:
         import asyncio as _asyncio
+        import os as _os
 
-        # Session 82.82b — für XETRA-Kürzel (MUV2, BAS, BMW …) muss dasselbe
-        # yfinance-Mapping angewandt werden wie in stock_public.py, sonst
-        # antwortet yfinance mit leerem fast_info.
+        # Session 82.83b — Primärer Realtime-Provider: Twelve Data (Free-Tier,
+        # stabiler als yfinance, bessere Rate-Limits). yfinance bleibt als
+        # Fallback für Symbole, die TD nicht kennt.
         try:
             from routes.stock_public import ALLOWED as _ALLOWED  # type: ignore
         except Exception:
             _ALLOWED = {}
+
+        td_key = _os.environ.get("TWELVEDATA_API_KEY")
+
+        def _td_batch(syms: list[str]) -> dict[str, dict]:
+            """Twelve Data /quote batch. Strippt `.DE`/`.ST` etc. — TD nutzt
+            Auto-Exchange-Detection über primäres Listing."""
+            out: dict[str, dict] = {}
+            if not td_key or not syms:
+                return out
+            try:
+                import requests  # type: ignore
+            except Exception:
+                return out
+            # Map originales Symbol → TD-Symbol (nur bereinigen, nichts erfinden)
+            td_map: dict[str, str] = {}
+            for s in syms:
+                base = s.split(".")[0] if "." in s else s
+                td_map[s] = base
+            csv = ",".join({td_map[s] for s in syms})
+            try:
+                r = requests.get(
+                    "https://api.twelvedata.com/quote",
+                    params={"symbol": csv, "apikey": td_key},
+                    timeout=6,
+                )
+                data = r.json() if r.ok else {}
+            except Exception:
+                return out
+            if not isinstance(data, dict):
+                return out
+            # TD packt Single-Symbol als Top-Level-Dict, Multi als Dict[sym→dict]
+            if data.get("symbol") and data.get("close"):
+                data = {data["symbol"]: data}
+            for orig, td_sym in td_map.items():
+                row = data.get(td_sym)
+                if not isinstance(row, dict) or row.get("status") == "error":
+                    continue
+                try:
+                    price = float(row.get("close") or row.get("open") or 0)
+                except (TypeError, ValueError):
+                    price = 0
+                if price <= 0:
+                    continue
+                out[orig] = {
+                    "symbol": orig,
+                    "price": price,
+                    "currency": row.get("currency") or "EUR",
+                    "change": float(row["change"]) if row.get("change") not in (None, "") else None,
+                    "change_percent": float(row["percent_change"]) if row.get("percent_change") not in (None, "") else None,
+                    "last_updated": None,
+                    "data_source": "twelvedata",
+                }
+            return out
 
         def _yf_batch(syms: list[str]) -> dict[str, dict]:
             out: dict[str, dict] = {}
@@ -136,9 +190,15 @@ async def _fetch_provider_batch(symbols: list[str]) -> dict[str, dict]:
                     continue
             return out
 
-        yf_items = await _asyncio.to_thread(_yf_batch, missing)
-        for s, row in yf_items.items():
+        # 1) Primär: Twelve Data (Realtime-Token) 2) Fallback: yfinance
+        td_items = await _asyncio.to_thread(_td_batch, missing)
+        for s, row in td_items.items():
             items[s] = row
+        still_missing = [s for s in missing if s not in td_items]
+        if still_missing:
+            yf_items = await _asyncio.to_thread(_yf_batch, still_missing)
+            for s, row in yf_items.items():
+                items[s] = row
     return items
 
 

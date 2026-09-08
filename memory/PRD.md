@@ -3,6 +3,33 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.83b (Preview · IMPLEMENTED) · Twelve Data als Realtime-Provider integriert
+
+**Owner-Token:** Twelve Data Free-Tier API-Key `d17efde84f4845e08d8a4dc4711b410a` (800 calls/Tag, 8 calls/min · aus `twelvedata.com/account/api-keys`). Persistiert in `backend/.env` als `TWELVEDATA_API_KEY`.
+
+### Änderung (1 Datei · surgical)
+- `backend/services/stock_price_service.py::_fetch_provider_batch`:
+  - **Twelve Data als primärer Fallback** über `https://api.twelvedata.com/quote?symbol=CSV` (Batch pro Request → 1 Call für alle missing Symbols · Rate-Limit-freundlich · 6 s Timeout)
+  - Suffix-Stripping (`BOL.ST` → `BOL` · `IFX.DE` → `IFX`) — TD nutzt Auto-Exchange-Detection über primäres Listing, keine erfundenen Mappings
+  - **yfinance bleibt als Zweit-Fallback** für Symbole, die TD nicht kennt oder als error zurückgibt
+  - Kein Fake: TD-Fehler oder `price<=0` → nicht cached, kein Response · `price_status="unavailable"` legitim
+- Frontend unverändert (5 s Poll aus 82.83 wirkt weiter)
+
+### Coverage & Regression
+- 29-Symbol-Universe live getestet nach TD-Integration
+- Provider-Reihenfolge pro Symbol: `news.market_quotes → Twelve Data → yfinance`
+- Regression **21/21 PASS** (Coupon 16 + Realized-PnL 5) ✅
+- 0 Financial-Writes · 0 Fake-Preise · Kein Backend-Logik-Change außer Provider-Chain
+
+### FINAL REPORT
+- FILES_CHANGED: `backend/.env` (+`TWELVEDATA_API_KEY`), `backend/services/stock_price_service.py` (+TD-Batch-Provider), `memory/PRD.md`
+- PROVIDER_CHAIN: **market_quotes → Twelve Data → yfinance** (echte Antworten only)
+- TD_FREE_TIER_LIMIT: 800 calls/Tag · 8 calls/min · Batch von 8 Symbolen = 1 Call ⇒ bei 5-s-Poll auf 8 Symbolen: **17 280 Calls/Tag** → **Free-Tier reicht NUR mit Poll-Backoff** (siehe Next Actions)
+- READY_FOR_PROD: **NO** (Deploy-Blocker unverändert)
+
+---
+
+
 ## Session 82.83 (Preview · IMPLEMENTED) · Depot Realtime-Polling (5 s)
 
 **User-Wunsch:** Depot-Kurse (Aktien) alle 5 Sekunden aktualisieren. Kein neuer Provider/Token — bestehendes yfinance-Backend wiederverwendet.
