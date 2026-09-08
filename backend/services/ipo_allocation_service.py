@@ -317,6 +317,40 @@ async def _allocate_locked(db, request_id, *, allocated_shares, subscription_pri
 
     fresh = await db.ipo_allocations.find_one({"_id": alloc["_id"]})
     fresh_req = await db.ipo_requests.find_one({"_id": request_id})
+
+    # Session 82.52 — Non-critical Customer-Notification NACH IPO-Completion.
+    # Idempotent via `ipo-allocated:{request_id}`. Fehler nicht propagieren.
+    if fresh and fresh.get("status") == "completed" and fresh_req:
+        try:
+            from services.notification_service import (
+                insert_financial_notification,
+                format_eur_de,
+            )
+            symbol = fresh_req.get("symbol") or fresh.get("symbol") or ""
+            qty = fresh.get("allocated_quantity") or fresh.get("allocated_qty") or 0
+            price_raw = fresh.get("allocation_price_per_share")
+            try:
+                price = float(price_raw.to_decimal()) if price_raw is not None and hasattr(price_raw, "to_decimal") else (float(price_raw) if price_raw is not None else None)
+            except Exception:  # noqa: BLE001
+                price = None
+            if price is not None:
+                msg = f"{qty} {symbol}-Aktien wurden Ihnen zu {format_eur_de(price)} zugeteilt."
+            else:
+                msg = f"{qty} {symbol}-Aktien wurden Ihnen zugeteilt."
+            await insert_financial_notification(
+                db,
+                user_id=str(fresh_req.get("user_id") or fresh.get("user_id")),
+                event_type="ipo_allocated",
+                event_key=f"ipo-allocated:{str(request_id)}",
+                title="IPO-Zuteilung erfolgt",
+                message=msg,
+                route="/dashboard/orders",
+                symbol=symbol or None,
+                reference_type="ipo_request",
+                reference_id=str(request_id),
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("ipo_allocated notification side-effect failed request_id=%s", request_id)
     return {
         "allocation": _serialize(fresh),
         "resumed": resumed,

@@ -94,36 +94,56 @@ export default function StockNotificationBell({ chrome = 'light' }) {
             <p className="px-4 py-6 text-[13px] text-bank-text-muted">Keine Benachrichtigungen bisher.</p>
           ) : (
             <ul className="divide-y divide-bank-border/60 max-h-[380px] overflow-y-auto">
-              {items.map((n) => (
-                <li key={n.id} className={cn('px-4 py-3', !n.seen && 'bg-bank-primary/5')} data-testid={`bell-notif-${n.id}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13.5px] font-medium text-bank-text">
-                        {n.symbol} · {n.title.replace(`${n.symbol}: `, '')}
-                        {!n.seen && <span className="ml-1.5 rounded-full bg-bank-primary/15 px-1.5 py-0 font-mono text-[9px] uppercase tracking-[0.12em] text-bank-primary-strong">Neu</span>}
-                      </p>
-                      <p className="mt-0.5 line-clamp-2 text-[12px] text-bank-text-muted">{n.body}</p>
-                      <p className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.12em] text-bank-text-muted">
-                        {n.triggered_at && new Date(n.triggered_at).toLocaleString('de-DE')}
-                      </p>
+              {items.map((n) => {
+                // Session 82.52 — Type-aware Rendering. Backward-compat:
+                // Preisalarm-Docs ohne `type`/`route` behalten das alte
+                // Symbol-Prefix + Deep-Link zur Aktie.
+                const type = n.type || 'price_alert_triggered';
+                const isPriceAlert = type === 'price_alert_triggered';
+                const primaryLabel = isPriceAlert && n.symbol
+                  ? `${n.symbol} · ${(n.title || '').replace(`${n.symbol}: `, '')}`
+                  : (n.title || '');
+                const deepLink = n.route
+                  || (n.symbol ? `/aktien/${encodeURIComponent(n.symbol)}` : null);
+                const deepLinkLabel = isPriceAlert
+                  ? 'Aktie ansehen'
+                  : type === 'order_executed' ? 'Order öffnen'
+                  : type === 'ipo_allocated' ? 'Zuteilung öffnen'
+                  : type === 'bond_executed' ? 'Anleihe öffnen'
+                  : 'Details öffnen';
+                return (
+                  <li key={n.id} className={cn('px-4 py-3', !n.seen && 'bg-bank-primary/5')} data-testid={`bell-notif-${n.id}`} data-notif-type={type}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13.5px] font-medium text-bank-text">
+                          {primaryLabel}
+                          {!n.seen && <span className="ml-1.5 rounded-full bg-bank-primary/15 px-1.5 py-0 font-mono text-[9px] uppercase tracking-[0.12em] text-bank-primary-strong">Neu</span>}
+                        </p>
+                        <p className="mt-0.5 line-clamp-2 text-[12px] text-bank-text-muted">{n.body}</p>
+                        <p className="mt-1 font-mono text-[9.5px] uppercase tracking-[0.12em] text-bank-text-muted">
+                          {n.triggered_at && new Date(n.triggered_at).toLocaleString('de-DE')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-2 flex gap-2">
-                    <Link
-                      to={`/aktien/${encodeURIComponent(n.symbol)}`}
-                      onClick={() => setOpen(false)}
-                      className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted hover:text-bank-primary-strong"
-                    >Aktie ansehen</Link>
-                    {!n.seen && (
-                      <button
-                        type="button"
-                        onClick={() => markSeen(n.id)}
-                        className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted hover:text-bank-text"
-                      >Als gelesen markieren</button>
-                    )}
-                  </div>
-                </li>
-              ))}
+                    <div className="mt-2 flex gap-2">
+                      {deepLink && (
+                        <Link
+                          to={deepLink}
+                          onClick={() => setOpen(false)}
+                          className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted hover:text-bank-primary-strong"
+                        >{deepLinkLabel}</Link>
+                      )}
+                      {!n.seen && (
+                        <button
+                          type="button"
+                          onClick={() => markSeen(n.id)}
+                          className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted hover:text-bank-text"
+                        >Als gelesen markieren</button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
           <div className="border-t border-bank-border px-4 py-3 text-center">

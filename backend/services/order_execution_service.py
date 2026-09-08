@@ -594,6 +594,36 @@ async def _execute_order_locked(
 
     fresh = await db.order_executions.find_one({"_id": exec_doc["_id"]})
     fresh_order = await db.stock_orders.find_one({"_id": order_id})
+
+    # Session 82.52 — Non-critical Customer-Notification NACH Financial-Completion.
+    # Idempotent via `order-executed:{order_id}`. Fehler werden geloggt und nicht
+    # propagiert — Financial-Saga bleibt in jedem Fall `completed`.
+    if fresh and fresh.get("status") == "completed" and fresh_order:
+        try:
+            from services.notification_service import (
+                insert_financial_notification,
+                format_eur_de,
+            )
+            symbol = fresh_order.get("symbol") or ""
+            qty = fresh_order.get("executed_quantity") or 0
+            price = _decimal_from_bson(fresh_order.get("executed_price"))
+            side = (fresh_order.get("side") or "buy").lower()
+            action = "gekauft" if side == "buy" else "verkauft"
+            msg = f"{qty} {symbol} wurden zu {format_eur_de(price)} {action}." if price is not None else f"{qty} {symbol} wurden ausgeführt."
+            await insert_financial_notification(
+                db,
+                user_id=str(fresh_order.get("user_id") or fresh.get("user_id")),
+                event_type="order_executed",
+                event_key=f"order-executed:{str(order_id)}",
+                title="Order ausgeführt",
+                message=msg,
+                route="/dashboard/orders",
+                symbol=symbol or None,
+                reference_type="stock_order",
+                reference_id=str(order_id),
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("order_executed notification side-effect failed order_id=%s", order_id)
     return {
         "execution": _serialize_execution(fresh),
         "resumed": resumed,

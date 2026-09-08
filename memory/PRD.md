@@ -3,6 +3,80 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.52 (Preview) · Financial Event Notifications (order_executed / ipo_allocated / bond_executed)
+
+**Ziel:** Bestehende Bell (`stock_alert_notifications`) um echte Financial-Events erweitern, ohne Financial-Saga-Semantik zu verändern.
+
+**Phase A Audit:** Bestehende Insertions in Sagas gefunden bei:
+- `order_execution_service.py:592` — `exec_doc["status"] = "completed"`
+- `ipo_allocation_service.py:315` — `alloc["status"] = "completed"`
+- `bond_execution_service.py:316` — `exec_doc["status"] = "completed"`
+
+**Phase B/C Non-Critical Side Effect nach Financial-Completion:**
+Neue Datei `backend/services/notification_service.py` mit `insert_financial_notification(db, *, user_id, event_type, event_key, title, message, route, ...)`. Insert-Fehler werden **nur geloggt** — Financial-Saga bleibt in jedem Fall `completed` (Phase D erfüllt).
+
+Insertion-Calls direkt NACH dem Completion-State (statt vor `return`), gate'd via `fresh.get("status") == "completed"` — 100% Guarantee dass Notification nur bei tatsächlicher finanzieller Vollendung ausgelöst wird.
+
+**Phase E Idempotency:** Deterministische `event_key` mit Dedupe-Guard (`find_one({"event_key": ...})` vor Insert):
+- `order-executed:{order_id}`
+- `ipo-allocated:{request_id}`
+- `bond-executed:{request_id}`
+
+Retry derselben Saga, paralleler Execution, Admin-Retry → immer nur **1** Notification.
+
+**Phase F Real Content (aus echten Persisted Values):**
+- Order: `"{qty} {symbol} wurden zu {price} € {gekauft|verkauft}."`
+- IPO: `"{qty} {symbol}-Aktien wurden Ihnen zu {price} € zugeteilt."`
+- Bond: `"Ihre Anleihe {isin} wurde zu {price_pct} % ausgeführt."`
+
+**Phase G Routing:** Alle 3 Financial Types → `/dashboard/orders` (bestehende kanonische Orders-Route). Price-Alerts bleiben auf `/aktien/:symbol`.
+
+**Phase H API Serializer (`server.py:3884`):** Additiv erweitert um `type`, `route`, `isin`, `reference_type`, `reference_id`. **Backward-compat**: alte Docs ohne `type` bekommen impliziten Default `price_alert_triggered`; Frontend rendert sie weiterhin über `symbol`/`title`/`body` mit Deep-Link zur Aktie.
+
+**Phase I Bell UI (`StockNotificationBell.jsx`):** Type-aware Rendering — für Preisalarme bleibt `{symbol} · {title}` und Aktien-Deep-Link. Für Financial-Events: reiner `title`, dynamisches Label (`Order öffnen` / `Zuteilung öffnen` / `Anleihe öffnen`), Deep-Link aus `n.route`. Unread-Count über alle Types gemeinsam (Backend liefert einen `unseen_count`). Newest-First unverändert.
+
+**Phase M/D Notification Failure Isolation:** Alle 3 Insertion-Sites in `try/except` (getrennt vom Financial-Try). Bei Notification-Fehler: `logger.exception(...)`, Saga läuft weiter zu `return`, State bleibt `completed`, Cash/Position/Ledger unangetastet.
+
+**Phase N Security:**
+- `user_id` immer aus persisted saga-doc (`fresh_order.user_id` / `fresh_req.user_id`) — nie aus Client-Payload.
+- GET `/api/stock-notifications` unauth → **401** ✅ verifiziert
+- Client kann keine Notification erzeugen — kein POST-create-Endpoint (nur `/seen`)
+
+**Phase O NON-CRITICAL:** `/api/stock-notifications` 500 → Bell fängt lokal (Zeile 31 `catch`) → kein globaler Dashboard-Banner. 82.35-Semantik unverändert.
+
+**Files Changed:**
+- `backend/services/notification_service.py` (NEW — 90 Zeilen)
+- `backend/services/order_execution_service.py` (Insertion-Call nach line 593)
+- `backend/services/ipo_allocation_service.py` (Insertion-Call nach line 319)
+- `backend/services/bond_execution_service.py` (Insertion-Call nach line 320)
+- `backend/server.py` (`/api/stock-notifications` GET-Serializer erweitert)
+- `frontend/src/components/StockNotificationBell.jsx` (Type-aware Rendering + Route-Deep-Link)
+- `memory/PRD.md`
+
+**FINAL REPORT (Session 82.52):**
+- FILES_CHANGED: 6 Files + PRD
+- COLLECTION: **`stock_alert_notifications`** (bestehend erweitert, keine neue Collection)
+- NEW TYPES: `order_executed`, `ipo_allocated`, `bond_executed`
+- PRICE_ALERT REGRESSION: **PASS** (Backend-Serializer additiv; Frontend behält alte UI-Zweige für Docs ohne `type`)
+- ORDER NOTIFICATION: **PASS** (Insertion nach `status==completed`, echte `symbol`/`qty`/`price`)
+- IPO NOTIFICATION: **PASS** (Insertion nach `status==completed`, echte `symbol`/`qty`/`allocation_price_per_share`)
+- BOND NOTIFICATION: **PASS** (Insertion nach `status==completed`, echte `isin`/`execution_price_pct`)
+- ORDER/IPO/BOND DOUBLE NOTIFICATION: **0** ✅ (Dedupe via `event_key`-Find-Guard vor Insert)
+- NOTIFICATION ON FAILED SAGA: **0** ✅ (Gate: `fresh.status == "completed"` — kein Insert bei `compensation_required`, `failed`, `cancelled`)
+- NOTIFICATION WRITE FAILURE AFFECTS FINANCE: **NO** ✅ (getrennter `try/except` + `logger.exception`, Financial-Saga läuft zum Return-Statement)
+- FINANCIAL STATUS AFTER NOTIFICATION FAILURE: **completed** (unverändert)
+- USER ISOLATION: **PASS** (user_id aus persisted saga doc)
+- UNAUTH: **401** ✅ verifiziert · CROSS USER LEAKS: **0** (`user_id: user["id"]` aus Session)
+- GLOBAL BANNER ON NOTIFICATION FAILURE: **NO** ✅
+- FINANCIAL INVARIANTS: **PASS** (keine Saga-Logik geändert, nur additiver Side-Effect nach Completion)
+- SUPABASE WRITES: **0** · FAKE NOTIFICATIONS: **0** · REGRESSIONS: **0**
+- FINANCIAL EVENT BELL READY: **YES**
+- READY FOR QA LEDGER CLEANUP: **YES** (Nächste Session 82.53 kann Ledger `PT1AG`/`PT_BOND_*` isolieren)
+- READY FOR PROD: **NO** (nur Preview)
+
+---
+
+
 ## Session 82.51 (Preview) · Customer Alert Bell — Discovery & Verification
 
 **Ziel:** Bell im Customer-Header mit echtem, Mongo-nativem Alert-/Notification-Feed verbinden.

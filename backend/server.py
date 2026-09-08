@@ -3885,10 +3885,20 @@ async def sa_delete(alert_id: str, user: dict = Depends(get_current_user)):
 async def sn_list(limit: int = 50, user: dict = Depends(get_current_user)):
     limit = max(1, min(int(limit or 50), 200))
     docs = await db.stock_alert_notifications.find({"user_id": user["id"]}).sort([("triggered_at", -1)]).to_list(limit)
+    # Session 82.52 — additive Serializer-Erweiterung: `type`, `route`, `isin`,
+    # `reference_type`, `reference_id`. Alte Preisalarm-Docs (ohne `type`)
+    # bleiben rückwärtskompatibel und werden implizit als `price_alert_triggered`
+    # geführt (Front-End rendert sie weiterhin über `symbol`/`title`/`body`).
     return {
         "items": [{
             "id": str(d.get("_id")), "symbol": d.get("symbol"),
-            "alert_type": d.get("alert_type"), "title": d.get("title"), "body": d.get("body"),
+            "isin": d.get("isin"),
+            "alert_type": d.get("alert_type"),
+            "type": d.get("type") or "price_alert_triggered",
+            "title": d.get("title"), "body": d.get("body"),
+            "route": d.get("route"),
+            "reference_type": d.get("reference_type"),
+            "reference_id": d.get("reference_id"),
             "triggered_at": d.get("triggered_at").isoformat() if d.get("triggered_at") else None,
             "trigger_value": d.get("trigger_value"), "provider_timestamp": d.get("provider_timestamp"),
             "seen": bool(d.get("seen", False)),

@@ -318,6 +318,39 @@ async def _run(db, request_id, *, nominal_amount, execution_price_pct, decision_
 
     fresh = await db.bond_executions.find_one({"_id": exec_doc["_id"]})
     fresh_req = await db.bond_purchase_requests.find_one({"_id": request_id})
+
+    # Session 82.52 — Non-critical Customer-Notification NACH Bond-Completion.
+    # Idempotent via `bond-executed:{request_id}`. Fehler nicht propagieren.
+    if fresh and fresh.get("status") == "completed" and fresh_req:
+        try:
+            from services.notification_service import (
+                insert_financial_notification,
+                format_pct_de,
+            )
+            isin = fresh_req.get("isin") or fresh.get("isin") or ""
+            price_pct_raw = fresh.get("execution_price_pct")
+            try:
+                price_pct = float(price_pct_raw.to_decimal()) if price_pct_raw is not None and hasattr(price_pct_raw, "to_decimal") else (float(price_pct_raw) if price_pct_raw is not None else None)
+            except Exception:  # noqa: BLE001
+                price_pct = None
+            if price_pct is not None:
+                msg = f"Ihre Anleihe {isin} wurde zu {format_pct_de(price_pct)} ausgeführt."
+            else:
+                msg = f"Ihre Anleihe {isin} wurde ausgeführt."
+            await insert_financial_notification(
+                db,
+                user_id=str(fresh_req.get("user_id") or fresh.get("user_id")),
+                event_type="bond_executed",
+                event_key=f"bond-executed:{str(request_id)}",
+                title="Anleihe ausgeführt",
+                message=msg,
+                route="/dashboard/orders",
+                isin=isin or None,
+                reference_type="bond_request",
+                reference_id=str(request_id),
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("bond_executed notification side-effect failed request_id=%s", request_id)
     return {
         "execution": _serialize(fresh),
         "resumed": resumed,
