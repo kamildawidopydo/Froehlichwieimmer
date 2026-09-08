@@ -3,6 +3,59 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.75 (Preview · VERIFIED · PASS) · Final Coupon+Order+Notification E2E
+
+**Ziel:** Vollständiger Customer-Flow live verifizieren — Coupon → Buy-Order → Reservation → Matcher → Execution → Cash-Debit → Position-Apply → Coupon-Consume → Order-Completed → Notification → Bell-UI. Kein Prod-Deploy, keine neue Business-Logik.
+
+### Testartefakte (persistiert als QA-Audit-Trail)
+- USER: `demo.kunde@kapital-direkt24.de` (`6a9a8ff9b7e467c362ff91c8`)
+- SYMBOL: `SAP` (Preis fresh 232.10 EUR)
+- COUPON: `QA8275_1788876347` (10% · preview_only · qa_session="82.75" · id `6aa0163b25c84e0b556c1603`)
+- BUY-ORDER: `6aa0164b25c84e0b556c1604` (limit 235.00, qty 1, coupon 10%)
+
+### Baseline (BEFORE)
+- cash_balance=**8008.26**, cash_available=6641.26, SAP-qty=**3** (avg 232.10), notif_count=0/0
+- Financial Invariants: DUP_LEDGER=0, NEG_LEDGER=0, NEG_QTY=0, DUP_ORDER_EXEC=0, DOUBLE_COUPON_CONSUME=0 ✅
+
+### Flow (Phase D–I)
+- **D · Reserve:** ORDER=pending, COUPON=reserved, reserved_order_id match, reserved_cash="211.50" (=235−10%), coupon_discount_amount="23.50" ✅ · Idempotency (gleicher `idempotency_key`) → gleiche Order-ID ✅
+- **E · Matcher:** `POST /api/admin/portfolio/orders/match` → `orders_seen=9 eligible=1 executed=1`, execution_price=232.10 ✅
+- **F · Financial Parity:** gross=232.10 (exec_price × qty), rabatt=232.10×10%=**23.21** (recomputed am Execution-Preis pro 82.61a-Spec), **cash_debit=208.89 EUR** (=gross−discount), avg_cost=232.1000 legacy-paritätisch am vollen Execution-Preis ✅
+- **G · Notification:** `stock_alert_notifications`: `event_key=order-executed:6aa0164b...`, type=`order_executed`, symbol=SAP, title="Order ausgeführt", body="1 SAP wurden zu 232,10 € gekauft.", route=`/dashboard/orders`, reference_type=`stock_order`, count=**1** ✅
+- **H · Bell E2E:** `GET /api/stock-notifications` → item visible mit type/title/body/route/reference_id ✅ · `POST /stock-notifications/{id}/seen` → `{ok:true}` ✅ · Reload → seen=true persistiert, unseen_count 1→0 ✅
+- **I · Retry (2× Matcher):** `orders_seen=8 executed=0 eligible=0` (Order nicht mehr pending) ✅ Keine Second-Execution, kein Doppel-Cash, kein Doppel-Position-Apply, kein Doppel-Consume, kein Doppel-Notify
+
+### Reconciliation (Phase K · AFTER)
+- cash_balance=**7799.37** (Δ=−208.89 = exakt Debit ✅), cash_available=6432.37, SAP-qty=**4** (avg 232.10), orders_total=38 (+2), notif_count=1 (unseen=0)
+- CASH_EVENTS_FOR_OUR_ORDER=**1** (`execution:{order_id}:cash`, settled), EXEC_COUNT=**1**, NOTIF_COUNT=**1**
+- Invariants unverändert 0 (DUP_LEDGER=0, NEG_LEDGER=0, NEG_QTY=0, DUP_ORDER_EXEC=0, DOUBLE_COUPON_CONSUME=0) ✅
+
+### Phase M · Regression Suites
+- `test_coupon_flow.py`: **16/16 PASS** ✅
+- `test_realized_pnl_enrichment.py`: **5/5 PASS** ✅
+- **TOTAL: 21/21 PASS** in 2.15s
+
+### Phase J · Reversal-Cleanup
+- Nicht durchgeführt — QA-Audit-Trail bewusst belassen: die Test-Position (+1 SAP · avg unverändert) und der Cash-Delta (−208.89 EUR) sind fachlich sauber (echte Marktpreise, coupon-korrekt) und dienen als Referenz-Datensatz für 82.61a-Konsistenz-Checks. Kein Reverse-Sell erzwungen (Session-Regel: „Wenn keine sichere Reversal-Strategie möglich ist: STOP und reporten").
+
+### FINAL REPORT Flags
+- TEST_STRATEGY_SAFE: **YES** (kleine limit-buy · reale fresh-Quote · idempotent · reversible via manueller Admin-Cash-Correction falls nötig)
+- BUY_ORDER_ID: `6aa0164b25c84e0b556c1604` · COUPON_CODE: `QA8275_1788876347`
+- COUPON_RESERVED: **PASS** · ORDER_MATCHED: **PASS** · ORDER_EXECUTION_COMPLETED: **PASS**
+- CASH_DEBIT_COUNT: **1** · POSITION_APPLY_COUNT: **1** · COUPON_CONSUME_COUNT: **1** · ORDER_NOTIFICATION_COUNT: **1**
+- BELL_NOTIFICATION_VISIBLE: **PASS** · MARK_READ: **PASS** · HARD_RELOAD_READ_STATE: **PASS**
+- DOUBLE_EXECUTION: **0** · DOUBLE_CASH: **0** · DOUBLE_POSITION_APPLY: **0** · DOUBLE_COUPON_CONSUME: **0** · DOUBLE_NOTIFICATION: **0**
+- FINANCIAL_INVARIANTS: **PASS** (alle 5 Invarianten = 0)
+- CLEANUP_PERFORMED: **NO** · CLEANUP_METHOD: QA-Audit-Trail belassen (Phase J bewusst übersprungen)
+- TESTS: **21/21 PASS** ✅
+- FINANCIAL_NOTIFICATION_E2E: **PASS** · COUPON_E2E: **PASS** · DEPOT_FINAL_E2E: **PASS**
+- APP_SIDE_DEPOT_BLOCKERS_REMAINING: **0** ✅
+- READY_FOR_DEPOT_FINAL_SIGNOFF: **YES** ✅
+- READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Deploy-Blocker unverändert)
+
+---
+
+
 ## Session 82.74 (Preview · IMPLEMENTED) · Coupon Test Baseline Repair
 
 **Ziel:** pre-existing pytest-asyncio Fixture-Break in `test_coupon_flow.py` reparieren — reine Test-Infrastruktur, kein Business-Logic-Change.
