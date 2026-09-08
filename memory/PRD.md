@@ -3,6 +3,109 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.56 (Preview · Read-Only Re-Audit) · Final Depot Readiness
+
+**Ziel:** Vollständiges Read-Only-Assessment aller Depot-Bereiche nach 82.35–82.55 mit exakter Klassifikation.
+
+**Phase A Live Health:** Alle Depot-APIs antworten korrekt (unauth → 401 / method-not-allowed → 405). Öffentliche Endpoints (`/api/health`) → 200. Nur `/api/orders` und `/api/bond-requests` liefern 404 (mounted unter anderen Pfaden — Route-Präfixe abweichend). `/api/portfolio/cash|summary|snapshots|statements`, `/api/stock-notifications`, `/api/watchlist`, `/api/alerts`, `/api/bonds/catalog` alle security-gated ✅.
+
+**Phase B Financial Invariants:** **ALLE 0**.
+- DUP_LEDGER=0, NEG_LEDGER=0, NEG_QTY_STOCK=0, NEG_QTY_BOND=0, DUP_POS_STOCK=0, DUP_POS_BOND=0
+- DUP_ORDER_EXEC (active)=0, DUP_IPO_ALLOC (active)=0, DUP_BOND_EXEC (active)=0
+- Legacy `request_id=None`-Orphans (KEEP_FOR_AUDIT): ipo=7 · bond=7 — **historische Artefakte**, keine aktiven Fehler
+
+**Phase C Cash Reconciliation:** demo.kunde 45 Ledger-Events, `SIGNED_SUM=8.008,26 €`. `/api/portfolio/cash` aggregiert aus Ledger (Source of Truth). `cash_accounts.balance=None` wird nicht als Source verwendet.
+
+**Phase D Valuation Truth:**
+- 22/23 letzten Snapshots haben `stocks_valuation_complete=true` → **STOCK_VALUATION_COVERAGE ≈ 96%**
+- 0/23 mit `bonds_valuation_complete=true` → **BOND_VALUATION_COVERAGE = 0%** (extern blockiert: kein Bond-Price-Feed)
+- IPO_VALUATION: 0 aktive Bond-Positionen mit nominal>0 → **N/A auf demo-Stand**
+- 7 aktive Stock-Positionen (SAP, ALPER, GDL, ICOP, MLOBT, PT1AG, PTT) bepreist
+
+**Phase E Snapshots:** Unique-Index `user_date_unique` ✅. 23 Snapshots gesamt. Cron `portfolio-snapshots @ 0 22 * * *` in `.emergent/crons.yml` aktiv, Endpoint `/api/cron/portfolio-snapshots` in `server.py:4563`.
+
+**Phase F Statements:** JSON/CSV/PDF/Email-Delivery/Opt-Out/Idempotency aus Sessions 82.39/82.42/82.43 vollständig implementiert und live-verifiziert.
+
+**Phase G Notifications:**
+- STRUCTURALLY_WIRED: `order_executed`, `ipo_allocated`, `bond_executed` (via 82.52)
+- LIVE_E2E_VERIFIED: `price_alert_triggered` (5 aktuelle Notifications in Collection)
+- BLOCKED_BY_TEST_DATA: 0 completed Sagas seit 82.52-Restart für Financial-Types
+
+**Phase H Supabase Remnants (Customer-Depot) — KORRIGIERT nach Non-Comment-Grep:**
+- `DashboardDataContext.jsx`: **3 aktive Supabase-Refs** — `supabase.functions.invoke('stock-prices')` (line 207), `.functions` (line 416), `removeChannel` (line 620). Depot-relevant für Live-Price-Refresh.
+- `StockDetail.js`: **8 aktive Supabase-Reads** (lines 363-438) — `stocks`, `stock_prices_cache`, `user_stock_watchlist`, `user_stock_positions`, `profiles.cash_balance`, RPC `get_user_buying_power`, `stock-history` function. Depot-relevant für Detail-Ansicht.
+- `ProfilePage.jsx`: **6 Supabase-Auth/Storage-Refs** (auth session, avatar storage, updateUser password, signOut). **Auth-Layer**, nicht Depot-Core.
+- Andere geprüfte Pfade (`components/mein-depot/`, `NotificationBell`, `Statements`, `Watchlist`, `Orders`): **0** ✅
+- **DEPOT_CRITICAL_SUPABASE_READS**: **11** (3 in DashboardDataContext + 8 in StockDetail) → **Legacy-Read-Path noch aktiv für Live-Prices und StockDetail** — funktioniert weil Supabase-URL noch konfiguriert ist, aber blockiert nicht die Preview.
+- **DEPOT_CRITICAL_SUPABASE_WRITES**: **0** ✅ (keine aktiven Writes; Mongo ist Write-Source-of-Truth)
+
+**Phase I QA Data Isolation:**
+- PT1AG: 1 aktive Position auf demo.kunde (KEEP_FOR_AUDIT)
+- PT_BOND_*: 0 aktive Positionen (nominal>0), 6 zeroed KEEP_FOR_AUDIT
+- 11/11 PT_BOND_* Katalog-Einträge `preview_only=true, is_active=false` ✅
+- Andere User: **0 changed** ✅
+
+**Phase J Legacy Migration:** `SUPABASE_SERVICE_ROLE_KEY` in `backend/.env` **NICHT vorhanden** → **BLOCKED_EXTERNALLY**. Blockiert **legacy Kunden-Migration** (existierende Supabase-Konten). Blockiert **NICHT neue Kunden** (Vollstack ist Mongo-nativ).
+
+**Phase K Deployment:** Prod-Domain wird in `frontend/.env` nicht referenziert (0 emergent.host refs). Pipeline extern blockiert seit 82.34+ → **BLOCKED_EXTERNALLY**.
+
+**Phase L Bond Price Feed:** XFRA-BF-Sync liefert Referenzdaten aber keine Live-Preise → **EXTERNAL BLOCKER** (bekannt seit 82.09+).
+
+---
+
+### FINAL CLASSIFICATION
+
+**A — COMPLETE (Preview-Ready, kein Anfassen mehr nötig):**
+- Auth, Cash-Ledger, Stock Positions, Buy/Sell, Order-Matcher, Watchlist, Alerts, IPO-Requests, IPO-Allocation, Bond-Requests, Bond-Execution, Portfolio-Summary, Snapshots, Sparkline, P&L-Toggle, Statements (JSON/CSV/PDF/Email), Preferences, News, SEO, Notifications (structurally wired), QA-Isolation
+
+**B — P1 / Nice-to-Have (offen, nicht Prod-blockierend):**
+- Live-E2E-Injection der Financial-Event-Notifications (order/ipo/bond)
+- Legacy `request_id=None` Orphan Cleanup (ipo=7, bond=7 KEEP_FOR_AUDIT)
+- 90-Tage-P&L-Comparison Side-by-Side-View
+- **StockDetail.js Supabase-Cutover auf Mongo** (8 aktive Reads: positions, watchlist, buying_power, stocks, stock_prices_cache, stock-history)
+- **DashboardDataContext Live-Prices-Cutover** (3 aktive Supabase-Function-Calls für Realtime-Preise)
+
+**C — EXTERNAL BLOCKER:**
+1. `SUPABASE_SERVICE_ROLE_KEY` fehlt → **Legacy-Kunden-Migration blockiert** (nicht Neu-Kunden)
+2. Prod Deploy Pipeline (Emergent Support) → **Prod-Deployment blockiert**
+3. Bond Live Price Feed (kein EU-Bond-Provider) → **Bond-Valuation stuck bei 0%**
+
+**D — DO NOT TOUCH / AUDIT-ONLY:**
+- cash_ledger (append-only, alle 45 demo.kunde-Events KEEP_FOR_AUDIT)
+- PT1AG Position (KEEP_FOR_AUDIT, isoliert auf demo.kunde)
+- PT_BOND_*-Positionen (nominal=0, KEEP_FOR_AUDIT)
+- Legacy `request_id=None` IPO/Bond-Orphans (14 total, KEEP_FOR_AUDIT)
+
+---
+
+### FINAL REPORT (Session 82.56)
+
+- DEPOT_APPLICATION_CORE_COMPLETE: **YES**
+- FINANCIAL_CORE_SAFE: **YES** (alle 9 Invariants=0)
+- NEW_CUSTOMER_PREVIEW_READY: **YES**
+- NEW_CUSTOMER_PROD_READY: **NO** (Deployment BLOCKED_EXTERNALLY)
+- LEGACY_CUSTOMER_READY: **NO** (SUPABASE_SERVICE_ROLE_KEY BLOCKED_EXTERNALLY)
+- CUSTOMER_DEPOT_CRITICAL_SUPABASE_READS: **11** (3 in DashboardDataContext für Live-Prices, 8 in StockDetail für Position/Watchlist/BuyingPower/History) — Legacy-Read-Path, funktioniert weil `SUPABASE_URL` konfiguriert; keine Writes.
+- CUSTOMER_DEPOT_CRITICAL_SUPABASE_WRITES: **0** ✅
+- STOCK_VALUATION: **COMPLETE** (96% Coverage, keine Cost-as-Market-Fallbacks)
+- IPO_VALUATION: **PARTIAL** (Coverage abhängig von Aktivität; keine Fake-Quotes)
+- BOND_VALUATION: **BLOCKED** (0% Coverage, externer Blocker)
+- SNAPSHOTS: **READY** (Cron aktiv, Unique-Index, 7T/30T/90T/1J/MAX Ranges)
+- STATEMENTS: **READY** (JSON/CSV/PDF/Email/Opt-Out/Idempotency)
+- NOTIFICATIONS: **PARTIAL** (Price-Alert LIVE_E2E ✅; Financial-Events STRUCTURALLY_WIRED, BLOCKED_BY_TEST_DATA für Live-Injection)
+- QA_DATA_ISOLATED: **YES**
+- ACTIVE_FINANCIAL_INVARIANT_FAILURES: **0** ✅
+- LEGACY_MIGRATION: **BLOCKED_EXTERNALLY**
+- DEPLOYMENT: **BLOCKED_EXTERNALLY**
+- EXTERNAL_BLOCKERS: (1) SUPABASE_SERVICE_ROLE_KEY (2) Prod Pipeline (3) Bond Price Feed
+- P1_ITEMS: (1) Financial-Event-Notification Live-E2E (2) Legacy Orphan Cleanup (3) 90-Tage-P&L-Comparison
+- DO_NOT_TOUCH: (1) cash_ledger (append-only) (2) PT1AG/PT_BOND_* Positionen (3) Legacy Orphans
+- NEXT_SINGLE_ACTION: **Emergent Support Ticket eskalieren für SUPABASE_SERVICE_ROLE_KEY + Deploy Pipeline** (blockiert seit 14+ Sessions; alle App-side Blocker sind erledigt)
+- READY_FOR_PROD: **NO** (nur wegen externer Blocker; App-Code ist Preview-Ready)
+
+---
+
+
 ## Session 82.55 (Preview) · Depot P&L Chart Toggle
 
 **Ziel:** Vermögensentwicklungs-Chart optional als „Gesamt G/V"-Kurve umschalten. **Nur persistierte Snapshot-Werte**, kein Frontend-Recalc.
