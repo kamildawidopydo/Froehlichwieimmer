@@ -73,6 +73,21 @@ from services.order_execution_service import (  # noqa: E402
     ensure_indexes as ensure_execution_indexes,
 )
 
+# Session 82.61a · Coupon-Domain (Mongo-native Legacy-Parität)
+from services.coupon_service import (  # noqa: E402
+    CouponError,
+    peek_coupon as coupon_peek,
+    reserve_coupon_for_order,
+    release_coupon_for_order,
+    admin_create_coupon,
+    admin_revoke_coupon,
+    serialize_coupon,
+    normalize_code as normalize_coupon_code,
+    compute_net as compute_coupon_net,
+    ensure_indexes as ensure_coupon_indexes,
+    STATUS_ACTIVE as COUPON_STATUS_ACTIVE,
+)
+
 # Session 82.27 · Depot P0 — Auto-Matching-Service
 from services.order_matching_service import (  # noqa: E402
     run_pending_limit_buy_matching,
@@ -756,6 +771,9 @@ class OrderCreateIn(BaseModel):
     limit_price: Optional[str] = Field(default=None)
     idempotency_key: str = Field(..., min_length=8, max_length=200)
     client_reference: Optional[str] = Field(default=None, max_length=200)
+    # Session 82.61a — Optionaler Coupon (nur buy). Alle Financial-Werte werden
+    # serverseitig ermittelt; Client darf KEINE Coupon-Financial-Felder senden.
+    coupon_code: Optional[str] = Field(default=None, max_length=64)
 
     model_config = {"extra": "forbid"}
 
@@ -778,6 +796,12 @@ def _serialize_stock_order(doc: dict) -> dict:
         "currency": doc.get("currency") or "EUR",
         "status": doc.get("status", "pending"),
         "source": doc.get("source"),
+        # Session 82.61a · Coupon-Felder (nur wenn Coupon gesetzt).
+        "coupon_code": doc.get("coupon_code"),
+        "coupon_id": str(doc.get("coupon_id")) if doc.get("coupon_id") else None,
+        "coupon_discount_percent": _amt(doc.get("coupon_discount_percent")),
+        "coupon_discount_amount": _amt(doc.get("coupon_discount_amount")),
+        "coupon_status": doc.get("coupon_status"),
         "created_at": _iso(doc.get("created_at")),
         "updated_at": _iso(doc.get("updated_at")),
         "cancelled_at": _iso(doc.get("cancelled_at")),
@@ -816,17 +840,52 @@ async def create_order(
         raise HTTPException(status_code=422, detail="limit_price muss > 0 sein")
 
     uid = ObjectId(user["id"])
-    reserved = (limit_price * Decimal(qty)).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+
+    # Session 82.61a — Coupon-Sell-Guard bereits VOR dem Lock (billig, keine DB-Writes).
+    if payload.coupon_code and side == "sell":
+        raise HTTPException(
+            status_code=400,
+            detail="Gutscheine sind nur für Kaufaufträge gültig",
+        )
 
     lock = _order_locks[str(uid)]
     async with lock:
-        # Idempotency-Check
+        # Idempotency-Check — MUSS vor Coupon-Peek stehen, damit ein Retry
+        # mit gleichem idempotency_key auch dann noch die ursprüngliche
+        # Order (inkl. Coupon-Reservation) zurückgibt, wenn der Coupon
+        # zwischenzeitlich als "reserved" markiert wurde.
         existing = await db.stock_orders.find_one({
             "user_id": uid,
             "idempotency_key": payload.idempotency_key,
         })
         if existing:
             return _serialize_stock_order(existing)
+
+        # Session 82.61a — Coupon Peek + Discount-Computation (Legacy-Parität).
+        coupon_code_norm: Optional[str] = None
+        coupon_percent: Optional[Decimal] = None
+        coupon_id_pre: Optional[ObjectId] = None
+        if payload.coupon_code:
+            coupon_code_norm = normalize_coupon_code(payload.coupon_code)
+            if not coupon_code_norm:
+                raise HTTPException(status_code=422, detail="Gutscheincode ist leer")
+            pre_doc = await db.stock_trade_coupons.find_one(
+                {"code": coupon_code_norm, "status": COUPON_STATUS_ACTIVE}
+            )
+            if not pre_doc:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Ungültiger oder bereits verwendeter Gutscheincode",
+                )
+            try:
+                coupon_percent = pre_doc["percent"].to_decimal() if isinstance(pre_doc.get("percent"), Decimal128) else Decimal(str(pre_doc.get("percent")))
+            except Exception:
+                coupon_percent = None
+            coupon_id_pre = pre_doc["_id"]
+
+        gross = (limit_price * Decimal(qty)).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
+        reserved = compute_coupon_net(gross, coupon_percent) if side == "buy" else Decimal("0.00")
+        coupon_discount_amount = (gross - reserved).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN) if coupon_percent is not None else Decimal("0.00")
 
         if side == "buy":
             summary = await get_cash_summary(db, user)
@@ -879,10 +938,16 @@ async def create_order(
             "updated_at": now,
             "cancelled_at": None,
         }
+        # Session 82.61a — Coupon-Snapshot auf Order (BEFORE reserve).
+        if coupon_code_norm and coupon_percent is not None:
+            doc["coupon_code"] = coupon_code_norm
+            doc["coupon_id"] = coupon_id_pre
+            doc["coupon_discount_percent"] = Decimal128(coupon_percent)
+            doc["coupon_discount_amount"] = Decimal128(coupon_discount_amount)
+            doc["coupon_status"] = "pending_reserve"
         try:
             res = await db.stock_orders.insert_one(doc)
             doc["_id"] = res.inserted_id
-            return _serialize_stock_order(doc)
         except Exception as exc:
             if getattr(exc, "code", None) == 11000 or "duplicate key" in str(exc).lower():
                 existing = await db.stock_orders.find_one({
@@ -892,6 +957,29 @@ async def create_order(
                 if existing:
                     return _serialize_stock_order(existing)
             raise HTTPException(status_code=500, detail=f"order insert failed: {exc}")
+
+        # Session 82.61a — CAS-Reserve NACH Order-Insert.
+        # Race-safe: nur EIN paralleler Order-Insert kann Coupon reservieren.
+        # Bei Miss: Order löschen (safe: keine Cash-/Position-Nebenwirkung).
+        if coupon_code_norm:
+            try:
+                await reserve_coupon_for_order(
+                    db,
+                    code=coupon_code_norm,
+                    order_id=doc["_id"],
+                    side=side,
+                )
+                await db.stock_orders.update_one(
+                    {"_id": doc["_id"]},
+                    {"$set": {"coupon_status": "reserved", "updated_at": datetime.now(timezone.utc)}},
+                )
+                doc["coupon_status"] = "reserved"
+            except CouponError as ce:
+                # Rollback: Order wieder entfernen (safe — noch keine Financials).
+                await db.stock_orders.delete_one({"_id": doc["_id"], "status": "pending"})
+                raise HTTPException(status_code=ce.http_status, detail=ce.detail)
+
+        return _serialize_stock_order(doc)
 
 
 @router.post("/orders/{order_id}/cancel")
@@ -934,11 +1022,70 @@ async def cancel_order(
         # Zwischenzeitlich ausgeführt → aktueller Zustand zurückgeben.
         fresh = await db.stock_orders.find_one({"_id": oid})
         raise HTTPException(status_code=409, detail=f"Order ist nicht mehr stornierbar (Status: {fresh.get('status') if fresh else 'unbekannt'})")
+
+    # Session 82.61a — Coupon-Release bei erfolgreichem Cancel (idempotent per CAS).
+    if order.get("coupon_id"):
+        try:
+            released = await release_coupon_for_order(
+                db,
+                coupon_id=order.get("coupon_id"),
+                order_id=oid,
+            )
+            if released:
+                await db.stock_orders.update_one(
+                    {"_id": oid},
+                    {"$set": {"coupon_status": "released", "updated_at": datetime.now(timezone.utc)}},
+                )
+        except Exception:
+            # Coupon-Release-Fehler blockiert NICHT den Order-Cancel — Order ist
+            # bereits erfolgreich cancelled. Ops-Ticket über orphaned reservation
+            # bleibt separater Fix.
+            pass
+
     fresh = await db.stock_orders.find_one({"_id": oid})
     return _serialize_stock_order(fresh)
 
 
-# ─── ADMIN Portfolio-Snapshots (Session 82.25) ──────────────────────────
+# ─── Coupon Peek (Session 82.61a) ────────────────────────────────────────
+class CouponPeekIn(BaseModel):
+    coupon_code: str = Field(..., min_length=1, max_length=64)
+    side: str = Field(default="buy")
+    quantity: str = Field(...)
+    limit_price: str = Field(...)
+
+    model_config = {"extra": "forbid"}
+
+
+@router.post("/coupons/peek")
+async def coupon_peek_endpoint(
+    payload: CouponPeekIn = Body(...),
+    user: dict = Depends(get_current_user),
+):
+    """
+    Read-only Preview eines Stock-Trade-Coupons.
+
+    Berechnet `gross/discount/net` für Buy-Order (Legacy-Parität).
+    Keine DB-Writes. Kein Reserve, kein Consume. Auth-only.
+    """
+    try:
+        qty = int(payload.quantity)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=422, detail="quantity muss eine positive Ganzzahl sein")
+    try:
+        lp = _to_decimal_strict(payload.limit_price, "limit_price")
+    except HTTPException:
+        raise
+    try:
+        result = await coupon_peek(
+            db,
+            code=payload.coupon_code,
+            side=(payload.side or "buy").lower(),
+            quantity=qty,
+            limit_price=lp,
+        )
+    except CouponError as ce:
+        raise HTTPException(status_code=ce.http_status, detail=ce.detail)
+    return result
 class AdminSnapshotRunIn(BaseModel):
     user_id: Optional[str] = Field(default=None, description="Optional: nur ein User")
     limit: Optional[int] = Field(default=None, ge=1, le=10000)
@@ -1151,11 +1298,75 @@ async def ensure_indexes():
     await ensure_snapshot_indexes(db)
     # Session 82.26 · Order-Executions
     await ensure_execution_indexes(db)
+    # Session 82.61a · Coupon-Collection
+    await ensure_coupon_indexes(db)
     # Session 82.42 · Statement-Delivery-Log
     await ensure_statement_delivery_indexes(db)
     await db.depot_contracts.create_index(
         [("user_id", 1), ("is_active", -1)], name="user_active",
     )
+
+
+# ─── ADMIN Coupon Endpoints (Session 82.61a) ─────────────────────────────
+class AdminCouponCreateIn(BaseModel):
+    percent: str = Field(..., description="Rabatt in Prozent (0<x<=100)")
+    code: Optional[str] = Field(default=None, max_length=64)
+    preview_only: bool = Field(default=True)
+    qa_session: Optional[str] = Field(default=None, max_length=64)
+
+    model_config = {"extra": "forbid"}
+
+
+@admin_router.post("/coupons", status_code=201)
+async def admin_create_coupon_endpoint(
+    payload: AdminCouponCreateIn = Body(...),
+    admin: dict = Depends(require_admin),
+):
+    try:
+        pct = _to_decimal_strict(payload.percent, "percent")
+    except HTTPException:
+        raise
+    try:
+        doc = await admin_create_coupon(
+            db,
+            percent=pct,
+            admin_id=str(admin.get("id")),
+            preview_only=payload.preview_only,
+            qa_session=payload.qa_session,
+            code=payload.code,
+        )
+    except CouponError as ce:
+        raise HTTPException(status_code=ce.http_status, detail=ce.detail)
+    return serialize_coupon(doc)
+
+
+@admin_router.get("/coupons")
+async def admin_list_coupons(
+    status: Optional[str] = Query(default=None),
+    _admin: dict = Depends(require_admin),
+):
+    q: dict = {}
+    if status:
+        q["status"] = status.lower()
+    cursor = db.stock_trade_coupons.find(q).sort([("created_at", -1)]).limit(500)
+    return [serialize_coupon(d) async for d in cursor]
+
+
+@admin_router.post("/coupons/{coupon_id}/revoke")
+async def admin_revoke_coupon_endpoint(
+    coupon_id: str,
+    _admin: dict = Depends(require_admin),
+):
+    try:
+        cid = ObjectId(coupon_id)
+    except Exception:
+        raise HTTPException(status_code=422, detail="ungültige coupon_id")
+    try:
+        await admin_revoke_coupon(db, coupon_id=cid)
+    except CouponError as ce:
+        raise HTTPException(status_code=ce.http_status, detail=ce.detail)
+    doc = await db.stock_trade_coupons.find_one({"_id": cid})
+    return serialize_coupon(doc)
 
 
 # ─── ADMIN Cash Endpoints (Session 82.18 · Phase 2) ─────────────────────

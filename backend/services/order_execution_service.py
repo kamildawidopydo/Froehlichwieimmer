@@ -47,6 +47,13 @@ from services.cash_service import (
 )
 from services.stock_price_service import get_quotes as get_stock_quotes
 
+# Session 82.61a · Coupon-Support in Cash-Debit + Consumption
+from services.coupon_service import (
+    consume_coupon_for_order,
+    compute_discount as coupon_compute_discount,
+    CouponError,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -461,29 +468,62 @@ async def _execute_order_locked(
     # ═══════════════════════════════════════════════════════════════════
 
     # ── 4. Saga-Schritt: CASH-DEBIT ──────────────────────────────────
+    # Session 82.61a — Coupon-Rabatt (Legacy-Parität):
+    #   discount = round(gross × pct / 100, 2)
+    #   cash_debit = gross - discount   (nur bei Buy mit gültigem Coupon)
+    coupon_id_persisted = order.get("coupon_id")
+    coupon_percent_persisted = _decimal_from_bson(order.get("coupon_discount_percent")) if order.get("coupon_discount_percent") is not None else None
+    coupon_discount_amt = Decimal("0.00")
+    debit_amount = persisted_gross
+    if side == "buy" and coupon_id_persisted and coupon_percent_persisted and coupon_percent_persisted > 0:
+        coupon_discount_amt = coupon_compute_discount(persisted_gross, coupon_percent_persisted)
+        debit_amount = _q_money(persisted_gross - coupon_discount_amt)
+        # Snapshot auf Execution-Doc (informativ, für Audit).
+        await db.order_executions.update_one(
+            {"_id": exec_doc["_id"]},
+            {"$set": {
+                "coupon_id": coupon_id_persisted,
+                "coupon_code": order.get("coupon_code"),
+                "coupon_discount_percent": Decimal128(coupon_percent_persisted),
+                "coupon_discount": Decimal128(coupon_discount_amt),
+                "cash_debit": Decimal128(debit_amount),
+                "updated_at": _now(),
+            }},
+        )
+
     if exec_doc["status"] == "created":
         # Cash-Sufficient-Check (Ledger-basiert, nicht nur Reservation vertrauen).
         summary = await get_cash_summary(db, {"id": str(user_id)})
         balance = Decimal(summary["balance"])
-        if balance < persisted_gross:
+        if balance < debit_amount:
             await _mark_failed(db, exec_doc["_id"], "INSUFFICIENT_CASH",
-                               f"balance={balance} < gross={persisted_gross}")
+                               f"balance={balance} < debit={debit_amount}")
             raise ExecutionError(
                 "INSUFFICIENT_CASH",
-                f"Cash unzureichend: balance={balance} EUR, benötigt {persisted_gross} EUR.",
+                f"Cash unzureichend: balance={balance} EUR, benötigt {debit_amount} EUR.",
                 400,
             )
+
+        # Description-Erweiterung: Coupon-Kennung für Audit-Trail.
+        desc_base = f"Kauf {persisted_qty} × {persisted_symbol} @ {persisted_price}"
+        if coupon_id_persisted and coupon_percent_persisted:
+            desc = (
+                f"{desc_base} (Gutschein {order.get('coupon_code','?')} "
+                f"{coupon_percent_persisted}% Rabatt −{coupon_discount_amt} EUR)"
+            )
+        else:
+            desc = desc_base
 
         cash_res = await create_cash_event(
             db,
             user_id=str(user_id),
             event_type="stock_purchase",
             direction="debit",
-            amount=str(persisted_gross),
+            amount=str(debit_amount),
             currency="EUR",
             status="settled",
             idempotency_key=_cache_key_cash(order_id),
-            description=f"Kauf {persisted_qty} × {persisted_symbol} @ {persisted_price}",
+            description=desc,
             source="order_execution",
             source_reference_id=str(order_id),
             created_by=admin_id,
@@ -580,6 +620,36 @@ async def _execute_order_locked(
 
     # ── 7. Complete ──────────────────────────────────────────────────
     if exec_doc["status"] == "order_settled":
+        # Session 82.61a — Coupon Consumption (Legacy-Parität): erst NACHDEM
+        # Cash+Position+Order fest sind. Idempotent per CAS auf reserved_order_id.
+        if side == "buy" and coupon_id_persisted:
+            try:
+                await consume_coupon_for_order(
+                    db,
+                    coupon_id=coupon_id_persisted,
+                    order_id=order_id,
+                    user_id=user_id,
+                )
+                await db.stock_orders.update_one(
+                    {"_id": order_id},
+                    {"$set": {"coupon_status": "consumed", "updated_at": _now()}},
+                )
+            except CouponError as ce:
+                # Coupon state conflict AFTER cash+position — kritisch, aber
+                # Financial-State ist bereits richtig gebucht (mit Rabatt).
+                # Flag für Ops, aber Saga darf `completed` erreichen.
+                await db.order_executions.update_one(
+                    {"_id": exec_doc["_id"]},
+                    {"$set": {
+                        "last_error": f"COUPON_CONSUME_FAILED: {ce.code}: {ce.detail}"[:500],
+                        "updated_at": _now(),
+                    }},
+                )
+                logger.warning(
+                    "coupon consume failed order_id=%s coupon_id=%s: %s",
+                    order_id, coupon_id_persisted, ce.detail,
+                )
+
         now3 = _now()
         await db.order_executions.update_one(
             {"_id": exec_doc["_id"]},

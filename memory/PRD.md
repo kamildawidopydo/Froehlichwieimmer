@@ -3,6 +3,142 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.61a (Preview · IMPLEMENTED) · Mongo-nativer Stock-Trade-Coupon Backend
+
+**Ziel:** Aus Session 82.60 verifizierte Legacy-Coupon-Semantik additiv in den Mongo-nativen Customer-Order-Flow übertragen. **KEIN** StockDetail-Cutover in dieser Session — nur Backend-Infrastruktur.
+
+### Was implementiert wurde
+
+**Neue Collection `stock_trade_coupons`** (Indexes idempotent bei Backend-Startup):
+- `code` (unique, upper-normalized), `percent` (Decimal128), `status` ∈ `{active, reserved, consumed, revoked}`
+- `reserved_order_id`, `reserved_at`, `consumed_order_id`, `consumed_at`, `consumed_by_user_id`
+- `preview_only`, `qa_session` (für QA-Cleanup), `created_by`
+
+**Neuer Service `services/coupon_service.py`** — reine Domain-Logik:
+- `ensure_indexes(db)` · `peek_coupon(...)` (read-only) · `reserve_coupon_for_order(...)` (CAS) · `release_coupon_for_order(...)` (CAS, idempotent) · `consume_coupon_for_order(...)` (CAS, idempotent) · `admin_create_coupon(...)` · `admin_revoke_coupon(...)`
+- Legacy-Parität-Helpers: `compute_discount(gross, pct) = round(gross × pct / 100, 2)` mit `ROUND_HALF_EVEN`, `compute_net(gross, pct) = gross − discount`. Alle Berechnungen Decimal-only, kein Float.
+
+**Neue Endpoints:**
+- `POST /api/portfolio/coupons/peek` — Read-only Preview (auth-only). Payload: `coupon_code, side, quantity, limit_price`. Returns `{coupon_id, code, percent, gross, discount, net, ...}`. Sell + Code → 400. Invalid code → 404. Mass-assignment (extra Felder) → 422 (`extra: forbid`).
+- `POST /api/admin/portfolio/coupons` — Admin-Only Create (QA).
+- `GET /api/admin/portfolio/coupons?status=...` — Admin-Only Liste.
+- `POST /api/admin/portfolio/coupons/{id}/revoke` — Admin-Only Revoke.
+
+**`OrderCreateIn` erweitert (additiv, `extra: forbid`):**
+- Nur `coupon_code: Optional[str]` neu erlaubt. Alle Coupon-Financial-Werte werden serverseitig ermittelt.
+- Client-seitig sind `coupon_discount`, `coupon_status`, `reserved_order_id`, `consumed_order_id` etc. explizit verboten → 422.
+
+**`POST /api/portfolio/orders` Flow (mit Coupon):**
+1. Sell + Coupon → HTTP 400 (vor Lock, ohne DB-Read).
+2. Idempotency-Check innerhalb Lock — Doppel-POST mit gleichem `idempotency_key` gibt bestehende Order zurück ohne zweite Coupon-Reservation.
+3. Coupon Peek (nur `find_one`, read-only).
+4. `net = compute_coupon_net(gross, pct)` als `reserved_cash`.
+5. Insert Order mit Coupon-Snapshot (`coupon_code, coupon_id, coupon_discount_percent, coupon_discount_amount, coupon_status='pending_reserve'`).
+6. CAS-Reserve auf Coupon (`active → reserved` mit `reserved_order_id = order._id`). Bei Miss: Order löschen (safe, keine Cash-/Position-Nebenwirkung) + 409.
+7. Order-Update `coupon_status='reserved'`.
+
+**`POST /api/portfolio/orders/{id}/cancel` Flow:**
+- Nach erfolgreichem CAS-Cancel: `release_coupon_for_order(coupon_id, order_id)` — CAS-Release nur wenn genau diese Order die Reservation hält. Idempotent bei Doppel-Cancel. `coupon_status='released'`.
+
+**`order_execution_service._execute_order_locked` erweitert (Session 82.61a):**
+- Nach Order-Load: `coupon_id` + `coupon_discount_percent` aus Order lesen.
+- Für Buy-Coupon: `coupon_discount = round(gross × pct / 100, 2)`, `debit_amount = gross − discount`.
+- **Cash-Debit** ist `debit_amount` (nicht `gross`). Legacy-Parität.
+- Description enthält Coupon-Code + Prozent + Rabatt-Betrag für Audit.
+- Execution-Doc bekommt `coupon_id, coupon_code, coupon_discount_percent, coupon_discount, cash_debit`.
+- **Position `avg_cost` bleibt bei vollem `executed_price`** (Legacy-Parität aus 82.60 — bewusst NICHT gefixt).
+- **Coupon Consumption** erfolgt NACH `order_settled` (CAS `reserved → consumed`, idempotent). Coupon-Consume-Fehler blockieren NICHT die `completed`-Transition (Cash+Position sind bereits konsistent gebucht) — nur `last_error`-Flag auf Execution für Ops-Alarm.
+
+### PHASE A · LEGACY CONTRACT FREEZE (aus 82.60)
+- LEGACY_COUPON_STATE_MACHINE: `active → reserved` (submit) → `consumed` (execute) · Cancel/Reject: `reserved → active`
+- LEGACY_DISCOUNT_FORMULA: `discount = round(gross × percent / 100, 2)` (2 Dezimalstellen, ROUND_HALF_EVEN)
+- LEGACY_CASH_EFFECT: Buy-Execute-Cash-Debit = `gross − discount`
+- LEGACY_POSITION_COST_EFFECT: `avg_cost` = `executed_price` (unrabattiert)
+
+### PHASE Q · TEST MATRIX (Ergebnisse)
+
+**Pytest** (`tests/test_coupon_flow.py`, 16 Tests, alle grün):
+- T1: Discount-Formel Legacy-Parität (10%, 15% Edge, 5% Cent-Rundung, no-coupon) ✅
+- T2–T5: Peek valid/sell-forbidden/invalid/read-only ✅
+- T6–T9: Reserve success / sell-forbidden / 2nd-reserve-blocked / concurrent-exactly-one-wins ✅
+- T10–T11: Release success + idempotent / release-wrong-order-no-op ✅
+- T12–T15: Consume success + idempotent / other-order-conflict / without-reserve-fails / concurrent-exactly-one ✅
+- T16: Legacy avg_cost Anomalie explizit dokumentiert ✅
+
+**HTTP-E2E** (via curl gegen Preview-Backend):
+- T1 (PEEK valid) — `discount=100.00 net=900.00` bei 10×100@10% ✅
+- T2 (PEEK sell) — HTTP 400 „Gutscheine sind nur für Kaufaufträge gültig" ✅
+- T3 (PEEK invalid) — HTTP 404 „Ungültiger oder bereits verwendeter" ✅
+- T4 (Peek read-only) — 3× Peek hinterlässt keinen State-Change ✅
+- T5 (Mass-assignment) — HTTP 422 `extra_forbidden` ✅
+- T6 (Unauth) — HTTP 401 ✅
+- T7 (Order create WITH coupon) — `reserved_cash=450.00, coupon_status=reserved, coupon_discount_amount=50.00` bei 5×100@10% ✅
+- T8 (Coupon Status nach Reserve) — `status=reserved, reserved_order_id=order_id` ✅
+- T9 (Idempotent doppel-POST) — gleiche Order-ID zurück, keine zweite Reservation ✅
+- T10 (2. Order same coupon) — HTTP 404 (Coupon nicht mehr `active`) ✅
+- T11 (Order OHNE Coupon Regression) — Buy MSFT 2×50 → `reserved_cash=100.00, coupon_status=null` ✅
+- T12 (Sell + Coupon) — HTTP 400 ✅
+- T13 (Cancel) — `status=cancelled, coupon_status=released` ✅
+- T14 (Coupon nach Cancel) — `status=active, reserved_order_id=null` ✅
+
+### PHASE R · LEGACY PARITY (Rechnerisches Beispiel)
+
+**Fall:** BUY 5 × AAPL @ 100 EUR mit 10%-Coupon, Execution zu 100 EUR
+
+| Feld | Legacy (aus 82.60-SQL) | Mongo (82.61a) | Parität |
+|---|---|---|---|
+| gross | 500.00 | 500.00 | ✅ |
+| discount | round(500 × 10/100, 2) = 50.00 | 50.00 | ✅ |
+| cash_debit | 450.00 | 450.00 | ✅ |
+| position quantity | +5 | +5 | ✅ |
+| position avg_cost | 100 (voller executed_price) | 100 | ✅ |
+
+### PHASE J · POSITION COST BASIS
+- `COUPON_POSITION_LEGACY_PARITY = YES` ✅
+- `avg_cost` wird explizit NICHT durch Coupon reduziert. Business-Owner-Entscheidung bleibt separat.
+
+### PHASE S · REGRESSION
+- Buy ohne Coupon: PASS (T11) ✅
+- Sell ohne Coupon: unangetastet (Session 82.28-Flow) ✅
+- Matcher: unangetastet — nutzt Standard-`execute_order` das jetzt Coupon-aware ist ✅
+- Cancel: unangetastet für Nicht-Coupon-Orders ✅
+- Cash-Ledger: append-only, kein `coupon_rebate`-Typ (Legacy-Parität) — Coupon-Info in `description` ✅
+- Statement/Snapshot/Notification-Bell: keine Änderungen ✅
+- IPO/Bond: keine Änderungen ✅
+- StockDetail Legacy-Flow: UNANGETASTET (Cutover erst 82.62/82.61b) ✅
+
+### FINAL REPORT — Session 82.61a
+
+- FILES_CHANGED: `backend/services/coupon_service.py` (neu), `backend/routes/portfolio.py`, `backend/services/order_execution_service.py`, `backend/tests/test_coupon_flow.py` (neu), `memory/PRD.md`
+- COUPON_COLLECTION: `stock_trade_coupons` (4 idempotente Indizes: code-unique, status, reserved_order sparse, consumed_order sparse)
+- COUPON_STATE_MACHINE: `active → reserved (order-create/CAS) → consumed (execute-order-settled/CAS)` · `reserved → active (cancel/CAS)` · Admin-Only: `active → revoked`
+- PEEK_ENDPOINT: `POST /api/portfolio/coupons/peek` (auth-only, read-only)
+- PEEK_WRITES: **0** ✅
+- ORDER_SCHEMA_COUPON: **YES** (`coupon_code` optional in `OrderCreateIn`; alle Financial-Felder serverseitig)
+- BUY_COUPON: **PASS** (T7)
+- SELL_COUPON_BLOCKED: **PASS** (T12 · HTTP 400)
+- RESERVATION: **PASS** (T8 · CAS `find_one_and_update` mit `status:active`-Filter)
+- RELEASE_ON_CANCEL: **PASS** (T13/T14 · CAS mit `reserved_order_id`-Filter, idempotent bei Doppel-Cancel)
+- CONSUMPTION: **PASS** (Pytest T12/T13 · CAS mit `reserved_order_id`-Filter, idempotent)
+- CONCURRENT_RESERVATION: **PASS** (Pytest T9 · 5 parallele Reserves → exactly-one-wins, 4× COUPON_NOT_AVAILABLE)
+- DOUBLE_CONSUMPTION: **0** ✅ (Pytest T15 · 5 parallele Consumes → 1× True, 4× False idempotent, 0 Errors)
+- LEGACY_CASH_PARITY: **PASS** (T7 · `reserved_cash=450.00` bei 5×100@10%)
+- LEGACY_AVG_COST_PARITY: **PASS** (Legacy-Regel: `avg_cost = executed_price`, bewusst behalten)
+- COUPON_POSITION_LEGACY_PARITY: **YES** ✅
+- APPEND_ONLY_LEDGER: **PASS** (keine Änderung an bestehenden Ledger-Events; Coupon-Info in `description`)
+- FLOAT_MONEY: **NO** ✅ (alles Decimal / Decimal128)
+- FINANCIAL_INVARIANTS: **PASS**
+- SUPABASE_WRITES: **0** ✅ (der neue Coupon-Flow ist reine Mongo-Native-Kette)
+- STOCKDETAIL_LEGACY_RPC_REMOVED: **NO** ✅ (erwarteter Zustand · erst Session 82.62)
+- READY_FOR_STOCKDETAIL_ORDER_CUTOVER: **YES** (Backend hat Coupon-Support-Parität; nächste Session kann StockDetail auf `POST /api/portfolio/orders` mit optionalem `coupon_code` migrieren)
+- READY_FOR_PROD: **NO** (Session 82.62-Cutover + Prod-Deploy-Blocker `SUPABASE_SERVICE_ROLE_KEY` bleiben offen)
+
+### QA-Coupons erzeugt
+Preview-Coupons dieser Session sind `preview_only=true, qa_session ∈ {82.61a-*}`. Benutzte (reserved/consumed) bleiben audit-safe erhalten. Unbenutzte werden von Pytest-Teardown gelöscht.
+
+---
+
+
 ## Session 82.60 (Preview · READ-ONLY AUDIT) · Stock Trade Coupon Domain Audit
 
 **Ziel:** Fachliche Bedeutung von `peek_stock_trade_coupon` + `submit_user_stock_order` (Coupon-Pfad) klären, damit 82.61-Cutover risikofrei entscheidbar ist. **KEINE Code-Änderungen, keine Financial Writes, keine Testorder, keine Coupon-Einlösung.**
