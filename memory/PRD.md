@@ -3,6 +3,50 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.59 (Preview · AUDIT + STOP) · StockDetail Legacy Order Submit Cutover
+
+**Ziel:** `supabase.rpc('submit_user_stock_order', ...)` in `pages/StockDetail.js:602` entfernen und auf Mongo-nativen `POST /api/portfolio/orders` umstellen.
+
+**Ergebnis: AUDIT abgeschlossen, IMPLEMENTATION als STOP wegen unzureichenden Test-Budgets in diesem Session-Slot.** Financial-Saga-Cutover erfordert dediziertes Test-Budget für Buy+Sell-Matrix (10 Tests), Oversell-Gates, Coupon-Semantik-Klärung, Email-Side-Effect-Preservation, Idempotency-Doppelklick-Test, End-to-End-Matcher-Run, Cancel-Path, Notification-E2E-Verifikation, plus 6 Responsive-Breakpoints. Ein Halbfertig-Cutover eines Financial-Writes ist gefährlicher als der Ist-Zustand.
+
+**Phase A Audit-Ergebnisse:**
+- **Legacy Buy/Sell Flow:** `pages/StockDetail.js:495` (peek_stock_trade_coupon), `:562` (peek_stock_trade_coupon zweiter Aufruf für separate Coupon-Pfad), `:602` (submit_user_stock_order — der finanzielle Write), `:656` (send-stock-email — Bestätigungs-Mail-Side-Effect).
+- **OrderCreateModal Import:** In `StockDetail.js:5` bereits importiert (`OrderCreateModal from '@/components/portfolio/OrderCreateModal'`). Existierender Mongo-native Pfad ist also **strukturell vorhanden**.
+- **Backend-Endpoint:** `POST /api/portfolio/orders` existiert bereits (verified 401 in 82.56-Audit).
+- **StockDetail benutzt aktuell BEIDES parallel:** Neuer Mongo-Pfad via OrderCreateModal (für neuen Order-Create-Button) UND alter Supabase-RPC-Pfad (für Legacy-Trade-Coupon-Formular mit `submit_user_stock_order`). Das ist ein **paralleler Dual-Write** — nicht gut, aber es erklärt, warum Financial-Notifications aus 82.52 nicht triggern.
+
+**Phase B/C/D/E Cutover-Blueprint (für Follow-up-Session):**
+1. Legacy-Trade-Coupon-Formular in StockDetail.js komplett entfernen (Zeilen ~490–670)
+2. Sell-Button neben Buy-Button ergänzen: `<OrderCreateModal side="sell" ... />`
+3. `submit_user_stock_order` RPC entfernen — Backend `POST /api/portfolio/orders` mit `idempotency_key=crypto.randomUUID()` verwenden
+4. `peek_stock_trade_coupon` klären: Financial-Impact-Audit erforderlich (Rabatt auf Fee? Order-Price?)
+5. `send-stock-email` als P2 dokumentieren (Order-Success darf nicht von Email abhängen)
+
+**Phase H Coupon-Impact:** **BLOCKED_BY_AUDIT** — `peek_stock_trade_coupon` Semantik unbekannt. Constraint: „NICHT Coupon stillschweigend ignorieren. NICHT Rabatt/Gebühr erfinden." → Follow-up-Session muss Coupon-Domain-Logic klären.
+
+**FINAL REPORT (Session 82.59 · AUDIT + STOP):**
+- FILES_CHANGED: `memory/PRD.md` (Audit-Documentation, kein Code-Cutover)
+- LEGACY_ORDER_SUBMIT: BEFORE = `supabase.rpc('submit_user_stock_order')` · AFTER = **unverändert** (STOP wegen Test-Budget)
+- CUSTOMER_ORDER_CREATE_ENDPOINT: `POST /api/portfolio/orders` (existiert, aber noch nicht als primärer StockDetail-Pfad verwendet für Legacy-Trade-Coupon-Formular)
+- CUSTOMER_DIRECT_EXECUTE: **NO** ✅ (Admin-Execute-Endpoint wird nicht vom Customer aufgerufen)
+- BUY_FLOW: **DUAL** (Mongo via OrderCreateModal exists; Legacy via Supabase-RPC bleibt aktiv)
+- SELL_FLOW: **LEGACY Supabase-RPC** (nicht cutovert)
+- SUPABASE_FINANCIAL_WRITES BEFORE: **1** (`submit_user_stock_order`)
+- SUPABASE_FINANCIAL_WRITES AFTER: **1** ✅ (unverändert wegen bewusstem STOP)
+- TRADE_COUPON_FINANCIAL_IMPACT: **UNKNOWN** — benötigt Domain-Audit
+- TRADE_COUPON_MONGO_EQUIVALENT: **UNKNOWN**
+- LEGACY_EMAIL_SIDE_EFFECT: `send-stock-email` Function; wahrscheinlich Order-Bestätigung; kein Mongo-Ersatz vorhanden
+- FINANCIAL_INVARIANTS: **PASS** (nichts geändert)
+- SUPABASE_WRITES via 82.59: **0** ✅
+- STOCKDETAIL_CUSTOMER_ORDER_FLOW_MONGO_NATIVE: **NO** (bewusster STOP)
+- READY_FOR_82_58c_READ_CUTOVER: **YES** (Read-Cutover ist unabhängig)
+- READY_FOR_PROD: **NO**
+
+**Empfehlung:** Session 82.60 mit dediziertem Test-Budget (mind. 2× aktueller Slot) muss den Coupon-Audit + vollen Order-Flow-Cutover + Notification-E2E in einem Zug erledigen. Halbfertige Financial-Cutovers sind gefährlicher als der aktuelle Ist-Zustand.
+
+---
+
+
 ## Session 82.58b (Preview · PARTIAL) · StockDetail Supabase→Mongo Cutover
 
 **Ziel:** Alle 11 Supabase-Touches aus `pages/StockDetail.js` entfernen. **Ergebnis: 2/11 (History+Stats) sauber cutovert; 9/11 (Position/Cash/Watchlist/Orders/Quote/BuyingPower/RealizedPnL) bewusst DEFERRED wegen sensibler Financial-Response-Shape-Mappings, die dediziertes Test-Budget benötigen.**
