@@ -12,7 +12,6 @@ import { PRODUCT_ICONS } from '@/lib/productIcons';
 import ProductIcon from '@/components/ProductIcon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { PageContainer, PageHeader, SurfaceCard } from '@/components/dashboard/PageHeader';
 import VermoegenBreadcrumb from '@/components/dashboard/VermoegenBreadcrumb';
@@ -34,9 +33,7 @@ import {
 } from '@/components/ui/dialog';
 import { normalizeIpoCatalogRow } from '@/lib/decodeHtmlEntities';
 
-// Session 82.03: unused import (`supabase`) beibehalten, weil sonstige
-// Referenzen in dieser Datei geblieben sind — der Katalog-Read ist der
-// einzige Supabase-Call, der komplett entfernt wird.
+// Session 82.69: Legacy-Katalog-Read längst Mongo-native; toter Import entfernt.
 
 const STATUS_LABELS = {
   upcoming: 'Bevorstehend',

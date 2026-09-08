@@ -3,6 +3,42 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.69 (Preview · IMPLEMENTED) · Dead Supabase Imports Cleanup
+
+**Ziel:** Nicht-benutzte Supabase-Imports in bereits migrierten Customer-Pages entfernen. Kein Behavior-Change.
+
+### PHASE A · Audit
+- `pages/dashboard/IpoPage.jsx` (Zeile 15): `import { supabase }` — **DEAD_IMPORT** (kein anderer `supabase.`-Ref in Datei; kommentierter Legacy-Hinweis aus Session 82.03 dokumentiert, dass Katalog-Read längst Mongo-native)
+- `pages/dashboard/AnleihenKaufenPage.jsx` (Zeile 14): `import { supabase }` — **DEAD_IMPORT** (kein anderer `supabase.`-Ref in Datei)
+
+### PHASE B · Entfernt
+- IpoPage: `import { supabase }` entfernt + Legacy-Kommentar aktualisiert (82.03 → 82.69)
+- AnleihenKaufenPage: `import { supabase }` entfernt
+
+### PHASE C · Static Verify
+- `IpoPage.jsx` grep `supabase`: **0** ✅
+- `AnleihenKaufenPage.jsx` grep `supabase`: **0** ✅
+
+### PHASE D · Frontend Compile
+- Webpack: **PASS** (keine neuen Errors, keine neuen Warnings)
+
+### PHASE E · Smoke
+- Backend Pytest Coupon-Regression: 16/16 PASS ✅
+- Frontend Hot-Reload erfolgreich; Rendering-Regression wurde durch reine Import-Entfernung ausgeschlossen (kein anderer `supabase.`-Ref hätte laufen können)
+
+### FINAL REPORT — Session 82.69
+- FILES_CHANGED: `frontend/src/pages/dashboard/IpoPage.jsx`, `frontend/src/pages/dashboard/AnleihenKaufenPage.jsx`, `memory/PRD.md`
+- IPO_PAGE_SUPABASE_BEFORE: **2** (Import + Legacy-Kommentar) → IPO_PAGE_SUPABASE_AFTER: **0** ✅
+- BOND_PAGE_SUPABASE_BEFORE: **1** (Import) → BOND_PAGE_SUPABASE_AFTER: **0** ✅
+- BEHAVIOR_CHANGED: **NO** ✅
+- FINANCIAL_WRITES: **0** ✅ · SUPABASE_WRITES: **0** ✅
+- FRONTEND_COMPILE: **PASS** ✅ · REGRESSIONS: **0** ✅
+- READY_FOR_82.70_SUPPORTPAGE: **YES** ✅
+- READY_FOR_PROD: **NO** (`SUPABASE_SERVICE_ROLE_KEY`-Blocker unverändert)
+
+---
+
+
 ## Session 82.68 (Preview · IMPLEMENTED) · ProfilePage Supabase → FastAPI/Mongo Cutover
 
 **Ziel:** `pages/dashboard/ProfilePage.jsx` vollständig von Supabase-Auth/Profile-Updates lösen. Kein Financial-Impact. Kein Dual-Write.

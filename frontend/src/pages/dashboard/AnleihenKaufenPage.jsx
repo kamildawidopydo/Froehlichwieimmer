@@ -11,7 +11,6 @@ import {
 import { PRODUCT_ICONS } from '@/lib/productIcons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { PageContainer, PageHeader, SurfaceCard } from '@/components/dashboard/PageHeader';
 import VermoegenBreadcrumb from '@/components/dashboard/VermoegenBreadcrumb';
