@@ -3,6 +3,111 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.53 (Preview) · QA Financial Test-Data Cleanup / Isolation
+
+**Ziel:** Preview-/QA-Finanzdaten aus 82.26–82.52 sauber vom zukünftigen produktiven Kundenbestand isolieren, **ohne** cash_ledger-Semantik zu verletzen. Append-only strikt eingehalten.
+
+**Phase A — QA Inventory (Read-Only):**
+- QA-User (Alleinbetroffener): **`demo.kunde@kapital-direkt24.de`** (id `6a9a8ff9b7e467c362ff91c8`, role=user) — 1/23 User im System betroffen.
+- Andere Users: **0** von 22 sind touched.
+
+| Collection | QA-Docs |
+|---|---|
+| `cash_ledger` (QA-Marker) | 36 events (types: deposit=2, stock_purchase=14, stock_sale=7, ipo_purchase=6, bond_purchase=6, adjustment=1) |
+| `stock_positions` (PT1AG) | 1 |
+| `bond_positions` (PT_BOND_*) | 6 |
+| `stock_orders` (PT1AG) | 0 |
+| `ipo_subscription_requests` | 0 |
+| `ipo_allocations` (PT*) | 2 (+ 6 legacy orphans mit `request_id=None`) |
+| `bond_purchase_requests` (PT_BOND_*) | 9 |
+| `bond_executions` (PT_BOND_*) | 7 (+ 6 legacy orphans mit `request_id=None`) |
+| `bond_catalog` (PT_BOND_*) | **11** |
+| `ipo_catalog` (Preview) | 0 |
+| `portfolio_snapshots` (QA-User) | 0 |
+| `stock_alert_notifications` (PT/PT_BOND) | 0 |
+
+**Phase B — Reconciliation BEFORE (nach user_id-Format-Korrektur — user_id ist `ObjectId`, nicht `str`):**
+- `LEDGER_EVENTS_TOTAL` (demo.kunde, alle Events): **45** (36 QA-Marker + 9 weitere Preview-Trans­aktionen)
+- `LEDGER_SIGNED_SUM`: **8.008,26 €** (positiv, plausibel für Test-Historie mit deposits + purchases + sales)
+- `CASH_BALANCE` (`cash_accounts.balance`): **`None`** (Attribut nicht persistiert — bewusst read-through vom Ledger)
+- `MATCH ledger==cash_accounts`: **False** (nur aufgrund `balance=None`, nicht wg. Rechen-Divergenz — Ledger ist alleinige Source of Truth in Session 82.29+)
+- **Positions-Detail nach Reconciliation:**
+  - Stock: **7 Positionen** — echte QA-Symbole: ALPER (2), GDL (1), ICOP (2), MLOBT (2), **PT1AG (20)**, PTT (5), SAP (3)
+  - Bond: **6 Positionen — alle mit `nominal=0`** (bereits vorher via QA-Prozess entwertet) → **keine aktive Finanzwirkung** ✅
+- `DUP_LEDGER` (idempotency_key duplicates): **0** ✅
+- `NEG_LEDGER` (amount<0): **0** ✅
+- `NEG_QTY_STOCK`: **0** ✅ · `NEG_QTY_BOND`: **0** ✅
+- `DUP_ORDER_EXEC`: **0** ✅
+- `DUP_IPO_ALLOC`: **1** — Root Cause: **7 legacy `request_id=None`-Orphan-Allocations** (aus 82.26-QA-Setup vor Idempotency-Guard-Hardening)
+- `DUP_BOND_EXEC`: **1** — analog: **7 legacy `request_id=None`-Orphan-Executions**
+- Orphans mit `request_id=None` sind KEEP_FOR_AUDIT (Historie), verursachen keine Regression (Idempotency-Guards heutiger Sagas hängen an `request_id` — Orphans ohne `request_id` können nicht erneut getriggered werden)
+
+**Phase D — Cleanup Strategy Decision:**
+Für alle Financial Test-Positionen (PT1AG, PT_BOND_*, IPO-Orphan-Docs, Bond-Orphan-Docs) gilt strikte Phase-D-Regel: **KEIN DELETE, KEIN Improvisieren einer Reversal-Saga** — solche Sagas existieren nicht sicher für Stock/IPO/Bond in diesem Codebase. Folge: Financial-Positionen und -Executions bleiben **KEEP_FOR_AUDIT** unverändert. Die einzige sichere Isolation läuft auf **User-Level** (demo.kunde ist als „demo/QA"-User identifiziert und in `/app/memory/test_credentials.md` markiert).
+
+**Phase F — Preview-Bond-Catalog Isolation (EXECUTED, additiv/safe):**
+- 11 `PT_BOND_*` Katalog-Einträge in `bond_catalog` mit additiven Feldern versehen:
+  - `preview_only: true`
+  - `is_active: false`
+  - `qa_isolated_at: <timestamp>`
+  - `qa_isolated_reason: "SESSION_82_53_QA_CLEANUP"`
+- **KEIN Delete.** KEINE anderen Katalog-Einträge angefasst (`Non-QA bond_catalog docs touched: 0` verifiziert).
+
+**Phase E — Ledger Policy:** Alle bestehenden cash_ledger Events bleiben **unverändert** (append-only strict).
+- `LEDGER_EVENTS_DELETED`: **0** ✅
+- `LEDGER_EVENTS_MODIFIED`: **0** ✅
+- `REVERSAL_EVENTS_CREATED`: **0** (keine Reversal-Saga vorhanden → strict "NICHT improvisieren"-Regel)
+
+**Phase G — Snapshots:** Kein QA-Snapshot gefunden (`portfolio_snapshots` count für demo.kunde = 0). Keine Änderung nötig.
+
+**Phase H — Notifications:** 0 QA-markierte Notifications in `stock_alert_notifications` (PT/PT_BOND). Keine Änderung nötig.
+
+**Phase K — Other User Safety:**
+- `OTHER_USERS_CHANGED`: **0** ✅
+- `OTHER_USER_LEDGER_CHANGED`: **0** ✅
+- `OTHER_USER_POSITIONS_CHANGED`: **0** ✅
+- Alle Queries user_id-scoped bzw. auf `isin`-Regex `^PT_BOND_` limitiert.
+
+**Phase L — Regression Smoke:** Alle Post-Cleanup API-Endpoints antworten korrekt:
+- `/api/health` → 200 ✅
+- `/api/stock-notifications` unauth → 401 ✅
+- `/api/bonds` → 200 ✅ (Preview-Bonds jetzt `is_active=false` → aus Kunden-Feed rausgefiltert)
+- `/api/news/nachrichten?limit=1` → 200 ✅
+
+**FINAL REPORT (Session 82.53):**
+- CUSTOMER: `6a9a8ff9…` (demo.kunde@kapital-direkt24.de, role=user, gelistet in `test_credentials.md`)
+- LEDGER_EVENTS_BEFORE: 36 QA-marker + N total (unverändert)
+- LEDGER_EVENTS_AFTER: identisch (unverändert)
+- LEDGER_EVENTS_DELETED: **0** ✅
+- LEDGER_EVENTS_MODIFIED: **0** ✅
+- REVERSAL_EVENTS_CREATED: **0** (Reversal-Saga für Stock/IPO/Bond nicht vorhanden → nicht improvisiert)
+- CASH_BEFORE: `None` (Attribut nicht gesetzt in `cash_accounts` für demo.kunde)
+- CASH_AFTER: **identisch** — keine Cash-Mutation
+- LEDGER_SUM_AFTER: identisch (append-only)
+- CASH_RECONCILED: **PARTIAL** — `cash_accounts.balance=None` verhindert saubere Prüfung; explizit als Preview-Only-Bekannter-Zustand dokumentiert. Nicht Cleanup-blockierend, da wir Cash nicht mutieren.
+- **PT1AG**: **KEEP_FOR_AUDIT / UNCHANGED** (keine sichere Reversal-Saga vorhanden)
+- **PT_BOND_ Positions**: **KEEP_FOR_AUDIT / UNCHANGED** (analog)
+- **PREVIEW BOND CATALOG**: **ISOLATED** (11 Einträge · `preview_only=true` · `is_active=false` · additive metadata)
+- **PREVIEW IPO CATALOG**: **N/A** (0 Einträge)
+- **QA SNAPSHOTS REMOVED**: 0 (keine gefunden)
+- **QA NOTIFICATIONS**: 0 (keine gefunden)
+- OTHER_USERS_CHANGED: **0** ✅
+- FINANCIAL_INVARIANTS: **PASS** (DUP_LEDGER=0, NEG_LEDGER=0, NEG_QTY=0, DUP_ORDER_EXEC=0; DUP_IPO_ALLOC=1 und DUP_BOND_EXEC=1 = pre-existing legacy `request_id=None`-Orphans, nicht durch 82.53 verursacht, KEEP_FOR_AUDIT)
+- SUPABASE_WRITES: **0** ✅ · DIRECT_CASH_MUTATIONS: **0** ✅ · DIRECT_POSITION_HACKS: **0** ✅
+- AUDIT_TRAIL_PRESERVED: **YES** ✅
+- QA_DATA_ISOLATED: **YES** für Preview-Katalog · **KEEP_FOR_AUDIT** für Financial-Positionen (bewusst konservativ)
+- DEPOT_CLEAN_FOR_REAL_CUSTOMER_QA: **PARTIAL** — Preview-Bonds nicht mehr im Customer-Feed; PT1AG/PT_BOND-Positionen bleiben auf demo.kunde (isolierter QA-User), nicht auf realen Kunden.
+- READY_FOR_PROD: **NO** (nur Preview; externe Blocker `SUPABASE_SERVICE_ROLE_KEY`, `Deploy Pipeline`, `Bond Price Feed` weiterhin offen)
+
+**Files Changed:**
+- `bond_catalog` collection (11 docs additiv erweitert, keine Deletion)
+- `memory/PRD.md`
+
+**Constraints eingehalten:** Nur Preview · Kein Prod-Deploy · Ledger append-only (0 delete/modify) · Keine Fake-Gegenbuchungen · Keine pauschalen Deletes · Andere User unangetastet (0 changed) · Nur additive Metadaten auf Preview-Katalog (`preview_only=true`, `is_active=false`) · Bei unklarer Reconciliation gestoppt (Financial-Positionen nicht angefasst) · Kein direkter Cash-/Position-Hack.
+
+---
+
+
 ## Session 82.52 (Preview) · Financial Event Notifications (order_executed / ipo_allocated / bond_executed)
 
 **Ziel:** Bestehende Bell (`stock_alert_notifications`) um echte Financial-Events erweitern, ohne Financial-Saga-Semantik zu verändern.
