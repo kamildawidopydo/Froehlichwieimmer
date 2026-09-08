@@ -3,6 +3,50 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.70 (Preview · IMPLEMENTED) · SupportPage Supabase → Mongo/FastAPI Cutover
+
+**Ziel:** `pages/dashboard/SupportPage.jsx` vollständig von Supabase lösen (9 aktive Touches → 0). Non-financial. Kein Prod-Deploy.
+
+### Was gebaut wurde
+- **Backend NEU:** `routes/support.py` mit Mongo-Collections `support_tickets` + `support_messages` (Indizes idempotent) und 6 Customer-Endpoints:
+  - `GET /api/support/tickets` — eigene Liste
+  - `POST /api/support/tickets` — Ticket + Initial-Message atomar
+  - `GET /api/support/tickets/{id}` — eigenes Ticket
+  - `GET /api/support/tickets/{id}/messages` — chronologisch aufsteigend
+  - `POST /api/support/tickets/{id}/messages` — Message anhängen (blockiert bei `status=closed`)
+  - `POST /api/support/tickets/{id}/read` — `unread_for_user=0` + Admin-Messages `read_at` setzen
+  - Ownership serverseitig via Cookie-JWT; Pydantic `extra='forbid'` gegen Mass-Assignment (`user_id`, `status`, `priority`, `role` → 422).
+- **Neuer Service** `frontend/src/services/supportApi.js` (Cookie-basiert via `credentials: 'include'`).
+- **SupportPage.jsx** komplett cutovert — `supabase.from/rpc/channel/removeChannel` alle entfernt. Realtime-Channel durch **sichtbarkeitsgesteuerten 45s-Poll + visibilitychange-Refresh** ersetzt. `import { supabase }` entfernt.
+
+### Static Audit
+- `SupportPage.jsx` grep `supabase`: **0** ✅
+
+### E2E Tests (8/8 curl PASS + Pytest 16/16)
+- T1 unauth list → **401** · T3 create ticket → **201** mit korrekten Feldern · T4 create message → **201** · T5 read own messages → 2 messages, `first_role='user'` · T8 mass-assignment `user_id`+`status` → **422 extra_forbidden** · T6 foreign ticket → **404 „Ticket nicht gefunden"** · T14 mark read → **200** · T2 list own → nur eigene Tickets sichtbar
+- Coupon-Regression 16/16 PASS ✅
+
+### FINAL REPORT Flags
+- FILES_CHANGED: `backend/routes/support.py` (neu), `backend/server.py` (router+startup), `frontend/src/services/supportApi.js` (neu), `frontend/src/pages/dashboard/SupportPage.jsx`, `memory/PRD.md`
+- SUPABASE_TOUCHES_BEFORE: **9** → AFTER: **0** ✅ · SUPABASE_IMPORT_PRESENT: **NO** ✅
+- SUPPORT_BACKEND_EXISTED_BEFORE: **NO** → **6 neue Mongo-Endpoints**
+- TICKET/MESSAGE_COLLECTION: `support_tickets` / `support_messages` mit 3 Indizes (user+updated_desc, status+updated_desc, ticket+created_asc)
+- LIST/CREATE_TICKET/MESSAGE/MARK_READ_SOURCE_AFTER: alle `/api/support/*`
+- REALTIME_BEFORE: `supabase.channel(support_user_*)` → REALTIME_AFTER: **45-s-Polling** (pausiert wenn `document.hidden`, +visibilitychange-Refresh)
+- USER_ISOLATION: **PASS** ✅ · CROSS_USER_LEAKS: **0** ✅ · MASS_ASSIGNMENT: **PASS** ✅ · UNAUTH: **PASS** ✅
+- EMPTY_STATE / LOCAL_ERROR_HANDLING: **PASS** (Toast + Input-Restore bei send-fail; kein globaler Banner)
+- GLOBAL_BANNER_ON_SUPPORT_FAIL: **NO** ✅
+- ATTACHMENT_STATUS: **N/A** (keine Attachments implementiert; kein Regressionsrisiko)
+- ADMIN_SUPPORT_CUTOVER_REQUIRED: **YES** (separater Track — Admin-Seite liest weiterhin Supabase; Customer-Nachrichten in Mongo, Admin sieht sie nicht bis Admin-Route existiert)
+- FINANCIAL_WRITES: **0** ✅ · SUPABASE_WRITES: **0** ✅ · FINANCIAL_INVARIANTS_CHANGED: **NO** ✅
+- SUPPORTPAGE_MONGO_NATIVE: **YES** ✅ (Attachments nicht vorhanden; kein Storage-Sonderfall)
+- READY_FOR_82.71: **YES** · READY_FOR_PROD: **NO**
+
+**Kritischer Hinweis:** Customer-Seite schreibt jetzt in Mongo — der bestehende Admin-Support-Screen (falls Supabase-basiert) sieht diese neuen Tickets NICHT mehr. Admin-Cutover ist zwingend erforderlich als Follow-Up-Track, bevor Support wieder betriebsfähig im Live-Betrieb ist.
+
+---
+
+
 ## Session 82.69 (Preview · IMPLEMENTED) · Dead Supabase Imports Cleanup
 
 **Ziel:** Nicht-benutzte Supabase-Imports in bereits migrierten Customer-Pages entfernen. Kein Behavior-Change.

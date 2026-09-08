@@ -5247,6 +5247,14 @@ from routes.portfolio import (  # noqa: E402
 app.include_router(_portfolio_router)
 app.include_router(_portfolio_admin_router)
 
+# Session 82.70 · Customer-Support (Mongo-native)
+from routes.support import router as _support_router, ensure_support_indexes  # noqa: E402
+app.include_router(_support_router)
+
+@app.on_event("startup")
+async def _support_indexes_startup():
+    await ensure_support_indexes(db)
+
 @app.on_event("startup")
 async def _init_ipo_indexes():
     try:

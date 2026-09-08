@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
+import { supportApi } from '@/services/supportApi';
 import { useAuth } from '@/context/AuthContext';
 import { PageContainer, PageHeader, SurfaceCard } from '@/components/dashboard/PageHeader';
 import SupportContactBar from '@/components/dashboard/support/SupportContactBar';
@@ -73,13 +73,8 @@ const SupportPage = () => {
     if (!user?.id) return;
     setLoadingTickets(true);
     try {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('last_message_at', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false });
-      if (error) throw error;
+      // Session 82.70 — Mongo-native GET /api/support/tickets.
+      const data = await supportApi.listTickets();
       setTickets(data || []);
       if (!activeId && (data || []).length > 0) {
         setActiveId(data[0].id);
@@ -95,12 +90,7 @@ const SupportPage = () => {
     if (!ticketId) return;
     setLoadingMessages(true);
     try {
-      const { data, error } = await supabase
-        .from('support_messages')
-        .select('*')
-        .eq('ticket_id', ticketId)
-        .order('created_at', { ascending: true });
-      if (error) throw error;
+      const data = await supportApi.listMessages(ticketId);
       setMessages(data || []);
     } catch (err) {
       toast.error('Nachrichten konnten nicht geladen werden.');
@@ -112,15 +102,12 @@ const SupportPage = () => {
   const markRead = useCallback(async (ticketId) => {
     if (!ticketId) return;
     try {
-      await supabase.rpc('mark_support_thread_read', {
-        p_ticket_id: ticketId,
-        p_role: 'user',
-      });
+      await supportApi.markRead(ticketId);
       setTickets((prev) =>
         prev.map((t) => (t.id === ticketId ? { ...t, unread_for_user: 0 } : t)),
       );
     } catch {
-      // Best effort — Zähler synchronisiert sich beim nächsten Abruf
+      /* Best effort — Zähler synchronisiert sich beim nächsten Abruf */
     }
   }, []);
 
@@ -143,42 +130,25 @@ const SupportPage = () => {
     }
   }, [messages.length]);
 
-  // Realtime: bei neuem Ticket/Nachricht automatisch aktualisieren
+  // Session 82.70 — Realtime durch sichtbarkeitsgesteuerten 45-s-Poll ersetzt.
   useEffect(() => {
     if (!user?.id) return undefined;
-    const ch = supabase
-      .channel(`support_user_${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'support_tickets',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchTickets();
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'support_messages' },
-        (payload) => {
-          const msg = payload?.new;
-          if (!msg) return;
-          if (msg.ticket_id === activeId) {
-            setMessages((prev) =>
-              prev.some((m) => m.id === msg.id) ? prev : [...prev, msg],
-            );
-            if (msg.sender_role === 'admin') markRead(activeId);
-          }
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
+    const POLL_MS = 45000;
+    let cancelled = false;
+    const tick = () => {
+      if (cancelled || typeof document !== 'undefined' && document.hidden) return;
+      fetchTickets();
+      if (activeId) fetchMessages(activeId);
     };
-  }, [user?.id, activeId, fetchTickets, markRead]);
+    const iv = setInterval(tick, POLL_MS);
+    const onFocus = () => tick();
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [user?.id, activeId, fetchTickets, fetchMessages]);
 
   const activeTicket = useMemo(
     () => tickets.find((t) => t.id === activeId) || null,
@@ -210,18 +180,17 @@ const SupportPage = () => {
       };
       setMessages((prev) => [...prev, optimistic]);
       setInput('');
-      const { error } = await supabase.from('support_messages').insert({
-        ticket_id: activeId,
-        sender_id: user.id,
-        sender_role: 'user',
-        body,
-      });
-      if (error) {
+      let real;
+      try {
+        real = await supportApi.createMessage(activeId, body);
+      } catch (err) {
         setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
-        throw error;
+        setInput(body);
+        throw err;
       }
-      // Echte Nachricht kommt per Realtime; optimistic'i temizle
-      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== optimistic.id).concat(real ? [real] : []),
+      );
     } catch (err) {
       toast.error('Senden fehlgeschlagen. Bitte versuchen Sie es erneut.');
     } finally {
@@ -483,19 +452,10 @@ const NewTicketModal = ({ onClose, onCreated, userId }) => {
     if (!subject.trim() || !message.trim() || !userId) return;
     setSubmitting(true);
     try {
-      const { data: ticket, error: tErr } = await supabase
-        .from('support_tickets')
-        .insert({ user_id: userId, subject: subject.trim() })
-        .select()
-        .single();
-      if (tErr) throw tErr;
-      const { error: mErr } = await supabase.from('support_messages').insert({
-        ticket_id: ticket.id,
-        sender_id: userId,
-        sender_role: 'user',
+      const ticket = await supportApi.createTicket({
+        subject: subject.trim(),
         body: message.trim(),
       });
-      if (mErr) throw mErr;
       toast.success(
         t('dashboardShell.support.created', { defaultValue: 'Nachricht gesendet — wir melden uns in Kürze.' }),
       );
