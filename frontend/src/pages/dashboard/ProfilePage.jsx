@@ -306,14 +306,25 @@ const ProfilePage = () => {
     setPrefsSaving(true);
     setNotificationPrefs(nextPrefs);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          notification_prefs: nextPrefs,
-          email_digest_enabled: nextPrefs.weekly_digest,
-        })
-        .eq('id', user.id);
-      if (error) throw error;
+      // Session 82.44 · Mongo-native Preference-Persist via /api/users/onboarding
+      // (PATCH mit extra='forbid' → Mass-Assignment-safe).
+      // Wichtig: `email_digest_enabled` bleibt Legacy-Spiegel für weekly_digest,
+      // damit bestehende Consumer (falls je aktiviert) konsistent bleiben.
+      const mergedPrefs = {
+        ...(user?.notification_prefs || {}),
+        [key]: next,
+      };
+      const resp = await fetch('/api/users/onboarding', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notification_prefs: mergedPrefs,
+          email_digest_enabled: mergedPrefs.weekly_digest !== false,
+        }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      await refreshUser?.();
       toast.success('Einstellungen gespeichert');
     } catch (err) {
       Sentry.captureException(err);
@@ -329,13 +340,14 @@ const ProfilePage = () => {
     const nextPrefs = { ...(user.notification_prefs || {}), language };
     setLanguageSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          notification_prefs: nextPrefs,
-        })
-        .eq('id', user.id);
-      if (error) throw error;
+      // Session 82.44 · Mongo-native via /api/users/onboarding
+      const resp = await fetch('/api/users/onboarding', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notification_prefs: nextPrefs }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(APP_LANG_STORAGE_KEY, language);
       }

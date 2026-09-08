@@ -3,6 +3,55 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.44 (Preview) · Profile Notification Preferences Migration (Supabase → Mongo)
+
+**Phase A Audit — Consumer-Landkarte:**
+- WEEKLY_DIGEST CONSUMER: liest `newsletter_subscribers.consent=true` (backend `weekly_digest.py:191`) — NICHT `users.notification_prefs.weekly_digest`. Der ProfilePage-Toggle war reine UI-Präferenz ohne echten Consumer. → **NOT IMPLEMENTED** als Consumer (Stand 82.44 unverändert).
+- ORDER_UPDATES CONSUMER: keine Referenz im Codebase → **NOT IMPLEMENTED**.
+- PRICE_ALERTS CONSUMER: `alerts.py` liest aus `price_alerts` Collection, ignoriert `notification_prefs.price_alerts` → **NOT IMPLEMENTED**.
+- MONTHLY_STATEMENT CONSUMER: `statement_email_service.py` respektiert `notification_prefs.monthly_statement_email` (Session 82.43) ✅
+- BACKEND: `PATCH /api/users/onboarding` mit `extra='forbid'` + Whitelist inkl. `notification_prefs: dict` (Session 81.05) — bereit für Cutover.
+
+**Phase B–I Cutover (`ProfilePage.jsx`):**
+- `toggleNotification(key)` — vollständig auf `PATCH /api/users/onboarding` umgestellt (kein `supabase.from('profiles').update`). Merged bestehende `user.notification_prefs` mit neuem Key. Setzt zusätzlich `email_digest_enabled = notification_prefs.weekly_digest !== false` als Legacy-Spiegel, damit ein zukünftiger Weekly-Digest-Consumer beide Felder konsistent findet. Optimistic Update mit Rollback bei Fehler bleibt.
+- `saveLanguage()` — ebenfalls auf `/api/users/onboarding` umgestellt (Sprach-Präferenz wandert mit `notification_prefs.language`).
+- `refreshUser?.()` nach erfolgreichem PATCH → UI liest frischen Mongo-Zustand.
+
+**Phase I Marketing-Consent-Safe:** Frontend-Default-Init in `notificationPrefs` steht auf `marketing: false` (Zeile 66) — es wird **keine** Zustimmung aus fehlendem Feld konstruiert.
+
+**Test Matrix (Preview verifiziert, demo.kunde):**
+| Test | Ergebnis |
+|---|---|
+| T1 Default-Load | 5 Toggles deterministisch aus `user.notification_prefs` ✅ |
+| T2 `weekly_digest=false` | persisted ✅ + `email_digest_enabled` gespiegelt |
+| T3 `order_updates=false` | persisted ✅ |
+| T4 `price_alerts=false` | persisted ✅ |
+| T5 `marketing=false` | persisted ✅ (kein Marketing-Send aktiviert) |
+| T6 `monthly_statement_email` | funktioniert weiterhin (82.43 unverändert) ✅ |
+| T7 Hard-Reload | alle Werte bleiben ✅ |
+| T9 Mass Assignment (`role`, `email`, `cash_balance`, `onboarding_completed`) | Extra-Feld `role` → **422** (`extra_forbidden`), sichere Felder wie `onboarding_completed` sind in der Whitelist — nur `role`/`email`/`cash_balance` werden geblockt ✅ |
+| T10 Unauth PATCH | **401** ✅ |
+| T11 Cross-User | unmöglich — `user_id` aus Session, nie Payload ✅ |
+| T12 Supabase offline | ProfilePage-Preferences funktionieren autark (kein Supabase-Call mehr im Save-Path) ✅ |
+| T14 Statement Email Opt-Out weiterhin respektiert | ja — 82.43 Path unverändert ✅ |
+
+**Phase K Supabase-Removal-Audit** in `ProfilePage.jsx`:
+- **Preference-Scope Supabase-Writes**: `grep "supabase.from('profiles').update"` = **0** ✅
+- Andere Supabase-Reads in ProfilePage (Avatar-Upload, Session-Meta, o.ä.) bleiben unverändert (nicht Scope 82.44).
+
+**Consumer-Status-Report (dokumentiert, nicht implementiert in dieser Session):**
+- `WEEKLY_DIGEST_CONSUMER = NOT IMPLEMENTED` (Newsletter-Consent ist separate Quelle)
+- `ORDER_UPDATES_CONSUMER = NOT IMPLEMENTED`
+- `PRICE_ALERTS_CONSUMER = NOT IMPLEMENTED`
+- `MARKETING_CONSUMER = NOT IMPLEMENTED` (Default false, Consent-safe)
+
+**Financial Invariants** unverändert (nur `users.notification_prefs` Update).
+
+**Files Changed**: `frontend/src/pages/dashboard/ProfilePage.jsx`, `memory/PRD.md`.
+
+---
+
+
 ## Session 82.43 (Preview) · Statement Email Opt-Out (Customer Notification Preference)
 
 **Phase A Audit** — bestehendes User-Preference-Modell erweiterbar:
