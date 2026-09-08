@@ -3,6 +3,63 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.48 (Preview) · Sitemap Foreign-Domain Purge
+
+**Ziel:** Fremde `www.kapitalmitte.com`-URLs (18 Einträge) aus `public/sitemap.xml` entfernen. Sicherstellen, dass ausschließlich kontrollierte `kapital-direkt24.de`-URLs zu tatsächlich existierenden Routen ausgeliefert werden. **Kein Prod-Deploy.**
+
+**Phase A Audit (Ist vor 82.48):**
+- `SITEMAP_TOTAL_BEFORE`: **36**
+- `KAPITALMITTE_URLS_IN_SITEMAP`: **18** (Root, `/comparison`, `/calculator`, `/how-it-works`, `/dokumente`, `/spezial-aif`, `/fonds-grundlagen`, `/security`, `/savings-education`, `/faq`, `/about`, `/contact`, `/partner-banks`, `/legal/{impressum,privacy,terms,disclaimer,revocation}`)
+- `KAPITALMITTE_REFS_CODEBASE`: **0 aktive Referenzen** im Live-Stack (`/app/frontend/src`, `/app/frontend/public/*.txt/xml/html`, `/app/backend`). Vorkommen ausschließlich in `/app/legacy_source/**` (unbeteiligter Read-only-Legacy-Ordner) sowie zwei stale Build-Chunks `/app/8774.*.chunk.js` und `/app/845.*.chunk.js` (Reste eines alten Root-Level-Builds — nicht Teil des aktiven `frontend/build`, keine Auswirkung auf Preview/Prod).
+- `GENERATED_OR_STATIC_SITEMAP`: **STATIC** (`public/sitemap.xml`, kein Generator, kein Build-Script).
+
+**Phase B Source Fix:** Da statisch → nur fremde Einträge entfernt. Keine URL-Umschreibungen, keine erfundenen Seiten, keine noindex-Pfade, keine News-Feed-Aufnahme.
+
+**Phase C Validation:**
+| Metrik | Wert |
+|---|---|
+| `SITEMAP_TOTAL_AFTER` | **18** |
+| `KAPITALMITTE_URLS_AFTER` | **0** ✅ |
+| `FOREIGN_DOMAINS_AFTER` | **0** ✅ |
+| `DUPLICATE_URLS` | **0** ✅ |
+| `LEGACY_NEWS_DETAIL_URLS` | **0** ✅ |
+| `PREVIEW_URLS` | **0** ✅ |
+| `LOCALHOST_URLS` | **0** ✅ |
+| `HTTP_URLS` | **0** ✅ |
+| `QUERY_URLS` | **0** ✅ |
+| `HASH_URLS` | **0** ✅ |
+| `XML_VALID` | true ✅ |
+
+**Phase D Route Check:** Alle 18 verbleibenden Pfade sind `/strategie[*]`. `App.js` liefert dazu drei passende Routen (`/strategie` → `StrategieOverview`, `/strategie/:category` → `StrategieCategory`, `/strategie/:category/:topic` → `StrategieDetail`). Kein Legacy-News-Detail-Pfad, kein Redirect-Ziel, kein Not-Found-Pfad. 82.46/82.47-Regeln eingehalten (keine `/nachrichten/:slug`, `/news/nachrichten/:slug`; `/news/:slug` kanonisch nicht in Sitemap, da News-Detail `noIndex`).
+
+**Phase E Robots/Canonical Regression:**
+- `robots.txt` Sitemap-Link unverändert korrekt: `Sitemap: https://kapital-direkt24.de/sitemap.xml` ✅
+- `PageMeta.js::CANONICAL_ORIGIN` weiterhin `https://kapital-direkt24.de` ✅
+- Statischer `<link rel="canonical">` in `index.html` weiterhin entfernt (nicht zurückgekehrt) ✅
+- Live-Verifikation: pro gerenderter Seite genau **1** Canonical-Tag (Home, News-Overview, News-Detail, Legacy-Redirect-Target, Euronews, Unknown-Slug, `/strategie`) ✅
+
+**Phase F Regression Smoke:**
+| Route | Status | Canonical |
+|---|---|---|
+| `/` | 200 · lädt | `https://kapital-direkt24.de/` |
+| `/news` | 200 · lädt | `https://kapital-direkt24.de/news` |
+| `/news/{real-slug}` | 200 · Artikel rendert | `https://kapital-direkt24.de/news/{slug}` |
+| `/nachrichten/{slug}?utm=t` → Redirect | 82.46 aktiv | `https://kapital-direkt24.de/news/{slug}` |
+| `/news/euronews/{slug}` | 200 · rendert | `https://kapital-direkt24.de/news/euronews/{slug}` |
+| `/news/definitely-nonexistent-…-8248` | Not-Found-State | canonical passt zur URL, `noindex,nofollow` |
+| `/strategie` | 200 · rendert | `https://kapital-direkt24.de/strategie` |
+
+82.45 Provider-Fallback: ✅ · 82.46 Route Consolidation: ✅ · 82.47 Canonical Handling: ✅ · Keine Backend-/Depot-/Financial-Änderungen.
+
+**Files Changed:**
+- `frontend/public/sitemap.xml` (18 fremde `www.kapitalmitte.com`-Einträge entfernt, Header-Kommentar hinzugefügt der die Session dokumentiert; verbleibende 18 kapital-direkt24-`/strategie/*`-URLs unverändert)
+- `memory/PRD.md`
+
+**Constraints eingehalten:** Nur Preview · Kein Prod-Deploy · Keine URL-Umschreibungen · Keine erfundenen Seiten · Keine noindex-Aufnahme · Kein Auto-News-Feed-Import · News-Detail-Routing (82.46) unverändert · Canonical-Strategie (82.47) unverändert · Provider-Fallback (82.45) unverändert · Backend/Depot/Financial-Code nicht angefasst · `robots.txt` unverändert.
+
+---
+
+
 ## Session 82.47 (Preview) · News SEO Consolidation (Canonical + Sitemap Refresh)
 
 **Ziel:** Die in 82.46 konsolidierten News-Detailrouten SEO-seitig sauber vereinheitlichen — genau EIN kanonisches `<link rel="canonical">` pro Seite, absolute Prod-Origin, Query/Hash-frei. **Kein Prod-Deploy.**

@@ -1,78 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Session 82.48 — Foreign-domain purge.
+  Fremde www.kapitalmitte.com-Einträge (18 URLs) entfernt.
+  Es verbleiben ausschließlich kontrollierte kapital-direkt24.de-URLs
+  zu real existierenden /strategie/*-Routen (siehe App.js).
+  Keine Ersatz-URLs erfunden, keine noindex-Seiten aufgenommen,
+  News-Detail-Artikel bewusst NICHT aufgenommen (Session 82.47: /news/* setzt noIndex).
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  
-  <url>
-    <loc>https://www.kapitalmitte.com/</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/comparison</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/calculator</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/how-it-works</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/dokumente</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/spezial-aif</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/fonds-grundlagen</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/security</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/savings-education</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/faq</loc>
-  </url>
-
-  
-  <url>
-    <loc>https://www.kapitalmitte.com/about</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/contact</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/partner-banks</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/legal/impressum</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/legal/privacy</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/legal/terms</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/legal/disclaimer</loc>
-  </url>
-
-  <url>
-    <loc>https://www.kapitalmitte.com/legal/revocation</loc>
-  </url>
   <url>
     <loc>https://kapital-direkt24.de/strategie</loc>
   </url>
