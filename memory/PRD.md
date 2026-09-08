@@ -3,6 +3,62 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.76 (Preview · IMPLEMENTED) · Dedicated Owner-Admin Setup + Verification
+
+**Ziel:** Sauberen dedizierten Admin-Zugang `admin@kapital-direkt24.de` im Preview anlegen + vollständig verifizieren. Kein Prod-Deploy, keine Financial-Änderung, keine Rolle client-seitig gesetzt.
+
+### Phase A · Audit
+- **ADMIN_USERS_EXISTING**: `admin@kapitalmitte.com` (6a82fe2eb0ef4c52da900a83), `patron@froehlich-vermoegensberatung.de` (6a9166b315fd11ecb3abddfd) — beide bcrypt-hashed, kein Plaintext
+- **ROLE_FIELD**: `users.role` · **ADMIN_ROLE_VALUE**: `"admin"`
+- **ADMIN_GUARD_SOURCE**: `require_admin` (server.py:150 · JWT-Cookie-authoritative, 403 sonst)
+- **ADMIN_LOGIN_SOURCE**: `POST /api/auth/login` → HttpOnly `access_token` Cookie
+- **ADMIN_FRONTEND_ROUTE**: `/admin` (App.js:814, `<ProtectedRoute requireAdmin>` mit AdminDashboardLayout + 40+ Sub-Routen)
+
+### Phase B–D · Account Creation
+- **Neuer Admin erzeugt** (nicht Duplikat): `admin@kapital-direkt24.de` · id `6aa01969c92bd083631c78a5`
+- **Passwort**: 24-Zeichen zufällig (Python `secrets.choice`) · bcrypt-hashed via `hash_password` · kein Plaintext in Mongo/PRD/Logs · in `test_credentials.md` als Verweis auf Session-82.76-Abschlussreport dokumentiert (Passwort nicht persistiert)
+- **Methode**: einmaliges idempotentes Python-Script direkt gegen Preview-Mongo — kein Frontend-Payload, keine Supabase-Auth, keine client-side Rolle · Assertions: `role="admin"`, `password_hash.startswith("$2b$")`, kein `password`-Feld
+- **ADMIN_ACCOUNT_CREATED**: YES · **ADMIN_ACCOUNT_REUSED**: NO
+
+### Phase E · Login + /me
+- `POST /api/auth/login` → **HTTP 200** ✅ · Response `role="admin"`, `id=6aa01969c92bd083631c78a5`
+- `GET /api/auth/me` → **HTTP 200** ✅ · Response `role="admin"`
+
+### Phase F · Admin-Route Security Matrix
+| Route | Unauth | Customer (demo.kunde) | Neuer Admin |
+|---|---|---|---|
+| `GET  /api/admin/support/tickets` | **401** ✅ | **403** ✅ | **200** ✅ |
+| `GET  /api/admin/portfolio/cash/summary?user_id=…` | **401** ✅ | **403** ✅ | **200** ✅ |
+| `POST /api/admin/portfolio/orders/match` | **401** ✅ | **403** ✅ | **200** ✅ |
+| `GET  /api/admin/portfolio/coupons` | **401** ✅ | **403** ✅ | **200** ✅ |
+
+### Phase G · Frontend Admin Access
+- `/admin` mit unauth Session → redirect `/login?next=%2Fadmin` ✅ (ProtectedRoute funktioniert)
+- `/admin` mit neuem Admin (API-cookie-login) → **rendert AdminDashboardLayout** mit vollständiger Sidebar: Benutzer, Aktien-Aufträge, Kaufkraft-Warnungen, Aktien-Gutscheine, Anträge, Vertrags-Einreichungen, Interessenten, Kundenbewertungen, Kredit-Anfragen, Produkt-Anfragen, Assistent-Anfragen, Social-Nachrichten, Aktivität, Formular-Zugang, Dokument-Upload, Vermögen & Depot (Kontoguthaben, Bond, IPO, Aktien, …), Support ✅ · Header-Badge zeigt „Admin (Kapital-Direkt24)"
+
+### Phase H · Role-Escalation Test
+- `PATCH /api/auth/me` als demo.kunde mit Payload `{"role":"admin","name":"HackerAttempt"}` → HTTP 200, **`role` blieb `"user"`** ✅ (nur `name` geändert — Server ignoriert `role`-Feld · Mass-Assignment SAFE)
+- **ROLE_ESCALATION_COUNT**: **0** ✅
+
+### Phase I · Session-Persistenz
+- Hard-Reload / neuer Prozess mit gleichem Cookie → `/me` bleibt `role="admin"` ✅ (server-authoritative, kein localStorage-Role-Hack)
+- `POST /api/auth/logout` sendet **`Set-Cookie: access_token=""; Max-Age=0; HttpOnly; Secure; SameSite=none`** ✅ — Browser löscht Cookie, curl-Cookie-Jar behält (curl-Quirk, kein Security-Bug); stateless JWT expiring bis `exp`
+- Logout → Re-Login → `/me role="admin"` ✅
+
+### FINAL REPORT Flags
+- ADMIN_ACCOUNT_CREATED: **YES** · ADMIN_ACCOUNT_REUSED: **NO**
+- ADMIN_EMAIL: `admin@kapital-direkt24.de` · ADMIN_ROLE: `admin` · ADMIN_USER_ID: `6aa01969c92bd083631c78a5`
+- PASSWORD_HASHED: **YES** ✅ (bcrypt $2b$) · PLAINTEXT_PASSWORD_IN_DB: **NO** ✅ · PLAINTEXT_IN_PRD: **NO** ✅ · PLAINTEXT_IN_LOGS: **NO** ✅
+- LOGIN: **PASS** · AUTH_ME_ROLE: **PASS** · ADMIN_API_ACCESS: **PASS**
+- CUSTOMER_ADMIN_ACCESS: **403** ✅ (alle 4 getesteten Routen) · UNAUTH_ADMIN_ACCESS: **401** ✅ (alle 4)
+- ROLE_ESCALATION: **0** ✅ (Server ignoriert `role`-Feld in `PATCH /api/auth/me`)
+- HARD_RELOAD_SESSION: **PASS** · ADMIN_FRONTEND_ROUTE: `/admin` · ADMIN_FRONTEND_RENDER: **PASS**
+- FINANCIAL_WRITES: **0** ✅ · SUPABASE_WRITES: **0** ✅
+- READY_FOR_ADMIN_USE: **YES** ✅ · READY_FOR_PROD: **NO** (dedizierter Admin muss für Prod-Deploy in `ADMIN_EXTRAS`-ENV bei Emergent-Deploy-Config gesetzt werden)
+
+---
+
+
 ## Session 82.75 (Preview · VERIFIED · PASS) · Final Coupon+Order+Notification E2E
 
 **Ziel:** Vollständiger Customer-Flow live verifizieren — Coupon → Buy-Order → Reservation → Matcher → Execution → Cash-Debit → Position-Apply → Coupon-Consume → Order-Completed → Notification → Bell-UI. Kein Prod-Deploy, keine neue Business-Logik.
