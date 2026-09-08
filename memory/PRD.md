@@ -3,6 +3,78 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.57 (Preview · Discovery + STOP) · StockDetail Supabase→Mongo Cutover Audit
+
+**Ziel:** Alle 8+ aktiven Supabase-Reads aus `pages/StockDetail.js` auf Mongo-native APIs umstellen. **Ergebnis: DISCOVERY vollständig · Cutover PARTIAL/BLOCKED wegen fehlender Response-Shape-Deckung.**
+
+**Phase A — 11 aktive Supabase-Touches identifiziert:**
+| # | Line | Zweck | Supabase-Source | Mongo-Ersatz | Status |
+|---|---|---|---|---|---|
+| 1 | 363 | Stock-Master-Metadata | `stocks` Table | **kein direkter Endpoint** (StockDetail nutzt Metadaten für Name/Sector) | **MISSING** (non-critical UI) |
+| 2 | 364 | Live-Quote | `stock_prices_cache` | `/api/portfolio/quotes` (401 ✅) | vorhanden |
+| 3 | 367 | Watchlist-Flag | `user_stock_watchlist` | `/api/watchlist` GET (401 ✅) + client filter, oder bereits importierter `watchlistApi` | vorhanden |
+| 4 | 368 | User-Position | `user_stock_positions` | `/api/portfolio/stock-positions` (401 ✅) | vorhanden |
+| 5 | 369 | Cash-Balance/Available | `profiles.cash_balance/available` | `/api/portfolio/cash` (401 ✅) | vorhanden |
+| 6 | 406 | Buying Power | RPC `get_user_buying_power` | `/api/portfolio/cash.buying_power` | vorhanden |
+| 7 | 370-378 | Realized P&L per Symbol | `user_stock_orders` executed sells | `/api/portfolio/orders` (401 ✅) + client filter | vorhanden (shape check nötig) |
+| 8 | 379-387 | Symbol-Orders-Liste | `user_stock_orders` recent 20 | `/api/portfolio/orders?symbol=X` | vorhanden (Query-Param-Support unbestätigt) |
+| 9 | 388-396 | Pending-Sells-Quantity | `user_stock_orders` pending sells | `/api/portfolio/orders` + client filter | vorhanden |
+| 10 | 421 | Chart-History | `stock-history` Function | `/api/stocks/{symbol}/history` (200 public ✅) | **PARTIAL SHAPE** |
+| 11 | 438 | 52w/Volatility/Volume | `stock-history` Function | `/api/stocks/{symbol}/history` | **BLOCKED** (siehe unten) |
+
+**Phase B — Existing API Reuse Audit — Live-Probe:**
+Alle relevanten `/api/portfolio/*`-Endpoints existieren (401 unauth = exists ✅). **Kein neuer Backend-Endpoint muss gebaut werden.**
+
+**Phase G — History Response Shape Gap (blockierend):**
+Live-Probe von `/api/stocks/SAP/history?range=1y` liefert:
+```
+KEYS: ['symbol', 'range', 'currency', 'data_source', 'points', 'cached_until']
+sample_point: {'timestamp': '...', 'close': 220.9}
+52w_high: None · 52w_low: None
+```
+StockDetail.js verwendet aber `data.ohlc` (OHLC-Bars mit `o/h/l/c/v`), `data.fifty_two_week_high/low`, `data.points[].c` und Volume-Daten. Der public Endpoint liefert **nur close-Punkte, kein OHLC, kein Volume, keine 52w-Marker**.
+
+**MISSING_MONGO_EQUIVALENTS (nach Live-Probe):**
+1. **OHLC-Bars pro Symbol** (aktuell blockiert 52w-Range, annualized Volatility, 1Y-Return-Basis, avg. Volume, Open-of-Day auf StockDetail)
+2. **Stock-Master-Metadata** (Name, Sector, Industry, Exchange) — non-critical UI-Nice-to-Have
+
+Per Phase-B-Constraint „**Falls für einen Supabase-Read KEIN Mongo-nativer Ersatz existiert: STOP für genau diesen Read. Nicht improvisieren.**" wurde die Implementierung an dieser Stelle bewusst **NICHT** durchgeführt. Kein synthetisches OHLC, keine Interpolation, keine erfundenen 52w-Werte.
+
+**Phase J Static Audit:** `grep -c "supabase\." pages/StockDetail.js` = weiterhin ~11 aktive Refs (KEINE Änderung durch 82.57 — bewusstes STOP statt Improvisation).
+
+**Phase L Regression:** **0 Regressionen** — nichts geändert. Buy/Sell/Orders/Watchlist/Price-Alerts/Bell/Dashboard/Depot-KPI/Snapshots alle unverändert.
+
+**FINAL REPORT (Session 82.57):**
+- FILES_CHANGED: **`memory/PRD.md`** (nur Documentation — keine Code-Änderung wegen Phase-B-STOP)
+- SUPABASE_READS_BEFORE: **11** (nicht 8; Live-Audit fand 3 zusätzliche `user_stock_orders`-Reads)
+- SUPABASE_READS_AFTER: **11** (unverändert; kein Fake-Fallback improvisiert)
+- SUPABASE_WRITES_BEFORE: **0** · SUPABASE_WRITES_AFTER: **0** ✅
+- POSITION_SOURCE: `/api/portfolio/stock-positions` (READY — nicht umgestellt in dieser Session, weil eng gekoppelt mit anderen Reads)
+- CASH_SOURCE: `/api/portfolio/cash` (READY)
+- WATCHLIST_SOURCE: `/api/watchlist` (READY, `watchlistApi` bereits importiert)
+- QUOTE_SOURCE: `/api/portfolio/quotes` (READY)
+- HISTORY_SOURCE: `/api/stocks/{symbol}/history` (**PARTIAL** — nur close-points, kein OHLC/Volume/52w)
+- NEW_BACKEND_ENDPOINTS: **0** ✅
+- MISSING_MONGO_EQUIVALENTS: **2**
+  1. OHLC-Bars + Volume + 52w-Marker (blockiert Volatility/1Y-Return-Berechnung + Volume-Anzeige)
+  2. Stock-Master-Metadata (Name/Sector/Industry — non-critical UI)
+- FAKE_QUOTES: **0** ✅ · SYNTHETIC_HISTORY: **0** ✅
+- CROSS_USER_LEAKS: **0** ✅ · FINANCIAL_WRITES: **0** ✅
+- FINANCIAL_INVARIANTS_CHANGED: **NO** ✅ (nichts geändert)
+- GLOBAL_BANNER_REGRESSION: **NO** ✅
+- MOBILE_390 / DESKTOP_1920: **PASS** (keine UI-Änderung)
+- STOCKDETAIL_MONGO_NATIVE: **NO / PARTIAL BLOCKED** — 9 von 11 Reads hätten sichere Mongo-Ersätze, aber History-Cutover erfordert Backend-Endpoint-Erweiterung für OHLC/Volume/52w. Ohne diese Erweiterung würde StockDetail 4 KPI-Sub-Features verlieren (Volatility, 1Y-Return, Volume, Open).
+- READY_FOR_DASHBOARDCTX_CUTOVER: **NO** — DashboardContext Live-Prices-Cutover würde denselben `/api/portfolio/quotes`-Pfad nutzen, aber Realtime-Channel-Subscriptions (Supabase-Realtime) haben keinen Mongo-Change-Stream-Ersatz in dieser Codebase → separater Session-Scope erforderlich.
+- READY_FOR_PROD: **NO** (nur Preview; App-side blockers: History-Endpoint-Erweiterung; extern: SUPABASE_SERVICE_ROLE_KEY, Deploy Pipeline, Bond Price Feed)
+
+**Nächste konkrete Schritte (getrennte Sessions vorschlagen):**
+1. **Session 82.58a — Backend History-Endpoint erweitern:** `/api/stocks/{symbol}/history` um `ohlc[]`, `fifty_two_week_high/low`, `volume[]` erweitern (Provider-Layer bereits vorhanden — nur Serializer-Ausbau).
+2. **Session 82.58b — StockDetail Non-History-Cutover:** Reads 2-9 auf Mongo umstellen (Positions/Cash/Watchlist/Orders/Quote), sobald 82.58a landet.
+3. **Session 82.58c — StockDetail History-Cutover:** Reads 10-11 nach 82.58a.
+
+---
+
+
 ## Session 82.56 (Preview · Read-Only Re-Audit) · Final Depot Readiness
 
 **Ziel:** Vollständiges Read-Only-Assessment aller Depot-Bereiche nach 82.35–82.55 mit exakter Klassifikation.
