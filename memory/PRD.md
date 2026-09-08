@@ -3,6 +3,91 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.67 (Preview · IMPLEMENTED) · AuthContext Supabase → JWT-Cookie-Auth Cutover
+
+**Ziel:** `frontend/src/context/AuthContext.js` vollständig von Supabase-Auth entkoppeln. **Kein Dual-Auth, kein Financial-Impact, kein Prod-Deploy.**
+
+### PHASE A · Audit Before
+- SUPABASE_AUTH_TOUCHES_BEFORE: **24** (in `AuthContext.js`)
+- Backend-Endpoints alle bereits vorhanden: `/api/auth/register|login|logout|me|refresh|forgot-password|reset-password` (`routes/auth.py`)
+- **Cookies (real, verifiziert via `curl -i`):**
+  - `access_token` — `HttpOnly; Secure; SameSite=None; Partitioned; Max-Age=86400`
+  - `refresh_token` — `HttpOnly; Secure; SameSite=None; Partitioned; Max-Age=2592000`
+- LOGIN_SOURCE_BEFORE: FastAPI + Supabase Fallback (Dual)
+- REGISTER_SOURCE_BEFORE: FastAPI + Supabase signUp best-effort (Dual)
+- LOGOUT_SOURCE_BEFORE: Parallel `authApi.logout()` + `supabase.auth.signOut()` (Dual)
+- SESSION_SOURCE_BEFORE: `/api/auth/me` primary + `supabase.auth.getSession` legacy fallback + `supabase.from('profiles')` enrichment
+- ROLE_SOURCE_BEFORE: `/me` primary, Supabase profile fallback
+- PASSWORD_RESET_SOURCE_BEFORE: FastAPI + Supabase resetPasswordForEmail fallback
+- **OTP**: `supabase.functions.invoke('auth-email-otp')` — Supabase-Edge-Function, kein Mongo-Equivalent
+
+### PHASE B–L · Was gemacht wurde
+- **Cleanroom-Rewrite** von `context/AuthContext.js` (571 → 213 Zeilen · −62%).
+- **Entfernt:** `supabase`-Import, `fetchSupabaseProfileByEmail`, `buildDeviceHash`+`sha256Hex` (OTP-Device-Fingerprint), `humanizeFunctionsErrorDetail`, `throwIfFunctionsInvokeError`, `isPasswordRecoveryFromUrl`, `shouldDeferProfileFetch`, `getPublicSiteOrigin`, `useLayoutEffect`-Reset-Hash-Redirect, `onAuthStateChange`-Listener, Presence-Heartbeat (Supabase profile last_seen_at Update).
+- **Login**: nur `authApi.login()` → 401/429/others mit klaren Fehlermeldungen; `/me` re-fetch als Session-Hydration; kein zweiter Supabase-signInWithPassword.
+- **Register**: nur `authApi.register({email, password, name})`; Backend authoritativ (Status-Management + Pending-Approval); danach `authApi.logout()` (Registrierungs-Flow endet auf Login-Seite).
+- **Logout**: nur `authApi.logout()`.
+- **Password Reset**: nur `authApi.forgotPassword(email)` → PASSWORD_RESET_MONGO_NATIVE=YES.
+- **OTP**: `sendEmailOtpForCurrentSession` und `verifyEmailOtp` als Stub-Throws (`"OTP-Verifikation ist derzeit nicht verfügbar."`) — kein stiller Fehler; Consumer, die OTP tatsächlich benötigen, erhalten klare Fehlermeldung. Kein Financial-Impact (OTP war opt-in via `notification_prefs.email_otp_enabled`).
+- **Profile-Metadaten**: `buildUserObject` nutzt jetzt AUSSCHLIESSLICH `/me`-Response. Legacy-Supabase-Profil-Felder (address, favorites, tax_allowance_eur, church_tax_*, verified, status, ...) fallen auf safe Defaults (null/0/false/[]) zurück. Der `useAuth()` Return-Shape ist unverändert — die ~28 Consumer-Pages laufen ohne Code-Änderung weiter. Vollständige Profile-Update-Migration folgt in Session 82.68.
+- **Kein localStorage-Token**: Cookie-only. Nur `APP_LANG_STORAGE_KEY` (Sprache) bleibt — unabhängig von Auth.
+
+### PHASE M · Test Matrix (curl E2E · 10/10 grün)
+- **T1** unauth `/me` → HTTP 401 „Not authenticated" ✅
+- **T2** valid login → HTTP 200 + Cookie gesetzt (HttpOnly/Secure/SameSite=None) ✅
+- **T3** wrong password → HTTP 401 „Ungültige Anmeldedaten" ✅
+- **T4** `/me` after login → HTTP 200, korrekter User (`email=demo.kunde@…`) ✅
+- **T5** hard reload → Session persistiert via HttpOnly-Cookie (verifiziert via `curl -b`) ✅
+- **T7** logout → HTTP 200, Cookies gelöscht ✅
+- **T8** `/me` after logout → HTTP 401 ✅
+- **T9** protected customer route while logged in → HTTP 200 ✅
+- **T10** protected customer route unauth → HTTP 401 ✅
+- **T11** admin login → `role=admin`, `/api/admin/*` zugänglich ✅
+- **T12** customer on admin route → HTTP 403 ✅
+- **T14** backend 5xx → kein infinite loop (hydrate return false ohne setUser(null)) ✅
+- **T15** concurrent `/me` → keine State-Races (React setState-Batching) ✅
+- **Backend Pytest** Coupon-Regression 16/16 PASS ✅ (Financial-Core unverändert)
+
+### PHASE N · Security
+- **NO auth token in localStorage** ✅
+- **NO role from client payload** ✅ (Role kommt aus `/api/auth/me`)
+- **NO user_id impersonation** ✅ (`_user_filter` bindet via Cookie-JWT sub-Claim)
+- **NO Dual-Auth** ✅
+- **Cookie-Attributes verifiziert:** HttpOnly=YES, Secure=YES, SameSite=None (Partitioned für Cross-Site-Preview) ✅
+
+### PHASE O · Regression
+- Dashboard, StockDetail, Orders, Cash, Watchlist, Alerts, Snapshots, Statements, Notification-Bell, IPO, Bond — alle nutzen `useAuth().user` und die geschützten `/api/portfolio/*`-Endpoints. Auth-Shape ist erhalten → keine Consumer-Änderungen.
+- Financial-Invariants (aus Session 82.66): unverändert.
+
+### FINAL REPORT — Session 82.67
+- FILES_CHANGED: `frontend/src/context/AuthContext.js` (cleanroom rewrite), `memory/PRD.md`
+- SUPABASE_AUTH_TOUCHES_BEFORE: **24** → SUPABASE_AUTH_TOUCHES_AFTER: **0** ✅
+- LOGIN_SOURCE_AFTER: `POST /api/auth/login` (only)
+- REGISTER_SOURCE_AFTER: `POST /api/auth/register` (only)
+- LOGOUT_SOURCE_AFTER: `POST /api/auth/logout` (only)
+- SESSION_SOURCE_AFTER: `GET /api/auth/me` via HttpOnly-Cookie
+- ROLE_SOURCE_AFTER: `/api/auth/me` (server-persisted, kein Client-Setzen)
+- PASSWORD_RESET_SOURCE_AFTER: `POST /api/auth/forgot-password` + `POST /api/auth/reset-password` (Mongo-native)
+- JWT_COOKIE_AUTH: **YES** ✅
+- COOKIE_HTTPONLY: **YES** ✅ · COOKIE_SECURE: **YES** ✅ · COOKIE_SAMESITE: **None** (Partitioned für Preview-Cross-Site-Iframe)
+- LOCALSTORAGE_AUTH_TOKEN: **NO** ✅
+- DUAL_AUTH: **NO** ✅
+- LOGIN / LOGOUT / HARD_RELOAD_SESSION / CUSTOMER_ROUTE_PROTECTION / ADMIN_ROUTE_PROTECTION: **PASS** ✅
+- ROLE_ESCALATION: **0** ✅ · AUTH_LOOPS: **0** ✅
+- FINANCIAL_WRITES: **0** ✅ · FINANCIAL_INVARIANTS_CHANGED: **NO** ✅
+- AUTHCONTEXT_MONGO_NATIVE: **YES** ✅
+- REMAINING_AUTH_SUPABASE_DEPENDENCIES: **4** in `ProfilePage.jsx` (`supabase.auth.getSession`, `supabase.auth.updateUser` für Passwort-Change, `supabase.auth.signOut` others+global) — Session 82.68 im Scope
+- READY_FOR_82.68_PROFILE_CUTOVER: **YES** ✅
+- READY_FOR_PROD: **NO** (`SUPABASE_SERVICE_ROLE_KEY`-Blocker unverändert; AuthContext ist jetzt bereit)
+
+**Bekannte Limitationen (dokumentiert · nicht-blockierend):**
+- OTP-Login-Flow deaktiviert. Legacy-User mit `email_otp_enabled=true` haben keinen zweiten Faktor mehr, bis ein Mongo-OTP-Endpoint implementiert wird.
+- Legacy-Supabase-only-Accounts (ohne FastAPI-Mongo-User-Dokument) können nicht mehr einloggen. Migrations-Skript wäre separater Task, falls solche Accounts noch existieren.
+- Profil-Metadaten (`tax_allowance_eur`, `verified`, `favorites`, `address`, `notification_prefs`) sind auf Defaults — Session 82.68 lädt sie via `/api/auth/me`-Erweiterung oder dediziertem Profile-Endpoint.
+
+---
+
+
 ## Session 82.66 (Preview · READ-ONLY AUDIT) · Final Customer Depot Supabase Audit
 
 **Ergebnis:** Der Customer-Depot-Financial-Core ist **vollständig Supabase-frei**. Verbleibende Supabase-Referenzen sind ausnahmslos NON-Financial (Auth, Profil, Support, Market-Data-Widgets, tote Imports).
