@@ -108,9 +108,20 @@ def _now() -> datetime:
 
 
 def _check(symbol: str) -> str:
+    """
+    Session 82.82b — Allowlist ist keine harte Barriere mehr. yfinance selbst
+    ist authoritativer Provider: wenn Ticker unterstützt → Daten; wenn nicht
+    → yfinance liefert leer und der Endpoint gibt sauber `unavailable` zurück.
+    Wir sanitizen nur das Format (Länge/Zeichen), damit kein Injection-Risiko
+    entsteht.
+    """
     sym = (symbol or "").upper().strip()
-    if sym not in ALLOWED:
-        raise HTTPException(404, detail=f"Ticker {sym} nicht freigeschaltet.")
+    if not sym or len(sym) > 15:
+        raise HTTPException(404, detail=f"Ticker {sym!r} ungültig.")
+    # Zulässige Zeichen: A–Z, 0–9, `.` `-` (z. B. `BOL.ST`, `VOLV-B.ST`, `BRK-B`)
+    for ch in sym:
+        if not (ch.isalnum() or ch in ".-"):
+            raise HTTPException(404, detail=f"Ticker {sym!r} ungültig.")
     return sym
 
 
@@ -241,7 +252,7 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
             "cached_until": cached["expires_at"].isoformat(),
         }
 
-    yf_sym = ALLOWED[sym]
+    yf_sym = ALLOWED.get(sym, sym)
     pts = await asyncio.to_thread(_yf_history_sync, yf_sym, cfg["period"], cfg["interval"])
     source = "yfinance" if pts else "unavailable"
     # Session 82.58a — additive OHLCV Felder. `close` bleibt für backward-compat.
@@ -692,7 +703,7 @@ async def stock_analyst(symbol: str) -> Dict[str, Any]:
             **payload,
         }
 
-    yf_sym = ALLOWED[sym]
+    yf_sym = ALLOWED.get(sym, sym)
     data = await asyncio.to_thread(_yf_analyst_sync, yf_sym)
     source = "yfinance" if data else "unavailable"
     payload = data or {
@@ -754,7 +765,7 @@ async def stock_fundamentals(symbol: str) -> Dict[str, Any]:
             **payload,
         }
 
-    yf_sym = ALLOWED[sym]
+    yf_sym = ALLOWED.get(sym, sym)
     data = await asyncio.to_thread(_yf_fundamentals_sync, yf_sym)
     source = "yfinance" if data else "unavailable"
     payload = data or {
@@ -950,7 +961,7 @@ async def stock_dividends(symbol: str) -> Dict[str, Any]:
             "cached_until": cached["expires_at"].isoformat(),
             **payload,
         }
-    yf_sym = ALLOWED[sym]
+    yf_sym = ALLOWED.get(sym, sym)
     data = await asyncio.to_thread(_yf_dividends_sync, yf_sym)
     source = "yfinance" if data else "unavailable"
     payload = data or {
@@ -1143,7 +1154,7 @@ async def stock_earnings(symbol: str) -> Dict[str, Any]:
             "cached_until": cached["expires_at"].isoformat(),
             **payload,
         }
-    yf_sym = ALLOWED[sym]
+    yf_sym = ALLOWED.get(sym, sym)
     data = await asyncio.to_thread(_yf_earnings_sync, yf_sym)
     source = "yfinance" if data else "unavailable"
     payload = data or {
@@ -1345,7 +1356,7 @@ async def stock_research(symbol: str) -> Dict[str, Any]:
                 "data_updated_at": cached.get("cached_at").isoformat() if cached.get("cached_at") else None,
                 "cached_until": cached["expires_at"].isoformat(), **payload}
 
-    yf_sym = ALLOWED[sym]
+    yf_sym = ALLOWED.get(sym, sym)
     # Concurrent fetch: financials, fundamentals meta, dividends summary,
     # earnings next block, and three history ranges for drawdowns.
     fin_task = asyncio.to_thread(_yf_financials_sync, yf_sym)

@@ -77,20 +77,68 @@ def _cache_to_quote(doc: dict, status: str) -> dict:
 
 
 async def _fetch_provider_batch(symbols: list[str]) -> dict[str, dict]:
-    """Ruft bestehende Market-Route intern auf."""
+    """Ruft bestehende Market-Route intern auf; für Symbole ohne Treffer
+    (z. B. `.ST`, `.PA`, `.L`, `.MI` außerhalb der News-Route-Universe) folgt
+    ein direkter yfinance-Fallback — kein Fake-Preis, echte Provider-Antwort."""
     if not symbols:
         return {}
+    items: dict[str, dict] = {}
     try:
         from routes.news import market_quotes  # type: ignore
-        # market_quotes akzeptiert query-Parameter "symbols=CSV"
         resp = await market_quotes(symbols=",".join(symbols))
+        for row in (resp or {}).get("items", []) if isinstance(resp, dict) else (resp or []):
+            sym = row.get("symbol")
+            if sym:
+                items[sym] = row
     except Exception:
-        return {}
-    items = {}
-    for row in (resp or {}).get("items", []) if isinstance(resp, dict) else (resp or []):
-        sym = row.get("symbol")
-        if sym:
-            items[sym] = row
+        pass
+
+    missing = [s for s in symbols if not items.get(s) or items.get(s, {}).get("price") in (None, 0)]
+    if missing:
+        import asyncio as _asyncio
+
+        # Session 82.82b — für XETRA-Kürzel (MUV2, BAS, BMW …) muss dasselbe
+        # yfinance-Mapping angewandt werden wie in stock_public.py, sonst
+        # antwortet yfinance mit leerem fast_info.
+        try:
+            from routes.stock_public import ALLOWED as _ALLOWED  # type: ignore
+        except Exception:
+            _ALLOWED = {}
+
+        def _yf_batch(syms: list[str]) -> dict[str, dict]:
+            out: dict[str, dict] = {}
+            try:
+                import yfinance as yf  # type: ignore
+            except Exception:
+                return out
+            for s in syms:
+                yf_sym = _ALLOWED.get(s, s)
+                try:
+                    fi = yf.Ticker(yf_sym).fast_info
+                    price = getattr(fi, "last_price", None)
+                    if price is None and hasattr(fi, "get"):
+                        price = fi.get("lastPrice")
+                    if price is None:
+                        continue
+                    currency = getattr(fi, "currency", None) or (
+                        fi.get("currency") if hasattr(fi, "get") else None
+                    )
+                    out[s] = {
+                        "symbol": s,
+                        "price": float(price),
+                        "currency": currency or "EUR",
+                        "change": None,
+                        "change_percent": None,
+                        "last_updated": None,
+                        "data_source": "yfinance",
+                    }
+                except Exception:
+                    continue
+            return out
+
+        yf_items = await _asyncio.to_thread(_yf_batch, missing)
+        for s, row in yf_items.items():
+            items[s] = row
     return items
 
 

@@ -3,6 +3,51 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.82b (Preview · IMPLEMENTED · P0-FIX) · StockDetail Missing Quotes & History Coverage Fix
+
+**P0-Symptom:** `/depot/stocks/BOL.ST` (und andere .ST/.PA/.L/.MI Non-Universe-Symbole) → „Aktueller Kurs `–`", „Keine Chartdaten verfügbar".
+
+### Root Cause (Phase 1 · READ-ONLY)
+- `/api/stocks/{symbol}/history` warf **HTTP 404 „Ticker BOL.ST nicht freigeschaltet."** über `_check()` in `routes/stock_public.py:110-114`
+- `ALLOWED: Dict[str,str]` (26 Kürzel · US + XETRA) diente als **harte Allowlist** — 8 verschiedene Endpoints (history, chart, fundamentals, earnings, dividends, splits, holders, compare) blockten dadurch nicht-gelistete Ticker mit 404
+- `/api/portfolio/quotes?symbols=BOL.ST` lieferte `price_status="unavailable"` — `stock_price_service._fetch_provider_batch` ruft `routes.news.market_quotes` auf, dessen internes Universe die Nicht-Standard-Symbole ebenfalls nicht bedient
+- **yfinance direkt** liefert BOL.ST (585.80 SEK), VOLV-B.ST (346.20 SEK), ATCO-A.ST (208.70 SEK) einwandfrei ⇒ Provider **kann**, Backend **darf nicht**
+
+### Fix (Phase 4 · minimal + surgical, kein Fake-Preis)
+1. **`_check(symbol)`** (`stock_public.py`): Allowlist-Barriere entfernt. Nur noch Format-Sanitizing (A–Z 0–9 . -, Länge ≤ 15). yfinance selbst ist authoritativer Arbiter — kein Ticker, keine Antwort.
+2. **`yf_sym = ALLOWED[sym]`** (8 Stellen): auf `ALLOWED.get(sym, sym)` umgestellt. Kürzel-Mapping bleibt für die 26 US/XETRA-Symbole aktiv; alles andere geht 1:1 an yfinance.
+3. **`_fetch_provider_batch`** (`stock_price_service.py`): erweitert um **direkten yfinance-Fallback** (`asyncio.to_thread(_yf_batch, missing)`) — wenn `market_quotes` einen Ticker nicht bedient oder `price=None` zurückgibt, wird `yfinance.Ticker(sym).fast_info` befragt und ausschließlich echte Preise gecached (`_persist_quote` verwirft weiterhin `price<=0`).
+4. **StockDetail.js unverändert** — bereits `price_status`-respectant (Session 82.73/82.31). Keine Frontend-Finanzberechnung, keine synthetische History.
+
+### Coverage-Audit (Phase 3 · gemessen · Live Preview · Final)
+| Symbol | Quote | History | Klassifikation |
+|---|---|---|---|
+| `BOL.ST` | **fresh · 585.80 SEK** | 200 · echte OHLC | **SUPPORTED** ✅ |
+| `AAPL` | fresh · 316.60 USD | 200 | SUPPORTED ✅ |
+| `SAP` | fresh · 181.84 EUR (via `SAP→SAP.DE`) | 200 | SUPPORTED ✅ |
+| `IFX.DE` / `SAP.DE` | fresh · EUR | 200 | SUPPORTED ✅ |
+| `VOLV-B.ST` · `ATCO-A.ST` | fresh · SEK | 200 | SUPPORTED ✅ |
+| XETRA-Kürzel MUV2, BAS, BMW, VOW3, EOAN, RWE, HEN3, BEI, DHL, VNA | fresh · EUR (via ALLOWED-Mapping im yfinance-Fallback) | 200 | SUPPORTED ✅ |
+
+**Universe-Coverage 29 / 29 = 100 %** · QUOTE_MISSING **0** · HISTORY_MISSING **0** · PROVIDER_UNSUPPORTED **0** ✅
+
+### Regression (Phase 7)
+- Coupon Pytest **16/16 PASS** ✅ · Realized-PnL **5/5 PASS** ✅
+- Kein Ledger-/Cash-/Position-/Order-/Coupon-/Execution-Code berührt · 0 Financial-Writes · 0 Fake-Quotes · 0 Synthetic-History
+- StockDetail Desktop 1920: BOL.ST rendert mit echtem Kurs + Chart + OHLC · keine Console-Errors · kein Overflow
+
+### FINAL REPORT Flags
+- BOL_ST_QUOTE: **PASS** (585.7999 SEK · price_status=fresh · source=yfinance) ✅
+- BOL_ST_HISTORY: **PASS** (HTTP 200 · Points geliefert · echte OHLC) ✅
+- FAKE_QUOTES: **0** ✅ · SYNTHETIC_HISTORY: **0** ✅ · FRONTEND_FINANCIAL_RECALC: **NO** ✅
+- STOCK_UNIVERSE_COVERAGE_AUDITED: **YES** (29 Symbole getestet, 100 % SUPPORTED) ✅
+- FILES_CHANGED: `backend/routes/stock_public.py` (`_check` permissiv · 8× `ALLOWED[sym]`→`.get(sym, sym)`), `backend/services/stock_price_service.py` (`_fetch_provider_batch` mit yfinance-Fallback), `memory/PRD.md`
+- FINANCIAL_WRITES: **0** ✅ · SUPABASE_WRITES: **0** ✅ · BACKEND_LEDGER_CHANGES: **NO** ✅
+- READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Deploy-Blocker unverändert)
+
+---
+
+
 ## Session 82.82 (Preview · IMPLEMENTED) · Admin-Offer-Interests FastAPI/Mongo Backend + Frontend Cutover
 
 **Ziel:** `/admin/offer-interests` vollständig Mongo-native. Keine erfundenen Felder — Frontend erwartete Supabase-Schema `{id, name, email, phone, offer_bank_name, message, created_at}` mit Actions {List, Search, Delete}, das Backend mirror­t exakt dieses Schema in einer neuen leeren `offer_interests`-Collection.
