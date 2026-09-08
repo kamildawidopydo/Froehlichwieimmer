@@ -4580,6 +4580,46 @@ api.add_api_route(
 )
 
 
+# Session 82.42 — Monatlicher Statement-Versand-Cron.
+# Läuft am 1. Kalendertag des Folgemonats um 06:00 UTC. Iteriert alle aktiven
+# Kunden, versendet den PDF-Kontoauszug für den Vormonat via Emergent-Managed
+# Email-Provider. Idempotent per (user_id, year, month) — Doppelversand
+# ausgeschlossen. Bearer via WEBHOOK_CRON_SECRET; ack 2xx sofort und Ausführung
+# im Background-Task (analog snapshot/matcher pattern).
+async def _cron_monthly_statements(request: Request):
+    _verify_cron_bearer(request.headers.get("authorization"))
+    run_id = _secrets.token_hex(8)
+    started = datetime.now(timezone.utc).isoformat()
+
+    async def _job() -> None:
+        try:
+            from services.statement_email_service import (  # lazy import
+                run_monthly_batch, previous_month,
+            )
+            year, month = previous_month()
+            report = await run_monthly_batch(db, year, month, _send_email_via_emergent)
+            logger.info(
+                "cron_monthly_statements ok run_id=%s year=%d month=%d report=%s",
+                run_id, year, month,
+                {k: report.get(k) for k in
+                 ("users_seen", "eligible", "sent", "already_sent",
+                  "failed", "skipped_no_email", "duration_ms")},
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("cron_monthly_statements failed run_id=%s", run_id)
+
+    asyncio.create_task(_job())
+    return {"accepted": True, "run_id": run_id, "job": "monthly-statements", "started_at": started}
+
+
+api.add_api_route(
+    "/cron/monthly-statements",
+    _cron_monthly_statements,
+    methods=["POST"],
+    include_in_schema=False,
+)
+
+
 # Session 82.27 — Auto-Matcher-Cron (alle 15 Min).
 # Prüft pending Limit-Buy-Orders gegen echte Quotes und ruft für jede
 # erfüllte Limit-Bedingung die bestehende Execution-Saga aus 82.26 auf.

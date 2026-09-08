@@ -65,3 +65,15 @@ crons:
     endpoint: "{{BASE_URL}}/api/cron/portfolio-matcher"
     method: POST
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+
+  # Session 82.42 · Monatlicher Kunden-Kontoauszug-Versand.
+  # Läuft am 1. Kalendertag des Folgemonats um 06:00 UTC. Iteriert alle aktiven
+  # Kunden, versendet den PDF-Kontoauszug für den Vormonat via Emergent-Managed
+  # Email-Provider. Idempotent per (user_id, year, month) — Doppelversand
+  # ausgeschlossen. Ack 2xx sofort, Verarbeitung als asyncio-Background-Task.
+  - name: monthly-statements
+    description: "Am 1. jedes Monats den PDF-Kontoauszug des Vormonats versenden"
+    cron: "0 6 1 * *"
+    endpoint: "{{BASE_URL}}/api/cron/monthly-statements"
+    method: POST
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.

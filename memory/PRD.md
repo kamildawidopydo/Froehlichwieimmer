@@ -3,6 +3,77 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.42 (Preview) · Statement Email Delivery (monatlich)
+
+**Phase A Audit** (kein Neubau nötig):
+- STATEMENT SERVICE: `portfolio_statement_service.py` (82.39) ✅
+- PDF GENERATOR: WeasyPrint ✅
+- EMAIL SERVICE: `_send_email_via_emergent` mit **Attachment-Support (Session 75.4)** — Base64-Payload via Emergent-Managed Resend ✅
+- EMAIL PROVIDER: **Emergent Managed** via `EMERGENT_EMAIL_KEY` (verified via provider-message-id im Log)
+- USER EMAIL SOURCE: `users.email` (serverseitig, keine client-supplied Adresse)
+- CRON PATTERN: bestehend (`WEBHOOK_CRON_SECRET` + ack-2xx-sofort + Background-Task)
+
+**Phase B–L Implementierung:**
+- **`services/statement_email_service.py`** (NEU, 195 lines):
+  - `send_monthly_statement_email(db, user_id, year, month, send_email_fn)` — atomarer Single-User-Versand mit Idempotency-Key `statement:{user_id}:{YYYY-MM}`; wirft NIE (Fehler → `status='failed'` im Log persistiert; Retry via zweitem Call möglich).
+  - Timezone: **UTC** (System-Standard, in Docstring dokumentiert).
+  - Leerer Monat → PDF wird trotzdem versendet mit „Im ausgewählten Zeitraum gab es keine Buchungen." (keine künstlichen Ledger-Einträge).
+  - PDF wird via bestehendem `build_pdf()` aus 82.39 erzeugt (Parity zu manuellem Download garantiert).
+  - `run_monthly_batch(db, year, month, send_email_fn)` — iteriert alle `users` mit `is_active != False`; Fehler pro User isoliert; Report `{users_seen, eligible, sent, already_sent, failed, skipped_no_email, skipped_other, duration_ms}`.
+  - `ensure_delivery_indexes(db)` — **UNIQUE-Index** `(user_id, year, month)` in `statement_deliveries`.
+  - `previous_month(today=None)` — Jahres-Rollover-safe (Dezember → Januar → `(year-1, 12)`).
+
+- **`routes/portfolio.py`** — 2 neue Admin-Endpoints:
+  - `POST /api/admin/portfolio/statements/send` — Payload `{user_id, year, month}`. 422 bei ungültigem Input, 401 unauth, 403 customer, 200 admin.
+  - `GET /api/admin/portfolio/statements/deliveries?year&month&limit` — Read-only Delivery-Log für Ops-Übersicht.
+  - `ensure_indexes()` ruft nun `ensure_statement_delivery_indexes(db)` beim Bootstrap.
+
+- **`server.py`** — Cron `POST /api/cron/monthly-statements`:
+  - Bearer via `WEBHOOK_CRON_SECRET` (401 sonst).
+  - Ack 2xx sofort mit `{accepted, run_id, job, started_at}`; Batch läuft im `asyncio.create_task`.
+  - Verwendet `previous_month()` → versendet immer den vorherigen Kalendermonat.
+
+- **`.emergent/crons.yml`** — neuer Cron-Slot `monthly-statements` mit Schedule **`0 6 1 * *`** (1. Kalendertag des Folgemonats, 06:00 UTC).
+
+**Test-Matrix verifiziert im Preview:**
+| Test | Ergebnis |
+|---|---|
+| T3 Unauth | **401** ✅ |
+| T2 Customer 403 | **403** ✅ |
+| T-Val bad month=13 | **422** ✅ |
+| T-Val bad user_id | **422** ✅ |
+| T1 Happy Sept 2026 | **200** `{status:'sent', delivery_id, message_id}` ✅ |
+| T4 Duplicate Sept 2026 | **200** `{status:'already_sent'}` — keine zweite E-Mail ✅ |
+| T7 Empty Month Juli 2026 | **200** `{status:'sent', count:0}` — PDF mit „keine Buchungen" ✅ |
+| T11 Year Rollover Dez 2025 | **200** — `previous_month(Jan 2026) == (2025, 12)` ✅ |
+| T5/T9 Idempotency + Retry | UNIQUE(user_id, year, month) verhindert Doppelrow · failed → status='failed' zulässt Retry mit gleicher delivery_id ✅ |
+| T10 Cross-User Isolation | `demo.kunde` uid → immer `demo.kunde@…` Email; kein Leak ✅ |
+| T12 PDF Parity | Anhang wird via `build_pdf(statement, customer)` = identisch zu `GET /api/portfolio/statements?format=pdf` (82.39) ✅ |
+| T13 CSV/PDF Download Regression | JSON/CSV/PDF alle 200 ✅ |
+| T14 Financial DB Writes | **0** — nur `statement_deliveries` (Log), nichts im `cash_ledger`/`stock_orders`/`order_executions`/`ipo_allocations`/`bond_executions` ✅ |
+| Cron Unauth | **401** ✅ |
+| Cron Authorized | **200** `{accepted:true, run_id, job:'monthly-statements'}` — Background-Job lief ✅ |
+
+**Security-Invarianten:**
+- Empfängeradresse ausschließlich aus `users.email` (serverseitig aufgelöst).
+- Keine `client-supplied email` akzeptiert.
+- `user_id` aus Payload wird ObjectId-validiert + gegen `users` verifiziert (via bestehender Batch-Iterator im Cron).
+- `last_error` sanitized auf 180 Zeichen — keine PDF-Inhalte, keine Secrets im Log.
+
+**Customer-Setting Audit (Phase P):** Keine `notification_preferences.monthly_statement_email` Präferenz existiert. **Default-Regel für Preview: alle aktiven Kunden mit `email` erhalten den Monatsauszug.** Opt-out kann später als P2-Feature ergänzt werden.
+
+**Regression (Q):** Statement 82.39, Delta-KPI 82.38, Sparkline 82.41, Banner-Fix 82.35, IPO-UI 82.36, Bond-UI 82.37, Widget-Cutover 82.40 alle intakt (Endpoints 200, keine UI-Regression).
+
+**Files Changed**:
+- `backend/services/statement_email_service.py` (NEW)
+- `backend/routes/portfolio.py` (+ 2 admin endpoints + delivery index bootstrap)
+- `backend/server.py` (+ cron endpoint)
+- `.emergent/crons.yml` (+ monthly-statements cron slot)
+- `memory/PRD.md`
+
+---
+
+
 ## Session 82.41 (Preview) · Depot P1 · 7T/30T Snapshot Sparkline
 
 **Phase A Audit** (kein neuer Backend-Endpoint nötig):

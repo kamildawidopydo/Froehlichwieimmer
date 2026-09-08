@@ -84,6 +84,12 @@ from services.portfolio_statement_service import (  # noqa: E402
     build_csv as build_statement_csv,
     build_pdf as build_statement_pdf,
 )
+from services.statement_email_service import (  # noqa: E402  · Session 82.42
+    send_monthly_statement_email,
+    run_monthly_batch as run_monthly_statement_batch,
+    ensure_delivery_indexes as ensure_statement_delivery_indexes,
+    previous_month as prev_statement_month,
+)
 from fastapi.responses import Response  # noqa: E402
 
 
@@ -1021,6 +1027,69 @@ async def admin_match_orders(
     return await run_pending_limit_buy_matching(db, trigger="admin-manual")
 
 
+# ─── ADMIN Statement-Email (Session 82.42 · Depot P1) ──────────────────
+@admin_router.post("/statements/send")
+async def admin_send_statement(
+    body: dict = Body(...),
+    _admin: dict = Depends(require_admin),
+):
+    """
+    Admin-Trigger für Monats-Kontoauszug-Versand.
+    Payload: {user_id, year, month}. Nutzt Emergent-Managed Email-Provider.
+    """
+    from server import _send_email_via_emergent  # type: ignore[attr-defined]
+
+    target_id = body.get("user_id")
+    year = body.get("year")
+    month = body.get("month")
+    if not target_id or not isinstance(year, int) or not isinstance(month, int):
+        raise HTTPException(status_code=422, detail="user_id, year, month erforderlich")
+    if not ObjectId.is_valid(str(target_id)):
+        raise HTTPException(status_code=422, detail="user_id ungültig")
+    if not (2020 <= year <= 2100 and 1 <= month <= 12):
+        raise HTTPException(status_code=422, detail="year/month außerhalb Bereichs")
+    result = await send_monthly_statement_email(
+        db, ObjectId(str(target_id)), year, month, _send_email_via_emergent,
+    )
+    return result
+
+
+@admin_router.get("/statements/deliveries")
+async def admin_list_deliveries(
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    limit: int = 50,
+    _admin: dict = Depends(require_admin),
+):
+    """Read-only Delivery-Log für Ops-Übersicht."""
+    q: dict = {}
+    if isinstance(year, int):
+        q["year"] = year
+    if isinstance(month, int):
+        q["month"] = month
+    limit = max(1, min(int(limit or 50), 500))
+    cursor = db.statement_deliveries.find(q).sort([("created_at", -1)]).limit(limit)
+    out = []
+    async for d in cursor:
+        out.append({
+            "id": str(d["_id"]),
+            "user_id": str(d.get("user_id")),
+            "year": d.get("year"),
+            "month": d.get("month"),
+            "email": d.get("email"),
+            "status": d.get("status"),
+            "attempt_count": d.get("attempt_count", 0),
+            "period_from": d.get("period_from"),
+            "period_to": d.get("period_to"),
+            "statement_count": d.get("statement_count"),
+            "provider_message_id": d.get("provider_message_id"),
+            "last_error": d.get("last_error"),
+            "sent_at": d.get("sent_at").isoformat() if d.get("sent_at") else None,
+            "created_at": d.get("created_at").isoformat() if d.get("created_at") else None,
+        })
+    return out
+
+
 # ─── Indizes ─────────────────────────────────────────────────────────────
 async def ensure_indexes():
     """
@@ -1080,6 +1149,8 @@ async def ensure_indexes():
     await ensure_snapshot_indexes(db)
     # Session 82.26 · Order-Executions
     await ensure_execution_indexes(db)
+    # Session 82.42 · Statement-Delivery-Log
+    await ensure_statement_delivery_indexes(db)
     await db.depot_contracts.create_index(
         [("user_id", 1), ("is_active", -1)], name="user_active",
     )
