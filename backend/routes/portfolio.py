@@ -37,7 +37,7 @@ from typing import Optional
 
 from bson import ObjectId
 from bson.decimal128 import Decimal128
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from pydantic import BaseModel, Field
 
 from server import get_current_user, db, require_admin  # type: ignore[attr-defined]
@@ -77,6 +77,14 @@ from services.order_execution_service import (  # noqa: E402
 from services.order_matching_service import (  # noqa: E402
     run_pending_limit_buy_matching,
 )
+
+# Session 82.39 · Depot P1 — Kontoauszug-Service
+from services.portfolio_statement_service import (  # noqa: E402
+    build_statement as build_statement_svc,
+    build_csv as build_statement_csv,
+    build_pdf as build_statement_pdf,
+)
+from fastapi.responses import Response  # noqa: E402
 
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
@@ -338,6 +346,81 @@ async def list_alerts(user: dict = Depends(get_current_user)):
     # Bestehende Collection ist `stock_alerts`
     cursor = db.stock_alerts.find(_user_filter(user)).sort("created_at", -1)
     return [_serialize_alert(doc) async for doc in cursor]
+
+
+@router.get("/statements")
+async def get_statement(
+    from_: Optional[str] = Query(None, alias="from"),
+    to: Optional[str] = Query(None),
+    format: str = Query("json"),
+    user: dict = Depends(get_current_user),
+):
+    """
+    Kunden-Kontoauszug (Session 82.39 · P1).
+
+    Query-Parameter:
+      * `from` (YYYY-MM-DD, optional) — inklusive Untergrenze
+      * `to`   (YYYY-MM-DD, optional) — inklusive Obergrenze
+      * `format` ∈ json | csv | pdf (default json)
+
+    Ownership: ausschließlich eingeloggter Customer (`user_id` aus Session).
+    Source of Truth: `cash_ledger` (settled). Executions/Allocations/Bonds
+    dienen nur zur Anreicherung (Symbol/ISIN/Qty/Kurs).
+    """
+    from datetime import date as _date  # noqa: WPS433
+
+    def _parse(s: Optional[str], name: str):
+        if s in (None, ""):
+            return None
+        try:
+            return _date.fromisoformat(s)
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=422, detail=f"invalid {name} date (YYYY-MM-DD erwartet)")
+
+    date_from = _parse(from_, "from")
+    date_to = _parse(to, "to")
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(status_code=422, detail="from muss <= to sein")
+
+    fmt = (format or "json").lower().strip()
+    if fmt not in {"json", "csv", "pdf"}:
+        raise HTTPException(status_code=422, detail="format muss json|csv|pdf sein")
+
+    statement = await build_statement_svc(db, _oid(user), date_from, date_to)
+
+    if fmt == "json":
+        return statement
+
+    if fmt == "csv":
+        payload = build_statement_csv(statement)
+        fn_from = date_from.isoformat() if date_from else "start"
+        fn_to = date_to.isoformat() if date_to else "heute"
+        return Response(
+            content=payload,
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="kontoauszug-{fn_from}-{fn_to}.csv"',
+            },
+        )
+
+    # PDF
+    profile = await db.users.find_one({"_id": _oid(user)}) or {}
+    customer = {
+        "email": profile.get("email") or user.get("email"),
+        "name": " ".join(
+            [p for p in (profile.get("first_name"), profile.get("last_name")) if p]
+        ) or None,
+    }
+    pdf_bytes = build_statement_pdf(statement, customer)
+    fn_from = date_from.isoformat() if date_from else "start"
+    fn_to = date_to.isoformat() if date_to else "heute"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="kontoauszug-{fn_from}-{fn_to}.pdf"',
+        },
+    )
 
 
 @router.get("/snapshots")

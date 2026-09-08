@@ -3,6 +3,53 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.39 (Preview) · Kunden-Kontoauszug (CSV + PDF Export)
+
+**Phase A — Read-only Audit (bestätigt):** `cash_ledger` ist die vollständige Financial Source of Truth. Signierte Summe aller 45 settled Entries (demo.kunde) = **8008.26 EUR** = aktueller `cash_balance` (perfekte Reconciliation, 0 Cent Differenz). Alle P0-Event-Typen im Ledger: `deposit, adjustment (incl. cash-reversal), stock_purchase, stock_sale, ipo_purchase, bond_purchase`. Executions/Orders/Requests/Allocations enthalten KEINE eigenen Geldbuchungen — reine Idempotency-Referenzen via `idempotency_key`. **Kein Double-Counting-Risiko.**
+
+**Phase B — Canonical Service** `backend/services/portfolio_statement_service.py`:
+- `build_statement(db, user_id, date_from, date_to)` → JSON-serialisierbares Dataset `{period, currency, opening_balance, closing_balance, running_balance_complete, count, entries[…]}`. Entries beinhalten `id, booked_at, value_date, type, type_label, direction, amount, signed_amount, currency, description, symbol, isin, quantity, execution_price, reference_type, reference_id, idempotency_key, running_balance`.
+- Sortierung deterministisch nach `(created_at ASC, _id ASC)`. Running-Balance wird über die vollständige Historie berechnet — `running_balance_complete=true` (`cash_ledger` ist append-only und komplett).
+- Enrichment via `_enrich_map()`: greift Symbol/Qty/Price aus `order_executions` (Stock-Buy/Sell), `ipo_allocations` (IPO-Zuteilungen), `bond_executions` (Anleiheausführungen). Kein Insert/Update.
+- `build_csv(statement)` → UTF-8-BOM, Semikolon-Trenner (deutsches Excel), 15 Spalten. Deutsches Zahlenformat (Komma). **Formula-Injection-Schutz** für Textfelder (Präfix-Escape `=+-@`).
+- `build_pdf(statement, customer)` → WeasyPrint (bereits im Stack, Session 82.19 reports). A4, Seitenzahlen, Titel „Kontoauszug", Kunde+Zeitraum+Erstellungszeitpunkt, Anfangs-/Endsaldo, Tabelle aller Buchungen mit deutschem €-Format, Farbcodierung Credit/Debit.
+
+**Phase C — API `GET /api/portfolio/statements`** in `backend/routes/portfolio.py`:
+- Query-Parameter: `from` (Alias-Mapping via `Query(alias="from")`, YYYY-MM-DD), `to` (YYYY-MM-DD), `format=json|csv|pdf` (default json).
+- 422 bei ungültigem Datum oder `from > to` oder `format ∉ json|csv|pdf`.
+- Ownership ausschließlich aus `get_current_user`'s `_oid(user)`. Kein Client-`user_id`.
+
+**Phase D — Customer UI** `frontend/src/pages/dashboard/KontoauszugPage.jsx`:
+- Neues Export-Panel oberhalb der bestehenden Print-Statement-Ansicht.
+- Von/Bis Date-Inputs (mit min/max Cross-Constraints), CSV + PDF Buttons mit Loading-Spinner (`RefreshCw`).
+- Downloads via `credentials: include`, Auslesen von `Content-Disposition` für Filename, Blob→`URL.createObjectURL`.
+- Fehler-State inline (role=alert) + Toast. `data-testid`s für alle Interaktionselemente.
+
+**Phase E — QA Verifiziert (demo.kunde Preview):**
+- T1 JSON Happy: `count=45, closing_balance=8008.26, running_balance_complete=true` ✅
+- T2 CSV: 7180 bytes, UTF-8 BOM, `content-type=text/csv; charset=utf-8`, `content-disposition=attachment; filename="kontoauszug-start-heute.csv"`, deutsches €-Format, Umlaute korrekt, keine unsafe formula-injection ✅
+- T3 PDF: 22279 bytes, `magic=%PDF-`, `content-type=application/pdf`, Titel + Anfangssaldo + Endsaldo + Buchungen im Text ✅
+- T4 Date Filter `from=2026-09-08&to=2026-09-08`: count=2, opening=8305.26, closing=8008.26 ✅ (nach Alias-Fix)
+- T5 Invalid Range `from > to`: **422** ✅ · Invalid Date: **422** ✅ · Invalid Format: **422** ✅
+- T6 Isolation: Admin sieht Customer-Entry-IDs NICHT ✅
+- T7 Reconciliation: `statement.closing_balance == /api/portfolio/cash.cash_balance` (exakt 8008.26 EUR) ✅
+- T8 No Double Counting: 45 Entries, 0 duplicate `idempotency_key` ✅ · Type-Verteilung: `deposit=8, adjustment=4, stock_purchase=14, stock_sale=7, ipo_purchase=6, bond_purchase=6`
+- T9 Compensation: 3 `cash-reversal` Adjustment-Entries als eigene Gegenbuchungen sichtbar ✅
+- T10 Regression: alle 9 Endpoints liefern 200 · Dashboard-Banner-Fix (82.35), IPO-UI (82.36), Bond-UI (82.37), Delta-KPI (82.38) intakt
+- Unauth: **401** ✅
+- Desktop 1920 + Mobile 390 QA: Panel + Buttons rendern korrekt (Screenshot bestätigt); Overflow-Zähler in Mobile bezieht sich auf Legacy-Print-Statement-Vorschau (pre-existing), nicht auf das neue Export-Panel.
+
+**Financial Invariants unverändert:** cash_ledger append-only · keine erfundenen Opening-Balances · keine Fake-Preise · keine Bond-/IPO-Marktwerte im Cash-Statement (Cash ist unabhängig vom Valuation-Feed).
+
+**Files Changed**:
+- `backend/services/portfolio_statement_service.py` (NEW, 297 lines)
+- `backend/routes/portfolio.py` (+Query-Import, +Response-Import, +statement-service-imports, +`GET /api/portfolio/statements` endpoint)
+- `frontend/src/pages/dashboard/KontoauszugPage.jsx` (rewrite: Export-Panel + Statement embed)
+- `memory/PRD.md`
+
+---
+
+
 ## Session 82.38 (Preview) · Depot Delta-KPI „Heute" aus Portfolio-Snapshots
 
 - **Neue Datenquelle für „Heute"-KPI** in `components/mein-depot/DepotKpiRail.jsx`: statt Intraday-Aktien-Delta (`dailyPortfolioPnl` aus `stock_prices_cache.change_abs`) jetzt echter Snapshot-Vergleich `latest.total_value − previous.total_value` aus `heroSnapshots` (Endpoint `/api/portfolio/snapshots?days=400`, Mongo-Collection `portfolio_snapshots`).
