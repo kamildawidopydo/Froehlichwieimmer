@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { fetchFeaturedStocks } from '@/services/marketService';
 import {
   CommandDialog,
   CommandInput,
@@ -58,7 +58,6 @@ const CommandPalette = ({ open, onOpenChange }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [stocks, setStocks] = useState([]);
-  const [contracts, setContracts] = useState([]);
   const { recent } = useRecentPages();
 
   const NAV_ITEMS_PRODUCTS = [
@@ -157,35 +156,30 @@ const CommandPalette = ({ open, onOpenChange }) => {
 
   useEffect(() => {
     if (!open) return;
-    (async () => {
-      try {
-        const [stocksRes, cacheRes] = await Promise.all([
-          supabase.from('stocks').select('symbol, name, sector').eq('is_active', true).limit(60),
-          supabase.from('stock_prices_cache').select('symbol, price, change_pct, currency'),
-        ]);
-        const map = {};
-        (cacheRes.data || []).forEach((c) => { map[c.symbol] = c; });
-        const rows = (stocksRes.data || []).map((s) => ({ ...s, price: map[s.symbol] }));
-        setStocks(rows);
-      } catch (err) {
+    // Session 82.40 · Mongo-native via marketService (Alpha-Vantage-backed
+    // FastAPI endpoint). Non-CRITICAL: Fetch-Fehler bleiben lokal, kein
+    // globales Dashboard-Banner. Kein direkter Supabase-Read mehr.
+    let cancelled = false;
+    fetchFeaturedStocks(60, 'EUR')
+      .then((rows) => {
+        if (cancelled) return;
+        const normalized = (rows || []).map((r) => ({
+          symbol: r.symbol,
+          name: r.name,
+          sector: null,
+          price: r.price != null
+            ? { price: r.price, change_pct: r.changePct, currency: r.currency }
+            : null,
+        }));
+        setStocks(normalized);
+      })
+      .catch((err) => {
+        // Silently degrade — CommandPalette bleibt nutzbar für Navigation.
         console.error('palette stocks fetch', err);
-      }
-
-      if (user) {
-        try {
-          const { data } = await supabase
-            .from('user_depot_contracts')
-            .select('id, vertragsnummer, product_type, amount_eur, is_active')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(20);
-          setContracts(data || []);
-        } catch (err) {
-          console.error('palette contracts fetch', err);
-        }
-      }
-    })();
-  }, [open, user]);
+        if (!cancelled) setStocks([]);
+      });
+    return () => { cancelled = true; };
+  }, [open]);
 
   const go = (path) => {
     onOpenChange(false);
@@ -263,28 +257,7 @@ const CommandPalette = ({ open, onOpenChange }) => {
           </CommandGroup>
         )}
 
-        {user && contracts.length > 0 && (
-          <CommandGroup heading={t('commandPalette.contractsHeading', { defaultValue: 'Meine Verträge' })}>
-            {contracts.map((c) => (
-              <CommandItem
-                key={c.id}
-                value={`${c.vertragsnummer || ''} ${c.product_type || ''}`}
-                onSelect={() => go('/dashboard/vermoegen')}
-                className="gap-3"
-              >
-                <Briefcase className="text-bank-text-muted" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-bank-text">
-                    {c.product_type} {c.vertragsnummer && <span className="text-bank-text-muted font-normal">· {c.vertragsnummer}</span>}
-                  </p>
-                  <p className="text-[11px] text-bank-text-muted tabular-nums">
-                    {Number(c.amount_eur || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} {c.is_active ? '· aktiv' : '· inaktiv'}
-                  </p>
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
+        {/* Section entfernt in Session 82.40 · Supabase user_depot_contracts read weg */}
 
         {navGroups.map((group) => (
           <CommandGroup key={group.heading} heading={group.heading}>

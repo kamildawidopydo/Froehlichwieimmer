@@ -3,6 +3,31 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.40 (Preview) · P1 Widget Cutover · Supabase → Mongo-native
+
+**Phase A Audit**:
+- MarketOverview.js: `supabase.from('stocks')` + `supabase.from('stock_prices_cache')` + `supabase.functions.invoke('stock-prices')`
+- LiveTicker.js: `supabase.from('stocks')` + `supabase.from('stock_prices_cache')`
+- CommandPalette.js: `supabase.from('stocks')` + `supabase.from('stock_prices_cache')` + `supabase.from('user_depot_contracts')`
+- Mongo `stocks` collection: **0 docs** (Legacy, nie migriert) — Read direkt aus Supabase erklärt persistente Fehler.
+- Bestehender FastAPI-Endpoint `GET /api/news-markte/market/stocks` (Alpha-Vantage-backed, bereits im `services/marketService.js` gekapselt) liefert reale Batch-Quotes (`symbol, name, price, change, change_percent, currency, last_updated, data_source, is_delayed, asset_class`).
+
+**Phase B/C/D Cutover** (keine neuen Backend-Endpoints erforderlich):
+- `MarketOverview.js` — Vollständiger Rewrite: nutzt `fetchFeaturedStocks(40, 'EUR')` aus `marketService.js`. Neue Spalte „Quelle" mit `dataSource` und `zeitverzögert`-Marker. Refresh-Button ohne Supabase-Function. Empty-/Retry-State kompakt.
+- `LiveTicker.js` — Vollständiger Rewrite: nutzt `fetchFeaturedStocks(40, 'EUR')`. 60s Refresh-Interval bleibt. Flash-Animation bei Preisänderung bleibt. Kein Non-Auth-Anforderung; Non-CRITICAL Fehlerpfad (silent degrade).
+- `CommandPalette.js` — Import-/State-Umbau: nutzt `fetchFeaturedStocks(60, 'EUR')`. Entfernt `contracts`-State + `user_depot_contracts`-Read (Supabase-Legacy-Feature, non-critical). Symbol-Suche funktioniert weiter via CommandInput-Filter.
+
+**Verifikation im Preview:**
+- `grep supabase\.(from|rpc|functions)` in `MarketOverview.js` + `LiveTicker.js` + `CommandPalette.js` = **0** ✅
+- CommandPalette Test: 39 Items, typing „SAP" filtert zu **SAP · 232,10 € · +0.45% / SIE 178,44 € +0.35% / ALV 342,20 € +0.05% / DBK 18,75 € −0.58% / IFX 33,05 € +1.07%** ✅
+- Regression Dashboard-Banner (82.35): **bannerVisible=false** ✅
+- Alle Fetch-Failures sind non-critical (kein globaler Banner-Trigger möglich, da diese Widgets nicht im `DashboardDataContext` referenziert werden).
+
+**Files Changed**: `frontend/src/components/MarketOverview.js`, `frontend/src/components/LiveTicker.js`, `frontend/src/components/CommandPalette.js`, `memory/PRD.md`.
+
+---
+
+
 ## Session 82.39 (Preview) · Kunden-Kontoauszug (CSV + PDF Export)
 
 **Phase A — Read-only Audit (bestätigt):** `cash_ledger` ist die vollständige Financial Source of Truth. Signierte Summe aller 45 settled Entries (demo.kunde) = **8008.26 EUR** = aktueller `cash_balance` (perfekte Reconciliation, 0 Cent Differenz). Alle P0-Event-Typen im Ledger: `deposit, adjustment (incl. cash-reversal), stock_purchase, stock_sale, ipo_purchase, bond_purchase`. Executions/Orders/Requests/Allocations enthalten KEINE eigenen Geldbuchungen — reine Idempotency-Referenzen via `idempotency_key`. **Kein Double-Counting-Risiko.**
