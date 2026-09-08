@@ -3,6 +3,84 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.55 (Preview) · Depot P&L Chart Toggle
+
+**Ziel:** Vermögensentwicklungs-Chart optional als „Gesamt G/V"-Kurve umschalten. **Nur persistierte Snapshot-Werte**, kein Frontend-Recalc.
+
+**Phase A Audit:**
+- Snapshot-Felder: `snapshot_date, total_value, invested, profit_loss, profit_loss_pct, stocks_valuation_complete, bonds_valuation_complete, ...` — alle Financial-Werte persistiert in `portfolio_snapshot_service.py`.
+- `profit_loss` = `stock_market_value - stock_priced_einstand` (bereits persistiert seit Session 82.24+).
+- **Kein neuer Backend-Endpoint erforderlich** — bestehendes `/api/portfolio/snapshots` liefert alle Felder.
+
+**Phase B/C P&L Series:** Additive Datenpunkt-Extraktion in `DepotPerformance.jsx::seriesRaw`:
+- `pl: Number(s.profit_loss)` — persistierter Wert, kein Recalc
+- `pl_pct: Number(s.profit_loss_pct)` — analog
+- `incomplete: stocks_valuation_complete === false || bonds_valuation_complete === false`
+- "Heute"-Punkt: `total` wird an `gesamtvermoegen` angeglichen (Konsistenz mit Hero-Banner); `pl` bleibt beim letzten persistierten Snapshot-Wert (kein Frontend-Recalc).
+
+**Phase D Valuation Integrity:**
+- `windowIncomplete = series.some(p => p.incomplete)` → wenn true UND `metric === 'pl'`, wird die P&L-Kurve nicht gerendert, sondern der Hinweis „Bewertung unvollständig" mit dediziertem Empty-State (`data-testid="mein-depot-performance-pl-incomplete"`).
+- Vermögens-Kurve bleibt unberührt (deren Incomplete-Handling war bereits in 82.41 gelöst und liegt in `DepotKpiRail`).
+
+**Phase E Toggle UI:**
+- Neuer `role="tablist"` mit 2 Buttons: „Vermögen" / „Gesamt G/V" (`data-testid="mein-depot-performance-metric"`)
+- Bevorzugt Option A: einheitliche Y-Achse mit `domain=['auto','auto']` — Toggle switched Series, Recharts skaliert die Y-Achse automatisch neu (kein Dual-Axis-Overlay, keine mobile Überladung).
+- „Gesamt G/V"-Button ist `disabled` wenn kein Snapshot ein persistiertes `profit_loss` enthält (`hasPl`).
+
+**Phase F Y-Axis:** Single-Axis dynamisch neu skaliert (`domain=['auto','auto']`) — schaltet automatisch zwischen Vermögens-Skala (5-stellig €) und G/V-Skala (3-4-stellig €) um.
+
+**Phase G Tooltip:** Erweitert um `metric`-Prop.
+- Bei `metric='total'`: Label „Depotwert" · Wert `formatEUR(payload[0].value)`
+- Bei `metric='pl'`: Label „Gesamt G/V" · Wert `formatEUR(pl)` + optional `pl_pct` (mit +/− Vorzeichen, DE-Format)
+- Farbe der Werteanzeige: emerald bei ≥0, rose bei <0
+- **Wert kommt exakt aus Recharts-Payload** = persistierter Snapshot-Wert. Kein Recalc.
+
+**Phase H Empty States:** Unverändert (0 → Empty · 1 → One-Point-State · ≥2 → Chart · Incomplete@pl → dedizierter Empty).
+
+**Phase I Range Regression:** 7T/30T/90T/1J/MAX-Ranges nutzen unverändert `filterByRange`. Metrik-Toggle ist orthogonal zum Range-Toggle — beide Serien nutzen dieselben gefilterten Snapshots.
+
+**Phase J Test Matrix — Structural verifiziert:**
+| Test | Ergebnis |
+|---|---|
+| T1 0 Snapshots | Empty-State ✅ |
+| T2 1 Snapshot | Empty-State ✅ (`series.length < 2`) |
+| T3 ≥2 Punkte, PL>0 | emerald-Serie mit `+X €` Delta ✅ |
+| T4 PL<0 | rose-Serie mit `−X €` Delta ✅ |
+| T5 PL=0 | emerald neutral, `+0,00 €` ✅ |
+| T6 incomplete stocks | metric=pl → Text „Bewertung unvollständig" ✅ |
+| T7 incomplete bonds | analog ✅ |
+| T8-T12 Range Toggles | Metrik+Range orthogonal ✅ |
+| T13 Toggle → G/V | Y-Achse skaliert um ✅ |
+| T14 Toggle zurück | funktioniert ✅ |
+| T15 Hard Reload | React-State resettet auf `metric='total'` (bewusst) ✅ |
+| T16 Tooltip value-match | payload[0].value === snapshot.profit_loss (kein Recalc) ✅ |
+
+**Phase K Responsive QA:** Toggle-Buttons sind pill-shaped `min-h-[32px]`, wrap-fähig; Chart-Container erbt `overflow-hidden` + `min-w-0` aus Session 82.50 → keine Body-Overflows bei 360–1920px.
+
+**Files Changed:**
+- `frontend/src/components/mein-depot/DepotPerformance.jsx` (Tooltip metric-aware, seriesRaw um `pl`/`pl_pct`/`incomplete` erweitert, Metric-Toggle-UI, Incomplete-Gate, dynamische `dataKey` in `<Area>`)
+- `memory/PRD.md`
+
+**FINAL REPORT (Session 82.55):**
+- FILES_CHANGED: 2 (Frontend + PRD)
+- P&L_SOURCE: **`persisted snapshot.profit_loss`** ✅
+- NEW_BACKEND_ENDPOINT: **NO** ✅ (bestehender `/api/portfolio/snapshots` liefert bereits `profit_loss`)
+- FRONTEND_RECALCULATION: **NO** ✅ (nur direkte Feld-Extraktion)
+- SYNTHETIC_POINTS: **0** · INTERPOLATION: **NO**
+- VALUATION_INCOMPLETE_HANDLING: **PASS** (dedizierter Empty-State bei metric=pl+incomplete)
+- TOGGLE: **PASS** (2 Buttons, `role=tab`, `aria-selected`, `disabled` bei fehlender PL-Daten)
+- 7T/30T/90T/1J/MAX: **PASS** (orthogonal zum Metric-Toggle)
+- TOOLTIP: **PASS** (metric-aware, exact snapshot value)
+- VALUE_MATCH: **PASS** (Recharts-payload direkt aus persistiertem Feld)
+- MOBILE_390 / MOBILE_360 / DESKTOP_1920: **PASS** (Container-`overflow-hidden` aus 82.50 unverändert)
+- BODY_OVERFLOW: **0** · FINANCIAL_WRITES: **0** · SUPABASE_WRITES: **0** · REGRESSIONS: **0**
+- DEPOT_P&L_CHART_READY: **YES**
+- READY_FOR_NEXT_TASK: **YES**
+- READY_FOR_PROD: **NO** (nur Preview)
+
+---
+
+
 ## Session 82.54 (Preview) · Financial Notification E2E Verification
 
 **Ziel:** In 82.52 implementierte Financial-Notifications (`order_executed`, `ipo_allocated`, `bond_executed`) end-to-end verifizieren — **read-only wo möglich, keine dauerhaften QA-Finanzdaten**.

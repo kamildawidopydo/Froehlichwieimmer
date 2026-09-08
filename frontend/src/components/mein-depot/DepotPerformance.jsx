@@ -36,13 +36,28 @@ const filterByRange = (snapshots, days) => {
   return snapshots.filter((s) => (s?.snapshot_date || '') >= iso);
 };
 
-const TooltipContent = ({ active, payload, label }) => {
+const TooltipContent = ({ active, payload, label, metric }) => {
   if (!active || !payload?.length) return null;
   const val = Number(payload[0]?.value || 0);
+  // Session 82.55 — Metrik-abhängige Tooltip-Formatierung. `metric` steuert
+  // ausschließlich das Label; der Wert kommt exakt aus dem Recharts-Payload,
+  // also dem persistierten Snapshot (keine Front-End-Neu-Berechnung).
+  const isPl = metric === 'pl';
+  const pct = isPl ? payload[0]?.payload?.pl_pct : null;
   return (
-    <div className="rounded-sm border border-bank-border bg-white px-3 py-2 shadow-sm">
+    <div className="rounded-sm border border-bank-border bg-white px-3 py-2 shadow-sm" data-testid="mein-depot-performance-tooltip">
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bank-text-muted">{label}</p>
-      <p className="mt-1 text-[13px] font-semibold tabular-nums text-bank-text">{formatEUR(val)}</p>
+      <p className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-bank-text-muted">
+        {isPl ? 'Gesamt G/V' : 'Depotwert'}
+      </p>
+      <p className={cn('mt-1 text-[13px] font-semibold tabular-nums', isPl ? (val >= 0 ? 'text-emerald-700' : 'text-rose-700') : 'text-bank-text')}>
+        {formatEUR(val)}
+        {isPl && pct != null && Number.isFinite(Number(pct)) && (
+          <span className="ml-2 font-mono text-[10.5px] tabular-nums text-bank-text-muted">
+            {Number(pct) >= 0 ? '+' : ''}{Number(pct).toFixed(2).replace('.', ',')} %
+          </span>
+        )}
+      </p>
     </div>
   );
 };
@@ -50,22 +65,30 @@ const TooltipContent = ({ active, payload, label }) => {
 const DepotPerformance = () => {
   const { heroSnapshots, gesamtvermoegen, loading } = useDashboardData();
 
-  // Aktuellen "heute"-Punkt an die Reihe anhängen, damit der Chart bis zum
-  // Live-Wert reicht (Konsistenz mit HeroBanner-Verhalten).
+  // Session 82.55 — beide Serien aus echten Snapshots. `total` = total_value,
+  // `pl` = profit_loss, `pl_pct` = profit_loss_pct. Kein Frontend-Recalc.
+  // Incomplete-Flag pro Punkt persistiert, damit incomplete-Gate im aktiven
+  // Fenster ausgewertet werden kann.
   const seriesRaw = useMemo(() => {
     const base = (heroSnapshots || [])
       .map((s) => ({
         date: s?.snapshot_date,
         total: Number(s?.total_value || 0),
+        pl: Number.isFinite(Number(s?.profit_loss)) ? Number(s.profit_loss) : null,
+        pl_pct: Number.isFinite(Number(s?.profit_loss_pct)) ? Number(s.profit_loss_pct) : null,
+        incomplete: s?.stocks_valuation_complete === false || s?.bonds_valuation_complete === false,
       }))
       .filter((p) => p.date && Number.isFinite(p.total));
     if (base.length === 0) return [];
     const today = new Date().toISOString().slice(0, 10);
     const last = base[base.length - 1];
+    // "Heute"-Punkt: nur `total` wird an gesamtvermoegen angeglichen; für `pl`
+    // gibt es keine Live-Neuberechnung → letzter persistierter Snapshot-Wert
+    // bleibt maßgeblich (kein Frontend-Recalc).
     if (last.date !== today) {
-      base.push({ date: today, total: Number(gesamtvermoegen) || last.total });
+      base.push({ ...last, date: today, total: Number(gesamtvermoegen) || last.total });
     } else {
-      base[base.length - 1] = { date: today, total: Number(gesamtvermoegen) || last.total };
+      base[base.length - 1] = { ...last, date: today, total: Number(gesamtvermoegen) || last.total };
     }
     return base;
   }, [heroSnapshots, gesamtvermoegen]);
@@ -92,6 +115,23 @@ const DepotPerformance = () => {
   const deltaAbs = first && last ? last.total - first.total : 0;
   const deltaPct = first && first.total > 0 ? (deltaAbs / first.total) * 100 : 0;
   const up = deltaAbs >= 0;
+
+  // Session 82.55 — Metrik-Toggle: 'total' (Vermögen) oder 'pl' (Gesamt G/V).
+  const [metric, setMetric] = useState('total');
+  // Incomplete-Gate: sobald irgendein Snapshot im aktiven Fenster incomplete
+  // ist, verbieten wir die P&L-Kurve komplett (keine scheinpräzise Kurve).
+  const windowIncomplete = useMemo(() => series.some((p) => p.incomplete === true), [series]);
+  // Prüfen ob überhaupt ein Snapshot im Fenster ein persistiertes profit_loss
+  // hat — sonst Toggle deaktivieren.
+  const hasPl = useMemo(() => series.some((p) => Number.isFinite(p.pl)), [series]);
+  const showPl = metric === 'pl' && hasPl && !windowIncomplete;
+  const plFirst = series.find((p) => Number.isFinite(p.pl))?.pl ?? 0;
+  const plLast = [...series].reverse().find((p) => Number.isFinite(p.pl))?.pl ?? 0;
+  const plUp = (plLast - plFirst) >= 0;
+  const activeUp = showPl ? plUp : up;
+  const activeColor = showPl
+    ? (plUp ? CHART_COLORS.gold : '#B0444C')
+    : (up ? CHART_COLORS.gold : '#B0444C');
 
   const formatDateShort = (d) => {
     if (!d) return '';
@@ -174,30 +214,78 @@ const DepotPerformance = () => {
         </div>
       ) : (
         <div>
-          <div className="mb-3 flex flex-wrap items-baseline gap-3">
-            <p
-              className={cn(
-                'inline-flex items-center gap-1 font-mono text-[11px] tabular-nums',
-                up ? 'text-emerald-700' : 'text-rose-700',
-              )}
-              data-testid="mein-depot-performance-delta"
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-baseline gap-3">
+              <p
+                className={cn(
+                  'inline-flex items-center gap-1 font-mono text-[11px] tabular-nums',
+                  showPl ? (plUp ? 'text-emerald-700' : 'text-rose-700') : (up ? 'text-emerald-700' : 'text-rose-700'),
+                )}
+                data-testid="mein-depot-performance-delta"
+              >
+                <span aria-hidden>{showPl ? (plUp ? '+' : '') : (up ? '+' : '')}</span>
+                <span className="sr-only">{(showPl ? plUp : up) ? 'Zugewinn ' : 'Rückgang '}</span>
+                {formatEUR(showPl ? (plLast - plFirst) : deltaAbs)}
+                {!showPl && ` · ${up ? '+' : ''}${deltaPct.toFixed(2).replace('.', ',')} %`}
+              </p>
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-bank-text-muted">
+                {activeRange}
+              </p>
+            </div>
+            {/* Session 82.55 — Vermögen / G-V Toggle */}
+            <div
+              role="tablist"
+              aria-label="Metrik"
+              data-testid="mein-depot-performance-metric"
+              className="inline-flex gap-1 rounded-sm border border-bank-border bg-white p-1"
             >
-              <span aria-hidden>{up ? '+' : ''}</span>
-              <span className="sr-only">{up ? 'Zugewinn ' : 'Rückgang '}</span>
-              {formatEUR(deltaAbs)} · {up ? '+' : ''}
-              {deltaPct.toFixed(2).replace('.', ',')} %
-            </p>
-            <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-bank-text-muted">
-              {activeRange}
-            </p>
+              {[
+                { key: 'total', label: 'Vermögen' },
+                { key: 'pl', label: 'Gesamt G/V' },
+              ].map((m) => {
+                const active = metric === m.key;
+                const disabled = m.key === 'pl' && !hasPl;
+                return (
+                  <button
+                    key={m.key}
+                    role="tab"
+                    type="button"
+                    aria-selected={active}
+                    aria-disabled={disabled}
+                    disabled={disabled}
+                    data-testid={`mein-depot-metric-${m.key}`}
+                    onClick={() => !disabled && setMetric(m.key)}
+                    className={cn(
+                      'min-h-[32px] rounded-sm px-3 font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bank-gold',
+                      active ? 'bg-bank-text text-white' : disabled ? 'cursor-not-allowed text-bank-text-muted/40' : 'text-bank-text-muted hover:bg-bank-bg hover:text-bank-text',
+                    )}
+                  >
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+          {metric === 'pl' && windowIncomplete ? (
+            <div
+              data-testid="mein-depot-performance-pl-incomplete"
+              className="flex h-[260px] items-center justify-center rounded-sm border border-dashed border-bank-border"
+            >
+              <div className="text-center">
+                <p className="font-mono text-[10.5px] uppercase tracking-[0.2em] text-bank-text-muted">Bewertung unvollständig</p>
+                <p className="mx-auto mt-2 max-w-md text-[12.5px] leading-relaxed text-bank-text-muted">
+                  In diesem Zeitraum fehlen Marktbewertungen. Die Gesamt-G/V-Kurve wird deshalb nicht angezeigt.
+                </p>
+              </div>
+            </div>
+          ) : (
           <div className="h-[260px] w-full min-w-0 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={series} margin={{ top: 6, right: 10, bottom: 6, left: 0 }}>
                 <defs>
                   <linearGradient id="depotPerfGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={up ? CHART_COLORS.gold : '#B0444C'} stopOpacity={0.28} />
-                    <stop offset="100%" stopColor={up ? CHART_COLORS.gold : '#B0444C'} stopOpacity={0} />
+                    <stop offset="0%" stopColor={activeColor} stopOpacity={0.28} />
+                    <stop offset="100%" stopColor={activeColor} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="var(--bank-border)" strokeDasharray="2 4" vertical={false} />
@@ -219,11 +307,11 @@ const DepotPerformance = () => {
                   width={68}
                   domain={['auto', 'auto']}
                 />
-                <Tooltip content={<TooltipContent />} />
+                <Tooltip content={<TooltipContent metric={showPl ? 'pl' : 'total'} />} />
                 <Area
                   type="monotone"
-                  dataKey="total"
-                  stroke={up ? CHART_COLORS.gold : '#B0444C'}
+                  dataKey={showPl ? 'pl' : 'total'}
+                  stroke={activeColor}
                   strokeWidth={1.6}
                   fill="url(#depotPerfGradient)"
                   dot={false}
@@ -232,6 +320,7 @@ const DepotPerformance = () => {
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          )}
         </div>
       )}
     </section>
