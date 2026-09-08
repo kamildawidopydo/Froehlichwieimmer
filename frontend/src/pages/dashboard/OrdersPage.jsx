@@ -64,6 +64,12 @@ const BOND_STATUS_META = {
     icon: XCircle,
     label: 'Abgelehnt',
   },
+  // Session 82.37 · Bond-Execution finaler Status.
+  executed: {
+    cls: 'border-sky-300/55 bg-sky-50 text-sky-700',
+    icon: CheckCircle,
+    label: 'Ausgeführt',
+  },
 };
 
 // Session 82.36 · IPO-Requests kennen zusätzlich den Status 'allocated'

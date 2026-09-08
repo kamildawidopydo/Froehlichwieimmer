@@ -3,6 +3,40 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.37 (Preview) · Admin Bond Execution UI
+
+- **Neuer Frontend-Flow** in `pages/AdminBondRequests.js`:
+  - „Ausführung erfassen"-Button (Package-Icon, `data-testid="bond-request-execute-{id}"`) erscheint nur für **Mongo-native** Requests mit `status='approved'`. Legacy-Supabase-Requests behalten den bestehenden Approve/Reject-Prompt-Flow.
+  - Modal `data-testid="bond-execute-modal"` mit Read-only Request-Zusammenfassung (Bond, ISIN, Emittent aus `bond_catalog`, Beantragtes Nominal, Stückelung, Kupon, Fälligkeit, Kundenname/E-Mail).
+  - Eingaben: `nominal_amount` (Prefill = `requested_nominal || amount_eur`), `execution_price_pct` (Prefill 100), optional `decision_note` ≤500.
+  - Live-Vorschau `Gesamtbetrag = Nominal × Kurs ÷ 100` (Anzeige only; Backend Source of Truth).
+  - Client-Validation: `nominal > 0`, `price > 0`, `nominal ≤ requested`, `nominal Vielfaches von denomination` (falls Katalog denom>0).
+  - Submit-Button während Request disabled → Double-Click-Schutz.
+  - BondExecError-Codes gemappt (INSUFFICIENT_CASH, OVER_NOMINAL, INVALID_DENOMINATION, BAD_NOMINAL, BAD_PRICE, REQUEST_BAD_STATUS, BOND_UNAVAILABLE, BOND_EXPIRED, BOND_NOT_FOUND, MISSING_ISIN, REQUEST_REJECTED_RACE). Modal bleibt bei Fehler offen.
+  - Nach Erfolg: Toast „Anleiheausführung wurde erfolgreich erfasst.", Modal schließt, Liste re-lädt. Row zeigt Status **Ausgeführt** (sky) + Gross + Nominal + Kurs + Datum via Tabellenspalten.
+
+- **Neuer Customer-Status-Pill** `executed → „Ausgeführt"` in `pages/dashboard/OrdersPage.jsx` (`BOND_STATUS_META`).
+
+- **QA (verifiziert im Preview, patron admin + demo.kunde customer):**
+  - Security: unauth **401** · customer **403** · admin **200** ✅
+  - REQUEST_BAD_STATUS (pending → execute): **409** ✅
+  - INVALID_DENOMINATION (999999999 % 100 ≠ 0): **422** ✅
+  - BAD_NOMINAL (0): **422** ✅
+  - Happy-Path PREVIEW TEST BOND 3 · 200 nom × 98.5% = 197 EUR → **200**, Execution `completed`, Position + cash_event angelegt, Cash **8205.26 → 8008.26 EUR** ✅
+  - Idempotent Retry → gleiche `execution.id`, cash NICHT doppelt belastet ✅
+  - Customer `GET /api/bonds/requests/me`: `status='executed'`, `executed_nominal=200`, `execution_price_pct=98.5000`, `gross_amount=197.00`, `executed_at` ✅
+  - Customer `GET /api/portfolio/bond-positions`: neue PT_BOND_03 Position sichtbar ✅
+  - Client-Validation UI (getestet mit `data-testid`): over-nominal, invalid denomination (150 vs Stückelung 100), bad price 0 → jeweils deutsche Fehler im Modal, Modal bleibt offen ✅
+  - Gross-Preview UI: 100 × 98.5% → „98,50 €" ✅
+  - Desktop 1920 · Mobile 390 → Modal ohne Overflow, alle Inputs erreichbar ✅
+  - Regression Dashboard-Banner-Fix (82.35): bannerVisible=false ✅
+  - Kein Supabase-Write · Legacy-Flow unangetastet.
+
+- **Files Changed**: `pages/AdminBondRequests.js` (rewrite), `pages/dashboard/OrdersPage.jsx` (BOND_STATUS_META.executed), `memory/PRD.md`.
+
+---
+
+
 ## Session 82.36 (Preview) · Admin IPO Allocation UI
 
 - **Neuer Frontend-Flow** in `pages/AdminIpoRequests.js`:

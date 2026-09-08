@@ -1,6 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { Send, Check, RefreshCw, Trash2, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Send, Check, RefreshCw, Trash2, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
@@ -10,14 +19,17 @@ import {
   adminTheadClass,
   adminRowHover,
 } from '@/components/admin/AdminSubpageChrome';
+import { formatEUR } from '@/lib/dashboardFormatters';
 
 /**
- * Admin Bond-Anfragen (Session 82.04) — Merge Mongo + Legacy.
+ * Admin Bond-Anfragen (Session 82.04 → Session 82.37) — Merge Mongo + Legacy.
  *
  * Legacy-Supabase-Rows werden weiterhin READ-only angezeigt (best-effort;
  * bei fehlender RLS-Erlaubnis leer, kein Blocker). Neue Mongo-Requests
- * werden via FastAPI-Admin-Endpoints gelesen und (approve/reject) modifiziert.
- * Kein Dual-Write, keine Migration bestehender Legacy-Daten.
+ * werden via FastAPI-Admin-Endpoints gelesen und approve/reject/execute
+ * modifiziert. Kein Dual-Write, keine Migration bestehender Legacy-Daten.
+ *
+ * Session 82.37 · Execution-Modal + Client-Validation ergänzt.
  */
 
 const fetchJson = async (path, options = {}) => {
@@ -32,6 +44,7 @@ const fetchJson = async (path, options = {}) => {
     const detail = body?.detail || `HTTP ${resp.status}`;
     const err = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
     err.status = resp.status;
+    err.body = body;
     throw err;
   }
   return body;
@@ -55,14 +68,59 @@ const normalizeLegacy = (row) => ({
   customer_email: row.profiles?.email || null,
 });
 
+// Session 82.37 · Deutsche Fehlertexte für Bond-Execution-Backend-Codes.
+const humanExecError = (code, detail) => {
+  const map = {
+    INSUFFICIENT_CASH: 'Nicht genügend Guthaben auf dem Kundenkonto für die Ausführung.',
+    OVER_NOMINAL: 'Ausgeführtes Nominal übersteigt das vom Kunden angefragte Volumen.',
+    INVALID_DENOMINATION: 'Nominal ist kein Vielfaches der Stückelung.',
+    BAD_NOMINAL: 'Nominal muss > 0 sein.',
+    BAD_PRICE: 'Ausführungskurs muss > 0 sein.',
+    REQUEST_BAD_STATUS: 'Ausführung nicht möglich — die Anfrage ist nicht mehr im Status „approved".',
+    BOND_UNAVAILABLE: 'Anleihe ist derzeit nicht mehr verfügbar.',
+    BOND_EXPIRED: 'Anleihe ist bereits fällig — keine Ausführung möglich.',
+    BOND_NOT_FOUND: 'Anleihe im Katalog nicht gefunden.',
+    MISSING_ISIN: 'Anleihe hat keine ISIN — Ausführung abgebrochen.',
+    REQUEST_NOT_FOUND: 'Anfrage wurde nicht gefunden.',
+    REQUEST_REJECTED_RACE: 'Anfrage wurde parallel abgelehnt.',
+  };
+  return map[code] || detail || 'Ausführung fehlgeschlagen.';
+};
+
+const parseDecStr = (v) => {
+  if (v == null || String(v).trim() === '') return null;
+  const n = Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+const EMPTY_EXEC_FORM = {
+  nominalAmount: '',
+  executionPricePct: '',
+  decisionNote: '',
+};
+
 const AdminBondRequests = () => {
   const [items, setItems] = useState([]);
+  const [bondCatalog, setBondCatalog] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
 
+  const [executeRow, setExecuteRow] = useState(null);
+  const [executeForm, setExecuteForm] = useState(EMPTY_EXEC_FORM);
+  const [executeError, setExecuteError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const bondById = useMemo(() => {
+    const m = {};
+    (bondCatalog || []).forEach((b) => {
+      m[b.id] = b;
+    });
+    return m;
+  }, [bondCatalog]);
+
   const load = async () => {
     setLoading(true);
-    // Mongo-native ist Pflicht; Legacy best-effort.
+    // Mongo-native ist Pflicht; Legacy + Katalog best-effort.
     const results = await Promise.allSettled([
       fetchJson('/api/admin/bonds/requests'),
       supabase
@@ -71,6 +129,7 @@ const AdminBondRequests = () => {
           'id, user_id, isin, bond_name, kupon_rate, amount_eur, status, created_at, approved_at, rejected_at, decision_note, handled_at, profiles:user_id(email, first_name, last_name)',
         )
         .order('created_at', { ascending: false }),
+      fetchJson('/api/bonds/catalog'),
     ]);
     const mongo = results[0].status === 'fulfilled' ? results[0].value || [] : [];
     if (results[0].status === 'rejected') {
@@ -81,16 +140,19 @@ const AdminBondRequests = () => {
       const r = results[1].value;
       if (!r.error) legacy = (r.data || []).map(normalizeLegacy);
     }
+    const catalog = results[2].status === 'fulfilled' ? results[2].value || [] : [];
     const merged = [
       ...mongo.map((m) => ({ ...m, backend: 'mongo' })),
       ...legacy,
     ].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
     setItems(merged);
+    setBondCatalog(catalog);
     setLoading(false);
   };
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const approveMongo = async (row) => {
@@ -101,7 +163,7 @@ const AdminBondRequests = () => {
         method: 'POST',
         body: JSON.stringify({ decision_note: note }),
       });
-      toast.success('Anfrage genehmigt (fachlich; keine Position erzeugt)');
+      toast.success('Anfrage genehmigt — bereit zur Ausführung');
       await load();
     } catch (err) {
       toast.error('Freigabe fehlgeschlagen: ' + err.message);
@@ -124,6 +186,77 @@ const AdminBondRequests = () => {
       toast.error('Ablehnung fehlgeschlagen: ' + err.message);
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  // Session 82.37 · Execution-Modal
+  const openExecute = (row) => {
+    setExecuteError(null);
+    const catalog = bondById[row.bond_id] || {};
+    // Prefill: Nominal ← requested_nominal falls vorhanden, sonst amount_eur (Nominal ≈ 100% Buchwert).
+    const nomDefault = row.requested_nominal ?? row.amount_eur ?? '';
+    setExecuteForm({
+      ...EMPTY_EXEC_FORM,
+      nominalAmount: nomDefault !== '' ? String(nomDefault) : '',
+      executionPricePct: '100',
+    });
+    setExecuteRow({ ...row, _catalog: catalog });
+  };
+
+  const submitExecute = async () => {
+    if (!executeRow) return;
+    setExecuteError(null);
+    const nominal = parseDecStr(executeForm.nominalAmount);
+    const price = parseDecStr(executeForm.executionPricePct);
+    if (nominal == null) {
+      setExecuteError('Auszuführendes Nominal muss > 0 sein.');
+      return;
+    }
+    if (price == null) {
+      setExecuteError('Ausführungskurs (%) muss > 0 sein.');
+      return;
+    }
+    const requested = Number(executeRow.requested_nominal ?? executeRow.amount_eur ?? 0);
+    if (requested > 0 && nominal > requested) {
+      setExecuteError(
+        `Nominal (${nominal}) übersteigt das angefragte Volumen (${requested}).`,
+      );
+      return;
+    }
+    const denom = Number(executeRow._catalog?.denomination || 0);
+    if (denom > 0 && Math.abs((nominal / denom) - Math.round(nominal / denom)) > 1e-9) {
+      setExecuteError(
+        `Nominal muss Vielfaches der Stückelung (${denom.toLocaleString('de-DE')}) sein.`,
+      );
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const payload = {
+        nominal_amount: String(nominal),
+        execution_price_pct: String(price),
+      };
+      const note = executeForm.decisionNote.trim();
+      if (note) payload.decision_note = note;
+      await fetchJson(
+        `/api/admin/bonds/requests/${encodeURIComponent(executeRow.id)}/execute`,
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        },
+      );
+      toast.success('Anleiheausführung wurde erfolgreich erfasst.');
+      setExecuteRow(null);
+      await load();
+    } catch (err) {
+      // Backend liefert `detail: "CODE: message"` bei BondExecError.
+      const raw = err.message || '';
+      const match = raw.match(/^([A-Z_]+):\s*(.*)$/);
+      const code = match ? match[1] : null;
+      const message = match ? match[2] : raw;
+      setExecuteError(humanExecError(code, message));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -183,13 +316,18 @@ const AdminBondRequests = () => {
     setItems((prev) => prev.filter((item) => item.id !== row.id));
   };
 
+  const execNominal = parseDecStr(executeForm.nominalAmount);
+  const execPrice = parseDecStr(executeForm.executionPricePct);
+  const execGross =
+    execNominal != null && execPrice != null ? (execNominal * execPrice) / 100 : null;
+
   return (
     <AdminSubpageLayout>
       <AdminSubpageHeader
         eyebrow="Admin"
         title="Anleihen-Anfragen"
         titleIcon={Send}
-        description="Kaufanfragen, die Kunden über die Anleihen-Suche an unser Team senden."
+        description="Kaufanfragen genehmigen, ausführen (Cash-Buchung + Positionsanlage) oder ablehnen."
       />
 
       <AdminSurfaceCard>
@@ -226,13 +364,23 @@ const AdminBondRequests = () => {
               ) : (
                 items.map((row) => {
                   const isPending = row.status === 'pending';
-                  const isApproved = row.status === 'approved' || row.status === 'handled';
+                  const isApproved = row.status === 'approved';
+                  const isExecuted = row.status === 'executed';
                   const isRejected = row.status === 'rejected' || row.status === 'cancelled';
-                  const statusCls = isApproved
-                    ? 'border-emerald-300/55 bg-emerald-50 text-emerald-700'
-                    : isRejected
-                      ? 'border-rose-300/55 bg-rose-50 text-rose-700'
-                      : 'border-amber-300/55 bg-amber-50 text-amber-700';
+                  const statusCls = isExecuted
+                    ? 'border-sky-300/55 bg-sky-50 text-sky-700'
+                    : isApproved
+                      ? 'border-emerald-300/55 bg-emerald-50 text-emerald-700'
+                      : isRejected
+                        ? 'border-rose-300/55 bg-rose-50 text-rose-700'
+                        : 'border-amber-300/55 bg-amber-50 text-amber-700';
+                  const statusLabel = isExecuted
+                    ? 'Ausgeführt'
+                    : isApproved
+                      ? 'Genehmigt'
+                      : isRejected
+                        ? 'Abgelehnt'
+                        : 'Offen';
                   const isMongo = row.backend === 'mongo';
                   return (
                     <tr
@@ -272,11 +420,22 @@ const AdminBondRequests = () => {
                               style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
                             })
                           : '–'}
+                        {isExecuted && row.gross_amount != null && (
+                          <p className="mt-0.5 text-[10.5px] normal-case text-sky-700">
+                            Gross · {Number(row.gross_amount).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                          </p>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] ${statusCls}`}>
-                          {isApproved ? 'Genehmigt' : isRejected ? 'Abgelehnt' : 'Offen'}
+                          {statusLabel}
                         </span>
+                        {isExecuted && row.execution_price_pct != null && (
+                          <p className="mt-1 font-mono text-[10.5px] text-bank-text-muted">
+                            @ {Number(row.execution_price_pct).toLocaleString('de-DE', { maximumFractionDigits: 4 })}% ·
+                            Nom {Number(row.executed_nominal).toLocaleString('de-DE')}
+                          </p>
+                        )}
                         {row.decision_note && (
                           <p className="mt-1 max-w-[180px] text-[11px] text-bank-text-muted">
                             {row.decision_note}
@@ -324,14 +483,30 @@ const AdminBondRequests = () => {
                               </Button>
                             )}
                           </div>
+                        ) : isApproved && isMongo ? (
+                          <div className="inline-flex gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openExecute(row)}
+                              disabled={processingId === row.id}
+                              className="gap-1 border-sky-300/55 text-sky-700 hover:bg-sky-50 hover:text-sky-700"
+                              data-testid={`bond-request-execute-${row.id}`}
+                            >
+                              <Package size={12} strokeWidth={1.5} />
+                              <span className="text-[11px]">Ausführung erfassen</span>
+                            </Button>
+                          </div>
                         ) : (
                           <div className="inline-flex items-center gap-2">
                             <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-bank-text-muted">
-                              {isApproved && row.approved_at
-                                ? `Freigegeben · ${new Date(row.approved_at).toLocaleDateString('de-DE')}`
-                                : isRejected && row.rejected_at
-                                  ? `Abgelehnt · ${new Date(row.rejected_at).toLocaleDateString('de-DE')}`
-                                  : 'Abgeschlossen'}
+                              {isExecuted && row.executed_at
+                                ? `Ausgeführt · ${new Date(row.executed_at).toLocaleDateString('de-DE')}`
+                                : isApproved && row.approved_at
+                                  ? `Freigegeben · ${new Date(row.approved_at).toLocaleDateString('de-DE')}`
+                                  : isRejected && row.rejected_at
+                                    ? `Abgelehnt · ${new Date(row.rejected_at).toLocaleDateString('de-DE')}`
+                                    : 'Abgeschlossen'}
                             </span>
                             {!isMongo && (
                               <Button
@@ -355,9 +530,165 @@ const AdminBondRequests = () => {
         </div>
       </AdminSurfaceCard>
 
+      {/* Execute Modal — Session 82.37 (Mongo-native only) */}
+      <Dialog open={!!executeRow} onOpenChange={(open) => !open && setExecuteRow(null)}>
+        <DialogContent
+          className="max-h-[90vh] max-w-lg overflow-y-auto bg-white"
+          data-testid="bond-execute-modal"
+        >
+          <DialogHeader>
+            <DialogTitle>Anleiheausführung erfassen</DialogTitle>
+          </DialogHeader>
+          {executeRow && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-bank-border bg-bank-bg/40 p-3 text-[12.5px]">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="col-span-2">
+                    <p className="text-bank-text-muted">Anleihe</p>
+                    <p className="font-medium">{executeRow.bond_name || '–'}</p>
+                  </div>
+                  <div>
+                    <p className="text-bank-text-muted">ISIN</p>
+                    <p className="font-mono text-[12px]">{executeRow.isin || '–'}</p>
+                  </div>
+                  <div>
+                    <p className="text-bank-text-muted">Emittent</p>
+                    <p className="text-[12px]">{executeRow._catalog?.issuer || '–'}</p>
+                  </div>
+                  <div>
+                    <p className="text-bank-text-muted">Beantragtes Nominal</p>
+                    <p className="tabular-nums">
+                      {Number(executeRow.requested_nominal ?? executeRow.amount_eur ?? 0).toLocaleString('de-DE')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-bank-text-muted">Stückelung</p>
+                    <p className="tabular-nums">
+                      {executeRow._catalog?.denomination
+                        ? Number(executeRow._catalog.denomination).toLocaleString('de-DE')
+                        : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-bank-text-muted">Kupon</p>
+                    <p className="tabular-nums">
+                      {executeRow.kupon_rate != null ? `${executeRow.kupon_rate}%` : '–'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-bank-text-muted">Fälligkeit</p>
+                    <p className="tabular-nums">
+                      {executeRow._catalog?.faelligkeitsdatum
+                        ? new Date(executeRow._catalog.faelligkeitsdatum).toLocaleDateString('de-DE')
+                        : '—'}
+                    </p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-bank-text-muted">Kunde</p>
+                    <p className="text-[13px]">
+                      {executeRow.customer_name || '–'}
+                      {executeRow.customer_email ? (
+                        <span className="ml-1 text-bank-text-muted">
+                          ({executeRow.customer_email})
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="bond-exec-nominal">Auszuführendes Nominal *</Label>
+                  <Input
+                    id="bond-exec-nominal"
+                    data-testid="bond-execute-nominal"
+                    inputMode="decimal"
+                    value={executeForm.nominalAmount}
+                    onChange={(e) =>
+                      setExecuteForm((f) => ({ ...f, nominalAmount: e.target.value }))
+                    }
+                    placeholder={`≤ ${Number(executeRow.requested_nominal ?? executeRow.amount_eur ?? 0).toLocaleString('de-DE')}`}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="bond-exec-price">Ausführungskurs in % *</Label>
+                  <Input
+                    id="bond-exec-price"
+                    data-testid="bond-execute-price"
+                    inputMode="decimal"
+                    value={executeForm.executionPricePct}
+                    onChange={(e) =>
+                      setExecuteForm((f) => ({ ...f, executionPricePct: e.target.value }))
+                    }
+                    placeholder="z. B. 98.75"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-md border border-bank-border bg-bank-bg/30 p-3 text-[12.5px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-bank-text-muted">Gesamtbetrag (Vorschau)</span>
+                  <span
+                    className="font-semibold tabular-nums"
+                    data-testid="bond-execute-gross-preview"
+                  >
+                    {execGross != null ? formatEUR(execGross) : '–'}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-bank-text-muted">
+                  = Nominal × Kurs ÷ 100 · Cash-Buchung erfolgt über die Backend-Saga (Source of Truth).
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="bond-exec-note">Admin-Notiz (optional)</Label>
+                <Textarea
+                  id="bond-exec-note"
+                  data-testid="bond-execute-note"
+                  value={executeForm.decisionNote}
+                  onChange={(e) =>
+                    setExecuteForm((f) => ({ ...f, decisionNote: e.target.value }))
+                  }
+                  rows={2}
+                  maxLength={500}
+                />
+              </div>
+
+              {executeError && (
+                <div
+                  role="alert"
+                  data-testid="bond-execute-error"
+                  className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-800"
+                >
+                  {executeError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setExecuteRow(null)}
+                  disabled={submitting}
+                  data-testid="bond-execute-cancel"
+                >
+                  Abbrechen
+                </Button>
+                <Button
+                  onClick={submitExecute}
+                  disabled={submitting}
+                  data-testid="bond-execute-submit"
+                >
+                  {submitting ? 'Wird erfasst…' : 'Ausführung erfassen'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <p className="mt-3 text-[11px] text-bank-text-muted">
-        Hinweis: Bei Mongo-native Anfragen erzeugt „Genehmigen" derzeit KEINE Depotposition und
-        belastet KEIN Cash (Portfolio-Migration blockiert).
+        Hinweis: „Genehmigen" ist die fachliche Freigabe — erst „Ausführung erfassen" belastet Cash und legt die Position an.
       </p>
     </AdminSubpageLayout>
   );
