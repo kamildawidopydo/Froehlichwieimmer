@@ -3,6 +3,81 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.77 (Preview · IMPLEMENTED) · Admin First-Login + Password-Rotation + Admin-Menu-Audit
+
+**Ziel:** Owner-Admin-Konto aus 82.76 in Betrieb nehmen: Initial-Login → Passwort-Rotation via `POST /api/auth/change-password` → Hard-Reload + Re-Login → alle 40 Sidebar-Bereiche unter `/admin/*` besuchen und READY/PARTIAL/BROKEN klassifizieren. Kein Prod-Deploy, keine Financial-Writes, keine Daten-Änderung außer Passwort-Hash.
+
+### Password-Rotation (Preview)
+- **Initial-Login** (Session-82.76-Passwort): HTTP **200** ✅
+- **`POST /api/auth/change-password`** {current_password, new_password}: HTTP **200** `{status:"ok"}` ✅ · Server persistiert nur neuen bcrypt-Hash + `last_password_reset_at`
+- **Alt-Passwort abgelehnt**: HTTP **401** ✅
+- **Neues Passwort Login**: HTTP **200** ✅ · `role="admin"`
+- **Hard-Reload** (Cookie im 2. Prozess): `/me` role="admin" ✅
+- Neues Passwort wurde ausschließlich im Chat-Terminal-Output an den Owner ausgegeben (nicht in DB · nicht in PRD · nicht in Logs · nicht in test_credentials.md); Temp-File aus `/tmp` gesichert gelöscht.
+
+### Admin-Menu-Audit (40 Routen · alle mit neuem Admin-Cookie besucht)
+
+**READY (30/40)** — Seite rendert vollständig mit Content/Marker (Buttons, Filter, Daten):
+| Route | Label | Content-Länge |
+|---|---|---|
+| `/admin` | Dashboard | 10 451, markers=92 |
+| `/admin/banks` | Banken | 9 239, markers=76 |
+| `/admin/offers` | Angebote | 9 484, markers=89 |
+| `/admin/applications` | Anträge | 5 525 |
+| `/admin/cash-balances` | Kontoguthaben | 5 567 |
+| `/admin/bond-catalog` | Bond-Katalog | 88 217 |
+| `/admin/bond-requests` | Bond-Anfragen | 6 994, markers=19 |
+| `/admin/ipo-catalog` | IPO-Katalog | 7 254 |
+| `/admin/ipo-requests` | IPO-Anfragen | 6 500 |
+| `/admin/stocks` | Aktien | 39 711, markers=360 |
+| `/admin/stock-orders` | Aktien-Aufträge | 5 587 |
+| `/admin/insufficient-buying-power` | Kaufkraft-Warnungen | 5 616 |
+| `/admin/user-positions` | Nutzer-Positionen | 5 572 |
+| `/admin/support` | Support | 5 741 |
+| `/admin/credit-leads` | Kredit-Anfragen | 5 547 |
+| `/admin/product-inquiry-leads` | Produkt-Anfragen | 5 774 |
+| `/admin/assistant-handoffs` | Assistent-Handoffs | 6 988 |
+| `/admin/social-preview-messages` | Social-Preview-Messages | 5 624 |
+| `/admin/offer-reviews` | Angebots-Reviews | 5 899 |
+| `/admin/credit-offers` | Kredit-Angebote | 12 632, markers=83 |
+| `/admin/credit-bank-details` | Kredit-Bankdaten | 8 528 |
+| `/admin/analytics` | Analytics | 6 144 |
+| `/admin/live-visitors` | Live-Besucher | 6 967 |
+| `/admin/editorial` | Editorial | 5 629 |
+| `/admin/einordnung` | Einordnung | 6 265 |
+| `/admin/reviews` | Kundenbewertungen | 5 619 |
+| `/admin/investment-topics` | Investment-Topics | 5 938 |
+| `/admin/news-articles` | News-Artikel | 13 027 |
+| `/admin/social-content` | Social-Content | 7 304 |
+| `/admin/stock-research` | Stock-Research | 6 840, markers=24 |
+
+**PARTIAL (10/40)** — Seite rendert, aber leerer/dünner Datenzustand (Empty-State legitim, kein Fehler):
+| Route | Label | Note |
+|---|---|---|
+| `/admin/users` | Benutzer | Empty-State (len=5 737) |
+| `/admin/offer-interests` | Interessenten | Empty-State (len=5 573) |
+| `/admin/depot-contracts` | Depot-Verträge | Empty-State (len=5 587) |
+| `/admin/activity` | Aktivität | Empty-State (len=6 276) |
+| `/admin/bond-positions` | Bond-Positionen | Empty-State (len=5 539) |
+| `/admin/stock-coupons` | Aktien-Gutscheine | Empty-State (len=5 521) |
+| `/admin/formular-access` | Formular-Zugang | Empty-State (len=5 610) |
+| `/admin/document-uploads` | Dokument-Upload | Empty-State (len=5 630) |
+| `/admin/markt-daten` | Markt-Daten | Empty-State (len=7 845) |
+| `/admin/contract-submissions` | Vertrags-Einreichungen | Empty-State (len=5 534) |
+
+**BROKEN (0/40)** — keine gebrochene Seite ✅ · keine 500er, keine Redirect-Loops, keine Runtime-Errors.
+
+### FINAL REPORT Flags
+- ADMIN_LOGIN_INITIAL: **PASS** · CHANGE_PASSWORD_FLOW: **PASS** · OLD_PW_REJECTED: **PASS (401)** · NEW_PW_ACCEPTED: **PASS (200)**
+- HARD_RELOAD_SESSION: **PASS** · SERVER_AUTHORITATIVE_ROLE: **PASS**
+- ADMIN_ROUTES_TESTED: **40**
+- ROUTES_READY: **30** · ROUTES_PARTIAL: **10** (alle Empty-States, kein Fehler) · ROUTES_BROKEN: **0** ✅
+- FINANCIAL_WRITES: **0** ✅ · DATA_CHANGES_OUTSIDE_PASSWORD_HASH: **0** ✅ · SUPABASE_WRITES: **0** ✅
+- READY_FOR_OWNER_ADMIN_USE: **YES** ✅ · READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Deploy-Blocker unverändert)
+
+---
+
+
 ## Session 82.76 (Preview · IMPLEMENTED) · Dedicated Owner-Admin Setup + Verification
 
 **Ziel:** Sauberen dedizierten Admin-Zugang `admin@kapital-direkt24.de` im Preview anlegen + vollständig verifizieren. Kein Prod-Deploy, keine Financial-Änderung, keine Rolle client-seitig gesetzt.
