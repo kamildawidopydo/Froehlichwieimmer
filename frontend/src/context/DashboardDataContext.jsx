@@ -337,18 +337,36 @@ export const DashboardDataProvider = ({ children }) => {
     if (!user?.id) return true;
     update({ ipoRequestsLoading: true });
     try {
-      const { data, error } = await supabase
-        .from('ipo_subscription_requests')
-        .select(
-          'id, ipo_id, company_name, ticker, amount_eur, shares_requested, status, notes, created_at, decision_note, approved_at, rejected_at, subscription_price_per_share, listing_price_per_share, profit_margin_pct, position_symbol, use_admin_valuation, valuation_set_at, ipo_catalog:ipo_id(price_currency)',
-        )
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      update({ ipoSubscriptionRequests: data || [] });
+      // Session 82.35 · IPO Requests Cutover — Mongo-native via FastAPI.
+      // Der bisherige Supabase-Read scheiterte an RLS/UUID-Cast und triggerte
+      // fälschlich den globalen Dashboard-Error-Banner. Jetzt lesen wir aus
+      // /api/ipo/requests/me und normalisieren auf das von den Widgets
+      // erwartete Legacy-Shape (approved_at/valuation_set_at/ipo_catalog).
+      const resp = await fetch('/api/ipo/requests/me', {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      const normalized = (Array.isArray(data) ? data : []).map((r) => ({
+        ...r,
+        // Legacy-Kompat-Felder (Mongo kennt kein separates approved_at —
+        // Bewertung wird bei Allocation gesetzt, daher fallen approved_at /
+        // valuation_set_at auf allocation_date zurück).
+        approved_at: r.allocation_date || null,
+        valuation_set_at: r.allocation_date || null,
+        position_symbol: null,
+        use_admin_valuation: true,
+        profit_margin_pct: null,
+        decision_note: null,
+        rejected_at: null,
+        ipo_catalog: { price_currency: 'EUR' },
+      }));
+      update({ ipoSubscriptionRequests: normalized });
       return true;
     } catch (err) {
       Sentry.captureException(err);
+      console.error('ipo subscription requests fetch failed', err);
       update({ ipoSubscriptionRequests: [] });
       return false;
     } finally {
@@ -448,21 +466,38 @@ export const DashboardDataProvider = ({ children }) => {
   const refreshAll = useCallback(async () => {
     if (!user?.id) return;
     update({ loading: true, dashboardFetchHadFailure: false });
-    const results = await Promise.all([
-      fetchCashBalance(),
-      fetchDepotContracts(),
-      fetchBondPositions(),
-      fetchBondPurchaseRequests(),
-      fetchIpoSubscriptionRequests(),
-      fetchStockData(),
-      fetchStockCatalog(),
-      fetchFavorites(),
-      fetchComparisonHistory(),
-      fetchHeroSnapshots(),
-      fetchSupportUnread(),
-      fetchInflationRate(),
+    // Session 82.35 · Banner-Semantik gesplittet.
+    // CRITICAL = Finanzkern des Depots (Cash, Positions, Orders, Bond-Requests,
+    // Snapshots). Nur deren Fehler dürfen den globalen roten Dashboard-Banner
+    // auslösen. NON_CRITICAL sind Marketing-/Legacy-Supabase-Reads
+    // (Stock-Catalog, Favoriten, Vergleichsverlauf, Support-Unread, Inflation)
+    // sowie IPO-Requests (fachlich nicht finanziell kritisch für den Depot-
+    // Core). Diese laufen parallel, ihre Fehler werden geloggt, aber kein
+    // Banner.
+    const [criticalResults] = await Promise.all([
+      Promise.all([
+        fetchCashBalance(),
+        fetchDepotContracts(),
+        fetchBondPositions(),
+        fetchBondPurchaseRequests(),
+        fetchStockData(),
+        fetchHeroSnapshots(),
+      ]),
+      Promise.all([
+        fetchIpoSubscriptionRequests(),
+        fetchStockCatalog(),
+        fetchFavorites(),
+        fetchComparisonHistory(),
+        fetchSupportUnread(),
+        fetchInflationRate(),
+      ]).catch((err) => {
+        // Ein einzelner non-critical Fetch darf niemals den Depot-Health-State
+        // beeinflussen — Fehler werden in den Sub-Funktionen bereits geloggt.
+        console.warn('non-critical dashboard fetch failed', err);
+        return [];
+      }),
     ]);
-    const failed = results.some((r) => r === false);
+    const failed = criticalResults.some((r) => r === false);
     update({ loading: false, dashboardFetchHadFailure: failed });
     checkPriceAlerts()
       .then((res) => {

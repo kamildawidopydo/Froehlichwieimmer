@@ -2,6 +2,36 @@
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
+
+## Session 82.35 (Preview) · Dashboard Fetch-Banner Fix + IPO Requests Cutover
+
+**Root Cause (verifiziert):** Der globale rote Banner „Einige Dashboard-Daten konnten nicht geladen werden." wurde von `refreshAll()` in `DashboardDataContext.jsx` gesetzt, sobald **irgendeiner** von 12 Fetches `false` zurückgab. Vier Legacy-Supabase-Reads (`stocks`, `profiles/savings_offers`, `comparison_history`, `ipo_subscription_requests`) scheiterten dauerhaft an RLS/UUID-Cast (FastAPI-User-Session ist keine Supabase-Session) und triggerten den Banner obwohl der Depot-Kern gesund war.
+
+**Fix (2 Files):**
+- `frontend/src/context/DashboardDataContext.jsx` — Fetches gesplittet in **CRITICAL** (Cash, Depot-Contracts, Bond-Positions, Bond-Requests, Stock-Data, Snapshots) und **NON_CRITICAL** (IPO-Requests, Stock-Catalog, Favorites, Comparison-History, Support-Unread, Inflation). Nur Critical-Fetch-Failures setzen `dashboardFetchHadFailure=true`. Non-Critical-Errors werden geloggt (Sentry + console), aber der globale Banner bleibt aus.
+- `fetchIpoSubscriptionRequests` — Cutover von Supabase (`ipo_subscription_requests`) auf Mongo-native `GET /api/ipo/requests/me`. Response wird zu Legacy-Shape normalisiert (`approved_at`/`valuation_set_at` fallback auf `allocation_date`, `ipo_catalog.price_currency='EUR'`, `use_admin_valuation=true`).
+- `frontend/src/lib/ipoValuation.js` — `buildIpoValuationMap` akzeptiert Status **`approved` UND `allocated`** (Mongo-Flow setzt `listing_price_per_share` erst bei Allocation).
+
+**QA Preview (verifiziert via Fetch-Mock im echten Preview-Frontend):**
+- T1 (Alle Critical 200) → **kein Banner** ✅, Gesamtvermögen 10.351,56 € rendert
+- T2 (IPO Mongo API 200) → 11 Requests laden, kein Legacy-Supabase-Read ✅
+- T3 (`/api/ipo/requests/me` 500 simuliert) → **kein Banner** ✅ (non-critical)
+- T4 (`/api/portfolio/stock-positions` 500) → **Banner erscheint** ✅
+- T5 (`/api/portfolio/cash` 500) → **Banner erscheint** ✅
+- Alle 8 Critical Backend-Endpoints im Preview liefern 200 (curl-verifiziert)
+
+**Verbleibende Supabase-Reads im `DashboardDataContext` (alle NON-CRITICAL):**
+- `stocks` (Stock-Catalog) — CRITICAL=NO
+- `profiles` + `savings_offers` (Favoriten) — CRITICAL=NO
+- `comparison_history` — CRITICAL=NO
+- `macro_rates` (Inflation, bereits tolerant) — CRITICAL=NO
+- Supabase Realtime-Channel (`user_stock_orders`, `support_tickets`, `bond_purchase_requests`, `ipo_subscription_requests`) — nur Toast-Nebeneffekt, kein Banner
+- Kein Supabase-Write in diesem Scope.
+
+**IPO Requests Supabase Reads in `DashboardDataContext`: MUST = 0 ✅**
+
+---
+
 ## Session 82.30 (Preview) · Depot P0 — Bond-Execution Saga
 - **cash_service**: `bond_purchase` in `_ACTIVE_TYPES` freigegeben.
 - **Neuer Service** `services/bond_execution_service.py` — Saga für approved Bond-Requests. States: `created → cash_debited → position_applied → request_settled → completed` (+ `failed`, `compensation_required`).

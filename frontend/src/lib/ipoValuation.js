@@ -140,7 +140,7 @@ export const buildIpoValuationMap = (requests = []) => {
   const map = {};
   const sorted = [...requests]
     .filter((r) => {
-      if (r.status !== 'approved' || r.use_admin_valuation === false) return false;
+      if (!['approved', 'allocated'].includes(r.status) || r.use_admin_valuation === false) return false;
       const listing = toNumber(r.listing_price_per_share);
       return listing != null && listing > 0 && !!resolveIpoPositionSymbol(r);
     })
