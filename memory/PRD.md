@@ -3,6 +3,56 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.50 (Preview) · Mobile Portfolio Chart Fit
+
+**Ziel:** Den in 82.49 gemeldeten horizontalen Overflow des Vermögensentwicklungs-Charts auf 390px Mobile beseitigen. Kein Redesign, keine Datenlogik-Änderung, kein synthetischer Snapshot, kein Backend-Change. **Kein Prod-Deploy.**
+
+**Phase A Root-Cause (Read-Only Audit):**
+- `document.documentElement.scrollWidth == clientWidth` bei allen 5 Breiten (360, 375, 390, 768, 1920) → **kein echter Dokument-Overflow** — HTML/Body clippt bereits sauber.
+- Chart selbst (`recharts-wrapper`) hat `right ≤ viewport` bei allen Breiten: 1920 → 1632 · 768 → 736 · 390 → 370 · 375 → 355 · 360 → 340. **Chart innerhalb Viewport** ✅.
+- Einziger DOM-Rect-Offender (bei 768 & 390 vor Fix): `<div class="recharts-tooltip-wrapper" width=0 right=598>` — Recharts' Tooltip-Wrapper mit **`visibility: hidden`** und `width: 0` (Recharts-Default für inactive tooltip). Funktional unsichtbar, aber `getBoundingClientRect()` gibt Position ungeachtet Overflow-Clipping zurück.
+- `ROOT_CAUSE`: Recharts positioniert seinen Tooltip-Wrapper initial off-screen mit inline `left: 566px` (letzte Cursor-Position vom Desktop-Rendering); der Wrapper ist `visibility:hidden`, also visuell nicht sichtbar, aber im rohen DOM-Rect-Sweep als Offender.
+
+**Phase B Minimal Fix:** `DepotPerformance.jsx` Zeile 194 — Chart-Container-Div bekommt `overflow-hidden` **und** `min-w-0`, damit (a) Recharts-interne, absolute-positionierte Kind-Elemente visuell geclippt bleiben und (b) potenzielle Flex-Parent-Auto-min-width nicht doch das Layout weitet. Kein Redesign, keine Achsen-/Label-Entfernung, keine feste 390px-Sonderlösung.
+
+```jsx
+- <div className="h-[260px] w-full">
++ <div className="h-[260px] w-full min-w-0 overflow-hidden">
+```
+
+**Phase C Data Integrity:** Chart-Datenquelle (`heroSnapshots` → `filterByRange` → `series`) unangetastet · Empty/One/Multi-States unverändert · keine synthetischen Punkte, kein Backfill, keine Interpolation, Valuation-Gates unverändert.
+
+**Phase D Responsive QA — After Fix (verifiziert):**
+| Breite | `scrollW-clientW` | visible offenders | Chart `right`/`left`/width | Chart in Viewport |
+|---:|---:|---:|:---|:-:|
+| 1920 | 0 | **0** | 1632/288/1344 | ✅ |
+| 768  | 0 | **0** | 736/32/704 | ✅ |
+| 390  | 0 | **0** | 370/20/350 | ✅ |
+| 375  | 0 | **0** | 355/20/335 | ✅ |
+| 360  | 0 | **0** | 340/20/320 | ✅ |
+
+Der Strict-Offender-Sweep filtert `visibility:hidden`, `display:none`, `opacity:0` — beide Bedingungen aus Phase D sind erfüllt: `document.documentElement.scrollWidth <= clientWidth` und Chart-`right ≤ viewport width` bei allen Breiten. Range-Tabs weiterhin bedienbar auf 390px, keine Text-Überlagerung, kein KPI-Wert abgeschnitten.
+
+**Regressions-Check:** Desktop-Hover-Tooltip weiterhin sichtbar (`visibility: visible` on hover, hasContent=true) — kein regressioneller Tooltip-Break aus einem zwischenzeitlich getesteten und wieder verworfenen `wrapperStyle`-Override.
+
+**Phase E Regression:** 82.35 Dashboard Banner · 82.38 Heute-KPI · 82.41 7T/30T Sparkline · 82.49 Sparkline Tooltip alle unangetastet. Buy/Sell/IPO/Bonds/Cash/Statements/Orders/Snapshot-Service unverändert.
+
+**Phase F Snapshot Cron Sanity Check (Read-Only):**
+- `DAILY_SNAPSHOT_CRON`: **ACTIVE** (`portfolio-snapshots` in `/app/.emergent/crons.yml`, `cron: "0 22 * * *"`, POST `/api/cron/portfolio-snapshots`)
+- Endpoint `_cron_portfolio_snapshots` in `server.py:4563` liefert 2xx sofort, dispatched Job via `asyncio.create_task`
+- `DUPLICATE_SNAPSHOT_CRONS`: **0** (nur 1 Cron-Definition + 1 Beschreibungs-Kommentar; kein zweiter Cron)
+- Unique-Constraint `(user_id, snapshot_date)` weiterhin aus 82.25 aktiv — idempotenter Same-Day-Upsert.
+- `HISTORICAL_BACKFILL`: **NO** (nicht implementiert, nicht geplant im Rahmen von 82.50)
+
+**Files Changed:**
+- `frontend/src/components/mein-depot/DepotPerformance.jsx` (Chart-Container `overflow-hidden min-w-0`)
+- `memory/PRD.md`
+
+**Constraints eingehalten:** Nur Preview · Kein Prod-Deploy · Keine Datenlogik-/Snapshot-Logik-Änderung · Keine synthetischen Punkte · Kein Backend-Change (Backend nur read-only geprüft) · Kein Chart-Clipping mit sichtbarem Content · Keine globale `overflow-x-hidden`-Hack am Body · Keine Achsen/Labels blind entfernt · Kein Datenpunkt reduziert · Backend/Financial/Supabase unangetastet.
+
+---
+
+
 ## Session 82.49 (Preview) · Depot Snapshot Sparkline Tooltip
 
 **Ziel:** Bestehende 7T/30T-Snapshot-Sparkline aus Session 82.41 mit einem dezenten Tooltip erweitern, der Snapshot-Datum und Depotwert des aktiven Recharts-Datenpunkts anzeigt. Keine neue Backend-API, keine Interpolation, keine synthetischen Snapshots, keine Financial Writes. **Kein Prod-Deploy.**
