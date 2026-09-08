@@ -1048,8 +1048,10 @@ async def admin_send_statement(
         raise HTTPException(status_code=422, detail="user_id ungültig")
     if not (2020 <= year <= 2100 and 1 <= month <= 12):
         raise HTTPException(status_code=422, detail="year/month außerhalb Bereichs")
+    # Session 82.43 · `force=true` (admin-only, explizit) umgeht das Opt-Out.
+    force = bool(body.get("force", False))
     result = await send_monthly_statement_email(
-        db, ObjectId(str(target_id)), year, month, _send_email_via_emergent,
+        db, ObjectId(str(target_id)), year, month, _send_email_via_emergent, force=force,
     )
     return result
 

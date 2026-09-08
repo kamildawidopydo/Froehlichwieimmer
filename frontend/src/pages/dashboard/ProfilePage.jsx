@@ -68,6 +68,42 @@ const ProfilePage = () => {
     email_otp_enabled: false,
   });
   const [prefsSaving, setPrefsSaving] = useState(false);
+  // Session 82.43 · Monatlicher Kontoauszug per E-Mail — Mongo-native Prefs.
+  // Default true für Bestandsnutzer (fehlendes Feld == aktiv).
+  const [statementEmail, setStatementEmail] = useState(
+    user?.notification_prefs?.monthly_statement_email !== false,
+  );
+  const [statementEmailSaving, setStatementEmailSaving] = useState(false);
+  useEffect(() => {
+    setStatementEmail(user?.notification_prefs?.monthly_statement_email !== false);
+  }, [user?.notification_prefs?.monthly_statement_email]);
+
+  const toggleStatementEmail = async () => {
+    const next = !statementEmail;
+    setStatementEmail(next);
+    setStatementEmailSaving(true);
+    try {
+      const mergedPrefs = {
+        ...(user?.notification_prefs || {}),
+        monthly_statement_email: next,
+      };
+      const resp = await fetch('/api/users/onboarding', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notification_prefs: mergedPrefs }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      await refreshUser?.();
+      toast.success('Einstellung gespeichert');
+    } catch (err) {
+      Sentry.captureException(err);
+      setStatementEmail(!next);
+      toast.error('Einstellung konnte nicht gespeichert werden');
+    } finally {
+      setStatementEmailSaving(false);
+    }
+  };
   const [taxForm, setTaxForm] = useState({
     tax_allowance_eur: '',
     tax_allowance_used_eur: '',
@@ -772,6 +808,36 @@ const ProfilePage = () => {
                     </div>
                   );
                 })}
+              </div>
+              {/* Session 82.43 · Kontoauszug-Opt-Out (Mongo-native via /api/users/onboarding) */}
+              <div className="mt-6 border-t border-bank-border pt-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-bank-text-muted">
+                  Dokumente & Benachrichtigungen
+                </p>
+                <div className="mt-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-bank-text">
+                      Monatlichen Kontoauszug per E-Mail erhalten
+                    </p>
+                    <p className="text-xs text-bank-text-muted mt-0.5">
+                      Wir senden Ihnen Ihren Kontoauszug automatisch zu Beginn des Folgemonats
+                      als PDF an Ihre hinterlegte E-Mail-Adresse.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={statementEmail}
+                    onClick={toggleStatementEmail}
+                    disabled={statementEmailSaving}
+                    data-testid="pref-monthly-statement-email"
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-bank-accent/45 focus:ring-offset-2 disabled:opacity-50 ${statementEmail ? 'bg-bank-primary' : 'bg-bank-border'}`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${statementEmail ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </button>
+                </div>
               </div>
             </SurfaceCard>
           )}

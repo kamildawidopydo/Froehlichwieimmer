@@ -58,10 +58,19 @@ async def send_monthly_statement_email(
     year: int,
     month: int,
     send_email_fn: Callable[..., Awaitable[Optional[str]]],
+    *,
+    force: bool = False,
 ) -> dict:
     """
     Kanonischer Single-User-Versand. Rückgabe: `{status, delivery_id, ...}`.
     Wirft NIE — auf Fehler → status='failed' im Log persistiert.
+
+    Session 82.43 · Opt-Out-Semantik:
+      * Batch/Auto-Mode (`force=False`): respektiert `users.notification_prefs.monthly_statement_email`.
+        Fehlt Feld → true (Default für Bestandsnutzer).
+        Explizit false → status='skipped', reason='user_opt_out', **kein Provider-Call**.
+      * `force=True` (nur admin manual mit explizitem Flag): umgeht Opt-Out und dokumentiert
+        das im Delivery-Log.
     """
     if not (1 <= month <= 12):
         return {"status": "skipped", "reason": "BAD_MONTH"}
@@ -69,17 +78,46 @@ async def send_monthly_statement_email(
     idem_key = f"statement:{str(user_id)}:{year:04d}-{month:02d}"
     now = datetime.now(timezone.utc)
 
-    # 1. Delivery-Log upsert (pending) — verhindert Doppelversand parallel.
+    # 1. Delivery-Log check.
     existing = await db.statement_deliveries.find_one(
         {"user_id": user_id, "year": year, "month": month}
     )
     if existing and existing.get("status") == "sent":
         return {"status": "already_sent", "delivery_id": str(existing["_id"])}
 
-    # 2. User + Email auflösen (nur serverseitig, keine client-supplied email).
+    # 2. User + Email + Preferences (serverseitig, keine client-supplied Werte).
     user = await db.users.find_one({"_id": user_id})
     if not user:
         return {"status": "skipped", "reason": "USER_NOT_FOUND"}
+
+    prefs = user.get("notification_prefs") or {}
+    opt_in = prefs.get("monthly_statement_email")
+    # Default = True für Bestandsnutzer (fehlendes Feld == aktiv).
+    if opt_in is False and not force:
+        # Opt-Out ist bewusster Wunsch → keine Provider-Interaktion.
+        await db.statement_deliveries.update_one(
+            {"user_id": user_id, "year": year, "month": month},
+            {
+                "$set": {
+                    "status": "skipped",
+                    "last_error": None,
+                    "updated_at": now,
+                    "reason": "user_opt_out",
+                },
+                "$setOnInsert": {
+                    "user_id": user_id, "year": year, "month": month,
+                    "idempotency_key": idem_key, "attempt_count": 0,
+                    "created_at": now,
+                    "email": (user.get("email") or "").strip() or None,
+                    "period_from": _month_bounds(year, month)[0].isoformat(),
+                    "period_to": _month_bounds(year, month)[1].isoformat(),
+                    "statement_count": 0,
+                },
+            },
+            upsert=True,
+        )
+        return {"status": "skipped", "reason": "user_opt_out"}
+
     email = (user.get("email") or "").strip()
     if not email:
         await db.statement_deliveries.update_one(
@@ -197,7 +235,8 @@ async def run_monthly_batch(
     month: int,
     send_email_fn: Callable[..., Awaitable[Optional[str]]],
 ) -> dict:
-    """Batch-Runner. Fehler pro User werden isoliert; nichts bricht den Batch ab."""
+    """Batch-Runner. Fehler pro User werden isoliert; nichts bricht den Batch ab.
+    Respektiert `notification_prefs.monthly_statement_email` (Session 82.43)."""
     start = datetime.now(timezone.utc)
     report = {
         "users_seen": 0,
@@ -206,6 +245,7 @@ async def run_monthly_batch(
         "already_sent": 0,
         "failed": 0,
         "skipped_no_email": 0,
+        "skipped_opt_out": 0,
         "skipped_other": 0,
     }
     cursor = db.users.find({}, {"_id": 1, "email": 1, "first_name": 1, "last_name": 1, "is_active": 1})
@@ -225,6 +265,8 @@ async def run_monthly_batch(
                 report["failed"] += 1
             elif res["status"] == "skipped" and res.get("reason") == "NO_EMAIL":
                 report["skipped_no_email"] += 1
+            elif res["status"] == "skipped" and res.get("reason") == "user_opt_out":
+                report["skipped_opt_out"] += 1
             else:
                 report["skipped_other"] += 1
         except Exception:  # noqa: BLE001

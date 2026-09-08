@@ -3,6 +3,62 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.43 (Preview) · Statement Email Opt-Out (Customer Notification Preference)
+
+**Phase A Audit** — bestehendes User-Preference-Modell erweiterbar:
+- USER MODEL: `users` collection mit `notification_prefs: dict`, `email_digest_enabled: bool` bereits vorhanden (Onboarding-Endpoints seit 81.05).
+- PATCH ENDPOINT: `PATCH /api/users/onboarding` mit `notification_prefs: Optional[dict]`, `model_config extra='forbid'` → Mass-Assignment-safe (Session 81.05).
+- SETTINGS UI: `pages/dashboard/ProfilePage.jsx`, Section `notifications` mit bestehendem Toggle-Pattern (Bell-Icon).
+- STATEMENT DEFAULT: Alle Bestandsnutzer haben KEIN Feld → gilt als aktiv (`monthly_statement_email !== false`).
+
+**Phase B–H Implementierung** (additiv, keine neue Collection, kein Datenschema-Break):
+
+- **`backend/services/statement_email_service.py`**:
+  - `send_monthly_statement_email(..., *, force=False)` — neuer Kwarg. Prüft `users.notification_prefs.monthly_statement_email`:
+    - `false` + `force=False` → **kein Provider-Call**, Delivery-Log mit `status='skipped', reason='user_opt_out'` upserted (verhindert idempotent auch spätere Doppelversuche im selben Monat).
+    - fehlendes Feld ODER `true` → normaler Versand.
+    - `force=True` → umgeht Opt-Out (admin-only, explizit).
+  - `run_monthly_batch(...)` erweitert um `skipped_opt_out` Counter im Report.
+
+- **`backend/routes/portfolio.py`** — `POST /api/admin/portfolio/statements/send` akzeptiert optional `force: bool` (Default false). Ohne `force` respektiert der Admin-Endpoint das Kundenwunsch-Opt-Out (Spec-Pflicht: „Kein verstecktes Umgehen"). `force=true` ist admin-only, explizit, wird im Log durch das Fehlen von `reason='user_opt_out'` dokumentiert.
+
+- **`frontend/src/pages/dashboard/ProfilePage.jsx`** — neue Sektion **„Dokumente & Benachrichtigungen"** unterhalb der bestehenden Benachrichtigungs-Toggles:
+  - Neues Toggle `data-testid="pref-monthly-statement-email"` — „Monatlichen Kontoauszug per E-Mail erhalten".
+  - State-Init `user?.notification_prefs?.monthly_statement_email !== false` (Default aktiv für Bestandsnutzer).
+  - Speicher via **Mongo-native `PATCH /api/users/onboarding`** (nicht Supabase), Optimistic Update mit Rollback bei Fehler, Toast „Einstellung gespeichert" / „Einstellung konnte nicht gespeichert werden".
+  - Bestehende Toggles (weekly_digest, order_updates, marketing, price_alerts, email_otp_enabled) bleiben unverändert (out-of-scope für 82.43).
+
+**Test Matrix (Preview verifiziert):**
+| Test | Ergebnis |
+|---|---|
+| T1 Default (fehlendes Feld) | Frontend zeigt `true` (`!== false` Logik) ✅ |
+| T2 Customer setzt false | persisted in `users.notification_prefs.monthly_statement_email=false` ✅ |
+| T3 Hard Reload | 2. GET liefert `false` — Persistierung bestätigt ✅ |
+| T4 Admin Send (opt-out, force=false) | `{status:'skipped', reason:'user_opt_out'}` · **kein Provider-Call** ✅ |
+| T5 Idempotenz 2. Call | wieder `skipped:user_opt_out`, keine Doppelmail ✅ |
+| T6 Customer setzt true | persisted true ✅ |
+| T7 Nächster Monatslauf möglich | send re-enabled, Batch würde senden ✅ |
+| T8 Unauth PATCH | **401** ✅ |
+| T9 Mass Assignment (`role`, `email`, `user_id`) | **422** (`extra='forbid'`) ✅ |
+| T10 Cross-User Update | unmöglich — `user_id` aus Session, nicht Payload ✅ |
+| T11 Manual Statement Download | JSON/CSV/PDF alle 200 (unabhängig vom Opt-Out) ✅ |
+| T12 Provider Retry-Logik | unverändert (opt-out bricht Path frühzeitig ab, kein failed) ✅ |
+| T13 Cross-User Attachment Isolation | unverändert (Session 82.42 verifiziert) ✅ |
+| Admin `force=true` | umgeht Opt-Out — würde senden (im Test lieferte Provider 422 wg. Test-Domain, aber KEIN `skipped`-Status) ✅ |
+
+**Phase K Privacy/Consent:** `monthly_statement_email` ist **ausschließlich** Dokumenten-Zustellpräferenz — keine Marketing-Consent-Vermischung. Regulatorisch nicht zwingend, daher Opt-Out zulässig.
+
+**Financial Invariants** unverändert (keine Writes außerhalb `users.notification_prefs` und `statement_deliveries.status`).
+
+**Files Changed**:
+- `backend/services/statement_email_service.py` (+ `force` kwarg, opt-out branch, `skipped_opt_out` counter)
+- `backend/routes/portfolio.py` (+ `force` bool in admin send)
+- `frontend/src/pages/dashboard/ProfilePage.jsx` (+ Opt-Out Toggle, Mongo-native PATCH)
+- `memory/PRD.md`
+
+---
+
+
 ## Session 82.42 (Preview) · Statement Email Delivery (monatlich)
 
 **Phase A Audit** (kein Neubau nötig):
