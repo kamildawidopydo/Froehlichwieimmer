@@ -3,6 +3,36 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.36 (Preview) · Admin IPO Allocation UI
+
+- **Neuer Frontend-Flow** in `pages/AdminIpoRequests.js`:
+  - „Zuteilung erfassen"-Button (Package-Icon, `data-testid="ipo-allocate-btn-{id}"`) erscheint nur für **Mongo-native** Requests mit `status='approved'`. Legacy-Supabase-Requests unverändert (Edit-Button + RPC-Flow).
+  - Modal `data-testid="ipo-allocate-modal"` mit Read-only Request-Zusammenfassung (Unternehmen, Ticker, Angefragte Stück, Anlagebetrag, Kundenname/E-Mail) + Eingaben (`allocated_shares`, `subscription_price_per_share`, optional `listing_price_per_share`, optional `decision_note` ≤500).
+  - Live-Vorschau `Gesamtbetrag = shares × price` (Anzeige only; Backend ist Source of Truth).
+  - Client-Validation: `allocated_shares > 0`, `≤ shares_requested`, `subscription_price_per_share > 0`.
+  - Submit-Button während Request disabled → Double-Click-Schutz.
+  - Backend-AllocationError-Codes werden zu freundlichen Meldungen gemappt (`INSUFFICIENT_CASH`, `OVER_ALLOCATION`, `REQUEST_BAD_STATUS`, `MISSING_SYMBOL`, `BAD_SHARES`, `BAD_PRICE`, `REQUEST_NOT_FOUND`, `REQUEST_REJECTED_RACE`). Modal bleibt bei Fehler offen.
+  - Nach Erfolg: Toast „IPO-Zuteilung wurde erfolgreich erfasst.", Modal schließt, Liste re-lädt. Row zeigt Status **Zugeteilt** (sky-Farbschema) + Stück, Preis, Datum via bestehende Spalten.
+
+- **Neuer Customer-Status-Pill** `allocated → "Zugeteilt"` in `pages/dashboard/OrdersPage.jsx` (`IPO_STATUS_META`), damit der Kunde im Auftragscenter den finalen Zustand sieht.
+
+- **QA (verifiziert im Preview, patron admin + demo.kunde customer):**
+  - Security-Matrix: unauth **401** · customer **403** · admin **200** ✅
+  - REQUEST_BAD_STATUS (pending → allocate): **409** ✅
+  - OVER_ALLOCATION (10 > 5): **422** ✅
+  - BAD_SHARES (0): **422** (Pydantic gt=0) ✅
+  - Happy-Path Siyata PTT 5 × 20.00 € = 100 € · listing 25.00 € → **200**, Allocation `completed`, Position `PTT qty=5 avg=20`, Cash **8305.26 → 8205.26 EUR** ✅
+  - Idempotent Double-Allocate → gleiches allocation_id, `resumed=true` ✅
+  - Customer `GET /api/ipo/requests/me` zeigt: `status='allocated'`, `allocated_shares=5`, `subscription_price_per_share=20.0000`, `listing_price_per_share=25.0000`, `allocation_gross_amount=100.00`, `allocation_date` ✅
+  - Customer `GET /api/portfolio/stock-positions` zeigt `PTT qty=5.0 avg=20.0` ✅
+  - Client-Validation UI: Over-Alloc + Bad-Price zeigen deutsche Fehler im Modal (Modal bleibt offen).
+  - Kein Supabase-Write · Kein Legacy-Flow-Impact.
+
+- **Files Changed**: `pages/AdminIpoRequests.js`, `pages/dashboard/OrdersPage.jsx`, `memory/PRD.md`.
+
+---
+
+
 ## Session 82.35 (Preview) · Dashboard Fetch-Banner Fix + IPO Requests Cutover
 
 **Root Cause (verifiziert):** Der globale rote Banner „Einige Dashboard-Daten konnten nicht geladen werden." wurde von `refreshAll()` in `DashboardDataContext.jsx` gesetzt, sobald **irgendeiner** von 12 Fetches `false` zurückgab. Vier Legacy-Supabase-Reads (`stocks`, `profiles/savings_offers`, `comparison_history`, `ipo_subscription_requests`) scheiterten dauerhaft an RLS/UUID-Cast (FastAPI-User-Session ist keine Supabase-Session) und triggerten den Banner obwohl der Depot-Kern gesund war.

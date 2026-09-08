@@ -66,7 +66,16 @@ const BOND_STATUS_META = {
   },
 };
 
-const IPO_STATUS_META = BOND_STATUS_META;
+// Session 82.36 · IPO-Requests kennen zusätzlich den Status 'allocated'
+// (Admin-Zuteilung erfolgt via IPO-Allocation-Saga → Depotposition entsteht).
+const IPO_STATUS_META = {
+  ...BOND_STATUS_META,
+  allocated: {
+    cls: 'border-sky-300/55 bg-sky-50 text-sky-700',
+    icon: CheckCircle,
+    label: 'Zugeteilt',
+  },
+};
 
 const StatusPill = ({ meta }) => {
   const Icon = meta.icon;

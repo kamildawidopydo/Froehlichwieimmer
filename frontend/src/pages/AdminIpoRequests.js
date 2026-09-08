@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Send, Check, RefreshCw, Trash2, Plus, Edit, X } from 'lucide-react';
+import { Send, Check, RefreshCw, Trash2, Plus, Edit, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -74,6 +74,35 @@ const EMPTY_MANUAL_FORM = {
   deductCash: false,
 };
 
+// Session 82.36 · Zuteilungs-Modal für Mongo-native (Kundenportal) IPO-Requests.
+// Backend bleibt Source of Truth — POST /api/admin/ipo/requests/{id}/allocate.
+const EMPTY_ALLOCATE_FORM = {
+  allocatedShares: '',
+  subscriptionPrice: '',
+  listingPrice: '',
+  decisionNote: '',
+};
+
+const parseDecStr = (v) => {
+  if (v == null || String(v).trim() === '') return null;
+  const n = Number(String(v).replace(',', '.'));
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+const humanAllocationError = (code, detail) => {
+  const map = {
+    INSUFFICIENT_CASH: 'Nicht genügend Guthaben auf dem Kundenkonto für die Zuteilung.',
+    OVER_ALLOCATION: 'Zuzuteilende Stückzahl übersteigt die vom Kunden angefragte Menge.',
+    REQUEST_BAD_STATUS: 'Zuteilung nicht möglich — die Anfrage ist nicht mehr im Status „approved".',
+    MISSING_SYMBOL: 'IPO hat kein handelbares Ticker-Symbol — Zuteilung abgebrochen.',
+    BAD_SHARES: 'Ungültige Stückzahl.',
+    BAD_PRICE: 'Ungültiger Zeichnungspreis.',
+    REQUEST_NOT_FOUND: 'Anfrage wurde nicht gefunden.',
+    REQUEST_REJECTED_RACE: 'Anfrage wurde parallel abgelehnt.',
+  };
+  return map[code] || detail || 'Zuteilung fehlgeschlagen.';
+};
+
 const ValuationPreview = ({ preview, currency }) => {
   if (!preview) {
     return (
@@ -128,9 +157,12 @@ const AdminIpoRequests = () => {
 
   const [approveRow, setApproveRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
+  const [allocateRow, setAllocateRow] = useState(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [valuationForm, setValuationForm] = useState(EMPTY_VALUATION_FORM);
   const [manualForm, setManualForm] = useState(EMPTY_MANUAL_FORM);
+  const [allocateForm, setAllocateForm] = useState(EMPTY_ALLOCATE_FORM);
+  const [allocateError, setAllocateError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [eurRates, setEurRates] = useState({ EUR: 1 });
 
@@ -297,6 +329,78 @@ const AdminIpoRequests = () => {
   const openManual = () => {
     setManualForm(EMPTY_MANUAL_FORM);
     setManualOpen(true);
+  };
+
+  // Session 82.36 · Zuteilungs-Modal öffnen (nur für Mongo-native + status='approved').
+  const openAllocate = (row) => {
+    setAllocateError(null);
+    setAllocateForm({
+      ...EMPTY_ALLOCATE_FORM,
+      allocatedShares: String(row.shares_requested ?? ''),
+      subscriptionPrice:
+        row.subscription_price_per_share != null ? String(row.subscription_price_per_share) : '',
+      listingPrice:
+        row.listing_price_per_share != null ? String(row.listing_price_per_share) : '',
+    });
+    setAllocateRow(row);
+  };
+
+  const submitAllocate = async () => {
+    if (!allocateRow) return;
+    setAllocateError(null);
+    const shares = parseInt(String(allocateForm.allocatedShares).trim(), 10);
+    const subPrice = parseDecStr(allocateForm.subscriptionPrice);
+    const listing = parseDecStr(allocateForm.listingPrice);
+    if (!Number.isInteger(shares) || shares <= 0) {
+      setAllocateError('Zuzuteilende Stückzahl muss > 0 sein.');
+      return;
+    }
+    if (shares > Number(allocateRow.shares_requested || 0)) {
+      setAllocateError(
+        `Zuzuteilende Stückzahl (${shares}) übersteigt die angefragten ${allocateRow.shares_requested} Stück.`,
+      );
+      return;
+    }
+    if (subPrice == null) {
+      setAllocateError('Zeichnungspreis je Aktie muss > 0 sein.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const payload = {
+        allocated_shares: shares,
+        subscription_price_per_share: String(subPrice),
+      };
+      if (listing != null) payload.listing_price_per_share = String(listing);
+      const note = allocateForm.decisionNote.trim();
+      if (note) payload.decision_note = note;
+      const resp = await fetch(
+        `/api/admin/ipo/requests/${encodeURIComponent(allocateRow.id)}/allocate`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        // Backend liefert `detail: "CODE: message"` bei AllocationError
+        const raw = body?.detail || `HTTP ${resp.status}`;
+        const match = typeof raw === 'string' && raw.match(/^([A-Z_]+):\s*(.*)$/);
+        const code = match ? match[1] : null;
+        const message = match ? match[2] : raw;
+        setAllocateError(humanAllocationError(code, message));
+        return;
+      }
+      toast.success('IPO-Zuteilung wurde erfolgreich erfasst.');
+      setAllocateRow(null);
+      load();
+    } catch (err) {
+      setAllocateError(err?.message || 'Netzwerkfehler bei der Zuteilung.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const submitApprove = async () => {
@@ -572,13 +676,16 @@ const AdminIpoRequests = () => {
                   items.map((row) => {
                     const isPending = row.status === 'pending';
                     const isApproved = row.status === 'approved';
+                    const isAllocated = row.status === 'allocated';
                     const currency = resolveCurrency(row);
                     const val = rowValuation(row);
                     const statusCls = isApproved
                       ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                      : row.status === 'rejected'
-                        ? 'border-rose-300 bg-rose-50 text-rose-700'
-                        : 'border-amber-300 bg-amber-50 text-amber-700';
+                      : isAllocated
+                        ? 'border-sky-300 bg-sky-50 text-sky-700'
+                        : row.status === 'rejected'
+                          ? 'border-rose-300 bg-rose-50 text-rose-700'
+                          : 'border-amber-300 bg-amber-50 text-amber-700';
                     const up = (val?.profitAbsEur ?? val?.profitAbs ?? 0) >= 0;
                     return (
                       <tr key={row._rowKey || row.id} className={`border-b border-bank-border ${adminRowHover}`}>
@@ -689,7 +796,21 @@ const AdminIpoRequests = () => {
                             </div>
                           ) : (
                             <div className="flex justify-end gap-1">
-                              {isApproved && (
+                              {isApproved && row.source === 'mongo' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  data-testid={`ipo-allocate-btn-${row.id}`}
+                                  disabled={processingId === row.id}
+                                  onClick={() => openAllocate(row)}
+                                  title="Zuteilung erfassen"
+                                  className="gap-1"
+                                >
+                                  <Package size={14} />
+                                  <span className="hidden text-[11px] sm:inline">Zuteilen</span>
+                                </Button>
+                              )}
+                              {isApproved && row.source !== 'mongo' && (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -843,6 +964,157 @@ const AdminIpoRequests = () => {
                 </Button>
                 <Button onClick={submitEdit} disabled={submitting}>
                   Speichern
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Allocate modal — Session 82.36 (Mongo-native only) */}
+      <Dialog open={!!allocateRow} onOpenChange={(open) => !open && setAllocateRow(null)}>
+        <DialogContent
+          className="max-h-[90vh] max-w-lg overflow-y-auto bg-white"
+          data-testid="ipo-allocate-modal"
+        >
+          <DialogHeader>
+            <DialogTitle>IPO-Zuteilung erfassen</DialogTitle>
+          </DialogHeader>
+          {allocateRow && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-bank-border bg-bank-bg/40 p-3 text-[12.5px]">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-bank-text-muted">Unternehmen</p>
+                    <p className="font-medium">{allocateRow.company_name || '–'}</p>
+                  </div>
+                  <div>
+                    <p className="text-bank-text-muted">Ticker</p>
+                    <p className="font-mono text-[12px]">{allocateRow.ticker || '–'}</p>
+                  </div>
+                  <div>
+                    <p className="text-bank-text-muted">Angefragte Stück</p>
+                    <p className="tabular-nums">{allocateRow.shares_requested}</p>
+                  </div>
+                  <div>
+                    <p className="text-bank-text-muted">Anlagebetrag</p>
+                    <p className="tabular-nums">
+                      {allocateRow.amount_eur != null ? formatEUR(allocateRow.amount_eur) : '—'}
+                    </p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-bank-text-muted">Kunde</p>
+                    <p className="text-[13px]">
+                      {customerLabel(allocateRow.profiles)}
+                      {allocateRow.profiles?.email ? (
+                        <span className="ml-1 text-bank-text-muted">
+                          ({allocateRow.profiles.email})
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="allocate-shares">Zuzuteilende Stück *</Label>
+                  <Input
+                    id="allocate-shares"
+                    data-testid="ipo-allocate-shares"
+                    inputMode="numeric"
+                    value={allocateForm.allocatedShares}
+                    onChange={(e) =>
+                      setAllocateForm((f) => ({ ...f, allocatedShares: e.target.value }))
+                    }
+                    placeholder={`≤ ${allocateRow.shares_requested}`}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="allocate-sub">Zeichnungspreis / Aktie *</Label>
+                  <Input
+                    id="allocate-sub"
+                    data-testid="ipo-allocate-sub-price"
+                    inputMode="decimal"
+                    value={allocateForm.subscriptionPrice}
+                    onChange={(e) =>
+                      setAllocateForm((f) => ({ ...f, subscriptionPrice: e.target.value }))
+                    }
+                    placeholder="z. B. 24.50"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="allocate-listing">Listing-Preis / Aktie (optional)</Label>
+                <Input
+                  id="allocate-listing"
+                  data-testid="ipo-allocate-listing-price"
+                  inputMode="decimal"
+                  value={allocateForm.listingPrice}
+                  onChange={(e) =>
+                    setAllocateForm((f) => ({ ...f, listingPrice: e.target.value }))
+                  }
+                  placeholder="Leer = keine Bewertungserfassung"
+                />
+              </div>
+
+              <div className="rounded-md border border-bank-border bg-bank-bg/30 p-3 text-[12.5px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-bank-text-muted">Gesamtbetrag (Vorschau)</span>
+                  <span className="font-semibold tabular-nums">
+                    {(() => {
+                      const s = parseInt(String(allocateForm.allocatedShares).trim(), 10);
+                      const p = parseDecStr(allocateForm.subscriptionPrice);
+                      if (!Number.isInteger(s) || s <= 0 || p == null) return '–';
+                      return formatEUR(s * p);
+                    })()}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-bank-text-muted">
+                  Serverseitig verbindlich = Stück × Zeichnungspreis · Cash-Buchung erfolgt via Backend-Saga.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="allocate-note">Admin-Notiz (optional)</Label>
+                <Textarea
+                  id="allocate-note"
+                  data-testid="ipo-allocate-note"
+                  value={allocateForm.decisionNote}
+                  onChange={(e) =>
+                    setAllocateForm((f) => ({ ...f, decisionNote: e.target.value }))
+                  }
+                  rows={2}
+                  maxLength={500}
+                />
+              </div>
+
+              {allocateError && (
+                <div
+                  role="alert"
+                  data-testid="ipo-allocate-error"
+                  className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-[12.5px] text-rose-800"
+                >
+                  {allocateError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setAllocateRow(null)}
+                  disabled={submitting}
+                  data-testid="ipo-allocate-cancel"
+                >
+                  Abbrechen
+                </Button>
+                <Button
+                  onClick={submitAllocate}
+                  disabled={submitting}
+                  data-testid="ipo-allocate-submit"
+                >
+                  {submitting ? 'Wird erfasst…' : 'Zuteilung erfassen'}
                 </Button>
               </div>
             </div>
