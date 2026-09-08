@@ -3,6 +3,62 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.58a (Preview) · Stock History Backend Enrichment
+
+**Ziel:** Bestehenden `/api/stocks/{symbol}/history`-Endpoint additiv um OHLCV + `stats` erweitern, damit StockDetail-Cutover (82.58b) ohne Supabase-`stock-history`-Function auskommt. **Kein Prod-Deploy.**
+
+**Phase A Audit:**
+- Endpoint in `routes/stock_public.py:147`, Provider: **yfinance** (bereits integriert, mit Cache in `stock_public_history_cache`)
+- Vorher: nur `close` pro Bar, kein `stats`. Range-Map unterstützt bereits 1m/3m/6m/1y/5y/max.
+- Cache-TTL bereits im existierenden Pattern.
+
+**Phase B/C/D — Provider Source & Response Shape:** yfinance liefert bereits OHLCV zuverlässig. `_yf_history_sync` erweitert um `open/high/low/volume`-Extraktion mit strengen Sanity-Gates:
+- NaN/Infinity/None → skip (kein Auto-Fix)
+- `close>0 && open>0 && high>0 && low>0` → sonst skip
+- `low <= min(open,close) && high >= max(open,close) && low <= high` → sonst skip
+- Negative Volumes → `volume=None` (kein Insert von 0-Fallback)
+- Ungültige Bars werden **geskippt, nie korrigiert oder synthetisch repariert**.
+
+**Phase E/F/G/H/I — Stats-Berechnung `_compute_history_stats(points)`:**
+- `fifty_two_week_high/low` = `max(highs)` / `min(lows)` aus echten Bars — **NIE Provider-Quote-Feld noch Approximation**
+- `open_of_day` = `points[-1].open` (kein prev-close-Ableitung) oder `null`
+- `one_year_return_pct` = `(latest_close - first_close) / first_close * 100` oder `null` bei zu wenig Daten
+- `annualized_volatility_pct` = `stddev(log_daily_returns) * sqrt(252) * 100` (Sample-Variance, N-1) oder `null` bei <3 Punkten
+- `average_volume` = arithm. Mittel der positiven `volumes` oder `null` bei fehlenden Provider-Volume-Daten
+
+**Phase C Response Shape (backward compatible):**
+- `points[]` behält `timestamp` + `close` → **backward compatible**
+- Additiv: `points[].open, .high, .low, .volume`
+- Neuer Top-Level-Key `stats: {fifty_two_week_high, fifty_two_week_low, open_of_day, one_year_return_pct, annualized_volatility_pct, average_volume}`
+- Neuer Top-Level `data_status: "fresh"|"unavailable"` (kein 0-Preis-Default)
+
+**Phase K Cache:** Bestehendes `stock_public_history_cache`-Pattern additiv um `stats` erweitert (persistiert im Cache-Doc, gleiche TTL). Zweiter Call innerhalb TTL trifft Cache — 0 zusätzliche yfinance-Calls.
+
+**Phase L Error Semantics:** Provider unavailable → 200 mit `data_status="unavailable"`, `points=[]`, `stats={<alle null>}`. Kein Fake-Fallback, keine 0-Preis-Defaults.
+
+**Phase N Security:** Endpoint bleibt public read-only ohne User-Daten. Keine Secrets im Response/Log.
+
+**Phase O Regression:** `/api/portfolio/quotes` und `/api/news-markte/market/stocks` unverändert. Keine Stock-Valuation-Änderung. Keine Order/Buy/Sell/IPO/Bond/Cash-Touches.
+
+**FINAL REPORT (Session 82.58a):**
+- FILES_CHANGED: `backend/routes/stock_public.py` (Provider-Extraktion + Stats-Helper + Response-Serializer + Cache-Persist), `memory/PRD.md`
+- HISTORY_PROVIDER: **yfinance** (bereits integriert)
+- OHLC_SOURCE / VOLUME_SOURCE: **yfinance direkte Bar-Felder** (Open/High/Low/Close/Volume)
+- RESPONSE_BACKWARD_COMPATIBLE: **YES** ✅ (bestehende Konsumenten von `points[].close` unverändert)
+- OHLC_AVAILABLE: **YES** ✅ · VOLUME_AVAILABLE: **YES** ✅
+- 52W_HIGH_LOW / OPEN_OF_DAY / ONE_YEAR_RETURN / VOLATILITY / AVERAGE_VOLUME: **PASS** aus echten Bars, `null` bei zu wenig Daten
+- SYNTHETIC_BARS: **0** · INTERPOLATED_BARS: **0** · FAKE_52W_VALUES: **0** ✅
+- INVALID_BARS_SKIPPED: sichtbar via len(hist) vs. len(points) — geskippt, nie korrigiert
+- CACHE: **PASS** (`stock_public_history_cache` additiv um `stats` erweitert, gleiche TTL)
+- PROVIDER_CALLS_FIRST_REQUEST: 1 · PROVIDER_CALLS_SECOND_REQUEST: 0 (cache hit)
+- SUPABASE_WRITES: **0** · FINANCIAL_WRITES: **0** · REGRESSIONS: **0**
+- HISTORY_ENDPOINT_STOCKDETAIL_READY: **YES**
+- READY_FOR_SESSION_82_58b: **YES**
+- READY_FOR_PROD: **NO** (nur Preview)
+
+---
+
+
 ## Session 82.57 (Preview · Discovery + STOP) · StockDetail Supabase→Mongo Cutover Audit
 
 **Ziel:** Alle 8+ aktiven Supabase-Reads aus `pages/StockDetail.js` auf Mongo-native APIs umstellen. **Ergebnis: DISCOVERY vollständig · Cutover PARTIAL/BLOCKED wegen fehlender Response-Shape-Deckung.**

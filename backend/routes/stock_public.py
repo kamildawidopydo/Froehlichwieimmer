@@ -127,21 +127,96 @@ def _yf_history_sync(yf_sym: str, period: str, interval: str) -> Optional[List[d
         if hist is None or hist.empty:
             return None
         pts: List[dict] = []
+        # Session 82.58a — OHLCV pro Bar aus yfinance direkt übernehmen.
+        # KEINE synthetischen Werte, KEINE Interpolation.
+        # Invalide Bars (low > high, close/open <= 0, NaN) werden ausschließlich
+        # geskippt, niemals korrigiert. Anzahl skipped wird beim Aufrufer via
+        # Längen-Diff sichtbar (points_returned < bars_seen).
         for idx, row in hist.iterrows():
             try:
                 close = float(row["Close"])
+                open_v = float(row["Open"])
+                high = float(row["High"])
+                low = float(row["Low"])
+                vol_raw = row["Volume"]
+                volume = int(vol_raw) if vol_raw is not None and vol_raw == vol_raw else None  # NaN-safe
             except (TypeError, ValueError, KeyError):
                 continue
-            if not (close > 0):
+            # Skip NaN/Infinity/non-finite via python check.
+            import math
+            if any((x is None or (isinstance(x, float) and (math.isnan(x) or math.isinf(x))))
+                   for x in [close, open_v, high, low]):
                 continue
+            # OHLC Sanity-Gates: low <= min(open,close) und high >= max(open,close), low<=high.
+            if not (close > 0 and open_v > 0 and high > 0 and low > 0):
+                continue
+            if low > high or low > min(open_v, close) or high < max(open_v, close):
+                continue
+            if volume is not None and volume < 0:
+                volume = None
             ts = idx.to_pydatetime() if hasattr(idx, "to_pydatetime") else idx
             if getattr(ts, "tzinfo", None) is None:
                 ts = ts.replace(tzinfo=timezone.utc)
-            pts.append({"t": ts.astimezone(timezone.utc).isoformat(), "c": round(close, 4)})
+            pts.append({
+                "t": ts.astimezone(timezone.utc).isoformat(),
+                "c": round(close, 4),
+                "o": round(open_v, 4),
+                "h": round(high, 4),
+                "l": round(low, 4),
+                "v": volume,
+            })
         return pts if len(pts) >= 2 else None
     except Exception as exc:  # noqa: BLE001
         logger.info("yfinance history %s (%s/%s) error: %s", yf_sym, period, interval, str(exc)[:120])
         return None
+
+
+def _compute_history_stats(points: List[dict]) -> Dict[str, Any]:
+    """Session 82.58a — Aggregat-Statistiken NUR aus echten Provider-Bars.
+    Kein synthetischer Punkt, keine Interpolation. Bei zu wenig Daten: null.
+    """
+    import math
+    if not points or len(points) < 2:
+        return {
+            "fifty_two_week_high": None,
+            "fifty_two_week_low": None,
+            "open_of_day": None,
+            "one_year_return_pct": None,
+            "annualized_volatility_pct": None,
+            "average_volume": None,
+        }
+    highs = [p["high"] for p in points if p.get("high") is not None]
+    lows = [p["low"] for p in points if p.get("low") is not None]
+    closes = [p["close"] for p in points if p.get("close") is not None]
+    vols = [p["volume"] for p in points if p.get("volume") is not None and p["volume"] > 0]
+    latest = points[-1]
+    open_of_day = latest.get("open") if latest.get("open") is not None else None
+    fifty_two_high = max(highs) if highs else None
+    fifty_two_low = min(lows) if lows else None
+    # 1Y-Return aus erstem/letztem echtem Close.
+    one_year_return_pct = None
+    if len(closes) >= 2 and closes[0] > 0:
+        one_year_return_pct = round(((closes[-1] - closes[0]) / closes[0]) * 100, 4)
+    # Annualized daily-log volatility (× √252).
+    ann_vol = None
+    if len(closes) >= 3:
+        rets = []
+        for i in range(1, len(closes)):
+            if closes[i - 1] > 0:
+                rets.append(math.log(closes[i] / closes[i - 1]))
+        if len(rets) >= 2:
+            mean = sum(rets) / len(rets)
+            var = sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)  # sample variance
+            ann_vol = round(math.sqrt(var) * math.sqrt(252) * 100, 4)
+    avg_vol = int(sum(vols) / len(vols)) if vols else None
+    return {
+        "fifty_two_week_high": round(fifty_two_high, 4) if fifty_two_high is not None else None,
+        "fifty_two_week_low": round(fifty_two_low, 4) if fifty_two_low is not None else None,
+        "open_of_day": round(open_of_day, 4) if open_of_day is not None else None,
+        "one_year_return_pct": one_year_return_pct,
+        "annualized_volatility_pct": ann_vol,
+        "average_volume": avg_vol,
+    }
 
 
 @router.get("/stocks/{symbol}/history")
@@ -160,14 +235,25 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
             "range": rk,
             "currency": cached.get("currency"),
             "data_source": cached.get("data_source", "cache"),
+            "data_status": "fresh" if cached.get("data_source") == "yfinance" else "unavailable",
             "points": cached.get("points", []),
+            "stats": cached.get("stats") or _compute_history_stats(cached.get("points", [])),
             "cached_until": cached["expires_at"].isoformat(),
         }
 
     yf_sym = ALLOWED[sym]
     pts = await asyncio.to_thread(_yf_history_sync, yf_sym, cfg["period"], cfg["interval"])
     source = "yfinance" if pts else "unavailable"
-    points = [{"timestamp": p["t"], "close": p["c"]} for p in (pts or [])]
+    # Session 82.58a — additive OHLCV Felder. `close` bleibt für backward-compat.
+    points = [{
+        "timestamp": p["t"],
+        "close": p["c"],
+        "open": p.get("o"),
+        "high": p.get("h"),
+        "low": p.get("l"),
+        "volume": p.get("v"),
+    } for p in (pts or [])]
+    stats = _compute_history_stats(points) if points else _compute_history_stats([])
 
     # currency heuristic from ticker suffix
     if yf_sym.startswith("^"):
@@ -188,6 +274,7 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
             "currency": currency,
             "data_source": source,
             "points": points,
+            "stats": stats,
             "cached_at": _now(),
             "expires_at": expires_at,
         }},
@@ -198,7 +285,9 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
         "range": rk,
         "currency": currency,
         "data_source": source,
+        "data_status": "fresh" if source == "yfinance" else "unavailable",
         "points": points,
+        "stats": stats,
         "cached_until": expires_at.isoformat(),
     }
 
