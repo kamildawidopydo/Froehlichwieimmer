@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, YAxis } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip } from 'recharts';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import { formatEUR, formatEURSigned } from '@/lib/dashboardFormatters';
 import { cn } from '@/lib/utils';
@@ -134,6 +134,60 @@ export const computeSnapshotTrend = (heroSnapshots, range /* '7d' | '30d' */) =>
   return { count: points.length, points, absolute, pct, direction, incomplete };
 };
 
+// Session 82.49 · Dezenter Sparkline-Tooltip.
+// Nutzt ausschließlich den aktiven Recharts-Datenpunkt aus `payload` — keine
+// Interpolation, kein Access auf Snapshot-Daten außerhalb des tatsächlich
+// existierenden Punkts. Rendert nichts, wenn kein aktiver Punkt.
+const SPARKLINE_TOOLTIP_DATE_FMT = new Intl.DateTimeFormat('de-DE', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: 'UTC', // snapshot_date ist ein Kalendertag ohne Zeitzone
+});
+
+const SparklineTooltip = ({ active, payload }) => {
+  if (!active || !Array.isArray(payload) || payload.length === 0) return null;
+  const point = payload[0]?.payload;
+  if (!point || point.date == null || point.value == null) return null;
+  const dateISO = String(point.date).slice(0, 10);
+  let dateLabel = dateISO;
+  try {
+    // ISO-Kalendertag (YYYY-MM-DD) → deutsches Datum (DD.MM.YYYY).
+    const asDate = new Date(`${dateISO}T00:00:00Z`);
+    if (!Number.isNaN(asDate.getTime())) {
+      dateLabel = SPARKLINE_TOOLTIP_DATE_FMT.format(asDate);
+    }
+  } catch {
+    // Fallback: ISO-String belassen.
+  }
+  return (
+    <div
+      role="tooltip"
+      data-testid="heute-trend-tooltip"
+      className="pointer-events-none max-w-[180px] rounded-sm border border-bank-border bg-white/95 px-2 py-1.5 text-left shadow-editorial-sm backdrop-blur-sm"
+    >
+      <p
+        className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-bank-text-muted"
+        data-testid="heute-trend-tooltip-label"
+      >
+        Depotwert
+      </p>
+      <p
+        className="mt-0.5 truncate font-mono text-[11px] tabular-nums text-bank-text"
+        data-testid="heute-trend-tooltip-date"
+      >
+        {dateLabel}
+      </p>
+      <p
+        className="truncate text-[12px] font-semibold tabular-nums text-bank-text"
+        data-testid="heute-trend-tooltip-value"
+      >
+        {formatEUR(Number(point.value))}
+      </p>
+    </div>
+  );
+};
+
 const HeuteSparklineFooter = ({ heroSnapshots }) => {
   const [range, setRange] = useState('7d');
   const trend = useMemo(() => computeSnapshotTrend(heroSnapshots, range), [heroSnapshots, range]);
@@ -185,12 +239,21 @@ const HeuteSparklineFooter = ({ heroSnapshots }) => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend.points} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
                 <YAxis hide domain={['dataMin', 'dataMax']} />
+                <Tooltip
+                  content={<SparklineTooltip />}
+                  cursor={{ stroke: 'rgb(148 163 184)', strokeWidth: 0.75, strokeDasharray: '2 2' }}
+                  offset={10}
+                  allowEscapeViewBox={{ x: false, y: true }}
+                  wrapperStyle={{ zIndex: 20, outline: 'none' }}
+                  isAnimationActive={false}
+                />
                 <Line
                   type="monotone"
                   dataKey="value"
                   stroke={strokeColor}
                   strokeWidth={1.6}
                   dot={false}
+                  activeDot={{ r: 2.5, strokeWidth: 0, fill: strokeColor }}
                   isAnimationActive={false}
                 />
               </LineChart>

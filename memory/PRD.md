@@ -3,6 +3,85 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.49 (Preview) · Depot Snapshot Sparkline Tooltip
+
+**Ziel:** Bestehende 7T/30T-Snapshot-Sparkline aus Session 82.41 mit einem dezenten Tooltip erweitern, der Snapshot-Datum und Depotwert des aktiven Recharts-Datenpunkts anzeigt. Keine neue Backend-API, keine Interpolation, keine synthetischen Snapshots, keine Financial Writes. **Kein Prod-Deploy.**
+
+**Phase A Audit (Ist vor 82.49):**
+- `computeSnapshotTrend(heroSnapshots, range)` liefert `{ count, points:[{date:'YYYY-MM-DD', value:number}], absolute, pct, direction, incomplete }` — reine, testbare Trend-Selektion, keine Interpolation.
+- Rendering-Gates: `count===0` → "Noch keine Verlaufsdaten" · `count===1` → "Noch nicht genügend Verlaufsdaten" · `incomplete===true` → "Bewertung unvollständig" · `count≥2 && !incomplete` → Sparkline (`ResponsiveContainer > LineChart > Line`, keine Tooltip-Komponente vorher).
+- Sparkline-Höhe `h-8` (32px), Recharts ohne Tooltip.
+- Datenpunkte-Shape: `{ date: 'YYYY-MM-DD', value: number }` (Kalendertag, ohne Zeitzone).
+
+**Phase B Tooltip-Komponente `SparklineTooltip`:**
+- Rendert **nur** bei `active && payload?.length && payload[0].payload.date && payload[0].payload.value != null` — sonst `return null` (keine leeren/geisterhaften Tooltips).
+- Datenquelle ausschließlich der aktive Recharts-Payload-Datenpunkt → keine Interpolation, kein Access auf andere Snapshots, kein Kaufpreis, kein Tages-P/L.
+- Formatierung:
+  - Datum via `Intl.DateTimeFormat('de-DE', {…, timeZone:'UTC'})` — Kalendertag korrekt ohne DST-Drift → `07.09.2026`.
+  - Wert via bestehendes `formatEUR` → `9.001,56 €`.
+- Kleines Label `"Depotwert"` (uppercase mono, wie die KPI-Labels).
+- Rendering nur innerhalb des bereits vorhandenen `count≥2 && !incomplete`-Zweigs → **Incomplete/0/1-States triggern niemals Tooltip**.
+
+**Phase C UX:**
+- **Desktop:** Hover zeigt Tooltip; `activeDot` (kleiner Punkt r=2.5) markiert den aktiven Datenpunkt; dashed cursor line (`stroke='rgb(148 163 184)' dasharray='2 2'`).
+- **Mobile/Touch:** Tap zeigt Tooltip. `max-w-[180px]`, `truncate` und `wrapperStyle`-Konstante verhindern horizontalen Overflow im schmalen 390px-Viewport. Sparkline und 7T/30T-Toggle bleiben bedienbar.
+- **Position:** `offset={10}`, `allowEscapeViewBox={{x:false, y:true}}` — Tooltip weicht bei Bedarf vertikal aus, verdeckt aber nicht die KPI.
+- **A11y:** `role="tooltip"` gesetzt · 7T/30T-Toggles behalten `role="tab"` + `aria-selected` (unverändert) · Tooltip ist Zusatzinformation, KPI-Text bleibt eigenständig verständlich.
+
+**Phase D Valuation Gates (unverändert):**
+| Zustand | Verhalten |
+|---|---|
+| 0 Snapshots | keine Sparkline · kein Tooltip ✅ (Text-State) |
+| 1 Snapshot | keine Sparkline · kein Tooltip ✅ (Text-State) |
+| ≥2 vollständige Snapshots | Sparkline + Tooltip ✅ |
+| Irgendein Snapshot im Fenster incomplete | Sparkline versteckt · Text „Bewertung unvollständig" · kein Tooltip ✅ |
+| `previous.total_value <= 0` | bestehendes pct-Verhalten (null) unverändert ✅ |
+
+**Phase E Test-Matrix (Preview verifiziert):**
+| Test | Ergebnis |
+|---|---|
+| T1 0 Snapshots | „Noch keine Verlaufsdaten" · kein Tooltip |
+| T2 1 Snapshot | „Noch nicht genügend Verlaufsdaten" · kein Tooltip |
+| T3 2 positive Punkte | Sparkline + Tooltip (emerald) |
+| T4 negativer Verlauf | Sparkline + Tooltip (rose) |
+| T5 7T mit mehreren Punkten | ✅ (Live-QA) |
+| T6 30T mit mehreren Punkten | ✅ (Live-QA nach Toggle) |
+| T7 Datums-Gaps | Punkte nur mit echten Snapshot-Daten, keine Interpolation |
+| T8 Unsortiert | Vor-Sort in `computeSnapshotTrend` sorgt für deterministisch aufsteigende `points` |
+| T9 Duplicate `snapshot_date` | Dedup-Map: letzter Eintrag gewinnt |
+| T10 incomplete stocks | Sparkline versteckt · kein Tooltip |
+| T11 incomplete bonds | Sparkline versteckt · kein Tooltip |
+| T12 Tooltip erster Punkt | Datum + Wert stimmen ✅ |
+| T13 Tooltip mittlerer Punkt | Datum + Wert stimmen ✅ |
+| T14 Tooltip letzter Punkt | Datum + Wert stimmen ✅ |
+| T15 7T→30T Toggle | Toggle+Tooltip weiterhin funktional ✅ |
+| T16 Hard Reload | State-Reset auf 7T, Toggle+Tooltip weiter ok ✅ |
+| T17 Desktop 1920px | kein Overflow ✅ |
+| T18 Mobile 390px | kein Overflow, Tooltip innerhalb Viewport ✅ |
+| T19 Keyboard-Nav Toggles | 7T/30T mit Tab/Enter erreichbar ✅ |
+
+**Phase F Regression:** 82.35–82.48 geprüft im Live-Smoke:
+- 82.38 Heute-KPI (Delta-Text) → unverändert
+- 82.41 Sparkline (Rendering-Zweige, Gates) → unverändert, nur Tooltip additiv
+- 82.45 News Provider-Fallback → unberührt
+- 82.46 News Redirects → unberührt
+- 82.47 Canonical (1/Seite) → unberührt
+- 82.48 Sitemap → unberührt
+- Keine Financial Writes · Keine Supabase Writes · Keine QA-Snapshots persisted · Backend unverändert.
+
+**Files Changed:**
+- `frontend/src/components/mein-depot/DepotKpiRail.jsx`
+  - `Tooltip` aus `recharts` importiert
+  - Neue Komponente `SparklineTooltip` (payload-basiert, DE-Datum, `formatEUR`)
+  - `<Tooltip content={<SparklineTooltip/>} cursor={…} offset={10} allowEscapeViewBox={…}/>` in `LineChart`
+  - `activeDot` auf `Line` für sichtbare Aktivierung
+- `memory/PRD.md`
+
+**Constraints eingehalten:** Nur Preview · Kein Prod-Deploy · Keine neue Backend-API · Keine Interpolation · Keine synthetischen Snapshots · Keine Änderung an Financial-/Snapshot-Daten · Valuation-Integrity aus 82.38/82.41 strikt beibehalten (Tooltip erscheint nur im bestehenden `count≥2 && !incomplete`-Zweig) · Keine Financial Writes · Keine Supabase Writes.
+
+---
+
+
 ## Session 82.48 (Preview) · Sitemap Foreign-Domain Purge
 
 **Ziel:** Fremde `www.kapitalmitte.com`-URLs (18 Einträge) aus `public/sitemap.xml` entfernen. Sicherstellen, dass ausschließlich kontrollierte `kapital-direkt24.de`-URLs zu tatsächlich existierenden Routen ausgeliefert werden. **Kein Prod-Deploy.**
