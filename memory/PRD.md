@@ -3,6 +3,194 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.60 (Preview · READ-ONLY AUDIT) · Stock Trade Coupon Domain Audit
+
+**Ziel:** Fachliche Bedeutung von `peek_stock_trade_coupon` + `submit_user_stock_order` (Coupon-Pfad) klären, damit 82.61-Cutover risikofrei entscheidbar ist. **KEINE Code-Änderungen, keine Financial Writes, keine Testorder, keine Coupon-Einlösung.**
+
+### PHASE A — Repo-Wide Search (Treffer)
+
+**Legacy Supabase Migrations (SQL):**
+- `legacy_source/supabase/migrations/20260512140000_stock_trade_coupons_and_rpcs.sql` — Basis-Schema + peek/submit/execute/admin RPCs (Original).
+- `20260513120000_fix_admin_coupon_gen_random_uuid.sql`, `20260513123000_fix_admin_coupon_returning_ambiguous_id.sql` — Admin-Create-Fixes.
+- `20260513140000_stock_coupons_consumed_audit.sql` — Audit-Spalten `consumed_order_id`, `consumed_by_user_id` + Backfill + `execute_stock_order` neu geschrieben mit Consumption.
+- `20260618120000_stock_realized_pnl.sql` — `execute_stock_order` neu (realized_pnl beim sell); Coupon-Consumption unverändert.
+- `20260618150000_cash_settlement_limit_orders.sql` — `submit_user_stock_order` erweitert um `p_order_type`, `p_limit_price`, `cash_reserved`; Buying-Power statt Cash-Balance-Check; `execute_stock_order` mit T+2-Settlement + `cash_available`-Debit; Coupon-Consumption unverändert.
+- `20260626120000_stock_sellable_quantity_check.sql` — `submit_user_stock_order` erneut; sellable Menge = Position - pending sells; Coupon-Logik unverändert.
+
+**Frontend (Legacy Supabase-Pfad):**
+- `frontend/src/pages/StockDetail.js:310–312` — State `couponCode`, `couponVerifiedPct`, `couponCheckLoading`.
+- `:488–509` — `verifyCoupon()` UX-Peek-Handler (Button „Prüfen").
+- `:495` — `supabase.rpc('peek_stock_trade_coupon', { p_code: raw })`.
+- `:559–573` — Zweiter Peek unmittelbar vor Submit (Race-Safety).
+- `:602–611` — `supabase.rpc('submit_user_stock_order', ...)` mit `p_coupon_code`, `p_order_type`, `p_limit_price`.
+- `:722–723` — UI-Rendering des geschätzten Rabatts (nur Anzeige).
+- `:1254–1275` — Formular-Feld für Coupon-Code + Button + Rabatt-Anzeige.
+
+**Legacy Admin-UI:** Chunks (`tmp_chk/8076.*.chunk.js`) enthalten `admin_create_stock_trade_coupon`, `admin_revoke_stock_trade_coupon`, DELETE-Handler und Read der `stock_trade_coupons`-Tabelle → Admin-Coupon-Screen existiert als Legacy-Feature.
+
+**Neuer Mongo-Backend (`/app/backend`):**
+- **KEIN** Treffer für `coupon`, `stock_trade_coupon`, `discount`, `commission` im Zusammenhang mit Stock-Orders.
+- `services/bond_execution_service.py:381` und `services/bond_sync.py:236/250` → `coupon_rate` bezieht sich auf **Bond-Kupon (Zins)**, NICHT auf Stock-Trade-Coupons.
+- `services/cash_service.py:47` → `"fee", "tax"` sind als `_RESERVED_TYPES` dokumentiert, aber **nicht aktiv** akzeptiert.
+
+### PHASE B — `peek_stock_trade_coupon` Definition
+
+Quelle: `20260512140000_stock_trade_coupons_and_rpcs.sql:123–142` (unverändert in nachfolgenden Migrationen).
+
+- **INPUT PARAMETERS:** `p_code text`
+- **OUTPUT FIELDS:** `TABLE(percent numeric, coupon_id uuid)`
+- **TABLES READ:** `stock_trade_coupons` (nur WHERE `code=UPPER(TRIM(...)) AND status='active'`, LIMIT 1)
+- **TABLES WRITTEN:** **NONE** (Funktion ist `stable`, kein `for update`, kein Insert/Update)
+- **SIDE EFFECTS:** **NONE**
+- **RLS/AUTH CONTEXT:** `SECURITY DEFINER`; requires `auth.uid() IS NOT NULL`; grantee `authenticated`.
+- **Verhält sich als:** Pure UX-Preview. Reserviert NICHT. Validiert NUR gegen `status='active'`. Berechnet KEINEN Rabatt (gibt nur `percent`-Wert). Gibt KEINEN finalen Orderpreis zurück.
+- **`PEEK_RPC_DEFINITION_FOUND = YES`**
+
+### PHASE C — `submit_user_stock_order` Definition (aktuellste Version = `20260626120000_stock_sellable_quantity_check.sql`)
+
+- **INPUT PARAMETERS:** `p_symbol text, p_side text, p_quantity numeric, p_requested_price numeric, p_note text, p_coupon_code text DEFAULT NULL, p_order_type text DEFAULT 'market', p_limit_price numeric DEFAULT NULL`
+- **RETURN FIELDS:** `uuid` (order_id)
+- **TABLES READ:** `stock_trade_coupons` (mit `FOR UPDATE` lock), `user_stock_orders` (via `get_user_buying_power` für buy und via Sellable-Query für sell), `user_stock_positions` (sell), `profiles` (indirekt via `get_user_buying_power`).
+- **TABLES WRITTEN:**
+  1. `user_stock_orders` — INSERT status='pending' mit Feldern `coupon_id`, `discount_percent_snapshot`, `order_type`, `limit_price`, `cash_reserved`.
+  2. `stock_trade_coupons` — UPDATE status `active` → `reserved` + `reserved_order_id = neue Order-ID` (nur wenn Coupon vorhanden UND side='buy').
+  3. Zusätzlich: `perform public.process_cash_settlements(v_uid)` als Nebenwirkung (Settlement-Batch für pending sells) — nicht direkt Coupon-relevant.
+- **CASH EFFECT:** Beim Submit **KEIN direkter Cash-Debit**. Nur `cash_reserved = net` (buy) auf der Order-Row → Buying-Power sinkt. Ein Release-Trigger `release_order_cash_reservation` gibt `cash_reserved` frei beim Verlassen von `pending` (cancelled/rejected/executed).
+- **POSITION EFFECT:** Beim Submit **KEINE Position-Änderung**. Sell-Validation prüft nur, dass genug „sellable" Menge existiert (Position minus offene Pending-Sells).
+- **ORDER EFFECT:** Insert `pending` Order mit `coupon_id`, `discount_percent_snapshot` (percent-Wert des Coupons), `cash_reserved` (net-nach-Rabatt-Betrag bei buy).
+- **COUPON EFFECT:**
+  - `SELECT c.id, c.percent … FOR UPDATE WHERE status='active'` — atomarer Reserve-Lock.
+  - Wenn nicht gefunden: HARD ERROR "Ungültiger oder bereits verwendeter Gutscheincode".
+  - Coupon-für-`sell`: HARD ERROR "Gutscheine sind nur für Kaufaufträge gültig".
+  - `net = round(gross * (1 - pct/100), 2)` (nur für Buying-Power-Check UND `cash_reserved`).
+  - UPDATE coupon: `status='reserved'`, `reserved_order_id=v_order_id`.
+- **EMAIL/EVENT SIDE EFFECTS:** **KEINE im RPC**. E-Mail-Versand erfolgt separat aus dem Frontend (`StockDetail.js:656 supabase.functions.invoke('send-stock-email', ...)`).
+- **usage_count / used_at:** Es gibt **kein** `usage_count`-Feld — Coupon ist strikt single-use via Status-Enum. `consumed_at` wird erst in `execute_stock_order` gesetzt (nicht in submit).
+- **`SUBMIT_RPC_DEFINITION_FOUND = YES`**
+
+**Execute-Path-Nebenaudit (`execute_stock_order` in `20260618150000_cash_settlement_limit_orders.sql:440–526`, Admin-Only):**
+- `v_disc = round(v_gross * (discount_percent_snapshot/100), 2)` (nur wenn side='buy' UND coupon_id vorhanden).
+- `v_net = v_gross - v_disc` → Cash-Debit ist `net`.
+- **Wichtig:** `v_new_avg` (Position `avg_cost`) wird mit `v_px` (executed_price, **ungerabattet**) berechnet → **Kunde profitiert doppelt: weniger Cash gezahlt UND avg_cost bleibt bei vollem Preis** → höheres realized_pnl bei späterem Verkauf.
+- Coupon-State: `reserved` → `consumed`, `consumed_at=now()`, `consumed_order_id`, `consumed_by_user_id`, `reserved_order_id=null`.
+
+### PHASE D — StockDetail Flow
+
+- **COUPON PREVIEW CALL:** Ausgelöst durch Klick auf „Prüfen"-Button (`verifyCoupon()`, StockDetail.js:488). Setzt `couponVerifiedPct` für UI-Rabatt-Anzeige.
+- **COUPON SUBMIT FIELD:** `p_coupon_code: codeTrim || null` in `submit_user_stock_order`-RPC (StockDetail.js:608). Zusätzlich wird 40 Zeilen vorher ein weiterer Peek gemacht (`:562`), aber nur für die Frontend-Fehlermeldung — nicht als Reserve.
+- **ORDER WITHOUT COUPON:** **YES** — Feld ist optional (default NULL im RPC).
+- **INVALID COUPON:**
+  - Frontend: `peek`-Return null → `toast.error('Ungültiger oder inaktiver Gutscheincode')` und Abbruch **vor** submit-Call. Auch: RPC-Error „Ungültiger oder bereits verwendeter Gutscheincode" wird als generisches `toast.error('Auftrag konnte nicht eingereicht werden.')` gemappt (Zeile 630).
+  - Backend: HARD ERROR (Order wird NICHT angelegt).
+- **COUPON REQUIRED:** **NO** — Optional bei buy, verboten bei sell.
+- **LEGACY BUY FLOW:** Peek (optional) → Submit → RPC insert order (`pending`) + reserve coupon → Order sichtbar in Depot → Admin-`execute_stock_order` → Cash-Debit (net) + Position update (avg_cost mit unrabattetem `v_px`) + coupon `consumed`.
+- **LEGACY SELL FLOW:** Coupon-Feld wird im UI nur bei `side==='buy'` gerendert; Frontend sendet leeren String für sell (`codeTrim = side === 'buy' ? couponCode.trim() : ''`). Falls jemand doch einen Code sendet → RPC HARD ERROR.
+
+### PHASE E — Coupon Data Model (`stock_trade_coupons` — aus 20260512140000 + 20260513140000)
+
+- **CODE:** `text NOT NULL`, unique, upper-only-check.
+- **STATUS:** `text NOT NULL DEFAULT 'active'`, CHECK IN `('active','reserved','consumed','revoked')`.
+- **PERCENT:** `numeric(7,4) NOT NULL`, CHECK `>0 AND <=100`.
+- **RESERVED_ORDER_ID:** `uuid` (FK → user_stock_orders).
+- **CONSUMED_ORDER_ID:** `uuid` (FK → user_stock_orders, hinzugefügt 20260513140000).
+- **CONSUMED_BY_USER_ID:** `uuid` (FK → profiles).
+- **CONSUMED_AT:** `timestamptz`.
+- **CREATED_AT:** `timestamptz NOT NULL DEFAULT now()`.
+- **CREATED_BY:** `uuid` (FK → profiles).
+- **ADMIN_NOTE:** `text`.
+
+**Nicht vorhandene Felder** (nicht erfunden): `active`-Boolean, `valid_from`, `valid_until`, `discount_type`, `discount_value`-Currency, `min_order`, `max_discount`, `max_uses`, `usage_count`, `user_id` (Coupons sind nicht user-gebunden — jeder Kunde kann jeden aktiven Code eingeben), `currency`, `used_at` (statt: `consumed_at`).
+
+### PHASE F — Financial Classification
+
+**KATEGORIE: E (andere/mehrere Financial Effects)**
+
+Begründung: Der Coupon hat gleichzeitig zwei Financial Effects mit unterschiedlicher Zielrichtung, die keiner der Kategorien A/B/C sauber entspricht:
+
+1. **Cash-Debit-Reduktion (Kategorie-C-artig):** Beim `execute_stock_order` wird nur `net = gross - discount` vom Kunden-Cash abgezogen.
+2. **Position-Cost-Basis UNCHANGED (Nicht Kategorie A):** `avg_cost` in `user_stock_positions` wird mit dem **ungerabatteten** `executed_price` gemittelt → realized_pnl bei späterem Sell wird auf dem vollen Preis berechnet → **impliziter zusätzlicher Gewinn** bei Verkauf.
+
+Es gibt weder eine explizite "fee"-Zeile im Legacy-System noch eine "commission"-Berechnung — die Kategorien B/A würden Rabatt auf etwas Existierendes voraussetzen. Da der Rabatt auf `gross = qty*price` wirkt aber ohne dass ein separater Fee-Posten reduziert würde, klassifiziere ich als **E**.
+
+### PHASE G — Mongo Gap Audit
+
+Basis: `backend/routes/portfolio.py:751–784` (`OrderCreateIn`, `_serialize_stock_order`), `backend/services/order_execution_service.py`, `backend/services/cash_service.py`.
+
+- **MONGO ORDER HAS COUPON FIELD:** **NO** (`OrderCreateIn` akzeptiert nur symbol, side, order_type, quantity, limit_price, idempotency_key, client_reference).
+- **MONGO ORDER HAS FEE FIELD:** **NO**.
+- **MONGO EXECUTION HAS FEE:** **NO** (`_serialize_execution` in `order_execution_service.py` liefert keine Fee/Discount-Felder).
+- **MONGO CASH LEDGER HAS FEE EVENT:** **NO** aktiv (in `_RESERVED_TYPES` dokumentiert, aber `_ACTIVE_TYPES` enthält kein `fee`, kein `discount`, kein `coupon_rebate`).
+- **MONGO COUPON VALIDATION:** **NO** (keine Coupon-Collection, kein Peek-Endpoint, kein Model).
+- **MONGO COUPON CONSUMPTION:** **NO** (kein Reserve/Consume-Flow, kein Trigger).
+
+### PHASE H — Financial Difference
+
+**LEGACY ORDER WITHOUT COUPON (buy, executed):**
+- Gross = qty × executed_price
+- Discount = 0
+- Cash Impact (debit) = Gross
+- Position avg_cost neu = weighted-avg mit executed_price
+
+**LEGACY ORDER WITH COUPON (buy, executed, coupon pct%):**
+- Gross = qty × executed_price
+- Discount = round(Gross × pct/100, 2)
+- Cash Impact (debit) = Gross − Discount
+- Position avg_cost neu = weighted-avg mit **executed_price** (nicht mit `executed_price − discount/qty`)
+
+**Konkrete Zahlen werden nicht erfunden.** Die Formeln stammen direkt aus `execute_stock_order` (`20260618150000_cash_settlement_limit_orders.sql:440–472`).
+
+### PHASE I — Cutover Decision
+
+**OPTION B** — Coupon beeinflusst Financials, aber Semantik ist klar und klein. Vor/innerhalb 82.61 muss Mongo-native Coupon-Unterstützung additiv implementiert werden.
+
+Begründung:
+1. **Semantik ist klar & klein:** Single-use %-Rabatt auf `gross` beim Buy-Execution-Cash-Debit; keine Currency-Konvertierung, keine Ablauffrist, keine User-Bindung, kein Min/Max-Order, keine Fee-Modifikation, kein Preis-Modifikation → Implementations-Aufwand additiv & überschaubar.
+2. **Feature ist aktiv:** Admin-Coupon-UI existiert im Legacy-Repo (`tmp_chk/8076.*.chunk.js`); Coupons können also live sein — ein „stiller" Cutover, der Coupon-Eingaben ignoriert, wäre **finanziell relevant** (Kunden zahlen den vollen Preis, obwohl sie Rabatt erwarten).
+3. **Doppel-Impact-Warnung:** Cutover-Session muss zusätzlich entscheiden, ob die avg_cost-Anomalie (Coupon-Rabatt fließt nicht in Position-Cost-Basis) beibehalten oder korrigiert werden soll. Beibehalten bedeutet: Financial-Parität zu Legacy. Korrigieren bedeutet: Business-Owner-Entscheidung nötig.
+4. **Option A (deprecaten):** Wäre nur zulässig, wenn Business-Owner bestätigt, dass keine aktiven Coupons existieren UND das Feature abgeschaltet werden soll → benötigt explizite Owner-Freigabe (nicht Teil dieses Audits).
+5. **Option C (komplexe Migration):** Zu schwer für den kleinen Scope; die Coupon-Domain ist keine komplexe Fee/Tax/Multi-Currency-Logik.
+6. **Option D (unbestimmbar):** Nicht zutreffend — beide RPC-Definitionen sind im Repo vorhanden und lesbar.
+
+### PHASE J — Safety-Bestätigung
+
+- FILES_CHANGED: **nur `memory/PRD.md`** ✅
+- ORDERS_CREATED: **0** ✅
+- COUPONS_CONSUMED: **0** ✅
+- LEDGER_WRITES: **0** ✅
+- POSITION_WRITES: **0** ✅
+- SUPABASE_WRITES: **0** ✅
+- MONGO_WRITES: **0** ✅
+- PROD_CHANGED: **NO** ✅
+
+### FINAL REPORT — Session 82.60
+
+- PEEK_RPC_DEFINITION_FOUND: **YES**
+- SUBMIT_RPC_DEFINITION_FOUND: **YES**
+- COUPON_CLASSIFICATION: **E** (mehrere Financial Effects: Cash-Debit-Reduktion + Position-Cost-Basis unverändert)
+- COUPON_FINANCIAL_IMPACT: **MATERIAL** (verändert Cash-Debit UND implizit realized_pnl bei späterem Sell)
+- COUPON_CHANGES_ORDER_PRICE: **NO** (weder `requested_price` noch `executed_price` werden verändert)
+- COUPON_CHANGES_FEES: **NO** (System hat keine expliziten Fees)
+- COUPON_CHANGES_CASH: **YES** (Cash-Debit beim Execute = gross − discount; buy-only)
+- COUPON_CONSUMED_ON_SUBMIT: **NO** — auf submit nur `reserved`; **auf Execute** wird konsumiert
+- COUPON_AUDIT_TRAIL: **YES** (`consumed_at`, `consumed_order_id`, `consumed_by_user_id` in `stock_trade_coupons`)
+- MONGO_ORDER_COUPON_SUPPORT: **NO**
+- MONGO_FEE_SUPPORT: **NO**
+- MONGO_COUPON_CONSUMPTION: **NO**
+- LEGACY BUY REQUIRES COUPON: **NO**
+- LEGACY SELL REQUIRES COUPON: **NO** (Coupon bei sell ist explizit verboten)
+- CUTOVER_DECISION: **OPTION_B**
+- READY_FOR_SESSION_82_61: **NO**
+- BLOCKER_IF_NO: Mongo-Backend muss Coupon-Support additiv erhalten (Coupon-Collection + `GET /api/portfolio/coupons/peek` + `coupon_code`-Feld in `OrderCreateIn` + `cash_reserved`-Berechnung mit Rabatt + Coupon-State-Machine active→reserved→consumed inkl. Release-Trigger bei Cancel/Reject + Consumption in `execute_order`). ALTERNATIV: Business-Owner-Freigabe für Option A (Feature-Deprecation) einholen.
+- FILES_CHANGED: `memory/PRD.md` (nur Dokumentation)
+- FINANCIAL_WRITES: **0** ✅
+- SUPABASE_WRITES: **0** ✅
+- ORDERS_CREATED: **0** ✅
+- COUPONS_CONSUMED: **0** ✅
+- REGRESSIONS: **0** ✅
+
+---
+
+
 ## Session 82.59 (Preview · AUDIT + STOP) · StockDetail Legacy Order Submit Cutover
 
 **Ziel:** `supabase.rpc('submit_user_stock_order', ...)` in `pages/StockDetail.js:602` entfernen und auf Mongo-nativen `POST /api/portfolio/orders` umstellen.
