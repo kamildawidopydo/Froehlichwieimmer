@@ -4,8 +4,6 @@ import { getApiBase } from '@/lib/apiBase';
  * - Uses REACT_APP_BACKEND_URL (never localhost)
  * - Sends & receives httpOnly auth cookies via withCredentials
  * - Exposes typed helpers for auth + public content
- * - Optional Supabase migration path: while pages still call supabase.*, the new
- *   FastAPI-backed flows can be introduced page by page through this module.
  */
 
 import axios from 'axios';

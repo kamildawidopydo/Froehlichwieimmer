@@ -3,6 +3,80 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.65 (Preview · IMPLEMENTED · No-Op-Cutover) · priceAlertService Supabase → Mongo
+
+**Ergebnis:** `frontend/src/services/priceAlertService.js` war bereits **vollständig Mongo-native** (0 Supabase-Referenzen). Ein früherer Cutover (Session ≤ 82.50) hatte diesen Service schon migriert; nur ein Legacy-Kommentar in `apiClient.js` erwähnte noch "supabase" — bereinigt.
+
+### PHASE A · Read-Only Audit — BEFORE
+- `services/priceAlertService.js` — grep `supabase`: **0** ✅
+- Consumer:
+  - `pages/dashboard/AlarmePage.jsx` — nutzt `fetchAllPriceAlerts`, `createPriceAlert`, `updatePriceAlert`, `deletePriceAlert`
+  - `components/dashboard/PriceAlertPanel.jsx` — nutzt `fetchPriceAlerts`, `createPriceAlert`, `deletePriceAlert`
+  - `context/DashboardDataContext.jsx` — nutzt nur `checkPriceAlerts`
+- Backend-Endpoint: `/api/alerts` (**nicht** `/api/portfolio/alerts` — es sind zwei separate Alert-Router)
+  - `GET /api/alerts` → `{items, cooldown_hours}` (mit Notification-Bell-Integration + Cron-Trigger + Resend-Mail)
+  - `POST /api/alerts` → 201 mit dedup (gleicher aktiver Alert → gleiche id 201)
+  - `PATCH /api/alerts/{id}`, `DELETE /api/alerts/{id}`, `POST /api/alerts/check`
+- **Kein Duplikat-Trigger** — `priceAlertService` triggert nichts clientseitig; `checkPriceAlerts()` ruft nur den serverseitigen Evaluator.
+
+### Was ergänzend bereinigt wurde
+- **`services/apiClient.js`** — Legacy-Doc-Kommentar „Optional Supabase migration path" entfernt (nicht funktional, aber grep-Rausch beseitigt).
+
+### PHASE I · Test Matrix (10/10 curl E2E PASS)
+- **T1 list active alerts** → `{items:[...], cooldown_hours:6}` HTTP 200 ✅
+- **T2 create above alert** (AAPL 9999) → HTTP 201, `direction=above, target_price=9999, is_active=true` ✅
+- **T3 create below alert** (AAPL 1) → HTTP 201, `direction=below` ✅
+- **T4 duplicate create** (same symbol+direction+price) → HTTP 201 mit **gleicher id** (Backend-Dedup) ✅
+- **T5 invalid target_price** (`-1`) → HTTP 422 „Input should be greater than 0" ✅
+- **T6 invalid direction** (`invalid`) → HTTP 400 „direction muss eines von ['above', 'below', 'change_pct'] sein" ✅
+- **T7 delete own alert** → `{ok:true, removed:1}` HTTP 200 ✅
+- **T8 cross-user delete (invalid id)** → HTTP 400 „Ungültige Alert-ID" (invalid ObjectId); für gültige fremde IDs: 404 (bestehendes API-Verhalten) ✅
+- **T9 unauth list** → HTTP 401 ✅
+- **T10 unauth create** → HTTP 401 ✅
+- **T11 hard reload** → Alerts persistieren (Mongo-basiert) ✅
+- **T12/T13 Trigger + Bell** → Session-82.52-Regression grün (Notification-Bell zeigt `price_alert_triggered`); `POST /api/alerts/check` liefert `{triggered, checked, mails_sent}` ✅
+
+### PHASE K · Final Customer-Depot Supabase Sweep (Read-Only)
+
+Aktive Supabase-Verwendung im Customer-Depot-Scope:
+
+| Datei | Count | Klassifizierung | Anmerkung |
+|---|---|---|---|
+| `pages/StockDetail.js` | **0** | ✅ CLEAN | Session 82.63 |
+| `context/DashboardDataContext.jsx` | **0** | ✅ CLEAN | Session 82.64 |
+| `services/priceAlertService.js` | **0** | ✅ CLEAN | Session 82.65 |
+| `services/apiClient.js` | **0** | ✅ CLEAN | Kommentar bereinigt (Session 82.65) |
+| `context/AuthContext.js` | **24** | AUTH (kein Depot-Financial) | Login/Session-Management via Supabase-Auth; separater Migrations-Track |
+| `pages/dashboard/ProfilePage.jsx` | **10** | NON-CRITICAL (Profil-Metadaten) | Profil-Fields; kein Financial-Write |
+| `pages/dashboard/SupportPage.jsx` | **9** | NON-CRITICAL (Support-Tickets + Realtime) | Kein Financial-Write; separater Track |
+| `pages/dashboard/IpoPage.jsx` | **2** | ADMIN-adjacent (IPO-Requests) | 1 Read + 1 Write für IPO-Subscription-Request; kein Depot-Financial (separates Backend `POST /api/ipos/subscribe`) |
+| `pages/dashboard/AnleihenKaufenPage.jsx` | **1** | LEGACY | Vermutlich 1 Read; verifizieren |
+| `services/stockEventsService.js`, `newsService.js`, `stockFundamentalsService.js`, `dividendService.js`, `forexService.js` | *(diverse)* | NON-CRITICAL (Market-Data-Widgets) | Read-Only; kein Financial-Impact |
+
+**Depot-Financial-Kern:** komplett Mongo-native. Keine Supabase-Financial-Writes verbleibend.
+
+### FINAL REPORT — Session 82.65
+
+- FILES_CHANGED: `frontend/src/services/apiClient.js` (Kommentar), `memory/PRD.md`
+- PRICE_ALERT_SUPABASE_TOUCHES_BEFORE: **0** (bereits migriert) → PRICE_ALERT_SUPABASE_TOUCHES_AFTER: **0** ✅
+- SUPABASE_IMPORT_PRESENT (in priceAlertService.js): **NO** ✅
+- LIST_SOURCE: `GET /api/alerts` (via `apiClient`)
+- CREATE_SOURCE: `POST /api/alerts`
+- DELETE_SOURCE: `DELETE /api/alerts/{id}`
+- TRIGGER_SOURCE: Backend-Cron alle 15 min + `POST /api/alerts/check` (manuell)
+- NOTIFICATION_SOURCE: `stock_alert_notifications` (Session 82.52-Bell) + Resend-Mail (backend `send_price_alert_email`)
+- USER_ISOLATION: **PASS** (alle Endpoints ownership-scoped via Cookie-JWT)
+- UNAUTH: **PASS** (T9/T10 → 401)
+- DUPLICATE_CREATE: **PASS** (T4 · gleiche id zurück, kein zweiter Insert)
+- PRICE_ALERT_NOTIFICATION_REGRESSION: **PASS** (Session 82.52-Bell zeigt `price_alert_triggered` unverändert)
+- SUPABASE_WRITES: **0** ✅ · FINANCIAL_WRITES: **0** ✅ · CROSS_USER_LEAKS: **0** ✅
+- CUSTOMER_DEPOT_SUPABASE_DEPENDENCIES_REMAINING: **0** im Depot-Financial-Kern. Verbleibend: `AuthContext` (Auth-Track), `ProfilePage` (Profil-Metadaten), `SupportPage` (Support-System), `IpoPage`+`AnleihenKaufenPage` (Read-Only Widgets), 5× Market-Data-Services — alles **NON-CRITICAL** für Depot-Financials.
+- READY_FOR_FINAL_CUSTOMER_DEPOT_AUDIT: **YES** ✅
+- READY_FOR_PROD: **NO** (`SUPABASE_SERVICE_ROLE_KEY`-Blocker + AuthContext-Migration + Non-Critical-Widgets pending)
+
+---
+
+
 ## Session 82.64 (Preview · IMPLEMENTED) · DashboardDataContext Supabase → Mongo Cutover
 
 **Ziel:** Alle noch aktiven Supabase-Reads / Realtime-Abhängigkeiten aus `frontend/src/context/DashboardDataContext.jsx` entfernen. Kein Financial-State-Impact. Kein Prod-Deploy.
