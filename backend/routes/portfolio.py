@@ -172,7 +172,7 @@ def _serialize_position(doc: dict, kind: str) -> dict:
     }
 
 
-def _serialize_order(doc: dict) -> dict:
+def _serialize_order(doc: dict, realized_pnl: Optional[str] = None) -> dict:
     def _amt(v):
         if v is None:
             return None
@@ -191,6 +191,10 @@ def _serialize_order(doc: dict) -> dict:
         "limit_price": _amt(doc.get("limit_price")) if doc.get("limit_price") is not None else None,
         "executed_price": _amt(doc.get("executed_price")) if doc.get("executed_price") is not None else None,
         "reserved_cash": _amt(doc.get("reserved_cash")) if doc.get("reserved_cash") is not None else None,
+        # Session 82.73 — authoritative realized P&L from `order_executions.realized_profit_loss`.
+        # Nur für Sell-Executions gesetzt; sonst `null`. Wird batched vom Endpoint
+        # geliefert (siehe `list_orders`), niemals frontendseitig berechnet.
+        "realized_pnl": realized_pnl,
         "status": doc.get("status", "pending"),
         "currency": doc.get("currency") or "EUR",
         "created_at": _iso(doc.get("created_at")),
@@ -323,9 +327,42 @@ async def list_orders(
     limit: int = 50,
     user: dict = Depends(get_current_user),
 ):
+    """
+    Session 82.73 — Enrichment mit authoritativer `realized_pnl` aus
+    `order_executions.realized_profit_loss`. Genau EINE zusätzliche Query
+    (`$in` über die Order-IDs der Response), kein N+1. Nur echte Werte —
+    fehlt eine Execution oder ist `realized_profit_loss` NULL, bleibt das
+    Feld `null` (keine frontendseitige Berechnung).
+    """
     limit = max(1, min(int(limit or 50), 200))
-    cursor = db.stock_orders.find(_user_filter(user)).sort("created_at", -1).limit(limit)
-    return [_serialize_order(doc) async for doc in cursor]
+    docs = await db.stock_orders.find(
+        _user_filter(user)
+    ).sort("created_at", -1).limit(limit).to_list(length=limit)
+
+    if not docs:
+        return []
+
+    order_ids = [d["_id"] for d in docs]
+    # Batched Fan-in: 1 Query für alle Executions der Response-Orders.
+    # Unique-Index auf `order_id` in `order_executions` ⇒ max. 1 Doc pro Order.
+    pnl_map: dict[ObjectId, str] = {}
+    exec_cursor = db.order_executions.find(
+        {
+            "order_id": {"$in": order_ids},
+            "realized_profit_loss": {"$ne": None},
+        },
+        projection={"order_id": 1, "realized_profit_loss": 1},
+    )
+    async for ex in exec_cursor:
+        raw = ex.get("realized_profit_loss")
+        if raw is None:
+            continue
+        if isinstance(raw, Decimal128):
+            pnl_map[ex["order_id"]] = format(raw.to_decimal(), "f")
+        else:
+            pnl_map[ex["order_id"]] = str(raw)
+
+    return [_serialize_order(d, realized_pnl=pnl_map.get(d["_id"])) for d in docs]
 
 
 @router.get("/cash")

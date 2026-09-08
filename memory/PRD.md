@@ -3,6 +3,98 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.74 (Preview · IMPLEMENTED) · Coupon Test Baseline Repair
+
+**Ziel:** pre-existing pytest-asyncio Fixture-Break in `test_coupon_flow.py` reparieren — reine Test-Infrastruktur, kein Business-Logic-Change.
+
+### Audit (Phase A)
+- **Async Fixtures gefunden:** 1 (`db` in `tests/test_coupon_flow.py` Zeile 53)
+- **Root Cause:** `@pytest.fixture` mit `async def` — unter `pytest-asyncio 1.4.0` (strict mode) **nicht** unterstützt → `'test_x' requested an async fixture 'db', with no plugin or hook that handled it`
+- **Kein conftest.py**, **kein pyproject.toml**; `pytest.ini` unverändert (addopts `-n 2 --dist loadscope`)
+
+### Minimal Fix (Phase B)
+- `tests/test_coupon_flow.py`:
+  - `+ import pytest_asyncio`
+  - `@pytest.fixture` (async `db`) → `@pytest_asyncio.fixture`
+- **0** Testlogik-Änderungen, **0** Assertions modifiziert, **0** Tests skipped/xfail
+
+### Regression (Phase D + E)
+```
+tests/test_coupon_flow.py ............... 16/16 PASS
+tests/test_realized_pnl_enrichment.py .... 5/5 PASS
+────────────────────────────────────────────────────
+TOTAL:                                   21/21 PASS  (2.07s)
+```
+- COUPON_RESERVE_TEST: PASS ✅ (test_reserve_success, test_second_reserve_same_coupon_blocked, test_reserve_sell_forbidden)
+- COUPON_CONSUME_TEST: PASS ✅ (test_consume_success_and_idempotent, test_consume_other_order_conflict, test_consume_without_reserve_fails)
+- CONCURRENT_RESERVE: PASS ✅ (test_concurrent_reservation_exactly_one_wins)
+- CONCURRENT_CONSUME: PASS ✅ (test_concurrent_consume_exactly_one_wins)
+- CANCEL_RELEASE: PASS ✅ (test_release_success_and_idempotent, test_release_wrong_order_does_not_release)
+- IDEMPOTENCY: PASS ✅ (release + consume idempotent)
+- REALIZED_PNL: PASS ✅ (5/5, inkl. Anti-N+1)
+
+### FINAL REPORT Flags
+- FILES_CHANGED: `backend/tests/test_coupon_flow.py` (2 Zeilen: import + Fixture-Decorator), `memory/PRD.md`
+- ASYNC_FIXTURES_FOUND: **1** (`db`)
+- ASYNC_FIXTURES_FIXED: **1** (`@pytest.fixture` → `@pytest_asyncio.fixture`)
+- PRODUCTION_CODE_CHANGED: **NO** ✅ (routes/portfolio.py, coupon_service.py, order_execution_service.py, Modelle, Ledger, Cash, Position, Matcher, Frontend — alle unverändert)
+- TEST_ASSERTIONS_CHANGED: **NO** ✅
+- TESTS_SKIPPED: **0** ✅
+- COUPON_TESTS: **16/16 PASS** ✅
+- REALIZED_PNL_TESTS: **5/5 PASS** ✅
+- FINANCIAL_WRITES: **0** ✅
+- TEST_DATA_WRITES: **0** (nur `preview_only=True` QA-Coupons via `admin_create_coupon`, Cleanup im Fixture)
+- REGRESSION_BASELINE_GREEN: **YES** ✅
+- READY_FOR_FINAL_COUPON_NOTIFICATION_E2E: **YES** ✅
+- READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Blocker unverändert)
+
+---
+
+
+## Session 82.73 (Preview · IMPLEMENTED) · Realized-PnL Backend-Enrichment
+
+**Ziel:** `GET /api/portfolio/orders` liefert `realized_pnl` authoritativ aus `order_executions.realized_profit_loss` — batched (kein N+1), kein Frontend-Neuberechnen. Kein Prod-Deploy.
+
+### Was gebaut wurde
+- **Backend** (`routes/portfolio.py`):
+  - `_serialize_order(doc, realized_pnl: Optional[str] = None)` — neues Feld `realized_pnl` (Decimal128 → String; sonst `null`). Kein Default-Zero, keine Erfindung.
+  - `list_orders` refaktoriert: Materialize Orders → 1 batched `db.order_executions.find({order_id: {$in: [...]}, realized_profit_loss: {$ne: None}}, projection={order_id, realized_profit_loss})` → dict → Serialize. Für `n` Orders exakt **1** zusätzliche Query (Unique-Index `order_id_unique` garantiert ≤1 Execution pro Order).
+- **Frontend** (`pages/StockDetail.js`):
+  - `setRealizedPnl(...)` in `loadMeta`: summiert **nur** Backend-`realized_pnl` über die symbol-gefilterten Orders, keine clientseitige Kalkulation. `null`-Werte werden übersprungen; wenn kein einziger Wert vorliegt, bleibt `realizedPnl = null` und die UI blendet den Block aus.
+  - Legacy-Kommentar `REALIZED_PNL_SOURCE=MISSING` → `REALIZED_PNL_SOURCE=BACKEND` aktualisiert.
+- **Tests** (`backend/tests/test_realized_pnl_enrichment.py`, **5/5 PASS**):
+  - `test_realized_pnl_null_when_no_execution` — Order ohne Execution → `null`
+  - `test_realized_pnl_null_when_execution_pnl_null` — Execution mit `realized_profit_loss=None` → `null`
+  - `test_realized_pnl_positive` — Decimal128("123.45") → String `"123.45"`
+  - `test_realized_pnl_negative` — Decimal128("-42.00") → String `"-42.00"`
+  - `test_realized_pnl_batched_no_n_plus_one` — 3 Orders + 2 Executions ⇒ `pymongo.monitoring.CommandListener` zählt exakt **1** `order_executions.find` mit `order_id`-Filter (Anti-N+1-Beweis).
+
+### E2E Verifikation (Preview)
+```
+GET /api/portfolio/orders?limit=10  (demo.kunde@kapital-direkt24.de)
+  buy MSFT  pending    realized_pnl=None
+  buy AAPL  cancelled  realized_pnl=None
+  buy SAP   executed   realized_pnl=None
+  sell SAP  executed   realized_pnl="0.00"   ← authoritativ aus order_executions
+```
+
+### FINAL REPORT Flags
+- FILES_CHANGED: `backend/routes/portfolio.py` (`_serialize_order`, `list_orders`), `frontend/src/pages/StockDetail.js` (`loadMeta` Realized-PnL-Sum), `backend/tests/test_realized_pnl_enrichment.py` (NEU, 5 Tests), `memory/PRD.md`
+- REALIZED_PNL_SOURCE_BEFORE: **MISSING** (Frontend setzt `null`)
+- REALIZED_PNL_SOURCE_AFTER: **`order_executions.realized_profit_loss` (authoritativ)**
+- N_PLUS_ONE_QUERIES: **0** ✅ (batched `$in`, monitoring-Test beweist es)
+- FRONTEND_CALCULATION: **0** ✅ (nur `Number()` + Summe der Backend-Strings)
+- FAKE_FINANCIAL_DATA: **0** ✅ · SUPABASE_WRITES: **0** ✅ · FINANCIAL_WRITES: **0** ✅
+- FINANCIAL_INVARIANTS_CHANGED: **NO** ✅ · READ_ONLY_ENRICHMENT: **YES** ✅
+- PYTEST_REALIZED_PNL: **5/5 PASS** ✅
+- PYTEST_COUPON_REGRESSION: **PRE-EXISTING BREAK** ⚠️ — 14 Tests errorn wegen pytest-asyncio-Fixture-Regression (`@pytest.fixture` async → braucht `@pytest_asyncio.fixture`); **NICHT durch Session 82.73 verursacht** (portfolio.py-Änderung ist rein additiv, keine Coupon-Berührung). Fix out-of-scope.
+- E2E_CURL_PREVIEW: **PASS** ✅ (Sell-Executed-Order zeigt `realized_pnl="0.00"`, Buy/Cancelled bleiben `null`)
+- BREAKING_CHANGES: **0** (Feld ist additiv, alle bestehenden Consumer weiterhin funktional)
+- READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Blocker unverändert)
+
+---
+
+
 ## Session 82.72 (Preview · IMPLEMENTED · PARTIAL) · Market-Data-Services Cutover
 
 **Ergebnis:** 3 von 5 Services vollständig cutovert (fundamentals, events, dividends). 2 Services BLOCKED (news, forex) — kein 1:1-Mapping, per Session-Regel „NICHT improvisieren" transparent gestoppt.

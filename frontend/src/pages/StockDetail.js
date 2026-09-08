@@ -378,8 +378,9 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
     // STOCK_METADATA_SOURCE=MINIMAL: `stocks`-Metadata (name/sector/exchange) hat
     // aktuell keinen Mongo-Endpoint — dekoratives Fallback via {symbol, currency}
     // aus dem Quote-Response, keine Erfindung von Sector/Exchange (Phase G).
-    // REALIZED_PNL_SOURCE=MISSING: `_serialize_order` liefert `realized_pnl` nicht;
-    // wir setzen `null` (Phase F Option 1 · „NICHT improvisieren").
+    // REALIZED_PNL_SOURCE=BACKEND (Session 82.73): `_serialize_order.realized_pnl`
+    // stammt authoritativ aus `order_executions.realized_profit_loss` und wird
+    // clientseitig NUR summiert — nicht neu berechnet.
 
     // Non-auth: Quote reicht.
     if (!user) {
@@ -469,8 +470,18 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
       );
       setPendingSellQty(pendingSells.reduce((s, o) => s + Number(o.quantity || 0), 0));
 
-      // Realized P&L — Backend liefert Feld aktuell nicht → UI zeigt es nicht.
-      setRealizedPnl(null);
+      // Session 82.73 — Realized P&L: authoritativ vom Backend
+      // (`_serialize_order.realized_pnl` aus `order_executions.realized_profit_loss`).
+      // Wir summieren ausschließlich Server-Werte für dieses Symbol — keine
+      // frontendseitige Neu-Berechnung.
+      let realizedSum = null;
+      for (const o of symOrders) {
+        if (o.realized_pnl == null) continue;
+        const n = Number(o.realized_pnl);
+        if (!Number.isFinite(n)) continue;
+        realizedSum = (realizedSum ?? 0) + n;
+      }
+      setRealizedPnl(realizedSum);
 
       // Watchlist
       const wlItems = (watchlistResp && watchlistResp.items) || [];

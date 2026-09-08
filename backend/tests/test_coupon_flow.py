@@ -19,6 +19,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 from bson import ObjectId
 from bson.decimal128 import Decimal128
 from dotenv import load_dotenv
@@ -50,7 +51,7 @@ DB_NAME = os.environ["DB_NAME"]
 QA_SESSION = "82.61a-pytest"
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db():
     client = AsyncIOMotorClient(MONGO_URL)
     _db = client[DB_NAME]
