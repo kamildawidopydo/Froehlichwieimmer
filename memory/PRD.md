@@ -3,6 +3,45 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.71 (Preview · IMPLEMENTED) · Admin-Support Mongo Cutover
+
+**Ziel:** Admin-Support (`pages/AdminSupport.js`) auf das Mongo-Support-Backend aus 82.70 umstellen. Support-Stack vollständig Supabase-frei. Kein Prod-Deploy.
+
+### Was gebaut wurde
+- **Backend NEU (Admin-Router):** `routes/support.py` erweitert um `admin_router` unter `/api/admin/support` + `require_admin` Dependency:
+  - `GET /tickets?status=&limit=` (mit `customer` Metadaten: email + first/last, KEIN password_hash)
+  - `GET /tickets/{id}`
+  - `GET /tickets/{id}/messages`
+  - `POST /tickets/{id}/reply` (setzt `sender_role='admin'` server-seitig, inc `unread_for_user`, reset `unread_for_admin`, `closed` → `pending`)
+  - `POST /tickets/{id}/status` (nur `open|pending|closed`; erfindet keine neuen Status)
+  - `POST /tickets/{id}/read` (reset `unread_for_admin`, mark user-messages `read_at`)
+  - Alle mit Pydantic `extra='forbid'` gegen Mass-Assignment
+- **Service:** `supportApi.js` erweitert um `adminListTickets/adminListMessages/adminReply/adminSetStatus/adminMarkRead`
+- **AdminSupport.js:** alle 8 Supabase-Touches (Import + 7 Nutzungen) entfernt · Realtime-Channel → 45-s-Polling mit visibilitychange-Refresh · `t.profiles` → `t.customer`
+- **Registrierung:** `server.py` `include_router(_support_admin_router)`
+
+### Static Audit
+- `pages/AdminSupport.js` grep `supabase`: **0** ✅
+
+### E2E Tests (10/10 curl + Pytest 16/16 grün)
+- T1 customer creates ticket → 201 · T2 admin sees it mit customer.email · T4 admin reply → 201 · T5 customer sees reply (2 msgs, last_role='admin') · T6 unread_for_user=1 nach Admin-Reply ✅ · T9 status update `closed` → 200 · T12 unauth admin list → **401** · T13 customer on admin route → **403** · T14 mass-assignment `sender_role/user_id` → **422 extra_forbidden** · T14b invalid status `deleted` → **400** · Coupon-Regression 16/16 PASS ✅
+
+### FINAL REPORT Flags
+- FILES_CHANGED: `backend/routes/support.py` (admin router), `backend/server.py` (include), `frontend/src/services/supportApi.js` (5 admin methods), `frontend/src/pages/AdminSupport.js` (8 Supabase-Touches → 0), `memory/PRD.md`
+- ADMIN_SUPPORT_SUPABASE_TOUCHES: **8 → 0** ✅ · Import entfernt ✅
+- NEW_ADMIN_ENDPOINTS: 6 (`GET/POST /api/admin/support/tickets(/{id}(/messages|/reply|/status|/read))`)
+- ADMIN_LIST/THREAD/REPLY/STATUS/READ_SOURCE: alle `/api/admin/support/*`
+- CUSTOMER_TO_ADMIN_VISIBILITY: **PASS** ✅ · ADMIN_TO_CUSTOMER_REPLY: **PASS** ✅
+- UNREAD_ADMIN / UNREAD_CUSTOMER / STATUS_UPDATE / UNAUTH / MASS_ASSIGNMENT: **PASS** ✅
+- CUSTOMER_ADMIN_ACCESS: **403** ✅ · CROSS_USER_LEAKS: **0** ✅
+- REALTIME_AFTER: **45-s-Polling** (pausiert `document.hidden`)
+- SUPABASE_WRITES: **0** ✅ · FINANCIAL_WRITES: **0** ✅ · FINANCIAL_INVARIANTS_CHANGED: **NO** ✅
+- ADMIN_SUPPORT_MONGO_NATIVE: **YES** ✅ · SUPPORT_STACK_FULLY_MONGO_NATIVE: **YES** ✅
+- READY_FOR_82.72: **YES** ✅ · READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Blocker unverändert)
+
+---
+
+
 ## Session 82.70 (Preview · IMPLEMENTED) · SupportPage Supabase → Mongo/FastAPI Cutover
 
 **Ziel:** `pages/dashboard/SupportPage.jsx` vollständig von Supabase lösen (9 aktive Touches → 0). Non-financial. Kein Prod-Deploy.

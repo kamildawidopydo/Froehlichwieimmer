@@ -197,3 +197,150 @@ async def mark_read(ticket_id: str, user: dict = Depends(get_current_user)):
         {"$set": {"read_at": now}},
     )
     return {"status": "ok"}
+
+
+# ─── ADMIN ────────────────────────────────────────────────────────────
+# Session 82.71 · Admin-Support (require_admin)
+from server import require_admin  # noqa: E402
+
+admin_router = APIRouter(prefix="/api/admin/support", tags=["support-admin"])
+
+
+class AdminReplyIn(BaseModel):
+    body: str = Field(..., min_length=1, max_length=8000)
+    model_config = {"extra": "forbid"}
+
+
+class AdminStatusIn(BaseModel):
+    status: str = Field(...)
+    model_config = {"extra": "forbid"}
+
+
+ALLOWED_STATUSES = {"open", "pending", "closed"}
+
+
+async def _admin_ticket_serialize(t: dict) -> dict:
+    d = _serialize_ticket(t)
+    # Additiv: minimale Customer-Metadaten (nur E-Mail + Name), keine Auth-Felder.
+    try:
+        u = await db.users.find_one({"_id": t.get("user_id")}) if t.get("user_id") else None
+    except Exception:
+        u = None
+    if u:
+        first = (u.get("first_name") or (u.get("name") or "").split(" ")[0] or "") if u.get("name") else (u.get("first_name") or "")
+        last = u.get("last_name") or ""
+        d["customer"] = {
+            "id": str(u["_id"]),
+            "email": u.get("email"),
+            "first_name": first or None,
+            "last_name": last or None,
+        }
+    else:
+        d["customer"] = None
+    return d
+
+
+@admin_router.get("/tickets")
+async def admin_list_tickets(
+    status: Optional[str] = None,
+    limit: int = 200,
+    _admin: dict = Depends(require_admin),
+):
+    q = {}
+    if status and status in ALLOWED_STATUSES:
+        q["status"] = status
+    cursor = db.support_tickets.find(q).sort([
+        ("last_message_at", -1), ("created_at", -1)
+    ]).limit(max(1, min(int(limit), 500)))
+    out = []
+    async for t in cursor:
+        out.append(await _admin_ticket_serialize(t))
+    return out
+
+
+async def _admin_get_ticket(ticket_id: str) -> dict:
+    oid = _validate_oid(ticket_id)
+    doc = await db.support_tickets.find_one({"_id": oid})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Ticket nicht gefunden.")
+    return doc
+
+
+@admin_router.get("/tickets/{ticket_id}")
+async def admin_get_ticket(ticket_id: str, _admin: dict = Depends(require_admin)):
+    doc = await _admin_get_ticket(ticket_id)
+    return await _admin_ticket_serialize(doc)
+
+
+@admin_router.get("/tickets/{ticket_id}/messages")
+async def admin_list_messages(ticket_id: str, _admin: dict = Depends(require_admin)):
+    doc = await _admin_get_ticket(ticket_id)
+    cursor = db.support_messages.find({"ticket_id": doc["_id"]}).sort([("created_at", 1)])
+    return [_serialize_message(m) async for m in cursor]
+
+
+@admin_router.post("/tickets/{ticket_id}/reply", status_code=201)
+async def admin_reply(
+    ticket_id: str,
+    payload: AdminReplyIn = Body(...),
+    admin: dict = Depends(require_admin),
+):
+    doc = await _admin_get_ticket(ticket_id)
+    now = datetime.now(timezone.utc)
+    msg = {
+        "ticket_id": doc["_id"],
+        "sender_id": ObjectId(admin["id"]),
+        "sender_role": "admin",
+        "body": payload.body.strip(),
+        "created_at": now,
+        "read_at": None,
+    }
+    res = await db.support_messages.insert_one(msg)
+    msg["_id"] = res.inserted_id
+    new_status = doc.get("status") if doc.get("status") != "closed" else "pending"
+    await db.support_tickets.update_one(
+        {"_id": doc["_id"]},
+        {
+            "$set": {
+                "updated_at": now,
+                "last_message_at": now,
+                "unread_for_admin": 0,
+                "status": new_status,
+            },
+            "$inc": {"unread_for_user": 1},
+        },
+    )
+    return _serialize_message(msg)
+
+
+@admin_router.post("/tickets/{ticket_id}/status")
+async def admin_set_status(
+    ticket_id: str,
+    payload: AdminStatusIn = Body(...),
+    _admin: dict = Depends(require_admin),
+):
+    doc = await _admin_get_ticket(ticket_id)
+    st = payload.status.strip().lower()
+    if st not in ALLOWED_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Ungültiger Status. Erlaubt: {sorted(ALLOWED_STATUSES)}")
+    await db.support_tickets.update_one(
+        {"_id": doc["_id"]},
+        {"$set": {"status": st, "updated_at": datetime.now(timezone.utc)}},
+    )
+    fresh = await db.support_tickets.find_one({"_id": doc["_id"]})
+    return await _admin_ticket_serialize(fresh)
+
+
+@admin_router.post("/tickets/{ticket_id}/read")
+async def admin_mark_read(ticket_id: str, _admin: dict = Depends(require_admin)):
+    doc = await _admin_get_ticket(ticket_id)
+    now = datetime.now(timezone.utc)
+    await db.support_tickets.update_one(
+        {"_id": doc["_id"]},
+        {"$set": {"unread_for_admin": 0, "updated_at": now}},
+    )
+    await db.support_messages.update_many(
+        {"ticket_id": doc["_id"], "sender_role": "user", "read_at": None},
+        {"$set": {"read_at": now}},
+    )
+    return {"status": "ok"}

@@ -29,4 +29,24 @@ export const supportApi = {
     }),
   markRead: (ticketId) =>
     req(`/api/support/tickets/${encodeURIComponent(ticketId)}/read`, { method: 'POST' }),
+  // Session 82.71 · Admin
+  adminListTickets: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set('status', params.status);
+    if (params.limit) qs.set('limit', String(params.limit));
+    const q = qs.toString();
+    return req(`/api/admin/support/tickets${q ? `?${q}` : ''}`);
+  },
+  adminListMessages: (ticketId) =>
+    req(`/api/admin/support/tickets/${encodeURIComponent(ticketId)}/messages`),
+  adminReply: (ticketId, body) =>
+    req(`/api/admin/support/tickets/${encodeURIComponent(ticketId)}/reply`, {
+      method: 'POST', body: JSON.stringify({ body }),
+    }),
+  adminSetStatus: (ticketId, status) =>
+    req(`/api/admin/support/tickets/${encodeURIComponent(ticketId)}/status`, {
+      method: 'POST', body: JSON.stringify({ status }),
+    }),
+  adminMarkRead: (ticketId) =>
+    req(`/api/admin/support/tickets/${encodeURIComponent(ticketId)}/read`, { method: 'POST' }),
 };

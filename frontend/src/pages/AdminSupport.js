@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
+import { supportApi } from '@/services/supportApi';
 import { useAuth } from '@/context/AuthContext';
 import {
   AdminSubpageLayout,
@@ -89,14 +89,8 @@ const AdminSupport = () => {
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select(
-          'id, user_id, subject, status, unread_for_admin, unread_for_user, last_message_at, created_at, profiles:user_id(email, first_name, last_name)',
-        )
-        .order('last_message_at', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false });
-      if (error) throw error;
+      // Session 82.71 — Mongo-native /api/admin/support/tickets
+      const data = await supportApi.adminListTickets({ limit: 200 });
       setTickets(data || []);
     } catch (err) {
       toast.error('Tickets konnten nicht geladen werden: ' + (err?.message || err));
@@ -110,12 +104,7 @@ const AdminSupport = () => {
     if (!ticketId) return;
     setLoadingMessages(true);
     try {
-      const { data, error } = await supabase
-        .from('support_messages')
-        .select('*')
-        .eq('ticket_id', ticketId)
-        .order('created_at', { ascending: true });
-      if (error) throw error;
+      const data = await supportApi.adminListMessages(ticketId);
       setMessages(data || []);
     } catch (err) {
       toast.error('Nachrichten konnten nicht geladen werden: ' + (err?.message || err));
@@ -127,15 +116,12 @@ const AdminSupport = () => {
   const markRead = useCallback(async (ticketId) => {
     if (!ticketId) return;
     try {
-      await supabase.rpc('mark_support_thread_read', {
-        p_ticket_id: ticketId,
-        p_role: 'admin',
-      });
+      await supportApi.adminMarkRead(ticketId);
       setTickets((prev) =>
         prev.map((t) => (t.id === ticketId ? { ...t, unread_for_admin: 0 } : t)),
       );
     } catch {
-      // best effort
+      /* best effort */
     }
   }, []);
 
@@ -158,46 +144,36 @@ const AdminSupport = () => {
     }
   }, [messages.length]);
 
-  // Realtime: tüm support_tickets ve support_messages değişiklikleri admin görür
+  // Session 82.71 — Realtime → sichtbarkeitsgesteuerter 45-s-Poll.
   useEffect(() => {
-    const ch = supabase
-      .channel('admin_support_threads')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'support_tickets' },
-        () => load(),
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'support_messages' },
-        (payload) => {
-          const msg = payload?.new;
-          if (!msg) return;
-          if (msg.ticket_id === activeId) {
-            setMessages((prev) =>
-              prev.some((m) => m.id === msg.id) ? prev : [...prev, msg],
-            );
-            if (msg.sender_role === 'user') markRead(activeId);
-          }
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
+    const POLL_MS = 45000;
+    let cancelled = false;
+    const tick = () => {
+      if (cancelled || (typeof document !== 'undefined' && document.hidden)) return;
+      load();
+      if (activeId) fetchMessages(activeId);
     };
-  }, [activeId, load, markRead]);
+    const iv = setInterval(tick, POLL_MS);
+    const onFocus = () => tick();
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [activeId, load, fetchMessages]);
 
   const filteredTickets = useMemo(() => {
     const q = search.trim().toLowerCase();
     return tickets.filter((t) => {
       if (statusFilter !== 'all' && t.status !== statusFilter) return false;
       if (!q) return true;
-      const u = t.profiles;
+      const u = t.customer || {};
       const hay = [
         t.subject,
-        u?.email,
-        u?.first_name,
-        u?.last_name,
+        u.email,
+        u.first_name,
+        u.last_name,
       ]
         .filter(Boolean)
         .join(' ')
@@ -247,17 +223,17 @@ const AdminSupport = () => {
       };
       setMessages((prev) => [...prev, optimistic]);
       setInput('');
-      const { error } = await supabase.from('support_messages').insert({
-        ticket_id: activeId,
-        sender_id: user.id,
-        sender_role: 'admin',
-        body,
-      });
-      if (error) {
+      let real;
+      try {
+        real = await supportApi.adminReply(activeId, body);
+      } catch (err) {
         setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
-        throw error;
+        setInput(body);
+        throw err;
       }
-      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== optimistic.id).concat(real ? [real] : []),
+      );
     } catch (err) {
       toast.error('Senden fehlgeschlagen: ' + (err?.message || err));
     } finally {
@@ -269,11 +245,7 @@ const AdminSupport = () => {
     if (!activeId) return;
     setStatusUpdating(true);
     try {
-      const { error } = await supabase
-        .from('support_tickets')
-        .update({ status: newStatus })
-        .eq('id', activeId);
-      if (error) throw error;
+      const updated = await supportApi.adminSetStatus(activeId, newStatus);
       toast.success(
         newStatus === 'closed'
           ? 'Ticket geschlossen.'
@@ -282,7 +254,7 @@ const AdminSupport = () => {
             : 'Ticket erneut geöffnet.',
       );
       setTickets((prev) =>
-        prev.map((t) => (t.id === activeId ? { ...t, status: newStatus } : t)),
+        prev.map((t) => (t.id === activeId ? { ...t, status: updated?.status || newStatus } : t)),
       );
     } catch (err) {
       toast.error('Statusänderung fehlgeschlagen: ' + (err?.message || err));
@@ -398,7 +370,7 @@ const AdminSupport = () => {
                               {t.subject}
                             </p>
                             <p className="text-[11px] text-bank-text-muted truncate flex items-center gap-1 mt-0.5">
-                              <UserIcon size={10} /> {userLabel(t.profiles)}
+                              <UserIcon size={10} /> {userLabel(t.customer)}
                             </p>
                           </div>
                           {t.unread_for_admin > 0 && (
@@ -442,9 +414,9 @@ const AdminSupport = () => {
                     {activeTicket.subject}
                   </p>
                   <p className="text-[11px] text-bank-text-muted truncate">
-                    {userLabel(activeTicket.profiles)}
-                    {activeTicket.profiles?.email
-                      ? ` · ${activeTicket.profiles.email}`
+                    {userLabel(activeTicket.customer)}
+                    {activeTicket.customer?.email
+                      ? ` · ${activeTicket.customer.email}`
                       : ''}
                     {' · eröffnet am '}
                     {fmtDateTime(activeTicket.created_at)}
