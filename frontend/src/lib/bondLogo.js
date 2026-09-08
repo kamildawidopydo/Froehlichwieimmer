@@ -42,6 +42,29 @@ export const CURATED_BOND_LOGO_ASSETS = {
   bayer: '/assets/bond-logos/bayer.png',
   heineken: '/assets/bond-logos/heineken.png',
   'anheuser-busch inbev': '/assets/bond-logos/ab-inbev.png',
+  // Session 82.79b — Deutsche Emittenten-Abkürzungen (mappen auf existierende
+  // lokale Assets). Nur eindeutige Kürzel; keine erfundenen Zuordnungen.
+  'dt bank': '/assets/bond-logos/deutsche-bank.png',
+  'dt bk': '/assets/bond-logos/deutsche-bank.png',
+  // COBA ist die Kurzform / das Ticker-Präfix der Commerzbank AG.
+  coba: '/assets/bond-logos/commerzbank.svg',
+  commerzbank: '/assets/bond-logos/commerzbank.svg',
+  // Deutsche Staatsanleihen unter Kurznamen — Flagge als authoritatives Emittentenzeichen.
+  'bund schatzanw': '/assets/bond-logos/de.png',
+  'bund schatzanwei': '/assets/bond-logos/de.png',
+  'bundesobli': '/assets/bond-logos/de.png',
+  'bundes anl': '/assets/bond-logos/de.png',
+  'brd bundes': '/assets/bond-logos/de.png',
+  'brd uschat': '/assets/bond-logos/de.png',
+  // Länder (Bundesländer) — deutsche Flagge (Bundesrepublik-übergreifend).
+  'rheinl pf': '/assets/bond-logos/de.png',
+  'rhein pfalz': '/assets/bond-logos/de.png',
+  'sachsen anh': '/assets/bond-logos/de.png',
+  // Fremdsprachige Kurznamen anderer EU-Staaten aus deutschen Datenquellen.
+  frankreich: '/assets/bond-logos/fr.png',
+  italien: '/assets/bond-logos/it.png',
+  spanien: '/assets/bond-logos/es.png',
+  belgien: '/assets/bond-logos/be.png',
 };
 
 const SOVEREIGN_FLAG_CODES = {
@@ -94,6 +117,36 @@ const ISSUER_DOMAIN_OVERRIDES = {
   'royaume de belgique': 'belgium.be',
   'republik osterreich': 'bundeskanzleramt.gv.at',
   'koninkrijk der nederlanden': 'government.nl',
+  // Session 82.79b — Deutsche Landesbanken / Förderbanken / Sparkassen-Verbund.
+  // Domains sind offiziell und stabil; das existierende favicon-Fallback
+  // (unavatar → google → duckduckgo) liefert für diese Domains verlässliche
+  // Corporate-Icons ohne neue lokale Assets zu erfordern.
+  lbbw: 'lbbw.de',
+  nordlb: 'nordlb.de',
+  'lb hess thr': 'helaba.de',
+  'lb hess': 'helaba.de',
+  helaba: 'helaba.de',
+  deka: 'deka.de',
+  'kred f wied': 'kfw.de',
+  kfw: 'kfw.de',
+  'erste gr bk': 'erstegroup.com',
+  'erste gp bnk': 'erstegroup.com',
+  commerzbank: 'commerzbank.de',
+  // Deutsche Sparkassen — verbundweite Domain (kein Emittenten-Missbrauch).
+  stspk: 'sparkasse.de',
+  // Session 82.79b — weitere eindeutige EU-Emittenten aus dem Katalog-Top-25.
+  'dz bank': 'dzbank.de',
+  dzbank: 'dzbank.de',
+  coba: 'commerzbank.de',
+  bpce: 'groupebpce.com',
+  'schneider electric': 'se.com',
+  edenred: 'edenred.com',
+  kinepolis: 'kinepolis.com',
+  'credit agri': 'credit-agricole.com',
+  'credit agricole': 'credit-agricole.com',
+  'ikb dt ind bk': 'ikb.de',
+  ikb: 'ikb.de',
+  arkea: 'arkea.com',
 };
 
 /** Issuer / bond name substring → FMP ticker for reliable corporate logos. */
@@ -112,7 +165,11 @@ function normalizeIssuerKey(value) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[.,']/g, '')
+    // Session 82.79b — Trenner (.,'-/) durch Space ersetzen (nicht wegwerfen),
+    // damit deutsche Emittenten-Abkürzungen wie „LB.HESS.-THR.WELTSPA12/22"
+    // zu „lb hess thr weltspa12 22" werden und über Substring-Needles wie
+    // „lb hess thr" gefunden werden.
+    .replace(/[.,'\-/]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
