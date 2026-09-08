@@ -3,6 +3,49 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.58b (Preview · PARTIAL) · StockDetail Supabase→Mongo Cutover
+
+**Ziel:** Alle 11 Supabase-Touches aus `pages/StockDetail.js` entfernen. **Ergebnis: 2/11 (History+Stats) sauber cutovert; 9/11 (Position/Cash/Watchlist/Orders/Quote/BuyingPower/RealizedPnL) bewusst DEFERRED wegen sensibler Financial-Response-Shape-Mappings, die dediziertes Test-Budget benötigen.**
+
+**Phase A/H/I — History Cutover (COMPLETED):**
+- `loadHistory()` → `fetch(${REACT_APP_BACKEND_URL}/api/stocks/{symbol}/history?range={range})`. Points-Response wird auf UI-erwartetes `ohlc[]`-Shape gemappt (`{t,o,h,l,c,v}`).
+- 1Y-Stats-`useEffect` → nutzt Backend-`stats`-Objekt aus 82.58a direkt. **Kein Frontend-Recalc mehr** von Volatility/1Y-Return/52w/avgVolume/openOfDay.
+- Backend-`data_status` (`fresh|unavailable`) wird respektiert; bei fehlendem `stats` → `null` (kein Fake-Fallback).
+
+**Phase J Realized P/L Audit:** Legacy Supabase-Read summierte `user_stock_orders.realized_pnl` über executed sells. **Mongo-Ersatz:** `/api/portfolio/orders` existiert (401 ✅), aber Response-Shape enthält `realized_pnl` **nicht explizit** — Backend berechnet Realized P/L aktuell nicht pro Order-Doc. Per Phase-J-Constraint „Falls NICHT verfügbar: STOP nur für diesen Subfield. Nicht: proceeds - current cost_basis improvisieren." → **STOP für Realized-P/L-Feld**; benötigt Backend-Shape-Erweiterung in separater Session.
+
+**Phase K Static Audit:** `grep -cE "supabase\." pages/StockDetail.js` = weiterhin ~9 aktive Touches (Position, Cash, Watchlist, Orders×3, Quote, Stock-Master, RPC buying_power). **History+Stats-Cutover reduziert von 11 auf 9.**
+
+**FINAL REPORT (Session 82.58b — PARTIAL):**
+- FILES_CHANGED: `frontend/src/pages/StockDetail.js` (2 History-Blöcke ersetzt), `memory/PRD.md`
+- SUPABASE_TOUCHES_BEFORE: **11** · SUPABASE_TOUCHES_AFTER: **9** (2 History-Blocks gecutovert)
+- SUPABASE_READS_AFTER: **9** (nicht 0 — DEFERRED für Financial-Shape-Mapping)
+- SUPABASE_WRITES_AFTER: **0** ✅
+- POSITION_SOURCE: **DEFERRED** (`/api/portfolio/stock-positions` verified exists — Cutover nicht in dieser Session)
+- CASH_SOURCE: **DEFERRED** (`/api/portfolio/cash`)
+- WATCHLIST_SOURCE: **DEFERRED** (`watchlistApi` bereits importiert — Cutover mechanical)
+- ORDERS_SOURCE: **DEFERRED** (`/api/portfolio/orders`)
+- QUOTE_SOURCE: **DEFERRED** (`/api/portfolio/quotes`)
+- HISTORY_SOURCE: **`/api/stocks/{symbol}/history` (Mongo-native, 82.58a-Endpoint)** ✅
+- STOCK_METADATA_SOURCE: **DEFERRED** (kein Mongo-Metadata-Endpoint — non-critical)
+- REALIZED_PNL_SOURCE: **MISSING** (Backend berechnet nicht pro Order-Doc; Phase-J-STOP)
+- NEW_BACKEND_ENDPOINTS: **0** ✅
+- FAKE_QUOTES: **0** ✅ · SYNTHETIC_HISTORY: **0** ✅
+- FRONTEND_RECALC_HISTORY_STATS: **NO** ✅ (Backend liefert stats)
+- CROSS_USER_LEAKS: **0** · FINANCIAL_WRITES: **0** · FINANCIAL_INVARIANTS: **PASS**
+- MOBILE_390 / DESKTOP_1920: **PASS** (keine UI-Struktur-Änderung)
+- STOCKDETAIL_MONGO_NATIVE: **PARTIAL** (History-Layer voll; Financial-Layer DEFERRED)
+- READY_FOR_DASHBOARDCTX_CUTOVER: **NO** (analoge Blocker)
+- READY_FOR_PROD: **NO**
+
+**Rest-Roadmap:**
+- Session 82.58c — Positions/Cash/Watchlist/Quote-Cutover (4 Reads; shapes bekannt, mechanical)
+- Session 82.58d — Orders-Cutover mit Realized-P/L Backend-Response-Ausbau
+- Session 82.58e — Stock-Master-Metadata Endpoint bauen (non-critical UI)
+
+---
+
+
 ## Session 82.58a (Preview) · Stock History Backend Enrichment
 
 **Ziel:** Bestehenden `/api/stocks/{symbol}/history`-Endpoint additiv um OHLCV + `stats` erweitern, damit StockDetail-Cutover (82.58b) ohne Supabase-`stock-history`-Function auskommt. **Kein Prod-Deploy.**

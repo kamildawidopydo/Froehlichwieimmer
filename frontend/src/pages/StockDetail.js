@@ -418,9 +418,19 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   const loadHistory = async () => {
     setLoadingHistory(true);
     try {
-      const { data, error } = await supabase.functions.invoke('stock-history', { body: { symbol, range } });
-      if (error) throw error;
-      setOhlc(data?.ohlc || []);
+      // Session 82.58b — Mongo-native History via 82.58a-Endpoint. Backward-
+      // compat: `points[].close` bleibt; additiv `open/high/low/volume` +
+      // `stats`. Backend liefert `data_status` — bei "unavailable" leerer State.
+      const url = `${process.env.REACT_APP_BACKEND_URL}/api/stocks/${encodeURIComponent(symbol)}/history?range=${encodeURIComponent(range)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`history status ${res.status}`);
+      const data = await res.json();
+      // UI erwartete früher `ohlc[]` mit {t,o,h,l,c,v}. Aus `points[]` ableiten.
+      const ohlcMapped = (data?.points || []).map((p) => ({
+        t: p.timestamp,
+        o: p.open, h: p.high, l: p.low, c: p.close, v: p.volume,
+      }));
+      setOhlc(ohlcMapped);
     } catch (err) {
       console.error('History failed:', err);
       setOhlc([]);
@@ -430,35 +440,31 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   };
 
   // One 1-year pull per symbol → 52-week range, annualized volatility, 1Y return.
+  // Session 82.58b — Backend liefert alle Stats fertig berechnet (82.58a).
+  // Kein Frontend-Recalc mehr.
   useEffect(() => {
     if (!symbol) return;
     let active = true;
     (async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('stock-history', {
-          body: { symbol, range: '1y' },
-        });
-        if (error) throw error;
-        const closes = (data?.points || []).map((p) => p.c).filter((c) => typeof c === 'number');
-        if (!active || closes.length < 2) {
-          if (active) setStats(null);
+        const url = `${process.env.REACT_APP_BACKEND_URL}/api/stocks/${encodeURIComponent(symbol)}/history?range=1y`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`stats status ${res.status}`);
+        const data = await res.json();
+        if (!active) return;
+        const s = data?.stats || null;
+        if (!s || (s.fifty_two_week_high == null && s.fifty_two_week_low == null && s.one_year_return_pct == null)) {
+          setStats(null);
           return;
         }
-        const week52High = data?.fifty_two_week_high ?? Math.max(...closes);
-        const week52Low = data?.fifty_two_week_low ?? Math.min(...closes);
-        const returns = [];
-        for (let i = 1; i < closes.length; i++) {
-          if (closes[i - 1] > 0) returns.push(Math.log(closes[i] / closes[i - 1]));
-        }
-        const mean = returns.reduce((s, r) => s + r, 0) / (returns.length || 1);
-        const variance = returns.reduce((s, r) => s + (r - mean) ** 2, 0) / (returns.length || 1);
-        const volatility = Math.sqrt(variance) * Math.sqrt(252) * 100; // annualized %
-        const return1y = ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100;
-        const bars = data?.ohlc || [];
-        const vols = bars.map((b) => Number(b.v || 0)).filter((v) => v > 0);
-        const avgVolume = vols.length ? Math.round(vols.reduce((s, v) => s + v, 0) / vols.length) : null;
-        const open = bars.length ? bars[bars.length - 1].o : null;
-        setStats({ week52High, week52Low, volatility, return1y, avgVolume, open });
+        setStats({
+          week52High: s.fifty_two_week_high,
+          week52Low: s.fifty_two_week_low,
+          volatility: s.annualized_volatility_pct,
+          return1y: s.one_year_return_pct,
+          avgVolume: s.average_volume,
+          open: s.open_of_day,
+        });
       } catch {
         if (active) setStats(null);
       }
