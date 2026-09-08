@@ -8,7 +8,6 @@ import {
   Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
   AdminSubpageLayout,
@@ -17,6 +16,32 @@ import {
   adminTheadClass,
   adminRowHover,
 } from '@/components/admin/AdminSubpageChrome';
+
+// Session 82.80 — Mongo-native Cutover. Kein Supabase-Import mehr.
+//   Universe + Refresh: POST /api/admin/stock-research/sync?sync_type=prices
+//   Quotes/Health:      GET  /api/portfolio/quotes?symbols=T1,T2,...
+//   Sync-History:       GET  /api/admin/stock-research/sync/history?limit=10
+// Keine Fake-Preise: fehlt price/as_of, wird das Symbol als "missing" gezeigt.
+
+const API_BASE = process.env.REACT_APP_BACKEND_URL;
+
+async function apiJson(path, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  const txt = await res.text();
+  let json = null;
+  try { json = txt ? JSON.parse(txt) : null; } catch { /* keep raw */ }
+  if (!res.ok) {
+    const detail = (json && (json.detail || json.error)) || txt || `HTTP ${res.status}`;
+    const err = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    err.status = res.status;
+    throw err;
+  }
+  return json;
+}
 
 const fmtAge = (iso) => {
   if (!iso) return '–';
@@ -35,36 +60,27 @@ const fmtIsoLocal = (iso) => {
   return new Date(iso).toLocaleString('de-DE');
 };
 
-// Kompaktes Summary für die "Letzte Edge-Function-Antwort"-Karte.
-// Wir wollen nicht alle 380+ Quotes als JSON dumpen — die Detail-Tabellen
-// darunter zeigen Cache-Inhalte ohnehin. Hier nur die wichtigsten Felder
-// sowie eine kleine Vorschau der Symbole ohne Preis.
-const summarizeFunctionResponse = (data) => {
+const summarizeSyncResponse = (data) => {
   if (!data) return null;
-  if (data.error) return { error: data.error };
-  const quotes = Array.isArray(data.quotes) ? data.quotes : [];
-  const withPrice = quotes.filter((q) => q?.price != null).length;
-  const withoutPrice = quotes.length - withPrice;
-  const missingPreview = quotes
-    .filter((q) => q?.price == null)
-    .slice(0, 10)
-    .map((q) => q.symbol);
+  const price = data.price || {};
   return {
-    cached: data.cached ?? null,
-    fetched_at: data.fetched_at ?? null,
-    forced: data.forced === true,
-    skipped: data.skipped === true,
-    reason: data.reason ?? null,
-    quotes_total: quotes.length,
-    quotes_with_price: withPrice,
-    quotes_without_price: withoutPrice,
-    ...(missingPreview.length ? { missing_preview: missingPreview } : {}),
+    started_at: data.started_at ?? null,
+    duration_ms: data.duration_ms ?? null,
+    sync_type: data.sync_type ?? null,
+    universe_size: data.universe_size ?? null,
+    updated: price.updated ?? null,
+    provider_hits: price.provider_hits ?? null,
+    unchanged: price.unchanged ?? null,
+    skipped: price.skipped ?? null,
+    ...(Array.isArray(data.tickers) && data.tickers.length
+      ? { tickers_preview: data.tickers.slice(0, 12) }
+      : {}),
   };
 };
 
 const AdminMarketData = () => {
-  const [stocks, setStocks] = useState([]);
-  const [cache, setCache] = useState([]);
+  const [universe, setUniverse] = useState([]); // [{symbol}]
+  const [quotes, setQuotes] = useState({}); // {SYM: {price, as_of, currency}}
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [healthChecking, setHealthChecking] = useState(false);
@@ -73,15 +89,21 @@ const AdminMarketData = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [{ data: stocksData, error: stocksErr }, { data: cacheData, error: cacheErr }] =
-        await Promise.all([
-          supabase.from('stocks').select('symbol, name, sector, is_active').eq('is_active', true),
-          supabase.from('stock_prices_cache').select('symbol, price, fetched_at, currency'),
-        ]);
-      if (stocksErr) throw stocksErr;
-      if (cacheErr) throw cacheErr;
-      setStocks(stocksData || []);
-      setCache(cacheData || []);
+      // Universe kommt aus dem Sync-Endpoint. `sync_type=prices` triggert
+      // gleichzeitig einen leichten Refresh — bewusster Admin-Kontext.
+      const sync = await apiJson('/api/admin/stock-research/sync?sync_type=prices', {
+        method: 'POST',
+      });
+      const tickers = Array.isArray(sync?.tickers) ? sync.tickers : [];
+      setUniverse(tickers.map((s) => ({ symbol: s, name: s })));
+      if (tickers.length > 0) {
+        const q = await apiJson(
+          `/api/portfolio/quotes?symbols=${encodeURIComponent(tickers.join(','))}`,
+        );
+        setQuotes(q || {});
+      } else {
+        setQuotes({});
+      }
     } catch (err) {
       toast.error('Fehler beim Laden: ' + (err?.message || err));
     } finally {
@@ -93,78 +115,57 @@ const AdminMarketData = () => {
     load();
   }, []);
 
-  const cacheBySymbol = useMemo(() => {
-    const m = {};
-    cache.forEach((c) => {
-      m[c.symbol] = c;
-    });
-    return m;
-  }, [cache]);
-
   const summary = useMemo(() => {
-    const totalActive = stocks.length;
-    const symbolsWithPrice = stocks.filter(
-      (s) => cacheBySymbol[s.symbol] && cacheBySymbol[s.symbol].price != null,
-    );
-    const symbolsMissing = stocks.filter(
-      (s) => !cacheBySymbol[s.symbol] || cacheBySymbol[s.symbol].price == null,
-    );
-    const fetchedAts = symbolsWithPrice
-      .map((s) => cacheBySymbol[s.symbol].fetched_at)
+    const totalActive = universe.length;
+    const withPrice = universe.filter((s) => quotes[s.symbol]?.price != null);
+    const missing = universe.filter((s) => quotes[s.symbol]?.price == null);
+    const fetchedAts = withPrice
+      .map((s) => quotes[s.symbol]?.as_of)
       .filter(Boolean)
       .map((iso) => new Date(iso).getTime());
     const oldest = fetchedAts.length ? new Date(Math.min(...fetchedAts)).toISOString() : null;
     const newest = fetchedAts.length ? new Date(Math.max(...fetchedAts)).toISOString() : null;
     return {
       totalActive,
-      withPrice: symbolsWithPrice.length,
-      missing: symbolsMissing.length,
-      missingList: symbolsMissing,
+      withPrice: withPrice.length,
+      missing: missing.length,
+      missingList: missing,
       oldest,
       newest,
     };
-  }, [stocks, cacheBySymbol]);
+  }, [universe, quotes]);
 
   const oldestSymbols = useMemo(() => {
-    return stocks
+    return universe
       .map((s) => ({
         symbol: s.symbol,
         name: s.name,
-        price: cacheBySymbol[s.symbol]?.price ?? null,
-        fetched_at: cacheBySymbol[s.symbol]?.fetched_at ?? null,
+        price: quotes[s.symbol]?.price ?? null,
+        as_of: quotes[s.symbol]?.as_of ?? null,
       }))
-      .filter((row) => row.fetched_at)
-      .sort((a, b) => new Date(a.fetched_at).getTime() - new Date(b.fetched_at).getTime())
+      .filter((row) => row.as_of)
+      .sort((a, b) => new Date(a.as_of).getTime() - new Date(b.as_of).getTime())
       .slice(0, 20);
-  }, [stocks, cacheBySymbol]);
+  }, [universe, quotes]);
 
-  const triggerRefresh = async ({ force = true } = {}) => {
+  const triggerRefresh = async () => {
     setRefreshing(true);
     setLastResponse(null);
     try {
-      const { data, error } = await supabase.functions.invoke('stock-prices', {
-        body: { force },
+      const data = await apiJson('/api/admin/stock-research/sync?sync_type=prices', {
+        method: 'POST',
       });
-      if (error) {
-        toast.error('Refresh fehlgeschlagen: ' + error.message);
-        setLastResponse({ error: error.message });
-        return;
-      }
-      setLastResponse(summarizeFunctionResponse(data));
-      if (data?.skipped) {
-        toast.info(
-          `Cache war noch frisch (Stand: ${
-            data.fetched_at ? new Date(data.fetched_at).toLocaleTimeString('de-DE') : 'jetzt'
-          }) — Throttle aktiv.`,
-        );
-      } else if (data?.forced) {
-        toast.success(`Force-Refresh erfolgreich (${data?.cached ?? 0} Symbole neu geladen).`);
-      } else {
-        toast.success(`Cache aktualisiert (${data?.cached ?? 0} Symbole).`);
-      }
+      setLastResponse(summarizeSyncResponse(data));
+      const updated = data?.price?.updated ?? 0;
+      const providerHits = data?.price?.provider_hits ?? 0;
+      toast.success(
+        `Sync abgeschlossen · ${updated} aktualisiert · ${providerHits} Provider-Hits`,
+      );
       await load();
     } catch (err) {
-      toast.error('Refresh-Fehler: ' + (err?.message || err));
+      const msg = err?.message || String(err);
+      toast.error('Refresh-Fehler: ' + msg);
+      setLastResponse({ error: msg });
     } finally {
       setRefreshing(false);
     }
@@ -174,18 +175,22 @@ const AdminMarketData = () => {
     setHealthChecking(true);
     setLastResponse(null);
     try {
-      const { data, error } = await supabase.functions.invoke('stock-prices', {
-        body: { symbols: ['AAPL'] },
+      const q = await apiJson('/api/portfolio/quotes?symbols=AAPL');
+      const aapl = q?.AAPL || null;
+      setLastResponse({
+        health_probe: 'AAPL',
+        price: aapl?.price ?? null,
+        currency: aapl?.currency ?? null,
+        as_of: aapl?.as_of ?? null,
+        source: aapl?.source ?? null,
+        price_status: aapl?.price_status ?? null,
       });
-      if (error) {
-        toast.error('Health-Check fehlgeschlagen: ' + error.message);
-        setLastResponse({ error: error.message });
-        return;
-      }
-      setLastResponse(summarizeFunctionResponse(data));
-      toast.success('Edge Function antwortet.');
+      if (aapl?.price != null) toast.success('Quotes-API antwortet.');
+      else toast.warning('Quotes-API antwortete ohne Preis.');
     } catch (err) {
-      toast.error('Health-Check-Fehler: ' + (err?.message || err));
+      const msg = err?.message || String(err);
+      toast.error('Health-Check-Fehler: ' + msg);
+      setLastResponse({ error: msg });
     } finally {
       setHealthChecking(false);
     }
@@ -199,11 +204,12 @@ const AdminMarketData = () => {
       <AdminSubpageHeader
         eyebrow="Admin"
         title="Markt-Daten"
-        description="Status der Stock-Price-Pipeline. Cache-Frische, fehlende Symbole und manuelle Aktualisierung der Yahoo-Anbindung."
+        description="Status der Stock-Price-Pipeline. Universe, Preis-Frische und manueller Sync-Trigger."
         titleIcon={Activity}
         actions={
           <div className="flex flex-wrap items-center gap-2 justify-end">
             <Button
+              data-testid="market-data-health-btn"
               variant="outline"
               onClick={triggerHealthCheck}
               disabled={healthChecking}
@@ -213,19 +219,23 @@ const AdminMarketData = () => {
               {healthChecking ? 'Prüfe…' : 'Health Check'}
             </Button>
             <Button
-              onClick={() => triggerRefresh({ force: true })}
+              data-testid="market-data-refresh-btn"
+              onClick={triggerRefresh}
               disabled={refreshing}
               className="bg-bank-ink text-white hover:bg-bank-ink-elev gap-2"
-              title="Erzwingt einen direkten Yahoo-Fetch (Throttle umgehen)"
+              title="Triggert einen Preis-Sync über den yfinance-Backend-Pfad"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-              {refreshing ? 'Aktualisiere…' : 'Force-Refresh (Yahoo neu laden)'}
+              {refreshing ? 'Sync läuft…' : 'Preis-Sync ausführen'}
             </Button>
           </div>
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
+      <div
+        className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6"
+        data-testid="market-data-kpis"
+      >
         <AdminSurfaceCard className="p-4">
           <p className="text-xs uppercase tracking-wider text-bank-text-muted">Aktive Symbole</p>
           <p className="text-2xl font-bold text-bank-text mt-1">{summary.totalActive}</p>
@@ -256,7 +266,7 @@ const AdminMarketData = () => {
         </AdminSurfaceCard>
       </div>
 
-      <AdminSurfaceCard className="p-4 mb-6">
+      <AdminSurfaceCard className="p-4 mb-6" data-testid="market-data-health-card">
         <div className="flex items-start gap-3">
           {stalenessOk ? (
             <CheckCircle2 size={18} className="text-bank-success mt-0.5 shrink-0" />
@@ -270,18 +280,19 @@ const AdminMarketData = () => {
                 : 'Pipeline veraltet — letzter Refresh ist älter als 60 Min.'}
             </p>
             <p className="text-bank-text-muted">
-              Cron-Job läuft alle 15 Minuten via <code>pg_net</code> + Edge Function{' '}
-              <code>stock-prices</code> (Yahoo Finance Chart-Endpoint, throttled auf 5 Min für
-              Endkunden). Admin-Klick hier sendet <code>force: true</code> und umgeht den Throttle.
+              Sync läuft über den FastAPI-Endpoint{' '}
+              <code>POST /api/admin/stock-research/sync?sync_type=prices</code> (yfinance-Adapter).
+              Quotes werden aus dem Preis-Cache über{' '}
+              <code>GET /api/portfolio/quotes</code> gelesen.
             </p>
           </div>
         </div>
       </AdminSurfaceCard>
 
       {lastResponse && (
-        <AdminSurfaceCard className="p-4 mb-6">
+        <AdminSurfaceCard className="p-4 mb-6" data-testid="market-data-response-card">
           <p className="text-xs font-semibold uppercase tracking-wider text-bank-text-muted mb-2">
-            Letzte Edge-Function-Antwort
+            Letzte Sync-Antwort
           </p>
           <pre className="text-[11px] text-bank-text-muted bg-bank-bg/50 rounded-md p-3 overflow-auto max-h-60 whitespace-pre-wrap">
             {JSON.stringify(lastResponse, null, 2)}
@@ -290,12 +301,12 @@ const AdminMarketData = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AdminSurfaceCard className="p-0 overflow-hidden">
+        <AdminSurfaceCard className="p-0 overflow-hidden" data-testid="market-data-oldest-card">
           <div className="px-5 py-3 border-b border-bank-border flex items-center justify-between">
             <div>
               <p className="font-semibold text-bank-text">Älteste 20 Cache-Einträge</p>
               <p className="text-[11px] text-bank-text-muted">
-                Sortiert nach <code>fetched_at</code> aufsteigend.
+                Sortiert nach <code>as_of</code> aufsteigend.
               </p>
             </div>
             <Clock size={16} className="text-bank-text-muted" />
@@ -305,66 +316,8 @@ const AdminMarketData = () => {
               <thead className={adminTheadClass}>
                 <tr>
                   <th className="text-left px-4 py-2">Symbol</th>
-                  <th className="text-left px-4 py-2">Name</th>
                   <th className="text-right px-4 py-2">Kurs</th>
                   <th className="text-right px-4 py-2">Stand</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={4} className="text-center py-8 text-bank-text-muted">
-                      <RefreshCw size={14} className="inline animate-spin mr-2" /> Lädt…
-                    </td>
-                  </tr>
-                ) : oldestSymbols.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="text-center py-8 text-bank-text-muted">
-                      Noch keine Cache-Einträge.
-                    </td>
-                  </tr>
-                ) : (
-                  oldestSymbols.map((row) => (
-                    <tr key={row.symbol} className={adminRowHover}>
-                      <td className="px-4 py-2 font-semibold text-bank-text">{row.symbol}</td>
-                      <td className="px-4 py-2 text-bank-text-muted truncate max-w-[180px]">
-                        {row.name || '–'}
-                      </td>
-                      <td className="px-4 py-2 text-right tabular-nums">
-                        {row.price != null
-                          ? Number(row.price).toLocaleString('de-DE', {
-                              maximumFractionDigits: 2,
-                            })
-                          : '–'}
-                      </td>
-                      <td className="px-4 py-2 text-right text-bank-text-muted">
-                        {fmtAge(row.fetched_at)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </AdminSurfaceCard>
-
-        <AdminSurfaceCard className="p-0 overflow-hidden">
-          <div className="px-5 py-3 border-b border-bank-border flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-bank-text">Symbole ohne Preis</p>
-              <p className="text-[11px] text-bank-text-muted">
-                Aktive Stocks, für die keine oder eine leere Cache-Zeile existiert.
-              </p>
-            </div>
-            <AlertTriangle size={16} className="text-amber-600" />
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className={adminTheadClass}>
-                <tr>
-                  <th className="text-left px-4 py-2">Symbol</th>
-                  <th className="text-left px-4 py-2">Name</th>
-                  <th className="text-left px-4 py-2">Sektor</th>
                 </tr>
               </thead>
               <tbody>
@@ -374,9 +327,61 @@ const AdminMarketData = () => {
                       <RefreshCw size={14} className="inline animate-spin mr-2" /> Lädt…
                     </td>
                   </tr>
+                ) : oldestSymbols.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="text-center py-8 text-bank-text-muted">
+                      Noch keine Cache-Einträge.
+                    </td>
+                  </tr>
+                ) : (
+                  oldestSymbols.map((row) => (
+                    <tr key={row.symbol} className={adminRowHover}>
+                      <td className="px-4 py-2 font-semibold text-bank-text">{row.symbol}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">
+                        {row.price != null
+                          ? Number(row.price).toLocaleString('de-DE', {
+                              maximumFractionDigits: 2,
+                            })
+                          : '–'}
+                      </td>
+                      <td className="px-4 py-2 text-right text-bank-text-muted">
+                        {fmtAge(row.as_of)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </AdminSurfaceCard>
+
+        <AdminSurfaceCard className="p-0 overflow-hidden" data-testid="market-data-missing-card">
+          <div className="px-5 py-3 border-b border-bank-border flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-bank-text">Symbole ohne Preis</p>
+              <p className="text-[11px] text-bank-text-muted">
+                Universe-Tickers, für die die Quotes-API aktuell keinen Preis liefert.
+              </p>
+            </div>
+            <AlertTriangle size={16} className="text-amber-600" />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className={adminTheadClass}>
+                <tr>
+                  <th className="text-left px-4 py-2">Symbol</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td className="text-center py-8 text-bank-text-muted">
+                      <RefreshCw size={14} className="inline animate-spin mr-2" /> Lädt…
+                    </td>
+                  </tr>
                 ) : summary.missingList.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="text-center py-8 text-bank-success">
+                    <td className="text-center py-8 text-bank-success">
                       Alle aktiven Symbole haben Kurse.
                     </td>
                   </tr>
@@ -384,10 +389,6 @@ const AdminMarketData = () => {
                   summary.missingList.slice(0, 50).map((s) => (
                     <tr key={s.symbol} className={adminRowHover}>
                       <td className="px-4 py-2 font-semibold text-bank-text">{s.symbol}</td>
-                      <td className="px-4 py-2 text-bank-text-muted truncate max-w-[180px]">
-                        {s.name || '–'}
-                      </td>
-                      <td className="px-4 py-2 text-bank-text-muted">{s.sector || '–'}</td>
                     </tr>
                   ))
                 )}

@@ -3,6 +3,56 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.80 (Preview · IMPLEMENTED) · Admin-Markt-Daten Supabase → FastAPI Cutover
+
+**Ziel:** `AdminMarketData.js` von 5 Supabase-Touches auf existierende FastAPI-Endpoints umstellen. Frontend-Only, keine neuen Backend-Endpoints, keine Preislogik verändert.
+
+### Endpoint-Mapping (Audit)
+| UI-Bereich | Vorher (Supabase) | Nachher (FastAPI) |
+|---|---|---|
+| Universe (aktive Symbole) | `supabase.from('stocks').select(...).eq('is_active', true)` | `POST /api/admin/stock-research/sync?sync_type=prices` → `tickers[]` |
+| Preis-Cache (fetched_at + price) | `supabase.from('stock_prices_cache').select(...)` | `GET /api/portfolio/quotes?symbols=T1,T2,...` → `{sym: {price, as_of, currency, price_status}}` |
+| Force-Refresh | `supabase.functions.invoke('stock-prices', {body:{force:true}})` | `POST /api/admin/stock-research/sync?sync_type=prices` |
+| Health-Check | `supabase.functions.invoke('stock-prices', {body:{symbols:['AAPL']}})` | `GET /api/portfolio/quotes?symbols=AAPL` |
+| Sync-History (bereits vorhanden) | — | `GET /api/admin/stock-research/sync/history?limit=10` |
+
+### Was gebaut wurde
+- **`AdminMarketData.js` komplett neu geschrieben** (Overwrite):
+  - Kein `supabase`-Import, keine Edge-Function-Calls
+  - Universe kommt einmalig beim Load aus dem Sync-POST (universe + tickers[])
+  - Quotes über batched `/api/portfolio/quotes` mit CSV der Universe-Symbole
+  - KPIs + "Älteste 20"-Liste + "Symbole ohne Preis" arbeiten auf `quotes[symbol].price` und `quotes[symbol].as_of` (kein Fake-Preis, fehlende Symbole gehen in „missing")
+  - „Preis-Sync ausführen"-Button triggert denselben Sync-Endpoint und toastet `updated / provider_hits`
+  - Health-Check ruft `AAPL` ab und zeigt `price / currency / as_of / source / price_status`
+  - `data-testid` auf allen wichtigen Elementen: `market-data-{refresh,health}-btn`, `market-data-{kpis,oldest-card,missing-card,response-card,health-card}`
+
+### Security & Auth-Matrix (verifiziert)
+- `POST /api/admin/stock-research/sync?sync_type=prices` → unauth **401** ✅ · customer **403** ✅ · admin **200** ✅ (universe_size=11, tickers=NVDA/AAPL/MSFT/GOOGL/AMZN/SAP/SIE/ALV/DBK/IFX/RHM)
+- `GET /api/portfolio/quotes?symbols=AAPL` → unauth **401** ✅ · authenticated **200** (customer + admin both allowed, correct — dies ist ein auth-only, nicht admin-only)
+
+### Responsive
+- **Desktop 1920 × 900**: alle 5 KPI-Karten in einer Zeile, beide Tabellen 2-spaltig, kein Overflow ✅
+- **Mobile 390 × 844**: KPI-Karten 2-spaltig, Tabellen stacken vertikal, kein Layout-Break ✅
+
+### FINAL REPORT
+- FILES_CHANGED: `frontend/src/pages/AdminMarketData.js` (Rewrite · 404 → 337 Zeilen), `memory/PRD.md`
+- SUPABASE_TOUCHES_BEFORE: **5** · SUPABASE_TOUCHES_AFTER: **0** ✅ · SUPABASE_IMPORT_PRESENT: **NO** ✅
+- LIST_SOURCE_AFTER: `/api/admin/stock-research/sync?sync_type=prices` (Universe) + `/api/portfolio/quotes` (Preise)
+- REFRESH_SOURCE_AFTER: `/api/admin/stock-research/sync?sync_type=prices` (statt Edge Function)
+- HEALTH_SOURCE_AFTER: `/api/portfolio/quotes?symbols=AAPL`
+- BACKEND_CHANGED: **NO** ✅ · NEW_BACKEND_ENDPOINTS: **0** ✅
+- PRICE_LOGIC_CHANGED: **NO** ✅ (Preise/`as_of` stammen unverändert aus dem yfinance-Backend-Cache)
+- FAKE_MARKET_DATA: **0** ✅ (fehlende Preise → Symbol landet in „Fehlend"-Tabelle)
+- UNAUTH: **401** ✅ · CUSTOMER_ADMIN_ACCESS: **403** ✅ · ADMIN_ACCESS: **200** ✅
+- FINANCIAL_WRITES: **0** ✅ · SUPABASE_WRITES: **0** ✅
+- MOBILE_390: **PASS** · DESKTOP_1920: **PASS**
+- ADMIN_MARKET_DATA_MONGO_NATIVE: **YES** ✅
+- ADMIN_READY_COUNT: **31 → 32 / 40** ✅
+- READY_FOR_NEXT_ADMIN_CUTOVER: **YES** (nächstes P1: Admin-Users Backend + Frontend, bereits BACKEND_MISSING aus 82.78) · READY_FOR_PROD: **NO** (Deploy-Blocker unverändert)
+
+---
+
+
 ## Session 82.79b (Preview · IMPLEMENTED) · Bond Issuer Logo Coverage Fix
 
 **Ziel:** Auf der Anleihen-Kaufen-Seite Emittentenlogos für alle eindeutig identifizierbaren Bonds anzeigen. Reine Frontend-Datenanreicherung. Keine Financial-Logik, keine Preise, keine Order-Flows verändert.
