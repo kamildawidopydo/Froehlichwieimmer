@@ -3,6 +3,56 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.82 (Preview · IMPLEMENTED) · Admin-Offer-Interests FastAPI/Mongo Backend + Frontend Cutover
+
+**Ziel:** `/admin/offer-interests` vollständig Mongo-native. Keine erfundenen Felder — Frontend erwartete Supabase-Schema `{id, name, email, phone, offer_bank_name, message, created_at}` mit Actions {List, Search, Delete}, das Backend mirror­t exakt dieses Schema in einer neuen leeren `offer_interests`-Collection.
+
+### Audit (Phase 1)
+- Frontend nutzte 3 Supabase-Touches: `.from('offer_interests').select()`, `.from('offer_interests').delete()`, plus Import
+- Mongo hatte **KEINE** `offer_interests`-Collection (nur `savings_offers`, `investment_leads` mit anderen Schemas)
+- Preview-DB bleibt in dieser Session leer — legitimer Empty State, kein Fake-Seed (Public-Submit-Pfad ist nicht Teil dieser Session)
+
+### Backend · `/app/backend/routes/admin_offer_interests.py`
+- `GET    /api/admin/offer-interests?q=&limit=1..200&offset=0` — Substring-Search auf `name/email/offer_bank_name`
+- `GET    /api/admin/offer-interests/{id}` — Detail (400 bei ungültiger OID, 404 bei nicht gefunden)
+- `DELETE /api/admin/offer-interests/{id}` — 204 bei Erfolg, 404 bei doppeltem/nicht-existentem Delete
+- `require_admin` auf allen Endpoints · Whitelist-`_serialize` verhindert Leak interner Felder
+- Kein POST (Public-Submit-Path außerhalb dieser Session · `extra=forbid` nicht relevant, da keine Writes vom Admin)
+
+### Frontend
+- `AdminOfferInterests.js` Rewrite: **3 Supabase-Touches → 0**, Server-Side-Search mit 300 ms Debounce, gleicher UI-Look
+- data-testids: `offer-interests-{search-input,count,table-wrap,loading,empty}`, pro Row `offer-interests-{row,delete-btn}-{id}`
+
+### Tests (alle grün)
+| Test | Erwartet | Ergebnis |
+|---|---|---|
+| Frontend `grep -c supabase` | 0 | **0** ✅ |
+| Auth GET unauth/customer/admin | 401/403/200 | **401/403/200** ✅ |
+| Auth DELETE unauth/customer | 401/403 | **401/403** ✅ |
+| List `{total,limit,offset,items[]}` Whitelist | ok | **ok** (empty in Preview) ✅ |
+| Detail invalid OID / nonexistent | 400 / 404 | **400 / 404** ✅ |
+| DELETE round-trip: Insert → List(1) → Delete(204) → Double-Delete(404) → List(0) | ok | **ok** ✅ |
+| Coupon Pytest Regression | 16/16 | **16/16** ✅ |
+| Realized-PnL Pytest Regression | 5/5 | **5/5** ✅ |
+| Desktop 1920 · Mobile 390 · Overflow | 0 (page-level) | **0** ✅ |
+
+### Safety
+- 0 Financial-Writes · 0 Ledger/Cash/Position/Order/Coupon-Änderung · QA-Testdatensatz nach Test-Delete-Round-Trip wieder entfernt · Kein Prod-Deploy
+
+### FINAL REPORT Flags
+- FILES_CHANGED: `backend/routes/admin_offer_interests.py` (neu · 89 Zeilen), `backend/server.py` (+3 Zeilen), `frontend/src/pages/AdminOfferInterests.js` (Rewrite · 162 → 176 Zeilen), `memory/PRD.md`
+- ADMIN_OFFER_INTERESTS_SUPABASE_TOUCHES: **3 → 0** ✅ · SUPABASE_IMPORT_PRESENT: **NO** ✅
+- MASS_ASSIGNMENT: **PASS** (keine Writes vom Admin außer DELETE-by-ID · kein Owner-Feld manipulierbar) ✅
+- SENSITIVE_FIELDS_EXPOSED: **0** ✅ (Whitelist-Serializer, kein `password_hash`/Owner-ID/interne Felder)
+- CROSS_USER_LEAKS: **0** ✅ (Admin-Only-Endpoints, kein user_id-Feld im Schema, kein Owner-Filter nötig)
+- FINANCIAL_WRITES: **0** ✅
+- ADMIN_OFFER_INTERESTS_MONGO_NATIVE: **YES** ✅
+- ADMIN_READY_COUNT: **33 → 34 / 40** ✅
+- READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Deploy-Blocker unverändert)
+
+---
+
+
 ## Session 82.81 (Preview · IMPLEMENTED) · Admin-Users FastAPI/Mongo Backend + Frontend Cutover
 
 **Ziel:** `/admin/users` vollständig Mongo-native — neuer Backend-Router `/api/admin/users` + Frontend-Cutover · **keine erfundenen Felder/Zustände**.
