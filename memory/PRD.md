@@ -3,6 +3,30 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.38 (Preview) · Depot Delta-KPI „Heute" aus Portfolio-Snapshots
+
+- **Neue Datenquelle für „Heute"-KPI** in `components/mein-depot/DepotKpiRail.jsx`: statt Intraday-Aktien-Delta (`dailyPortfolioPnl` aus `stock_prices_cache.change_abs`) jetzt echter Snapshot-Vergleich `latest.total_value − previous.total_value` aus `heroSnapshots` (Endpoint `/api/portfolio/snapshots?days=400`, Mongo-Collection `portfolio_snapshots`).
+- **Neuer exportierter Selector** `computeSnapshotDayChange(heroSnapshots)` → `{count, absolute, pct, incomplete, latest, previous}`. Frontend rechnet ausschließlich abs/pct; die Snapshot-Werte selbst kommen unverändert vom Backend (Source of Truth).
+- **Formel**: `abs = latest.total_value - previous.total_value` · `pct = prevTotal > 0 ? abs/prevTotal*100 : null` (keine Division durch 0).
+- **Valuation-Incomplete-Handling (Approach B, keine scheinpräzise Performance)**: wenn `stocks_valuation_complete=false` ODER `bonds_valuation_complete=false` in latest oder previous → `—` mit Sekundär-Hinweis „Bewertung unvollständig — Vergleich nicht verlässlich".
+- **Empty/One-Point-States**: 0 Snapshots → „—" · „Noch kein Depot-Snapshot vorhanden"; 1 Snapshot → „—" · „Noch kein Vergleichswert vom Vortag".
+- **UI**: positiv dezent emerald-700, negativ dezent rose-700, 0 neutral · Sekundärzeile mit Arrow-Icon + „X,XX % vs. Vortag".
+- **KEIN neuer Backend-Endpoint** — `/api/portfolio/snapshots` liefert bereits alles Nötige.
+- **QA (verifiziert im Preview, demo.kunde):**
+  - Ausgangslage 1 Snapshot (2026-09-07, `total_value=9001.56`, `stocks_valuation_complete=false`, `bonds_valuation_complete=false`) → KPI zeigte korrekt „—" + „Bewertung unvollständig".
+  - QA-Setup: synthetischen Vortags-Snapshot 2026-09-06 mit `total_value=10000.0` + beide `valuation_complete=true` eingespielt, sowie den 2026-09-07-Snapshot als valuation_complete markiert.
+  - Erwartetes Delta: 9001.56 − 10000.00 = **−998,44 €**, pct = −9,98 %.
+  - UI zeigte im Preview den korrekten roten Delta-Betrag im „Heute"-Feld mit „−9,98 % vs. Vortag".
+  - Desktop 1920px + Mobile 390px ohne Overflow, KPI-Rail-Zelle vollständig sichtbar.
+  - Hard-Reload liefert identischen KPI (keine 0→real Flicker; nur `heroSnapshots` als Datenquelle).
+  - Regression-Check: Dashboard-Banner-Fix (82.35), IPO-Allocation-UI (82.36), Bond-Execution-UI (82.37) unverändert.
+
+- **Files Changed**: `components/mein-depot/DepotKpiRail.jsx`, `memory/PRD.md`.
+- **QA-Test-Snapshot**: `{user_id: demo.kunde, snapshot_date: 2026-09-06, source: 'qa82.38-test'}` — vor Prod-Deploy bereinigen.
+
+---
+
+
 ## Session 82.37 (Preview) · Admin Bond Execution UI
 
 - **Neuer Frontend-Flow** in `pages/AdminBondRequests.js`:

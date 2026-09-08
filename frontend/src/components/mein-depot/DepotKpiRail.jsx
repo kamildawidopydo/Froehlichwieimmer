@@ -61,6 +61,29 @@ const KpiCell = ({ label, primary, secondary, tone = 'neutral', testId }) => (
   </div>
 );
 
+// Session 82.38 · Tages-Delta ausschließlich aus echten Portfolio-Snapshots.
+// Frontend berechnet nur abs/pct; Backend bleibt Source of Truth für die Snapshot-Werte.
+export const computeSnapshotDayChange = (heroSnapshots) => {
+  const sorted = [...(heroSnapshots || [])]
+    .filter((s) => s && s.snapshot_date && s.total_value != null)
+    .sort((a, b) => String(a.snapshot_date).localeCompare(String(b.snapshot_date)));
+  const n = sorted.length;
+  if (n === 0) return { count: 0, absolute: null, pct: null, incomplete: false, latest: null, previous: null };
+  if (n === 1) return { count: 1, absolute: null, pct: null, incomplete: false, latest: sorted[0], previous: null };
+  const latest = sorted[n - 1];
+  const previous = sorted[n - 2];
+  const incomplete =
+    latest.stocks_valuation_complete === false ||
+    latest.bonds_valuation_complete === false ||
+    previous.stocks_valuation_complete === false ||
+    previous.bonds_valuation_complete === false;
+  const prevTotal = Number(previous.total_value);
+  const latestTotal = Number(latest.total_value);
+  const absolute = latestTotal - prevTotal;
+  const pct = prevTotal > 0 ? (absolute / prevTotal) * 100 : null;
+  return { count: n, absolute, pct, incomplete, latest, previous };
+};
+
 const DepotKpiRail = () => {
   const {
     loading,
@@ -68,13 +91,13 @@ const DepotKpiRail = () => {
     depotGV,
     bondsEinstand,
     bondsGV,
-    dailyPortfolioPnl,
     cashBalance,
     stockMetrics,
     activeBonds,
     dashboardFetchHadFailure,
     portfolioSummary,
     refreshPortfolioSummary,
+    heroSnapshots,
   } = useDashboardData();
 
   // Session 82.24 · Depot Phase 4B-Final — serverseitige Summary beim Mount ziehen.
@@ -106,10 +129,8 @@ const DepotKpiRail = () => {
     const bondCount = useServer ? Number(s.bonds?.positions ?? 0) : (activeBonds || []).length;
     const posTotal = stockCount + bondCount;
 
-    const dailyPnl = Number(dailyPortfolioPnl || 0);
-    const dailyKnown = stockCount > 0;
-    const dailyUp = dailyPnl >= 0;
-
+    // Session 82.38 · „Heute" nur aus echten Portfolio-Snapshots (2+ Tage), keine Intraday-Simulation.
+    const snapDelta = computeSnapshotDayChange(heroSnapshots);
     const stocksValIncomplete = useServer && s.stocks?.valuation_complete === false;
 
     return {
@@ -145,14 +166,51 @@ const DepotKpiRail = () => {
             </span>
           ),
       },
-      // 3. Heute (nur Aktien-Delta aus stock_prices_cache.change_abs)
-      heute: {
-        primary: dailyKnown ? formatEURSigned(dailyPnl) : '—',
-        tone: dailyKnown ? (dailyUp ? 'pos' : 'neg') : 'muted',
-        secondary: dailyKnown
-          ? 'Tagesveränderung Aktien-Positionen'
-          : 'Keine Aktien-Positionen im Depot',
-      },
+      // 3. Heute — Tages-Delta aus echten Portfolio-Snapshots (Session 82.38).
+      // 0 Snapshots → „—"; 1 Snapshot → „Noch kein Vergleichswert";
+      // 2+ mit valuation_complete=false → „—" + Hinweis („keine scheinpräzise Performance");
+      // 2+ vollständig → abs + optional % (null wenn previous.total_value ≤ 0).
+      heute: (() => {
+        if (snapDelta.count === 0) {
+          return { primary: '—', tone: 'muted', secondary: 'Noch kein Depot-Snapshot vorhanden' };
+        }
+        if (snapDelta.count === 1) {
+          return { primary: '—', tone: 'muted', secondary: 'Noch kein Vergleichswert vom Vortag' };
+        }
+        if (snapDelta.incomplete) {
+          return {
+            primary: '—',
+            tone: 'muted',
+            secondary: 'Bewertung unvollständig — Vergleich nicht verlässlich',
+          };
+        }
+        const dayUp = (snapDelta.absolute || 0) >= 0;
+        const absTxt = formatEURSigned(snapDelta.absolute);
+        return {
+          primary: absTxt,
+          tone: snapDelta.absolute === 0 ? 'neutral' : dayUp ? 'pos' : 'neg',
+          secondary: (
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              {snapDelta.absolute === 0 ? null : dayUp ? (
+                <ArrowUpRight size={12} strokeWidth={1.6} aria-hidden />
+              ) : (
+                <ArrowDownRight size={12} strokeWidth={1.6} aria-hidden />
+              )}
+              {snapDelta.pct == null ? (
+                <span>Vs. Vortag · % nicht berechenbar</span>
+              ) : (
+                <>
+                  <span aria-hidden>{dayUp && snapDelta.absolute !== 0 ? '+' : ''}</span>
+                  <span className="sr-only">
+                    {dayUp ? 'positiv ' : 'negativ '}
+                  </span>
+                  <span>{snapDelta.pct.toFixed(2).replace('.', ',')} % vs. Vortag</span>
+                </>
+              )}
+            </span>
+          ),
+        };
+      })(),
       // 4. Liquidität
       cash: {
         primary: uncertain ? '—' : formatEUR(cashBalance || 0),
@@ -177,8 +235,10 @@ const DepotKpiRail = () => {
     bondsGV,
     stockMetrics,
     activeBonds,
-    dailyPortfolioPnl,
     cashBalance,
+    heroSnapshots,
+    portfolioSummary,
+    uncertain,
   ]);
 
   if (loading) {
