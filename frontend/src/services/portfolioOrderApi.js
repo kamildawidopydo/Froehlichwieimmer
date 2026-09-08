@@ -34,4 +34,15 @@ export const portfolioOrderApi = {
   createOrder: (payload) => req('/portfolio/orders', { method: 'POST', body: JSON.stringify(payload) }),
   cancelOrder: (id) => req(`/portfolio/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST' }),
   getCash: () => req('/portfolio/cash'),
+  // Session 82.61a — Mongo-native Coupon Peek (read-only, kein Reserve).
+  peekCoupon: ({ coupon_code, side, quantity, limit_price }) =>
+    req('/portfolio/coupons/peek', {
+      method: 'POST',
+      body: JSON.stringify({
+        coupon_code,
+        side,
+        quantity: String(quantity),
+        limit_price: String(limit_price),
+      }),
+    }),
 };

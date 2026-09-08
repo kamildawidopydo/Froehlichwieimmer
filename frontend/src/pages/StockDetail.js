@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState, useRef, Suspense, laz
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { watchlistApi } from '@/services/watchlistApi';
-import OrderCreateModal from '@/components/portfolio/OrderCreateModal';
+import { portfolioOrderApi } from '@/services/portfolioOrderApi';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import { useNewsList } from '@/hooks/useNewsList';
 import { fetchDividends } from '@/services/dividendService';
@@ -301,24 +301,33 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   const [cashAvailable, setCashAvailable] = useState(0);
   const [buyingPower, setBuyingPower] = useState(0);
 
-  // Order form state
-  const [orderType, setOrderType] = useState('market'); // market | limit
+  // Order form state — Session 82.62: Mongo-native Cutover.
+  // `market` ist backendseitig noch nicht verfügbar → Default = `limit`.
+  const [orderType, setOrderType] = useState('limit'); // limit (market disabled)
   const [limitPrice, setLimitPrice] = useState('');
   const [side, setSide] = useState('buy');
   const [quantity, setQuantity] = useState('');
   const [note, setNote] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [couponVerifiedPct, setCouponVerifiedPct] = useState(null);
+  const [couponPeekPreview, setCouponPeekPreview] = useState(null); // {gross,discount,net} vom Backend
   const [couponCheckLoading, setCouponCheckLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [buyingPowerError, setBuyingPowerError] = useState(null);
   const [sellSharesError, setSellSharesError] = useState(null);
   const [pendingSellQty, setPendingSellQty] = useState(0);
+  const [idemKey, setIdemKey] = useState(() =>
+    (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `k-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+  );
   const formRef = useRef(null);
 
   useEffect(() => {
     setBuyingPowerError(null);
     setSellSharesError(null);
+    // Coupon-Preview zurücksetzen wenn Coupon/qty/limit sich ändern.
+    setCouponPeekPreview(null);
   }, [quantity, couponCode, side, orderType, limitPrice]);
 
   const loadFundamentals = useCallback(() => {
@@ -491,24 +500,42 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
       toast.error('Bitte Gutscheincode eingeben');
       return;
     }
+    if (side !== 'buy') {
+      toast.error('Gutscheine sind nur für Kaufaufträge gültig');
+      return;
+    }
+    const q = Number(quantity);
+    const px = orderType === 'limit' ? Number(limitPrice) : Number(price?.price);
+    if (!q || q <= 0) {
+      toast.error('Bitte zuerst Stückzahl angeben');
+      return;
+    }
+    if (!px || px <= 0) {
+      toast.error(orderType === 'limit' ? 'Bitte zuerst Limitkurs angeben' : 'Kein aktueller Kurs verfügbar');
+      return;
+    }
     setCouponCheckLoading(true);
-    const { data, error } = await supabase.rpc('peek_stock_trade_coupon', { p_code: raw });
-    setCouponCheckLoading(false);
-    if (error) {
-      toast.error('Gutschein konnte nicht geprüft werden.');
-      return;
-    }
-    const row = Array.isArray(data) ? data[0] : data;
-    if (row == null || row.percent == null) {
-      toast.error('Code ungültig oder nicht mehr aktiv');
+    try {
+      const preview = await portfolioOrderApi.peekCoupon({
+        coupon_code: raw,
+        side: 'buy',
+        quantity: q,
+        limit_price: px,
+      });
+      setCouponVerifiedPct(Number(preview.percent));
+      setCouponPeekPreview(preview);
+      toast.success(
+        `Gutschein gültig: ${Number(preview.percent).toLocaleString('de-DE', { maximumFractionDigits: 2 })}% Rabatt (−${Number(preview.discount).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })})`,
+      );
+    } catch (err) {
       setCouponVerifiedPct(null);
-      return;
+      setCouponPeekPreview(null);
+      toast.error(err?.detail || 'Gutschein konnte nicht geprüft werden.');
+    } finally {
+      setCouponCheckLoading(false);
     }
-    setCouponVerifiedPct(Number(row.percent));
-    toast.success(`Gutschein gültig: ${Number(row.percent).toLocaleString('de-DE', { maximumFractionDigits: 2 })}% Rabatt`);
   };
 
-  const [showOrderModal, setShowOrderModal] = useState(false);
   const { refreshAll: refreshDashboard } = useDashboardData();
 
   const toggleWatchlist = async () => {
@@ -548,40 +575,33 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
     if (!user) { toast.error('Bitte einloggen'); return; }
     const qty = Number(quantity);
     if (!qty || qty <= 0) { toast.error('Bitte Stückzahl angeben'); return; }
-    const px = orderType === 'limit' ? Number(limitPrice) : Number(price.price);
+    if (!Number.isInteger(qty) || qty < 1) {
+      toast.error('Stückzahl muss eine positive Ganzzahl sein');
+      return;
+    }
+    if (orderType !== 'limit') {
+      toast.error('Nur Limit-Orders sind derzeit möglich.');
+      return;
+    }
+    const px = Number(limitPrice);
     if (!px || px <= 0) {
-      toast.error(orderType === 'limit' ? 'Bitte Limitkurs angeben' : 'Kein aktueller Kurs verfügbar');
+      toast.error('Bitte Limitkurs angeben');
       return;
     }
 
-    const gross = Math.round(qty * px * 10000) / 10000;
-    let discountPct = null;
     const codeTrim = side === 'buy' ? couponCode.trim() : '';
 
-    if (codeTrim) {
-      const { data: peekRows, error: peekErr } = await supabase.rpc('peek_stock_trade_coupon', { p_code: codeTrim });
-      if (peekErr) {
-        toast.error('Gutschein konnte nicht geprüft werden.');
-        return;
-      }
-      const prow = Array.isArray(peekRows) ? peekRows[0] : peekRows;
-      if (prow == null || prow.percent == null) {
-        toast.error('Ungültiger oder inaktiver Gutscheincode');
-        return;
-      }
-      discountPct = Number(prow.percent);
-    }
+    // UI-seitige Pre-Checks aus lokal geladenen Werten (Backend bleibt authoritativ).
+    const gross = Math.round(qty * px * 100) / 100;
+    const localDiscountPct = codeTrim && couponVerifiedPct != null ? Number(couponVerifiedPct) : null;
+    const localNet = localDiscountPct != null
+      ? Math.round((gross - gross * (localDiscountPct / 100)) * 100) / 100
+      : gross;
 
-    const discountAmt =
-      side === 'buy' && discountPct != null && discountPct > 0
-        ? Math.round((gross * (discountPct / 100)) * 100) / 100
-        : 0;
-    const net = Math.round((gross - discountAmt) * 100) / 100;
-
-    if (side === 'buy' && net > buyingPower) {
-      setBuyingPowerError({ required: net, available: buyingPower });
+    if (side === 'buy' && localNet > buyingPower) {
+      setBuyingPowerError({ required: localNet, available: buyingPower });
       setSellSharesError(null);
-      reportInsufficientBuyingPower(net, qty);
+      reportInsufficientBuyingPower(localNet, qty);
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
     }
@@ -598,87 +618,53 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
     setSellSharesError(null);
 
     setSubmitting(true);
-    const noteValue = note.trim() || null;
-    const { data: orderId, error } = await supabase.rpc('submit_user_stock_order', {
-      p_symbol: symbol,
-      p_side: side,
-      p_quantity: qty,
-      p_requested_price: px,
-      p_note: noteValue,
-      p_coupon_code: codeTrim || null,
-      p_order_type: orderType,
-      p_limit_price: orderType === 'limit' ? px : null,
-    });
-    setSubmitting(false);
-    if (error) {
-      const msg = error.message || '';
-      if (side === 'buy' && /Nicht genug Guthaben|Kaufkraft/i.test(msg)) {
-        setBuyingPowerError({ required: net, available: buyingPower });
+    try {
+      const payload = {
+        symbol: String(symbol).toUpperCase(),
+        side,
+        order_type: 'limit',
+        quantity: String(Math.trunc(qty)),
+        limit_price: String(px.toFixed(2)),
+        idempotency_key: idemKey,
+      };
+      if (codeTrim) payload.coupon_code = codeTrim;
+
+      const order = await portfolioOrderApi.createOrder(payload);
+
+      // Neuer Idempotenz-Key für die nächste Order.
+      setIdemKey(
+        (typeof crypto !== 'undefined' && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : `k-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      );
+
+      toast.success('Auftrag eingereicht — wartet auf Bestätigung');
+      setQuantity('');
+      setNote('');
+      setCouponCode('');
+      setCouponVerifiedPct(null);
+      setCouponPeekPreview(null);
+      setBuyingPowerError(null);
+      setSellSharesError(null);
+      void loadMeta();
+      try { refreshDashboard?.(); } catch (_) { /* noop */ }
+    } catch (err) {
+      const msg = err?.detail || err?.message || '';
+      if (side === 'buy' && /Liquidität|Kaufkraft|Guthaben/i.test(msg)) {
+        setBuyingPowerError({ required: localNet, available: buyingPower });
         setSellSharesError(null);
-        reportInsufficientBuyingPower(net, qty);
+        reportInsufficientBuyingPower(localNet, qty);
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         return;
       }
-      if (side === 'sell' && /Nicht genügend Stücke/i.test(msg)) {
-        const sellableQty = position
-          ? Math.max(0, Math.round((Number(position.quantity) - pendingSellQty) * 10000) / 10000)
-          : 0;
+      if (side === 'sell' && /Stücke|verfügbare Stücke|Bestand/i.test(msg)) {
         setSellSharesError({ requested: qty, available: sellableQty });
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         return;
       }
-      toast.error('Auftrag konnte nicht eingereicht werden.');
-      return;
-    }
-    if (!orderId) {
-      toast.error('Auftrag konnte nicht angelegt werden');
-      return;
-    }
-
-    const { data: inserted } = await supabase
-      .from('user_stock_orders')
-      .select('*')
-      .eq('id', orderId)
-      .maybeSingle();
-
-    toast.success('Auftrag eingereicht — wartet auf Bestätigung');
-    setQuantity('');
-    setNote('');
-    setCouponCode('');
-    setCouponVerifiedPct(null);
-    setBuyingPowerError(null);
-    setSellSharesError(null);
-    void loadMeta();
-
-    try {
-      const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
-      console.log('[send-stock-email] invoking submitted for', user.email);
-      supabase.functions.invoke('send-stock-email', {
-        body: {
-          type: 'submitted',
-          to: user.email,
-          user_name: fullName || null,
-          order: {
-            symbol,
-            side,
-            quantity: qty,
-            requested_price: px,
-            total: net,
-            gross_amount: gross,
-            discount_percent: discountPct,
-            discount_amount: discountAmt > 0 ? discountAmt : null,
-            net_amount: net,
-            currency: price?.currency || stock?.currency || 'USD',
-            note: noteValue,
-            created_at: inserted?.created_at || new Date().toISOString(),
-          },
-        },
-      }).then(({ data, error: emErr }) => {
-        if (emErr) console.warn('[send-stock-email] error:', emErr);
-        else console.log('[send-stock-email] ok:', data);
-      }).catch((err) => console.warn('[send-stock-email] threw:', err));
-    } catch (err) {
-      console.warn('[send-stock-email] outer catch:', err);
+      toast.error(msg || 'Auftrag konnte nicht eingereicht werden.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -1064,7 +1050,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                   type="button"
                   onClick={() => {
                     setSide('buy');
-                    setShowOrderModal(true);
+                    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
                   className="h-11 rounded-md bg-emerald-600 text-[14px] font-semibold text-white transition-colors hover:bg-emerald-700"
                   data-testid="stock-detail-buy-btn"
@@ -1178,8 +1164,10 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
               <div className="flex gap-2 mb-4">
                 <button
                   type="button"
-                  onClick={() => setOrderType('market')}
-                  className={`flex-1 h-9 rounded-md text-[12px] font-medium border ${orderType === 'market' ? 'bg-bank-primary text-white border-bank-primary' : 'border-bank-border text-bank-text-muted'}`}
+                  onClick={() => toast.info('Market-Orders sind derzeit noch nicht verfügbar. Bitte Limit-Order verwenden.')}
+                  disabled
+                  className={`flex-1 h-9 rounded-md text-[12px] font-medium border cursor-not-allowed opacity-60 ${orderType === 'market' ? 'bg-bank-primary text-white border-bank-primary' : 'border-bank-border text-bank-text-muted'}`}
+                  data-testid="order-type-market"
                 >
                   Markt
                 </button>
@@ -1190,6 +1178,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     if (!limitPrice && price?.price != null) setLimitPrice(String(price.price));
                   }}
                   className={`flex-1 h-9 rounded-md text-[12px] font-medium border ${orderType === 'limit' ? 'bg-bank-primary text-white border-bank-primary' : 'border-bank-border text-bank-text-muted'}`}
+                  data-testid="order-type-limit"
                 >
                   Limit
                 </button>
@@ -1255,24 +1244,30 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                         onChange={(e) => {
                           setCouponCode(e.target.value);
                           setCouponVerifiedPct(null);
+                          setCouponPeekPreview(null);
                         }}
                         placeholder="z.B. A1B2C3D4E5F6"
                         className="flex-1 font-mono text-sm uppercase"
                         autoCapitalize="characters"
+                        data-testid="coupon-code-input"
                       />
                       <Button
                         type="button"
                         variant="outline"
                         className="shrink-0"
-                        disabled={couponCheckLoading || !couponCode.trim()}
+                        disabled={couponCheckLoading || !couponCode.trim() || !quantity || !limitPrice}
                         onClick={verifyCoupon}
+                        data-testid="coupon-verify-btn"
                       >
                         {couponCheckLoading ? '…' : 'Prüfen'}
                       </Button>
                     </div>
-                    {couponVerifiedPct != null && (
-                      <p className="mt-1 text-[11px] text-emerald-700">
-                        Rabatt: {Number(couponVerifiedPct).toLocaleString('de-DE', { maximumFractionDigits: 2 })}% (geschätzt auf Referenzkurs)
+                    {couponPeekPreview && (
+                      <p className="mt-1 text-[11px] text-emerald-700" data-testid="coupon-preview">
+                        Rabatt {Number(couponPeekPreview.percent).toLocaleString('de-DE', { maximumFractionDigits: 2 })}% —
+                        {' '}Brutto {Number(couponPeekPreview.gross).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })},
+                        {' '}−{Number(couponPeekPreview.discount).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })},
+                        {' '}Netto {Number(couponPeekPreview.net).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                       </p>
                     )}
                   </div>
@@ -1382,15 +1377,6 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
           </DashboardStagger>
         </div>
       </div>
-      <OrderCreateModal
-        open={showOrderModal}
-        onClose={() => setShowOrderModal(false)}
-        symbol={symbol}
-        displayName={stock?.name || symbol}
-        onCreated={() => {
-          try { refreshDashboard?.(); } catch (_) {}
-        }}
-      />
     </div>
   );
 
