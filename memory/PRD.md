@@ -3,6 +3,80 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.78 (Preview · READ-ONLY AUDIT) · Final Admin-Readiness + Depot/Auth/Support Roll-up
+
+**Ziel:** Die 10 PARTIAL-Admin-Seiten aus 82.77 einzeln nach EMPTY_BUT_READY / BACKEND_MISSING / DATA_SOURCE_MISSING / UI_INCOMPLETE klassifizieren. Anschließend finalen App-Status (Customer-Depot, Auth, Support, Admin) konsolidieren und offene P0/P1 exakt reporten. Keine Test-Daten geseedet · keine Financial-Writes · keine DB-Mutationen.
+
+### 10 PARTIAL-Admin-Seiten · Detail-Klassifikation
+
+| # | Route | Datei | Supabase-Touches | FastAPI-Backend? | **Status** |
+|---|---|---|---:|---|---|
+| 1 | `/admin/users` | `AdminUsers.js` | 5 (`profiles`, `supabase.functions.invoke('create-admin-user')`) | ❌ Kein `/api/admin/users`-Listing/CRUD | **BACKEND_MISSING** |
+| 2 | `/admin/offer-interests` | `AdminOfferInterests.js` | 3 (`offer_interests` Tabelle) | ❌ | **BACKEND_MISSING** |
+| 3 | `/admin/depot-contracts` | `AdminDepotContracts.js` | 8 (`user_depot_contracts` CRUD) | ⚠️ Nur `db.depot_contracts.create_index` (Collection-Prep · keine Endpoints) | **BACKEND_MISSING** |
+| 4 | `/admin/activity` | `AdminActivity.js` | 6 (Realtime-Channels · `admin_activity_log`) | ❌ Kein Activity-Log-Backend | **BACKEND_MISSING** |
+| 5 | `/admin/bond-positions` | `AdminBondPositions.js` | 9 (`user_bond_positions` CRUD) | ⚠️ `db.bond_positions` (Customer-Read) · kein Admin-CRUD | **BACKEND_MISSING** |
+| 6 | `/admin/stock-coupons` | `AdminStockCoupons.jsx` | 7 (`admin_create_stock_trade_coupon` RPC · `admin_revoke_stock_trade_coupon` RPC · Table-Delete) | ✅ `/api/admin/portfolio/coupons` (GET · POST · POST `/{id}/revoke`) — **existent seit 82.61a** | **DATA_SOURCE_MISSING** |
+| 7 | `/admin/formular-access` | `AdminFormularAccess.jsx` | 6 (`admin_create_formular_access_code` + `admin_revoke_formular_access_code` RPCs · Table-Delete) | ❌ | **BACKEND_MISSING** |
+| 8 | `/admin/document-uploads` | `AdminDocumentUploads.jsx` | 10 (Storage + RPCs + Tables) | ❌ Kein FastAPI-Endpoint · keine Object-Storage-Integration | **BACKEND_MISSING** |
+| 9 | `/admin/markt-daten` | `AdminMarketData.js` | 5 (`stocks` · `stock_prices_cache` · `supabase.functions.invoke('stock-prices')`) | ✅ `/api/stocks/*` (public quotes/fundamentals/history) + `/admin/stock-research/sync` — Frontend-Cutover machbar | **DATA_SOURCE_MISSING** |
+| 10 | `/admin/contract-submissions` | `AdminContractSubmissions.js` | 6 (`admin_list_contract_form_submissions` RPC + Storage) | ❌ | **BACKEND_MISSING** |
+
+**Verteilung:** BACKEND_MISSING=**8** · DATA_SOURCE_MISSING=**2** · EMPTY_BUT_READY=**0** · UI_INCOMPLETE=**0**
+
+Keine der PARTIAL-Seiten ist tatsächlich "ready + leer": alle 10 hängen noch am Supabase-Stack — 8 davon warten auf ein FastAPI-Backend, 2 könnten heute schon auf existierendes FastAPI umgestellt werden (`stock-coupons`, `markt-daten`).
+
+---
+
+### App-Roll-up (Preview) · Konsolidierter Status
+
+| Bereich | Status | Kommentar |
+|---|---|---|
+| **Customer Depot (Financial Core)** | ✅ **PROD-READY** | Sagas (Orders/Executions/Cash-Ledger/Positions) Mongo-native · Decimal128 · idempotent · 82.61a Coupon-Domain · 82.73 Realized-PnL · 82.75 E2E PASS · 82.61a-Regression-Pytest 16/16 |
+| **Auth** | ✅ **PROD-READY** | FastAPI JWT HttpOnly Cookie · bcrypt · brute-force lockout · Server-authoritative Role · `PATCH /me` mass-assignment safe · 82.67 AuthContext Cutover · 82.68 ProfilePage + change-password · 82.76/77 Owner-Admin Setup + Rotation |
+| **Support (Customer + Admin)** | ✅ **PROD-READY** | Vollständig Mongo-native (10/10 E2E-Tests grün) · `/api/support/*` + `/api/admin/support/*` · Realtime → 45-s-Polling · Mass-Assignment via `extra=forbid` gesichert |
+| **Admin-Menü (40 Routen)** | 🟡 **PARTIAL** | 30 READY · 10 PARTIAL (8 BACKEND_MISSING + 2 DATA_SOURCE_MISSING) · 0 BROKEN |
+| **Market-Data-Services** | 🟡 **PARTIAL** | Fundamentals · Events · Dividends Mongo-native (82.72) · **News + Forex bleiben Supabase-abhängig** (BLOCKED: kein Mongo-Fallback) |
+| **Prod-Deploy** | 🔴 **BLOCKED** | `SUPABASE_SERVICE_ROLE_KEY` fehlt in Emergent-Deploy-ENV · Ticket bei Support pending seit 17+ Iterationen |
+
+---
+
+### App-seitige P0/P1-Aufgaben · finale Restliste
+
+**P0 · Blocker (extern)**
+- `SUPABASE_SERVICE_ROLE_KEY` in Deploy-ENV setzen (Emergent-Support-Ticket · unverändert seit 82.52ff)
+
+**P1 · Frontend-Cutover (Backend existiert bereits · schnell umsetzbar)**
+- **P1.a `/admin/stock-coupons`** → Cutover auf `/api/admin/portfolio/coupons` (GET · POST · POST `/{id}/revoke`). Frontend-Only-Change.
+- **P1.b `/admin/markt-daten`** → Cutover auf `/api/stocks/*` (Symbol-Katalog, Quotes-Cache) + `/admin/stock-research/sync`. Frontend-Only-Change.
+
+**P1 · Neue Backend-Endpoints erforderlich (8 Admin-Seiten)**
+- **P1.c `/api/admin/users`** — Admin-Listing (approve/reject/search), Extra-Admin-Create-Endpoint als Ersatz für `create-admin-user` Edge-Function.
+- **P1.d `/api/admin/offer-interests`** — CRUD für `offer_interests`.
+- **P1.e `/api/admin/depot-contracts`** — CRUD auf `depot_contracts` (Collection bereits per Index vorbereitet).
+- **P1.f `/api/admin/activity`** — Admin-Activity-Log (Read + Filter, Realtime via SSE oder Polling).
+- **P1.g `/api/admin/bond-positions`** — Admin-CRUD auf `bond_positions` (Customer-Read existiert; Admin-Overrides fehlen).
+- **P1.h `/api/admin/formular-access`** — Access-Code Create/Revoke/List (Ersatz für 2 Supabase-RPCs).
+- **P1.i `/api/admin/document-uploads`** — Document-Access-Codes + Upload-Submissions + Object-Storage-Integration (Emergent Storage · Playbook via integration_playbook_expert_v2).
+- **P1.j `/api/admin/contract-submissions`** — List + Detail + Signed-File-Download (Ersatz für Supabase-RPC + Storage-Bucket).
+
+**P1 · Market-Data-Rest (bereits offen aus 82.72)**
+- **P1.k** News-Backend-Track (Endpoints für `news_fuzzy_search` · `news_increment_video_view` · `news_search_suggestions` + Full-Suchindex).
+- **P1.l** Forex-Provider-Endpoint (`/api/forex/quotes` mit FX-Pair-Semantik).
+
+**Nicht mehr offen (in dieser Session bereits abgeschlossen)**
+- ~~Session 82.73 Realized-PnL~~ ✅ · ~~Session 82.74 Coupon-Test-Baseline~~ ✅ · ~~Session 82.75 Coupon+Notification E2E~~ ✅ · ~~Session 82.76 Owner-Admin~~ ✅ · ~~Session 82.77 Password-Rotation + 40-Routen-Audit~~ ✅
+
+### FINAL REPORT Flags
+- PARTIAL_PAGES_AUDITED: **10** · EMPTY_BUT_READY: **0** · BACKEND_MISSING: **8** · DATA_SOURCE_MISSING: **2** · UI_INCOMPLETE: **0**
+- CUSTOMER_DEPOT_STATUS: **PROD-READY** ✅ · AUTH_STATUS: **PROD-READY** ✅ · SUPPORT_STATUS: **PROD-READY** ✅ · ADMIN_STATUS: **PARTIAL (30/40 READY)**
+- FINANCIAL_WRITES: **0** ✅ · DB_MUTATIONS: **0** ✅ · SUPABASE_WRITES: **0** ✅ · TEST_DATA_SEEDED: **0** ✅
+- OPEN_P0: **1** (Deploy-ENV) · OPEN_P1_FRONTEND_ONLY: **2** (Coupons, Markt-Daten) · OPEN_P1_BACKEND: **8** Admin + **2** Market-Data (News, Forex) = **10 neue Endpoints**
+- READY_FOR_PROD: **NO** (Deploy-Blocker unverändert · Admin-Menu 25 % noch Supabase-abhängig)
+
+---
+
+
 ## Session 82.77 (Preview · IMPLEMENTED) · Admin First-Login + Password-Rotation + Admin-Menu-Audit
 
 **Ziel:** Owner-Admin-Konto aus 82.76 in Betrieb nehmen: Initial-Login → Passwort-Rotation via `POST /api/auth/change-password` → Hard-Reload + Re-Login → alle 40 Sidebar-Bereiche unter `/admin/*` besuchen und READY/PARTIAL/BROKEN klassifizieren. Kein Prod-Deploy, keine Financial-Writes, keine Daten-Änderung außer Passwort-Hash.
