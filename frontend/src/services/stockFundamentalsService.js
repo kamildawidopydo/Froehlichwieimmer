@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase';
+// Session 82.72 — Mongo-native Fundamentals via /api/stocks/{symbol}/fundamentals.
+const BASE = process.env.REACT_APP_BACKEND_URL;
 
 function mapRow(row) {
   if (!row) return null;
@@ -21,11 +22,8 @@ function mapRow(row) {
   };
 }
 
-function hasUsableFundamentals(mapped) {
+function hasUsable(mapped) {
   if (!mapped) return false;
-  if (mapped.fetchError && mapped.fiftyTwoWeekHigh == null && mapped.peRatio == null && mapped.marketCap == null) {
-    return false;
-  }
   return (
     mapped.marketCap != null ||
     mapped.peRatio != null ||
@@ -35,44 +33,22 @@ function hasUsableFundamentals(mapped) {
   );
 }
 
-/** Daily cache first; on miss triggers stock-fundamentals Edge Function (Yahoo fetch + upsert). */
 export async function fetchStockFundamentals(symbol) {
   const sym = String(symbol).toUpperCase();
-
-  const { data, error } = await supabase
-    .from('stock_fundamentals_cache')
-    .select('*')
-    .eq('symbol', sym)
-    .maybeSingle();
-  if (error) throw error;
-
-  const cached = mapRow(data);
-  if (hasUsableFundamentals(cached)) {
-    return cached;
-  }
-
-  const { data: live, error: fnErr } = await supabase.functions.invoke('stock-fundamentals', {
-    body: { symbol: sym, syncIfMissing: true },
+  const res = await fetch(`${BASE}/api/stocks/${encodeURIComponent(sym)}/fundamentals`, {
+    credentials: 'include',
   });
-
-  if (fnErr) {
-    const err = new Error(fnErr.message || 'Fundamentaldaten konnten nicht geladen werden.');
-    err.code = 'SYNC_FAILED';
+  if (!res.ok) {
+    const err = new Error(`HTTP ${res.status}`);
+    err.code = res.status === 404 ? 'NOT_CACHED' : 'SYNC_FAILED';
     throw err;
   }
-
-  if (live?.error) {
-    const err = new Error(String(live.error));
-    err.code = live.error === 'not_cached' ? 'NOT_CACHED' : 'SYNC_FAILED';
-    throw err;
-  }
-
-  const mapped = mapRow(live);
-  if (!hasUsableFundamentals(mapped)) {
+  const data = await res.json();
+  const mapped = mapRow(data);
+  if (!hasUsable(mapped)) {
     const err = new Error(mapped?.fetchError || 'Für dieses Symbol sind derzeit keine Kennzahlen verfügbar.');
     err.code = 'SYNC_FAILED';
     throw err;
   }
-
   return mapped;
 }

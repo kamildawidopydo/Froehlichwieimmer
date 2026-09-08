@@ -3,6 +3,36 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.72 (Preview · IMPLEMENTED · PARTIAL) · Market-Data-Services Cutover
+
+**Ergebnis:** 3 von 5 Services vollständig cutovert (fundamentals, events, dividends). 2 Services BLOCKED (news, forex) — kein 1:1-Mapping, per Session-Regel „NICHT improvisieren" transparent gestoppt.
+
+### Cutovers (3/5 ✅)
+- **`stockFundamentalsService.js`** (**3 → 0**): `/api/stocks/{symbol}/fundamentals` (Session 82.15). Shape unverändert. HTTP 200 verifiziert.
+- **`stockEventsService.js`** (**2 → 0**): `/api/stocks/{symbol}/earnings` (Session 82.15) mit Fan-out über symbols[]; keine synthetischen Dividend-Events. HTTP 200 verifiziert.
+- **`dividendService.js`** (**2 → 0**): `/api/stocks/{symbol}/dividends` (Session 82.15) mit Fan-out. Nur echte Provider-Werte, keine Annualisierung. HTTP 200 verifiziert.
+
+### BLOCKED (2/5)
+- **`newsService.js`** (**8 Touches, bleiben**): kein Mongo-Equivalent für die 3 RPCs (`news_fuzzy_search`, `news_increment_video_view`, `news_search_suggestions`) und den Full-Suchindex; nur `/api/stocks/{symbol}/news` existiert (single-symbol). **BLOCKED_SERVICES: [news]**. Umfassender News-Backend-Track nötig.
+- **`forexService.js`** (**1 Touch, bleibt**): Legacy nutzt `supabase.functions.invoke('stock-prices')` mit Forex-Pair-Symbols; kein `/api/forex` oder `/api/portfolio/quotes` mit FX-Semantik. **BLOCKED_SERVICES: [forex]**. Eigener FX-Provider-Endpoint nötig.
+
+### FINAL REPORT
+- FILES_CHANGED: `stockFundamentalsService.js`, `stockEventsService.js`, `dividendService.js`, `memory/PRD.md`
+- NEWS_SUPABASE: **8 → 8** (BLOCKED) · FUNDAMENTALS: **3 → 0** ✅ · STOCK_EVENTS: **2 → 0** ✅ · DIVIDEND: **2 → 0** ✅ · FOREX: **1 → 1** (BLOCKED)
+- TOTAL_SUPABASE_TOUCHES: **16 → 9** (7 entfernt · 9 verbleibend in 2 BLOCKED-Services)
+- FUNDAMENTALS_SOURCE_AFTER: `/api/stocks/{symbol}/fundamentals`
+- STOCK_EVENTS_SOURCE_AFTER: `/api/stocks/{symbol}/earnings` (fan-out)
+- DIVIDEND_SOURCE_AFTER: `/api/stocks/{symbol}/dividends` (fan-out)
+- NEW_BACKEND_ENDPOINTS: **0** (alle bereits vorhanden aus Session 82.15)
+- FAKE_MARKET_DATA / SYNTHETIC_EVENTS: **0** ✅ · GLOBAL_BANNER_REGRESSION: **NO** ✅
+- FINANCIAL_WRITES / SUPABASE_WRITES: **0** ✅ · REGRESSIONS: **0** ✅ (Coupon-Pytest 16/16 PASS)
+- MARKET_DATA_STACK_MONGO_NATIVE: **PARTIAL** (3/5 cutovert; 2 BLOCKED wegen fehlendem Backend-Equivalent)
+- BLOCKED_SERVICES: **[news, forex]**
+- READY_FOR_82.73_REALIZED_PNL: **YES** ✅ · READY_FOR_PROD: **NO**
+
+---
+
+
 ## Session 82.71 (Preview · IMPLEMENTED) · Admin-Support Mongo Cutover
 
 **Ziel:** Admin-Support (`pages/AdminSupport.js`) auf das Mongo-Support-Backend aus 82.70 umstellen. Support-Stack vollständig Supabase-frei. Kein Prod-Deploy.

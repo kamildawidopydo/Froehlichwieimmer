@@ -1,27 +1,34 @@
-// Dividend info for held symbols via the `stock-dividends` edge function.
+// Session 82.72 — Mongo-native Dividends via /api/stocks/{symbol}/dividends (Fan-out).
+const BASE = process.env.REACT_APP_BACKEND_URL;
 
-import { supabase } from '@/lib/supabase';
+async function fetchOne(symbol) {
+  try {
+    const res = await fetch(`${BASE}/api/stocks/${encodeURIComponent(symbol)}/dividends`, {
+      credentials: 'include',
+    });
+    if (!res.ok) return null;
+    const d = await res.json();
+    // Normalize backend shape → legacy consumer shape. Nur echte Provider-Werte.
+    return {
+      symbol,
+      currency: d.currency || 'USD',
+      ttmDividend: Number(d.ttm_dividend ?? d.ttmDividend ?? 0),
+      lastAmount: (d.last_amount ?? d.lastAmount) != null ? Number(d.last_amount ?? d.lastAmount) : null,
+      lastDate: d.last_date ?? d.lastDate ?? null,
+      payments12m: Number(d.payments_12m ?? d.payments12m ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
 
-/**
- * @returns {Promise<Record<string, {currency:string, ttmDividend:number, lastAmount:number|null, lastDate:string|null, payments12m:number}>>}
- */
 export async function fetchDividends(symbols) {
   const list = (symbols || []).filter(Boolean);
   if (list.length === 0) return {};
-  const { data, error } = await supabase.functions.invoke('stock-dividends', {
-    body: { symbols: list },
-  });
-  if (error) throw error;
+  const results = await Promise.all(list.map((s) => fetchOne(String(s).toUpperCase())));
   const map = {};
-  (data?.dividends || []).forEach((d) => {
-    if (!d?.symbol) return;
-    map[d.symbol] = {
-      currency: d.currency || 'USD',
-      ttmDividend: Number(d.ttm_dividend || 0),
-      lastAmount: d.last_amount != null ? Number(d.last_amount) : null,
-      lastDate: d.last_date || null,
-      payments12m: Number(d.payments_12m || 0),
-    };
+  results.forEach((r) => {
+    if (r?.symbol) map[r.symbol] = r;
   });
   return map;
 }
