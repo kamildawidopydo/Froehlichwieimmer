@@ -77,11 +77,18 @@ BENCHMARK_FOR: Dict[str, str] = {
 }
 
 # range → (yfinance period, interval, cache TTL seconds)
+# Session 82.84 — Frontend nutzt yfinance-Style-Keys (`5d`, `1mo`, `3mo`, `6mo`).
+# Backend akzeptiert beide Notationen: yfinance-Style (kanonisch) + Legacy
+# Kurzkeys (`1w`, `1m`, `3m`) als Aliase. Zusätzlich `6mo` neu unterstützt.
 RANGE_MAP: Dict[str, Dict[str, Any]] = {
     "1d":  {"period": "1d",  "interval": "5m",  "ttl": 5 * 60},
-    "1w":  {"period": "5d",  "interval": "30m", "ttl": 15 * 60},
-    "1m":  {"period": "1mo", "interval": "1d",  "ttl": 30 * 60},
-    "3m":  {"period": "3mo", "interval": "1d",  "ttl": 60 * 60},
+    "5d":  {"period": "5d",  "interval": "30m", "ttl": 15 * 60},
+    "1w":  {"period": "5d",  "interval": "30m", "ttl": 15 * 60},   # Legacy alias
+    "1mo": {"period": "1mo", "interval": "1d",  "ttl": 30 * 60},
+    "1m":  {"period": "1mo", "interval": "1d",  "ttl": 30 * 60},   # Legacy alias
+    "3mo": {"period": "3mo", "interval": "1d",  "ttl": 60 * 60},
+    "3m":  {"period": "3mo", "interval": "1d",  "ttl": 60 * 60},   # Legacy alias
+    "6mo": {"period": "6mo", "interval": "1d",  "ttl": 2 * 60 * 60},
     "1y":  {"period": "1y",  "interval": "1wk", "ttl": 6 * 60 * 60},
     "5y":  {"period": "5y",  "interval": "1mo", "ttl": 24 * 60 * 60},
     "max": {"period": "max", "interval": "3mo", "ttl": 24 * 60 * 60},
@@ -132,6 +139,13 @@ def _yf_history_sync(yf_sym: str, period: str, interval: str) -> Optional[List[d
         import yfinance as yf  # type: ignore
     except Exception:  # noqa: BLE001
         return None
+    # Session 82.84 — YFRateLimitError defensiv abfangen: kein synthetischer
+    # Fallback, kein 500. Signalisieren via `None` → Endpoint gibt sauber
+    # `data_status: "unavailable"` mit leeren Points zurück.
+    try:
+        from yfinance.exceptions import YFRateLimitError  # type: ignore
+    except Exception:  # noqa: BLE001
+        YFRateLimitError = None  # type: ignore
     try:
         t = yf.Ticker(yf_sym)
         hist = t.history(period=period, interval=interval, prepost=False, auto_adjust=False)
@@ -178,7 +192,13 @@ def _yf_history_sync(yf_sym: str, period: str, interval: str) -> Optional[List[d
             })
         return pts if len(pts) >= 2 else None
     except Exception as exc:  # noqa: BLE001
-        logger.info("yfinance history %s (%s/%s) error: %s", yf_sym, period, interval, str(exc)[:120])
+        # Session 82.84 — Rate-Limit explizit loggen, aber Verhalten identisch:
+        # `None` zurückgeben → Endpoint liefert `data_status: "unavailable"`.
+        if YFRateLimitError is not None and isinstance(exc, YFRateLimitError):
+            logger.warning("yfinance rate-limit hit for %s (%s/%s) — returning unavailable",
+                           yf_sym, period, interval)
+        else:
+            logger.info("yfinance history %s (%s/%s) error: %s", yf_sym, period, interval, str(exc)[:120])
         return None
 
 

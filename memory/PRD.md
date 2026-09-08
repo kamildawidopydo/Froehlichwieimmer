@@ -3,6 +3,35 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.84b (Preview · VERIFIED) · StockDetail Chart-History Range-Mismatch Fix + yfinance Rate-Limit Härtung
+
+**Auslöser:** User-Report „Keine Chartdaten verfügbar" auf `/aktien/:symbol`.
+
+### Root-Cause (bestätigt via curl)
+- Frontend (`StockDetail.js` `RANGES`, `StockPriceChart.jsx`) sendet `range` = **yfinance-Style** (`1d`, `5d`, `1mo`, `3mo`, `6mo`, `1y`, `5y`)
+- Backend `RANGE_MAP` in `/app/backend/routes/stock_public.py` akzeptierte nur Legacy-Kurzkeys (`1d`, `1w`, `1m`, `3m`, `1y`, `5y`, `max`)
+- Nicht-Match: `5d`, `1mo`, `3mo`, `6mo` → HTTP 400 „Ungültiger Zeitraum"
+
+### Fix (`/app/backend/routes/stock_public.py`)
+1. `RANGE_MAP` erweitert um yfinance-Style-Keys (`5d`, `1mo`, `3mo`, `6mo` neu). Legacy-Kurzkeys (`1w`, `1m`, `3m`) bleiben als Aliase → keine Breaking Change.
+2. `_yf_history_sync` fängt `yfinance.exceptions.YFRateLimitError` explizit ab, loggt `WARNING`, gibt `None` → Endpoint liefert sauber `data_status: "unavailable"` mit `points: []`. **Kein synthetischer Fallback, kein 500.**
+
+### Verifikation (Backend curl · 5 Symbole × 7 Ranges = 35 Calls)
+Alle 35 Kombinationen: **`data_status=fresh` · echte Points ≥ 21** (SAP, AAPL, IFX.DE, BOL.ST, KGX.DE × `1d/5d/1mo/3mo/6mo/1y/5y`).
+
+### Regression (grün)
+- Coupon-Pytest **16 / 16 PASS** ✅
+- Realized-PnL **5 / 5 PASS** ✅
+
+### Browser-Verifikation
+- Consent-Gate übersprungen via localStorage-Prime
+- Chart rendert sichtbar auf `/aktien/SAP` mit Startwert 182,70 € · Endwert 181,44 € · Veränderung -0,69 % · Quelle yfinance ✅
+- Range-Buttons 1T/1W/1M/3M/1J/5J/MAX vollständig sichtbar
+
+### Betroffene Dateien
+- `/app/backend/routes/stock_public.py` (RANGE_MAP erweitert, YFRateLimitError-Handling)
+
+
 ## Session 82.84 (Preview · VERIFIED · READ-ONLY AUDIT) · StockDetail Universum-Vollständigkeits-Verifikation (KGX.DE + 29 weitere)
 
 **Auslöser:** User berichtete „KGX.DE Chart fehlt, Metadaten leer, `KGX.DE KGX.DE` als Firmenname". Screenshot stammte aus Zeitraum **vor** Session 82.82b (Allowlist-Fix).
