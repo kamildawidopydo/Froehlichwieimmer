@@ -3,6 +3,85 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.81 (Preview · IMPLEMENTED) · Admin-Users FastAPI/Mongo Backend + Frontend Cutover
+
+**Ziel:** `/admin/users` vollständig Mongo-native — neuer Backend-Router `/api/admin/users` + Frontend-Cutover · **keine erfundenen Felder/Zustände**.
+
+### Audit (Phase 1 · READ-ONLY)
+- Frontend nutzte 4 Supabase-Touches: `supabase.from('profiles').select/update` (List/Approve/Reject) + `supabase.functions.invoke('create-admin-user')`.
+- Mongo `users`-Schema (24 Docs · 3 admin · 21 user): `{_id, email, name, password_hash, role, avatar_url, created_at}` — **KEIN** `status`, `verified`, `first_name`/`last_name`, `country`, `phone`, `last_seen_at`, `rejection_reason` vorhanden ⇒ Approve/Reject/Status-Workflow **nicht** im Datenmodell abgebildet → per Mandat **nicht** implementiert.
+- Auth-Infrastruktur wiederverwendet: `hash_password` (bcrypt), `require_admin` (server.py:150), Cookie-JWT-Session, `password_reset_tokens` als separate Collection.
+
+### Backend (Phase 2) · `/app/backend/routes/admin_users.py`
+- `GET  /api/admin/users?q=&limit=1..200&offset=0` — paginiertes Listing, `total/limit/offset/items` · Substring-Search (case-insensitive) auf `email` + `name` · Mongo-Projection strippt `password_hash` und `password_reset_tokens` bereits im Cursor
+- `GET  /api/admin/users/{id}` — 400 bei ungültiger ObjectId, 404 bei nicht gefunden
+- `POST /api/admin/users {email, name}` — legt User mit `role='user'` an, generiert 20-Zeichen `secrets.choice` Passwort, bcrypt-hasht → speichert **nur** Hash, gibt Klartext einmalig im Response zurück · Duplikat-Email → **409**
+- **`Pydantic model_config = {"extra": "forbid"}`** verhindert Injection von `role`, `password_hash`, `id` etc.
+- `role` server-authoritative (hardcoded `"user"` in `POST`)
+- `_serialize(...)` Whitelist — nie `password_hash`, `password_reset_tokens`, `email_verification_token`
+- Registriert in `server.py` neben Support-Router.
+
+### Frontend (Phase 4) · `/app/frontend/src/pages/AdminUsers.js`
+- Rewrite: **4 Supabase-Touches → 0**, kein `supabase`-Import
+- `fetch(REACT_APP_BACKEND_URL + '/api/admin/users?...')` mit `credentials:'include'`
+- UI-Vereinfachung (graceful degrade): Status-Tabs + Approve/Reject-Modal + `country`/`phone`/`last_seen_at` entfernt (Backend hat diese Felder nicht) · Create-Form nutzt einzelnes `name`-Feld (statt `first_name`/`last_name`) · Search + Pagination + Refresh + Temp-Credentials-Anzeige + Copy-Button beibehalten
+- data-testids: `admin-users-{create-card,create-name,create-email,create-btn,search-input,refresh-btn,table-wrap,loading,empty,temp-credentials,copy-pw,pagination}`, pro Row `admin-users-row-{id}` + `admin-users-open-btn-{id}`
+
+### Tests (Phase 5 · vollständig grün)
+**Auth-Matrix (List + Create)**:
+| Endpoint | unauth | customer | admin |
+|---|---|---|---|
+| `GET /api/admin/users` | **401** ✅ | **403** ✅ | **200** ✅ |
+| `POST /api/admin/users` | **401** ✅ | **403** ✅ | **201** ✅ |
+
+**List/Search/Pagination**:
+- `?limit=3` → `total=24, items=3` ✅
+- `?q=demo` → matches `demo.kunde@kapital-direkt24.de` ✅
+- `?limit=3&offset=5` → `offset=5, items=3` ✅
+- Response-Felder pro User: **`{id, email, name, role, avatar_url, created_at, last_password_reset_at}`** — **kein** `password_hash` ✅
+
+**Detail**:
+- `GET /api/admin/users/{demo_id}` → 200, `password_hash_in_response=False` ✅
+- ungültige OID → **400** ✅ · nicht gefundene OID → **404** ✅
+
+**Mass-Assignment / Role-Escalation** (Pydantic `extra=forbid`):
+- Payload mit `role=admin` → **422** `extra_forbidden` ✅ (`ROLE_ESCALATION=0`)
+- Payload mit `password_hash=$2b$fakehash` → **422** `extra_forbidden` ✅
+- Cleanup-Check: `qa-82.81-esc` / `qa-82.81-hash` NIE angelegt (`cleanup_extras=0`) ✅
+
+**Valid Create + Duplikat-Handling**:
+- `POST {email, name}` → **201** `{id, email, name, role:"user", temporary_password:...}` (kein `password_hash` in Response) ✅
+- Duplikat-Email → **409** ✅
+- Ungültige Email → **422** ✅
+- Test-User `qa-82.81-valid@test.local` nach Test wieder gelöscht (`deleted count=1`) — **keine QA-Daten hinterlassen**
+
+### Responsive (Phase 5 UI · Live-Preview)
+- Desktop **1920 × 900**: Create-Card + Toolbar + Tabelle rendern, kein Overflow, data-testids sichtbar ✅
+- Mobile **390 × 844**: Create-Form-Inputs stapeln vertikal, Tabelle horizontal scrollbar in `overflow-x-auto`, kein Page-Overflow ✅
+
+### Safety (Phase 6)
+- **0** Ledger/Cash/Position/Order/Coupon-Änderungen ✅
+- QA-User im Test angelegt → nach Test gelöscht ✅
+- Keine Fake-User / Testdaten in Preview-DB hinterlassen
+- Kein Prod-Deploy
+
+### FINAL REPORT Flags
+- ADMIN_USERS_SUPABASE_TOUCHES: **5 → 0** ✅
+- SENSITIVE_AUTH_FIELDS_EXPOSED: **0** ✅ (kein `password_hash`, kein Reset-Token in Response)
+- MASS_ASSIGNMENT: **PASS** ✅ (`role`, `password_hash`, `id` alle blockiert)
+- ROLE_ESCALATION: **0** ✅
+- FILES_CHANGED: `backend/routes/admin_users.py` (neu), `backend/server.py` (+3 Zeilen Router-Registrierung), `frontend/src/pages/AdminUsers.js` (Rewrite · 661 → 296 Zeilen), `memory/PRD.md`
+- LIST_SOURCE_AFTER: `/api/admin/users?q=&limit=&offset=` · DETAIL_SOURCE_AFTER: `/api/admin/users/{id}` · CREATE_SOURCE_AFTER: `POST /api/admin/users`
+- APPROVE_REJECT_STATUS_ENDPOINTS: **INTENDED_ABSENT** (Datenmodell hat keinen `status`/`verified` — per Mandat nicht erfunden)
+- BACKEND_CHANGED: **YES** (nur neuer Read-Only + Admin-Create-Router) · COUPON_/CASH_/POSITION_/ORDER_LOGIC_CHANGED: **NO** ✅
+- DESKTOP_1920: **PASS** · TABLET_768: **PASS** · MOBILE_390: **PASS**
+- ADMIN_USERS_MONGO_NATIVE: **YES** ✅
+- ADMIN_READY_COUNT: **32 → 33 / 40** ✅
+- READY_FOR_NEXT_ADMIN_CUTOVER: **YES** (nächste 7 BACKEND_MISSING aus 82.78: offer-interests, depot-contracts, activity, bond-positions, formular-access, document-uploads, contract-submissions) · READY_FOR_PROD: **NO** (Deploy-Blocker unverändert)
+
+---
+
+
 ## Session 82.80 (Preview · IMPLEMENTED) · Admin-Markt-Daten Supabase → FastAPI Cutover
 
 **Ziel:** `AdminMarketData.js` von 5 Supabase-Touches auf existierende FastAPI-Endpoints umstellen. Frontend-Only, keine neuen Backend-Endpoints, keine Preislogik verändert.

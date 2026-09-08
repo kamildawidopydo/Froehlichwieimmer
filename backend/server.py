@@ -5252,6 +5252,10 @@ from routes.support import router as _support_router, admin_router as _support_a
 app.include_router(_support_router)
 app.include_router(_support_admin_router)
 
+# Session 82.81 · Admin-Users (Mongo-native · read + admin-create; kein Approve/Reject).
+from routes.admin_users import router as _admin_users_router  # noqa: E402
+app.include_router(_admin_users_router)
+
 @app.on_event("startup")
 async def _support_indexes_startup():
     await ensure_support_indexes(db)
