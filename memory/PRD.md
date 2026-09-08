@@ -3,6 +3,138 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.66 (Preview · READ-ONLY AUDIT) · Final Customer Depot Supabase Audit
+
+**Ergebnis:** Der Customer-Depot-Financial-Core ist **vollständig Supabase-frei**. Verbleibende Supabase-Referenzen sind ausnahmslos NON-Financial (Auth, Profil, Support, Market-Data-Widgets, tote Imports).
+
+### PHASE B · Grep Sweep (Klassifiziert)
+
+| Datei | Supabase-Count | Klassifikation | Financial-Impact | Prod-Blocker |
+|---|---|---|---|---|
+| `pages/StockDetail.js` | **0** | ✅ A · DEPOT_FINANCIAL_CRITICAL | — | — |
+| `context/DashboardDataContext.jsx` | **0** | ✅ A · DEPOT_FINANCIAL_CRITICAL | — | — |
+| `services/priceAlertService.js` | **0** | ✅ A · DEPOT_FINANCIAL_CRITICAL | — | — |
+| `services/apiClient.js` | **0** | ✅ A · DEPOT_FINANCIAL_CRITICAL | — | — |
+| `services/portfolioApi.js` | **0** | ✅ A · DEPOT_FINANCIAL_CRITICAL | — | — |
+| `services/portfolioOrderApi.js` | **0** | ✅ A · DEPOT_FINANCIAL_CRITICAL | — | — |
+| `services/watchlistApi.js` | **0** | ✅ A · DEPOT_FINANCIAL_CRITICAL | — | — |
+| `pages/dashboard/AktienPage`, `AlarmePage`, `AnleihenPage`, `DepotPage`, `KontoauszugPage`, `OrdersPage`, `UebersichtPage`, ~12 weitere | **0 each** | ✅ A/B · CLEAN | — | — |
+| `pages/dashboard/IpoPage.jsx` | 2 | **G · LEGACY/DEAD** (unused import + Kommentar dazu, keine Aufrufe) | — | — |
+| `pages/dashboard/AnleihenKaufenPage.jsx` | 1 | **G · LEGACY/DEAD** (nur Import, kein Aufruf) | — | — |
+| `pages/dashboard/ProfilePage.jsx` | 10 | **C · AUTH** (`supabase.auth.getSession/updateUser/signOut`, `supabase.storage` avatar) + **B · NON-CRITICAL** (Profil-Metadaten Update) | NO | NO¹ |
+| `pages/dashboard/SupportPage.jsx` | 9 | **E · SUPPORT** (support_tickets, support_messages, `rpc('mark_support_thread_read')`, Realtime-Channel) | NO | NO |
+| `context/AuthContext.js` | 24 | **C · AUTH** (Session-Management, Login/Logout) | NO | Siehe¹ |
+| `components/dashboard/AdminDashboardLayout.jsx` | *(vorhanden)* | **D · ADMIN** (Admin-Layout, kein Customer-Depot) | NO | NO |
+| `services/stockEventsService.js` | 2 | **F · MARKET_DATA** (read-only Widget) | NO | NO |
+| `services/newsService.js` | 10 | **F · MARKET_DATA** (read-only News-Widget) | NO | NO |
+| `services/stockFundamentalsService.js` | 3 | **F · MARKET_DATA** (read-only) | NO | NO |
+| `services/dividendService.js` | 2 | **F · MARKET_DATA** (read-only) | NO | NO |
+| `services/forexService.js` | 2 | **F · MARKET_DATA** (read-only) | NO | NO |
+| `services/__tests__/newsService.test.js` | *(test)* | **G · TEST-CODE** | — | — |
+
+¹ AUTH ist separater Migrations-Track (JWT-Custom-Auth bereits im Backend implementiert; siehe Phase E).
+
+### PHASE C · Financial-Core-Verifikation (alle bestätigt Mongo-native)
+
+| Bereich | Supabase Read | Supabase Write | Mongo/FastAPI Source |
+|---|---|---|---|
+| StockDetail | NO | NO | `/api/portfolio/*`, `/api/stocks/{sym}/history`, `watchlistApi` |
+| Cash | NO | NO | `/api/portfolio/cash` (Ledger-basiert) |
+| Positions | NO | NO | `/api/portfolio/{stock,bond}-positions` |
+| Orders | NO | NO | `/api/portfolio/orders`, `POST /orders`, `POST /orders/{id}/cancel` |
+| Buy/Sell | NO | NO | `POST /api/portfolio/orders` (Session 82.62) |
+| Coupons | NO | NO | `/api/portfolio/coupons/peek` + Order-Coupon (Session 82.61a) |
+| Matcher | NO | NO | `order_execution_service._execute_order_locked` (Saga) |
+| Watchlist | NO | NO | `/api/watchlist` |
+| Price Alerts | NO | NO | `/api/alerts` + Cron 15min + Resend-Mail |
+| IPO Requests | NO | NO | `/api/ipos/*` (Mongo-native; Frontend IpoPage-Import ist dead) |
+| Bond Requests | NO | NO | `/api/bonds/*` (Mongo-native; Frontend AnleihenKaufenPage-Import ist dead) |
+| Snapshots | NO | NO | `/api/portfolio/snapshots` |
+| Statements | NO | NO | `/api/portfolio/statements` (Session 82.39) |
+| Notification-Bell | NO | NO | `/api/stock-notifications` (Session 82.52) |
+
+### PHASE D · Financial-Write-Audit
+Repo-weit im Customer-Depot-Scope: **0 aktive Supabase-Financial-Writes** ✅
+
+### PHASE E · Auth Separation
+- **AUTH_SUPABASE_TOUCHES**: 24 (AuthContext.js) + 4 (ProfilePage.jsx: getSession/updateUser/signOut×2)
+- **AUTH_MIGRATION_REQUIRED_FOR_DEPOT**: **NO** (Cookie-JWT-Backend-Auth existiert bereits parallel via `apiClient` mit `withCredentials`; Financial-Endpoints nutzen bereits Cookie-Auth)
+- **AUTH_MIGRATION_REQUIRED_FOR_PROD**: **UNKNOWN** (Prod-Deploy-Pipeline hängt am fehlenden `SUPABASE_SERVICE_ROLE_KEY`; sobald der Key nachgereicht ist, wäre die Supabase-Auth-Schicht theoretisch funktionsfähig in Prod. Business-Entscheidung: reine JWT-Cookie-Auth vs. Dual-Auth)
+
+### PHASE F · Non-Critical Customer Files
+- `ProfilePage.jsx`: FINANCIAL_IMPACT=**NO**, PROD_BLOCKER=**NO** (Profil-Update + Avatar via Supabase-Storage; für Customer-Depot-Financials irrelevant)
+- `SupportPage.jsx`: FINANCIAL_IMPACT=**NO**, PROD_BLOCKER=**NO** (isoliertes Support-System)
+- `IpoPage.jsx`, `AnleihenKaufenPage.jsx`: FINANCIAL_IMPACT=**NO** (Imports sind DEAD; keine aktiven Calls)
+
+### PHASE G · Market Data Services
+- Alle 5 Services (`stockEvents`, `news`, `stockFundamentals`, `dividend`, `forex`) sind read-only Widgets → **MARKET_DATA_NON_CRITICAL = YES** — kein Umbau in dieser Session nötig.
+
+### PHASE H · Live Endpoint Health (curl, alle 200 auth / 401 unauth)
+- `/api/portfolio/summary`, `/cash`, `/stock-positions`, `/bond-positions`, `/orders`, `/alerts`, `/snapshots`, `/statements`, `/api/stock-notifications` → **200** ✅
+- Unauth: alle 5 geprüften Endpoints → **401** ✅
+
+### PHASE I · Financial Invariants (Live-DB, Read-Only)
+- DUP_LEDGER (unique `idempotency_key`): **0** ✅
+- NEG_LEDGER (`status=settled, amount<0`): **0** ✅
+- NEG_QTY (`stock_positions.quantity<0`): **0** ✅
+- DUP_ORDER_EXEC (completed executions per order): **0** ✅
+- DUP_IPO_ALLOC (`ipo_subscriptions.status=allocated` per user/ipo): **0** ✅
+- DUP_BOND_EXEC (completed per request_id): **1** — **historische KEEP_FOR_AUDIT-Orphan-Gruppe** mit `request_id=null` (6× completed + 1× failed executions ohne Request-ID; Test-Data-Cleanup-Artefakte aus Session 82.53). Kein aktiver Financial-Fehler.
+
+### PHASE J · External Blockers
+- **SUPABASE_SERVICE_ROLE_KEY**: **NOT PRESENT** in `backend/.env` — Prod-Deploy-Blocker.
+- **PROD_DEPLOY_PIPELINE**: available, aber hängend am fehlenden Secret.
+- **BOND_PRICE_FEED**: not available (kein EU-Bond-Quote-Provider integriert).
+
+### PHASE K · Final Classification
+
+**1. APP-SIDE P0**: keine offenen Punkte im Depot-Financial-Core.
+
+**2. APP-SIDE P1**:
+- P1.a — AuthContext-Cutover (JWT-Cookie einheitlich) — 24 Touches
+- P1.b — ProfilePage Profil-Update auf Mongo `/api/auth/me PATCH` — 6 Touches (avatar bleibt Supabase-Storage bis eigenes Object-Storage existiert)
+- P1.c — Dead-Imports entfernen (`IpoPage.jsx`, `AnleihenKaufenPage.jsx`)
+- P1.d — SupportPage auf Mongo-Support-System — 9 Touches (benötigt neues Backend)
+- P1.e — Realized-PnL Backend-Enrichment (`_serialize_order` additiv)
+- P1.f — 5× Market-Data-Services auf Mongo-Endpoints (optional, non-blocking)
+
+**3. EXTERNAL BLOCKER**:
+- E.1 — `SUPABASE_SERVICE_ROLE_KEY` fehlt in Preview-ENV (Emergent Support-Ticket)
+- E.2 — Prod-Deploy-Pipeline hängt (folgt aus E.1)
+- E.3 — Bond-Live-Price-Feed (externer EU-Provider nötig)
+
+**4. DO NOT TOUCH**:
+- Historische `KEEP_FOR_AUDIT`-Bond-Executions mit `request_id=null` (Session 82.53 Testdaten-Isolation)
+- Backend `order_execution_service._execute_order_locked` (Saga-Semantik final, Coupon-Extension Session 82.61a stabil)
+- Coupon-State-Machine (Session 82.61a Legacy-Parität)
+- `avg_cost = executed_price` bei Coupon-Buy (Legacy-Parität, bewusste Entscheidung)
+
+### FINAL REPORT — Session 82.66
+
+- CUSTOMER_DEPOT_FINANCIAL_SUPABASE_READS: **0** ✅
+- CUSTOMER_DEPOT_FINANCIAL_SUPABASE_WRITES: **0** ✅
+- STOCKDETAIL_SUPABASE: **0** · DASHBOARDCONTEXT_SUPABASE: **0** · PRICE_ALERT_SERVICE_SUPABASE: **0**
+- AUTH_SUPABASE_TOUCHES: **28** (AuthContext 24 + ProfilePage auth-related 4)
+- PROFILEPAGE_SUPABASE_TOUCHES: **10** (davon 4 auth, 6 profile/avatar)
+- SUPPORTPAGE_SUPABASE_TOUCHES: **9**
+- MARKET_DATA_SUPABASE_TOUCHES: **19** (news 10, fundamentals 3, stockEvents 2, dividend 2, forex 2)
+- FINANCIAL_CORE_MONGO_NATIVE: **YES** ✅
+- FINANCIAL_CORE_SAFE: **YES** ✅ (alle Invarianten grün außer historischer KEEP_FOR_AUDIT-Orphan)
+- CUSTOMER_DEPOT_PREVIEW_READY: **YES** ✅
+- APP_SIDE_P0_REMAINING: **0**
+- APP_SIDE_P1_REMAINING: **6** (Auth-Cutover, ProfilePage-Profile-Update, Dead-Imports, SupportPage, Realized-PnL, Market-Data-Services)
+- EXTERNAL_BLOCKERS: **3** (SUPABASE_SERVICE_ROLE_KEY, Prod-Deploy-Pipeline, Bond-Price-Feed)
+- DO_NOT_TOUCH: historische Bond-Exec-Orphans, Saga, Coupon-State-Machine, Coupon-avg_cost-Parität
+- READY_FOR_AUTH_CUTOVER: **YES** (Cookie-JWT-Backend + Custom-Auth-Endpoints existieren bereits parallel)
+- AUTH_CUTOVER_REQUIRED_BEFORE_PROD: **UNKNOWN** (Business-Entscheidung; technisch nicht zwingend, aber empfohlen für saubere Prod-Auth ohne Supabase-Abhängigkeit)
+- READY_FOR_PROD: **NO** (ausschließlich wegen External-Blockern; Code-seitig Preview-fertig)
+- **NEXT_SINGLE_ACTION**: **Session 82.67 · AuthContext Supabase → JWT-Cookie Cutover** — größter verbleibender P1-Block; entfernt die letzte strukturelle Supabase-Abhängigkeit außerhalb der reinen Widgets/Profile-Zusatzfelder.
+- FILES_CHANGED: **`memory/PRD.md` only** ✅
+- FINANCIAL_WRITES: **0** ✅ · SUPABASE_WRITES: **0** ✅
+
+---
+
+
 ## Session 82.65 (Preview · IMPLEMENTED · No-Op-Cutover) · priceAlertService Supabase → Mongo
 
 **Ergebnis:** `frontend/src/services/priceAlertService.js` war bereits **vollständig Mongo-native** (0 Supabase-Referenzen). Ein früherer Cutover (Session ≤ 82.50) hatte diesen Service schon migriert; nur ein Legacy-Kommentar in `apiClient.js` erwähnte noch "supabase" — bereinigt.
