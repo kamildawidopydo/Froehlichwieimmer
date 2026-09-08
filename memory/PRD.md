@@ -3,6 +3,54 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`.
 
 
+## Session 82.41 (Preview) · Depot P1 · 7T/30T Snapshot Sparkline
+
+**Phase A Audit** (kein neuer Backend-Endpoint nötig):
+- SNAPSHOT SOURCE: `heroSnapshots` via bestehendem `GET /api/portfolio/snapshots?days=400`
+- SNAPSHOT SORT: chronologisch ASC (backend-seitig)
+- FIELDS: `snapshot_date, total_value, stocks_valuation_complete, bonds_valuation_complete, cash_value, stock_value, bond_value, ...`
+- CHART LIBRARY: **recharts** (bereits im Einsatz in `DepotPerformance.jsx`)
+
+**Phase B — Selector**: neue exportierte reine Funktion `computeSnapshotTrend(heroSnapshots, range)` in `DepotKpiRail.jsx`. Dedup über `snapshot_date` (letzter Eintrag deterministisch gewinnt), chronologische Sortierung, **Kalender-Fenster relativ zum letzten Snapshot** (nicht relativ zu now — zeitzone-/DST-sicher). Rückgabe `{count, points: [{date, value}], absolute, pct, direction, incomplete}`.
+
+**Phase C — Valuation Integrity**: `incomplete=true` bei irgendeinem `stocks_valuation_complete=false` ODER `bonds_valuation_complete=false` im Fenster → Sparkline versteckt, Text-Only „Bewertung unvollständig". **Kein scheinpräziser Verlauf.**
+
+**Phase D — Data Sufficiency**: 0 Punkte → „Noch keine Verlaufsdaten" · 1 Punkt → „Noch nicht genügend Verlaufsdaten" · ≥2 vollständige → Sparkline + Delta.
+
+**Phase E/F — UI** in `DepotKpiRail.jsx` unter dem existierenden „Heute"-KPI (82.38-Wert bleibt fachlich unverändert):
+- Neuer `KpiCell.footer`-Slot (kein Layout-Reflow der übrigen 4 KPIs).
+- Neue Sub-Component `HeuteSparklineFooter`:
+  - Toggle `[ 7T | 30T ]` (`data-testid="heute-trend-range-7d"` / `-30d`).
+  - Recharts `LineChart` (30 × 8 px), Stroke: emerald-700 bei pos, rose-700 bei neg, slate-400 bei neutral/incomplete (bestehende Design-Tokens).
+  - Delta-Zeile darunter: `+/-abs €  ·  +/-pct %` (deutsches Format).
+- Neuer `data-testid="heute-sparkline-block"`, `-empty`, `-insufficient`, `-incomplete`, `-sparkline`, `-delta`.
+
+**Phase G — Range Semantik**: Kalender-Fenster `[latest_date − (days−1), latest_date]` inklusive Grenzen. Snapshots außerhalb des Fensters strikt ausgeschlossen (kein Rückgriff auf ältere Daten). **Keine Interpolation** fehlender Kalendertage.
+
+**Phase H — Test Matrix (Python-Mirror aller 11 Tests):**
+- T1 (0 snaps) → count=0 ✅
+- T2 (1 snap) → count=1, abs/pct=None ✅
+- T3 (positiv 10000→10500) → abs=500 pct=+5.00% dir=pos ✅
+- T4 (negativ 10500→10000) → abs=-500 pct=-4.76% dir=neg ✅
+- T5 (first=0) → pct=None (keine Division durch 0) ✅
+- T6 (incomplete) → incomplete=true ✅
+- T7 (7T-Grenze, 9000 vor 8 Tagen) → ausgeschlossen, count=2 ab 09-02 ✅
+- T8 (30T-Grenze) → count=2 ab 08-10 ✅
+- T9 (Lücken) → keine Interpolation, dates=[09-02, 09-05, 09-08] ✅
+- T10 (unsortiert) → chronologisch korrekt ✅
+- T11 (Duplicate date) → deterministisch letzter Wert 9500 ✅
+
+**QA im Preview (demo.kunde):**
+- Baseline (1 Snap, valuation_complete=false) → „Noch nicht genügend Verlaufsdaten" ✅
+- Nach Injection von 3 vollständigen Vortags-Snapshots (9500/9800/10000 €) + latest 9001.56 → Sparkline rendert, Delta rot mit korrekten Werten, 30d-Toggle wechselt korrekt.
+- Hard-Reload liefert identisches Ergebnis ✅ · Mobile 390 kein Overflow ✅ · Dashboard-Banner-Regression negativ ✅.
+- QA-Testdaten (`source='qa82.41-test'`) nach Verifizierung aus DB entfernt, `2026-09-07` auf `valuation_complete=false` zurückgesetzt.
+
+**Files Changed**: `frontend/src/components/mein-depot/DepotKpiRail.jsx`, `memory/PRD.md`.
+
+---
+
+
 ## Session 82.40 (Preview) · P1 Widget Cutover · Supabase → Mongo-native
 
 **Phase A Audit**:

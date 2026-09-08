@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, YAxis } from 'recharts';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import { formatEUR, formatEURSigned } from '@/lib/dashboardFormatters';
 import { cn } from '@/lib/utils';
@@ -37,7 +38,7 @@ import { cn } from '@/lib/utils';
 const KPI_BASE =
   'group flex min-w-0 flex-col gap-1 border-t border-bank-border/70 pt-5';
 
-const KpiCell = ({ label, primary, secondary, tone = 'neutral', testId }) => (
+const KpiCell = ({ label, primary, secondary, tone = 'neutral', testId, footer }) => (
   <div className={KPI_BASE} data-testid={testId}>
     <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-bank-text-muted">
       {label}
@@ -58,6 +59,7 @@ const KpiCell = ({ label, primary, secondary, tone = 'neutral', testId }) => (
         {secondary}
       </div>
     )}
+    {footer}
   </div>
 );
 
@@ -82,6 +84,138 @@ export const computeSnapshotDayChange = (heroSnapshots) => {
   const absolute = latestTotal - prevTotal;
   const pct = prevTotal > 0 ? (absolute / prevTotal) * 100 : null;
   return { count: n, absolute, pct, incomplete, latest, previous };
+};
+
+// Session 82.41 · Reine, testbare Trend-Selektion für 7T/30T-Sparkline.
+// Ausschließlich echte persistierte Snapshots. Kein Backfill, keine Interpolation,
+// keine synthetischen Zwischenpunkte. Deduping über snapshot_date (letzter gewinnt).
+// Kalendertage-Fenster relativ zum letzten Snapshot (nicht relativ zu now, um DST-
+// und Zeitzonen-Artefakte zu vermeiden — die snapshot_date-Reihe ist authoritative).
+export const computeSnapshotTrend = (heroSnapshots, range /* '7d' | '30d' */) => {
+  const rangeDays = range === '30d' ? 30 : 7;
+  const dedup = new Map();
+  (heroSnapshots || []).forEach((s) => {
+    if (!s || !s.snapshot_date || s.total_value == null) return;
+    const v = Number(s.total_value);
+    if (!Number.isFinite(v)) return;
+    // Duplicate snapshot_date → letzter Eintrag gewinnt (deterministisch).
+    dedup.set(String(s.snapshot_date), s);
+  });
+  const sorted = [...dedup.values()].sort((a, b) =>
+    String(a.snapshot_date).localeCompare(String(b.snapshot_date)),
+  );
+  if (sorted.length === 0) {
+    return { count: 0, points: [], absolute: null, pct: null, direction: 'neutral', incomplete: false };
+  }
+  const latest = sorted[sorted.length - 1];
+  // Kalender-Fenster: alle snapshot_date >= (latest.snapshot_date - rangeDays + 1).
+  const latestDate = new Date(`${String(latest.snapshot_date).slice(0, 10)}T00:00:00Z`);
+  const cutoff = new Date(latestDate.getTime() - (rangeDays - 1) * 86400000);
+  const cutoffISO = cutoff.toISOString().slice(0, 10);
+  const windowed = sorted.filter((s) => String(s.snapshot_date).slice(0, 10) >= cutoffISO);
+  if (windowed.length === 0) {
+    return { count: 0, points: [], absolute: null, pct: null, direction: 'neutral', incomplete: false };
+  }
+  const incomplete = windowed.some(
+    (s) => s.stocks_valuation_complete === false || s.bonds_valuation_complete === false,
+  );
+  const points = windowed.map((s) => ({
+    date: String(s.snapshot_date).slice(0, 10),
+    value: Number(s.total_value),
+  }));
+  if (points.length < 2) {
+    return { count: points.length, points, absolute: null, pct: null, direction: 'neutral', incomplete };
+  }
+  const first = points[0].value;
+  const last = points[points.length - 1].value;
+  const absolute = last - first;
+  const pct = first > 0 ? (absolute / first) * 100 : null;
+  const direction = absolute === 0 ? 'neutral' : absolute > 0 ? 'pos' : 'neg';
+  return { count: points.length, points, absolute, pct, direction, incomplete };
+};
+
+const HeuteSparklineFooter = ({ heroSnapshots }) => {
+  const [range, setRange] = useState('7d');
+  const trend = useMemo(() => computeSnapshotTrend(heroSnapshots, range), [heroSnapshots, range]);
+  const strokeColor =
+    trend.incomplete || trend.direction === 'neutral'
+      ? 'rgb(148 163 184)' // slate-400 (neutral, keine scheinpräzise Performance-Farbe)
+      : trend.direction === 'pos'
+        ? 'rgb(4 120 87)' // emerald-700
+        : 'rgb(190 18 60)'; // rose-700
+  const isPos = trend.direction === 'pos';
+
+  return (
+    <div className="mt-2.5 flex flex-col gap-1" data-testid="heute-sparkline-block">
+      <div className="inline-flex gap-1" role="tablist" aria-label="Trend-Zeitraum">
+        {['7d', '30d'].map((r) => (
+          <button
+            key={r}
+            type="button"
+            role="tab"
+            aria-selected={range === r}
+            onClick={() => setRange(r)}
+            data-testid={`heute-trend-range-${r}`}
+            className={cn(
+              'rounded-sm border px-1.5 py-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] transition-colors',
+              range === r
+                ? 'border-bank-text bg-bank-text text-white'
+                : 'border-bank-border bg-white text-bank-text-muted hover:border-bank-text/50',
+            )}
+          >
+            {r === '7d' ? '7 T' : '30 T'}
+          </button>
+        ))}
+      </div>
+      {trend.count === 0 ? (
+        <p className="text-[11px] text-bank-text-muted" data-testid="heute-trend-empty">
+          Noch keine Verlaufsdaten
+        </p>
+      ) : trend.count === 1 ? (
+        <p className="text-[11px] text-bank-text-muted" data-testid="heute-trend-insufficient">
+          Noch nicht genügend Verlaufsdaten
+        </p>
+      ) : trend.incomplete ? (
+        <p className="text-[11px] text-bank-text-muted" data-testid="heute-trend-incomplete">
+          Bewertung unvollständig
+        </p>
+      ) : (
+        <>
+          <div className="-mx-1 h-8 w-full" data-testid="heute-trend-sparkline">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trend.points} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+                <YAxis hide domain={['dataMin', 'dataMax']} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke={strokeColor}
+                  strokeWidth={1.6}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <p
+            className={cn(
+              'font-mono text-[10.5px] tabular-nums',
+              trend.direction === 'pos' && 'text-emerald-700',
+              trend.direction === 'neg' && 'text-rose-700',
+              trend.direction === 'neutral' && 'text-bank-text-muted',
+            )}
+            data-testid="heute-trend-delta"
+          >
+            {trend.absolute === 0
+              ? '±0,00 €'
+              : `${isPos ? '+' : ''}${formatEURSigned(trend.absolute)}`}
+            {trend.pct != null
+              ? ` · ${isPos && trend.absolute !== 0 ? '+' : ''}${trend.pct.toFixed(2).replace('.', ',')} %`
+              : ''}
+          </p>
+        </>
+      )}
+    </div>
+  );
 };
 
 const DepotKpiRail = () => {
@@ -267,7 +401,14 @@ const DepotKpiRail = () => {
     >
       <KpiCell label="Investiert" primary={kpis.investiert.primary} secondary={kpis.investiert.secondary} testId="kpi-investiert" />
       <KpiCell label="Gesamt G/V" primary={kpis.gv.primary} secondary={kpis.gv.secondary} tone={kpis.gv.tone} testId="kpi-gv" />
-      <KpiCell label="Heute" primary={kpis.heute.primary} secondary={kpis.heute.secondary} tone={kpis.heute.tone} testId="kpi-heute" />
+      <KpiCell
+        label="Heute"
+        primary={kpis.heute.primary}
+        secondary={kpis.heute.secondary}
+        tone={kpis.heute.tone}
+        testId="kpi-heute"
+        footer={<HeuteSparklineFooter heroSnapshots={heroSnapshots} />}
+      />
       <KpiCell label="Liquidität" primary={kpis.cash.primary} secondary={kpis.cash.secondary} tone={kpis.cash.tone} testId="kpi-liquidity" />
       <KpiCell label="Positionen" primary={kpis.positionen.primary} secondary={kpis.positionen.secondary} tone={kpis.positionen.tone} testId="kpi-positionen" />
     </section>
