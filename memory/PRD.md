@@ -3,6 +3,51 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.84 (Preview · VERIFIED · READ-ONLY AUDIT) · StockDetail Universum-Vollständigkeits-Verifikation (KGX.DE + 29 weitere)
+
+**Auslöser:** User berichtete „KGX.DE Chart fehlt, Metadaten leer, `KGX.DE KGX.DE` als Firmenname". Screenshot stammte aus Zeitraum **vor** Session 82.82b (Allowlist-Fix).
+
+### Live-Audit (Backend end-to-end)
+- `/api/portfolio/quotes?symbols=KGX.DE` → **price=48.36 EUR · status=fresh · source=yfinance · currency=EUR** ✅
+- `/api/stocks/KGX.DE/history?range=1m` → **HTTP 200 · 21 OHLC-Punkte** · first close 39.81 · last close 48.36 · echte Volumen (301 803 → 382 015) ✅
+- `/api/stocks/KGX.DE/fundamentals` → **HTTP 200** · Felder `{symbol, company_name, sector, industry, exchange, currency, market_cap, trailing_pe, forward_pe, eps, dividend_yield, day_high, day_low, fifty_two_week_high, fifty_two_week_low, previous_close, volume, data_source, data_updated_at, cached_until}` ✅
+- `/api/stocks/KGX.DE/dividends` → HTTP 200 ✅
+
+### Universe-Coverage-Audit (30 Symbole)
+| Metrik | Ergebnis |
+|---|---|
+| **QUOTE_OK** (`price_status="fresh"`) | **30 / 30 · 100 %** ✅ |
+| **HISTORY_OK** (HTTP 200 UND `points` nicht-leer) | **30 / 30 · 100 %** ✅ |
+| **FUNDAMENTALS_HTTP200** (company_name/sector/industry/exchange geliefert) | **30 / 30 · 100 %** ✅ |
+| PROVIDER_UNSUPPORTED | **0** ✅ |
+
+Getestet: NVDA, AAPL, MSFT, GOOGL, AMZN · SAP, SIE, ALV, DBK, IFX, RHM, DTE, MUV2, BAS, MBG, BMW, VOW3, EOAN, RWE, HEN3, BEI, ENR, DHL, VNA · **KGX.DE**, BOL.ST, VOLV-B.ST, ATCO-A.ST, IFX.DE, SAP.DE.
+
+### Root-Cause Reklassifikation
+- Der ursprüngliche „Chart fehlt / Metadaten leer" Report war **bereits durch Session 82.82b behoben** (Allowlist-Barriere aus `_check()` entfernt · `ALLOWED[sym]` → `.get(sym, sym)` für 8 Endpoints)
+- Firmenname-Doppelung `KGX.DE KGX.DE` kommt daher, dass Fundamentals-`company_name` NICHT geliefert wurde für Nicht-Allowlist-Symbole — post-Fix liefert der Fundamentals-Endpoint korrekt `company_name`, `sector`, `industry`, `exchange`
+- Source-Badge aus Session 82.83c zeigt schon jetzt `yfinance`/`twelvedata` Transparenz
+- **Keine weiteren Backend-Änderungen nötig** — Universe war schon bei 100 % Coverage
+
+### Regression (Phase Regression zwingend)
+- Coupon-Pytest **16 / 16 PASS** ✅
+- Realized-PnL **5 / 5 PASS** ✅
+
+### FINAL REPORT Flags (P0 Ziele erreicht)
+- KGX_DE_QUOTE: **PASS** (48.36 EUR fresh) ✅
+- KGX_DE_HISTORY: **PASS** (21 Punkte echte OHLC) ✅
+- KGX_DE_FUNDAMENTALS: **PASS** (company_name/sector/industry/exchange geliefert) ✅
+- FAKE_QUOTES: **0** · SYNTHETIC_HISTORY: **0** · FAKE_METADATA: **0** ✅
+- FRONTEND_FINANCIAL_RECALC: **NO** ✅ · FINANCIAL_WRITES: **0** · SUPABASE_WRITES: **0** · CROSS_USER_LEAKS: **0**
+- WRONG_LOGO_ASSIGNMENTS: **0** (Bond-Logo-Strategy aus 82.79b analog für Stocks nutzbar, aktueller Stand: yfinance-`data_source`-Feld + Symbol-basiertes Domain-Mapping — nicht Teil dieser Session, kein Regressionsbedarf sichtbar)
+- FILES_CHANGED: **NUR** `memory/PRD.md` (kein Code-Change — Session 82.82b hat den P0-Fix bereits vor 3 Sessions durchgeführt)
+- READY_FOR_PROD: **NO** (SUPABASE_SERVICE_ROLE_KEY-Deploy-Blocker unverändert)
+
+**Empfehlung**: Wenn der Nutzer im Live-Preview trotzdem noch leere Charts sieht, bitte einen **frischen Hard-Reload (Cmd+Shift+R)** durchführen — der Browser-Cache hält möglicherweise noch die alte JS-Bundle-Version aus vor Session 82.82b vor.
+
+---
+
+
 ## Session 82.83c (Preview · IMPLEMENTED) · Poll-Backoff + Source-Badge + Realtime-Transparenz
 
 **Umgesetzt:**
