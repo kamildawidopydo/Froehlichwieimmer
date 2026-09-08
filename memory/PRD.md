@@ -3,6 +3,38 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.83 (Preview · IMPLEMENTED) · Depot Realtime-Polling (5 s)
+
+**User-Wunsch:** Depot-Kurse (Aktien) alle 5 Sekunden aktualisieren. Kein neuer Provider/Token — bestehendes yfinance-Backend wiederverwendet.
+
+**Wichtiger Hinweis (Datenquelle):** yfinance liefert für die meisten europäischen Börsen (Xetra, Tradegate, Stockholm) **~15 Minuten verzögerte** Kurse — das ist eine **Xetra-/Deutsche-Börse-Lizenz-Restriktion für kostenlose Provider**. US-Aktien (NVDA, AAPL, MSFT usw.) sind bei yfinance echtzeit-nah (<1 Min). Für echte Realtime auf Xetra müsste ein bezahlter Provider (Deutsche Börse Data Shop ab ~€50/Monat) integriert werden. Diese Session liefert die maximale UI-Aktualisierungsfrequenz, die die kostenlose Datenquelle erlaubt.
+
+### Änderungen (2 Zeilen Backend · 2 Blöcke Frontend)
+- **Backend** `stock_price_service.py`: `_FRESH_SECONDS = 15*60 → 4` — Cache-TTL 4 s, damit jeder 5-s-Frontend-Poll echte yfinance-Refreshes triggert (keine Cache-Stale-Wiederholungen). Kein Fake, keine synthetischen Preise.
+- **Frontend** `DashboardDataContext.jsx`: Depot-Polling `5 min → 5 s` (nur bei sichtbarer Seite, Focus-Refresh weiterhin ergänzend)
+- **Frontend** `StockDetail.js`: neuer `useEffect` mit 5-s-Interval, der **nur** die Quote refresht (nicht die schweren Metadaten/History) · pausiert auf Hidden-Tab · cancelled-safe
+
+### Verifikation
+- Cache-TTL greift: 2 direkt aufeinanderfolgende Requests bekommen den Cache; 6-s-Delay-Requests holen frisch von yfinance (`as_of` bewegt sich)
+- Regression **21/21 PASS** (Coupon 16 + Realized-PnL 5) ✅
+- Keine Financial-Writes · kein Ledger/Cash/Position/Order-Code berührt · nur Read-Through-Cache-TTL + zwei Frontend-Poll-Intervalle geändert
+
+### Was der Nutzer sieht
+- **Depot-Dashboard**: Marktdaten-Zeile aktualisiert sich alle 5 s automatisch (kein manueller „Aktualisieren"-Klick nötig)
+- **StockDetail** (z. B. AAPL, BOL.ST): Preis-Zeile aktualisiert sich alle 5 s live · Chart wird nicht mit-gepollt (bleibt bei manuellem Refresh)
+- **Hidden Tabs**: Pausierung, damit keine Provider-Rate-Limits reißen und der Browser-CPU-Bedarf niedrig bleibt
+
+### FINAL REPORT
+- FILES_CHANGED: `backend/services/stock_price_service.py` (1 Zeile · Cache-TTL 4 s), `frontend/src/context/DashboardDataContext.jsx` (1 Zeile · Poll 5 s), `frontend/src/pages/StockDetail.js` (+31 Zeilen · neuer 5-s-Poll-`useEffect`), `memory/PRD.md`
+- POLL_INTERVAL_MS: **5000** ✅ · BACKEND_CACHE_TTL_S: **4** ✅ (< Poll-Intervall)
+- FAKE_QUOTES: **0** · SYNTHETIC_DATA: **0** · FINANCIAL_WRITES: **0** · BACKEND_LOGIC_CHANGED: **NO** (nur TTL)
+- REALTIME_STATUS: **near-realtime für US-Aktien** (yfinance <1 Min) · **15-Min-delayed für europäische Aktien** (Provider-Lizenz-Restriktion)
+- ANLEIHEN_REALTIME: **NICHT UMGESETZT** — kein Free-Provider liefert Live-Bond-Preise. Bond-Katalog bleibt Cache-basiert (Session 82.79b). Für Realtime-Bonds bräuchte es Bloomberg B-PIPE oder Refinitiv Eikon (>€1.500/Monat).
+- READY_FOR_PROD: **NO** (Deploy-Blocker unverändert)
+
+---
+
+
 ## Session 82.82b (Preview · IMPLEMENTED · P0-FIX) · StockDetail Missing Quotes & History Coverage Fix
 
 **P0-Symptom:** `/depot/stocks/BOL.ST` (und andere .ST/.PA/.L/.MI Non-Universe-Symbole) → „Aktueller Kurs `–`", „Keine Chartdaten verfügbar".

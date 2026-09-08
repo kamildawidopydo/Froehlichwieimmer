@@ -424,12 +424,13 @@ export const DashboardDataProvider = ({ children }) => {
     return () => window.clearInterval(id);
   }, []);
 
-  // Re-read stock_prices_cache on the same cadence as the backend cron so
-  // /dashboard/aktien stays current without a manual "Aktualisieren" click.
+  // Session 82.83 — 5-Sekunden-Polling für Realtime-Depot-Kurse.
+  // Backend-Cache-TTL 4 s stellt sicher, dass jeder Frontend-Poll frische
+  // yfinance-Daten holt (keine Fake-Preise; nur echte Provider-Antworten).
   useEffect(() => {
     if (!user?.id) return undefined;
 
-    const STOCK_CACHE_POLL_MS = 5 * 60 * 1000;
+    const STOCK_CACHE_POLL_MS = 5 * 1000;
     const tick = () => {
       if (typeof document !== 'undefined' && document.hidden) return;
       fetchStockData();

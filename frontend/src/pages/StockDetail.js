@@ -360,6 +360,37 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
     loadMeta();
   }, [symbol]);
 
+  // Session 82.83 — 5-Sekunden-Live-Polling nur für den Kurs (nicht für die
+  // schwereren Metadaten). Backend-Cache-TTL 4 s ⇒ echte yfinance-Refreshes.
+  useEffect(() => {
+    if (!symbol) return undefined;
+    const POLL_MS = 5 * 1000;
+    const sym = String(symbol).toUpperCase();
+    let cancelled = false;
+    const tick = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      try {
+        const quotes = await fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(sym)}`);
+        if (cancelled) return;
+        const q = (quotes || {})[sym];
+        if (q && q.price != null) {
+          setPrice({
+            price: Number(q.price),
+            change_abs: q.change_abs != null ? Number(q.change_abs) : null,
+            change_pct: q.change_pct != null ? Number(q.change_pct) : null,
+            currency: q.currency || 'USD',
+            bid: q.bid != null ? Number(q.bid) : null,
+            ask: q.ask != null ? Number(q.ask) : null,
+            bid_size: q.bid_size != null ? Number(q.bid_size) : null,
+            ask_size: q.ask_size != null ? Number(q.ask_size) : null,
+          });
+        }
+      } catch { /* silent — nächster Tick versucht es erneut */ }
+    };
+    const id = window.setInterval(tick, POLL_MS);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [symbol]);
+
   useEffect(() => {
     if (!symbol) return;
     loadHistory();

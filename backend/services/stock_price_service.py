@@ -15,7 +15,7 @@ from typing import Optional
 
 from bson.decimal128 import Decimal128
 
-_FRESH_SECONDS = 15 * 60  # 15 Min
+_FRESH_SECONDS = 4  # Session 82.83 — 4s Cache-TTL für 5s-Frontend-Polling
 
 
 def _to_dec(v) -> Optional[Decimal]:
