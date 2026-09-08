@@ -3,6 +3,126 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.87 (READ-ONLY AUDIT) · Global Supabase Remaining-Dependencies Audit
+
+**Ziel:** Definitive Restliste aller Supabase-Abhängigkeiten nach den Cutovers bis 82.86. Keine Code-Änderungen.
+
+### Aggregierte Zählwerte (frontend/src/, node_modules ausgeschlossen)
+| API-Typ | Count |
+|---|---|
+| `supabase.from(...)` (Tabellen-CRUD) | **71** |
+| `supabase.rpc(...)` (Postgres-RPCs) | **29** |
+| `supabase.functions.invoke(...)` (Edge Functions) | **7** |
+| `.channel(...)` (Realtime-Subscriptions) | **14** |
+| `supabase.auth.*` (Auth-Session) | **12** |
+| `supabase.storage.*` (Object Storage) | **5** |
+| `removeChannel(...)` (Realtime Teardown) | **16** |
+| **TOTAL_ACTIVE_SUPABASE_TOUCHES** | **154** |
+| Dateien mit aktivem Supabase-Import + Call | **60** |
+
+### Runtime-Beweis SUPABASE_SERVICE_ROLE_KEY
+```
+1) Backend Python (grep -r "SUPABASE_SERVICE_ROLE_KEY" /app/backend)
+   → 0 Runtime-References  (nur historische Erwähnungen in Comments möglich)
+
+2) Backend Python (Import + Env-Read)
+   → 0 Imports (`import supabase` / `from supabase`)
+   → 0 Env-Reads (`os.environ.get("SUPABASE_*")`)
+   → 0 Entries in requirements.txt
+
+3) Frontend
+   → 1 Vorkommen: AdminContractSubmissions.js:447
+       "Keine PDFs in Storage (lokal ohne SUPABASE_SERVICE_ROLE_KEY)."
+       (reiner UI-Kommentar-String, kein Aufruf)
+
+4) .env-Dateien (Preview)
+   → backend/.env: hat SUPABASE_URL + SUPABASE_ANON_KEY (nicht SERVICE_ROLE)
+   → frontend/.env: hat REACT_APP_SUPABASE_URL + REACT_APP_SUPABASE_ANON_KEY
+   → SUPABASE_SERVICE_ROLE_KEY steht in KEINER .env-Datei
+```
+
+**SUPABASE_SERVICE_ROLE_KEY_RUNTIME_REQUIRED = NO** ✅  
+Der Schlüssel ist im aktuellen Codestand **nicht laufzeitrelevant**. Der bisherige Prod-Deploy-Blocker ist ein reiner **Legacy-Deploy-Config-Artefakt** aus dem Import-Job (Phase 0) und muss für die Cutover-Kette nicht mehr rekonstruiert werden.
+
+### Klassifikation der 154 Touches nach Kategorie
+| Kategorie | Touches | Betroffene Dateien (Auszug) | Cutover-Aufwand | Prio |
+|---|---|---|---|---|
+| **CUSTOMER_FINANCIAL** | **~9** | Statement.js (Auszug), Handeln.js (Handelsdaten für Endkunden), ResetPassword.js (Profil-Read) | BACKEND_REQUIRED | **P0** |
+| **AUTH** | **12** | supabase.js (createClient), App.js (isSupabaseConfigured Toast), ResetPassword.js (getSession/onAuthStateChange/updateUser/signOut/getUser), pages/admin/AdminStockResearch/AdminInvestmentTopics/AdminInvestmentTopicEdit/AdminNewsArticles (auth.getSession für Token-Forwarding), lib/activityLogger.js, lib/offerReviews.js, components/AdminGlobalNotifications.jsx | BACKEND_REQUIRED | **P0** |
+| **ADMIN** | **~85** | AdminDashboard, AdminBanks, AdminOffers, AdminApplications, AdminDepotContracts, AdminActivity (Realtime), AdminCashBalances (apply_cash_transaction RPC — Financial-Write!), AdminBondPositions/AdminBondRequests (Financial-Writes), AdminStocks/AdminStockOrders (Financial-Writes + Realtime), AdminFormularAccess, AdminDocumentUploads (Storage), AdminUserPositions (Financial-Write), AdminAnalytics (Aggregate-Reads + Edge-Fn), AdminLiveVisitors (Realtime + RPC), AdminIpoRequests (Financial-Writes), AdminCreditLeads, AdminInsufficientBuyingPower, AdminProductInquiryLeads, AdminSocialPreviewMessages, AdminContractSubmissions (RPC + Storage), AdminOfferReviews, AdminCreditOffers, AdminCreditBankDetails, AdminUserDetail (avatar Storage) | BACKEND_REQUIRED | **P1** |
+| **MARKET_DATA** | **~7** | Handeln.js (stock_prices_cache + `stock-prices` Edge Fn), AdminStocks.js (stock_prices_cache + Edge Fn), lib/market/chartOverviewConfig.js (`market-chart-history` Edge Fn) | BACKEND_REQUIRED (yfinance / TwelveData vorhanden) | **P1** |
+| **SUPPORT** | **~28** | Contact.js (contact_messages), CreditLeadPage.js (credit_leads), lib/submitProductInquiryLead.js (product_inquiry_leads), lib/activityLogger.js (user_activity_log), lib/logInsufficientBuyingPower.js, lib/visitorTracker.js (track_visitor_batch RPC), lib/offerReviews.js, lib/interestRateHistory.js, lib/savingsOfferStats.js, ApplicationForm.js (send-application-email Edge Fn), components/NotificationCenter, OfferInterestModal, FormularConditionsDialog, VisitorSessionDetailModal, SocialAnlagenprofisMessageModal, VermoegensStrukturSimulator, FormularProtectedRoute, AdminDashboardLayout (Realtime-Badges), AdminGlobalNotifications (10 Realtime-Channels), hooks/useFormularConditions, Home.js, PartnerBanks.js, SavingsComparison.js, PasswordPage.js (verify_formular_access_code RPC), DokumentHochladen.js | BACKEND_REQUIRED | **P1–P2** |
+| **STORAGE** | **5** | AdminContractSubmissions.js (list contract-PDFs), AdminDocumentUploads.jsx (upload/remove PDFs, signed URLs), AdminUserDetail.js (avatar upload + Public URL) | EXTERNAL_REQUIRED (Object-Storage-Integration nötig — Emergent oder S3/GCS) | **P1** |
+| **DEAD_CODE / CONFIG_ONLY** | **~2** | lib/supabase.js (createClient — kann nach letztem Cutover entfernt werden), App.js:220 (`isSupabaseConfigured`-Toast — reine Config-Warnung), AdminContractSubmissions.js:447 (UI-Comment-String) | FRONTEND_ONLY | **P2** |
+| **TEST_ONLY** | **0** | (nach 82.85 alle Tests fetch-mock-basiert) | — | — |
+
+### Detail — CUSTOMER_FINANCIAL / AUTH (P0 · echte Runtime-Blocker)
+| Datei / Zeile | Op | Tabelle/RPC/Function | Backend-Äquivalent | Aufwand |
+|---|---|---|---|---|
+| `lib/supabase.js:51` | init | createClient | n/a — kann nach Restcutover entfernt werden | FRONTEND_ONLY |
+| `App.js:220` | read | isSupabaseConfigured Toast | n/a | FRONTEND_ONLY |
+| `ResetPassword.js:29/36/68/71/87/101` | Auth | getSession, onAuthStateChange, updateUser (pw), getUser, `from('profiles')`, signOut | Ersatz durch bestehende JWT-Cookie-Auth (`/api/auth/*`) — Password-Reset-Flow braucht separaten `/api/auth/reset-password`-Endpoint | BACKEND_REQUIRED |
+| `lib/activityLogger.js:10/25` | Auth+Write | auth.getSession + insert `user_activity_log` | JWT + neuer `/api/activity/log` | BACKEND_REQUIRED |
+| `lib/offerReviews.js:113` | Auth | auth.getUser | JWT | FRONTEND_ONLY |
+| `Handeln.js:51-73` | Read+Fn | `stocks`, `stock_prices_cache`, `user_stock_watchlist`, Edge Fn `stock-prices` | `/api/stocks/*`, `/api/portfolio/quotes`, `/api/watchlist/*` — teilweise vorhanden, Edge-Fn ersetzt durch Twelve Data | BACKEND_REQUIRED |
+| `Statement.js` | Read | u. a. `user_stock_positions` | teilweise vorhanden | BACKEND_REQUIRED |
+| `pages/admin/AdminStockResearch/AdminInvestmentTopics/AdminInvestmentTopicEdit/AdminNewsArticles` | Auth-Bridge | `auth.getSession()` → Token forwardet an FastAPI | Umstellung auf JWT-Cookie (auto-forwarded via `credentials: 'include'`) | FRONTEND_ONLY |
+
+### Bereits abgeschlossene Cutover-Sessions (Reihenfolge)
+1. **82.79** — Admin Stock Coupons (Supabase → FastAPI)
+2. **82.79b** — Bond Issuer Logo Coverage Fix
+3. **82.80** — Admin Markt-Daten (Supabase → FastAPI)
+4. **82.81** — Admin Users FastAPI/Mongo Backend + Frontend Cutover
+5. **82.82** — Admin Offer-Interests FastAPI/Mongo Cutover
+6. **82.82b** — StockDetail Missing Quotes & History Coverage (Allowlist-Fix)
+7. **82.83** — Depot Realtime-Polling + Twelve Data Integration
+8. **82.84** — StockDetail Universum-Vollständigkeits-Verifikation (READ-ONLY)
+9. **82.84b** — StockDetail Chart-History Range-Mismatch Fix + yfinance Rate-Limit-Härtung
+10. **82.85** — News Service Supabase → FastAPI/Mongo Cutover
+11. **82.86** — Forex Service Supabase → FastAPI/Mongo Cutover
+
+### Empfohlene exakte Reihenfolge der letzten Cutover-Sessions
+Die verbleibenden 60 Dateien / 154 Touches nach Kritikalität abarbeiten. Jede Session bleibt in dem gewohnten Muster: Backend-Endpoint(s) + Frontend-Cutover + curl-E2E + Coupon/PnL-Regression.
+
+1. **82.87** — Global Audit (**diese Session**, READ-ONLY) ✅
+2. **82.88 (P0)** — Auth-Bridge Cutover: `ResetPassword.js` + 4 Admin-Pages (`admin/AdminStockResearch/AdminInvestmentTopics/AdminInvestmentTopicEdit/AdminNewsArticles`) auf JWT-Cookie; `Password-Reset` Endpoint neu (`/api/auth/reset-password/*`)
+3. **82.89 (P0)** — Customer-Financial Cutover: `Handeln.js` (Stocks + Watchlist + Preise) + `Statement.js` auf `/api/stocks`, `/api/portfolio`, `/api/watchlist`
+4. **82.90 (P1)** — Admin-Financial Writes: `AdminCashBalances`, `AdminStockOrders`, `AdminUserPositions`, `AdminBondPositions`, `AdminBondRequests`, `AdminIpoRequests` — allesamt RPC-Ersätze mit Saga/Outbox-Absicherung
+5. **82.91 (P1)** — Admin-Read: `AdminDashboard`, `AdminBanks`, `AdminOffers`, `AdminApplications`, `AdminDepotContracts`, `AdminActivity`, `AdminAnalytics`, `AdminLiveVisitors` (inkl. Realtime-Ersatz durch Polling oder WebSocket-Router)
+6. **82.92 (P1)** — Support-Flows: `Contact.js`, `CreditLeadPage.js`, `submitProductInquiryLead`, `activityLogger`, `logInsufficientBuyingPower`, `visitorTracker`, `interestRateHistory`, `savingsOfferStats`, `offerReviews`
+7. **82.93 (P1)** — Formular-/Document-Access: `PasswordPage`, `DokumentHochladen`, `AdminFormularAccess`, `AdminDocumentUploads` (RPCs + Storage → Emergent-Object-Storage oder S3-Alternative)
+8. **82.94 (P1)** — Storage-Cutover: `AdminContractSubmissions` (PDFs), `AdminUserDetail` (Avatars) — Storage-Provider einrichten
+9. **82.95 (P1)** — Admin-Notifications-Realtime: `AdminGlobalNotifications`, `AdminDashboardLayout` — Realtime-Channels durch Polling / SSE / WebSocket ersetzen
+10. **82.96 (P2)** — Rest-Admin: `AdminCreditLeads`, `AdminCreditOffers`, `AdminCreditBankDetails`, `AdminInsufficientBuyingPower`, `AdminProductInquiryLeads`, `AdminSocialPreviewMessages`, `AdminOfferReviews`, kleinere Modals & Home/PartnerBanks/SavingsComparison
+11. **82.97 (P2)** — Config-Cleanup: `lib/supabase.js` löschen, `@supabase/supabase-js` aus `package.json` entfernen, `App.js` `isSupabaseConfigured` Toast entfernen, `REACT_APP_SUPABASE_*` + `SUPABASE_URL` + `SUPABASE_ANON_KEY` aus `.env` entfernen, `supabase:deploy:*` npm-scripts entfernen
+
+### Final-Report Flags
+| Flag | Wert |
+|---|---|
+| **TOTAL_ACTIVE_SUPABASE_TOUCHES** | **154** |
+| **CUSTOMER_FINANCIAL_TOUCHES** | ~9 |
+| **AUTH_TOUCHES** | 12 |
+| **ADMIN_TOUCHES** | ~85 |
+| **MARKET_DATA_TOUCHES** | ~7 |
+| **SUPPORT_TOUCHES** | ~28 |
+| **STORAGE_TOUCHES** | 5 |
+| **DEAD_CODE_TOUCHES** | ~2 |
+| **SUPABASE_SERVICE_ROLE_KEY_RUNTIME_REQUIRED** | **NO** ✅ |
+| **REMAINING_CUTOVER_TASKS** | **10** (Sessions 82.88 – 82.97) |
+| **READY_TO_REMOVE_SUPABASE_DEPENDENCY** | **NO** (erst nach Session 82.97) |
+| **BACKEND_SUPABASE_RUNTIME** | 0 Python-References, 0 Imports, 0 Env-Reads |
+| **FINANCIAL_WRITES_IN_THIS_SESSION** | 0 (READ-ONLY) |
+| **DB_MUTATIONS_IN_THIS_SESSION** | 0 (READ-ONLY) |
+| **PROD_DEPLOY_IN_THIS_SESSION** | NO |
+
+### Kritische Erkenntnis
+Der bislang als „Prod-Deploy-Blocker" behandelte `SUPABASE_SERVICE_ROLE_KEY` **ist nicht mehr laufzeitrelevant** für die Backend-App. Ein Prod-Deploy kann in dem Moment stattfinden, in dem entweder:
+- die verbleibenden 60 Frontend-Dateien umgestellt sind (dann kann Supabase komplett entfernt werden), **oder**
+- vorübergehend eine funktionierende `SUPABASE_URL` + `SUPABASE_ANON_KEY` gesetzt bleibt, während die verbleibenden Frontend-Reads gegen die alte Supabase-Instanz laufen (Feature-Parity-Fenster, nur wenn die Legacy-DB noch existiert).
+
+Der Emergent-Support-Ticket-Punkt „SUPABASE_SERVICE_ROLE_KEY missing" ist damit als **historischer Deploy-Artefakt** einzuordnen — nicht als aktueller technischer Blocker.
+
+
 ## Session 82.86 (Preview · VERIFIED) · Forex Service Supabase → FastAPI/Mongo Cutover
 
 **Auslöser:** `frontend/src/services/forexService.js` war der letzte verbliebene Supabase-Touch (`functions.invoke('stock-prices', { symbols: [EURUSD=X,…] })`).
