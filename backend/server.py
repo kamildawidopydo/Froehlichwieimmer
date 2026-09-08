@@ -5166,6 +5166,19 @@ app.include_router(_stock_research_routes.router)
 from routes import news as _news_routes  # noqa: E402
 app.include_router(_news_routes.router)
 
+# Session 82.85 — News public router (Supabase-Cutover): article list, related,
+# videos, search-suggestions, public feed.
+from routes import news_public as _news_public_routes  # noqa: E402
+app.include_router(_news_public_routes.router)
+
+
+@app.on_event("startup")
+async def _news_public_indexes():
+    try:
+        await _news_public_routes.ensure_indexes()
+    except Exception:  # noqa: BLE001
+        logger.exception("news_public: index ensure failed")
+
 # Session 80.72 — Public single-stock endpoints (history + fundamentals)
 from routes import stock_public as _stock_public_routes  # noqa: E402
 app.include_router(_stock_public_routes.router)

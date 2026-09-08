@@ -3,6 +3,84 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.85 (Preview · VERIFIED) · News Service Supabase → FastAPI/Mongo Cutover
+
+**Auslöser:** `frontend/src/services/newsService.js` war das letzte verbliebene Modul mit direkten Supabase-Touches (RPCs, Table-Reads, Edge-Function-Invoke).
+
+### Static Audit (grep-basiert)
+| Metrik | BEFORE (git HEAD:services/newsService.js) | AFTER |
+|---|---|---|
+| Supabase-Touches (`supabase.` usages) | **4** (Zeilen 42, 193, 220, 308) | **0** ✅ |
+| Supabase-Imports (`@/lib/supabase`) | **1** (Zeile 6) | **0** ✅ |
+| Total legacy references | **5** | **0** ✅ |
+
+### Neue Backend-Endpoints (`/app/backend/routes/news_public.py`)
+Alle unter Prefix `/api/content/news`:
+| Endpoint | Ersetzt | Response |
+|---|---|---|
+| `GET  /list` | `supabase.from('news_articles')` + `rpc(news_fuzzy_search)` | `{items, count}` |
+| `GET  /related` | `supabase.from('news_articles').eq('category')` | `{items}` |
+| `GET  /search-suggestions` | `rpc(news_search_suggestions)` | `{items}` |
+| `GET  /feed` | `functions.invoke('news-public-feed')` | `{items, count, cached}` |
+| `GET  /videos` | `supabase.from('news_videos')` | `{items: [], count: 0}` (faithful) |
+| `GET  /video/{slug}` | `supabase.from('news_videos').eq('slug')` | 404 (faithful) |
+| `POST /video/{slug}/view` | `rpc(news_increment_video_view)` | `{ok, noop}` |
+| `GET  /related-videos` | `supabase.from('news_videos').limit()` | `{items: []}` (faithful) |
+
+### Mongo-Indizes (idempotent, via `ensure_indexes()` bei App-Startup)
+```
+pub_status_publishedAt          : (is_published, status, published_at desc)
+pub_status_cat_publishedAt      : (is_published, status, category, published_at desc)
+pub_status_views_publishedAt    : (is_published, status, views desc, published_at desc)
+```
+Bereits vorhanden bleibend: `_id_`, `published_at_desc`, `related_symbols_status_publishedAt`.
+
+### E2E-Verifikation (Backend curl)
+```
+health:200 · list:3/count=839 · list_cat:3/count=11 · list_popular:3/count=839
+list_search(Dax):3/count=30 · related:3 · suggest:5
+feed_articles:3 · feed_videos:0/count=0 · videos:0/count=0
+video_404:404 · video_view_noop:{ok:true, noop:true} · related_videos:0
+```
+
+### Input-Validation (schreibende + validierende Endpoints)
+```
+POST /video/normal-slug/view      → 200 {ok:true, noop:true}
+POST /video/<400 chars>/view      → {ok:false, reason:invalid_slug}
+GET  /list?limit=0                → 422 (FastAPI ge=1)
+GET  /list?limit=1000             → 422 (FastAPI le=100)
+GET  /list?offset=-1              → 422 (FastAPI ge=0)
+GET  /list?tab=hacker             → 400 (allowlist recent|popular)
+GET  /feed?source=pdf             → 400 (allowlist articles|videos)
+```
+
+### Fachliche Faithfulness (keine Fake-Daten)
+- `news_videos`-Kollektion existiert nicht → alle Video-Endpoints liefern strukturell leere Antworten (`[]`, `count:0`, `404`, `noop:true`). Keine erfundenen Video-Datensätze.
+- `guid`, `language`, `video_embed_url`, `video_thumbnail_url`, `video_source_url` sind in `news_articles` nicht gepflegt → im Serializer explizit `None`/`"de"` gesetzt (keine synthetischen Werte).
+
+### Frontend-Rewrite (`newsService.js`)
+- Import `@/lib/supabase` **entfernt**.
+- Public-API-Signatur (alle 11 Exports) unverändert erhalten → alle 9 Consumer-Files funktionieren unmodifiziert weiter (`useNewsList`, `useNewsCategorySections`, `useNewsSearchSuggestions`, `useNewsArticle`, `useNewsVideo`, `MarketInstrumentSnapshotPage`, `PublicNewsVideoPage`, `RelatedNewsArticles`, `MarktuebersichtSidebar`).
+- 48h-Client-Freshness (`filterFreshFeed`) für `recent`-Feeds erhalten; bei `search`/`popular` bewusst NICHT angewendet (Nutzer-Erwartung: alle Treffer/Top-Views).
+
+### Test-Suite (`__tests__/newsService.test.js`)
+- Vollständig neu geschrieben: statt Supabase-Chainable-Mocks jetzt `global.fetch`-Stubs. 15 Test-Cases decken alle 11 Exports ab (list-articles, get, view, videos, search, related, feed, validation).
+
+### Regression (grün wie gefordert)
+- Coupon-Flow: **16/16 PASS** ✅
+- Realized-PnL: **5/5 PASS** ✅
+- Kombiniert: `21 passed in 3.25s`
+
+### Verbleibende Blocker (BLOCKED, nicht erfunden)
+- Keine. Alle Legacy-Funktionen sind fachlich 1:1 reproduziert oder faithful mit leerem Faithful-Response abgedeckt.
+
+### Betroffene Dateien
+- **Neu**: `/app/backend/routes/news_public.py`
+- **Geändert**: `/app/backend/server.py` (Router-Registrierung + Index-Startup-Hook)
+- **Rewrite**: `/app/frontend/src/services/newsService.js`
+- **Rewrite**: `/app/frontend/src/services/__tests__/newsService.test.js`
+
+
 ## Session 82.84b (Preview · VERIFIED) · StockDetail Chart-History Range-Mismatch Fix + yfinance Rate-Limit Härtung
 
 **Auslöser:** User-Report „Keine Chartdaten verfügbar" auf `/aktien/:symbol`.
