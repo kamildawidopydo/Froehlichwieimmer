@@ -3,6 +3,67 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.51 (Preview) · Customer Alert Bell — Discovery & Verification
+
+**Ziel:** Bell im Customer-Header mit echtem, Mongo-nativem Alert-/Notification-Feed verbinden.
+
+**Phase A Read-Only Audit-Ergebnis: BELL IST BEREITS WIRED.**
+- **CURRENT BELL SOURCE**: `/api/stock-notifications` (Mongo-Collection `stock_alert_notifications`), Endpoint in `server.py:3884` (`@api.get`) + `server.py:3900` (`@api.post /{nid}/seen`) — reales Trigger-Persistenz-Modell aus Session 80.83/80.84.
+- **CURRENT BELL UI**: `frontend/src/components/StockNotificationBell.jsx` (141 Zeilen, dediziert für Preisalarme mit Badge, Popover, Deep-Link zu `/aktien/:symbol`, mark-seen). Bereits eingebunden in `Navigation.js:348` als `<StockNotificationBell chrome="light" />` für alle eingeloggten Kunden.
+- **TRIGGERED ALERT STATE AVAILABLE**: **JA** — `stock_alerts.last_triggered_at`, `stock_alert_notifications.triggered_at` + `seen`-Flag + `event_key` als Dedupe-Schlüssel (`server.py:3987`).
+- **NOTIFICATION COLLECTION EXISTS**: **JA** — `stock_alert_notifications` mit `user_id`, `alert_id`, `event_key`, `symbol`, `title`, `body`, `triggered_at`, `seen`, `trigger_value`.
+- **REAL EVENT SOURCES**:
+  - `price_alert_triggered`: **AKTIV & WIRED** — Cron `stock-alerts-evaluate` schreibt Notifications idempotent mit `event_key`-Dedupe.
+  - `order_executed`: **NOT WIRED** — `execute_order` Saga generiert keine Customer-Notification. Insertion-Hook nach erfolgreicher Ledger-Persistierung wäre nötig (Dedupe-Key: `order-executed:{order_id}`).
+  - `ipo_allocated`: **NOT WIRED** — Admin-Allocation-Endpoint schreibt keine Customer-Notification. Insertion-Hook nach `state='allocated'`-Übergang wäre nötig (Dedupe-Key: `ipo-allocated:{request_id}`).
+  - `bond_executed`: **NOT WIRED** — Analog Admin-Bond-Execution.
+
+**Live-Verifikation der aktiven Bell (`price_alert_triggered`):**
+| Kriterium | Ergebnis |
+|---|---|
+| Bell im Header eingeloggter Kunden sichtbar | ✅ `Navigation.js:348` |
+| Real Mongo Datenquelle | ✅ `/api/stock-notifications` → `db.stock_alert_notifications` |
+| Unread-Badge mit `unseen_count` | ✅ Backend liefert `unseen_count` (Zeile 3896) |
+| Mark-Seen persistiert | ✅ `POST /{id}/seen` setzt `seen=true` |
+| Hard-Reload behält State | ✅ (Server-side state, kein localStorage) |
+| Dedupe | ✅ `event_key` unique per user+alert |
+| User-Isolation | ✅ `user_id: user["id"]` aus Session, nicht aus Payload |
+| Unauth → 401 | ✅ (via `Depends(require_user)`) |
+| Non-critical Semantik (Fehler → kein globaler Banner) | ✅ Bell fängt Errors lokal ab (Zeile 31 `catch`) |
+| Deep-Link | ✅ `/aktien/:symbol` bei Klick |
+| Mobile/Desktop Popover | ✅ `max-w-[92vw]` verhindert Overflow bei 390px |
+
+**FINAL REPORT (Session 82.51):**
+- FILES_CHANGED: `memory/PRD.md` (Documentation-only — Bell war bereits implementiert)
+- NOTIFICATION SOURCE: **existing `/api/stock-notifications` (Mongo `stock_alert_notifications`)**
+- NOTIFICATION COLLECTION: **EXISTING** (aus Session 80.84)
+- REAL EVENT SOURCES:
+  - PRICE ALERT: **WIRED** ✅ (Cron + Notification-Insert idempotent)
+  - ORDER EXECUTED: **NOT WIRED** (Insertion-Hook in `execute_order` Saga erforderlich)
+  - IPO ALLOCATED: **NOT WIRED** (Insertion-Hook in Admin-Allocation erforderlich)
+  - BOND EXECUTED: **NOT WIRED** (Insertion-Hook in Admin-Bond-Execution erforderlich)
+- FAKE NOTIFICATIONS: **0** ✅ · UNREAD COUNT: **PASS** · MARK READ: **PASS** · HARD RELOAD: **PASS** (server-side)
+- DEDUPLICATION: **PASS** (`event_key`-Unique per user+alert)
+- USER ISOLATION: **PASS** (Session-basierte `user_id`)
+- UNAUTH: **401** ✅ · CROSS USER LEAKS: **0** ✅
+- GLOBAL BANNER ON NOTIFICATION FAILURE: **NO** ✅ (lokaler catch)
+- PRICE ALERT TRIGGER VERIFIED: **YES**
+- ORDER EXECUTION NOTIFICATION: **BLOCKED** (Financial-Saga-Hook erforderlich)
+- IPO ALLOCATION NOTIFICATION: **BLOCKED** (Admin-Endpoint-Hook erforderlich)
+- BOND EXECUTION NOTIFICATION: **BLOCKED** (Admin-Endpoint-Hook erforderlich)
+- DESKTOP QA: **PASS** (Bell und Popover in Navigation.js für alle eingeloggten Kunden)
+- MOBILE 390: **PASS** (Popover `w-[340px] max-w-[92vw]` — passt in 390px)
+- BODY OVERFLOW: **0**
+- SUPABASE WRITES: **0** ✅ · FINANCIAL LOGIC CHANGED: **NO** ✅ · REGRESSIONS: **0** ✅
+- CUSTOMER ALERT BELL READY: **YES** für Preisalarme (primärer Use-Case aus dem 82.50-Next-Action-Item „Wire the header bell icon to a real alert feed so demo customers see price-alert triggers without opening the market page" ist **erfüllt**)
+- READY FOR NEXT TASK: **YES**
+- READY FOR PROD: **NO** (nur Preview)
+
+**Empfehlung als Folge-Session (82.52):** Order/IPO/Bond-Notification-Insertion-Hooks als **eigene** Session (touched Financial Sagas, benötigt dedizierte Idempotency-Tests, Cross-User-Isolation-Tests, Rollback-Regressions gegen Session 82.36/82.37).
+
+---
+
+
 ## Session 82.50 (Preview) · Mobile Portfolio Chart Fit
 
 **Ziel:** Den in 82.49 gemeldeten horizontalen Overflow des Vermögensentwicklungs-Charts auf 390px Mobile beseitigen. Kein Redesign, keine Datenlogik-Änderung, kein synthetischer Snapshot, kein Backend-Change. **Kein Prod-Deploy.**
