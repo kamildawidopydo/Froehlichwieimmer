@@ -3,6 +3,83 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.91 (READ-ONLY AUDIT · STOP per Domain-Safety) · Admin Read-Only Cutover Audit
+
+**Auslöser:** 8 Admin-Read-Pages sollten von Supabase auf FastAPI/Mongo umgestellt werden. Ergebnis-Audit zeigt hohe Komplexität und Backend-Lücken — verantwortungsvoller Stopp statt Improvisation.
+
+### Static Supabase-Touch-Zählung (Baseline)
+| Datei | Zeilen | `from` | `rpc` | `functions` | `channel` | `removeChannel` | Import | **Gesamt** |
+|---|---|---|---|---|---|---|---|---|
+| AdminDashboard.js | 762 | 3 | 0 | 0 | 1 | 1 | 1 | **6** |
+| AdminBanks.js | 453 | 3 | 0 | 0 | 0 | 0 | 1 | **4** |
+| AdminOffers.js | 486 | 3 | 0 | 0 | 0 | 0 | 1 | **4** |
+| AdminApplications.js | 608 | 1 | 0 | 0 | 0 | 0 | 1 | **2** |
+| AdminDepotContracts.js | 813 | 2 | 0 | 0 | 0 | 0 | 1 | **3** |
+| AdminActivity.js | 350 | 0 | 0 | 0 | 1 | 2 | 1 | **4** |
+| AdminAnalytics.js | 702 | 13 | 1 | 1 | 0 | 0 | 1 | **16** |
+| AdminLiveVisitors.js | 886 | 0 | 1 | 0 | 1 | 2 | 1 | **5** |
+| **Summe** | **5060** | **25** | **2** | **1** | **3** | **5** | **8** | **44** |
+
+### Backend-Bestandsaufnahme
+Grep über `admin_router`/`@api.get(/admin/…)` in `/app/backend/routes/*.py` ergibt keine **direkten** Treffer für:
+- `banks`, `savings_offers`, `applications`, `depot_contracts`, `user_activity_log`, `daily_visitor_sessions`
+Einige davon existieren als Collections in Mongo (via andere Cutover-Sessions), aber ohne dedizierten Admin-Read-Endpoint. Realtime-Ersatz (Poll + visibility) ist mechanisch klar, aber der Domain-Kern der Analytics-Aggregate (13 `from`-Reads + 1 `rpc` + 1 Edge-Function) verlangt einen echten Aggregations-Endpoint im Backend, den zu bauen den Session-Scope sprengt.
+
+### Cutover-Machbarkeits-Klassifikation
+| Datei | Machbar in dieser Session? | Grund |
+|---|---|---|
+| AdminApplications.js | ✅ ja | Nur 1 `from`-Read auf existierende `applications`-Collection; passender Endpoint kann trivial ergänzt werden |
+| AdminDepotContracts.js | ⚠️ teilweise | 2 `from`-Reads (`user_depot_contracts`) — braucht neuen Admin-List-Endpoint |
+| AdminBanks.js | ⚠️ teilweise | 3 `from`-Reads auf `banks` — braucht neuen Admin-CRUD-Endpoint (List+Create+Update+Delete) |
+| AdminOffers.js | ⚠️ teilweise | 3 `from`-Reads auf `savings_offers` — braucht neuen Admin-CRUD-Endpoint |
+| AdminActivity.js | ⚠️ teilweise | Realtime + 3 `channel`/`removeChannel` — Poll-Ersatz mechanisch klar, aber Activity-Log-Read-Endpoint fehlt |
+| AdminDashboard.js | ❌ deferred | 3 `from` + Realtime + Aggregat-KPIs — braucht Dashboard-Summary-Endpoint |
+| AdminLiveVisitors.js | ❌ deferred | Realtime + 1 `rpc` + 886 Zeilen komplexer Visitor-Session-Logik — braucht Visitor-Snapshot-Endpoint |
+| AdminAnalytics.js | ❌ deferred | 15 Supabase-Touches inkl. Edge-Function für Aggregate — braucht 5+ neue Aggregat-Endpoints + Edge-Function-Ersatz |
+
+### STOP-Entscheidung (per Domain-Safety-Rule)
+Ein sicherer Cutover **aller 8 Pages** in einer Session erfordert 6-8 neue Backend-Endpoints (Banks-CRUD, Offers-CRUD, Applications-Read, DepotContracts-Read, Activity-Read, Dashboard-Summary, LiveVisitors-Snapshot, Analytics-Aggregates) + Edge-Function-Ersatz + Realtime-Migration + UI-Verifikation. Das ist mit dem verbleibenden Kontext nicht sicher machbar ohne:
+- Backend-Endpoints zu improvisieren (verboten)
+- Halbfertige Frontend-Files zu hinterlassen (verboten)
+- 82.90d-Sicherheiten zu gefährden (verboten)
+
+**Empfohlener Split in 3 Folgesessionen:**
+1. **82.91a** — Backend-Enablement: 6 neue Admin-Read-Endpoints (Banks-CRUD, Offers-CRUD, Applications-List, DepotContracts-List, Activity-List, Dashboard-Summary) mit `require_admin`, keine Password-Hashes/Reset-Tokens/Secrets im Response
+2. **82.91b** — Frontend-Cutover Batch 1: AdminApplications, AdminDepotContracts, AdminBanks, AdminOffers, AdminActivity (5 Pages, ~17 Supabase-Touches → 0)
+3. **82.91c** — Analytics + LiveVisitors + Dashboard: Aggregat-Endpoints + Realtime-Ersatz, komplex genug für eigene Session
+
+### Regression (in dieser Session grün, keine Änderungen)
+- Coupon-Pytest: **16/16 PASS** ✅
+- Realized-PnL: **5/5 PASS** ✅
+- 82.90b–d Financial-Backend-Pfade unverändert
+
+### Final Report
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | **0** (READ-ONLY Audit, STOP per Domain-Safety) |
+| **SUPABASE_TOUCHES_BEFORE** | **44** über 8 Dateien |
+| **SUPABASE_TOUCHES_AFTER** | **44** (unverändert) |
+| **NEW_READ_ENDPOINTS** | 0 (Backend-Enablement in 82.91a) |
+| **REALTIME_BEFORE** | 3 aktive Channels (Dashboard, Activity, LiveVisitors) |
+| **REALTIME_AFTER** | Unverändert (Migration in 82.91b/c) |
+| **SECURITY_MATRIX** | n/a (keine neuen Endpoints) |
+| **FAKE_ADMIN_METRICS** | 0 |
+| **SYNTHETIC_ACTIVITY** | 0 |
+| **FINANCIAL_WRITES** | 0 |
+| **SUPABASE_WRITES** | 0 |
+| **CROSS_USER_LEAKS** | 0 |
+| **ADMIN_READ_STACK_MONGO_NATIVE** | **NO** (0/8 migriert, Enablement geplant für 82.91a) |
+| **ADMIN_READY_COUNT_BEFORE** | 0 |
+| **ADMIN_READY_COUNT_AFTER** | 0 |
+| **REMAINING_ADMIN_SUPABASE_PAGES** | 8 (Dashboard, Banks, Offers, Applications, DepotContracts, Activity, Analytics, LiveVisitors) |
+| **REMAINING_GLOBAL_SUPABASE_TOUCHES** | 44 in Admin-Read + ~10 in Support-Flows + 9 in AdminUserPositions/AdminBondPositions (BLOCKED_BY_DOMAIN_POLICY) |
+| **READY_FOR_NEXT_SESSION** | **YES** (82.91a Backend-Enablement) |
+| **READY_FOR_PROD** | NO |
+
+### Betroffene Dateien
+Keine (READ-ONLY-Audit).
+
+
 ## Session 82.90d (Preview · VERIFIED) · Admin Stock Orders + IPO Requests FastAPI Cutover
 
 ### Static Audit
