@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -93,7 +92,6 @@ const AdminActivity = () => {
   useEffect(() => {
     if (!liveEnabled) {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
       return;
@@ -115,7 +113,6 @@ const AdminActivity = () => {
 
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };

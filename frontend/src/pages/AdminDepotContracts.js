@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -288,7 +287,7 @@ const AdminDepotContracts = () => {
         .update(payload)
         .eq('id', editingId));
     } else {
-      ({ error } = await supabase.from('user_depot_contracts').insert(payload));
+      toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
     }
 
     setSaving(false);
@@ -304,7 +303,7 @@ const AdminDepotContracts = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Diesen Vertrag wirklich löschen?')) return;
-    const { error } = await supabase.from('user_depot_contracts').delete().eq('id', id);
+    const toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
     if (error) {
       toast.error('Fehler beim Löschen: ' + error.message);
       return;

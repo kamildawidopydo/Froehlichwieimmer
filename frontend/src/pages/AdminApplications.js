@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -146,7 +145,7 @@ const AdminApplications = () => {
     const confirmed = window.confirm('Möchtest du diesen Antrag wirklich dauerhaft löschen?');
     if (!confirmed) return;
 
-    const { error } = await supabase.from('applications').delete().eq('id', appId);
+    const toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
     if (error) {
       toast.error('Antrag konnte nicht gelöscht werden');
       return;

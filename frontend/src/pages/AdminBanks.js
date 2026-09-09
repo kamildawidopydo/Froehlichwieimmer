@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import {
     AdminSubpageLayout,
     AdminSubpageHeader,
@@ -136,9 +135,9 @@ const AdminBanks = () => {
 
         let error;
         if (modalMode === 'add') {
-            ({ error } = await supabase.from('banks').insert(payload));
+            toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
         } else {
-            ({ error } = await supabase.from('banks').update(payload).eq('id', editingBank.id));
+            toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
         }
 
         if (error) {
@@ -153,7 +152,7 @@ const AdminBanks = () => {
 
     const handleDelete = async (bankId, bankName) => {
         if (!window.confirm(`Möchten Sie "${bankName}" wirklich löschen? Alle verknüpften Angebote werden ebenfalls gelöscht.`)) return;
-        const { error } = await supabase.from('banks').delete().eq('id', bankId);
+        const toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
         if (error) {
             toast.error('Fehler: ' + error.message);
         } else {

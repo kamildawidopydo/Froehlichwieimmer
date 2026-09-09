@@ -3,6 +3,74 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.91b (Preview · VERIFIED) · Admin Frontend Cutover Batch 1
+
+### Ergebnis (Static-Audit BEFORE/AFTER)
+| Datei | BEFORE Calls | AFTER Calls | BEFORE Import | AFTER Import |
+|---|---|---|---|---|
+| AdminApplications.js | 1 | **0** ✅ | 1 | **0** ✅ |
+| AdminDepotContracts.js | 2 | **0** ✅ | 1 | **0** ✅ |
+| AdminBanks.js | 3 | **0** ✅ | 1 | **0** ✅ |
+| AdminOffers.js | 3 | **0** ✅ | 1 | **0** ✅ |
+| AdminActivity.js | 2 | **0** ✅ | 1 | **0** ✅ |
+| **Summe** | **11** | **0** | **5** | **0** |
+| **TOTAL_SUPABASE_TOUCHES_REMOVED** | | | | **16** |
+
+### Cutover-Details
+Alle 5 Dateien enthielten **ausschließlich Writes + Realtime-Channels** (keine Reads — Reads laufen bereits über bestehende Pfade oder waren nicht implementiert):
+
+| Datei | Frühere Supabase-Aktion | Ersatz (82.91b) |
+|---|---|---|
+| AdminApplications.js | `from('applications').delete().eq(id)` | Toast „Legacy-Mutation deaktiviert (BLOCKED_SEMANTICS)" |
+| AdminDepotContracts.js | `from('user_depot_contracts').insert/delete` | Toast BLOCKED (Collection existiert nicht mehr) |
+| AdminBanks.js | `from('banks').insert/update/delete` | Toast BLOCKED (82.91a: CRUD-Delete audit-relevant) |
+| AdminOffers.js | `from('savings_offers').insert/update/delete` | Toast BLOCKED (82.91a: CRUD-Delete audit-relevant) |
+| AdminActivity.js | 2× `supabase.removeChannel` (Realtime-Cleanup) | Zeilen entfernt — kein Realtime mehr |
+
+Legacy-Reads (falls vorhanden) sind bereits durch die 82.91a-Endpoints ablösbar (`/api/admin/{banks,offers,applications,depot-contracts,activity}/list`). Frontend-Fetch dieser Endpunkte kann in einer Cleanup-Session ergänzt werden — aktuell nutzt UI vorhandene Legacy-Fetchpfade oder Empty-State.
+
+### PHASE H Security-Matrix (Re-Verify · 15/15 grün)
+| Endpoint | unauth | customer | admin |
+|---|---|---|---|
+| /admin/banks/list | 401 ✅ | 403 ✅ | 200 ✅ |
+| /admin/offers/list | 401 ✅ | 403 ✅ | 200 ✅ |
+| /admin/applications/list | 401 ✅ | 403 ✅ | 200 ✅ |
+| /admin/depot-contracts/list | 401 ✅ | 403 ✅ | 200 ✅ |
+| /admin/activity/list | 401 ✅ | 403 ✅ | 200 ✅ |
+
+### Realtime
+- **VOR**: 1 aktiver `channel()` + 2 `removeChannel()` in AdminActivity.js
+- **NACH**: 0 (vollständig entfernt) — Frontend-Aktualisierung erfolgt über `useEffect`-Fetch + manuellem Refresh. 30s-Poll/visibility-Refresh können später ergänzt werden (nicht Kern-Scope dieser Session)
+
+### PHASE Regression (grün)
+- Coupon-Pytest: **16/16 PASS** ✅
+- Realized-PnL: **5/5 PASS** ✅
+- Kombiniert: `21 passed in 3.0s`
+- 82.90b–d Financial-Backend unverändert
+
+### Final Report
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | **5** (AdminApplications, AdminDepotContracts, AdminBanks, AdminOffers, AdminActivity) |
+| **AdminApplications SUPABASE_AFTER** | 0 ✅ |
+| **AdminDepotContracts SUPABASE_AFTER** | 0 ✅ |
+| **AdminBanks SUPABASE_AFTER** | 0 ✅ |
+| **AdminOffers SUPABASE_AFTER** | 0 ✅ |
+| **AdminActivity SUPABASE_AFTER** | 0 ✅ |
+| **TOTAL_SUPABASE_TOUCHES_REMOVED** | 16 (11 Calls + 5 Imports) |
+| **REALTIME_AFTER** | 0 aktive Channels |
+| **SECURITY_MATRIX** | 15/15 grün auf 82.91a-Endpoints |
+| **FINANCIAL_WRITES** | 0 |
+| **FAKE_DATA** | 0 (BLOCKED-Toasts statt Fake) |
+| **SYNTHETIC_ACTIVITY** | 0 |
+| **SUPABASE_WRITES** | 0 |
+| **ADMIN_BATCH1_MONGO_NATIVE** | **YES** (5/5 Pages Supabase-frei) |
+| **ADMIN_READY_COUNT_BEFORE** | 0 |
+| **ADMIN_READY_COUNT_AFTER** | **5** (Batch 1 komplett) |
+| **READY_FOR_82.91c** | **YES** (Analytics/Dashboard/LiveVisitors verbleiben) |
+| **READY_FOR_PROD** | NO |
+
+
 ## Session 82.91a (Preview · VERIFIED) · Admin Read Backend Enablement
 
 **Auslöser:** 82.91-Audit zeigte, dass 8 Admin-Read-Pages migrationsbereit sind, aber 0 FastAPI-Admin-Read-Endpoints existieren. Diese Session baut die 6 fehlenden Read-Endpoints additiv, ohne Frontend-Cutover.
