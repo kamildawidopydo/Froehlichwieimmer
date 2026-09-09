@@ -94,7 +94,9 @@ async def _apply_adjustment(*, kind: str, payload_dict: Dict[str, Any], admin: d
     if kind == "stock":
         delta = _parse_dec(payload_dict["delta_qty"], "delta_qty")
         asset_key = payload_dict["symbol"].upper()
-        coll_positions = _db.user_stock_positions
+        # Session 82.94-fix: reale Mongo-Collection ist `stock_positions`
+        # (Legacy `user_stock_positions` aus Supabase-Zeit existiert nicht).
+        coll_positions = _db.stock_positions
         pos_filter = {"user_id": target_oid, "symbol": asset_key}
         pos_before = await coll_positions.find_one(pos_filter)
         current = Decimal(str(pos_before.get("quantity", 0))) if pos_before else Decimal(0)
@@ -103,14 +105,20 @@ async def _apply_adjustment(*, kind: str, payload_dict: Dict[str, Any], admin: d
             raise HTTPException(status_code=409, detail="Negative Position nicht erlaubt")
     else:
         delta = _parse_dec(payload_dict["delta_nominal"], "delta_nominal")
-        denom = _parse_dec(payload_dict.get("denomination") or "1000", "denomination")
-        if denom <= 0 or (delta % denom) != 0:
-            raise HTTPException(status_code=422, detail=f"delta_nominal muss Vielfaches von {denom} sein")
+        # Denomination-Default aus vorhandener Position übernehmen (falls gesetzt),
+        # sonst Fallback aus Payload oder 1000.
         asset_key = payload_dict["isin"].upper()
-        coll_positions = _db.user_bond_positions
+        # Session 82.94-fix: `bond_positions` mit Feld `nominal_amount`.
+        coll_positions = _db.bond_positions
         pos_filter = {"user_id": target_oid, "isin": asset_key}
         pos_before = await coll_positions.find_one(pos_filter)
-        current = Decimal(str(pos_before.get("nominal_value", 0))) if pos_before else Decimal(0)
+        denom_from_pos = None
+        if pos_before and pos_before.get("denomination") is not None:
+            denom_from_pos = _parse_dec(str(pos_before.get("denomination")), "denomination")
+        denom = denom_from_pos or _parse_dec(payload_dict.get("denomination") or "1000", "denomination")
+        if denom <= 0 or (delta % denom) != 0:
+            raise HTTPException(status_code=422, detail=f"delta_nominal muss Vielfaches von {denom} sein")
+        current = Decimal(str(pos_before.get("nominal_amount", 0))) if pos_before else Decimal(0)
         new_val = current + delta
         if new_val < 0:
             raise HTTPException(status_code=409, detail="Negative Nominale nicht erlaubt")
@@ -143,7 +151,8 @@ async def _apply_adjustment(*, kind: str, payload_dict: Dict[str, Any], admin: d
         }
 
     # Position-Delta atomar anwenden (upsert).
-    update_field = "quantity" if kind == "stock" else "nominal_value"
+    # Session 82.94-fix: bond nutzt `nominal_amount` (Real-Schema), stock `quantity`.
+    update_field = "quantity" if kind == "stock" else "nominal_amount"
     await coll_positions.update_one(
         pos_filter,
         {"$set": {update_field: Decimal128(str(new_val)), "updated_at": now},
@@ -171,6 +180,131 @@ async def create_stock_adjustment(body: StockAdjustmentIn, admin: dict = Depends
 @router.post("/bond-position-adjustments", status_code=201)
 async def create_bond_adjustment(body: BondAdjustmentIn, admin: dict = Depends(require_admin)):
     return await _apply_adjustment(kind="bond", payload_dict=body.model_dump(), admin=admin)
+
+
+# ─── SESSION 82.94 · Admin Read (Position-Listen für Adjustment-UIs) ─────
+def _dec_str(v: Any) -> Optional[str]:
+    if v is None:
+        return None
+    if isinstance(v, Decimal128):
+        try:
+            return format(v.to_decimal(), "f")
+        except Exception:
+            return None
+    try:
+        return format(Decimal(str(v)), "f")
+    except Exception:
+        return None
+
+
+def _iso(v: Any) -> Optional[str]:
+    return v.isoformat() if isinstance(v, datetime) else (v if isinstance(v, str) else None)
+
+
+async def _load_user_map(uids: List[ObjectId]) -> Dict[str, Dict[str, Any]]:
+    if not uids:
+        return {}
+    cursor = _db.users.find(
+        {"_id": {"$in": uids}},
+        projection={"email": 1, "name": 1, "first_name": 1, "last_name": 1},
+    )
+    out: Dict[str, Dict[str, Any]] = {}
+    async for u in cursor:
+        out[str(u["_id"])] = {
+            "id": str(u["_id"]),
+            "email": u.get("email"),
+            "name": u.get("name"),
+            "first_name": u.get("first_name"),
+            "last_name": u.get("last_name"),
+        }
+    return out
+
+
+@router.get("/stock-positions")
+async def admin_list_stock_positions(
+    user_id: Optional[str] = Query(default=None),
+    symbol: Optional[str] = Query(default=None),
+    limit: int = Query(default=500, ge=1, le=2000),
+    _admin: dict = Depends(require_admin),
+) -> Dict[str, Any]:
+    """Read-only Admin-Liste aller (oder gefilterter) Stock-Positionen.
+
+    Enrichment: User-Profil (Email, Name) + kompakte Position-Metriken.
+    Keine synthetischen Preise — Marktwert liefert das Frontend über den
+    bestehenden Quotes-Endpoint separat.
+    """
+    q: Dict[str, Any] = {}
+    if user_id:
+        if not ObjectId.is_valid(user_id):
+            raise HTTPException(status_code=422, detail="Ungültige user_id")
+        q["user_id"] = ObjectId(user_id)
+    if symbol:
+        q["symbol"] = symbol.upper()
+    cursor = _db.stock_positions.find(q).sort([("updated_at", -1)]).limit(limit)
+    docs = await cursor.to_list(limit)
+    uids = list({d["user_id"] for d in docs if d.get("user_id")})
+    umap = await _load_user_map([u for u in uids if isinstance(u, ObjectId)])
+    items: List[Dict[str, Any]] = []
+    for d in docs:
+        uid = d.get("user_id")
+        uid_str = str(uid) if uid else None
+        items.append({
+            "id": str(d["_id"]),
+            "user_id": uid_str,
+            "user": umap.get(uid_str),
+            "symbol": d.get("symbol"),
+            "quantity": _dec_str(d.get("quantity")) or "0",
+            "avg_cost": _dec_str(d.get("avg_cost")) or "0",
+            "currency": d.get("currency") or "EUR",
+            "is_active": bool(d.get("is_active", True)),
+            "updated_at": _iso(d.get("updated_at")),
+            "created_at": _iso(d.get("created_at")),
+        })
+    return {"items": items, "count": len(items)}
+
+
+@router.get("/bond-positions")
+async def admin_list_bond_positions(
+    user_id: Optional[str] = Query(default=None),
+    isin: Optional[str] = Query(default=None),
+    limit: int = Query(default=500, ge=1, le=2000),
+    _admin: dict = Depends(require_admin),
+) -> Dict[str, Any]:
+    """Read-only Admin-Liste aller (oder gefilterter) Bond-Positionen."""
+    q: Dict[str, Any] = {}
+    if user_id:
+        if not ObjectId.is_valid(user_id):
+            raise HTTPException(status_code=422, detail="Ungültige user_id")
+        q["user_id"] = ObjectId(user_id)
+    if isin:
+        q["isin"] = isin.upper()
+    cursor = _db.bond_positions.find(q).sort([("updated_at", -1)]).limit(limit)
+    docs = await cursor.to_list(limit)
+    uids = list({d["user_id"] for d in docs if d.get("user_id")})
+    umap = await _load_user_map([u for u in uids if isinstance(u, ObjectId)])
+    items: List[Dict[str, Any]] = []
+    for d in docs:
+        uid = d.get("user_id")
+        uid_str = str(uid) if uid else None
+        items.append({
+            "id": str(d["_id"]),
+            "user_id": uid_str,
+            "user": umap.get(uid_str),
+            "isin": d.get("isin"),
+            "bond_name": d.get("bond_name"),
+            "issuer": d.get("issuer"),
+            "currency": d.get("currency") or "EUR",
+            "nominal_amount": _dec_str(d.get("nominal_amount")) or "0",
+            "average_purchase_price_pct": _dec_str(d.get("average_purchase_price_pct")),
+            "cost_basis": _dec_str(d.get("cost_basis")),
+            "kupon_rate": _dec_str(d.get("kupon_rate") or d.get("coupon_rate")),
+            "maturity_date": d.get("maturity_date"),
+            "denomination": _dec_str(d.get("denomination")) or "1000",
+            "is_active": bool(d.get("is_active", True)),
+            "updated_at": _iso(d.get("updated_at")),
+            "created_at": _iso(d.get("created_at")),
+        })
+    return {"items": items, "count": len(items)}
 
 
 @router.get("/position-adjustments")

@@ -161,27 +161,21 @@ const AdminAnalytics = () => {
         aum += Number(row.total_value || 0);
       }
     }
-    // fallback: sum live positions if snapshots empty
+    // Session 82.91c neutralized · Session 82.94 syntax repair.
+    // Fallback-Aggregation deaktiviert (DATA_SOURCE_MISSING) — echte AUM-
+    // Berechnung erfolgt ausschließlich über Snapshots-Loop weiter oben.
     if (aum === 0) {
-      const [{ data: profs }, { data: positions }, { data: cache }, { data: bonds }, { data: contracts }] = await Promise.all([
-        Promise.resolve({data: [], error: null});
-      const priceMap = {};
-      (cache || []).forEach((c) => { priceMap[c.symbol] = Number(c.price || 0); });
-      const cash = (profs || []).reduce((s, r) => s + Number(r.cash_balance || 0), 0);
-      const stocks = (positions || []).reduce((s, r) => s + Number(r.quantity || 0) * (priceMap[r.symbol] ?? Number(r.avg_cost || 0)), 0);
-      const bondsV = (bonds || []).reduce((s, b) => s + (Number(b.nominal_betrag || 0) * Number(b.aktueller_kurs || 100)) / 100, 0);
-      const contractsV = (contracts || []).reduce((s, c) => s + Number(c.amount_eur || 0), 0);
-      aum = cash + stocks + bondsV + contractsV;
+      // Kein Fake-Fallback. Fehlende Snapshots → aum bleibt 0.
     }
     setTotalAum(aum);
 
-    const [a24, a7, tot, nu7, pend] = await Promise.all([
-      Promise.resolve({data: [], error: null});
-    setActive24h(a24.count || 0);
-    setActive7d(a7.count || 0);
-    setTotalUsers(tot.count || 0);
-    setNewUsers7d(nu7.count || 0);
-    setPendingOrders(pend.count || 0);
+    // Session 82.91c neutralized · Session 82.94 syntax repair.
+    // Aggregierte User-Counts derzeit ohne Datenquelle → 0 statt Fake-Werte.
+    setActive24h(0);
+    setActive7d(0);
+    setTotalUsers(0);
+    setNewUsers7d(0);
+    setPendingOrders(0);
   };
 
   const fetchAumSeries = async () => {
@@ -220,8 +214,12 @@ const AdminAnalytics = () => {
   };
 
   const fetchTopHoldings = async () => {
-    const [{ data: positions }, { data: stocks }, { data: cache }] = await Promise.all([
-      Promise.resolve({data: [], error: null});
+    // Session 82.91c neutralized · Session 82.94 syntax repair.
+    // Aggregation über echte Positionen deaktiviert bis Admin-Enrichment-
+    // Endpoint (Aggregation + Preise) verfügbar ist. Kein Fake-Ranking.
+    setTopHoldings([]);
+    return;
+    // eslint-disable-next-line no-unreachable
     const stockMap = {};
     (stocks || []).forEach((s) => { stockMap[s.symbol] = s; });
     const priceMap = {};

@@ -303,13 +303,7 @@ const AdminDepotContracts = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Diesen Vertrag wirklich löschen?')) return;
-    const toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
-    if (error) {
-      toast.error('Fehler beim Löschen: ' + error.message);
-      return;
-    }
-    toast.success('Vertrag gelöscht');
-    fetchContracts();
+    toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.');
   };
 
   const toggleActive = async (c) => {

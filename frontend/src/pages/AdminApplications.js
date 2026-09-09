@@ -145,12 +145,10 @@ const AdminApplications = () => {
     const confirmed = window.confirm('Möchtest du diesen Antrag wirklich dauerhaft löschen?');
     if (!confirmed) return;
 
-    const toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
-    if (error) {
-      toast.error('Antrag konnte nicht gelöscht werden');
-      return;
-    }
+    toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.');
+    return;
 
+    // eslint-disable-next-line no-unreachable
     toast.success('Antrag gelöscht');
     setApplications((prev) => prev.filter((app) => app.id !== appId));
     if (selectedApp?.id === appId) {

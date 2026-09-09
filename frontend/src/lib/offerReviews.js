@@ -92,19 +92,12 @@ export async function fetchApprovedReviewsForOffer(offerId, { productType, limit
   return { data: data || [], error };
 }
 
-export async function fetchMyReviewForOffer(offerId) {
-  const data = { session: null, user: null }; const error = null; // 82.92 auth via JWT-Cookie
-  if (!auth?.user?.id) return { data: null, error: null };
-
-  const { data, error } = await supabase
-    .from('offer_reviews')
-    .select('*')
-    .eq('savings_offer_id', offerId)
-    .eq('user_id', auth.user.id)
-    .is('deleted_at', null)
-    .maybeSingle();
-  if (error && error.code !== 'PGRST116') return { data: null, error };
-  return { data: normalizeOfferReviewRow(data), error: null };
+export async function fetchMyReviewForOffer(_offerId) {
+  // Session 82.92 neutralized · Session 82.94 syntax repair.
+  // Legacy Supabase-Auth-basierter Read entfernt. FastAPI-Ersatz wird
+  // additiv angebunden (`GET /api/reviews/me?savings_offer_id=…`), sobald
+  // Endpoint bereitsteht. Bis dahin: kein Fake-Return.
+  return { data: null, error: null };
 }
 
 export async function fetchOfferReviewStats(offerId) {

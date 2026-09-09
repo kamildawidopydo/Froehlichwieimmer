@@ -4825,6 +4825,15 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.94 (Preview · Sept 9 2026) · Admin Position Pages FastAPI Cutover ✅
+- **Frontend cutover**: `AdminUserPositions.js` (Aktien) + `AdminBondPositions.js` (Anleihen) komplett von Supabase auf FastAPI/Mongo. Direkte quantity-/nominal-Writes, Delete und Cost-Basis-Edit entfernt. Einzige Mutation: `AdjustmentModal` mit Increase/Decrease-Radio + absolutem Betrag + Reason-Dropdown (`corporate_action`, `migration_correction`, `inheritance_transfer`, `data_repair`) + Notiz.
+- **Backend Fix (Session-82.93-Bug behoben)**: `routes/position_adjustments.py` zielte fälschlich auf leere Collections `user_stock_positions`/`user_bond_positions`. Korrektur auf reale `stock_positions`/`bond_positions` + Bond-Feld `nominal_amount` (vorher `nominal_value`).
+- **Neue Admin-Read-Endpoints**: `GET /api/admin/portfolio/stock-positions` und `GET /api/admin/portfolio/bond-positions` mit User-Profile-Enrichment (email/first_name/last_name/name).
+- **Sicherheitsvertrag**: idempotency_key via `crypto.randomUUID()` pro Modal-Open · Double-Click-Schutz via `submitting`-State · 30-Sek Polling focus/visibility-aware und pausiert bei offenem Modal · Reason-Allowlist server- und clientseitig · Negative-Position-Guard (409) · Bond-Vielfaches-Guard (422).
+- **Pre-existing Compile-Blocker (82.91/82.92) mitrepariert**: `activityLogger.js`, `AdminBanks.js`, `AdminApplications.js`, `AdminOffers.js`, `AdminDepotContracts.js`, `AdminDashboard.js`, `AdminAnalytics.js`, `lib/offerReviews.js` — 8 kaputte Zeilen, die die gesamte Frontend-Compilation blockierten.
+- **Zero Supabase Touches**: `grep supabase` in `AdminUserPositions.js` + `AdminBondPositions.js` → 0 Treffer.
+- **Testing**: Backend 14/14 neu (auth guards, applied+idempotent+rollback, invalid reason, negative guard, non-multiple 422, audit filters) · Regression 47/47 (`test_coupon_flow.py` + `test_market_data_phase2.py`) · Frontend E2E green (Login, Rendering, Adjustment-Flow SAP 4→6→4, Bond PT_BOND_03 200→300→200, Double-Click-Schutz).
+
 ## Session 82.15 (Preview) · IPO-Sync History CSV Export
 - **Endpoint** `GET /api/admin/ipo/catalog/sync/history.csv` (admin-only). UTF-8 + BOM + Semikolon-Separator (Excel-DE). Content-Disposition mit Datum im Dateinamen.
 - **CSV-Injection-Protection**: `_csv_safe()` prefixt Werte, die mit `=` `+` `-` `@` `\t` `\r` beginnen, mit `'`.

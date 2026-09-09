@@ -1,0 +1,28 @@
+{
+  "summary": "Session 82.94 Position-Adjustment Cutover verified. Backend: 14/14 new tests pass (auth guards 401/403, admin lists with user-enrichment, stock applied+idempotent+rollback, bond non-multiple 422 + applied+rollback, negative-guard 409, invalid-reason 422, audit filters). Regression 47/47 (test_coupon_flow + test_market_data_phase2). Frontend E2E: Login (patron), both pages render tables, banner, no Add/Edit/Delete buttons, Anpassen-Modal shows all required testids. SAP flow: 4 -> 6 -> 4 with toast 'Position aktualisiert: 4 -> 6 (Delta 2)'. Bond flow: PT_BOND_03 200 -> 300 -> 200 with toast 'Nominale aktualisiert: 200.0 -> 300.0 EUR (Delta 100)'. Double-Click Schutz bestaetigt (Submit disabled=True waehrend submitting). 0 supabase-Refs in beiden Frontend-Dateien.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin Console (global)", "issues": ["Zahlreiche 400-Responses im Console-Log auf allen Admin-Seiten (nicht von den beiden 82.94-Seiten stammend). Pre-existing, ausserhalb Scope. AdminDashboard komponent wirft React-Errorboundary beim Landing auf /admin — pre-existing, unabhaengig von 82.94."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_position_adjustments_8294.py",
+    "/app/test_reports/pytest/8294.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Bond-Modal Toast/Formatter: 'Nominale aktualisiert: 200.0 -> 300.0 EUR' — before/after als str aus Decimal128 mit trailing .0. Cosmetic; formatEUR-Wrapper waere schoener, aber Spec ist erfuellt.",
+    "Client-side Non-Multiple-Check greift bereits via HTML5 step-Attribut (step=100, min=100) — daher wurde bei amount=50 kein JS-Toast angezeigt (Form-Validation blockiert Submit vor JS). Zusaetzliche JS-Validierung existiert in submitAdjustment als Fallback. OK.",
+    "Beide Pages nutzen focus/visibility-aware Polling und pausieren korrekt, solange adjModal offen ist (in Effect-Deps enthalten)."
+  ],
+  "updated_files": ["/app/backend/tests/test_position_adjustments_8294.py"],
+  "success_rate": {"backend": "100% (14/14 new + 47/47 regression)", "frontend": "100% (alle Test-IDs, Flows, Toasts, Refresh, Double-Click-Schutz)"},
+  "test_credentials": "Admin: patron@froehlich-vermoegensberatung.de / 500Euro! · Kunde: demo.kunde@kapital-direkt24.de / KundeDemo2026!",
+  "seed_data_creation": "Keine — Session 82.94-Adjustments (stock SAP +2/-2, bond PT_BOND_03 +100/-100) wurden per Test durchgefuehrt und zurueckgerollt; Netto-Delta = 0. Audit-Trail enthaelt jetzt 4 zusaetzliche adjustment_records (2 stock, 2 bond) mit reason=data_repair und note='TEST_8294' bzw. leer.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Session 82.94 komplett grün. Beide Seiten (/admin/user-positions, /admin/bond-positions) und Endpoints (stock-positions, bond-positions, stock-position-adjustments, bond-position-adjustments, position-adjustments) funktionieren wie spezifiziert."
+}

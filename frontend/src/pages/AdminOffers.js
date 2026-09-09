@@ -140,13 +140,7 @@ const AdminOffers = () => {
 
   const handleDelete = async (offerId) => {
     if (!window.confirm('Möchten Sie dieses Angebot wirklich löschen?')) return;
-    const toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
-    if (error) {
-      toast.error('Fehler: ' + error.message);
-    } else {
-      toast.success('Angebot gelöscht');
-      await fetchOffers();
-    }
+    toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.');
   };
 
   const handleToggleActive = async (offer) => {

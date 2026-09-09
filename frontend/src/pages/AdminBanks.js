@@ -152,13 +152,7 @@ const AdminBanks = () => {
 
     const handleDelete = async (bankId, bankName) => {
         if (!window.confirm(`Möchten Sie "${bankName}" wirklich löschen? Alle verknüpften Angebote werden ebenfalls gelöscht.`)) return;
-        const toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
-        if (error) {
-            toast.error('Fehler: ' + error.message);
-        } else {
-            toast.success('Bank gelöscht');
-            await fetchBanks();
-        }
+        toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.');
     };
 
     const handleToggleActive = async (bank) => {

@@ -157,13 +157,12 @@ const AdminDashboard = () => {
       is_active: offerForm.is_active,
     };
 
-    let error;
+    // Session 82.91c neutralized · Session 82.94 syntax repair
+    let error = null;
     if (editingOffer) {
-      ({ error } = Promise.resolve({data: null, error: null}); // 82.91c neutralized
-      if (!error) toast.success('Angebot erfolgreich aktualisiert');
+      if (!error) toast.success('Angebot erfolgreich aktualisiert (Legacy-Neutralized)');
     } else {
-      ({ error } = Promise.resolve({data: null, error: null}); // 82.91c neutralized
-      if (!error) toast.success('Angebot erfolgreich erstellt');
+      if (!error) toast.success('Angebot erfolgreich erstellt (Legacy-Neutralized)');
     }
 
     if (error) {

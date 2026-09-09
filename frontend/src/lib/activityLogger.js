@@ -1,39 +1,15 @@
 /**
- * Schreibt Nutzeraktivitäten in user_activity_log.
- * RLS: authenticated/anon dürfen eigene Zeilen einfügen; select nur Admin.
- * Fehler werden still geloggt — der Logger darf keinen Ablauf unterbrechen.
+ * Session 82.92: Activity-Logger auf No-Op neutralisiert (Supabase-Cutover).
+ * Session 82.94: Doppelte `error`-Deklaration entfernt (Compile-Blocker).
+ *
+ * `logEvent` bleibt aus Kompatibilitätsgründen als Export erhalten, führt
+ * jedoch keine Server-Persistierung mehr aus. Ein FastAPI-basierter
+ * Activity-Log-Endpoint kann später additiv angebunden werden — bis dahin
+ * ist das Verhalten still: alle Aufrufer laufen unverändert weiter.
  */
-export async function logEvent(eventType, payload = null, options = {}) {
-  try {
-    const data = { session: null, user: null }; const error = null; // 82.92 auth via JWT-Cookie
-    const session = sessionData?.session ?? null;
-
-    let userId = options.userId ?? null;
-    if (userId === null && session?.user?.id) {
-      userId = session.user.id;
-    }
-
-    // RLS: user_id IS NULL OR user_id = auth.uid()
-    if (!session) {
-      if (userId !== null) return;
-    } else if (userId !== null && userId !== session.user.id) {
-      userId = session.user.id;
-    }
-
-    const { error } = Promise.resolve({data: null, error: null}); // 82.92 neutralized (DATA_SOURCE_MISSING)
-
-    if (error) {
-      // Auth/session race or expired JWT — skip noisy console output.
-      if (error.code === 'PGRST301' || String(error.message || '').includes('JWT')) return;
-      if (typeof console !== 'undefined') {
-        console.warn('[activityLogger] failed:', eventType, error.message);
-      }
-    }
-  } catch (err) {
-    if (typeof console !== 'undefined') {
-      console.warn('[activityLogger] failed:', eventType, err?.message || err);
-    }
-  }
+export async function logEvent(_eventType, _payload = null, _options = {}) {
+  // No-op. Keine externen Writes.
+  return;
 }
 
 export const EVENTS = {
