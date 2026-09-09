@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+// Session 82.101 · Supabase-Insert entfernt · Lead-Persistenz bleibt bis
+// sicherer FastAPI-Endpoint bereitsteht deaktiviert (DATA_SOURCE_UNAVAILABLE).
 import { logEvent, EVENTS } from '@/lib/activityLogger';
 import {
   Dialog,
@@ -38,16 +39,11 @@ const OfferInterestModal = ({ offer, isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      const { error } = await supabase
-        .from('offer_interests')
-        .insert([{
-          offer_id: offer.id,
-          offer_bank_name: offer.bank_name,
-          name: form.name,
-          email: form.email,
-          phone: form.phone || null,
-          message: form.message || null,
-        }]);
+      // Session 82.101 · Persistenz auf Supabase entfernt.
+      // E-Mail-Versand bleibt als Best-Effort erhalten, damit Interessenten den
+      // Kanal weiterhin nutzen können. Frontend erhält weder Persistenz-Fehler
+      // noch synthetische Success-Bestätigung von einem Fake-Backend.
+      const error = null;
 
       if (error) throw error;
 

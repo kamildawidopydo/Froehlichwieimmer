@@ -13,7 +13,11 @@ import {
 import { uploadDocumentToCloudinary } from '@/lib/cloudinary';
 import { logEvent, EVENTS } from '@/lib/activityLogger';
 import { logVisitorConversion } from '@/lib/logVisitorConversion';
-import { supabase } from '@/lib/supabase';
+// Session 82.101 · Supabase entfernt · Applications Persistenz + Mail-Dispatch
+// nutzen ausschließlich das FastAPI-Backend. Legacy `supabase.from('applications')`
+// und `supabase.functions.invoke('send-application-email')` sind blockiert, bis ein
+// sicherer Backend-Endpoint verfügbar ist (BLOCKED_SAFE_BACKEND_MISSING).
+
 import { useAuth } from '@/context/AuthContext';
 import IdentityInterviewFlow from '@/components/liveness/IdentityInterviewFlow';
 import AddressFields from '@/components/profile/AddressFields';
@@ -247,48 +251,27 @@ const ApplicationForm = () => {
 
     try {
       const taxCheck = validateEuropeanTaxId(investmentData.tax_id, getCountryForNationality(personalData.nationality), { required: true });
-      const { data, error } = await supabase
-        .from('applications')
-        .insert({
-          personal_data: {
-            ...personalData,
-            phone: combinePhoneNumber(personalData.phone_dial_code, personalData.phone_local),
-            address: buildFullAddress(personalData),
-            identity_verification: identityVerification,
-          },
-          investment_data: {
-            ...investmentData,
-            tax_id: taxCheck.normalized || investmentData.tax_id,
-          },
-          documents: documents,
-          terms_accepted: termsAccepted,
-          privacy_accepted: privacyAccepted,
-          status: 'Neu',
-          status_history: [
-            {
-              status: 'Neu',
-              timestamp: new Date().toISOString(),
-              identity_video_id: identityVerification?.video_id || null,
-            },
-          ],
-        })
-        .select('id')
-        .single();
+      // Session 82.101 · Applications-Insert bewusst blockiert bis sicherer FastAPI-Endpoint bereit steht.
+      toast.error('Antragseinreichung ist aktuell deaktiviert (BLOCKED_SAFE_BACKEND_MISSING · 82.101). Bitte kontaktieren Sie den Kundenservice.');
+      setSubmitError('Antragseinreichung ist aktuell deaktiviert.');
+      setIsSubmitting(false);
+      return;
+
+      // eslint-disable-next-line no-unreachable
+      const data = { id: null };
+      // eslint-disable-next-line no-unreachable
+      const error = null;
 
       if (error) throw new Error(error.message || 'Antrag konnte nicht eingereicht werden.');
 
       // Fire-and-observe mail dispatch. Do not fail application creation if email fails:
       // retry is handled by the outbox table in the edge function.
       try {
-        const { error: mailError } = await supabase.functions.invoke('send-application-email', {
-          body: {
-            mode: 'application',
-            application_id: data.id,
-          },
-        });
+        // Session 82.101 · Edge-Function-Invoke entfernt; E-Mail-Dispatch würde
+        // serverseitig nach persistenter Anlage triggern.
+        const mailError = null;
         if (mailError) {
-          console.warn('[send-application-email] invoke failed:', mailError.message || mailError);
-          toast.warning('Antrag gespeichert. E-Mail-Versand wird im Hintergrund erneut versucht.');
+          console.warn('[send-application-email] disabled 82.101');
         }
       } catch (invokeErr) {
         console.warn('[send-application-email] invoke exception:', invokeErr);

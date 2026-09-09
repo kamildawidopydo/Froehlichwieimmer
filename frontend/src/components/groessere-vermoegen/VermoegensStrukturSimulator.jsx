@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { Button } from '@/components/ui/button';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+// Session 82.101 · Supabase-Import entfernt · Simulator benötigt keinen Fetch;
+// alle Berechnungen laufen client-seitig aus User-Inputs.
 import ReportBuilder from '@/components/groessere-vermoegen/ReportBuilder';
 
 /**
@@ -217,27 +218,15 @@ export default function VermoegensStrukturSimulator({ phase1 }) {
   const restBetrag = Math.max(0, (Number(p1Betrag) || 0) - totalAlloc);
   const overAllocated = totalAlloc > (Number(p1Betrag) || 0);
 
-  // Zins-/Laufzeitenleiter (lazy)
-  const [zinsLoad, setZinsLoad] = useState(isSupabaseConfigured ? 'idle' : 'unsupported');
+  // Zins-/Laufzeitenleiter (lazy). Session 82.101 · Supabase-Reader entfernt,
+  // Zinsleiter zeigt bis zum FastAPI-Backend `unsupported` (kein Fake-Fallback).
+  const [zinsLoad, setZinsLoad] = useState('unsupported');
   const [offers, setOffers] = useState([]);
   const zinsGroups = useMemo(() => aggregateOffersByTerm(offers), [offers]);
 
   const loadZinsen = useCallback(async () => {
-    if (!isSupabaseConfigured) { setZinsLoad('unsupported'); return; }
-    setZinsLoad('loading');
-    try {
-      const { data, error } = await supabase
-        .from('savings_offers')
-        .select('id, interest_rate, deposit_term, investment_type, banks(country, name)')
-        .eq('is_active', true)
-        .limit(500);
-      if (error) throw error;
-      setOffers(Array.isArray(data) ? data : []);
-      setZinsLoad('ready');
-    } catch (e) {
-      console.error('[GV-Simulator] savings_offers load failed:', e);
-      setZinsLoad('error');
-    }
+    setZinsLoad('unsupported');
+    setOffers([]);
   }, []);
 
   // Ladder-Simulator

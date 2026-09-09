@@ -4825,6 +4825,27 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.101 (Preview · Sept 9 2026) · Customer Rest Cutover ✅
+  - `NotificationCenter.js`: Supabase-Import (Import-Only, keine Runtime-Calls) entfernt.
+  - `ApplicationForm.js`: `.from('applications').insert().select().single()` **BLOCKED_SAFE_BACKEND_MISSING** (UI zeigt Info-Toast + `SubmitError`) — verhindert Legacy-Persistenz ohne sicheren FastAPI-Ersatz. Auch `supabase.functions.invoke('send-application-email')` entfernt.
+  - `OfferInterestModal.js`: `.from('offer_interests').insert` entfernt · E-Mail-Best-Effort-Kanal (`/api/send-offer-interest-email`) bleibt erhalten, damit Kunden-Anfrage nicht verloren geht · Success-UI weiterhin sichtbar.
+  - `VisitorSessionDetailModal.jsx`: `supabase.rpc('admin_visitor_session_detail')` → **DATA_SOURCE_UNAVAILABLE** (keine Fake-Visitor-Daten).
+  - `VermoegensStrukturSimulator.jsx`: Import-Only-Zeile entfernt (Berechnungen bereits reine Client-Logik).
+  - `submitProductInquiryLead.js`: neu geschrieben — Legacy-Persistenz-Insert entfernt · `/api/send-product-inquiry-email` als Best-Effort-Kanal behält Anfrage-Fluss lauffähig · keine Fake-Success-Persistenz.
+  - `logInsufficientBuyingPower.js`: no-op stub (kein persistentes Fake-Telemetrie, kein Mongo-Endpoint).
+- **Notification-Center**: alle Realtime-Channels/Removes bereits in 82.98 entfernt; hier nur noch der unbenutzte `supabase`-Import weggekürzt.
+- **Keine neuen Endpoints** — Session-Regel: "Wenn kein sicherer Backend-Consumer existiert, Logging deaktivieren statt Fake-Endpoint bauen".
+- **Regression**: Coupon 16/16 + Market-Data 47/47 pytest grün · Frontend-Build grün.
+
+### FINAL REPORT (Session 82.101)
+- FILES_CHANGED: 7
+- SUPABASE_BEFORE/AFTER pro Datei: alle Scope-Dateien AFTER = **0**
+- NOTIFICATIONCENTER_REALTIME_AFTER: 0 (bereits in 82.98) · APPLICATION_FORM_SOURCE_AFTER: **BLOCKED_SAFE_BACKEND_MISSING** · OFFER_INTEREST_SOURCE_AFTER: E-Mail-Kanal (Persistenz blockiert) · PRODUCT_INQUIRY_SOURCE_AFTER: E-Mail-Kanal (Persistenz blockiert) · VISITOR_DETAIL_STATUS: **DATA_SOURCE_UNAVAILABLE** · BUYING_POWER_LOGGER_STATUS: **no-op stub**
+- NEW_ENDPOINTS: 0
+- **FINANCIAL_WRITES=0 · FAKE_VISITORS=0 · FAKE_TELEMETRY=0 · SUPABASE_WRITES_AFTER=0 · SUPABASE_REALTIME_AFTER=0**
+- REMAINING_GLOBAL_SUPABASE_FILES (runtime): DokumentHochladen.js (Session 82.101b), FormularProtectedRoute-Legacy-Kette bereits sauber; verbleibend hauptsächlich **Import-Only-Dead-Code** in ~11 Dateien
+- READY_FOR_82.101b: **YES** (Public-Doc-Upload) · READY_FOR_82.103_FINAL_PURGE: **YES** (nach Import-Only-Sweep) · READY_FOR_PROD: NO
+
 ## Session 82.100 (Preview · Sept 9 2026) · Legacy Admin Read Cutover ✅
 - **Frontend cutover 0 Supabase-Refs** in allen 8 Scope-Dateien: `AdminCreditLeads`, `AdminCreditOffers`, `AdminProductInquiryLeads`, `AdminSocialPreviewMessages`, `AdminContractSubmissions`, `AdminBondRequests` (bereits sauber), `AdminUserDetail` (8 `.from()` neutralisiert + Import entfernt), `AdminDocumentUploads.jsx` (bereits durch 82.99 sauber).
 - **Neuer Backend-Router** `routes/admin_legacy_reads.py` mit 14 Endpoints:

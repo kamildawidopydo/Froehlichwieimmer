@@ -127,15 +127,12 @@ const SocialAnlagenprofisMessageModal = ({ open, platform = 'instagram', onClose
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('social_preview_messages').insert({
-        platform,
-        name: trimmedName,
-        email: trimmedEmail,
-        message_body: trimmedMessage,
-        status: 'new',
-      });
+      // Session 82.101 · Supabase-Insert entfernt (siehe AdminSocialPreviewMessages
+      // BLOCKED_SAFE_BACKEND_MISSING). Bis sicherer FastAPI-Endpoint existiert,
+      // erhält der Nutzer eine transparente Info-Nachricht statt Fake-Success.
+      toast.info('Der Nachrichten-Kanal wird aktuell erneuert (82.101). Bitte kontaktieren Sie uns direkt per E-Mail.');
+      const error = null;
       if (error) throw error;
-      toast.success('Nachricht gesendet. Das Team von Fröhlich Vermögensberatung GmbH meldet sich bei Ihnen.');
       onClose();
     } catch {
       toast.error('Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.');

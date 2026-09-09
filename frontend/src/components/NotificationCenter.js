@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAutoAnimateRef from '@/hooks/useAutoAnimateRef';
-import { supabase } from '@/lib/supabase';
+// Session 82.101 · Supabase-Realtime entfernt · Polling erfolgt über
+// AdminGlobalNotifications (Admin) bzw. bestehende Notification-Endpoints.
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

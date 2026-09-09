@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+// Session 82.101 · Supabase-RPC entfernt · Visitor-Session-Detail liegt bis
+// zum FastAPI-Backend als DATA_SOURCE_UNAVAILABLE vor (keine Fake-Visitor-Daten).
 import {
   Dialog,
   DialogContent,
@@ -71,21 +72,10 @@ const VisitorSessionDetailModal = ({ sessionId, open, onOpenChange }) => {
   const load = useCallback(async () => {
     if (!sessionId) return;
     setLoading(true);
-    setError(null);
-    try {
-      const { data, error: rpcError } = await supabase.rpc('admin_visitor_session_detail', {
-        p_session_id: sessionId,
-      });
-      if (rpcError) throw rpcError;
-      setSession(data?.session || null);
-      setEvents(data?.events || []);
-    } catch (err) {
-      setError(err?.message || String(err));
-      setSession(null);
-      setEvents([]);
-    } finally {
-      setLoading(false);
-    }
+    setError('DATA_SOURCE_UNAVAILABLE: Visitor-Session-Detail-Backend nicht verfügbar (Session 82.101).');
+    setSession(null);
+    setEvents([]);
+    setLoading(false);
   }, [sessionId]);
 
   useEffect(() => {
