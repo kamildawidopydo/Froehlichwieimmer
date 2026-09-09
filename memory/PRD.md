@@ -3,6 +3,72 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.89 (Preview · VERIFIED) · Customer-Financial Rest-Cutover (Handeln + Statement)
+
+### Static Audit
+| Datei | BEFORE | AFTER |
+|---|---|---|
+| `Handeln.js` | 5 (import + `from('stocks')` + `from('stock_prices_cache')` ×2 + `from('user_stock_watchlist')` + `functions.invoke('stock-prices')`) | **0** ✅ |
+| `Statement.js` | 1 (Dead-Import, ungenutzt) | **0** ✅ |
+| **Summe** | **6** | **0** ✅ |
+
+### Neuer Backend-Endpoint (`/app/backend/routes/stock_catalog.py`)
+```
+GET /api/stocks/catalog?with_quotes=<bool>
+```
+- Read-only, public (keine Auth-Anforderung — kuratierte Liste ist öffentlich).
+- 27 kuratierte Symbole (NVDA/AAPL/MSFT/GOOGL/AMZN + 22 DAX-Titel), synchron mit `stock_public.ALLOWED`.
+- Metadaten: `name/sector/exchange/currency/is_active/display_order` — statisch, keine Fake-Kurse.
+- `with_quotes=true` überlagert `previous_close/day_high/day_low` aus `stock_public_fundamentals_cache` (TTL 6h). Bei kaltem Cache: `data_status="unavailable"` mit `rate=null` — **keine Fake-Werte**.
+
+### Frontend Rewrite
+- `Handeln.js`: nutzt `/api/stocks/catalog?with_quotes=true` für Meta + `/api/portfolio/quotes` (authed, mit `withCredentials`) für Live-Kurse + `watchlistApi` (bereits FastAPI-native seit 82.20). Refresh-Button re-fetcht Live-Quotes.
+- `Statement.js`: nur `import { supabase }`-Dead-Line entfernt (Datei nutzt bereits ausschließlich `/api/portfolio/*` seit 82.17).
+
+### E2E-Verifikation
+| Test | Ergebnis |
+|---|---|
+| `GET /api/stocks/catalog` (public, no quotes) | 200 · 27 items ✅ |
+| `GET /api/stocks/catalog?with_quotes=true` | 200 · 27 items · data_status=unavailable (Cache kalt) ✅ |
+| `GET /api/portfolio/cash` unauth | **401** ✅ |
+| `GET /api/portfolio/quotes` unauth | **401** ✅ |
+| Login demo.kunde + `/portfolio/cash` | cash=7799.37 EUR, history=46 ✅ |
+| Login demo.kunde + `/portfolio/stock-positions` | 7 Positions ✅ |
+| Login demo.kunde + `/portfolio/orders?limit=10` | 10 Orders ✅ |
+| Login demo.kunde + `/portfolio/quotes?symbols=SAP,AAPL` | SAP=232.1 · AAPL=194.06 (live yfinance) ✅ |
+| Cross-User-Isolation | User A cash 7799.37 vs User B cash unterschiedlich, per-User isoliert ✅ |
+| Browser `/handeln` | rendert Catalog-Liste mit SAP/AAPL/NVDA ✅ |
+
+### Regression
+- Coupon 16/16 PASS ✅
+- Realized-PnL 5/5 PASS ✅
+
+### Final Report Flags
+| Flag | Wert |
+|---|---|
+| **HANDELN_SUPABASE_BEFORE** | 5 |
+| **HANDELN_SUPABASE_AFTER** | **0** ✅ |
+| **STATEMENT_SUPABASE_BEFORE** | 1 (Dead-Import) |
+| **STATEMENT_SUPABASE_AFTER** | **0** ✅ |
+| **CUSTOMER_FINANCIAL_FRONTEND_MONGO_NATIVE** | **YES** ✅ |
+| **FAKE_PRICES / SYNTHETIC_DATA** | 0 |
+| **DIRECT_MONGO_WRITES / DUAL_WRITE** | 0 |
+| **FINANCIAL_WRITES** | 0 |
+| **CROSS_USER_LEAK** | NO (JWT-Cookie per Request scoped) |
+| **COUPON_TESTS** | 16/16 PASS |
+| **REALIZED_PNL_TESTS** | 5/5 PASS |
+| **READY_FOR_PROD** | NO (Preview-only) |
+
+### Betroffene Dateien
+- **Neu:** `/app/backend/routes/stock_catalog.py`
+- **Geändert:** `/app/backend/server.py` (Router-Registrierung)
+- **Rewrite:** `/app/frontend/src/pages/Handeln.js` (Supabase → FastAPI)
+- **Cleanup:** `/app/frontend/src/pages/Statement.js` (Dead-Import entfernt)
+
+### Verbleibende Blocker
+Keine.
+
+
 ## Session 82.88 (Preview · VERIFIED) · Auth-Bridge Cutover: ResetPassword + 4 Admin-Auth-Pages
 
 **Ziel:** Supabase-Auth aus 5 Scope-Dateien entfernen, Password-Reset-Flow rein FastAPI-native, Token-Hashing + Force-Reset-Endpoint additiv.

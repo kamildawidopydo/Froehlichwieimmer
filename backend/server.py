@@ -5187,6 +5187,10 @@ async def _news_public_indexes():
 from routes import stock_public as _stock_public_routes  # noqa: E402
 app.include_router(_stock_public_routes.router)
 
+# Session 82.89 — Stocks Catalog (Supabase-Cutover für Handeln.js).
+from routes import stock_catalog as _stock_catalog_routes  # noqa: E402
+app.include_router(_stock_catalog_routes.router)
+
 # Product-Inquiry-Router (Session 78.6 — Stub entfernt, direkt registriert)
 from routes import product_inquiry as _product_inquiry_routes  # noqa: E402
 app.include_router(_product_inquiry_routes.router)

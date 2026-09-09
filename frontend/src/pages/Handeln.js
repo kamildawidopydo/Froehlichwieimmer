@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
 import { watchlistApi } from '@/services/watchlistApi';
 import { useAuth } from '@/context/AuthContext';
+import { getApiBase } from '@/lib/apiBase';
+
+const API_BASE = getApiBase();
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -45,35 +48,84 @@ const Handeln = ({ embedded = false }) => {
     fetchAll();
   }, [user]);
 
+  // Session 82.89 — Supabase-Cutover: Kuratierte Liste über /api/stocks/catalog,
+  // Live-Kurse über /api/portfolio/quotes (authed). Watchlist via watchlistApi.
+  const _loadQuotes = async (symbols) => {
+    if (!symbols || symbols.length === 0 || !user) return {};
+    try {
+      const { data } = await axios.get(
+        `${API_BASE}/api/portfolio/quotes?symbols=${encodeURIComponent(symbols.join(','))}`,
+        { withCredentials: true },
+      );
+      return data || {};
+    } catch {
+      return {};
+    }
+  };
+
   const fetchAll = async () => {
     setLoading(true);
-    const tasks = [
-      supabase.from('stocks').select('*').eq('is_active', true).order('display_order', { ascending: true }),
-      supabase.from('stock_prices_cache').select('*'),
-    ];
-    if (user) {
-      tasks.push(supabase.from('user_stock_watchlist').select('symbol').eq('user_id', user.id));
+    try {
+      const [catalogRes, wlRes] = await Promise.all([
+        axios.get(`${API_BASE}/api/stocks/catalog?with_quotes=true`),
+        user ? watchlistApi.list().catch(() => ({ items: [] })) : Promise.resolve({ items: [] }),
+      ]);
+      const catalog = catalogRes?.data?.items || [];
+      setStocks(catalog);
+      // Initial map from catalog (previous_close etc.).
+      const map = {};
+      for (const it of catalog) {
+        map[it.symbol] = {
+          symbol: it.symbol,
+          price: it.price,
+          change_abs: it.change_abs,
+          change_pct: it.change_pct,
+          day_high: it.day_high,
+          day_low: it.day_low,
+          volume: it.volume,
+          currency: it.currency,
+        };
+      }
+      // Live-Quotes overlay (nur wenn eingeloggt).
+      if (user) {
+        const q = await _loadQuotes(catalog.map((s) => s.symbol));
+        for (const [sym, quote] of Object.entries(q)) {
+          if (quote && typeof quote === 'object') {
+            map[sym] = { ...(map[sym] || {}), ...quote, symbol: sym };
+          }
+        }
+      }
+      setPriceMap(map);
+      const wlItems = (wlRes?.items || []).map((w) => String(w.symbol || '').toUpperCase());
+      setWatchlist(new Set(wlItems));
+    } catch (err) {
+      console.warn('Handeln fetchAll failed', err);
+    } finally {
+      setLoading(false);
     }
-    const results = await Promise.all(tasks);
-    setStocks(results[0].data || []);
-    const map = {};
-    (results[1].data || []).forEach((p) => { map[p.symbol] = p; });
-    setPriceMap(map);
-    if (user && results[2]) {
-      setWatchlist(new Set((results[2].data || []).map((w) => w.symbol)));
-    }
-    setLoading(false);
   };
 
   const refreshPrices = async () => {
     setRefreshing(true);
     try {
-      const { error } = await supabase.functions.invoke('stock-prices', { body: {} });
-      if (error) throw error;
-      const { data: pdata } = await supabase.from('stock_prices_cache').select('*');
-      const map = {};
-      (pdata || []).forEach((p) => { map[p.symbol] = p; });
-      setPriceMap(map);
+      if (!user) {
+        // Ohne Login sind keine Live-Quotes verfügbar → Catalog neu laden.
+        const { data } = await axios.get(`${API_BASE}/api/stocks/catalog?with_quotes=true`);
+        const map = {};
+        for (const it of (data?.items || [])) {
+          map[it.symbol] = { ...it, symbol: it.symbol };
+        }
+        setPriceMap(map);
+        toast.success('Kurse aktualisiert');
+        return;
+      }
+      const symbols = stocks.map((s) => s.symbol);
+      const q = await _loadQuotes(symbols);
+      const next = { ...priceMap };
+      for (const [sym, quote] of Object.entries(q)) {
+        if (quote && typeof quote === 'object') next[sym] = { ...(next[sym] || {}), ...quote, symbol: sym };
+      }
+      setPriceMap(next);
       toast.success('Kurse aktualisiert');
     } catch (err) {
       toast.error('Kurse konnten nicht aktualisiert werden.');

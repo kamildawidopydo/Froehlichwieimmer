@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+// Session 82.89 — Supabase-Import entfernt (Dead-Code); Datei nutzt
+// ausschließlich /api/portfolio/* + /api/auth/me.
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import BrandLogo from '@/components/BrandLogo';
