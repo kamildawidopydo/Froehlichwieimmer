@@ -16,7 +16,6 @@ import {
   AlertCircle,
   Search,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 const BASE = getApiBase();
 const EMPTY_FORM = {
@@ -36,18 +35,12 @@ const EMPTY_FORM = {
   published: false,
 };
 
-const useAuthedApi = () => useMemo(() => {
-  const client = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
-  client.interceptors.request.use(async (cfg) => {
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token;
-      if (token) cfg.headers.Authorization = `Bearer ${token}`;
-    } catch { /* noop */ }
-    return cfg;
-  });
-  return client;
-}, []);
+// Session 82.88 — Auth via JWT-Cookie (withCredentials). Kein Bearer-Header
+// mehr aus Supabase — Backend liest Auth ausschließlich aus dem access_token
+// Cookie via `get_current_user()`. Rolle kommt serverseitig aus `/api/auth/me`.
+const useAuthedApi = () => useMemo(() =>
+  axios.create({ baseURL: `${BASE}/api`, withCredentials: true }),
+[]);
 
 const fmtDate = (iso) => {
   if (!iso) return '—';

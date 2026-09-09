@@ -4,24 +4,15 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle2, CircleSlash } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 const BASE = getApiBase();
 
-const useAuthedApi = () => {
-  return React.useMemo(() => {
-    const client = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
-    client.interceptors.request.use(async (cfg) => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        const token = data?.session?.access_token;
-        if (token) cfg.headers.Authorization = `Bearer ${token}`;
-      } catch {}
-      return cfg;
-    });
-    return client;
-  }, []);
-};
+// Session 82.88 — Auth via JWT-Cookie (withCredentials). Kein Bearer-Header
+// mehr aus Supabase — Backend liest Auth ausschließlich aus dem access_token
+// Cookie. Rolle serverseitig aus `/api/auth/me`.
+const useAuthedApi = () => React.useMemo(() =>
+  axios.create({ baseURL: `${BASE}/api`, withCredentials: true }),
+[]);
 
 const StatusPill = ({ enabled }) =>
   enabled ? (

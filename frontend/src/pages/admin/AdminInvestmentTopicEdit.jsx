@@ -4,24 +4,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowDown, ArrowUp, Plus, Search, Trash2, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 const BASE = getApiBase();
 
-const useAuthedApi = () => {
-  return useMemo(() => {
-    const client = axios.create({ baseURL: `${BASE}/api`, withCredentials: true });
-    client.interceptors.request.use(async (cfg) => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        const token = data?.session?.access_token;
-        if (token) cfg.headers.Authorization = `Bearer ${token}`;
-      } catch {}
-      return cfg;
-    });
-    return client;
-  }, []);
-};
+// Session 82.88 — Auth via JWT-Cookie (withCredentials). Kein Bearer-Header
+// mehr aus Supabase.
+const useAuthedApi = () => useMemo(() =>
+  axios.create({ baseURL: `${BASE}/api`, withCredentials: true }),
+[]);
 
 const Field = ({ label, hint, children }) => (
   <label className="block">

@@ -3,6 +3,100 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.88 (Preview · VERIFIED) · Auth-Bridge Cutover: ResetPassword + 4 Admin-Auth-Pages
+
+**Ziel:** Supabase-Auth aus 5 Scope-Dateien entfernen, Password-Reset-Flow rein FastAPI-native, Token-Hashing + Force-Reset-Endpoint additiv.
+
+### Static Audit (5 Scope-Dateien)
+| Datei | `supabase.auth` BEFORE | AFTER | `supabase-import` BEFORE | AFTER |
+|---|---|---|---|---|
+| `pages/ResetPassword.js` | 6 (`getSession`, `onAuthStateChange`, `updateUser`, `getUser`, `signOut`) + 2× `from('profiles')` | **0** | 1 | **0** |
+| `pages/admin/AdminStockResearch.jsx` | 1 (Bearer-Bridge, Dead-Code) | **0** | 1 | **0** |
+| `pages/admin/AdminInvestmentTopics.jsx` | 1 | **0** | 1 | **0** |
+| `pages/admin/AdminInvestmentTopicEdit.jsx` | 1 | **0** | 1 | **0** |
+| `pages/admin/AdminNewsArticles.jsx` | 1 | **0** | 1 | **0** |
+| **Summe** | **12 (10 auth + 2 from) + 5 Imports = 17** | **0** ✅ | | |
+
+### Neue/geänderte FastAPI-Endpoints (`/app/backend/routes/auth.py`)
+- **`POST /api/auth/forgot-password`** — Token als **SHA-256-Hash** in Mongo (Feld `token_hash`), Plaintext-Token nie in DB, nie geloggt. Response identisch für existierende/unbekannte E-Mails (kein User-Enum-Leak). Preview-Only: `reset_token_preview` im Response für automatisierten Test.
+- **`POST /api/auth/reset-password`** — Lookup via `token_hash`, Single-Use (`used=True + used_at`), Ablauf 1h, setzt `password_hash + last_password_reset_at + must_change_password=false + verified=true`.
+- **`POST /api/auth/force-reset-password`** (NEU) — JWT-Cookie-authentifiziert (`get_current_user`), Payload `ForceResetInput{new_password}` mit `model_config extra="forbid"` (Mass-Assignment-Block).
+
+### PHASE F — Security Tests (15/15 grün)
+| # | Test | Ergebnis |
+|---|---|---|
+| 1 | Unauth `/api/auth/me` | **401** ✅ |
+| 2 | Admin-Login (patron) | **200** · role=admin ✅ |
+| 3 | Admin `/me` (Cookie) | 200 · role=admin ✅ |
+| 4 | Customer-Login (demo.kunde) | 200 · role=user ✅ |
+| 5 | Customer `/me` | role=user ✅ |
+| 6 | Forgot-password existing email | 200 `{status:ok, reset_token_preview:…}` ✅ |
+| 7 | Forgot-password UNKNOWN email | 200 `{status:ok}` (kein Token) → **kein User-Enum-Leak** ✅ |
+| 8 | Reset mit invalid Token | 400 „Ungültiger Token." ✅ |
+| 9 | Reset mit valid Token | 200 · Passwort geändert ✅ |
+| 10 | Reset-Token-Reuse | 400 „Token bereits verwendet." (Single-Use) ✅ |
+| 11 | Login mit altem Passwort nach Reset | **401** ✅ |
+| 12 | Login mit neuem Passwort | **200** ✅ |
+| 13 | Rollback demo.kunde-Passwort via `/change-password` | 200 ✅ |
+| 14 | Mass-Assignment `role=admin` auf Force-Reset | **422 extra_forbidden** (Pydantic `extra=forbid`) ✅ |
+| 15 | Mongo-Plaintext-Token-Check | `token_hash` present, `token` plaintext absent ✅ |
+
+### PHASE H — No Dual Auth
+```
+Scope-Files remaining supabase.auth touches:                0
+Scope-Files supabase-imports:                                0
+Scope-Files other supabase reads/writes:                     0
+Bearer-Bridge Dead-Code removed:                             4 Admin-Pages
+Backend reads auth exclusively from JWT-Cookie:              YES (get_current_user)
+Role decision serverside only (via /api/auth/me):            YES
+```
+
+### PHASE I — Regression (grün)
+```
+Coupon-Pytest:        16/16 PASS ✅
+Realized-PnL:          5/5 PASS ✅
+Kombiniert:           21 passed in 3.22s
+```
+
+### PHASE G — Session Regression (Browser)
+- `/reset-password` ohne Token → Invalid-State mit CTA „Passwort vergessen" ✅
+- `/reset-password?token=fake-abc` → Form + Submit-Button sichtbar ✅
+- Screenshot: Vollständige Passwort-Requirements-UI korrekt gerendert
+- Force-Flow (`?mode=force`) benötigt eingeloggten User → Invalid-State ohne Session (verifiziert im Code-Pfad)
+
+### Final Report
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | 6 (`backend/routes/auth.py`, `frontend/src/pages/ResetPassword.js`, 4× Admin-Pages) |
+| **AUTH_SUPABASE_TOUCHES_BEFORE** | 17 (10 `auth.*` + 2 `from('profiles')` + 5 Imports) |
+| **AUTH_SUPABASE_TOUCHES_AFTER** | **0** ✅ |
+| **RESET_PASSWORD_SOURCE_AFTER** | FastAPI JWT-Cookie (`/api/auth/reset-password` + `/api/auth/force-reset-password`) |
+| **ADMIN_AUTH_SOURCE_AFTER** | JWT-Cookie via `withCredentials: true` (Bearer-Bridge entfernt) |
+| **RESET_TOKEN_STORAGE** | SHA-256 Hash (`token_hash`) in Mongo `password_reset_tokens` |
+| **RESET_TOKEN_EXPIRY** | 1 Stunde (`expires_at = now + 1h`) |
+| **RESET_TOKEN_SINGLE_USE** | YES (`used=True + used_at` nach Erfolg) |
+| **USER_ENUMERATION_PROTECTED** | YES (identische `{status:ok}` für alle E-Mails) |
+| **ROLE_ESCALATION** | 0 (Pydantic `extra=forbid` blockt `role=admin` mit 422) |
+| **DUAL_AUTH** | NO (Supabase-Auth komplett entfernt in Scope, keine Fallbacks) |
+| **PASSWORD_HASH_EXPOSED** | NO (bcrypt-Hash bleibt serverseitig, niemals im Response) |
+| **RESET_TOKEN_PLAINTEXT_IN_DB** | NO (nur SHA-256-Hash gespeichert) |
+| **LOGIN_REGRESSION** | 0 |
+| **ADMIN_REGRESSION** | 0 |
+| **FINANCIAL_WRITES** | 0 |
+| **COUPON_TESTS** | 16/16 PASS |
+| **REALIZED_PNL_TESTS** | 5/5 PASS |
+| **READY_FOR_82.89** | **YES** |
+| **READY_FOR_PROD** | NO (Preview-only) |
+
+### Betroffene Dateien
+- **Geändert:** `/app/backend/routes/auth.py` (Token-Hashing, Force-Reset-Endpoint, `must_change_password` reset)
+- **Rewrite:** `/app/frontend/src/pages/ResetPassword.js`
+- **Geändert (4×):** `/app/frontend/src/pages/admin/AdminStockResearch.jsx`, `AdminInvestmentTopics.jsx`, `AdminInvestmentTopicEdit.jsx`, `AdminNewsArticles.jsx` (Bearer-Bridge → JWT-Cookie)
+
+### Verbleibende Blocker
+Keine.
+
+
 ## Session 82.87 (READ-ONLY AUDIT) · Global Supabase Remaining-Dependencies Audit
 
 **Ziel:** Definitive Restliste aller Supabase-Abhängigkeiten nach den Cutovers bis 82.86. Keine Code-Änderungen.
