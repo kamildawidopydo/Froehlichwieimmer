@@ -4,7 +4,10 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
+// Session 82.103a · Reviews-Reader auf FastAPI (`/api/admin/reviews`).
+const API = getApiBase();
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -42,43 +45,15 @@ const AdminOfferReviews = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      let q = supabase
-        .from('offer_reviews')
-        .select(
-          `
-          id, savings_offer_id, stars, body, product_type, author_display_name, status,
-          reviewer_kind, guest_first_name, guest_last_name,
-          created_at, reviewed_at, rejection_reason, deleted_at,
-          user_id,
-          savings_offer:savings_offers (
-            id, interest_rate, deposit_term, investment_type,
-            banks ( name )
-          ),
-          profiles:user_id ( email, first_name, last_name )
-        `
-        )
-        .order('created_at', { ascending: false });
-
-      if (tab === 'deleted') {
-        q = q.not('deleted_at', 'is', null);
-      } else if (tab === 'all') {
-        q = q.is('deleted_at', null);
-      } else {
-        q = q.eq('status', tab).is('deleted_at', null);
-      }
-
-      const { data, error } = await q;
-      if (error) {
-        if (error.code === '42P01' || error.message?.toLowerCase().includes('relation')) {
-          setTableMissing(true);
-        } else {
-          toast.error('Fehler beim Laden: ' + error.message);
-        }
-        setItems([]);
-      } else {
-        setTableMissing(false);
-        setItems(data || []);
-      }
+      const { data } = await axios.get(`${API}/api/admin/reviews`, {
+        withCredentials: true,
+        params: { status: tab },
+      });
+      setTableMissing(Boolean(data?.table_missing));
+      setItems(data?.items || []);
+    } catch (err) {
+      toast.error('Fehler beim Laden: ' + (err?.response?.data?.detail || err.message));
+      setItems([]);
     } finally {
       setLoading(false);
     }

@@ -4825,6 +4825,24 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.103a (Preview · Sept 9 2026) · Reviews FastAPI Cutover ✅
+- **Backend** `routes/reviews.py`: neuer Public-Router (`GET /api/reviews/approved`, `GET /api/reviews/stats`) und Admin-Router (`GET /api/admin/reviews` mit Status-Filter, `POST /{id}/approve`, `POST /{id}/reject`, `DELETE /{id}` als Soft-Delete). Collection `offer_reviews` empty-safe (Preview leer → faithful 0/null).
+- **Stats-Aggregation**: server-authoritative via Mongo-Aggregation-Pipeline (`$avg $sum`), keine Fake-Ratings, keine Default-4.8, `average_rating=null` bei 0 Reviews.
+- **Frontend cutover**: `AdminOfferReviews.js` `load()` auf `axios.get('/api/admin/reviews')` mit Status-Filter. `lib/offerReviews.js` `adminApproveReview/adminRejectReview/adminDeleteReview` an neue Endpoints angebunden (dynamic axios import). Neuer `fetchOfferReviewStatsRemote` steht für zukünftige Rating-Badge-Konsumenten bereit.
+- **Security-Matrix (8/8) grün**: public-approved=200 · public-stats=200 (0/null) · unauth-admin=401 · customer-admin=403 · admin-list=200 · invalid-status=422 · mass-assignment `status/admin_id` in approve-Body → 422 (extra=forbid) · approve non-existent=404.
+- **Regression**: Coupon 16/16 + Market-Data 47/47 pytest grün · Frontend-Build grün.
+
+### FINAL REPORT (Session 82.103a)
+- FILES_CHANGED: 4 (`backend/routes/reviews.py` neu, `backend/server.py`, `AdminOfferReviews.js`, `lib/offerReviews.js`)
+- REVIEWS_SUPABASE_BEFORE: `AdminOfferReviews.js` 1 chain + `lib/offerReviews.js` 3 tote Refs · **AFTER: 0**
+- REVIEWS_COLLECTION: `offer_reviews` (Mongo-native, lazy-created, Preview leer)
+- PUBLIC_APPROVED_ENDPOINT: `GET /api/reviews/approved?offer_id=&bank_id=&limit=`
+- PUBLIC_STATS_ENDPOINT: `GET /api/reviews/stats?offer_id=&bank_id=` (echte Aggregate, null bei 0 Reviews)
+- ADMIN_MODERATION_ENDPOINTS: list (mit Status-Filter), approve, reject, delete (Soft)
+- **FAKE_REVIEWS=0 · FAKE_RATINGS=0 · FINANCIAL_WRITES=0 · SUPABASE_WRITES_AFTER=0**
+- REMAINING_ACTIVE_RUNTIME_SUPABASE_FILES: 6 (`SavingsComparison.js`, `PartnerBanks.js`, `Home.js`, `AdminCreditBankDetails.js`, `AdminInsufficientBuyingPower.js`, plus AdminBondRequests.js false positive)
+- READY_FOR_82.103b: **YES** · READY_FOR_PROD: NO
+
 ## Session 82.102b (Preview · Sept 9 2026) · Supabase Import-Only Dead-Code Sweep · PARTIAL ⚠️
 - **PHASE A Neubewertung**: Frühere Sessions filterten Supabase-Runtime nur mit single-line `supabase\.(from|rpc|…)`. Ein zweiter, mehrzeiliger Audit (Chain-Style `let q = supabase\n.from(...)`) zeigt: **7 Files haben weiterhin ACTIVE_RUNTIME**, entgegen der 82.101-Bilanz.
 - **Classification**:

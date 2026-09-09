@@ -5205,6 +5205,11 @@ app.include_router(_admin_legacy_reads_routes.router)
 from routes import applications as _applications_routes  # noqa: E402
 app.include_router(_applications_routes.router)
 
+# Session 82.103a — Reviews (Public + Admin Moderation).
+from routes import reviews as _reviews_routes  # noqa: E402
+app.include_router(_reviews_routes.public_router)
+app.include_router(_reviews_routes.admin_router)
+
 @app.on_event("startup")
 async def _init_storage_at_startup():
     try:

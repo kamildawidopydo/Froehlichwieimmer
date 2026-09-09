@@ -101,17 +101,47 @@ export async function fetchOfferReviewStatsBatch(offerIds) {
   return { map: new Map(), error: null };
 }
 
-/** Admin */
+/** Admin — Session 82.103a · FastAPI-Endpoints */
+async function _axiosPost(path, payload) {
+  const _axios = (await import('axios')).default;
+  const _api = (await import('@/lib/apiBase')).getApiBase();
+  try {
+    const { data } = await _axios.post(`${_api}${path}`, payload || {}, { withCredentials: true });
+    return { data, error: null };
+  } catch (e) { return { data: null, error: { message: e?.response?.data?.detail || e.message } }; }
+}
+async function _axiosDelete(path) {
+  const _axios = (await import('axios')).default;
+  const _api = (await import('@/lib/apiBase')).getApiBase();
+  try {
+    const { data } = await _axios.delete(`${_api}${path}`, { withCredentials: true });
+    return { data, error: null };
+  } catch (e) { return { data: null, error: { message: e?.response?.data?.detail || e.message } }; }
+}
 export async function adminApproveReview(reviewId, note) {
-  return Promise.resolve({data: null, error: null}); // 82.92 neutralized
+  return _axiosPost(`/api/admin/reviews/${reviewId}/approve`, { note });
 }
-
 export async function adminRejectReview(reviewId, reason) {
-  return Promise.resolve({data: null, error: null}); // 82.92 neutralized
+  return _axiosPost(`/api/admin/reviews/${reviewId}/reject`, { reason });
+}
+export async function adminDeleteReview(reviewId) {
+  return _axiosDelete(`/api/admin/reviews/${reviewId}`);
 }
 
-export async function adminDeleteReview(reviewId) {
-  return Promise.resolve({data: null, error: null}); // 82.92 neutralized
+/** Public stats — Session 82.103a */
+export async function fetchOfferReviewStatsRemote(offerId) {
+  const _axios = (await import('axios')).default;
+  const _api = (await import('@/lib/apiBase')).getApiBase();
+  try {
+    const { data } = await _axios.get(`${_api}/api/reviews/stats`, {
+      params: { offer_id: offerId }, withCredentials: true,
+    });
+    return {
+      count: data?.review_count ?? 0,
+      average: data?.average_rating != null ? roundToQuarter(Number(data.average_rating)) : null,
+      error: null,
+    };
+  } catch (e) { return { count: 0, average: null, error: { message: e?.response?.data?.detail || e.message } }; }
 }
 
 /** @deprecated use adminDeleteReview */
