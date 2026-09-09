@@ -5210,6 +5210,10 @@ from routes import reviews as _reviews_routes  # noqa: E402
 app.include_router(_reviews_routes.public_router)
 app.include_router(_reviews_routes.admin_router)
 
+# Session 82.103b — Public Savings-Offers + Partner-Banks + Home-Stats.
+from routes import public_reads as _public_reads_routes  # noqa: E402
+app.include_router(_public_reads_routes.router)
+
 @app.on_event("startup")
 async def _init_storage_at_startup():
     try:

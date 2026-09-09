@@ -6,7 +6,7 @@ import OfferInterestModal from '@/components/OfferInterestModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
-import { supabase } from '@/lib/supabase';
+// Session 82.103b · Supabase entfernt.
 import { offerMeetsAmount } from '@/lib/comparisonDisplay';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
@@ -336,14 +336,12 @@ const SavingsComparison = () => {
   const fetchOffers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('savings_offers')
-        .select(
-          '*, banks(id, name, slug, country, logo_url, website_url, deposit_protection, deposit_protection_amount, founded_year, credit_rating, regulator_name)'
-        )
-        .eq('is_active', true);
-      if (error) throw error;
-      const mapped = (data || [])
+      // Session 82.103b · FastAPI-Read.
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data: res } = await _axios.get(`${_api}/api/public/savings-offers`, { withCredentials: true });
+      const data = res?.items || [];
+      const mapped = data
         .map((o) => ({
           ...o,
           bank_name: o.banks?.name || '',
@@ -372,38 +370,16 @@ const SavingsComparison = () => {
         setRateHistoryMap(new Map());
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('SavingsComparison fetchOffers', err);
-      const msg = String(err?.message || err || '');
-      const network =
-        msg.includes('Failed to fetch') ||
-        msg.includes('NetworkError') ||
-        msg.includes('fetch') ||
-        msg.includes('timeout') ||
-        msg.includes('TIMED_OUT') ||
-        err?.name === 'TypeError';
-      toast.error(
-        network
-          ? 'Keine Verbindung zum Daten-Server (Supabase). Bitte Netzwerk/VPN prüfen und die Seite neu laden.'
-          : 'Fehler beim Laden der Angebote'
-      );
+      toast.error('Fehler beim Laden der Angebote');
     } finally {
       setLoading(false);
     }
   };
 
   const fetchFavorites = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('favorites')
-        .eq('id', user.id)
-        .single();
-      if (error) throw error;
-      setFavorites(data?.favorites || []);
-    } catch {
-      console.error('Fehler beim Laden der Favoriten');
-    }
+    // Session 82.103b · Favoriten-Backend noch nicht bereitgestellt.
+    setFavorites([]);
   };
 
   const handleSearchChange = useCallback((value) => setFilters((prev) => ({ ...prev, searchText: value })), []);
@@ -446,20 +422,8 @@ const SavingsComparison = () => {
       setFavorites((prev) => {
         const wasFav = prev.includes(offerId);
         const next = wasFav ? prev.filter((id) => id !== offerId) : [...prev, offerId];
-
-        supabase
-          .from('profiles')
-          .update({ favorites: next })
-          .eq('id', user.id)
-          .then(({ error }) => {
-            if (error) {
-              toast.error('Fehler beim Aktualisieren der Favoriten');
-              setFavorites(prev);
-            } else {
-              logEvent(wasFav ? EVENTS.FAVORITE_REMOVE : EVENTS.FAVORITE_ADD, { offer_id: offerId });
-            }
-          });
-
+        // Session 82.103b · Favoriten-Persistenz-Backend noch nicht bereitgestellt.
+        logEvent(wasFav ? EVENTS.FAVORITE_REMOVE : EVENTS.FAVORITE_ADD, { offer_id: offerId });
         toast.success(wasFav ? 'Aus Favoriten entfernt' : 'Zu Favoriten hinzugefügt');
         return next;
       });

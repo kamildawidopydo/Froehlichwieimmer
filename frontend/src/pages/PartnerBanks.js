@@ -8,7 +8,7 @@ import Pullquote from '@/components/editorial/Pullquote';
 import BankLogo from '@/components/BankLogo';
 import { buildPartnerBankCards, formatPartnerBankCountryCodes } from '@/lib/partnerBanksList';
 import { isExcludedSavingsBankSlug } from '@/lib/comparisonCatalog';
-import { supabase } from '@/lib/supabase';
+// Session 82.103b · Supabase entfernt.
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 
 const PartnerBanks = () => {
@@ -20,23 +20,19 @@ const PartnerBanks = () => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('savings_offers')
-        .select(
-          'banks(id, name, slug, country, logo_url, deposit_protection, deposit_protection_amount, founded_year, regulator_name)'
-        )
-        .eq('is_active', true);
-      if (cancelled) return;
-      if (error) {
-        setPartnerBanks([]);
-        setLoading(false);
-        return;
+      // Session 82.103b · FastAPI-Read.
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      try {
+        const { data: res } = await _axios.get(`${_api}/api/public/partner-banks`, { withCredentials: true });
+        if (cancelled) return;
+        const banks = (res?.items || []).filter((bank) => bank && !isExcludedSavingsBankSlug(bank.slug));
+        setPartnerBanks(buildPartnerBankCards(banks));
+      } catch {
+        if (!cancelled) setPartnerBanks([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      const banks = (data || [])
-        .map((row) => row.banks)
-        .filter((bank) => bank && !isExcludedSavingsBankSlug(bank.slug));
-      setPartnerBanks(buildPartnerBankCards(banks));
-      setLoading(false);
     })();
     return () => {
       cancelled = true;

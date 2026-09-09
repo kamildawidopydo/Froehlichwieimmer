@@ -4825,6 +4825,26 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.103b (Preview · Sept 9 2026) · Savings-Offers + Partner-Banks + Home Cutover ✅
+- **Backend** `routes/public_reads.py`: neuer Public-Router mit `GET /api/public/savings-offers` (Enrichment mit Bank-Metadaten via In-Memory-`_bank_map`), `GET /api/public/partner-banks`, `GET /api/public/home-stats` (echte Mongo-Counts, null bei fehlender Collection).
+- **Frontend cutover 0 Supabase** in allen 3 Scope-Dateien:
+  - `SavingsComparison.js` (3 chains + Realtime-Favorite-Write) → axios auf `/api/public/savings-offers` · Favoriten-Persistenz auf `logEvent`-Only reduziert (Backend-Endpoint noch nicht bereit).
+  - `PartnerBanks.js` (1 chain) → axios auf `/api/public/partner-banks` mit `buildPartnerBankCards`.
+  - `Home.js` (2 chains) → axios auf `/api/public/savings-offers` · Credit-Offers-Feed derzeit leer (`credit_offers`-Backend fehlt, Enrichment ohne Credit-Body).
+- **Faithful Empty-States**: `savings_offers=8`, `banks=5` in Preview real vorhanden — Endpoints liefern echte Daten. Home-Stats: `users_count=24, applications_count=0, partner_banks_count=5, savings_offers_count=8`.
+- **Regression**: Coupon 16/16 + Market-Data 47/47 pytest grün · Frontend-Build grün.
+
+### FINAL REPORT (Session 82.103b)
+- FILES_CHANGED: 4 (`public_reads.py` neu, `server.py`, `SavingsComparison.js`, `PartnerBanks.js`, `Home.js`)
+- SAVINGS_SUPABASE_BEFORE: 3 chains · **AFTER: 0**
+- PARTNER_BANKS_SUPABASE_BEFORE: 1 chain · **AFTER: 0**
+- HOME_SUPABASE_BEFORE: 2 chains · **AFTER: 0**
+- NEW_PUBLIC_ENDPOINTS: 3 (`/api/public/savings-offers`, `/api/public/partner-banks`, `/api/public/home-stats`)
+- REALTIME_AFTER: 0 (SavingsComparison hatte keinen Realtime-Channel, nur Favorite-Write)
+- **FAKE_SAVINGS_RATES=0 · FAKE_BANK_DATA=0 · FAKE_HOME_STATS=0 · FINANCIAL_WRITES=0 · SUPABASE_WRITES_AFTER=0**
+- REMAINING_ACTIVE_RUNTIME_SUPABASE_FILES: 2 (`AdminCreditBankDetails.js`, `AdminInsufficientBuyingPower.js`) + ~13 mit Kommentar-/Import-Refs
+- READY_FOR_82.103c: **YES** · READY_FOR_PROD: NO
+
 ## Session 82.103a (Preview · Sept 9 2026) · Reviews FastAPI Cutover ✅
 - **Backend** `routes/reviews.py`: neuer Public-Router (`GET /api/reviews/approved`, `GET /api/reviews/stats`) und Admin-Router (`GET /api/admin/reviews` mit Status-Filter, `POST /{id}/approve`, `POST /{id}/reject`, `DELETE /{id}` als Soft-Delete). Collection `offer_reviews` empty-safe (Preview leer → faithful 0/null).
 - **Stats-Aggregation**: server-authoritative via Mongo-Aggregation-Pipeline (`$avg $sum`), keine Fake-Ratings, keine Default-4.8, `average_rating=null` bei 0 Reviews.

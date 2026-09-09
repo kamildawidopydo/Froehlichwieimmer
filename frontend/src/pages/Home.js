@@ -26,7 +26,7 @@ import PageMeta from '@/components/PageMeta';
 import { Button } from '@/components/ui/button';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
-import { supabase } from '@/lib/supabase';
+// Session 82.103b · Supabase entfernt.
 import { getOfferRatingValue } from '@/lib/offerRating';
 import { ArrowRight } from 'lucide-react';
 import siteCopy from '@/data/siteCopy';
@@ -108,22 +108,13 @@ const Home = () => {
 
   const fetchCreditOffers = async () => {
     try {
-      const [creditRes, savingsRes] = await Promise.all([
-        supabase
-          .from('credit_offers')
-          .select('*, banks(id, name, country, logo_url, founded_year, regulator_name)')
-          .eq('is_active', true),
-        supabase
-          .from('savings_offers')
-          .select('*, banks(id, name, country, logo_url, founded_year, regulator_name)')
-          .eq('is_active', true),
-      ]);
-
-      if (creditRes.error) throw creditRes.error;
-      if (savingsRes.error) throw savingsRes.error;
-
+      // Session 82.103b · Savings-Offers-Read via FastAPI. Credit-Offers-Endpoint
+      // fehlt noch (Legacy), daher hier reine Savings-Enrichment ohne Credit-Feed.
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data: savingsRes } = await _axios.get(`${_api}/api/public/savings-offers`, { withCredentials: true });
       const savingsByBank = new Map();
-      (savingsRes.data || []).forEach((item) => {
+      (savingsRes?.items || []).forEach((item) => {
         if (!item.bank_id) return;
         const current = savingsByBank.get(item.bank_id);
         const nextRate = Number(item.interest_rate || 0);
@@ -131,8 +122,7 @@ const Home = () => {
           savingsByBank.set(item.bank_id, item);
         }
       });
-
-      const enriched = (creditRes.data || []).map((offer) => {
+      const enriched = [];
         const savings = savingsByBank.get(offer.bank_id);
         const ratingFromSavings = savings
           ? getOfferRatingValue({
