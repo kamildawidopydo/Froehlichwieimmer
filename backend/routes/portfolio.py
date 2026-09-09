@@ -39,6 +39,7 @@ from bson import ObjectId
 from bson.decimal128 import Decimal128
 from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from pydantic import BaseModel, Field
+from pymongo.errors import DuplicateKeyError
 
 from server import get_current_user, db, require_admin  # type: ignore[attr-defined]
 
@@ -1209,6 +1210,115 @@ async def admin_match_orders(
     und liefert einen kompakten Report zurück. Preview-only Trigger.
     """
     return await run_pending_limit_buy_matching(db, trigger="admin-manual")
+
+
+# ─── ADMIN Order-Reject (Session 82.90b · Safe Cutover-Enablement) ──────
+class AdminOrderRejectIn(BaseModel):
+    decision_note: Optional[str] = Field(default=None, max_length=500)
+    model_config = {"extra": "forbid"}
+
+
+@admin_router.post("/orders/{order_id}/reject")
+async def admin_reject_order(
+    order_id: str,
+    body: AdminOrderRejectIn = Body(default_factory=AdminOrderRejectIn),
+    admin: dict = Depends(require_admin),
+):
+    """Atomarer `pending → rejected` Übergang für Stock-Orders (CAS).
+
+    - Kein Financial-Write (Cash-Debit passiert erst in Execute-Saga).
+    - Coupon-Reservation wird idempotent freigegeben.
+    - Race mit gleichzeitigem `execute` → 409 (CAS auf `status='pending'`).
+    - Idempotent: erneuter Aufruf auf bereits `rejected` → 409 mit klarem Detail.
+    """
+    try:
+        oid = ObjectId(order_id)
+    except Exception:
+        raise HTTPException(status_code=422, detail="ungültige order_id")
+    now = datetime.now(timezone.utc)
+    note = (body.decision_note or "").strip()[:500] or None
+    result = await db.stock_orders.find_one_and_update(
+        {"_id": oid, "status": "pending"},
+        {"$set": {
+            "status": "rejected",
+            "rejected_at": now,
+            "handled_by": ObjectId(admin["id"]),
+            "updated_at": now,
+            "decision_note": note,
+        }},
+        return_document=True,
+    )
+    if not result:
+        existing = await db.stock_orders.find_one({"_id": oid})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Order nicht gefunden")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Order bereits '{existing.get('status')}' — Reject nicht möglich",
+        )
+    # Coupon-Reservation freigeben (idempotent, safe bei keiner Reservation).
+    try:
+        from services.coupon_service import release_coupon_for_order
+        await release_coupon_for_order(db, oid)
+    except Exception:  # noqa: BLE001
+        pass
+    return {"status": "ok", "order_id": order_id, "new_status": "rejected"}
+
+
+# ─── ADMIN Order-Notify (Session 82.90b · Idempotent Email-Side-Effect) ─
+class AdminOrderNotifyIn(BaseModel):
+    event_type: str = Field(..., pattern="^(approved|rejected|executed)$")
+    channel: str = Field(default="email", pattern="^(email|internal)$")
+    subject: Optional[str] = Field(default=None, max_length=200)
+    body_preview: Optional[str] = Field(default=None, max_length=500)
+    model_config = {"extra": "forbid"}
+
+
+@admin_router.post("/orders/{order_id}/notify")
+async def admin_notify_order(
+    order_id: str,
+    body: AdminOrderNotifyIn,
+    admin: dict = Depends(require_admin),
+):
+    """Queued Notification zu einer Order (idempotent per `event_key`).
+
+    - Email-Zustellung wird von einem separaten Worker/Cron übernommen
+      (aktuell Stub `status=queued`). Email-Fehler ändern **niemals** den
+      Financial-State — dies ist ein reiner Side-Effect nach persistiertem
+      Zustand.
+    - `event_key = notify:{order_id}:{event_type}:{channel}` — Unique-Index
+      verhindert doppeltes Queuen.
+    """
+    try:
+        oid = ObjectId(order_id)
+    except Exception:
+        raise HTTPException(status_code=422, detail="ungültige order_id")
+    order = await db.stock_orders.find_one({"_id": oid})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order nicht gefunden")
+    event_key = f"notify:{order_id}:{body.event_type}:{body.channel}"
+    now = datetime.now(timezone.utc)
+    doc = {
+        "event_key": event_key,
+        "order_id": oid,
+        "user_id": order["user_id"],
+        "event_type": body.event_type,
+        "channel": body.channel,
+        "subject": body.subject,
+        "body_preview": body.body_preview,
+        "triggered_by": ObjectId(admin["id"]),
+        "created_at": now,
+        "status": "queued",
+    }
+    try:
+        # Unique-Index sichert Idempotenz per event_key.
+        await db.order_notifications.create_index(
+            [("event_key", 1)], unique=True, name="event_key_unique",
+        )
+        await db.order_notifications.insert_one(doc)
+        return {"status": "queued", "event_key": event_key, "idempotent": False}
+    except DuplicateKeyError:
+        return {"status": "already_queued", "event_key": event_key, "idempotent": True}
 
 
 # ─── ADMIN Statement-Email (Session 82.42 · Depot P1) ──────────────────

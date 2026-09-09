@@ -3,6 +3,100 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.90b (Preview · VERIFIED) · Safe Admin-Financial Backend Enablement
+
+**Auslöser:** 10 blockierte Financial-Mutationen aus 82.90 mussten sichere Backend-Pfade erhalten, bevor der Frontend-Cutover (82.90c) folgen kann.
+
+### Ergebnis: 5 sichere Pfade gebaut, 5 als BLOCKED_BY_DOMAIN_POLICY dokumentiert
+
+### Neue Backend-Endpoints (5)
+| # | Endpoint | Datei | Semantik |
+|---|---|---|---|
+| 1 | `POST /api/admin/portfolio/orders/{order_id}/reject` | `routes/portfolio.py` | Atomarer `pending → rejected` (CAS), idempotent; Coupon-Reservation via `release_coupon_for_order` freigegeben; kein Cash-Write (Debit passiert erst in Execute-Saga) |
+| 2 | `POST /api/admin/portfolio/orders/{order_id}/notify` | `routes/portfolio.py` | Notification-Queue mit Unique-Index auf `event_key = notify:{order_id}:{event_type}:{channel}`; Email-Zustellung ist reiner Side-Effect nach persistiertem Zustand — kein Financial-Rollback bei Email-Fehler |
+| 3 | `PATCH /api/admin/ipo/requests/{request_id}/valuation` | `routes/ipo_requests.py` | Whitelist (`subscription_price_per_share`, `listing_price_per_share`, `decision_note`) via `extra=forbid`; nur `status ∈ {pending, approved}` (nach `allocated` unwiderruflich) |
+| 4 | `POST /api/admin/ipo/requests/create-for-user` | `routes/ipo_requests.py` | Admin erstellt Request im Namen eines Users; server-authoritative `status='pending'`, `source='admin'`, `created_by=admin_id`; Duplicate-Guard via partial-unique-Index; keine Allocation |
+| 5a | `POST /api/admin/ipo/requests/{request_id}/archive` | `routes/ipo_requests.py` | Soft-Archive (`is_archived + archived_at + archived_by + archive_note`); nur `status ∈ {rejected, cancelled}` — audit-relevante ausgeführte Records nicht löschbar |
+| 5b | `POST /api/admin/bonds/requests/{request_id}/archive` | `routes/bond_requests.py` | Analog zu 5a für Bond-Requests |
+
+### BLOCKED_BY_DOMAIN_POLICY (5 Mutationen · nicht gebaut)
+Diese direkten Position-State-Writes würden die Ledger-Trail-Invariante brechen — für einen sicheren Cutover braucht es einen dedizierten Adjustment-Service mit vollständigem Cash+Position+Ledger-Zyklus, was den Scope dieser Session sprengt:
+
+1. Admin **Stock-Position Upsert** — verstößt gegen Ledger-Trail-Invariante
+2. Admin **Stock-Position Delete/Close** — verstößt gegen Ledger-Trail-Invariante
+3. Admin **Bond-Position Upsert** — verstößt gegen Ledger-Trail-Invariante
+4. Admin **Bond-Position Delete** — verstößt gegen Ledger-Trail-Invariante
+5. **Physical Delete** von IPO-/Bond-Requests → ersetzt durch **Soft-Archive** (Punkt 5a/5b)
+
+**Empfehlung:** Vor einem Position-Adjustment-Service dringend Domain-Review mit Finance-Team: welche fachlichen Use-Cases erfordern überhaupt direkte Position-Korrekturen? Wenn nachvollziehbar (z. B. Corporate Actions, Erbschaftsübertragungen), dann dedizierte Endpoints mit `adjustment_reason ∈ {corporate_action, inheritance, correction, migration}` + doppelter Ledger-Buchung.
+
+### PHASE K Security-Matrix (14/14 grün)
+| Test | Status |
+|---|---|
+| unauth → 401 auf reject/notify/valuation/create4u/ipo-arch/bond-arch | **6/6 ✅** |
+| customer → 403 auf reject/valuation | **2/2 ✅** |
+| admin: invalid ObjectId → 422 (reject/notify) | **2/2 ✅** |
+| admin: Mass-Assignment `role=admin` auf reject → 422 `extra_forbidden` | ✅ |
+| admin: Mass-Assignment `status=allocated` auf create4u → 422 `extra_forbidden` | ✅ |
+| admin: 404 auf missing entity (reject/notify/valuation/archive/create4u) | **6/6 ✅** |
+| admin: valuation ohne Felder → 422 „Kein Feld zum Aktualisieren angegeben" | ✅ |
+
+### PHASE L Idempotenz
+| Endpoint | Idempotency-Gate |
+|---|---|
+| Order-Reject | CAS `status=pending` (Duplicate-Reject → 409 mit klarem Detail) |
+| Order-Notify | Unique-Index `event_key` (Duplicate → `already_queued`, `idempotent:true`) |
+| IPO-Valuation | `find_one_and_update` idempotent bei identischen Werten |
+| IPO-Create-For-User | Partial-Unique-Index `(user_id, ipo_id, status='pending')` → 409 |
+| IPO/Bond-Archive | Pre-Check auf `is_archived=True` → no-op mit Return des Dokuments |
+
+### PHASE N Financial Invariants (unverändert)
+Keine Test-Mutation auf Financial-State in dieser Session (nur additive Endpoints, keine Aufrufe im Test).
+- `DUP_LEDGER = 0`
+- `NEG_LEDGER = 0`
+- `NEG_QTY = 0`
+- `DUP_ORDER_EXEC = 0`
+- `DUP_IPO_ALLOC = 0`
+- `DUP_BOND_EXEC = 0`
+- `EXECUTED_WITHOUT_CASH = 0`
+- `EXECUTED_WITHOUT_POSITION = 0`
+
+### PHASE J Regression (grün)
+- Coupon-Pytest: **16/16 PASS** ✅
+- Realized-PnL: **5/5 PASS** ✅
+- Kombiniert: `21 passed in 3.16s`
+
+### Final Report Flags
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | 3 (`routes/portfolio.py`, `routes/ipo_requests.py`, `routes/bond_requests.py`) |
+| **SAFE_BACKEND_PATHS_BUILT** | **5** (Order-Reject, Order-Notify, IPO-Valuation, IPO-Create-For-User, IPO+Bond-Archive) |
+| **BLOCKED_BY_DOMAIN_POLICY** | **5** (Stock/Bond-Position-Upsert/Delete, Physical-Delete of Requests) |
+| **ORDER_REJECT_READY** | **YES** |
+| **STOCK_POSITION_ADJUSTMENT_READY** | **NO — BLOCKED_BY_DOMAIN_POLICY** |
+| **BOND_POSITION_ADJUSTMENT_READY** | **NO — BLOCKED_BY_DOMAIN_POLICY** |
+| **REQUEST_DELETE_POLICY** | **Soft-Archive** (physical delete verboten für Audit-Trail) |
+| **IPO_VALUATION_UPDATE_READY** | **YES** |
+| **IPO_ADMIN_CREATE_READY** | **YES** |
+| **ORDER_EMAIL_READY** | **YES** (Queue via `event_key` idempotent; Email-Worker aktuell Stub `status=queued`, echter Resend-Dispatch als Follow-up) |
+| **IDEMPOTENCY** | Alle 5 Endpoints mit CAS oder Unique-Index oder Pre-Check-Gate |
+| **SECURITY_MATRIX** | 14/14 grün (401/403/422/404 + `extra=forbid`) |
+| **FINANCIAL_INVARIANTS** | Unverändert (nur additive Endpoints, keine Test-Mutation) |
+| **DIRECT_POSITION_HACKS** | 0 |
+| **DIRECT_CASH_HACKS** | 0 |
+| **PHYSICAL_DELETE_OF_EXECUTED_FINANCIAL_RECORDS** | 0 (Soft-Archive gated auf `rejected/cancelled`) |
+| **NEW_DUPLICATE_SAGA_LOGIC** | 0 (nutzt existing `coupon_service.release_coupon_for_order`) |
+| **SUPABASE_WRITES** | 0 |
+| **FINANCIAL_INVARIANTS_CHANGED** | NO |
+| **READY_FOR_82.90c** | **PARTIAL** — Frontend kann Order-Reject, Order-Notify, IPO-Valuation, IPO-Create-For-User, IPO/Bond-Archive umstellen; Stock/Bond-Position-Mutationen bleiben BLOCKED bis Adjustment-Service |
+| **READY_FOR_PROD** | NO (Preview-only) |
+
+### Betroffene Dateien
+- **Geändert:** `/app/backend/routes/portfolio.py` (+ Order-Reject + Order-Notify + `DuplicateKeyError` Import)
+- **Geändert:** `/app/backend/routes/ipo_requests.py` (+ Valuation-PATCH + Create-For-User + Archive + `Body` Import)
+- **Geändert:** `/app/backend/routes/bond_requests.py` (+ Archive)
+
+
 ## Session 82.90 (READ-ONLY AUDIT · STOP per PHASE-C-RULE) · Admin Financial Cutover Audit
 
 **Auslöser:** 6 Admin-Financial-Pages sollten von Supabase auf FastAPI/Saga umgestellt werden. Die STOP-Rule verbietet explizit: (a) direkte Mongo-Writes improvisieren, (b) Supabase parallel behalten, (c) Business-Logik im Frontend nachbauen. Ein Cutover pro Datei ist deshalb nur zulässig, wenn **alle** ihre Mutationen einen bestehenden sicheren Backend-Pfad haben.

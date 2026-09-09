@@ -325,6 +325,53 @@ async def admin_execute_bond(
         raise HTTPException(status_code=exc.http_status, detail=f"{exc.code}: {exc.detail}")
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# Session 82.90b — Safe Bond-Request Archive (Soft-Delete)
+# ═══════════════════════════════════════════════════════════════════════
+class AdminBondArchiveBody(BaseModel):
+    archive_note: Optional[str] = Field(default=None, max_length=500)
+    model_config = {"extra": "forbid"}
+
+
+@admin_router.post("/requests/{request_id}/archive")
+async def admin_archive_bond_request(
+    request_id: str,
+    body: AdminBondArchiveBody = AdminBondArchiveBody(),
+    admin_user: dict = Depends(require_admin),
+):
+    """Soft-Archive für Bond-Request. Physical-Delete von executed Records
+    ist verboten (Audit-Trail-Preservation).
+
+    - Nur `status ∈ {rejected, cancelled}`.
+    - Idempotent.
+    """
+    if not ObjectId.is_valid(request_id):
+        raise HTTPException(status_code=400, detail="Invalid request id")
+    existing = await db.bond_purchase_requests.find_one({"_id": ObjectId(request_id)})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+    if existing.get("is_archived"):
+        return await _serialize_admin(existing)
+    if existing.get("status") not in ("rejected", "cancelled"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Archive nur für rejected/cancelled zulässig — aktuell '{existing.get('status')}'",
+        )
+    now = datetime.now(timezone.utc)
+    result = await db.bond_purchase_requests.find_one_and_update(
+        {"_id": ObjectId(request_id), "is_archived": {"$ne": True}},
+        {"$set": {
+            "is_archived": True,
+            "archived_at": now,
+            "archived_by": ObjectId(admin_user["id"]),
+            "archive_note": (body.archive_note or "").strip()[:500] or None,
+            "updated_at": now,
+        }},
+        return_document=True,
+    )
+    return await _serialize_admin(result or existing)
+
+
 async def ensure_indexes():
     """Partial-Unique-Index für Duplicate-Guard + Query-Indizes."""
     await db.bond_purchase_requests.create_index(

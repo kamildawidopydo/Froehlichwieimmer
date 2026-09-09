@@ -24,7 +24,7 @@ from datetime import datetime, timezone, date
 from typing import Optional, Literal
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 from pymongo.errors import DuplicateKeyError
 
@@ -467,3 +467,165 @@ async def admin_allocate(
         raise HTTPException(status_code=555, detail=f"[injected-crash] {exc}")
     except AllocationError as exc:
         raise HTTPException(status_code=exc.http_status, detail=f"{exc.code}: {exc.detail}")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Session 82.90b — Safe Admin-Financial Backend Enablement
+# ═══════════════════════════════════════════════════════════════════════
+class AdminIpoValuationUpdate(BaseModel):
+    """Whitelist der Bewertungs-/Listing-Metadaten. Marktpreise (aus Provider-
+    Stack) bleiben unangetastet. Nur pre-allocation zulässig."""
+    subscription_price_per_share: Optional[str] = Field(default=None)
+    listing_price_per_share: Optional[str] = Field(default=None)
+    decision_note: Optional[str] = Field(default=None, max_length=500)
+    model_config = {"extra": "forbid"}
+
+
+@admin_router.patch("/requests/{request_id}/valuation")
+async def admin_update_ipo_valuation(
+    request_id: str,
+    body: AdminIpoValuationUpdate,
+    admin_user: dict = Depends(require_admin),
+):
+    """PATCH auf Bewertungs-Metadaten einer IPO-Zeichnungsanfrage.
+
+    - Nur `status ∈ {pending, approved}` — nach `allocated` unwiderruflich.
+    - Whitelist via Pydantic `extra=forbid`; keine Status-Manipulation möglich.
+    - Server-authoritative user_id/handled_at/handled_by.
+    - Idempotent: PATCH mit identischen Werten ist no-op-safe.
+    """
+    if not ObjectId.is_valid(request_id):
+        raise HTTPException(status_code=400, detail="Invalid request id")
+    if all(v is None for v in (body.subscription_price_per_share,
+                                body.listing_price_per_share,
+                                body.decision_note)):
+        raise HTTPException(status_code=422, detail="Kein Feld zum Aktualisieren angegeben")
+    now = datetime.now(timezone.utc)
+    updates: dict = {"updated_at": now, "handled_at": now,
+                     "handled_by": ObjectId(admin_user["id"])}
+    if body.subscription_price_per_share is not None:
+        _parse_dec(body.subscription_price_per_share, "subscription_price_per_share")
+        updates["subscription_price_per_share"] = body.subscription_price_per_share
+    if body.listing_price_per_share is not None:
+        _parse_dec(body.listing_price_per_share, "listing_price_per_share")
+        updates["listing_price_per_share"] = body.listing_price_per_share
+    if body.decision_note is not None:
+        updates["decision_note"] = body.decision_note.strip() or None
+    result = await db.ipo_requests.find_one_and_update(
+        {"_id": ObjectId(request_id), "status": {"$in": ["pending", "approved"]}},
+        {"$set": updates},
+        return_document=True,
+    )
+    if not result:
+        existing = await db.ipo_requests.find_one({"_id": ObjectId(request_id)})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Valuation-Update in Status '{existing.get('status')}' nicht zulässig",
+        )
+    return await _serialize_with_customer(result)
+
+
+class AdminIpoCreateForUserBody(BaseModel):
+    """Admin erstellt eine IPO-Zeichnungsanfrage im Namen eines Users.
+
+    Whitelist: keine client-controlled ID/Status/Allocation-States.
+    """
+    user_id: str = Field(..., min_length=1, max_length=64)
+    ipo_id: str = Field(..., min_length=1, max_length=64)
+    shares_requested: int = Field(..., ge=1)
+    amount_eur: Optional[float] = Field(default=None)
+    notes: Optional[str] = Field(default=None, max_length=2000)
+    model_config = {"extra": "forbid"}
+
+
+@admin_router.post("/requests/create-for-user", status_code=201)
+async def admin_create_ipo_request_for_user(
+    body: AdminIpoCreateForUserBody,
+    admin_user: dict = Depends(require_admin),
+):
+    """Admin erstellt eine IPO-Request im Namen eines Kunden.
+
+    - Status server-authoritative auf `pending`.
+    - Duplicate-Guard: (user_id, ipo_id, pending) unique via partial index.
+    - Keine direkte Allocation. Keine Position-Erzeugung.
+    - `source='admin'` für Audit-Unterscheidung.
+    """
+    if not ObjectId.is_valid(body.user_id):
+        raise HTTPException(status_code=422, detail="Ungültige user_id")
+    user = await db.users.find_one({"_id": ObjectId(body.user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="User nicht gefunden")
+    ipo = await _fetch_ipo_from_catalog(body.ipo_id)
+    if not ipo.get("is_visible"):
+        raise HTTPException(status_code=409, detail="IPO nicht zeichenbar")
+    now = datetime.now(timezone.utc)
+    doc = {
+        "user_id": ObjectId(body.user_id),
+        "ipo_id": body.ipo_id,
+        "company_name": ipo.get("company_name"),
+        "ticker": ipo.get("ticker_proposed"),
+        "amount_eur": body.amount_eur,
+        "shares_requested": body.shares_requested,
+        "notes": body.notes,
+        "status": "pending",
+        "source": "admin",
+        "created_by": ObjectId(admin_user["id"]),
+        "created_at": now,
+        "updated_at": now,
+    }
+    try:
+        result = await db.ipo_requests.insert_one(doc)
+    except DuplicateKeyError:
+        raise HTTPException(
+            status_code=409,
+            detail="Für diesen User existiert bereits eine pending-Anfrage zu diesem IPO.",
+        )
+    inserted = await db.ipo_requests.find_one({"_id": result.inserted_id})
+    return await _serialize_with_customer(inserted)
+
+
+class AdminArchiveBody(BaseModel):
+    archive_note: Optional[str] = Field(default=None, max_length=500)
+    model_config = {"extra": "forbid"}
+
+
+@admin_router.post("/requests/{request_id}/archive")
+async def admin_archive_ipo_request(
+    request_id: str,
+    body: AdminArchiveBody = Body(default_factory=AdminArchiveBody),
+    admin_user: dict = Depends(require_admin),
+):
+    """Soft-Archive: setzt `is_archived=True + archived_at`. Physical Delete
+    von audit-relevanten Financial-Records ist verboten.
+
+    - Nur wenn `status ∈ {rejected, cancelled}` — ausgeführte/pending Requests
+      dürfen nicht archiviert werden (Audit-Trail muss sichtbar bleiben).
+    - Idempotent: erneuter Aufruf auf bereits archivierten Request → 200 no-op.
+    """
+    if not ObjectId.is_valid(request_id):
+        raise HTTPException(status_code=400, detail="Invalid request id")
+    existing = await db.ipo_requests.find_one({"_id": ObjectId(request_id)})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+    if existing.get("is_archived"):
+        return await _serialize_with_customer(existing)
+    if existing.get("status") not in ("rejected", "cancelled"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Archive nur für rejected/cancelled zulässig — aktuell '{existing.get('status')}'",
+        )
+    now = datetime.now(timezone.utc)
+    result = await db.ipo_requests.find_one_and_update(
+        {"_id": ObjectId(request_id), "is_archived": {"$ne": True}},
+        {"$set": {
+            "is_archived": True,
+            "archived_at": now,
+            "archived_by": ObjectId(admin_user["id"]),
+            "archive_note": (body.archive_note or "").strip()[:500] or None,
+            "updated_at": now,
+        }},
+        return_document=True,
+    )
+    return await _serialize_with_customer(result or existing)
