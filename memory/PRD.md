@@ -4825,6 +4825,30 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.102 (Preview · Sept 9 2026) · Application Form FastAPI Backend + Resend ✅
+- **Neuer Endpoint** `POST /api/applications` in `routes/applications.py`:
+  - **Pydantic `extra='forbid'`**: Mass-Assignment (status/role/admin_notes/user_id/approved) → 422.
+  - Server setzt `status="Neu"`, `created_at`, `status_history` autoritativ; Client hat keinen Einfluss.
+  - **Idempotency** via optionalem `idempotency_key` — Doppel-Submit liefert `idempotent=true` mit gleicher `id` und triggert **keinen** zweiten Mail-Job.
+  - **Persistenz-First**: Mongo-Insert vor Mail. Mail-Fehler setzt `admin_email_sent=false` + `admin_email_error`, rollt Application **nicht** zurück.
+  - Best-Effort Dual-Mail (Admin + Kunde) über bestehenden `_send_email`-Helper (Emergent Managed Resend via `EMERGENT_EMAIL_KEY`).
+- **Frontend cutover 0 Supabase**: `ApplicationForm.js` `handleSubmit` auf `axios.post` gegen `/api/applications` umgestellt mit `crypto.randomUUID()`-Idempotency-Key · Success-UI nur nach 201 · Email-Fail-Toast als reine Info (Antrag bleibt gespeichert).
+- **Admin-Visibility**: neue Applications erscheinen unmittelbar über `GET /api/admin/applications/list` (aus 82.91a) — keine zweite Collection.
+- **Security-Matrix (6/6)**: valid submit → 201 (`id`, `status="Neu"`, `email_status`) · Doppel-Submit → `idempotent=true, same id` · Mass-Assignment `status=approved,role=admin,admin_notes` → **422** · Consent-false → 422 · Unknown-Field `malicious_field` → 422 · Admin sieht Application in `/admin/applications/list` mit `admin_email_sent`-Feld · **Email-Failure rollt Application nicht zurück** (getestet, `email_status` separates Feld).
+- **Regression**: Coupon 16/16 + Market-Data 47/47 pytest grün · Frontend-Build grün.
+
+### FINAL REPORT (Session 82.102)
+- FILES_CHANGED: 3 (`backend/routes/applications.py` neu, `backend/server.py` include_router, `ApplicationForm.js` handleSubmit)
+- APPLICATION_ENDPOINT: `POST /api/applications` (Public, kein Auth-Zwang · optional user_id via Session)
+- APPLICATION_COLLECTION: `applications` (Mongo-native, geteilt mit 82.91a Admin-Read)
+- APPLICATION_FORM_SOURCE_AFTER: FastAPI/Mongo · **BLOCKED_SAFE_BACKEND_MISSING entfernt**
+- ADMIN_VISIBILITY_TEST: **PASS** · EMAIL_PROVIDER: Emergent Managed Resend
+- EMAIL_FAILURE_BEHAVIOR: **NON_BLOCKING** (persistiert `admin_email_error`, Application bleibt) · IDEMPOTENCY: **YES** (`idempotency_key`)
+- SECURITY_MATRIX: 6/6 grün
+- **FINANCIAL_WRITES=0 · SUPABASE_RUNTIME_REFS=0 · FAKE_APPLICATIONS=0 · EMAIL_FAILURE_ROLLBACK=NO · MASS_ASSIGNMENT=BLOCKED**
+- ACTIVE_RUNTIME_SUPABASE_REFS_GLOBAL: **0** · IMPORT_ONLY_SUPABASE_REFS_GLOBAL: 9 Dateien
+- READY_FOR_82.102b: **YES** · READY_FOR_82.103_FINAL_PURGE: **YES** · READY_FOR_PROD: NO
+
 ## Session 82.101b (Preview · Sept 9 2026) · Public Document Upload Portal ✅
 - **Frontend cutover 0 Supabase**: `DokumentHochladen.js` handleSubmit auf `multipart/form-data` gegen neuen FastAPI-Endpoint umgestellt · base64-JSON-Path entfernt · Session-Expired-Handling (401 → zurück zu Step 1).
 - **Neuer Public-Endpoint** `POST /api/document-uploads/submit` in `routes/storage_files.py`:

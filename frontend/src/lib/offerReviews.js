@@ -74,22 +74,11 @@ export async function fetchMyGuestReviewForOffer(offerId, guestSessionToken) {
   return { data: normalizeOfferReviewRow(data), error: null };
 }
 
-export async function fetchApprovedReviewsForOffer(offerId, { productType, limit = 50 } = {}) {
-  let q = supabase
-    .from('offer_reviews')
-    .select('id, stars, body, product_type, author_display_name, created_at')
-    .eq('savings_offer_id', offerId)
-    .eq('status', 'approved')
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (productType && productType !== 'Alle') {
-    q = q.eq('product_type', productType);
-  }
-
-  const { data, error } = await q;
-  return { data: data || [], error };
+export async function fetchApprovedReviewsForOffer(_offerId, { productType: _productType, limit: _limit = 50 } = {}) {
+  // Session 82.102 · Supabase-Reader entfernt (Legacy). Bis der FastAPI-
+  // Ersatz `GET /api/reviews/approved?savings_offer_id=…` steht, liefert
+  // die Funktion faithful empty. Kein Fake-Fallback.
+  return { data: [], error: null };
 }
 
 export async function fetchMyReviewForOffer(_offerId) {
@@ -100,34 +89,17 @@ export async function fetchMyReviewForOffer(_offerId) {
   return { data: null, error: null };
 }
 
-export async function fetchOfferReviewStats(offerId) {
-  const { data, error } = await supabase
-    .from('offer_review_stats')
-    .select('review_count, avg_stars')
-    .eq('savings_offer_id', offerId)
-    .maybeSingle();
-
-  if (error) return { count: 0, average: null, error };
-  return {
-    count: data?.review_count ?? 0,
-    average: data?.avg_stars != null ? roundToQuarter(Number(data.avg_stars)) : null,
-    error: null,
-  };
+export async function fetchOfferReviewStats(_offerId) {
+  // Session 82.102 · Supabase-View entfernt. Stats liegen bis zum FastAPI-
+  // Backend als 0/null vor (faithful empty state).
+  return { count: 0, average: null, error: null };
 }
 
 export async function fetchOfferReviewStatsBatch(offerIds) {
   if (!offerIds?.length) return new Map();
-  const { data, error } = await supabase
-    .from('offer_review_stats')
-    .select('savings_offer_id, review_count, avg_stars')
-    .in('savings_offer_id', offerIds);
-
-  if (error) return { map: new Map(), error };
-
-  const map = new Map();
-  for (const row of data || []) {
-    map.set(row.savings_offer_id, {
-      count: row.review_count ?? 0,
+  // Session 82.102 · Supabase-View entfernt.
+  return { map: new Map(), error: null };
+}
       average: row.avg_stars != null ? roundToQuarter(Number(row.avg_stars)) : null,
     });
   }

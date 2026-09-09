@@ -5201,6 +5201,10 @@ app.include_router(_storage_files_routes.router)
 from routes import admin_legacy_reads as _admin_legacy_reads_routes  # noqa: E402
 app.include_router(_admin_legacy_reads_routes.router)
 
+# Session 82.102 — Public Applications Submit + Resend-Mail.
+from routes import applications as _applications_routes  # noqa: E402
+app.include_router(_applications_routes.router)
+
 @app.on_event("startup")
 async def _init_storage_at_startup():
     try:

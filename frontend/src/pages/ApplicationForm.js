@@ -251,30 +251,44 @@ const ApplicationForm = () => {
 
     try {
       const taxCheck = validateEuropeanTaxId(investmentData.tax_id, getCountryForNationality(personalData.nationality), { required: true });
-      // Session 82.101 · Applications-Insert bewusst blockiert bis sicherer FastAPI-Endpoint bereit steht.
-      toast.error('Antragseinreichung ist aktuell deaktiviert (BLOCKED_SAFE_BACKEND_MISSING · 82.101). Bitte kontaktieren Sie den Kundenservice.');
-      setSubmitError('Antragseinreichung ist aktuell deaktiviert.');
-      setIsSubmitting(false);
-      return;
+      // Session 82.102 · FastAPI-Persistenz + Best-Effort Resend-Mail.
+      const idemKey =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `app-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-      // eslint-disable-next-line no-unreachable
-      const data = { id: null };
-      // eslint-disable-next-line no-unreachable
-      const error = null;
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
 
-      if (error) throw new Error(error.message || 'Antrag konnte nicht eingereicht werden.');
-
-      // Fire-and-observe mail dispatch. Do not fail application creation if email fails:
-      // retry is handled by the outbox table in the edge function.
+      let data;
       try {
-        // Session 82.101 · Edge-Function-Invoke entfernt; E-Mail-Dispatch würde
-        // serverseitig nach persistenter Anlage triggern.
-        const mailError = null;
-        if (mailError) {
-          console.warn('[send-application-email] disabled 82.101');
-        }
-      } catch (invokeErr) {
-        console.warn('[send-application-email] invoke exception:', invokeErr);
+        const res = await _axios.post(
+          `${_api}/api/applications`,
+          {
+            personal_data: {
+              ...personalData,
+              phone: combinePhoneNumber(personalData.phone_dial_code, personalData.phone_local),
+              address: buildFullAddress(personalData),
+              identity_verification: identityVerification,
+            },
+            investment_data: {
+              ...investmentData,
+              tax_id: taxCheck.normalized || investmentData.tax_id,
+            },
+            documents,
+            terms_accepted: termsAccepted,
+            privacy_accepted: privacyAccepted,
+            idempotency_key: idemKey,
+          },
+          { withCredentials: true },
+        );
+        data = res.data;
+      } catch (err) {
+        const detail = err?.response?.data?.detail;
+        throw new Error(detail || err.message || 'Antrag konnte nicht eingereicht werden.');
+      }
+
+      if (data?.email_status === 'failed') {
         toast.warning('Antrag gespeichert. E-Mail-Versand wird im Hintergrund erneut versucht.');
       }
 
