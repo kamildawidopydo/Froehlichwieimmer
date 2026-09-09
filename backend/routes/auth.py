@@ -60,9 +60,29 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
+# Session 82.104a — Inline Rate-Limit (slowapi-Decorator bricht Pydantic
+# ForwardRef auf typed Bodies). In-memory Map per IP, gleiche Pattern wie
+# `_review_rate_limit` und `_UPLOAD_RL`.
+import time as _time_mod
+from collections import defaultdict as _defaultdict
+_AUTH_RL: dict = _defaultdict(lambda: _defaultdict(list))  # {rule: {ip: [timestamps]}}
+
+def _rl_check(request: Request, rule_key: str, max_hits: int, window_s: int = 60) -> None:
+    xff = request.headers.get("x-forwarded-for", "")
+    ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+    now = _time_mod.time()
+    hist = [t for t in _AUTH_RL[rule_key][ip] if t > now - window_s]
+    if len(hist) >= max_hits:
+        raise HTTPException(status_code=429, detail="Zu viele Anfragen. Bitte kurz warten.")
+    hist.append(now)
+    _AUTH_RL[rule_key][ip] = hist
+    if len(_AUTH_RL[rule_key]) > 500:
+        _AUTH_RL[rule_key].clear()
+
 
 @router.post("/auth/register")
-async def register(payload: RegisterInput, response: Response):
+async def register(request: Request, payload: RegisterInput, response: Response):
+    _rl_check(request, "register", 5)
     email = payload.email.lower().strip()
     existing = await db.users.find_one({"email": email})
     if existing:
@@ -164,7 +184,8 @@ async def refresh_token(request: Request, response: Response):
 
 
 @router.post("/auth/forgot-password")
-async def forgot_password(payload: ForgotInput):
+async def forgot_password(request: Request, payload: ForgotInput):
+    _rl_check(request, "forgot_password", 3)
     """Session 82.88 — Token wird ausschließlich als SHA-256-Hash in Mongo
     abgelegt. Response identisch für existierende/unbekannte E-Mails
     (kein User-Enumeration-Leak).
@@ -193,7 +214,8 @@ async def forgot_password(payload: ForgotInput):
 
 
 @router.post("/auth/reset-password")
-async def reset_password(payload: ResetInput):
+async def reset_password(request: Request, payload: ResetInput):
+    _rl_check(request, "reset_password", 5)
     """Session 82.88 — Verifiziert Token per Hash-Vergleich, Single-Use,
     Ablaufprüfung. Nach Erfolg wird der Token invalidiert (used=True) und der
     User erhält aktualisierten Password-Hash + Reset-Metadaten.

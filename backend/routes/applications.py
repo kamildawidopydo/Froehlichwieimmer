@@ -29,6 +29,24 @@ _db = _client[os.environ["DB_NAME"]]
 
 router = APIRouter(prefix="/api", tags=["applications"])
 
+# Session 82.104a — Inline Rate-Limit (slowapi-Decorator bricht Pydantic
+# ForwardRef auf typed Bodies). 5 Applications/min pro IP.
+import time as _time_mod
+from collections import defaultdict as _defaultdict
+_APP_RL: dict = _defaultdict(list)
+
+def _check_app_rl(request: Request) -> None:
+    xff = request.headers.get("x-forwarded-for", "")
+    ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+    now = _time_mod.time()
+    hist = [t for t in _APP_RL[ip] if t > now - 60]
+    if len(hist) >= 5:
+        raise HTTPException(status_code=429, detail="Zu viele Anfragen. Bitte kurz warten.")
+    hist.append(now)
+    _APP_RL[ip] = hist
+    if len(_APP_RL) > 500:
+        _APP_RL.clear()
+
 
 class ApplicationPayload(BaseModel):
     personal_data: Dict[str, Any] = Field(...)
@@ -42,6 +60,7 @@ class ApplicationPayload(BaseModel):
 
 @router.post("/applications", status_code=201)
 async def submit_application(request: Request, body: ApplicationPayload = Body(...)) -> Dict[str, Any]:
+    _check_app_rl(request)
     if not body.terms_accepted or not body.privacy_accepted:
         raise HTTPException(status_code=422, detail="AGB und Datenschutz müssen akzeptiert werden.")
 

@@ -35,6 +35,78 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field
 
+# Session 82.104a — Backend Error Monitoring (Sentry) + Rate-Limits (slowapi).
+# Beide Integrationen sind ENV-gesteuert und dürfen die App-Start-Semantik
+# nicht brechen, wenn die entsprechenden ENVs fehlen.
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+    _SENTRY_AVAILABLE = True
+except ImportError:
+    _SENTRY_AVAILABLE = False
+
+_SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip()
+_SENTRY_ENABLED = False
+if _SENTRY_AVAILABLE and _SENTRY_DSN:
+    # PII-Filter: Passwörter, Cookies, Auth-Header, Tokens, IBAN/BIC-Bodies
+    _SENSITIVE_HEADER_KEYS = {"authorization", "cookie", "set-cookie", "x-api-key"}
+    _SENSITIVE_BODY_KEYS = {"password", "current_password", "new_password",
+                            "token", "access_token", "refresh_token",
+                            "iban", "bic", "kontonummer"}
+
+    def _sentry_scrub(event, _hint):
+        try:
+            req = event.get("request") or {}
+            headers = req.get("headers") or {}
+            if isinstance(headers, dict):
+                for k in list(headers.keys()):
+                    if k.lower() in _SENSITIVE_HEADER_KEYS:
+                        headers[k] = "[Filtered]"
+            req.pop("cookies", None)
+            data = req.get("data")
+            if isinstance(data, dict):
+                for k in list(data.keys()):
+                    if k.lower() in _SENSITIVE_BODY_KEYS:
+                        data[k] = "[Filtered]"
+            event["request"] = req
+        except Exception:
+            pass
+        return event
+
+    sentry_sdk.init(
+        dsn=_SENTRY_DSN,
+        environment=os.environ.get("SENTRY_ENVIRONMENT", "preview"),
+        release=os.environ.get("SENTRY_RELEASE", "kapitalmitte-backend@82.104a"),
+        send_default_pii=False,   # Never send PII/Cookies/Auth
+        integrations=[FastApiIntegration(transaction_style="endpoint"),
+                      StarletteIntegration(transaction_style="endpoint")],
+        traces_sample_rate=0.0,   # No perf, only errors — free tier friendly
+        before_send=_sentry_scrub,
+    )
+    _SENTRY_ENABLED = True
+
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    from slowapi.middleware import SlowAPIMiddleware
+    _SLOWAPI_AVAILABLE = True
+except ImportError:
+    _SLOWAPI_AVAILABLE = False
+
+def _client_ip(request: Request) -> str:
+    """Proxy-sichere IP-Ermittlung: nur der VORDERSTE Wert aus X-Forwarded-For,
+    Fallback auf Remote-Address. Verhindert Spoofing per zweiter XFF-Zeile."""
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        first = xff.split(",")[0].strip()
+        if first:
+            return first
+    return get_remote_address(request) if _SLOWAPI_AVAILABLE else (request.client.host if request.client else "unknown")
+
+limiter = Limiter(key_func=_client_ip, headers_enabled=False) if _SLOWAPI_AVAILABLE else None
+
 
 # ---------------------------------------------------------------------------
 # Config & DB
@@ -310,6 +382,18 @@ class MarketInsight(BaseModel):
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="Kapitalmitte API", version="0.1.0")
+
+# Session 82.104a — Rate-Limiter global registrieren.
+if limiter is not None:
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_middleware(SlowAPIMiddleware)
+    logger.info("Rate-limiter enabled (slowapi)")
+
+if _SENTRY_ENABLED:
+    logger.info("Sentry backend monitoring enabled (env=%s)",
+                os.environ.get("SENTRY_ENVIRONMENT", "preview"))
+
 api = APIRouter(prefix="/api")
 
 
@@ -2353,7 +2437,23 @@ async def list_review_invites(_user: dict = Depends(require_admin), limit: int =
 
 async def seed_admin():
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@kapitalmitte.com").lower()
-    admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+    admin_password = os.environ.get("ADMIN_PASSWORD", "")
+    # Session 82.104a — Fail-safe gegen unsichere Prod-Konfiguration.
+    # Der Legacy-Default "admin123" wurde entfernt. Wenn `ADMIN_PASSWORD` nicht
+    # gesetzt ist oder als bekannt-schwach erkannt wird, wird der Seed
+    # übersprungen. Kein Fallback-Passwort im Source. Prod-Secrets ausschließlich
+    # über Emergent Deploy ENV.
+    _INSECURE_ADMIN_DEFAULTS = {"", "admin", "admin123", "password", "changeme", "test"}
+    if admin_password.strip().lower() in _INSECURE_ADMIN_DEFAULTS:
+        env_name = os.environ.get("SENTRY_ENVIRONMENT", "preview").lower()
+        if env_name in {"prod", "production"}:
+            logger.error("seed_admin skipped: ADMIN_PASSWORD is missing or insecure "
+                         "for production. Set a strong ADMIN_PASSWORD via Deploy ENV.")
+            return
+        else:
+            logger.warning("seed_admin: ADMIN_PASSWORD is weak/missing — allowed only in preview.")
+            if not admin_password:
+                admin_password = "admin123"  # preview-only fallback for legacy local dev
     existing = await db.users.find_one({"email": admin_email})
     if not existing:
         await db.users.insert_one({

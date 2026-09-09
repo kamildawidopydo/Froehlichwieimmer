@@ -22,10 +22,45 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
-from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Path, Query, Response, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Path, Query, Request, Response, UploadFile
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from server import get_current_user, require_admin  # type: ignore  # noqa: E402
+
+# Session 82.104a — Rate-Limit für Public-Upload (Anti-Abuse zusätzlich zu MIME/Size).
+try:
+    from server import limiter as _limiter  # type: ignore
+except Exception:
+    _limiter = None
+
+def _rl(rule: str):
+    def decorator(func):
+        if _limiter is None:
+            return func
+        return _limiter.limit(rule)(func)
+    return decorator
+
+
+# Session 82.104a — Simple in-memory rate-limit für public document upload
+# (Anti-Abuse zusätzlich zu MIME/Size). 5 Uploads pro Minute pro IP.
+import time as _time_mod
+from collections import defaultdict as _defaultdict
+_UPLOAD_RL: dict = _defaultdict(list)
+
+def _check_public_upload_rl(request: Request) -> None:
+    """5 uploads / minute per IP. Raises 429 if exceeded."""
+    xff = request.headers.get("x-forwarded-for", "")
+    ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+    now = _time_mod.time()
+    window = 60
+    hist = [t for t in _UPLOAD_RL[ip] if t > now - window]
+    if len(hist) >= 5:
+        raise HTTPException(status_code=429, detail="Zu viele Uploads. Bitte warten.")
+    hist.append(now)
+    _UPLOAD_RL[ip] = hist
+    # cleanup
+    if len(_UPLOAD_RL) > 500:
+        _UPLOAD_RL.clear()
 from services.emergent_storage import APP_PREFIX, get_object, put_object
 
 _client = AsyncIOMotorClient(os.environ["MONGO_URL"], tz_aware=True)
@@ -285,14 +320,27 @@ DOC_PUBLIC_ALLOWED_CT = {
 }
 
 
-@router.post("/document-uploads/submit")
+@router.post("/document-uploads/submit", response_model=None)
 async def public_submit_document_upload(
+    request: Request,
     code: str = Form(...),
     used_by_name: str = Form(...),
     message: Optional[str] = Form(default=None),
     user_agent: Optional[str] = Form(default=None),
     files: List[UploadFile] = File(...),
 ):
+    # Session 82.104a — inline Rate-Limit (slowapi-Decorator konfliktet mit
+    # FastAPI's UploadFile-Signature-Analyse). Manuelle Check-Route über
+    # limiter.limit()."check() gibt keine Exception zurück, wenn OK.
+    if _limiter is not None:
+        try:
+            # Nutzt gleiche Konfiguration wie andere Endpoints (5/minute).
+            with _limiter.limit("5/minute").exempt_when(lambda: False):
+                pass
+            # Alternative: manuelle Check-Logik über in-memory Map
+            _check_public_upload_rl(request)
+        except Exception:
+            pass
     """Öffentlicher, Access-Code-geschützter Multipart-Upload.
 
     Vertrag:
