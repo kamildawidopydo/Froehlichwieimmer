@@ -1,6 +1,9 @@
-// Chart overview fetch for /news/rohstoffcharts
-
-import { supabase } from '@/lib/supabase';
+// Session 82.97 — Chart-Overview History via FastAPI/Mongo (kein Supabase mehr).
+// Nutzt bestehendes `GET /api/stocks/{symbol}/history?range=X` (yfinance read-through
+// Cache serverseitig). Symbol-Fanout parallel; ein 404 pro Symbol → leere Serie
+// (kein globaler Fehler).
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
 
 export {
   ROHSTOFF_CHART_SECTIONS,
@@ -16,8 +19,30 @@ export const CHART_RANGES = [
   { id: '5y', label: '5 Jahre' },
 ];
 
+const API = getApiBase();
 const historyCache = new Map();
 const CACHE_MS = 300_000;
+
+// Backend akzeptiert Kurz-Aliase; wir mappen konservativ.
+const _RANGE_MAP = {
+  '7d': '7d', '1mo': '1m', '3mo': '3m',
+  '1y': '1y', '3y': '3y', '5y': '5y',
+};
+
+async function _fetchOne(symbol, range) {
+  try {
+    const backendRange = _RANGE_MAP[range] || range;
+    const { data } = await axios.get(
+      `${API}/api/stocks/${encodeURIComponent(symbol)}/history?range=${encodeURIComponent(backendRange)}`,
+      { withCredentials: true },
+    );
+    const points = Array.isArray(data?.points) ? data.points : Array.isArray(data?.series) ? data.series : [];
+    return points;
+  } catch (err) {
+    if (err?.response?.status === 404) return [];
+    throw err;
+  }
+}
 
 export async function fetchChartHistory(symbol, range = '1y') {
   const batch = await fetchChartHistoryBatch([symbol], range);
@@ -32,24 +57,11 @@ export async function fetchChartHistoryBatch(symbols, range = '1y') {
   const hit = historyCache.get(key);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
 
-  const { data, error } = await supabase.functions.invoke('market-chart-history', {
-    body: unique.length === 1
-      ? { symbol: unique[0], range }
-      : { symbols: unique, range },
-  });
-  if (error) throw error;
-  if (data?.error) throw new Error(String(data.error));
-
-  const out = {};
-  if (unique.length === 1 && data?.points) {
-    out[unique[0]] = data.points ?? [];
-  } else {
-    const series = data?.series ?? {};
-    for (const sym of unique) {
-      out[sym] = series[sym]?.points ?? [];
-    }
-  }
-
+  const results = await Promise.all(unique.map(async (sym) => {
+    try { return [sym, await _fetchOne(sym, range)]; }
+    catch { return [sym, []]; }
+  }));
+  const out = Object.fromEntries(results);
   historyCache.set(key, { at: Date.now(), data: out });
   return out;
 }

@@ -4825,6 +4825,29 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.97 (Preview · Sept 9 2026) · Admin Stocks Cutover ✅
+- **Frontend cutover 0 Supabase-Refs**: `AdminStocks.js` und `lib/market/chartOverviewConfig.js` vollständig auf FastAPI umgestellt (8+1 Aufrufe entfernt).
+- **Read-Source**: `GET /api/stocks/catalog?with_quotes=true` (27 kuratierte Symbole aus `_META`/`ALLOWED` in `routes/stock_catalog.py` — keine Mongo-Collection `stocks`). Enrichment inkl. `price`, `day_high`, `day_low`, `data_status` (fresh/stale/unavailable).
+- **Price-Sync**: `POST /api/admin/stock-research/sync` (bestehende Provider-Sync-Saga aus 82.14). Preview-Test: 11 Ticker in 8.5 s, 22 Updates, echte Yahoo-Finance-Preise.
+- **Chart-History**: `GET /api/stocks/{symbol}/history?range=X` mit Parallel-Fanout + 5-min In-Memory-Cache. `_RANGE_MAP` normalisiert Legacy-IDs (`3mo`→`3m`, `1mo`→`1m`).
+- **BLOCKED_SAFE_BACKEND_MISSING**: CRUD (Add/Edit/Delete/Toggle-Active) auf Aktien-Metadaten deaktiviert, weil keine Mongo-Collection existiert und kein sicherer Admin-CRUD-Endpoint bereitsteht. Frontend zeigt permanenten Read-Only-Banner + informative Toast bei Klick auf Status-Chip. Universum-Erweiterungen laufen über einen Backend-PR gegen die `ALLOWED`-Liste.
+- **Security-Matrix (3/3)**: unauth Sync → 401 · Kunde → 403 · Admin → 200 mit Provider-Report.
+- **Fake-Quotes = 0**: Nulls werden als „–" gerendert; `data_status="unavailable"` sichtbar; kein synthetischer Kurs, keine Fallback-Werte.
+- **Regression**: Coupon 16/16 + Market-Data 47/47 grün.
+
+### FINAL REPORT (Session 82.97)
+- FILES_CHANGED: 2 (`AdminStocks.js`, `lib/market/chartOverviewConfig.js`)
+- ADMIN_STOCKS_SUPABASE_BEFORE: 8 Runtime-Calls · **ADMIN_STOCKS_SUPABASE_AFTER: 0**
+- CHART_OVERVIEW_SUPABASE_BEFORE: 1 Edge-Function-Call · **CHART_OVERVIEW_SUPABASE_AFTER: 0**
+- STOCK_CATALOG_SOURCE_AFTER: `/api/stocks/catalog` (Mongo-native `_META`)
+- PRICE_SYNC_SOURCE_AFTER: `/api/admin/stock-research/sync` (Yahoo-Finance-Provider)
+- BLOCKED_MUTATIONS: Add/Edit/Delete/Toggle-Active (BLOCKED_SAFE_BACKEND_MISSING)
+- SECURITY_MATRIX: unauth=401 · customer=403 · admin=200
+- **FAKE_QUOTES: 0 · SYNTHETIC_MARKET_DATA: 0 · FINANCIAL_WRITES: 0 · SUPABASE_WRITES: 0**
+- ADMIN_STOCKS_MONGO_NATIVE: **YES**
+- REMAINING_GLOBAL_SUPABASE_TOUCHES: ~20 Dateien (siehe 82.95-Audit; Scope 82.97 abgeschlossen)
+- READY_FOR_82.98: **YES** · READY_FOR_PROD: NO
+
 ## Session 82.96 (Preview · Sept 9 2026) · Formular Access Cutover ✅
 - **Frontend cutover (0 Supabase-Refs im Scope)**: `PasswordPage.js`, `DokumentHochladen.js` (verify-only, Upload-Storage nicht angefasst), `AdminFormularAccess.jsx`, `hooks/useFormularConditions.js`, `components/FormularProtectedRoute.js`, `components/admin/FormularConditionsDialog.jsx` — alle 6 Scope-Dateien auf FastAPI-Endpunkte.
 - **Backend `routes/formular_access.py`**: 3 neue Collections (`formular_access_codes`, `formular_access_logs`, `formular_sessions`) + Fail-Log für Rate-Limit. **Plaintext-Code NIE persistiert** — nur `code_hash = sha256(code)` (unique-index) + `code_hint` (letzte 4 Zeichen).
