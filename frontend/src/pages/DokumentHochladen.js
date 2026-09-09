@@ -10,8 +10,13 @@ import {
   CheckCircle2,
   Loader2,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
 import PageMeta from '@/components/PageMeta';
+
+// Session 82.96 — Supabase-RPC `verify_document_access_code` ersetzt durch
+// `POST /api/formular-access/verify-document` (FastAPI/Mongo, generisches 401).
+const API = getApiBase();
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { parseApiJsonResponse, apiErrorMessage } from '@/lib/parseApiJsonResponse';
@@ -109,19 +114,21 @@ const DokumentHochladen = () => {
     }
 
     setVerifying(true);
-    const { data: valid, error } = await supabase.rpc('verify_document_access_code', {
-      p_code: trimmedCode,
-    });
-    setVerifying(false);
-
-    if (error || !valid) {
+    try {
+      await axios.post(
+        `${API}/api/formular-access/verify-document`,
+        { code: trimmedCode },
+        { withCredentials: true },
+      );
+      setStep(2);
+    } catch (err) {
       setShaking(true);
-      toast.error('Ungültiger oder bereits verwendeter Zugangscode');
+      const detail = err?.response?.data?.detail;
+      toast.error(detail || 'Ungültiger oder bereits verwendeter Zugangscode');
       setTimeout(() => setShaking(false), 500);
-      return;
+    } finally {
+      setVerifying(false);
     }
-
-    setStep(2);
   };
 
   const handleSubmit = async (e) => {

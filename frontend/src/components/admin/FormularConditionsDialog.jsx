@@ -18,7 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
 import {
   applyBankDefaultsToForm,
   bankSupportsProduct,
@@ -27,6 +28,10 @@ import {
   FORMULAR_BANKS,
   FORMULAR_PRODUCTS,
 } from '@/lib/formularConditions';
+
+// Session 82.96 — Supabase-Direct-Writes ersetzt durch
+// PATCH /api/admin/formular-access/codes/{id}/conditions
+const API = getApiBase();
 
 const FormularConditionsDialog = ({ open, onOpenChange, codeRow, onSaved }) => {
   const [form, setForm] = useState(emptyConditionsForm());
@@ -68,20 +73,20 @@ const FormularConditionsDialog = ({ open, onOpenChange, codeRow, onSaved }) => {
     }
 
     setSaving(true);
-    const { error } = await supabase
-      .from('formular_access_codes')
-      .update({ contract_conditions: payload })
-      .eq('id', codeRow.id);
-    setSaving(false);
-
-    if (error) {
-      toast.error('Fehler: ' + error.message);
-      return;
+    try {
+      await axios.patch(
+        `${API}/api/admin/formular-access/codes/${codeRow.id}/conditions`,
+        { contract_conditions: payload },
+        { withCredentials: true },
+      );
+      toast.success('Konditionen gespeichert');
+      onSaved?.();
+      onOpenChange(false);
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err.message));
+    } finally {
+      setSaving(false);
     }
-
-    toast.success('Konditionen gespeichert');
-    onSaved?.();
-    onOpenChange(false);
   };
 
   const clearConditions = async () => {
@@ -89,20 +94,20 @@ const FormularConditionsDialog = ({ open, onOpenChange, codeRow, onSaved }) => {
     if (!window.confirm('Konditionen für diesen Code entfernen? Es gelten dann wieder die Standardwerte.')) return;
 
     setClearing(true);
-    const { error } = await supabase
-      .from('formular_access_codes')
-      .update({ contract_conditions: null })
-      .eq('id', codeRow.id);
-    setClearing(false);
-
-    if (error) {
-      toast.error('Fehler: ' + error.message);
-      return;
+    try {
+      await axios.patch(
+        `${API}/api/admin/formular-access/codes/${codeRow.id}/conditions`,
+        { contract_conditions: null },
+        { withCredentials: true },
+      );
+      toast.success('Konditionen entfernt');
+      onSaved?.();
+      onOpenChange(false);
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err.message));
+    } finally {
+      setClearing(false);
     }
-
-    toast.success('Konditionen entfernt');
-    onSaved?.();
-    onOpenChange(false);
   };
 
   return (

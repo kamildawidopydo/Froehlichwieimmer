@@ -5184,6 +5184,11 @@ app.include_router(_admin_reads_routes.router)
 from routes import position_adjustments as _pos_adj_routes  # noqa: E402
 app.include_router(_pos_adj_routes.router)
 
+# Session 82.96 — Formular Access (Public + Admin, FastAPI/Mongo).
+from routes import formular_access as _formular_access_routes  # noqa: E402
+app.include_router(_formular_access_routes.public_router)
+app.include_router(_formular_access_routes.admin_router)
+
 
 @app.on_event("startup")
 async def _news_public_indexes():

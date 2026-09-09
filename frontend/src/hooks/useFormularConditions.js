@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
 import { DEFAULT_CONTRACT_CONDITIONS, resolveContractConditions } from '@/lib/formularConditions';
 
+// Session 82.96 — Supabase-RPC `get_formular_session_conditions` ersetzt durch
+// `POST /api/formular-access/session/conditions` (FastAPI/Mongo).
+
 const SESSION_KEY = 'formular_session_id';
+const API = getApiBase();
 
 export function useFormularConditions(bank, product, fallback = DEFAULT_CONTRACT_CONDITIONS) {
   const [custom, setCustom] = useState(null);
@@ -14,29 +19,26 @@ export function useFormularConditions(bank, product, fallback = DEFAULT_CONTRACT
     const load = async () => {
       const sessionId = sessionStorage.getItem(SESSION_KEY);
       if (!sessionId) {
-        if (!cancelled) {
-          setCustom(null);
-          setLoading(false);
-        }
+        if (!cancelled) { setCustom(null); setLoading(false); }
         return;
       }
-
-      const { data, error } = await supabase.rpc('get_formular_session_conditions', {
-        p_session_id: sessionId,
-        p_bank: bank,
-        p_product: product,
-      });
-
-      if (!cancelled) {
-        setCustom(error ? null : data);
-        setLoading(false);
+      try {
+        const { data } = await axios.post(
+          `${API}/api/formular-access/session/conditions`,
+          { session_id: sessionId, bank, product },
+          { withCredentials: true },
+        );
+        if (!cancelled) {
+          setCustom(data?.conditions || null);
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) { setCustom(null); setLoading(false); }
       }
     };
 
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [bank, product]);
 
   const conditions = useMemo(

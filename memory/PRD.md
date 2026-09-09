@@ -4825,6 +4825,28 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.96 (Preview · Sept 9 2026) · Formular Access Cutover ✅
+- **Frontend cutover (0 Supabase-Refs im Scope)**: `PasswordPage.js`, `DokumentHochladen.js` (verify-only, Upload-Storage nicht angefasst), `AdminFormularAccess.jsx`, `hooks/useFormularConditions.js`, `components/FormularProtectedRoute.js`, `components/admin/FormularConditionsDialog.jsx` — alle 6 Scope-Dateien auf FastAPI-Endpunkte.
+- **Backend `routes/formular_access.py`**: 3 neue Collections (`formular_access_codes`, `formular_access_logs`, `formular_sessions`) + Fail-Log für Rate-Limit. **Plaintext-Code NIE persistiert** — nur `code_hash = sha256(code)` (unique-index) + `code_hint` (letzte 4 Zeichen).
+- **Public Endpoints**: `POST /verify` (creates 24-h session + log), `POST /verify-document` (boolean-check, kein Log per Legacy), `POST /session/validate`, `POST /session/conditions` (bank+product-gated).
+- **Admin Endpoints** (`require_admin`, `extra='forbid'`): `GET /codes`, `POST /codes` (Plaintext-Return EINMALIG bei Create), `POST /codes/{id}/revoke` (idempotent, CAS auf `status=active`), `DELETE /codes/{id}` (cascade Logs + Sessions), `PATCH /codes/{id}/conditions` (whitelisted Keys), `GET /logs`.
+- **Security-Matrix (13/13 grün)**: valid-code · wrong-code (generisches 401) · valid-session · invalid-session · doc-verify valid+wrong · unauth-admin (401) · customer→admin (403) · revoke→verify=401 · revoked-session=invalid · idempotent revoke · mass-assignment (422 extra=forbid) · plaintext-not-in-db (`has_plaintext_code_field=False`) · brute-force cooldown greift bei 10 Fails / 15 min IP-Fenster (429).
+- **Session-Semantik**: 24-h TTL · `code.status=revoked` invalidiert alle bestehenden Sessions serverseitig sofort (Join im Validate-Handler).
+- **Regression**: Coupon 16/16 + Realized-PnL/Market-Data insgesamt 47/47 pytest grün. Position-Adjustment 82.94 unverändert grün.
+- **Storage-Dependency**: Doc-Upload-Portal nutzt weiterhin bestehendes `/api/submit-document-upload` (nicht angefasst per user rule "Storage nicht anfassen"). Formular-Access-Scope selbst hat keine Storage-Nutzung.
+
+### FINAL REPORT (Session 82.96)
+- FILES_CHANGED: 7 (`backend/routes/formular_access.py` neu, `backend/server.py` include_router, `PasswordPage.js`, `DokumentHochladen.js`, `AdminFormularAccess.jsx`, `useFormularConditions.js`, `FormularProtectedRoute.js`, `FormularConditionsDialog.jsx`)
+- FORMULAR_ACCESS_SUPABASE_BEFORE: 6 RPCs + 2 direct-writes + 6 Frontend-Dateien mit `supabase`-Imports
+- FORMULAR_ACCESS_SUPABASE_AFTER: **0** Runtime-Referenzen im Scope
+- ACCESS_CODE_STORAGE: SHA-256-Hash (unique-index), niemals Klartext
+- ACCESS_CODE_EXPIRY: Codes sind reusable (Legacy-Parität), Sessions 24 h TTL
+- ACCESS_CODE_REVOCATION: `status=revoked` mit CAS, cascade-invalidiert Sessions
+- SECURITY_MATRIX: 13/13 grün
+- STORAGE_DEPENDENCY_REMAINS: YES (Doc-Upload nutzt separaten Backend-Endpoint — unangefasst)
+- FINANCIAL_WRITES: 0 · PLAINTEXT_ACCESS_CODE_IN_DB: NO · FILES_DELETED: 0
+- READY_FOR_NEXT_SESSION: YES · READY_FOR_PROD: NO
+
 ## Session 82.95 (Preview · Sept 9 2026) · Global Supabase Cleanup — AUDIT ONLY · STOP
 - **Ergebnis PHASE A**: `ACTIVE_RUNTIME_SUPABASE_BEFORE > 0` — Cleanup **abgebrochen**. Keine Datei gelöscht, kein Package entfernt, keine `.env`-Zeile entfernt, kein npm-Script entfernt.
 - **Klassifikation** (nur reine Runtime-Aufrufe zählen: `.from/.rpc/.functions.invoke/.channel/.storage/.removeChannel`):

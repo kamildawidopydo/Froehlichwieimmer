@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -15,12 +16,18 @@ import { RefreshCw, Ban, Copy, Search, FileSignature, Trash2, SlidersHorizontal 
 import FormularConditionsDialog from '@/components/admin/FormularConditionsDialog';
 import { conditionsSummaryLabel } from '@/lib/formularConditions';
 
+// Session 82.96 — Supabase-RPCs + direkte `.from(...)` ersetzt durch
+// FastAPI-Endpoints `/api/admin/formular-access/*`. Plaintext-Code wird
+// NUR bei Create einmalig zurückgegeben; danach nur `code_hint` sichtbar.
+
+const API = getApiBase();
+
 const STATUS_LABEL = {
   active: { cls: 'border-emerald-300/55 bg-emerald-50 text-emerald-800', label: 'Aktiv' },
   revoked: { cls: 'border-rose-300/55 bg-rose-50 text-rose-800', label: 'Widerrufen' },
 };
 
-const displayCode = (row) => row.code || row.code_hint || '–';
+const displayCode = (row) => row.code || (row.code_hint ? `····${row.code_hint}` : '–');
 
 const AdminFormularAccess = () => {
   const [codes, setCodes] = useState([]);
@@ -32,43 +39,37 @@ const AdminFormularAccess = () => {
   const [revokingId, setRevokingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [conditionsRow, setConditionsRow] = useState(null);
+  const [freshCodes, setFreshCodes] = useState({}); // id → plain, nur bis Reload
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [codesRes, logsRes] = await Promise.all([
-        supabase
-          .from('formular_access_codes')
-          .select('id, code, code_hint, admin_label, status, use_count, last_used_at, created_at, created_by, contract_conditions')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('formular_access_logs')
-          .select('id, code_id, used_by_name, used_at, user_agent, session_id')
-          .order('used_at', { ascending: false })
-          .limit(500),
+        axios.get(`${API}/api/admin/formular-access/codes`, { withCredentials: true }),
+        axios.get(`${API}/api/admin/formular-access/logs?limit=500`, { withCredentials: true }),
       ]);
-      if (codesRes.error) throw codesRes.error;
-      if (logsRes.error) throw logsRes.error;
-      setCodes(codesRes.data || []);
-      setLogs(logsRes.data || []);
+      const items = codesRes.data?.items || [];
+      // Merge in bereits gezeigte Plaintext-Codes (bleiben bis Refresh sichtbar).
+      const merged = items.map((c) => (freshCodes[c.id] ? { ...c, code: freshCodes[c.id] } : c));
+      setCodes(merged);
+      setLogs(logsRes.data?.items || []);
     } catch (err) {
-      toast.error('Fehler beim Laden: ' + (err?.message || ''));
+      toast.error('Fehler beim Laden: ' + (err?.response?.data?.detail || err.message));
       setCodes([]);
       setLogs([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [freshCodes]);
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const codeById = useMemo(() => {
     const m = {};
-    codes.forEach((c) => {
-      m[c.id] = displayCode(c);
-    });
+    codes.forEach((c) => { m[c.id] = displayCode(c); });
     return m;
   }, [codes]);
 
@@ -77,9 +78,7 @@ const AdminFormularAccess = () => {
     if (!q) return codes;
     return codes.filter((c) => {
       const hay = [displayCode(c), c.admin_label, c.status, String(c.use_count)]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
+        .filter(Boolean).join(' ').toLowerCase();
       return hay.includes(q);
     });
   }, [codes, searchTerm]);
@@ -97,35 +96,39 @@ const AdminFormularAccess = () => {
   const createCode = async (e) => {
     e?.preventDefault?.();
     setCreating(true);
-    const { data, error } = await supabase.rpc('admin_create_formular_access_code', {
-      p_label: labelInput.trim() || null,
-    });
-    setCreating(false);
-    if (error) {
-      toast.error('Fehler: ' + error.message);
-      return;
-    }
-    const row = Array.isArray(data) ? data[0] : data;
-    if (row?.code) {
-      toast.success(`Zugangscode erstellt: ${row.code}`);
-      setLabelInput('');
-      fetchData();
-    } else {
-      toast.error('Kein Code zurückgegeben');
+    try {
+      const { data } = await axios.post(
+        `${API}/api/admin/formular-access/codes`,
+        { admin_label: labelInput.trim() || null },
+        { withCredentials: true },
+      );
+      if (data?.code && data?.id) {
+        toast.success(`Zugangscode erstellt: ${data.code}`);
+        setFreshCodes((prev) => ({ ...prev, [data.id]: data.code }));
+        setLabelInput('');
+        await fetchData();
+      } else {
+        toast.error('Kein Code zurückgegeben');
+      }
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err.message));
+    } finally {
+      setCreating(false);
     }
   };
 
   const revoke = async (id) => {
     if (!window.confirm('Zugangscode wirklich widerrufen? Bestehende Sitzungen verlieren den Zugang.')) return;
     setRevokingId(id);
-    const { error } = await supabase.rpc('admin_revoke_formular_access_code', { p_code_id: id });
-    setRevokingId(null);
-    if (error) {
-      toast.error('Fehler: ' + error.message);
-      return;
+    try {
+      await axios.post(`${API}/api/admin/formular-access/codes/${id}/revoke`, {}, { withCredentials: true });
+      toast.success('Zugangscode widerrufen');
+      await fetchData();
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err.message));
+    } finally {
+      setRevokingId(null);
     }
-    toast.success('Zugangscode widerrufen');
-    fetchData();
   };
 
   const deleteCode = async (row) => {
@@ -136,14 +139,16 @@ const AdminFormularAccess = () => {
     }
     if (!window.confirm(msg)) return;
     setDeletingId(row.id);
-    const { error } = await supabase.from('formular_access_codes').delete().eq('id', row.id);
-    setDeletingId(null);
-    if (error) {
-      toast.error('Fehler: ' + error.message);
-      return;
+    try {
+      await axios.delete(`${API}/api/admin/formular-access/codes/${row.id}`, { withCredentials: true });
+      toast.success('Zugangscode gelöscht');
+      setFreshCodes((prev) => { const n = { ...prev }; delete n[row.id]; return n; });
+      await fetchData();
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err.message));
+    } finally {
+      setDeletingId(null);
     }
-    toast.success('Zugangscode gelöscht');
-    fetchData();
   };
 
   const copyCode = (code) => {
@@ -161,7 +166,7 @@ const AdminFormularAccess = () => {
         titleIcon={FileSignature}
         description="Zugangscodes für /formular erzeugen, verwalten und Nutzung nachverfolgen."
         actions={
-          <Button variant="outline-ink" onClick={fetchData} disabled={loading}>
+          <Button variant="outline-ink" onClick={fetchData} disabled={loading} data-testid="fa-refresh">
             <RefreshCw size={14} strokeWidth={1.5} className={loading ? 'animate-spin' : ''} />
             Aktualisieren
           </Button>
@@ -169,7 +174,7 @@ const AdminFormularAccess = () => {
       />
 
       <AdminToolbarCard className="mb-4">
-        <form onSubmit={createCode} className="flex flex-col gap-3 md:flex-row md:items-end md:flex-wrap">
+        <form onSubmit={createCode} className="flex flex-col gap-3 md:flex-row md:items-end md:flex-wrap" data-testid="fa-create-form">
           <div className="flex-1 min-w-[180px] max-w-md">
             <label className="mb-1.5 block font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-bank-text-muted">
               Bezeichnung (optional)
@@ -179,9 +184,10 @@ const AdminFormularAccess = () => {
               value={labelInput}
               onChange={(e) => setLabelInput(e.target.value)}
               placeholder="z.B. Berater Müller · Q2"
+              data-testid="fa-create-label"
             />
           </div>
-          <Button type="submit" variant="primary" disabled={creating}>
+          <Button type="submit" variant="primary" disabled={creating} data-testid="fa-create-submit">
             {creating ? 'Wird erstellt…' : 'Zugangscode generieren'}
           </Button>
         </form>
@@ -189,16 +195,13 @@ const AdminFormularAccess = () => {
 
       <AdminToolbarCard className="mb-4">
         <div className="relative max-w-md">
-          <Search
-            size={14}
-            strokeWidth={1.5}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-bank-text-muted"
-          />
+          <Search size={14} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-bank-text-muted" />
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Code, Name, Bezeichnung…"
             className="pl-9"
+            data-testid="fa-search"
           />
         </div>
       </AdminToolbarCard>
@@ -209,14 +212,13 @@ const AdminFormularAccess = () => {
         </h2>
         {loading ? (
           <div className="py-12 text-center text-bank-text-muted">
-            <RefreshCw size={22} className="mx-auto mb-2 animate-spin opacity-60" />
-            Wird geladen…
+            <RefreshCw size={22} className="mx-auto mb-2 animate-spin opacity-60" /> Wird geladen…
           </div>
         ) : filteredCodes.length === 0 ? (
-          <div className="py-12 text-center text-sm text-bank-text-muted">Keine Zugangscodes</div>
+          <div className="py-12 text-center text-sm text-bank-text-muted" data-testid="fa-codes-empty">Keine Zugangscodes</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" data-testid="fa-codes-table">
               <thead className={adminTheadClass}>
                 <tr>
                   <th className="px-4 py-3 text-left">Erstellt</th>
@@ -234,7 +236,7 @@ const AdminFormularAccess = () => {
                   const sm = STATUS_LABEL[r.status] || STATUS_LABEL.active;
                   const fullCode = displayCode(r);
                   return (
-                    <tr key={r.id} className={`border-b border-bank-border last:border-b-0 ${adminRowHover}`}>
+                    <tr key={r.id} className={`border-b border-bank-border last:border-b-0 ${adminRowHover}`} data-testid={`fa-code-row-${r.id}`}>
                       <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[11px] text-bank-text-muted">
                         {new Date(r.created_at).toLocaleString('de-DE')}
                       </td>
@@ -246,9 +248,7 @@ const AdminFormularAccess = () => {
                         {conditionsSummaryLabel(r.contract_conditions) || '–'}
                       </td>
                       <td className="px-4 py-2.5">
-                        <span
-                          className={`inline-flex border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] ${sm.cls}`}
-                        >
+                        <span className={`inline-flex border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] ${sm.cls}`}>
                           {sm.label}
                         </span>
                       </td>
@@ -260,8 +260,8 @@ const AdminFormularAccess = () => {
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-right">
                         <div className="inline-flex flex-wrap justify-end gap-1">
-                          {fullCode !== '–' && (
-                            <Button type="button" variant="outline" size="sm" onClick={() => copyCode(fullCode)}>
+                          {r.code && (
+                            <Button type="button" variant="outline" size="sm" onClick={() => copyCode(r.code)} data-testid={`fa-copy-${r.id}`}>
                               <Copy size={12} strokeWidth={1.5} />
                             </Button>
                           )}
@@ -271,6 +271,7 @@ const AdminFormularAccess = () => {
                             size="sm"
                             title="Konditionen bearbeiten"
                             onClick={() => setConditionsRow(r)}
+                            data-testid={`fa-conditions-${r.id}`}
                           >
                             <SlidersHorizontal size={12} strokeWidth={1.5} />
                           </Button>
@@ -282,6 +283,7 @@ const AdminFormularAccess = () => {
                               className="border-rose-300/55 text-rose-700"
                               disabled={revokingId === r.id}
                               onClick={() => revoke(r.id)}
+                              data-testid={`fa-revoke-${r.id}`}
                             >
                               <Ban size={12} strokeWidth={1.5} /> Widerrufen
                             </Button>
@@ -294,6 +296,7 @@ const AdminFormularAccess = () => {
                             disabled={deletingId === r.id}
                             title="Zugangscode dauerhaft löschen"
                             onClick={() => deleteCode(r)}
+                            data-testid={`fa-delete-${r.id}`}
                           >
                             <Trash2 size={12} strokeWidth={1.5} />
                           </Button>
@@ -315,10 +318,10 @@ const AdminFormularAccess = () => {
         {loading ? (
           <div className="py-12 text-center text-bank-text-muted">…</div>
         ) : filteredLogs.length === 0 ? (
-          <div className="py-12 text-center text-sm text-bank-text-muted">Noch keine Nutzungen</div>
+          <div className="py-12 text-center text-sm text-bank-text-muted" data-testid="fa-logs-empty">Noch keine Nutzungen</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" data-testid="fa-logs-table">
               <thead className={adminTheadClass}>
                 <tr>
                   <th className="px-4 py-3 text-left">Zeitpunkt</th>
@@ -350,9 +353,7 @@ const AdminFormularAccess = () => {
 
       <FormularConditionsDialog
         open={Boolean(conditionsRow)}
-        onOpenChange={(open) => {
-          if (!open) setConditionsRow(null);
-        }}
+        onOpenChange={(open) => { if (!open) setConditionsRow(null); }}
         codeRow={conditionsRow}
         onSaved={fetchData}
       />

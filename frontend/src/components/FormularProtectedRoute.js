@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
+
+// Session 82.96 — Supabase-RPC `formular_session_is_valid` ersetzt durch
+// `POST /api/formular-access/session/validate` (FastAPI/Mongo).
 
 const SESSION_KEY = 'formular_session_id';
+const API = getApiBase();
 
 const FormularProtectedRoute = ({ children }) => {
   const [status, setStatus] = useState('checking');
@@ -16,13 +21,14 @@ const FormularProtectedRoute = ({ children }) => {
         if (!cancelled) setStatus('denied');
         return;
       }
-
       try {
-        const { data, error } = await supabase.rpc('formular_session_is_valid', {
-          p_session_id: sessionId,
-        });
+        const { data } = await axios.post(
+          `${API}/api/formular-access/session/validate`,
+          { session_id: sessionId },
+          { withCredentials: true },
+        );
         if (cancelled) return;
-        if (error || !data) {
+        if (!data?.valid) {
           sessionStorage.removeItem(SESSION_KEY);
           sessionStorage.removeItem('formular_auth');
           setStatus('denied');
@@ -39,9 +45,7 @@ const FormularProtectedRoute = ({ children }) => {
     };
 
     check();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   if (status === 'checking') {
@@ -51,11 +55,9 @@ const FormularProtectedRoute = ({ children }) => {
       </div>
     );
   }
-
   if (status === 'denied') {
     return <Navigate to="/formular" replace />;
   }
-
   return children;
 };
 
