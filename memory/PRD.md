@@ -1,3 +1,8 @@
+# PRD — Fröhlich Vermögensberatung GmbH · KAPITAL-DIREKT24 (Preview)
+
+<!-- Session 82.105 Preflight — bereit für Prod-Deploy nachdem Emergent Deploy-ENV gesetzt ist. Siehe Session-82.105-Block unten. -->
+
+
 # PRD — Fröhlich Vermögensberatung / Kapital-Direkt24 · FastAPI + MongoDB
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
