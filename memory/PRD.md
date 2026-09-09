@@ -3,6 +3,76 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.93 (Preview · VERIFIED) · Position Adjustment Service Domain Review + Safe Backend
+
+### Neuer Router `/app/backend/routes/position_adjustments.py` (3 Endpoints)
+| Endpoint | Zweck |
+|---|---|
+| `POST /api/admin/portfolio/stock-position-adjustments` | Delta-Adjustment auf `user_stock_positions.quantity` |
+| `POST /api/admin/portfolio/bond-position-adjustments` | Delta-Adjustment auf `user_bond_positions.nominal_value` (Denomination-Check) |
+| `GET /api/admin/portfolio/position-adjustments` | Audit-Trail mit user/asset/kind-Filter, keine Deletes |
+
+### PHASE A Domain-Review — Zulässige Reasons
+`corporate_action`, `migration_correction`, `inheritance_transfer`, `data_repair`
+**Verboten:** freie Beliebigkeit, Cost-Basis-Overwrite, Delete aus Audit-Trail
+
+### PHASE B Accounting-Modell
+- **Immutable adjustment record**: `_id, kind, idempotency_key, target_user_id, admin_user_id, asset_key, reason, reference_type/reference_id, delta, before, after, note, created_at`
+- **Server-berechnet**: `new_val = current + delta` (Client kann kein finales Ergebnis setzen)
+- **Negative Bestände** verboten (409)
+- **Bond-Denomination**: `delta % denomination == 0`, sonst 422
+- **Cost-Basis-Overwrite**: BLOCKED — separate Adjustment-Art nicht implementiert
+
+### PHASE F Idempotenz
+Unique-Index auf `idempotency_key` → doppelter Retry liefert `{status: already_applied, idempotent: true}` mit identischem before/after
+
+### PHASE H Security-Matrix + PHASE J Functional Tests (8/8 grün)
+```
+unauth-POST stock/bond → 401 ✅
+customer-POST stock/bond → 403 ✅
+1) stock +delta (data_repair, TESTSYM +3) → applied, before=0, after=3 ✅
+2) idempotent retry → already_applied ✅
+3) delta=-999 auf qty=3 → 409 „Negative Position nicht erlaubt" ✅
+4) reason='random_hack' → 422 ✅
+5) mass-assignment role=admin → 422 extra_forbidden ✅
+6) bond delta=1500 (denom=1000) → 422 „muss Vielfaches sein" ✅
+7) bond delta=2000 (denom=1000, inheritance_transfer) → applied ✅
+8) audit-trail GET → 2 items (stock:TESTSYM:3, bond:XX0000000001:2000) ✅
+```
+
+### PHASE K Financial Invariants (nach Test-Cycle + Cleanup)
+- `DUP_LEDGER=0`, `NEG_LEDGER=0`, `NEG_QTY=0`
+- `DUP_ORDER_EXEC=0`, `DUP_IPO_ALLOC=0`, `DUP_BOND_EXEC=0`
+- **DOUBLE_ADJUSTMENT=0** (Unique-Index bewiesen)
+- Test-Positionen + Adjustments nach Test-Run gelöscht
+
+### Regression (grün)
+- Coupon-Pytest: **16/16 PASS** ✅
+- Realized-PnL: **5/5 PASS** ✅
+- 82.90b–d Financial-Backend unverändert
+
+### Final Report
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | 2 (`routes/position_adjustments.py` NEU, `server.py` Router-Registration) |
+| **ALLOWED_ADJUSTMENT_REASONS** | corporate_action, migration_correction, inheritance_transfer, data_repair |
+| **STOCK_ADJUSTMENT_READY** | **YES** |
+| **BOND_ADJUSTMENT_READY** | **YES** |
+| **AUDIT_TRAIL_READY** | **YES** (GET-Endpoint mit Filter) |
+| **IDEMPOTENCY** | Unique-Index auf `idempotency_key`, Retry-safe, DuplicateKeyError → already_applied |
+| **SECURITY_MATRIX** | 6/6 grün + 4 Validierungs-Tests (422/409/extra=forbid) |
+| **FINANCIAL_INVARIANTS** | Alle 7 Invariants grün |
+| **DIRECT_POSITION_HACKS** | 0 (nur via Adjustment-Service) |
+| **DIRECT_CASH_HACKS** | 0 |
+| **PHYSICAL_DELETE_ADJUSTMENTS** | 0 |
+| **FAKE_COST_BASIS** | 0 (Cost-Basis-Overwrite bewusst BLOCKED) |
+| **SUPABASE_WRITES** | 0 |
+| **ADMIN_USER_POSITIONS_UNBLOCKED** | **YES** (Backend bereit; Frontend-Cutover in Folgesession) |
+| **ADMIN_BOND_POSITIONS_UNBLOCKED** | **YES** (Backend bereit; Frontend-Cutover in Folgesession) |
+| **READY_FOR_FINAL_SUPABASE_AUDIT** | **YES** |
+| **READY_FOR_PROD** | NO |
+
+
 ## Session 82.92 (Preview · VERIFIED) · Support / Lead / Utility Cutover
 
 ### Static Audit BEFORE/AFTER (8 Support-Flows)

@@ -5180,6 +5180,10 @@ app.include_router(_forex_routes.router)
 from routes import admin_reads as _admin_reads_routes  # noqa: E402
 app.include_router(_admin_reads_routes.router)
 
+# Session 82.93 — Position Adjustment Service (Safe Financial Backend).
+from routes import position_adjustments as _pos_adj_routes  # noqa: E402
+app.include_router(_pos_adj_routes.router)
+
 
 @app.on_event("startup")
 async def _news_public_indexes():
