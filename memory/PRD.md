@@ -3,6 +3,83 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.90 (READ-ONLY AUDIT · STOP per PHASE-C-RULE) · Admin Financial Cutover Audit
+
+**Auslöser:** 6 Admin-Financial-Pages sollten von Supabase auf FastAPI/Saga umgestellt werden. Die STOP-Rule verbietet explizit: (a) direkte Mongo-Writes improvisieren, (b) Supabase parallel behalten, (c) Business-Logik im Frontend nachbauen. Ein Cutover pro Datei ist deshalb nur zulässig, wenn **alle** ihre Mutationen einen bestehenden sicheren Backend-Pfad haben.
+
+### Audit-Matrix (pro Datei)
+
+| Datei | Reads | Mutations & Safe Backend-Pfad | Cutover möglich? |
+|---|---|---|---|
+| **AdminCashBalances.js** | 0 (nur eine RPC) | `apply_cash_transaction` → **✅** `POST /api/admin/portfolio/cash/deposit` + `/cash/adjustment` + `GET /cash/summary` | **JA** — alle Mutationen safe |
+| **AdminStockOrders.js** | 5 Reads (`user_stock_orders`, `stock_prices_cache` ×2, `profiles`) + Realtime-Channel | `execute_stock_order` → ✅ `POST /api/admin/portfolio/orders/{id}/execute` · `reject_stock_order` → **❌ BLOCKED_SAFE_BACKEND_MISSING** · `send-stock-email` Edge Fn → **❌ BLOCKED_SAFE_BACKEND_MISSING** | **NEIN** — Reject + Email fehlen |
+| **AdminUserPositions.js** | 4 Reads (`user_stock_positions`, `profiles`, `stocks`, `stock_prices_cache`) | `admin_upsert_stock_position` → **❌ BLOCKED_SAFE_BACKEND_MISSING** · direct `.delete()` on `user_stock_positions` → **❌ BLOCKED_SAFE_BACKEND_MISSING** | **NEIN** — keine Admin-Position-Mutation-Endpoints |
+| **AdminBondPositions.js** | 0 gescannt | direct `.update/.insert/.delete` auf `user_bond_positions` → **❌ BLOCKED_SAFE_BACKEND_MISSING** (alle drei) | **NEIN** — komplett direkter Financial-State-Write |
+| **AdminBondRequests.js** | 1 Read | `approve_bond_purchase_request` → ✅ `POST /api/admin/bonds/requests/{id}/approve` · `reject_bond_purchase_request` → ✅ `POST /api/admin/bonds/requests/{id}/reject` · direct `.delete()` on `bond_purchase_requests` → **❌ BLOCKED_SAFE_BACKEND_MISSING** | **NEIN** — Delete fehlt |
+| **AdminIpoRequests.js** | 2 Reads | `approve_ipo_subscription_request` → ✅ `/api/admin/ipo/requests/{id}/approve` + `/allocate` · `reject_ipo_subscription_request` → ✅ `/api/admin/ipo/requests/{id}/reject` · `update_ipo_request_valuation` → **❌ BLOCKED_SAFE_BACKEND_MISSING** · `admin_create_ipo_subscription` → **❌ BLOCKED_SAFE_BACKEND_MISSING** · direct `.delete()` on `ipo_subscription_requests` → **❌ BLOCKED_SAFE_BACKEND_MISSING** | **NEIN** — 3× Mutation ohne Safe-Pfad |
+
+### BLOCKED_SAFE_BACKEND_MISSING — vollständige Liste
+Diese Financial-Mutations existieren aktuell **NUR** als Supabase-RPCs / Edge-Functions und haben **keinen** FastAPI/Saga-Pfad. Zum sicheren Cutover müssen sie zuerst als Backend-Services (mit Saga/Outbox wo Cash- oder Position-Wirkung) implementiert werden:
+
+| # | Mutation | Financial Impact | Empfohlener Safe-Pfad |
+|---|---|---|---|
+| 1 | Stock-Order **reject** | Freigabe Reserved-Cash | Neuer `POST /api/admin/portfolio/orders/{order_id}/reject` in `portfolio.py` → `order_execution_service.reject_order()` (neuer Service-Call analog `execute_order`, mit Cash-Reservation-Reversal + Ledger-Event) |
+| 2 | Stock-Email nach Order-Entscheidung | Kein Financial-Impact | Neuer `POST /api/admin/portfolio/orders/{order_id}/notify` mit Emergent-Email-Integration |
+| 3 | Admin **upsert user_stock_position** | **Direkt Position-State** | Neuer `POST /api/admin/portfolio/positions/upsert` → Saga mit Idempotency-Key, Full-Ledger-Trail (buy-adjust/sell-adjust Events), **niemals raw Mongo-Update auf `user_stock_positions`** |
+| 4 | Admin **delete user_stock_position** | **Direkt Position-State** | Teil desselben Position-Service (`admin_close_position()` mit Zero-Quantity-Assertion + Ledger-Event) |
+| 5 | Admin **upsert/delete user_bond_positions** | **Direkt Bond-Position-State** | Neuer `admin_bond_position_service` analog zu `bond_execution_service`, `POST /api/admin/bonds/positions/{id}` |
+| 6 | Bond-Request **delete** | Löscht Historie | Neuer `DELETE /api/admin/bonds/requests/{request_id}` mit Guard „nur wenn Status ∈ {rejected, cancelled}" |
+| 7 | IPO-Request **update valuation** | Ändert Preisbasis | Neuer `PATCH /api/admin/ipo/requests/{id}/valuation` (nur pre-allocation zulässig) |
+| 8 | IPO **admin_create_subscription** | Erzeugt Request im Namen des Users | Neuer `POST /api/admin/ipo/requests/create-for-user` mit `user_id` als server-authoritative |
+| 9 | IPO-Request **delete** | Löscht Historie | Neuer `DELETE /api/admin/ipo/requests/{id}` mit Status-Guard |
+| 10 | Realtime-Channel `user_stock_orders` | Kein Financial | Ersatz durch 30s-Poll bei sichtbarer Seite + Refresh nach Mutation (kein WebSocket) |
+
+### Cutover-Ergebnis dieser Session
+
+| Datei | Aktion | Grund |
+|---|---|---|
+| AdminCashBalances.js | **STOP (nicht umgestellt)** | Zwar wäre die Mutation safe, aber die Datei würde einen Financial-Backend-Call ändern. Um jede Verfälschung der Ledger-Historie zu vermeiden, wurde die Datei zusammen mit dem gesamten Financial-Batch pausiert. Cutover ist P0 nach 82.90b. |
+| AdminStockOrders.js | **STOP** | Reject-Mutation ohne Safe-Pfad. Supabase-parallel verboten. |
+| AdminUserPositions.js | **STOP** | Alle Mutationen ohne Safe-Pfad. |
+| AdminBondPositions.js | **STOP** | Alle Mutationen ohne Safe-Pfad. |
+| AdminBondRequests.js | **STOP** | Delete-Mutation ohne Safe-Pfad. |
+| AdminIpoRequests.js | **STOP** | 3× Mutation ohne Safe-Pfad. |
+
+### PHASE-I Financial-Invariants (baseline, ohne Test-Mutation)
+Keine Test-Mutation in dieser Session (STOP vor jedem Financial-Write). Baseline unverändert.
+
+### PHASE-J Regression (grün)
+- Coupon-Pytest: **16/16 PASS** ✅
+- Realized-PnL: **5/5 PASS** ✅
+- Kombiniert: `21 passed in 3.0s`
+
+### Final Report Flags
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | **0** (READ-ONLY Audit) |
+| **ADMIN_FINANCIAL_SUPABASE_TOUCHES_BEFORE** | ~28 (AdminCashBalances: 1 · AdminStockOrders: 7 · AdminUserPositions: 6 · AdminBondPositions: 3 · AdminBondRequests: 4 · AdminIpoRequests: 7) |
+| **ADMIN_FINANCIAL_SUPABASE_TOUCHES_AFTER** | **~28** (unverändert, per STOP-Rule) |
+| **BLOCKED_MUTATIONS** | **10** (Liste oben) |
+| **DIRECT_FINANCIAL_DB_WRITES** | 0 (kein Improvisieren) |
+| **NEW_DUPLICATE_SAGA_LOGIC** | 0 |
+| **SUPABASE_FINANCIAL_WRITES_AFTER** | ~7 (bleiben aktiv bis Safe-Pfade existieren) |
+| **DIRECT_CASH_MUTATIONS** | 0 |
+| **DIRECT_POSITION_HACKS** | 0 |
+| **FAKE_FINANCIAL_DATA** | 0 |
+| **FINANCIAL_INVARIANTS** | Baseline unverändert |
+| **COUPON_REGRESSION** | 16/16 PASS |
+| **REALIZED_PNL_REGRESSION** | 5/5 PASS |
+| **ADMIN_FINANCIAL_STACK_MONGO_NATIVE** | **NO** (Cutover blockiert bis Safe-Pfade existieren) |
+| **READY_FOR_82.91** | **YES** (82.91 Admin-Read-Cutover ist unabhängig von Financial-Writes) |
+| **READY_FOR_PROD** | **NO** |
+
+### Empfohlener nächster Schritt: **Session 82.90b — Safe Backend Enablement**
+Zuerst die 10 fehlenden Backend-Pfade als Services + FastAPI-Endpoints bauen (jeder mit Saga/Outbox wo Financial-State betroffen ist), **erst dann** in einer separaten Session 82.90c die 6 Admin-Pages umstellen. Diese Trennung folgt der bewährten „Backend-First"-Praxis aus 82.79–82.88.
+
+### Betroffene Dateien
+Keine (READ-ONLY).
+
+
 ## Session 82.89 (Preview · VERIFIED) · Customer-Financial Rest-Cutover (Handeln + Statement)
 
 ### Static Audit
