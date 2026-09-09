@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Send, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SOCIAL_PREVIEW_LIGHT } from '@/components/social/socialPreviewLight';
-import { supabase } from '@/lib/supabase';
+// Session 82.102b · Supabase-Import entfernt (unused nach 82.101-Neutralisation).
 import { toast } from 'sonner';
 
 const IG_GRADIENT =

@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
-import { isSupabaseConfigured } from '@/lib/supabase';
+// Session 82.102b · Supabase-Config-Guard neutralisiert · immer false.
+const isSupabaseConfigured = false;
 import CookieConsent from '@/components/CookieConsent';
 import VisitorWelcomeGate from '@/components/VisitorWelcomeGate';
 import VisitorTracker from '@/components/VisitorTracker';

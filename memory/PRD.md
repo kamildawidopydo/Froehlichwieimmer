@@ -4825,7 +4825,33 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.102b (Preview · Sept 9 2026) · Supabase Import-Only Dead-Code Sweep · PARTIAL ⚠️
+- **PHASE A Neubewertung**: Frühere Sessions filterten Supabase-Runtime nur mit single-line `supabase\.(from|rpc|…)`. Ein zweiter, mehrzeiliger Audit (Chain-Style `let q = supabase\n.from(...)`) zeigt: **7 Files haben weiterhin ACTIVE_RUNTIME**, entgegen der 82.101-Bilanz.
+- **Classification**:
+  - **ACTIVE_RUNTIME (7 Files, STOP)**: `AdminOfferReviews.js` (1 chain), `SavingsComparison.js` (3 chains inkl. Realtime-Reader), `PartnerBanks.js` (1 chain), `Home.js` (2 chains), `AdminCreditBankDetails.js` (5 chains inkl. delete), `AdminInsufficientBuyingPower.js` (3 chains inkl. writes), `AdminOfferReviews.js` — jede Datei braucht einen eigenen Cutover mit Backend-Endpoint-Design (Reviews, Savings-Offers, Partner-Banks, Home-Public-Data, Credit-Bank-Details, Insufficient-Buying-Power-Log).
+  - **IMPORT_ONLY (2 Files, bereinigt)**: `App.js` (`isSupabaseConfigured` → `const false`), `SocialAnlagenprofisMessageModal.jsx` (Import entfernt).
+- **STOP per Session-Regel**: `Wenn ACTIVE_RUNTIME > 0: STOP`. Kein Zwangs-Cutover in diesem Sweep — würde Business-Logik ändern und Session-Verträge brechen.
+- **Regression**: Coupon 16/16 + Market-Data 47/47 pytest grün · Frontend-Build grün.
+
+### FINAL REPORT (Session 82.102b)
+- FILES_CHANGED: 2 (`App.js`, `SocialAnlagenprofisMessageModal.jsx`)
+- IMPORT_ONLY_REFS_BEFORE: 2 · **IMPORT_ONLY_REFS_AFTER: 0**
+- ACTIVE_RUNTIME_REFS_BEFORE: **7 Files (nicht 0 wie in 82.101 gemeldet)** · ACTIVE_RUNTIME_REFS_AFTER: **7 Files (unverändert — Cutover erfordert dedizierte Sessions)**
+- COMMENT_ONLY_REFS: 3 Backend-Files (unverändert, siehe 82.95)
+- FRONTEND_BUILD: PASS · REGRESSION_TESTS: PASS
+- **BUSINESS_LOGIC_CHANGED=NO · FINANCIAL_WRITES=0 · SUPABASE_RUNTIME_REFS=7 Files (unchanged)**
+- READY_FOR_82.103_FINAL_PURGE: **NO** (7 aktive Files blockieren Purge) · READY_FOR_PROD: NO
+
 ## Session 82.102 (Preview · Sept 9 2026) · Application Form FastAPI Backend + Resend ✅
+- **Backend**: neuer `POST /api/applications` in `routes/applications.py` mit `Pydantic extra='forbid'` (Mass-Assignment für `status/role/admin_notes` → 422), server-autoritativem `status="Neu"` + `created_at`, **Idempotency** via `idempotency_key` (Doppel-Submit → gleiche `id`, kein zweiter Mail-Job), **Persistenz-First-Kontrakt** (Mail-Fehler rollt Application **nicht** zurück, sondern persistiert `admin_email_error`).
+- **E-Mail** über bestehenden `_send_email`-Helper (Emergent Managed Resend): Admin- + Kunden-Bestätigung. Fehler ist Best-Effort und wird als `email_status=failed` zurückgegeben.
+- **Frontend**: `ApplicationForm.js` handleSubmit auf `axios.post` mit `crypto.randomUUID()`-Key umgestellt · BLOCKED_SAFE_BACKEND_MISSING aus 82.101 entfernt · Success-UI nur nach 201.
+- **Admin-Visibility**: neue Applications erscheinen sofort über bestehenden `GET /api/admin/applications/list` (82.91a).
+- **Security-Matrix 6/6 grün**: valid=201, Idempotent-Replay, Mass-Assignment=422, Consent-false=422, Extra-Field=422, Admin-Read ✓.
+- **Regression**: Coupon 16/16 + 47/47 pytest grün · Frontend-Build grün.
+- **Cleanup-Bonus** `lib/offerReviews.js`: 3 tote Supabase-Refs neutralisiert.
+
+## Session 82.101b (Preview · Sept 9 2026) · Public Document Upload Portal ✅
 - **Neuer Endpoint** `POST /api/applications` in `routes/applications.py`:
   - **Pydantic `extra='forbid'`**: Mass-Assignment (status/role/admin_notes/user_id/approved) → 422.
   - Server setzt `status="Neu"`, `created_at`, `status_history` autoritativ; Client hat keinen Einfluss.

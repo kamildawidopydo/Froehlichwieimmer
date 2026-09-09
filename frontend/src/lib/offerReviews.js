@@ -100,11 +100,6 @@ export async function fetchOfferReviewStatsBatch(offerIds) {
   // Session 82.102 · Supabase-View entfernt.
   return { map: new Map(), error: null };
 }
-      average: row.avg_stars != null ? roundToQuarter(Number(row.avg_stars)) : null,
-    });
-  }
-  return { map, error: null };
-}
 
 /** Admin */
 export async function adminApproveReview(reviewId, note) {
