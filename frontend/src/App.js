@@ -1,10 +1,8 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import { Toaster } from '@/components/ui/sonner';
-import { toast } from 'sonner';
-// Session 82.102b · Supabase-Config-Guard neutralisiert · immer false.
-const isSupabaseConfigured = false;
+// Session 82.106 · Supabase-Config-Toast entfernt (Migration abgeschlossen in 82.103d).
 import CookieConsent from '@/components/CookieConsent';
 import VisitorWelcomeGate from '@/components/VisitorWelcomeGate';
 import VisitorTracker from '@/components/VisitorTracker';
@@ -216,15 +214,6 @@ const KnabFestgeldProduktinfo = lazy(() => import('@/pages/knab/KnabFestgeldProd
 
 function App() {
   useProtectSiteImages();
-
-  useEffect(() => {
-    if (!isSupabaseConfigured) {
-      toast.error(
-        'Supabase ist im Build nicht konfiguriert. In Vercel REACT_APP_SUPABASE_URL und REACT_APP_SUPABASE_ANON_KEY setzen und neu deployen.',
-        { duration: 12000 },
-      );
-    }
-  }, []);
 
   return (
     <ThemeProvider>

@@ -56,13 +56,30 @@ const NotificationCenter = ({ chrome = 'light' }) => {
     if (!user) return;
     setLoading(true);
     try {
-      // Session 82.103c · Supabase-Feeds neutralisiert. FastAPI-Notification-Aggregator noch nicht verfügbar → faithful empty state.
-      const emptyRes = { data: [], error: null };
-      const [ordersRes, cashRes, contractsRes, bondsRes, bondReqRes, ipoReqRes, supportRes, alertsRes] =
-        [emptyRes, emptyRes, emptyRes, emptyRes, emptyRes, emptyRes, emptyRes, emptyRes];
+      // Session 82.106 · Notification-Aggregator jetzt gegen FastAPI (Cookie-Auth via withCredentials).
+      // Feeds: Orders (executed/rejected/cancelled), Cash (created_by-Admin), Alerts (triggered),
+      // Support-Tickets (unread_for_user > 0). Contracts/Bond-Requests/IPO-Requests haben derzeit
+      // keinen Kunden-List-Endpoint → gracefully übersprungen.
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const _cfg = { withCredentials: true };
+
+      const [ordersRes, cashRes, alertsRes, supportRes] = await Promise.allSettled([
+        _axios.get(`${_api}/api/portfolio/orders`, { ..._cfg, params: { limit: 30 } }),
+        _axios.get(`${_api}/api/portfolio/cash`, { ..._cfg, params: { history_limit: 20 } }),
+        _axios.get(`${_api}/api/stock-notifications`, { ..._cfg, params: { limit: 20 } }),
+        _axios.get(`${_api}/api/support/tickets`, _cfg),
+      ]);
+
+      const orders = ordersRes.status === 'fulfilled' ? (ordersRes.value.data || []) : [];
+      const cashData = cashRes.status === 'fulfilled' ? (cashRes.value.data || {}) : {};
+      const cashHistory = Array.isArray(cashData.history) ? cashData.history : [];
+      const alertsData = alertsRes.status === 'fulfilled' ? (alertsRes.value.data || {}) : {};
+      const alerts = Array.isArray(alertsData) ? alertsData : (alertsData.items || []);
+      const tickets = supportRes.status === 'fulfilled' ? (supportRes.value.data || []) : [];
 
       const aggregated = [];
-      (ordersRes.data || []).forEach((o) => {
+      orders.forEach((o) => {
         const time = o.executed_at || o.created_at;
         if (o.status === 'executed') {
           aggregated.push({
@@ -94,8 +111,8 @@ const NotificationCenter = ({ chrome = 'light' }) => {
         }
       });
 
-      (cashRes.data || []).forEach((t) => {
-        if (!t.created_by) return;
+      cashHistory.forEach((t) => {
+        if (!t.created_by) return;   // Nur Admin-getriggerte Cash-Bewegungen als Nachricht
         const isCredit = Number(t.amount) >= 0;
         aggregated.push({
           id: `cash-${t.id}`,
@@ -107,66 +124,23 @@ const NotificationCenter = ({ chrome = 'light' }) => {
         });
       });
 
-      (contractsRes.data || []).forEach((c) => {
+      alerts.forEach((a) => {
+        // /api/stock-notifications = ausgelöste Alerts
+        const time = a.triggered_at || a.created_at;
+        if (!time) return;
         aggregated.push({
-          id: `contract-${c.id}`,
-          type: 'contract',
-          time: c.created_at,
-          title: `Neuer ${c.product_type}-Vertrag`,
-          description: `${c.vertragsnummer || '—'} · ${formatEUR(c.amount_eur)}`,
-          path: '/dashboard/vermoegen',
-        });
-      });
-
-      (bondsRes.data || []).forEach((b) => {
-        aggregated.push({
-          id: `bond-${b.id}`,
-          type: 'bond',
-          time: b.created_at,
-          title: `Neue Anleihe: ${b.issuer || b.bond_name || b.isin}`,
-          description: `${formatEUR(b.nominal_betrag)} nominal`,
-          path: '/dashboard/anleihen',
-        });
-      });
-
-      (bondReqRes.data || []).forEach((r) => {
-        const approved = r.status === 'approved';
-        aggregated.push({
-          id: `bond-req-${r.id}`,
-          type: approved ? 'bond_request_approved' : 'bond_request_rejected',
-          time: r.updated_at,
-          title: approved
-            ? `Anleihe genehmigt: ${r.bond_name || r.isin || 'Anfrage'}`
-            : `Anleihe abgelehnt: ${r.bond_name || r.isin || 'Anfrage'}`,
-          description:
-            r.decision_note ||
-            (approved
-              ? `${formatEUR(r.amount_eur)} wurde freigegeben`
-              : 'Ihre Kaufanfrage wurde nicht angenommen'),
-          path: '/dashboard/auftraege',
-        });
-      });
-
-      (ipoReqRes.data || []).forEach((r) => {
-        const approved = r.status === 'approved';
-        const time = r.approved_at || r.rejected_at || r.created_at;
-        aggregated.push({
-          id: `ipo-req-${r.id}`,
-          type: approved ? 'ipo_request_approved' : 'ipo_request_rejected',
+          id: `alert-${a.id || `${a.symbol}-${time}`}`,
+          type: 'price_alert',
           time,
-          title: approved
-            ? `IPO genehmigt: ${r.company_name || r.ticker || 'Anfrage'}`
-            : `IPO abgelehnt: ${r.company_name || r.ticker || 'Anfrage'}`,
-          description:
-            r.decision_note ||
-            (approved
-              ? `${formatEUR(r.amount_eur)} wurde freigegeben`
-              : 'Ihre Zeichnungsanfrage wurde nicht angenommen'),
-          path: '/dashboard/auftraege',
+          title: `Preisalarm: ${a.symbol}`,
+          description: a.direction === 'above'
+            ? `Kurs über ${formatEUR(a.target_price)} erreicht`
+            : `Kurs unter ${formatEUR(a.target_price)} erreicht`,
+          path: '/dashboard/watchlist',
         });
       });
 
-      (supportRes.data || []).forEach((t) => {
+      tickets.forEach((t) => {
         if (Number(t.unread_for_user) <= 0) return;
         aggregated.push({
           id: `support-${t.id}-${t.last_message_at}`,

@@ -413,7 +413,7 @@ const AdminContractSubmissions = () => {
                   ))}
                   {!selected.contract_pdf_path && !(selected.attachments || []).length && (
                     <p className="text-bank-text-muted text-xs">
-                      Keine PDFs in Storage (lokal ohne SUPABASE_SERVICE_ROLE_KEY).
+                      Keine PDFs in Storage verfügbar.
                     </p>
                   )}
                 </ul>
