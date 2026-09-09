@@ -97,19 +97,8 @@ const AdminActivity = () => {
       return;
     }
 
-    const channel = supabase
-      .channel('admin-activity-feed')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'user_activity_log' },
-        (payload) => {
-          setEvents((prev) => [payload.new, ...prev].slice(0, PAGE_SIZE));
-          setNewCount((n) => n + 1);
-        }
-      )
-      .subscribe();
-
-    channelRef.current = channel;
+    // Session 82.103c · Realtime-Kanal entfernt (Supabase → Polling in Migrations-Session 82.98).
+    channelRef.current = null;
 
     return () => {
       if (channelRef.current) {
@@ -119,22 +108,25 @@ const AdminActivity = () => {
   }, [liveEnabled]);
 
   const fetchUsers = async () => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, email')
-      .order('first_name', { ascending: true });
-    setUsers(data || []);
+    // Session 82.103c · Legacy `profiles`-Read neutralisiert.
+    setUsers([]);
   };
 
   const fetchEvents = async () => {
+    // Session 82.103c · FastAPI /api/admin/activity/list statt Supabase `user_activity_log`.
     setLoading(true);
     setNewCount(0);
-    const { data, error } = await supabase
-      .from('user_activity_log')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(PAGE_SIZE);
-    if (!error) setEvents(data || []);
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(
+        `${_api}/api/admin/activity/list`,
+        { params: { limit: PAGE_SIZE }, withCredentials: true },
+      );
+      setEvents(data?.items || []);
+    } catch {
+      setEvents([]);
+    }
     setLoading(false);
   };
 

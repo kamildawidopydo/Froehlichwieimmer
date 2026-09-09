@@ -190,15 +190,19 @@ const AdminCreditOffers = () => {
   };
 
   const handleToggleActive = async (offer) => {
-    const { error } = await supabase
-      .from('credit_offers')
-      .update({ is_active: !offer.is_active })
-      .eq('id', offer.id);
-    if (error) {
-      toast.error(`Fehler: ${error.message}`);
-      return;
+    // Session 82.103c · FastAPI-PATCH statt Supabase.
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      await _axios.patch(
+        `${_api}/api/admin/credit-offers/${offer.id}`,
+        { is_active: !offer.is_active },
+        { withCredentials: true },
+      );
+      await fetchOffers();
+    } catch (e) {
+      toast.error(`Fehler: ${e?.response?.data?.detail || e.message}`);
     }
-    await fetchOffers();
   };
 
   const filteredOffers = useMemo(() => {

@@ -48,25 +48,27 @@ const AdminOffers = () => {
   }, []);
 
   const fetchBanks = async () => {
-    const { data, error } = await supabase
-      .from('banks')
-      .select('id, name, country')
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-    if (!error) setBanks(data || []);
+    // Session 82.103c · FastAPI /api/admin/banks/list statt Supabase.
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/banks/list`, { withCredentials: true });
+      setBanks((data?.items || []).filter((b) => b.is_active !== false));
+    } catch {
+      setBanks([]);
+    }
   };
 
   const fetchOffers = async () => {
+    // Session 82.103c · FastAPI /api/admin/offers/list statt Supabase.
     setLoading(true);
-    const { data, error } = await supabase
-      .from('savings_offers')
-      .select('*, banks(id, name, country, website_url, deposit_protection, deposit_protection_amount)')
-      .order('interest_rate', { ascending: false });
-
-    if (error) {
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/offers/list`, { withCredentials: true });
+      setOffers(data?.items || []);
+    } catch {
       toast.error('Fehler beim Laden der Angebote');
-    } else {
-      setOffers(data || []);
     }
     setLoading(false);
   };
@@ -143,14 +145,12 @@ const AdminOffers = () => {
     toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.');
   };
 
-  const handleToggleActive = async (offer) => {
-    const { error } = await supabase
-      .from('savings_offers')
-      .update({ is_active: !offer.is_active })
-      .eq('id', offer.id);
-    if (error) {
-      toast.error('Fehler: ' + error.message);
-    } else {
+  const handleToggleActive = async () => {
+    // Session 82.103c · Legacy Toggle-Mutation deaktiviert (kein FastAPI-Endpoint).
+    toast.info('Legacy-Mutation deaktiviert (Session 82.103c). Kein FastAPI-Toggle-Endpoint verfügbar.');
+    return;
+    // eslint-disable-next-line no-unreachable
+    if (false) {
       await fetchOffers();
     }
   };

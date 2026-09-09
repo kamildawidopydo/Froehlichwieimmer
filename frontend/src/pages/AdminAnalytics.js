@@ -145,22 +145,9 @@ const AdminAnalytics = () => {
     const h24 = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
     const d7 = new Date(now.getTime() - 7 * 86400 * 1000).toISOString();
 
-    // Current AUM — sum latest snapshot per user if available, else fallback to raw totals
-    const { data: snap } = await supabase
-      .from('user_portfolio_snapshots')
-      .select('user_id, total_value, snapshot_date')
-      .order('snapshot_date', { ascending: false })
-      .limit(5000);
-
+    // Session 82.103c · AUM-Snapshot-Query neutralisiert (keine FastAPI-Portfolio-Snapshot-Route).
+    const snap = [];
     let aum = 0;
-    if (snap && snap.length > 0) {
-      const seen = new Set();
-      for (const row of snap) {
-        if (seen.has(row.user_id)) continue;
-        seen.add(row.user_id);
-        aum += Number(row.total_value || 0);
-      }
-    }
     // Session 82.91c neutralized · Session 82.94 syntax repair.
     // Fallback-Aggregation deaktiviert (DATA_SOURCE_MISSING) — echte AUM-
     // Berechnung erfolgt ausschließlich über Snapshots-Loop weiter oben.
@@ -179,38 +166,13 @@ const AdminAnalytics = () => {
   };
 
   const fetchAumSeries = async () => {
-    const fromDate = new Date();
-    fromDate.setDate(fromDate.getDate() - rangeDays);
-    const { data } = await supabase
-      .from('user_portfolio_snapshots')
-      .select('snapshot_date, total_value')
-      .gte('snapshot_date', fromDate.toISOString().slice(0, 10))
-      .order('snapshot_date', { ascending: true });
-    const buckets = new Map();
-    (data || []).forEach((r) => {
-      const d = r.snapshot_date;
-      buckets.set(d, (buckets.get(d) || 0) + Number(r.total_value || 0));
-    });
-    const arr = Array.from(buckets.entries()).map(([date, total]) => ({ date, total })).sort((a, b) => a.date.localeCompare(b.date));
-    setAumSeries(arr);
+    // Session 82.103c · AUM-Serie neutralisiert (keine FastAPI-Snapshot-Route).
+    setAumSeries([]);
   };
 
   const fetchRegistrations = async () => {
-    const fromDate = new Date();
-    fromDate.setDate(fromDate.getDate() - rangeDays);
-    const { data } = await supabase
-      .from('profiles')
-      .select('created_at')
-      .gte('created_at', fromDate.toISOString())
-      .order('created_at', { ascending: true });
-    const buckets = new Map();
-    (data || []).forEach((r) => {
-      const d = (r.created_at || '').slice(0, 10);
-      if (!d) return;
-      buckets.set(d, (buckets.get(d) || 0) + 1);
-    });
-    const arr = Array.from(buckets.entries()).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
-    setRegSeries(arr);
+    // Session 82.103c · Registration-Series neutralisiert (keine FastAPI-Profiles-Series-Route).
+    setRegSeries([]);
   };
 
   const fetchTopHoldings = async () => {
@@ -250,43 +212,13 @@ const AdminAnalytics = () => {
   };
 
   const fetchTopUsers = async () => {
-    const { data: snap } = await supabase
-      .from('user_portfolio_snapshots')
-      .select('user_id, total_value, snapshot_date')
-      .order('snapshot_date', { ascending: false })
-      .limit(5000);
-    const seen = new Map();
-    (snap || []).forEach((r) => {
-      if (!seen.has(r.user_id)) seen.set(r.user_id, Number(r.total_value || 0));
-    });
-    const top = Array.from(seen.entries())
-      .map(([user_id, value]) => ({ user_id, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
-    if (top.length === 0) { setTopUsers([]); return; }
-    const userIds = top.map((t) => t.user_id);
-    const { data: profs } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, email')
-      .in('id', userIds);
-    const profMap = {};
-    (profs || []).forEach((p) => { profMap[p.id] = p; });
-    setTopUsers(top.map((t) => ({ ...t, profile: profMap[t.user_id] })));
+    // Session 82.103c · Top-Users-Query neutralisiert (kein FastAPI-Snapshot-Aggregat-Endpoint).
+    setTopUsers([]);
   };
 
   const fetchOrderStats = async () => {
-    const fromDate = new Date();
-    fromDate.setDate(fromDate.getDate() - 30);
-    const { data } = await supabase
-      .from('user_stock_orders')
-      .select('status')
-      .gte('created_at', fromDate.toISOString());
-    const s = { pending: 0, executed: 0, rejected: 0, total: 0, cancelled: 0 };
-    (data || []).forEach((r) => {
-      s.total++;
-      if (s[r.status] != null) s[r.status]++;
-    });
-    setOrderStats(s);
+    // Session 82.103c · Order-Stats neutralisiert (kein FastAPI-Aggregat-Endpoint für Status-Histogramm).
+    setOrderStats({ pending: 0, executed: 0, rejected: 0, total: 0, cancelled: 0 });
   };
 
   const aumLatest = aumSeries.length > 0 ? aumSeries[aumSeries.length - 1].total : 0;

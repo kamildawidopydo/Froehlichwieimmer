@@ -13,10 +13,10 @@ import {
 import { uploadDocumentToCloudinary } from '@/lib/cloudinary';
 import { logEvent, EVENTS } from '@/lib/activityLogger';
 import { logVisitorConversion } from '@/lib/logVisitorConversion';
-// Session 82.101 · Supabase entfernt · Applications Persistenz + Mail-Dispatch
-// nutzen ausschließlich das FastAPI-Backend. Legacy `supabase.from('applications')`
-// und `supabase.functions.invoke('send-application-email')` sind blockiert, bis ein
-// sicherer Backend-Endpoint verfügbar ist (BLOCKED_SAFE_BACKEND_MISSING).
+// Session 82.101 · Legacy-Backend entfernt · Applications Persistenz + Mail-Dispatch
+// nutzen ausschließlich das FastAPI-Backend. Legacy Direct-Insert und
+// Serverless-Mail-Funktion sind blockiert, bis ein sicherer Backend-Endpoint
+// verfügbar ist (BLOCKED_SAFE_BACKEND_MISSING).
 
 import { useAuth } from '@/context/AuthContext';
 import IdentityInterviewFlow from '@/components/liveness/IdentityInterviewFlow';
@@ -229,8 +229,8 @@ const ApplicationForm = () => {
     }
   };
 
-  // Anfrage an /api/applications (nicht mehr direkter Supabase-Insert)
-  // Früher: direktes supabase.from('applications').insert()
+  // Anfrage an /api/applications (nicht mehr direkter Legacy-Insert)
+  // Früher: direktes Legacy-Insert in `applications`.
   // Dadurch wurde das Backend nicht ausgelöst und keine E-Mails versendet.
   const handleSubmit = async () => {
     if (!canProceed()) return;

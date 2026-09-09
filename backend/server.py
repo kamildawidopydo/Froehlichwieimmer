@@ -5201,6 +5201,12 @@ app.include_router(_storage_files_routes.router)
 from routes import admin_legacy_reads as _admin_legacy_reads_routes  # noqa: E402
 app.include_router(_admin_legacy_reads_routes.router)
 
+# Session 82.103c — Admin Kredit-Bankdetails + Kaufkraft-Warnungen.
+from routes import admin_credit_bank_details as _admin_credit_bank_details_routes  # noqa: E402
+app.include_router(_admin_credit_bank_details_routes.router)
+from routes import admin_insufficient_buying_power as _admin_ibp_routes  # noqa: E402
+app.include_router(_admin_ibp_routes.router)
+
 # Session 82.102 — Public Applications Submit + Resend-Mail.
 from routes import applications as _applications_routes  # noqa: E402
 app.include_router(_applications_routes.router)

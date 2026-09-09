@@ -122,24 +122,12 @@ const Home = () => {
           savingsByBank.set(item.bank_id, item);
         }
       });
+      // Session 82.103c · Credit-Offers-Feed via FastAPI noch nicht verfügbar → leeres Karussell.
       const enriched = [];
-        const savings = savingsByBank.get(offer.bank_id);
-        const ratingFromSavings = savings
-          ? getOfferRatingValue({
-              bank_name: savings.banks?.name || offer.banks?.name || '',
-              interest_rate: Number(savings.interest_rate || 0),
-            })
-          : null;
-        return {
-          ...offer,
-          rating_value: ratingFromSavings ?? offer.rating_value ?? null,
-        };
-      });
-
       setCreditOffers(mapCreditOffersForCarousel(enriched));
 
       // Sparangebote fürs Home-Karussell: normalisieren wie /comparison-Konsumenten erwarten.
-      const savingsForCarousel = (savingsRes.data || [])
+      const savingsForCarousel = (savingsRes?.items || [])
         .filter((o) => o.bank_id && o.banks?.name)
         .map((o) => ({
           ...o,

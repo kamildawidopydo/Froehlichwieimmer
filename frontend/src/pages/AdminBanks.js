@@ -64,15 +64,18 @@ const AdminBanks = () => {
     }, []);
 
     const fetchBanks = async () => {
+        // Session 82.103c · FastAPI /api/admin/banks/list statt Supabase.
         setLoading(true);
-        const { data, error } = await supabase
-            .from('banks')
-            .select('*')
-            .order('name', { ascending: true });
-        if (error) {
+        try {
+            const _axios = (await import('axios')).default;
+            const _api = (await import('@/lib/apiBase')).getApiBase();
+            const { data } = await _axios.get(
+                `${_api}/api/admin/banks/list`,
+                { withCredentials: true },
+            );
+            setBanks(data?.items || []);
+        } catch {
             toast.error('Fehler beim Laden der Banken');
-        } else {
-            setBanks(data || []);
         }
         setLoading(false);
     };
@@ -155,16 +158,9 @@ const AdminBanks = () => {
         toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.');
     };
 
-    const handleToggleActive = async (bank) => {
-        const { error } = await supabase
-            .from('banks')
-            .update({ is_active: !bank.is_active })
-            .eq('id', bank.id);
-        if (error) {
-            toast.error('Fehler: ' + error.message);
-        } else {
-            await fetchBanks();
-        }
+    const handleToggleActive = async () => {
+        // Session 82.103c · Legacy Toggle-Mutation deaktiviert (kein FastAPI-Endpoint).
+        toast.info('Legacy-Mutation deaktiviert (Session 82.103c). Kein FastAPI-Toggle-Endpoint verfügbar.');
     };
 
     const filteredBanks = banks.filter(

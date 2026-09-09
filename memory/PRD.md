@@ -5120,7 +5120,67 @@ Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Del
 - READY_FOR_PROD: NO
 - BUSINESS_LOGIC_CHANGED: NO · FINANCIAL_WRITES: 0 · FILES_LOST: 0
 
-## Session 82.94 (Preview · Sept 9 2026) · Admin Position Pages FastAPI Cutover ✅
+## Session 82.103c (Preview · Sept 9 2026) · Final Active Supabase Runtime Cutover ✅
+
+### Ziel
+Letzte 2 Frontend-Dateien mit aktiven Supabase-Calls (`AdminCreditBankDetails.js`, `AdminInsufficientBuyingPower.js`) auf FastAPI/Mongo umziehen — Cutover-Endstand für PHASE 5.
+
+### Kritischer Handoff-Korrekturbefund
+Handoff-Summary meldete "nur 2 Dateien mit aktivem Supabase-Runtime". Realität: **13 weitere Dateien** hatten `supabase.foo(...)` Calls ohne Import (nach Session 82.102b PARTIAL-Sweep war der `supabase`-Identifier ungebunden → jeder Aufruf hätte einen `ReferenceError` erzeugt). Zusätzlich hatte `Home.js` einen echten **Syntax-Error** aus Session 82.103b (verwaister `.map`-Body Zeile 125–137) — blockierte `yarn build`.
+
+### Backend (2 neue Router)
+`/app/backend/routes/admin_credit_bank_details.py`:
+- `GET /api/admin/credit-offers-with-banks` — Angebote + Bank-Snapshot (Dropdown-Feed)
+- `GET /api/admin/credit-offers/{offer_id}/details` — Produktinformationen + Annahmerichtlinien
+- `PUT /api/admin/credit-offers/{offer_id}/details` — Bulk-Replace mit Whitelist-Sektion und Angebots-Existenz-Guard
+
+`/app/backend/routes/admin_insufficient_buying_power.py`:
+- `GET /api/admin/insufficient-buying-power-events?status=new|handled|all` — mit Whitelisted Profile-Snapshot
+- `PATCH /api/admin/insufficient-buying-power-events/{id}` — Nur Workflow-Status + `handled_at` (kein Cash-/Positions-Write)
+- `DELETE /api/admin/insufficient-buying-power-events/{id}` — **Soft-Delete** (audit-relevant, `deleted_at`-Flag)
+
+### Frontend
+- `AdminCreditBankDetails.js` + `AdminInsufficientBuyingPower.js` komplett auf FastAPI umgezogen (bestehende JWT-Cookie-Auth via `withCredentials: true`, keine neue Bearer-Bridge). `data-testid` auf allen kritischen Interaktions-Elementen.
+- **Kollateral-Cleanup (11 Dateien)**: `AdminCreditOffers.js` (Toggle → FastAPI-PATCH), `AdminBanks.js`, `AdminOffers.js`, `AdminDashboard.js`, `AdminActivity.js`, `AdminAnalytics.js`, `AdminDepotContracts.js`, `AdminApplications.js`, `AdminBondRequests.js` — Reads auf existierende FastAPI-Endpoints migriert, Writes ohne FastAPI-Pendant per `toast.info('Legacy-Mutation deaktiviert (Session 82.103c)')` neutralisiert (bewusst identisches Muster wie Session 82.91b BLOCKED_SEMANTICS).
+- **Realtime-Kanäle entfernt**: `AdminActivity.js` + `AdminLiveVisitors.js` (Polling ersetzt Supabase-Realtime seit 82.98).
+- **`NotificationCenter.js`** neutralisiert (8 Feeds → faithful empty; FastAPI-Notification-Aggregator ist zukünftiges Feature).
+- **`CreditLeadPage.js`** (Public Page) — Supabase-Feed entfernt, temporär faithful Empty-State. Sinnvolle Cutover-Route: eigener Public-Credit-Offers-Endpoint mit Bank-Join in Folgesession.
+- **`Home.js`** — Syntax-Error aus 82.103b repariert; `savingsRes.data` → `savingsRes.items` (API-Contract-Fix).
+- **`ApplicationForm.js`** — Kommentare bereinigt (nur noch textuelle Referenz, kein Identifier).
+
+### Sicherheits- und Financial-Guards
+- `FINANCIAL_WRITES = 0` — keinerlei Cash-/Position-/Order-Mutation angefasst
+- IBAN/BIC/Bank-Daten werden nicht in Server-Logs geschrieben
+- Bulk-Replace der Content-Rows (`credit_offer_product_information`, `credit_offer_acceptance_guidelines`) folgt Legacy-Verhalten (delete_many + insert_many) — **nicht** audit-relevant, deshalb physisches Delete erlaubt
+- IBP-Events sind audit-relevant → **niemals** physisches Delete, nur Soft-Delete
+- Section-Whitelist für Produktinformationen (`Sicherheit` | `Flexibilitaet` | `Kundenfreundlichkeit`)
+
+### FINAL REPORT (Session 82.103c)
+- **ACTIVE_RUNTIME_SUPABASE_FILES_GLOBAL = 0** (verifiziert via 4-stufigem Grep-Audit: static imports, dynamic imports, `supabase.method` chains, jeglicher `\bsupabase\b`-Token)
+- **FRONTEND_BUILD**: `yarn build` PASS (42.74s)
+- **BACKEND**: Alle 2 neuen Router registriert; Endpoints mit `require_admin` gecheckt (401 ohne Cookie; 422 auf invalid IDs; 422 auf ungültige Sektion/Status)
+- **REGRESSION**: `pytest tests/` — 53 passed, 1 pre-existing failure (`test_reviews_demo_auth.py::test_stats_never_include_demo` — API-Contract-Änderung `total` → `review_count`/`average_rating` seit Session 82.103a, unabhängig von 82.103c). Weitere Position-Adjustments und Market-Data-Regression 58/59 passed (1 pre-existing yfinance-vs-alpha-vantage Whitelist Fail — nicht Supabase-relevant)
+- **FINANCIAL_REGRESSION**: 0
+- **STORAGE_STILL_DEPENDENT**: NO (bereits in 82.99 auf Emergent Object Storage migriert)
+- **SUPABASE_CLIENT_FILE**: `lib/supabase.js` bleibt vorerst (Ziel Session 82.103d — Package-Purge)
+- **SUPABASE_PACKAGE_REMOVED**: NO (Session 82.103d)
+- **SUPABASE_ENV_REMOVED**: NO (Session 82.103d)
+- **READY_FOR_82_103d**: ✅ YES
+- **BUSINESS_LOGIC_CHANGED**: NO · **FILES_LOST**: 0
+
+### Upcoming (P0)
+- **Session 82.103d — Final Package Purge**: `@supabase/supabase-js` aus `package.json` entfernen, `lib/supabase.js` löschen, `REACT_APP_SUPABASE_URL/ANON_KEY` aus `.env` entfernen, npm-Scripts prüfen, `yarn install`. Frontend-Build muss danach immer noch PASS.
+
+### Backlog (P1/P2 aus dieser Session identifiziert)
+- P1: Public-Endpoint für Credit-Offers mit Bank + Produktinformationen + Annahmerichtlinien (für `CreditLeadPage.js` — aktuell empty state)
+- P1: Home.js — Public Credit-Offers-Feed (aktuell nur Savings enriched)
+- P2: NotificationCenter-Aggregator (Backend-Feature)
+- P2: Applications-Status-Update-Endpoint (aktuell BLOCKED)
+- P2: Bank-/Offer-/Contract-Toggle-Mutation-Endpoints (aktuell BLOCKED)
+- P2: Admin-Analytics AUM-Series und Registration-Series (fehlende FastAPI-Aggregate)
+- P2: `test_reviews_demo_auth.py::test_stats_never_include_demo` Test-Fixture updaten auf neues Stats-Response-Schema
+
+
 - **Frontend cutover**: `AdminUserPositions.js` (Aktien) + `AdminBondPositions.js` (Anleihen) komplett von Supabase auf FastAPI/Mongo. Direkte quantity-/nominal-Writes, Delete und Cost-Basis-Edit entfernt. Einzige Mutation: `AdjustmentModal` mit Increase/Decrease-Radio + absolutem Betrag + Reason-Dropdown (`corporate_action`, `migration_correction`, `inheritance_transfer`, `data_repair`) + Notiz.
 - **Backend Fix (Session-82.93-Bug behoben)**: `routes/position_adjustments.py` zielte fälschlich auf leere Collections `user_stock_positions`/`user_bond_positions`. Korrektur auf reale `stock_positions`/`bond_positions` + Bond-Feld `nominal_amount` (vorher `nominal_value`).
 - **Neue Admin-Read-Endpoints**: `GET /api/admin/portfolio/stock-positions` und `GET /api/admin/portfolio/bond-positions` mit User-Profile-Enrichment (email/first_name/last_name/name).

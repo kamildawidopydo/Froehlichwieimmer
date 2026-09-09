@@ -68,40 +68,44 @@ const AdminDashboard = () => {
   };
 
   const fetchPendingOrderCount = async () => {
-    const { count } = await supabase
-      .from('user_stock_orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'pending');
-    setPendingOrderCount(count || 0);
+    // Session 82.103c · FastAPI /api/admin/dashboard/summary liefert `orders.pending`.
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/dashboard/summary`, { withCredentials: true });
+      setPendingOrderCount(Number(data?.orders?.pending || 0));
+    } catch {
+      setPendingOrderCount(0);
+    }
   };
 
   const fetchBanks = async () => {
-    const { data } = await supabase
-      .from('banks')
-      .select('id, name, country')
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-    setBanks(data || []);
+    // Session 82.103c · FastAPI /api/admin/banks/list statt Supabase.
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/banks/list`, { withCredentials: true });
+      setBanks(data?.items || []);
+    } catch {
+      setBanks([]);
+    }
   };
 
   const fetchOffers = async () => {
-    const { data, error } = await supabase
-      .from('savings_offers')
-      .select('*, banks(id, name, country)')
-      .order('interest_rate', { ascending: false });
-    if (error) {
+    // Session 82.103c · FastAPI /api/admin/offers/list statt Supabase.
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/offers/list`, { withCredentials: true });
+      setOffers(data?.items || []);
+    } catch {
       toast.error('Fehler beim Laden der Angebote');
-    } else {
-      setOffers(data || []);
     }
   };
 
   const fetchPendingCount = async () => {
-    const { count } = await supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'pending');
-    setPendingUserCount(count || 0);
+    // Session 82.103c · Legacy Pending-Users-Count neutralisiert (kein FastAPI-Endpoint mit `status=pending`).
+    setPendingUserCount(0);
   };
 
   const openAddModal = () => {

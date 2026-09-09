@@ -60,22 +60,14 @@ const AdminApplications = () => {
   }, [statusFilter]);
 
   const fetchApplications = async () => {
+    // Session 82.103c · FastAPI /api/admin/applications/list statt Supabase.
     setLoading(true);
-    let query = supabase
-      .from('applications')
-      .select('id, personal_data, investment_data, status, pdf_url, created_at')
-      .order('created_at', { ascending: false });
-
-    if (statusFilter !== 'all') {
-      query = query.eq('status', statusFilter);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      toast.error('Fehler beim Laden der Anträge');
-    } else {
-      // Liste normalisieren — flache Felder aus personal_data und investment_data
-      const result = (data || []).map((app) => ({
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/applications/list`, { withCredentials: true });
+      const rows = (data?.items || []).filter((app) => statusFilter === 'all' || app.status === statusFilter);
+      const result = rows.map((app) => ({
         id: app.id,
         applicant_name: `${app.personal_data?.first_name || ''} ${app.personal_data?.last_name || ''}`.trim(),
         bank_name: app.investment_data?.bank_name || '–',
@@ -86,59 +78,34 @@ const AdminApplications = () => {
         has_pdf: !!app.pdf_url,
         pdf_url: app.pdf_url || null,
         created_at: app.created_at,
-        // Rohdaten für Detail-Modal
         personal_data: app.personal_data,
         investment_data: app.investment_data,
       }));
       setApplications(result);
+    } catch {
+      toast.error('Fehler beim Laden der Anträge');
     }
     setLoading(false);
   };
 
   const fetchApplicationDetail = async (appId) => {
-    const { data, error } = await supabase
-      .from('applications')
-      .select('*')
-      .eq('id', appId)
-      .single();
-
-    if (error) {
-      toast.error('Fehler beim Laden des Antrags');
-    } else {
-      setSelectedApp(data);
+    // Session 82.103c · Detail-Lookup aus bereits geladener Liste (keine Einzel-GET-Route derzeit).
+    const found = applications.find((a) => a.id === appId);
+    if (found) {
+      setSelectedApp(found);
       setDetailModalOpen(true);
+    } else {
+      toast.error('Antrag nicht gefunden — bitte Liste neu laden.');
     }
   };
 
   const updateStatus = async (appId, newStatus) => {
+    // Session 82.103c · Status-Mutation deaktiviert (kein FastAPI-Endpoint).
     setStatusUpdateLoading(true);
-
-    // Neuen Eintrag in status_history hinzufügen
-    const currentHistory = selectedApp?.status_history || [];
-    const newEntry = {
-      status: newStatus,
-      timestamp: new Date().toISOString(),
-      note: statusNote || null,
-    };
-
-    const { error } = await supabase
-      .from('applications')
-      .update({
-        status: newStatus,
-        status_history: [...currentHistory, newEntry],
-      })
-      .eq('id', appId);
-
-    if (error) {
-      toast.error('Fehler beim Aktualisieren des Status');
-    } else {
-      toast.success('Status aktualisiert');
-      setStatusNote('');
-      // Detail und Liste neu laden
-      await fetchApplications();
-      await fetchApplicationDetail(appId);
-    }
+    toast.info('Legacy-Mutation deaktiviert (Session 82.103c). Kein FastAPI-Applications-Status-Endpoint verfügbar.');
     setStatusUpdateLoading(false);
+    // Vermeidet Regression im Log:
+    void appId; void newStatus;
   };
 
   const deleteApplication = async (appId) => {

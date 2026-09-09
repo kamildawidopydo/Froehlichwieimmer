@@ -56,61 +56,10 @@ const NotificationCenter = ({ chrome = 'light' }) => {
     if (!user) return;
     setLoading(true);
     try {
+      // Session 82.103c · Supabase-Feeds neutralisiert. FastAPI-Notification-Aggregator noch nicht verfügbar → faithful empty state.
+      const emptyRes = { data: [], error: null };
       const [ordersRes, cashRes, contractsRes, bondsRes, bondReqRes, ipoReqRes, supportRes, alertsRes] =
-        await Promise.all([
-          supabase
-            .from('user_stock_orders')
-            .select('id, symbol, side, quantity, status, executed_at, created_at, rejection_reason, executed_price')
-            .eq('user_id', user.id)
-            .in('status', ['executed', 'rejected', 'cancelled'])
-            .order('executed_at', { ascending: false, nullsFirst: false })
-            .limit(15),
-          supabase
-            .from('user_cash_transactions')
-            .select('id, amount, type, description, created_at, created_by')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(10),
-          supabase
-            .from('user_depot_contracts')
-            .select('id, vertragsnummer, product_type, amount_eur, created_at, is_active')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(5),
-          supabase
-            .from('user_bond_positions')
-            .select('id, isin, issuer, bond_name, nominal_betrag, created_at, is_active')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(5),
-          supabase
-            .from('bond_purchase_requests')
-            .select('id, isin, bond_name, status, amount_eur, updated_at, decision_note')
-            .eq('user_id', user.id)
-            .in('status', ['approved', 'rejected'])
-            .order('updated_at', { ascending: false })
-            .limit(10),
-          supabase
-            .from('ipo_subscription_requests')
-            .select('id, company_name, ticker, status, amount_eur, created_at, approved_at, rejected_at, decision_note')
-            .eq('user_id', user.id)
-            .in('status', ['approved', 'rejected'])
-            .order('created_at', { ascending: false })
-            .limit(10),
-          supabase
-            .from('support_tickets')
-            .select('id, subject, unread_for_user, last_message_at, status')
-            .eq('user_id', user.id)
-            .order('last_message_at', { ascending: false, nullsFirst: false })
-            .limit(10),
-          supabase
-            .from('user_price_alerts')
-            .select('id, symbol, direction, target_price, triggered_at')
-            .eq('user_id', user.id)
-            .not('triggered_at', 'is', null)
-            .order('triggered_at', { ascending: false })
-            .limit(10),
-        ]);
+        [emptyRes, emptyRes, emptyRes, emptyRes, emptyRes, emptyRes, emptyRes, emptyRes];
 
       const aggregated = [];
       (ordersRes.data || []).forEach((o) => {

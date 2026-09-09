@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+// Session 82.103c — Supabase entfernt, ersetzt durch FastAPI (JWT-Cookie via withCredentials).
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -29,18 +29,15 @@ const AdminInsufficientBuyingPower = () => {
   const fetchEvents = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('insufficient_buying_power_events')
-        .select(
-          'id, user_id, symbol, stock_name, required_amount, available_amount, quantity, order_type, currency, status, created_at, profiles:user_id(email, first_name, last_name, phone)',
-        )
-        .order('created_at', { ascending: false });
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      setEvents(data || []);
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const params = {};
+      if (statusFilter) params.status = statusFilter;
+      const { data } = await _axios.get(
+        `${_api}/api/admin/insufficient-buying-power-events`,
+        { params, withCredentials: true },
+      );
+      setEvents(data?.items || []);
     } catch {
       toast.error('Fehler beim Laden der Kaufkraft-Warnungen.');
     } finally {
@@ -50,6 +47,7 @@ const AdminInsufficientBuyingPower = () => {
 
   useEffect(() => {
     fetchEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   const filteredEvents = useMemo(() => {
@@ -67,11 +65,13 @@ const AdminInsufficientBuyingPower = () => {
   const updateStatus = async (eventId, status) => {
     setUpdatingId(eventId);
     try {
-      const { error } = await supabase
-        .from('insufficient_buying_power_events')
-        .update({ status, handled_at: status === 'new' ? null : new Date().toISOString() })
-        .eq('id', eventId);
-      if (error) throw error;
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      await _axios.patch(
+        `${_api}/api/admin/insufficient-buying-power-events/${eventId}`,
+        { status },
+        { withCredentials: true },
+      );
       setEvents((prev) =>
         prev.map((event) => (event.id === eventId ? { ...event, status } : event)),
       );
@@ -84,19 +84,20 @@ const AdminInsufficientBuyingPower = () => {
   };
 
   const deleteEvent = async (eventId) => {
-    const confirmed = window.confirm('Diese Warnung wirklich dauerhaft löschen?');
+    const confirmed = window.confirm('Diese Warnung wirklich als erledigt archivieren?');
     if (!confirmed) return;
     setUpdatingId(eventId);
     try {
-      const { error } = await supabase
-        .from('insufficient_buying_power_events')
-        .delete()
-        .eq('id', eventId);
-      if (error) throw error;
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      await _axios.delete(
+        `${_api}/api/admin/insufficient-buying-power-events/${eventId}`,
+        { withCredentials: true },
+      );
       setEvents((prev) => prev.filter((event) => event.id !== eventId));
-      toast.success('Eintrag gelöscht.');
+      toast.success('Eintrag archiviert.');
     } catch {
-      toast.error('Eintrag konnte nicht gelöscht werden.');
+      toast.error('Eintrag konnte nicht archiviert werden.');
     } finally {
       setUpdatingId(null);
     }
@@ -132,7 +133,7 @@ const AdminInsufficientBuyingPower = () => {
         titleIcon={AlertTriangle}
         description="Kunden, die einen Kaufauftrag ohne ausreichende Kaufkraft eingereicht haben — für den Kundenservice."
         actions={
-          <Button variant="outline" onClick={fetchEvents} disabled={loading} className="rounded-xl">
+          <Button variant="outline" onClick={fetchEvents} disabled={loading} className="rounded-xl" data-testid="admin-ibp-refresh-btn">
             <RefreshCw size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
             Aktualisieren
           </Button>
@@ -147,6 +148,7 @@ const AdminInsufficientBuyingPower = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Kunde, E-Mail oder Symbol..."
             className="pl-9"
+            data-testid="admin-ibp-search-input"
           />
         </div>
 
@@ -156,6 +158,7 @@ const AdminInsufficientBuyingPower = () => {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="h-10 rounded-md border border-bank-border bg-white px-3 text-sm text-bank-text focus:outline-none focus:ring-2 focus:ring-bank-primary/40"
+            data-testid="admin-ibp-status-filter"
           >
             <option value="all">Alle Status</option>
             {STATUS_OPTIONS.map((opt) => (
@@ -189,7 +192,7 @@ const AdminInsufficientBuyingPower = () => {
                 </tr>
               ) : filteredEvents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-bank-text-muted">
+                  <td colSpan={6} className="px-4 py-12 text-center text-bank-text-muted" data-testid="admin-ibp-empty">
                     Keine Warnungen gefunden.
                   </td>
                 </tr>
@@ -261,8 +264,9 @@ const AdminInsufficientBuyingPower = () => {
                           onClick={() => deleteEvent(event.id)}
                           disabled={updatingId === event.id}
                           className="h-8 text-xs gap-1 border-bank-border text-bank-text-muted hover:bg-bank-muted"
+                          data-testid={`admin-ibp-delete-btn-${event.id}`}
                         >
-                          <Trash2 size={12} /> Löschen
+                          <Trash2 size={12} /> Archivieren
                         </Button>
                       </td>
                     </tr>

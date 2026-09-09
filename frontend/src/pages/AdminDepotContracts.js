@@ -103,42 +103,33 @@ const AdminDepotContracts = () => {
   }, []);
 
   const fetchBanks = async () => {
-    const { data, error } = await supabase
-      .from('banks')
-      .select('id, name, country, logo_url')
-      .order('name', { ascending: true });
-    if (error) {
-      toast.error('Fehler beim Laden der Banken: ' + error.message);
-      return;
+    // Session 82.103c · FastAPI /api/admin/banks/list statt Supabase.
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/banks/list`, { withCredentials: true });
+      setBanks(data?.items || []);
+    } catch (e) {
+      toast.error('Fehler beim Laden der Banken: ' + (e?.response?.data?.detail || e.message));
     }
-    setBanks(data || []);
   };
 
   const fetchUsers = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, email')
-      .neq('role', 'admin')
-      .order('first_name', { ascending: true });
-    if (error) {
-      toast.error('Fehler beim Laden der Benutzer: ' + error.message);
-      return;
-    }
-    setUsers(data || []);
+    // Session 82.103c · Legacy `profiles`-Read deaktiviert (kein Admin-User-List-Endpoint gebunden).
+    setUsers([]);
   };
 
   const fetchContracts = async () => {
+    // Session 82.103c · FastAPI /api/admin/depot-contracts/list statt Supabase.
     setLoading(true);
-    const { data, error } = await supabase
-      .from('user_depot_contracts')
-      .select('*, banks:bank_id(id, name, logo_url)')
-      .order('created_at', { ascending: false });
-    if (error) {
-      toast.error('Fehler beim Laden der Verträge: ' + error.message);
-      setLoading(false);
-      return;
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/depot-contracts/list`, { withCredentials: true });
+      setContracts(data?.items || []);
+    } catch (e) {
+      toast.error('Fehler beim Laden der Verträge: ' + (e?.response?.data?.detail || e.message));
     }
-    setContracts(data || []);
     setLoading(false);
   };
 
@@ -280,15 +271,9 @@ const AdminDepotContracts = () => {
       lock_until: form.lock_until || null,
     };
 
-    let error;
-    if (editingId) {
-      ({ error } = await supabase
-        .from('user_depot_contracts')
-        .update(payload)
-        .eq('id', editingId));
-    } else {
-      toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
-    }
+    // Session 82.103c · Alle Depot-Contract-Writes deaktiviert (kein FastAPI-Endpoint).
+    let error = { message: 'legacy_write_disabled_82_103c' };
+    toast.info('Legacy-Mutation deaktiviert (Session 82.103c). Kein FastAPI-Endpoint verfügbar.');
 
     setSaving(false);
 
@@ -306,16 +291,9 @@ const AdminDepotContracts = () => {
     toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.');
   };
 
-  const toggleActive = async (c) => {
-    const { error } = await supabase
-      .from('user_depot_contracts')
-      .update({ is_active: !c.is_active })
-      .eq('id', c.id);
-    if (error) {
-      toast.error('Fehler: ' + error.message);
-      return;
-    }
-    fetchContracts();
+  const toggleActive = async () => {
+    // Session 82.103c · Toggle-Mutation deaktiviert (kein FastAPI-Endpoint).
+    toast.info('Legacy-Mutation deaktiviert (Session 82.103c). Kein FastAPI-Toggle-Endpoint verfügbar.');
   };
 
   const filtered = useMemo(() => {

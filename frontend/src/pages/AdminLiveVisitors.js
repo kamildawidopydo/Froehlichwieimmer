@@ -196,39 +196,8 @@ function AdminLiveVisitors() {
 
     pollRef.current = setInterval(() => fetchOverview(true), POLL_MS);
 
-    const channel = supabase
-      .channel('admin-visitor-live')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'visitor_events' },
-        (payload) => {
-          const row = payload.new;
-          if (!row || row.event_type === 'heartbeat') return;
-          setNewEventCount((n) => n + 1);
-          setData((prev) => ({
-            ...prev,
-            recentEvents: [row, ...(prev.recentEvents || [])].slice(0, 100),
-          }));
-          if (row.event_type === 'page_view') scheduleRefetch();
-          if (row.event_type === 'conversion' && conversionAlertsEnabled) {
-            playConversionChime();
-            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-              const goal = row.event_payload?.goal || 'Conversion';
-              new Notification('Neue Conversion', { body: goal, tag: 'visitor-conversion' });
-            }
-          }
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'visitor_sessions' },
-        () => {
-          scheduleRefetch();
-        },
-      )
-      .subscribe();
-
-    channelRef.current = channel;
+    // Session 82.103c · Realtime-Kanal entfernt (Supabase realtime nicht mehr verwendet — Polling ersetzt).
+    channelRef.current = null;
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);

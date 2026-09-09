@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+// Session 82.103c — Supabase entfernt, ersetzt durch FastAPI (JWT-Cookie via withCredentials).
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -51,20 +51,21 @@ const AdminCreditBankDetails = () => {
 
   const fetchOffers = async () => {
     setLoadingOffers(true);
-    const { data, error } = await supabase
-      .from('credit_offers')
-      .select('id, purpose, is_active, banks(name, country)')
-      .order('sort_priority', { ascending: true })
-      .order('effective_rate_from', { ascending: true });
-
-    if (error) {
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(
+        `${_api}/api/admin/credit-offers-with-banks`,
+        { withCredentials: true },
+      );
+      const items = data?.items || [];
+      setOffers(items);
+      if (!selectedOfferId && items.length) {
+        setSelectedOfferId(items[0].id);
+      }
+    } catch {
       toast.error('Kredit-Angebote konnten nicht geladen werden.');
       setOffers([]);
-    } else {
-      setOffers(data || []);
-      if (!selectedOfferId && data?.length) {
-        setSelectedOfferId(data[0].id);
-      }
     }
     setLoadingOffers(false);
   };
@@ -77,25 +78,17 @@ const AdminCreditBankDetails = () => {
     }
     setLoadingDetails(true);
     try {
-      const [infoRes, guideRes] = await Promise.all([
-        supabase
-          .from('credit_offer_product_information')
-          .select('*')
-          .eq('credit_offer_id', offerId)
-          .order('section', { ascending: true })
-          .order('sort_order', { ascending: true }),
-        supabase
-          .from('credit_offer_acceptance_guidelines')
-          .select('*')
-          .eq('credit_offer_id', offerId)
-          .order('sort_order', { ascending: true }),
-      ]);
-
-      if (infoRes.error) throw infoRes.error;
-      if (guideRes.error) throw guideRes.error;
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(
+        `${_api}/api/admin/credit-offers/${offerId}/details`,
+        { withCredentials: true },
+      );
+      const info = data?.product_information || [];
+      const guide = data?.acceptance_guidelines || [];
 
       setProductRows(
-        (infoRes.data || []).map((row) => ({
+        info.map((row) => ({
           id: crypto.randomUUID(),
           section: row.section,
           item_label: row.item_label || '',
@@ -107,7 +100,7 @@ const AdminCreditBankDetails = () => {
       );
 
       setGuidelineRows(
-        (guideRes.data || []).map((row) => ({
+        guide.map((row) => ({
           id: crypto.randomUUID(),
           guideline_text: row.guideline_text || '',
           sort_order: row.sort_order ?? 0,
@@ -115,7 +108,8 @@ const AdminCreditBankDetails = () => {
         })),
       );
     } catch (error) {
-      toast.error(`Fehler beim Laden der Details: ${error.message}`);
+      const msg = error?.response?.data?.detail || error?.message || 'Unbekannter Fehler';
+      toast.error(`Fehler beim Laden der Details: ${msg}`);
     } finally {
       setLoadingDetails(false);
     }
@@ -138,10 +132,9 @@ const AdminCreditBankDetails = () => {
     try {
       const cleanedProductRows = productRows
         .map((row, idx) => ({
-          credit_offer_id: selectedOfferId,
           section: row.section,
           item_label: row.item_label.trim(),
-          item_description: row.item_description.trim() || null,
+          item_description: row.item_description?.trim() ? row.item_description.trim() : null,
           is_positive: !!row.is_positive,
           sort_order: Number.isFinite(Number(row.sort_order)) ? Number(row.sort_order) : idx,
         }))
@@ -149,43 +142,27 @@ const AdminCreditBankDetails = () => {
 
       const cleanedGuidelines = guidelineRows
         .map((row, idx) => ({
-          credit_offer_id: selectedOfferId,
           guideline_text: row.guideline_text.trim(),
           sort_order: Number.isFinite(Number(row.sort_order)) ? Number(row.sort_order) : idx,
         }))
         .filter((row) => row.guideline_text);
 
-      const deleteInfo = supabase
-        .from('credit_offer_product_information')
-        .delete()
-        .eq('credit_offer_id', selectedOfferId);
-      const deleteGuidelines = supabase
-        .from('credit_offer_acceptance_guidelines')
-        .delete()
-        .eq('credit_offer_id', selectedOfferId);
-
-      const [deleteInfoRes, deleteGuideRes] = await Promise.all([deleteInfo, deleteGuidelines]);
-      if (deleteInfoRes.error) throw deleteInfoRes.error;
-      if (deleteGuideRes.error) throw deleteGuideRes.error;
-
-      if (cleanedProductRows.length > 0) {
-        const { error } = await supabase
-          .from('credit_offer_product_information')
-          .insert(cleanedProductRows);
-        if (error) throw error;
-      }
-
-      if (cleanedGuidelines.length > 0) {
-        const { error } = await supabase
-          .from('credit_offer_acceptance_guidelines')
-          .insert(cleanedGuidelines);
-        if (error) throw error;
-      }
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      await _axios.put(
+        `${_api}/api/admin/credit-offers/${selectedOfferId}/details`,
+        {
+          product_information: cleanedProductRows,
+          acceptance_guidelines: cleanedGuidelines,
+        },
+        { withCredentials: true },
+      );
 
       toast.success('Bankdetails gespeichert.');
       await fetchDetails(selectedOfferId);
     } catch (error) {
-      toast.error(`Speichern fehlgeschlagen: ${error.message}`);
+      const msg = error?.response?.data?.detail || error?.message || 'Unbekannter Fehler';
+      toast.error(`Speichern fehlgeschlagen: ${msg}`);
     } finally {
       setSaving(false);
     }
@@ -199,7 +176,7 @@ const AdminCreditBankDetails = () => {
         titleIcon={ListChecks}
         description="Produktinformationen und Annahmerichtlinien pro Kredit-Angebot manuell pflegen."
         actions={
-          <Button variant="outline" onClick={fetchOffers} disabled={loadingOffers}>
+          <Button variant="outline" onClick={fetchOffers} disabled={loadingOffers} data-testid="admin-credit-bank-details-refresh-btn">
             <RefreshCw size={16} className={`mr-2 ${loadingOffers ? 'animate-spin' : ''}`} />
             Angebote neu laden
           </Button>
@@ -212,6 +189,7 @@ const AdminCreditBankDetails = () => {
           value={selectedOfferId}
           onChange={(e) => setSelectedOfferId(e.target.value)}
           className="h-10 w-full rounded-md border border-bank-border bg-white px-3 text-sm text-bank-text focus:outline-none focus:ring-2 focus:ring-bank-primary/40"
+          data-testid="admin-credit-bank-details-offer-select"
         >
           <option value="">Bitte waehlen...</option>
           {offers.map((offer) => (
@@ -238,6 +216,7 @@ const AdminCreditBankDetails = () => {
                 setProductRows((prev) => [...prev, { ...createInfoRow(), sort_order: prev.length }])
               }
               disabled={!selectedOfferId}
+              data-testid="admin-credit-bank-details-add-info-row-btn"
             >
               <Plus size={14} className="mr-1" />
               Zeile
@@ -341,6 +320,7 @@ const AdminCreditBankDetails = () => {
                 setGuidelineRows((prev) => [...prev, { ...createGuidelineRow(), sort_order: prev.length }])
               }
               disabled={!selectedOfferId}
+              data-testid="admin-credit-bank-details-add-guideline-row-btn"
             >
               <Plus size={14} className="mr-1" />
               Zeile
@@ -384,6 +364,7 @@ const AdminCreditBankDetails = () => {
           onClick={saveDetails}
           disabled={!selectedOfferId || saving}
           className="rounded-xl bg-bank-ink text-white hover:bg-bank-ink-elev"
+          data-testid="admin-credit-bank-details-save-btn"
         >
           <Save size={15} className="mr-2" />
           {saving ? 'Wird gespeichert...' : 'Bankdetails speichern'}

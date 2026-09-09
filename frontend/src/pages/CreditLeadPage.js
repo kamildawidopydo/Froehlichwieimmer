@@ -96,48 +96,12 @@ const CreditLeadPage = () => {
   };
 
   const fetchOffers = async () => {
+    // Session 82.103c · Supabase entfernt. Public-Credit-Offers-Endpoint (mit Bank + Product-Info + Guidelines) fehlt noch.
+    // Bis dahin faithful Empty-State — kein Fake-Feed.
     setLoading(true);
     try {
-      const [creditRes, savingsRes] = await Promise.all([
-        supabase
-          .from('credit_offers')
-          .select(`
-            *,
-            banks(id, name, country, logo_url),
-            credit_offer_product_information(*),
-            credit_offer_acceptance_guidelines(*)
-          `)
-          .eq('is_active', true),
-        supabase
-          .from('savings_offers')
-          .select('bank_id, interest_rate, banks(name)')
-          .eq('is_active', true),
-      ]);
-
-      if (creditRes.error) throw creditRes.error;
-      if (savingsRes.error) throw savingsRes.error;
-
-      const savingsByBank = new Map();
-      (savingsRes.data || []).forEach((item) => {
-        if (!item.bank_id) return;
-        const current = savingsByBank.get(item.bank_id);
-        const nextRate = Number(item.interest_rate || 0);
-        if (!current || nextRate > Number(current.interest_rate || 0)) {
-          savingsByBank.set(item.bank_id, item);
-        }
-      });
-
-      const ratings = {};
-      savingsByBank.forEach((item, bankId) => {
-        const syntheticOffer = {
-          bank_name: item.banks?.name || '',
-          interest_rate: Number(item.interest_rate || 0),
-        };
-        ratings[bankId] = getOfferRatingValue(syntheticOffer);
-      });
-
-      setRatingsByBankId(ratings);
-      setOffers(creditRes.data || []);
+      setOffers([]);
+      setRatingsByBankId({});
     } catch {
       toast.error('Kredit-Angebote konnten nicht geladen werden.');
     } finally {

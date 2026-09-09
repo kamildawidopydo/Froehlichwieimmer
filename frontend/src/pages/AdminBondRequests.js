@@ -53,7 +53,7 @@ const fetchJson = async (path, options = {}) => {
 
 const normalizeLegacy = (row) => ({
   id: row.id,
-  backend: 'supabase',
+  backend: 'legacy',
   bond_name: row.bond_name,
   isin: row.isin,
   kupon_rate: row.kupon_rate,
@@ -122,14 +122,10 @@ const AdminBondRequests = () => {
   const load = async () => {
     setLoading(true);
     // Mongo-native ist Pflicht; Legacy + Katalog best-effort.
+    // Session 82.103c · Legacy-Supabase-Fallback entfernt. Nur noch Mongo + Katalog.
     const results = await Promise.allSettled([
       fetchJson('/api/admin/bonds/requests'),
-      supabase
-        .from('bond_purchase_requests')
-        .select(
-          'id, user_id, isin, bond_name, kupon_rate, amount_eur, status, created_at, approved_at, rejected_at, decision_note, handled_at, profiles:user_id(email, first_name, last_name)',
-        )
-        .order('created_at', { ascending: false }),
+      Promise.resolve({ data: [], error: null }),  // legacy slot (kept for index-compat)
       fetchJson('/api/bonds/catalog'),
     ]);
     const mongo = results[0].status === 'fulfilled' ? results[0].value || [] : [];
