@@ -140,44 +140,38 @@ const DokumentHochladen = () => {
 
     setSubmitting(true);
     try {
-      const encoded = await Promise.all(
-        files.map(async (file) => ({
-          name: file.name,
-          type: file.type || 'application/octet-stream',
-          base64: await readFileAsBase64(file),
-        })),
+      // Session 82.101b · Multipart-Upload gegen FastAPI/Emergent-Object-Storage.
+      const form = new FormData();
+      form.append('code', code.trim());
+      form.append('used_by_name', name.trim());
+      if (message.trim()) form.append('message', message.trim());
+      form.append('user_agent', typeof navigator !== 'undefined' ? navigator.userAgent : '');
+      for (const f of files) form.append('files', f, f.name);
+
+      const { data: result } = await axios.post(
+        `${API}/api/document-uploads/submit`,
+        form,
+        { withCredentials: true, headers: { 'Content-Type': 'multipart/form-data' } },
       );
 
-      const response = await fetch('/api/submit-document-upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: code.trim(),
-          name: name.trim(),
-          message: message.trim() || null,
-          files: encoded,
-          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-        }),
-      });
-
-      const { data: result, raw } = await parseApiJsonResponse(response);
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error(
-            'Upload-API nicht gefunden. Lokal: npm run dev starten. Live: neueste Version deployen.',
-          );
-        }
-        throw new Error(apiErrorMessage(response, raw, result?.error || 'Upload fehlgeschlagen'));
+      if (!result?.submission_id) {
+        throw new Error('Upload fehlgeschlagen — keine Bestätigung erhalten');
       }
-
-      if (result.warning) {
-        toast.warning(result.warning);
-      } else {
-        toast.success('Dokumente erfolgreich übermittelt');
-      }
+      toast.success(`Dokumente erfolgreich übermittelt (${result.files_count} Datei${result.files_count === 1 ? '' : 'en'})`);
       setDone(true);
     } catch (err) {
-      toast.error(err.message || 'Upload fehlgeschlagen');
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      if (status === 401) {
+        toast.error('Sitzung abgelaufen. Bitte Zugangscode erneut eingeben.');
+        setStep(1);
+      } else if (status === 413) {
+        toast.error(detail || 'Datei zu groß');
+      } else if (status === 415) {
+        toast.error(detail || 'Dateityp nicht erlaubt');
+      } else {
+        toast.error(detail || err.message || 'Upload fehlgeschlagen');
+      }
     } finally {
       setSubmitting(false);
     }

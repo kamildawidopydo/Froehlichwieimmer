@@ -269,3 +269,158 @@ async def admin_download_doc(file_id: str, _admin: dict = Depends(require_admin)
         media_type=doc.get("content_type") or ct or "application/octet-stream",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ─── PUBLIC DOCUMENT SUBMIT (Session 82.101b) ────────────────────────────
+import hashlib as _hashlib
+
+DOC_PUBLIC_MAX_FILES = 10
+DOC_PUBLIC_MAX_FILE_BYTES = 10 * 1024 * 1024   # 10 MB/Datei
+DOC_PUBLIC_MAX_TOTAL_BYTES = 20 * 1024 * 1024  # 20 MB gesamt
+DOC_PUBLIC_ALLOWED_CT = {
+    "application/pdf",
+    "image/jpeg", "image/png", "image/webp",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+}
+
+
+@router.post("/document-uploads/submit")
+async def public_submit_document_upload(
+    code: str = Form(...),
+    used_by_name: str = Form(...),
+    message: Optional[str] = Form(default=None),
+    user_agent: Optional[str] = Form(default=None),
+    files: List[UploadFile] = File(...),
+):
+    """Öffentlicher, Access-Code-geschützter Multipart-Upload.
+
+    Vertrag:
+    - Access-Gate: Code muss existieren und `status=active` sein (siehe 82.96).
+    - Serverseitige MIME/Size-Validation, UUID-Object-Keys, Original-Filename
+      nur als Metadata, keine Path-Traversal möglich.
+    - Reihenfolge: Access → Validate → Storage-Put → Verify → Mongo-Insert.
+      Bei Storage-Put-Success + Mongo-Fail werden Storage-Objekte soft-deleted.
+    - Client darf weder user_id/Admin-Status/Storage-Key autoritativ setzen.
+    """
+    await _ensure_public_indexes()
+
+    # 1) Access-Check (Code + Status)
+    code_val = (code or "").strip().upper()
+    name = (used_by_name or "").strip()
+    if not name or len(name) < 2 or len(name) > 120:
+        raise HTTPException(status_code=422, detail="Name ungültig")
+    if not (4 <= len(code_val) <= 32):
+        raise HTTPException(status_code=422, detail="Code ungültig")
+    code_hash = _hashlib.sha256(code_val.encode()).hexdigest()
+    code_doc = await _db.formular_access_codes.find_one({"code_hash": code_hash})
+    if not code_doc or code_doc.get("status") != "active":
+        raise HTTPException(status_code=401, detail="Ungültiger oder bereits verwendeter Zugangscode")
+
+    # 2) Validation
+    if not files or len(files) == 0:
+        raise HTTPException(status_code=422, detail="Keine Datei übermittelt")
+    if len(files) > DOC_PUBLIC_MAX_FILES:
+        raise HTTPException(status_code=422, detail=f"Maximal {DOC_PUBLIC_MAX_FILES} Dateien erlaubt")
+
+    payloads: List[Dict[str, Any]] = []
+    total_bytes = 0
+    for f in files:
+        ct = (f.content_type or "").lower()
+        if ct not in DOC_PUBLIC_ALLOWED_CT:
+            raise HTTPException(status_code=415, detail=f"MIME nicht erlaubt: {ct or 'unknown'}")
+        data = await f.read()
+        if len(data) == 0:
+            raise HTTPException(status_code=422, detail=f"Leere Datei: {f.filename}")
+        if len(data) > DOC_PUBLIC_MAX_FILE_BYTES:
+            raise HTTPException(status_code=413, detail=f"Datei zu groß ({f.filename}, max 10 MB)")
+        total_bytes += len(data)
+        if total_bytes > DOC_PUBLIC_MAX_TOTAL_BYTES:
+            raise HTTPException(status_code=413, detail="Gesamtgröße überschreitet 20 MB")
+        payloads.append({"data": data, "ct": ct, "orig_name": _sanitize_filename(f.filename or "upload")})
+
+    # 3) Storage-Puts (server-authoritative Keys)
+    now = datetime.now(timezone.utc)
+    stored: List[Dict[str, Any]] = []
+    try:
+        for p in payloads:
+            ext = _ext_from_content_type(p["ct"])
+            path = f"{APP_PREFIX}/document-uploads/{str(code_doc['_id'])}/{uuid.uuid4().hex}.{ext}"
+            result = put_object(path, p["data"], p["ct"])
+            file_id = uuid.uuid4().hex
+            await _db.storage_files.insert_one({
+                "_id": file_id,
+                "scope": "document_upload",
+                "subject_id": str(code_doc["_id"]),
+                "storage_path": result["path"],
+                "content_type": p["ct"],
+                "size": int(result.get("size") or len(p["data"])),
+                "original_filename": p["orig_name"],
+                "is_deleted": False,
+                "uploaded_by": None,
+                "created_at": now,
+            })
+            stored.append({
+                "file_id": file_id,
+                "path": result["path"],
+                "original_filename": p["orig_name"],
+                "size": int(result.get("size") or len(p["data"])),
+                "content_type": p["ct"],
+            })
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Orphan-Cleanup: alle bereits gespeicherten Storage-Objekte soft-löschen
+        if stored:
+            await _db.storage_files.update_many(
+                {"_id": {"$in": [s["file_id"] for s in stored]}},
+                {"$set": {"is_deleted": True, "deleted_at": datetime.now(timezone.utc)}},
+            )
+        raise HTTPException(status_code=502, detail=f"Storage-Upload fehlgeschlagen: {e}")
+
+    # 4) Submission-Doc anlegen
+    try:
+        sub_id = ObjectId()
+        await _db.document_upload_submissions.insert_one({
+            "_id": sub_id,
+            "code_id": code_doc["_id"],
+            "used_by_name": name,
+            "message": (message or "").strip()[:2000] or None,
+            "files": stored,
+            "user_agent": (user_agent or "")[:500] or None,
+            "status": "new",
+            "admin_email_sent": False,
+            "admin_email_error": None,
+            "created_at": now,
+        })
+    except Exception as e:
+        # Mongo-Fail → orphaned storage rollback
+        await _db.storage_files.update_many(
+            {"_id": {"$in": [s["file_id"] for s in stored]}},
+            {"$set": {"is_deleted": True, "deleted_at": datetime.now(timezone.utc)}},
+        )
+        raise HTTPException(status_code=500, detail=f"Persistenz fehlgeschlagen: {e}")
+
+    # 5) Code-Nutzung tracken (Legacy: Doc-Upload = einmalig verwendet)
+    await _db.formular_access_codes.update_one(
+        {"_id": code_doc["_id"]},
+        {"$set": {"last_used_at": now, "updated_at": now}, "$inc": {"use_count": 1}},
+    )
+    await _db.formular_access_logs.insert_one({
+        "code_id": code_doc["_id"],
+        "used_by_name": name,
+        "used_at": now,
+        "user_agent": (user_agent or "")[:500] or None,
+        "session_id": f"doc-upload-{sub_id}",
+    })
+
+    return {"submission_id": str(sub_id), "files_count": len(stored)}
+
+
+async def _ensure_public_indexes() -> None:
+    try:
+        await _db.document_upload_submissions.create_index([("created_at", -1)], name="created_desc")
+        await _db.document_upload_submissions.create_index([("status", 1), ("created_at", -1)], name="status_created")
+        await _db.storage_files.create_index([("scope", 1), ("created_at", -1)], name="scope_created")
+    except Exception:
+        pass

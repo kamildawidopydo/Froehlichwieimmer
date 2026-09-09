@@ -4825,6 +4825,32 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.101b (Preview · Sept 9 2026) · Public Document Upload Portal ✅
+- **Frontend cutover 0 Supabase**: `DokumentHochladen.js` handleSubmit auf `multipart/form-data` gegen neuen FastAPI-Endpoint umgestellt · base64-JSON-Path entfernt · Session-Expired-Handling (401 → zurück zu Step 1).
+- **Neuer Public-Endpoint** `POST /api/document-uploads/submit` in `routes/storage_files.py`:
+  - **Access-Gate**: Code-Hash-Lookup gegen `formular_access_codes` mit `status=active` (SHA-256 aus 82.96); generisches 401 → **kein User-Enumeration-Leak**.
+  - **Validation**: server-authoritative MIME-Allowlist (PDF/JPEG/PNG/WEBP/DOCX/DOC), max 10 Dateien à 10 MB, gesamt 20 MB, MIN-2-Chars Name, MAX-2000-Chars Notiz — Pydantic-Body via `Form(...)`.
+  - **Storage-First-Order**: Access → Validate → Storage-Put → Verify → Mongo-Insert. Bei Mongo-Fail nach erfolgreichem Storage-Put werden **alle Objekte soft-deleted** (Orphan-Cleanup).
+  - **Server-authoritative Keys**: `froehlich/document-uploads/<code_id>/<uuid>.<ext>` → keine Path-Traversal möglich, Original-Filename nur als Metadata.
+  - **Usage-Tracking**: `formular_access_codes.use_count += 1` + `formular_access_logs`-Eintrag mit `session_id=doc-upload-<sub_id>`.
+- **Admin-Kompatibilität**: Neue Submissions erscheinen unmittelbar in `AdminDocumentUploads.jsx` (82.99-Route `GET /api/admin/document-uploads/submissions`). Download-Proxy `GET /api/admin/document-uploads/files/{file_id}/download` liefert Bytes mit korrektem Content-Type + Filename-Disposition.
+- **Security-Matrix (9/9) grün**: no-code=401 · valid-PDF+PNG=200 (submission_id + files_count) · EXE=415 · 12 MB=413 · Path-Traversal-Filename=safe (`_sanitize_filename` regex) · revoked-code=401 · Admin sieht Submission mit `files_count=2` · Admin-Download=200 mit realen Bytes · 0 Storage-Secrets im Frontend.
+- **Regression**: Coupon 16/16 + Market-Data 47/47 pytest grün · Frontend-Build grün.
+
+### FINAL REPORT (Session 82.101b)
+- FILES_CHANGED: 2 (`backend/routes/storage_files.py`, `frontend/src/pages/DokumentHochladen.js`)
+- PUBLIC_UPLOAD_ENDPOINT: `POST /api/document-uploads/submit` (multipart)
+- ACCESS_GATE: 82.96 Formular-Access-Codes (SHA-256-Hash + `status=active`)
+- STORAGE_PROVIDER: Emergent Object Storage (82.99)
+- DOCUMENT_UPLOAD_SUPABASE_BEFORE: 1 · **DOCUMENT_UPLOAD_SUPABASE_AFTER: 0**
+- ADMIN_VISIBILITY_TEST: PASS · ADMIN_DOWNLOAD_TEST: PASS
+- SECURITY_MATRIX: 9/9 grün
+- **FILES_LOST=0 · FAKE_UPLOADS=0 · SUPABASE_STORAGE_READS=0 · SUPABASE_STORAGE_WRITES=0 · STORAGE_SECRETS_IN_FRONTEND=0 · FINANCIAL_WRITES=0**
+- ACTIVE_RUNTIME_SUPABASE_REFS_GLOBAL: **0** (nach 82.101b vollständig)
+- IMPORT_ONLY_SUPABASE_REFS_GLOBAL: ~11 Dateien · CONFIG_REFS_GLOBAL: 4 (2 Frontend, 2 Backend `.env`)
+- FRONTEND_BUILD: PASS
+- READY_FOR_82.102: **YES** · READY_FOR_82.103_FINAL_PURGE: **YES** · READY_FOR_PROD: NO
+
 ## Session 82.101 (Preview · Sept 9 2026) · Customer Rest Cutover ✅
   - `NotificationCenter.js`: Supabase-Import (Import-Only, keine Runtime-Calls) entfernt.
   - `ApplicationForm.js`: `.from('applications').insert().select().single()` **BLOCKED_SAFE_BACKEND_MISSING** (UI zeigt Info-Toast + `SubmitError`) — verhindert Legacy-Persistenz ohne sicheren FastAPI-Ersatz. Auch `supabase.functions.invoke('send-application-email')` entfernt.
