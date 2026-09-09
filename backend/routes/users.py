@@ -1,9 +1,8 @@
-"""Session 81.05 — Onboarding-Persistierung von Supabase-Legacy auf FastAPI/Mongo migriert.
+"""Session 81.05 — Onboarding-Persistierung von Legacy-Backend auf FastAPI/Mongo migriert.
 
-Root Cause: `OnboardingWizard.js` schrieb via `supabase.from('profiles').update(...).eq('id', user.id)`,
-aber `user.id` = FastAPI-Mongo-ObjectId ≠ Supabase-auth.uid() (UUID). Bei FastAPI-registrierten
-Kunden matched das Update 0 Rows bzw. RLS blockiert → generischer Toast „Onboarding konnte nicht
-gespeichert werden".
+Root Cause: Legacy-Frontend schrieb Profile-Update über eine externe Auth-User-ID (UUID),
+aber `user.id` = FastAPI-Mongo-ObjectId. Bei FastAPI-registrierten Kunden matched das Update
+0 Rows bzw. RLS blockiert → generischer Toast „Onboarding konnte nicht gespeichert werden".
 
 Fix: Zwei authentifizierte Endpoints (`GET/PATCH /api/users/onboarding`) speichern und lesen die
 Onboarding-Felder direkt im bestehenden Mongo-`users`-Document. `user_id` **ausschließlich**

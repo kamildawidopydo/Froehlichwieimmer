@@ -175,8 +175,8 @@ async def list_related(
     exclude_slug: Optional[str] = Query(default=None),
     limit: int = Query(default=3, ge=1, le=20),
 ) -> Dict[str, Any]:
-    """Verwandte Artikel derselben Kategorie. Ersetzt
-    `supabase.from('news_articles').select().eq('category').limit()`.
+    """Verwandte Artikel derselben Kategorie. Ersetzt einen Legacy-Read auf
+    `news_articles` mit Kategorie- und Limit-Filter.
     """
     if not category:
         return {"items": []}

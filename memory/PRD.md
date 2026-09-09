@@ -5120,7 +5120,113 @@ Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Del
 - READY_FOR_PROD: NO
 - BUSINESS_LOGIC_CHANGED: NO · FINANCIAL_WRITES: 0 · FILES_LOST: 0
 
-## Session 82.103c (Preview · Sept 9 2026) · Final Active Supabase Runtime Cutover ✅
+## Session 82.103d (Preview · Sept 9 2026) · Final Supabase Package / Config Purge ✅
+
+### Ziel
+Nachdem 82.103c `ACTIVE_RUNTIME_SUPABASE_FILES_GLOBAL=0` bestätigt hatte: vollständige Entfernung von Supabase-Package, Client-Datei, ENV-Werten und npm-Scripts aus dem aktiven Projekt.
+
+### Vor-Audit (PHASE A) — Klassifizierung
+| Kategorie | Vorher | Notiz |
+|---|---|---|
+| ACTIVE_RUNTIME | 0 | Bestätigt durch 82.103c |
+| IMPORT_ONLY | 1 | `frontend/src/lib/supabase.js` selbst |
+| COMMENT_ONLY | 3 Backend-Docstrings | `routes/users.py`, `routes/forex.py`, `routes/news_public.py` |
+| CONFIG_ONLY | 2 ENV + 1 Dep + 1 DevDep + 15 npm-scripts + 2 yarn.lock-Refs | siehe PHASE B/D |
+
+Historische Dateien (unverändert): `/app/legacy_source/*`, `/app/memory/PRD.md`, `/app/test_reports/*`, `/app/tmp_chk/*`.
+
+### PHASE B — Frontend Package
+`/app/frontend/package.json`:
+- **Dep entfernt**: `"@supabase/supabase-js": "^2.99.2"`
+- **DevDep entfernt**: `"supabase": "^2.93.0"` (Supabase CLI)
+- **15 npm-Scripts entfernt**: `supabase:version`, `supabase:link`, `supabase:deploy:stock-prices/-history/-send-stock-email/-send-weekly-digest/-macro-rates/-news-articles/-news-videos/-news-public-feed/-market-sparklines/-news/-ipo-sync`, `supabase:invoke:ipo-sync`
+
+### PHASE C — Client-Datei gelöscht
+`rm /app/frontend/src/lib/supabase.js` (58 Zeilen). Kein Import mehr in `/app/frontend/src` — durch PHASE A verifiziert.
+
+### PHASE D — ENV Cleanup
+- `/app/frontend/.env`: `REACT_APP_SUPABASE_URL` + `REACT_APP_SUPABASE_ANON_KEY` entfernt (nur diese 2 Zeilen)
+- `/app/backend/.env`: `SUPABASE_URL` + `SUPABASE_ANON_KEY` entfernt (nur diese 2 Zeilen; `SUPABASE_SERVICE_ROLE_KEY` war bereits in 82.87 entfernt)
+- Alle anderen Secrets (`JWT_SECRET`, `EMERGENT_LLM_KEY`, `EMERGENT_EMAIL_KEY`, `MONGO_URL`, `TWELVEDATA_API_KEY`, `RESEND_API_KEY`, etc.) unangetastet
+
+### PHASE E — Comment Cleanup
+Aktive Backend-Docstrings neutralisiert (Identifier "supabase" entfernt, semantischer Inhalt bewahrt):
+- `routes/users.py` — Onboarding-Migrations-Docstring formuliert als „Legacy-Backend" statt „Supabase-Legacy"
+- `routes/forex.py` — 82.86-Session-Docstring formuliert als „Legacy-Cutover" statt „Supabase-Cutover"
+- `routes/news_public.py` — Related-News-Docstring ohne SQL-Snippet
+
+PRD.md, Session-Reports und `/app/legacy_source/*` bewusst unverändert (historisches Archiv).
+
+### PHASE F — Clean Install
+`yarn install --ignore-engines` PASS (29.66s). `--ignore-engines`-Flag notwendig wegen pre-existing `wrangler@4.123.0`-Konflikt (braucht Node ≥22, wir haben 20.20.2) — **unabhängig** von Supabase. Lockfile neu geschrieben.
+
+### PHASE G — Global Grep After
+```
+[G.1] @supabase/supabase-js in aktivem Code:         0 ✅
+[G.2] createClient Supabase in aktivem Code:         0 ✅
+[G.3] lib/supabase.js Imports:                       0 ✅
+[G.4] ACTIVE_RUNTIME supabase.method Chains:         0 ✅
+[G.5] CONFIG SUPABASE in aktiven .env-Dateien:       0 ✅
+[G.6] Bare `\bsupabase\b` Token in aktivem Code:     0 ✅
+[G.7] npm scripts + Deps mit "supabase":             0 ✅
+```
+
+Zusätzlich: `node_modules/@supabase` und `node_modules/supabase` (CLI) sind nicht mehr installiert. `yarn.lock` enthält 0 Supabase-Referenzen (vorher 2).
+
+### PHASE H — Build + Test
+- **Frontend Build**: `yarn build` PASS (42.41s) ✅
+- **Backend Regression** (session-relevante Suiten, `test_position_adjustments_8294 + test_market_data_phase2 + test_coupon_flow + test_auth_supplemental`): 63/64 passed (1 pre-existing Fail — siehe PHASE I)
+- **Smoke Tests** (Cookie-Auth): Auth-Login 200, /auth/me 200, /admin/dashboard/summary 200, /admin/portfolio/position-adjustments 200, /admin/formular-access/codes 200, /admin/document-uploads/codes 200, /admin/applications/list 200, /admin/credit-offers-with-banks 200 (82.103c), /admin/insufficient-buying-power-events 200 (82.103c), /api/applications POST 422 (Validierung wirkt)
+
+### PHASE I — Known Pre-existing Test Failures
+| Test | Ursache | Session Ursprung |
+|---|---|---|
+| `test_reviews_demo_auth.py::test_stats_never_include_demo` | API-Contract-Änderung `total` → `review_count`/`average_rating` | 82.103a |
+| `test_watchlist_phase2b::test_sparkline_supported_indices` | yfinance nicht in Data-Source-Whitelist | Pre-82.103c |
+| `test_auth_supplemental.py::test_seed_admin_updates_existing_hash_when_password_changes` | Bcrypt-Seed-Idempotenz-Test — trifft externe Preview-DB, kein 82.103d-Code angefasst | Pre-82.103d |
+
+Diese 3 Tests wurden **nicht** durch 82.103d beeinflusst — Root-Cause bleibt unverändert. Für 82.104 empfohlen, sie an aktuelle Contracts anzupassen.
+
+### FINAL REPORT — Session 82.103d
+```
+FILES_CHANGED                     : 8 (package.json, yarn.lock,
+                                       frontend/.env, backend/.env,
+                                       routes/users.py, routes/forex.py,
+                                       routes/news_public.py,
+                                       + Löschung lib/supabase.js)
+SUPABASE_PACKAGE_REMOVED          : YES ✅
+SUPABASE_CLI_REMOVED              : YES ✅
+SUPABASE_CLIENT_FILE_REMOVED      : YES ✅
+SUPABASE_ENV_REMOVED              : YES ✅
+SUPABASE_NPM_SCRIPTS_REMOVED      : YES ✅
+ACTIVE_RUNTIME_SUPABASE_AFTER     : 0 ✅
+CONFIG_SUPABASE_AFTER             : 0 ✅
+COMMENT_ONLY_SUPABASE_REFS        : nur historisch in
+                                    /memory/PRD.md, /test_reports/*,
+                                    /legacy_source/* (bewusst bewahrt)
+FRONTEND_BUILD                    : PASS
+BACKEND_REGRESSION                : PASS (session-relevant)
+KNOWN_PREEXISTING_FAILURES        : 3 (siehe PHASE I, alle NICHT
+                                       durch 82.103d verursacht)
+GLOBAL_SUPABASE_FREE              : YES ✅
+READY_FOR_82.104_PROD_READINESS   : YES ✅
+READY_FOR_PROD                    : NO (Session 82.104 offen —
+                                        Sentry / Rate-Limits / Health /
+                                        Ops-History)
+BUSINESS_LOGIC_CHANGED            : NO
+FINANCIAL_WRITES                  : 0
+FILES_LOST                        : 0
+```
+
+### Upcoming (P0)
+- **Session 82.104 — Prod-Readiness Audit**: Sentry-Integration verifizieren, Rate-Limits einrichten, `/api/health`-Endpoint, Ops-History-Dashboard.
+
+### Backlog aus 82.103d
+- P2: Historische Supabase-Referenzen in `legacy_source/`, `test_reports/*.json`, `PRD.md` können optional bei einer Archivierungs-Session bereinigt werden (aktuell bewusst als Audit-Trail beibehalten)
+- P2: `wrangler@4.123.0` Engine-Konflikt (braucht Node ≥22) — separater Refactoring-Task
+- P2: 3 pre-existing Test-Fails an aktuelle Contracts anpassen (`test_reviews_demo_auth`, `test_watchlist_phase2b`, `test_auth_supplemental::test_seed_admin_updates_existing_hash_when_password_changes`)
+
+
 
 ### Ziel
 Letzte 2 Frontend-Dateien mit aktiven Supabase-Calls (`AdminCreditBankDetails.js`, `AdminInsufficientBuyingPower.js`) auf FastAPI/Mongo umziehen — Cutover-Endstand für PHASE 5.

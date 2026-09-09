@@ -38,7 +38,6 @@
     "@radix-ui/react-toggle-group": "^1.1.7",
     "@radix-ui/react-tooltip": "^1.2.4",
     "@sentry/react": "^10.49.0",
-    "@supabase/supabase-js": "^2.99.2",
     "@visx/axis": "^4.0.0",
     "@visx/curve": "^4.0.0",
     "@visx/event": "^4.0.0",
@@ -112,21 +111,7 @@
     "pdf:bbva:bedingungen:flex": "node \"PDFS scripts/node/assemble-bbva-flexgeld-bedingungen-html.mjs\" && node \"PDFS scripts/node/generate-bbva-flexgeld-bedingungen-pdf.mjs\"",
     "pdf:bunq:kapital": "node \"PDFS scripts/node/assemble-bunq-kapitalanlagenvertrag-html.mjs\" && node \"PDFS scripts/node/generate-bunq-kapitalanlagenvertrag-pdf.mjs\"",
     "pdf:bunq:kapital:form": "node \"PDFS scripts/node/assemble-bunq-kapitalanlagenvertrag-html.mjs\" && node \"PDFS scripts/node/generate-contract-pdf.mjs\" \"PDFS scripts/Bunq_Kapitalanlagenvertrag_Final.html\" \"PDFS/Bunq_Kapitalanlagenvertrag_Form.pdf\" \"none\"",
-    "pdf:bunq:pi:flex": "node \"PDFS scripts/node/assemble-bunq-produktinfo-flexgeld-html.mjs\" && node \"PDFS scripts/node/generate-bunq-produktinfo-flexgeld-pdf.mjs\"",
-    "supabase:version": "supabase --version",
-    "supabase:link": "supabase link",
-    "supabase:deploy:stock-prices": "supabase functions deploy stock-prices --no-verify-jwt",
-    "supabase:deploy:stock-history": "supabase functions deploy stock-history --no-verify-jwt",
-    "supabase:deploy:send-stock-email": "supabase functions deploy send-stock-email --no-verify-jwt",
-    "supabase:deploy:send-weekly-digest": "supabase functions deploy send-weekly-digest --no-verify-jwt",
-    "supabase:deploy:macro-rates": "supabase functions deploy macro-rates --no-verify-jwt",
-    "supabase:deploy:news-articles": "supabase functions deploy news-sync-articles --no-verify-jwt",
-    "supabase:deploy:news-videos": "supabase functions deploy news-sync-videos --no-verify-jwt",
-    "supabase:deploy:news-public-feed": "supabase functions deploy news-public-feed --no-verify-jwt",
-    "supabase:deploy:market-sparklines": "supabase functions deploy market-sparklines --no-verify-jwt",
-    "supabase:deploy:news": "npm run supabase:deploy:news-articles && npm run supabase:deploy:news-videos && npm run supabase:deploy:news-public-feed && npm run supabase:deploy:market-sparklines",
-    "supabase:deploy:ipo-sync": "supabase functions deploy ipo-sync --no-verify-jwt",
-    "supabase:invoke:ipo-sync": "node scripts/invoke-ipo-sync.mjs"
+    "pdf:bunq:pi:flex": "node \"PDFS scripts/node/assemble-bunq-produktinfo-flexgeld-html.mjs\" && node \"PDFS scripts/node/generate-bunq-produktinfo-flexgeld-pdf.mjs\""
   },
   "jest": {
     "moduleNameMapper": {
@@ -164,7 +149,6 @@
     "postcss": "^8.4.49",
     "react-scripts": "5.0.1",
     "sharp": "^0.34.1",
-    "supabase": "^2.93.0",
     "tailwindcss": "^3.4.17",
     "to-ico": "^1.1.5",
     "wrangler": "^4.113.0"

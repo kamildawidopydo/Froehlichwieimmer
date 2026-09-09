@@ -1,7 +1,7 @@
-"""Session 82.86 — Forex Public Router (Supabase-Cutover).
+"""Session 82.86 — Forex Public Router (Legacy-Cutover).
 
-Ersetzt den letzten Supabase-Touch in `frontend/src/services/forexService.js`
-(`supabase.functions.invoke('stock-prices', { symbols: [EURUSD=X,...] })`)
+Ersetzt den letzten Legacy-Backend-Touch in `frontend/src/services/forexService.js`
+(Legacy Serverless-Funktion `stock-prices` mit FX-Symbolen)
 durch einen nativen FastAPI-Endpoint auf Basis des bestehenden
 `providers/fx_yfinance.get_fx_rate()`.
 
