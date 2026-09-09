@@ -478,28 +478,35 @@ const AdminDashboard = () => {
                       </td>
                     </tr>
                   ) : (
-                    offers.map((offer) => (
+                    offers.map((offer) => {
+                      const bankMeta = offer.banks || {};
+                      const bankName = bankMeta.name || offer.bank_slug || '–';
+                      const country = bankMeta.country || offer.country || '–';
+                      const rate = offer.interest_rate ?? offer.rate ?? 0;
+                      const term = offer.deposit_term ?? offer.duration_months ?? offer.term_months ?? '–';
+                      const minDeposit = offer.min_deposit ?? offer.min_amount ?? 0;
+                      return (
                       <tr
                         key={offer.id}
                         className="border-b border-bank-border last:border-b-0 transition-colors hover:bg-bank-bg/45"
                         data-testid={`offer-row-${offer.id}`}
                       >
                         <td className="px-4 py-3 text-[13.5px] font-medium text-bank-text">
-                          {offer.banks?.name || '–'}
+                          {bankName}
                         </td>
                         <td className="px-4 py-3 font-mono text-[11.5px] uppercase tracking-[0.14em] text-bank-text-muted">
-                          {offer.banks?.country || '–'}
+                          {country}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <span className="rate-figure text-[14px] tabular-nums text-bank-gold">
-                            {offer.interest_rate}%
+                            {Number(rate).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right font-mono text-[12.5px] tabular-nums text-bank-text-muted">
-                          {offer.deposit_term} M
+                          {term === '–' ? '–' : `${term} M`}
                         </td>
                         <td className="px-4 py-3 text-right font-mono text-[12.5px] tabular-nums text-bank-text-muted">
-                          €{offer.min_deposit.toLocaleString('de-DE')}
+                          €{Number(minDeposit).toLocaleString('de-DE')}
                         </td>
                         <td className="px-4 py-3">
                           <span
@@ -536,7 +543,7 @@ const AdminDashboard = () => {
                           </div>
                         </td>
                       </tr>
-                    ))
+                    );})
                   )}
                 </tbody>
               </table>
