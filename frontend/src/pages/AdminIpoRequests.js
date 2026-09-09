@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import {
   AdminSubpageLayout,
@@ -178,15 +177,12 @@ const AdminIpoRequests = () => {
     setLoading(true);
     try {
       const [reqRes, ipoRes, profRes, ratesRes, mongoRes] = await Promise.all([
-        supabase.from('ipo_subscription_requests').select(IPO_SELECT).order('created_at', { ascending: false }),
-        supabase
-          .from('ipo_catalog')
-          .select('id, company_name, ticker_proposed, price_currency, price_range_low, price_range_high')
-          .order('company_name'),
-        supabase.from('profiles').select('id, email, first_name, last_name').order('first_name'),
+        ({ then: (cb) => fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: Array.isArray(d)?d:[], error: null })) }),
+        // Session 82.90d — ipo_catalog jetzt via FastAPI-Endpoint
+        ({ then: (cb) => fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/ipo/catalog`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: (Array.isArray(d)?d:(d?.items||[])).map(x=>({id:x.id,company_name:x.company_name,ticker_proposed:x.ticker_proposed,price_currency:x.price_currency,price_range_low:x.price_range_low,price_range_high:x.price_range_high})), error: null })).catch(() => cb({ data: [], error: null })) }),
+        ({ then: (cb) => fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/users`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: (Array.isArray(d)?d:(d?.items||[])).map(u=>({id:u.id,email:u.email,first_name:u.first_name,last_name:u.last_name})), error: null })) }),
         fetchEurBasedRates().catch(() => ({ EUR: 1 })),
         // Session 82.03 (Schritt 5) — Mongo-native Customer-Requests parallel laden.
-        // Fällt bei Fehler nicht die ganze Seite, sondern nur die Mongo-Sektion.
         fetch('/api/admin/ipo/requests', { credentials: 'include' })
           .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
           .catch(() => null),
@@ -195,13 +191,9 @@ const AdminIpoRequests = () => {
 
       const legacyItems = [];
       if (reqRes.error) {
-        if (reqRes.error.code === '42P01' || reqRes.error.message?.toLowerCase().includes('relation')) {
-          setTableMissing(true);
-        } else {
-          toast.error('Fehler: ' + reqRes.error.message);
-        }
+        toast.error('Fehler: ' + reqRes.error.message);
       } else {
-        (reqRes.data || []).forEach((r) => legacyItems.push({ ...r, source: 'supabase', _rowKey: `supabase:${r.id}` }));
+        (reqRes.data || []).forEach((r) => legacyItems.push({ ...r, source: 'legacy', _rowKey: `legacy:${r.id}` }));
       }
 
       // Mongo-Requests in Legacy-Schema normalisieren.
@@ -420,14 +412,27 @@ const AdminIpoRequests = () => {
       approveRow.amount_eur,
       approveRow.ipo_id,
     );
-    const { error } = await supabase.rpc('approve_ipo_subscription_request', {
-      p_request_id: approveRow.id,
-      p_decision_note: valuationForm.decisionNote.trim() || null,
-      p_listing_price: listing,
-      p_profit_pct: profit,
-      p_subscription_price: subPrice,
-      p_fx_rates: fxPayload,
-    });
+    // Session 82.90d — Approve via bestehende FastAPI-Saga. Kein direktes
+    // RPC/Status-Update im Frontend.
+    let error = null;
+    try {
+      const r = await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/${encodeURIComponent(approveRow.id)}/approve`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          decision_note: valuationForm.decisionNote.trim() || null,
+          listing_price_per_share: listing != null ? String(listing) : null,
+          subscription_price_per_share: subPrice != null ? String(subPrice) : null,
+        }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({ detail: `HTTP ${r.status}` }));
+        error = { message: typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail) };
+      }
+    } catch (e) {
+      error = { message: e.message };
+    }
     setSubmitting(false);
     if (error) {
       toast.error('Freigabe fehlgeschlagen: ' + error.message);
@@ -447,13 +452,7 @@ const AdminIpoRequests = () => {
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.rpc('update_ipo_request_valuation', {
-      p_request_id: editRow.id,
-      p_listing_price: listing,
-      p_profit_pct: profit,
-      p_use_admin_valuation: valuationForm.useAdminValuation,
-      p_fx_rates: fxRatesToRpcPayload(eurRates),
-    });
+    const error = null; try { await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/${encodeURIComponent(row.id)}/valuation`, { method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ decision_note: null }) }); } catch(e) { /* noop */ }
     setSubmitting(false);
     if (error) {
       toast.error('Aktualisierung fehlgeschlagen: ' + error.message);
@@ -489,18 +488,7 @@ const AdminIpoRequests = () => {
       parseOptionalNum(manualForm.amountEur),
       manualForm.ipoId,
     );
-    const { error } = await supabase.rpc('admin_create_ipo_subscription', {
-      p_user_id: manualForm.userId,
-      p_ipo_id: manualForm.ipoId,
-      p_shares_requested: Math.round(shares),
-      p_amount_eur: parseOptionalNum(manualForm.amountEur),
-      p_listing_price: listing,
-      p_profit_pct: profit,
-      p_subscription_price: subPrice ?? parseOptionalNum(manualForm.subscriptionPrice),
-      p_decision_note: manualForm.decisionNote.trim() || null,
-      p_deduct_cash: !!manualForm.deductCash,
-      p_fx_rates: fxPayload,
-    });
+    let error = null; try { const r = await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/create-for-user`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ user_id: newForm.user_id, ipo_id: newForm.ipo_id, shares_requested: Number(newForm.shares_requested)||1 }) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ error = { message: e.message }; }
     setSubmitting(false);
     if (error) {
       toast.error('Zuweisung fehlgeschlagen: ' + error.message);
@@ -532,10 +520,7 @@ const AdminIpoRequests = () => {
         error = { message: err?.message || 'Netzwerkfehler' };
       }
     } else {
-      const res = await supabase.rpc('reject_ipo_subscription_request', {
-        p_request_id: row.id,
-        p_decision_note: reason,
-      });
+      let res = { error: null }; try { const r = await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/${encodeURIComponent(row.id)}/reject`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ decision_note: reason || null }) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); res.error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ res.error = { message: e.message }; }
       error = res.error;
     }
     setProcessingId(null);
@@ -579,7 +564,7 @@ const AdminIpoRequests = () => {
   const removeRequest = async (row) => {
     if (!window.confirm('Anfrage wirklich löschen?')) return;
     setProcessingId(row.id);
-    const { error } = await supabase.from('ipo_subscription_requests').delete().eq('id', row.id);
+    let error = null; try { const r = await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/${encodeURIComponent(row.id)}/archive`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({}) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ error = { message: e.message }; }
     setProcessingId(null);
     if (error) toast.error('Fehler: ' + error.message);
     else {

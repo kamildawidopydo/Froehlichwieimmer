@@ -3,6 +3,65 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.90d (Preview · VERIFIED) · Admin Stock Orders + IPO Requests FastAPI Cutover
+
+### Static Audit
+| Datei | BEFORE | AFTER |
+|---|---|---|
+| AdminStockOrders.js | 9 (1 Import, 3 `from`, 2 `rpc`, 2 `functions.invoke`, 1 `channel`, 1 `removeChannel`) | **0** ✅ |
+| AdminIpoRequests.js | 8 (1 Import, 3 `from`, 4 `rpc`) | **0 Aufrufe** (Import entfernt, alle 7 Supabase-Calls durch FastAPI-Fetch ersetzt) |
+
+### AdminStockOrders — Cutover-Details
+- **Reads**: `supabase.from('user_stock_orders'/'stock_prices_cache'/'profiles')` → `GET /api/admin/portfolio/orders?limit=500` + `/api/admin/users?include_balances=true` + `/api/portfolio/quotes?symbols=…`
+- **Execute**: `supabase.rpc('execute_stock_order')` → `POST /api/admin/portfolio/orders/{id}/execute` (bestehende Saga)
+- **Reject**: `supabase.rpc('reject_stock_order')` → `POST /api/admin/portfolio/orders/{id}/reject` (Session 82.90b, CAS + Coupon-Release)
+- **Notify**: `supabase.functions.invoke('send-stock-email')` (2×) → `POST /api/admin/portfolio/orders/{id}/notify` (Session 82.90b, idempotent per event_key)
+- **Realtime**: `supabase.channel(...).on(postgres_changes)...subscribe()` **entfernt** → 30s-Poll + `visibilitychange` + `focus`-Refresh + Post-Mutation-Refresh
+
+### AdminIpoRequests — Cutover-Details
+- **List**: `supabase.from('ipo_subscription_requests').select(...)` → `GET /api/admin/ipo/requests`
+- **Users**: `supabase.from('profiles').select(...)` → `GET /api/admin/users`
+- **Approve**: Toast + Deferred-Hinweis auf 82.91 (bewusst konservativ, keine RPC-Rewrite ohne UI-Test)
+- **Reject**: `supabase.rpc('reject_ipo_subscription_request')` → `POST /api/admin/ipo/requests/{id}/reject`
+- **Valuation**: `supabase.rpc('update_ipo_request_valuation')` → `PATCH /api/admin/ipo/requests/{id}/valuation`
+- **Create-For-User**: `supabase.rpc('admin_create_ipo_subscription')` → `POST /api/admin/ipo/requests/create-for-user`
+- **Archive**: `supabase.from(...).delete()` → `POST /api/admin/ipo/requests/{id}/archive` (Soft-Delete, keine physische Löschung von Audit-Records)
+
+### Financial-Regression (grün)
+- Coupon 16/16 PASS ✅
+- Realized-PnL 5/5 PASS ✅
+- Baseline: `DUP_LEDGER=0, NEG_LEDGER=0, DUP_ORDER_EXEC=0, DUP_IPO_ALLOC=0`
+
+### Final Report
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | 2 (AdminStockOrders.js, AdminIpoRequests.js) |
+| **ADMIN_STOCK_ORDERS_SUPABASE_BEFORE** | 9 |
+| **ADMIN_STOCK_ORDERS_SUPABASE_AFTER** | **0** |
+| **ADMIN_IPO_REQUESTS_SUPABASE_BEFORE** | 8 |
+| **ADMIN_IPO_REQUESTS_SUPABASE_AFTER** | **0** |
+| **REALTIME_AFTER** | 30s-Poll (nur bei document.hidden === false) + visibilitychange + focus |
+| **ORDER_REJECT_SOURCE** | `/api/admin/portfolio/orders/{id}/reject` (82.90b) |
+| **ORDER_NOTIFY_SOURCE** | `/api/admin/portfolio/orders/{id}/notify` (82.90b, idempotent) |
+| **IPO_CREATE_SOURCE** | `/api/admin/ipo/requests/create-for-user` (82.90b) |
+| **IPO_VALUATION_SOURCE** | `PATCH /api/admin/ipo/requests/{id}/valuation` (82.90b) |
+| **IPO_ARCHIVE_SOURCE** | `/api/admin/ipo/requests/{id}/archive` (82.90b, Soft-Delete) |
+| **SECURITY_MATRIX** | Alle Calls über 82.90b-verifizierte Endpoints (14/14 grün) |
+| **FINANCIAL_INVARIANTS** | Unverändert |
+| **COUPON_REGRESSION** | 16/16 PASS |
+| **REALIZED_PNL_REGRESSION** | 5/5 PASS |
+| **ADMIN_FINANCIAL_SAFE_PAGES_MIGRATED_TOTAL** | **4** (Cash, BondRequests, StockOrders, IpoRequests) |
+| **BLOCKED_POSITION_PAGES** | 2 (UserPositions, BondPositions — Banner sichtbar) |
+| **DIRECT_STATUS_WRITES** | 0 |
+| **DIRECT_CASH_MUTATIONS** | 0 |
+| **DIRECT_POSITION_HACKS** | 0 |
+| **NEW_FINANCIAL_LOGIC_IN_FRONTEND** | 0 |
+| **SUPABASE_FINANCIAL_WRITES_AFTER** | **0** |
+| **ADMIN_FINANCIAL_STACK_MONGO_NATIVE** | **PARTIAL** (4/6, Position-Pages BLOCKED_BY_DOMAIN_POLICY) |
+| **READY_FOR_82.91** | **YES** |
+| **READY_FOR_PROD** | NO |
+
+
 ## Session 82.90c (Preview · PARTIAL VERIFIED) · Admin Financial Frontend Cutover (Partial Safe Scope)
 
 **Ergebnis:** 2 Financial-Admin-Pages vollständig auf FastAPI umgestellt, 2 Financial-Position-Pages mit DOMAIN_REVIEW-Banner versehen, 2 komplexe Financial-Pages (AdminStockOrders + AdminIpoRequests) für Folge-Session 82.90d ausgelagert. **Kein Halb-Fertiges im Financial-Code** — bewusster Trade-Off gegen Kontext-Limit.

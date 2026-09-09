@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -16,6 +17,11 @@ import {
 } from 'lucide-react';
 
 const formatEUR = (v) => Number(v || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+
+const API = getApiBase();
+// Session 82.90d — Reads/Writes via FastAPI-Admin-Endpoints; Realtime durch
+// 30s-Poll (nur wenn Seite sichtbar) + visibility/focus/refresh-after-mutation.
+const api = axios.create({ baseURL: `${API}/api`, withCredentials: true });
 
 const AdminStockOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -46,40 +52,18 @@ const AdminStockOrders = () => {
 
   useEffect(() => {
     fetchAll();
-
-    const channel = supabase
-      .channel('admin_stock_orders_feed')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_stock_orders' }, async (payload) => {
-        const o = payload.new;
-        let userLabel = 'Kunde';
-        const cached = profilesMapRef.current?.[o.user_id];
-        if (cached) {
-          userLabel = `${cached.first_name || ''} ${cached.last_name || ''}`.trim() || cached.email;
-        } else {
-          const { data: prof } = await supabase
-            .from('profiles')
-            .select('id, email, first_name, last_name, cash_balance')
-            .eq('id', o.user_id)
-            .maybeSingle();
-          if (prof) {
-            userLabel = `${prof.first_name || ''} ${prof.last_name || ''}`.trim() || prof.email;
-            setProfilesMap((m) => ({ ...m, [prof.id]: prof }));
-          }
-        }
-        toast.info(
-          `Neuer ${o.side === 'buy' ? 'Kauf' : 'Verkauf'}-Auftrag: ${userLabel} · ${o.symbol} × ${Number(o.quantity).toLocaleString('de-DE', { maximumFractionDigits: 4 })}`,
-          { duration: 6000 }
-        );
-        playBeep();
-        setOrders((prev) => [o, ...prev.filter((x) => x.id !== o.id)]);
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'user_stock_orders' }, (payload) => {
-        const o = payload.new;
-        setOrders((prev) => prev.map((x) => (x.id === o.id ? { ...x, ...o } : x)));
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    // Session 82.90d — Realtime-Ersatz: 30s-Poll bei sichtbarer Seite +
+    // visibility/focus refresh. Kein Supabase-Channel, kein WebSocket.
+    let iv;
+    const kick = () => { if (!document.hidden) fetchAll(); };
+    iv = setInterval(kick, 30000);
+    document.addEventListener('visibilitychange', kick);
+    window.addEventListener('focus', kick);
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener('visibilitychange', kick);
+      window.removeEventListener('focus', kick);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -119,24 +103,31 @@ const AdminStockOrders = () => {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [ordersRes, cacheRes] = await Promise.all([
-        supabase.from('user_stock_orders').select('*').order('created_at', { ascending: false }).limit(500),
-        supabase.from('stock_prices_cache').select('*'),
+      // Session 82.90d — Admin-List über bestehende FastAPI-Endpoints.
+      const [ordersRes, usersRes] = await Promise.all([
+        api.get('/admin/portfolio/orders?limit=500').catch(() => ({ data: [] })),
+        api.get('/admin/users?include_balances=true').catch(() => ({ data: [] })),
       ]);
-      const orderData = ordersRes.data || [];
+      const orderData = Array.isArray(ordersRes.data) ? ordersRes.data : (ordersRes.data?.items || []);
       setOrders(orderData);
-      const map = {};
-      (cacheRes.data || []).forEach((p) => { map[p.symbol] = p; });
-      setPriceMap(map);
-      const userIds = Array.from(new Set(orderData.map((o) => o.user_id)));
-      if (userIds.length > 0) {
-        const { data: profs } = await supabase.from('profiles').select('id, email, first_name, last_name, cash_balance').in('id', userIds);
-        const pm = {};
-        (profs || []).forEach((p) => { pm[p.id] = p; });
-        setProfilesMap(pm);
+      const users = Array.isArray(usersRes.data) ? usersRes.data : (usersRes.data?.items || []);
+      const pm = {};
+      users.forEach((u) => { pm[u.id] = u; });
+      setProfilesMap(pm);
+      // Live-Preise: /api/portfolio/quotes für vorkommende Symbole
+      const symbols = Array.from(new Set(orderData.map((o) => o.symbol).filter(Boolean)));
+      if (symbols.length > 0) {
+        try {
+          const { data: q } = await api.get(`/portfolio/quotes?symbols=${encodeURIComponent(symbols.join(','))}`);
+          const map = {};
+          Object.entries(q || {}).forEach(([sym, v]) => { if (v && typeof v === 'object') map[sym] = v; });
+          setPriceMap(map);
+        } catch {
+          setPriceMap({});
+        }
       }
     } catch (err) {
-      toast.error('Fehler beim Laden: ' + (err?.message || ''));
+      toast.error('Fehler beim Laden: ' + (err?.response?.data?.detail || err?.message || ''));
     } finally {
       setLoading(false);
     }
@@ -153,71 +144,24 @@ const AdminStockOrders = () => {
     const priceNum = Number(execPrice);
     if (!priceNum || priceNum <= 0) { toast.error('Ungültiger Ausführungskurs'); return; }
     setExecSubmitting(true);
-    const { error } = await supabase.rpc('execute_stock_order', {
-      p_order_id: execOrder.id,
-      p_executed_price: priceNum,
-    });
-    setExecSubmitting(false);
-    if (error) { toast.error('Fehler: ' + error.message); return; }
-    toast.success('Auftrag ausgeführt');
-
     try {
-      let prof = profilesMap[execOrder.user_id];
-      if (!prof?.email) {
-        console.log('[send-stock-email] fetching profile for', execOrder.user_id);
-        const { data: freshProf, error: profErr } = await supabase
-          .from('profiles')
-          .select('id, email, first_name, last_name')
-          .eq('id', execOrder.user_id)
-          .maybeSingle();
-        if (profErr) console.warn('[send-stock-email] profile fetch error:', profErr);
-        prof = freshProf;
-      }
-      if (prof?.email) {
-        const fullName = [prof.first_name, prof.last_name].filter(Boolean).join(' ');
-        const qty = Number(execOrder.quantity);
-        const grossExec = priceNum * qty;
-        const discPct =
-          execOrder.side === 'buy' && execOrder.discount_percent_snapshot != null
-            ? Number(execOrder.discount_percent_snapshot)
-            : 0;
-        const discAmt =
-          execOrder.side === 'buy' && discPct > 0
-            ? Math.round(grossExec * (discPct / 100) * 100) / 100
-            : 0;
-        const netExec = Math.round((grossExec - discAmt) * 100) / 100;
-        console.log('[send-stock-email] invoking executed for', prof.email);
-        const { data: em, error: emErr } = await supabase.functions.invoke('send-stock-email', {
-          body: {
-            type: 'executed',
-            to: prof.email,
-            user_name: fullName || null,
-            order: {
-              symbol: execOrder.symbol,
-              side: execOrder.side,
-              quantity: qty,
-              requested_price: execOrder.requested_price != null ? Number(execOrder.requested_price) : null,
-              executed_price: priceNum,
-              total: execOrder.side === 'buy' ? netExec : grossExec,
-              gross_amount: grossExec,
-              discount_percent: discPct > 0 ? discPct : null,
-              discount_amount: discAmt > 0 ? discAmt : null,
-              net_amount: execOrder.side === 'buy' ? netExec : grossExec,
-              currency: priceMap[execOrder.symbol]?.currency || 'USD',
-              note: execOrder.note,
-              created_at: execOrder.created_at,
-            },
-          },
+      // Session 82.90d — Execute via Saga-Endpoint. Kein direktes Status-Update.
+      await api.post(`/admin/portfolio/orders/${encodeURIComponent(execOrder.id)}/execute`, {});
+      toast.success('Auftrag ausgeführt');
+      // Email-Side-Effect idempotent via order_notifications-Queue.
+      try {
+        await api.post(`/admin/portfolio/orders/${encodeURIComponent(execOrder.id)}/notify`, {
+          event_type: 'executed',
+          channel: 'email',
+          subject: `Auftrag ausgeführt · ${execOrder.symbol}`,
         });
-        if (emErr) console.warn('[send-stock-email] executed error:', emErr);
-        else console.log('[send-stock-email] executed ok:', em);
-      } else {
-        console.warn('[send-stock-email] executed: no email for user', execOrder.user_id);
-      }
-    } catch (e3) {
-      console.warn('[send-stock-email] outer catch:', e3);
+      } catch { /* Email-Fehler ändert Financial-State nie */ }
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err?.message || ''));
+      setExecSubmitting(false);
+      return;
     }
-
+    setExecSubmitting(false);
     setExecOrder(null);
     setExecPrice('');
     fetchAll();
@@ -227,54 +171,26 @@ const AdminStockOrders = () => {
     e?.preventDefault?.();
     if (!rejectReason.trim()) { toast.error('Bitte Grund angeben'); return; }
     setRejectSubmitting(true);
-    const { error } = await supabase.rpc('reject_stock_order', {
-      p_order_id: rejectOrder.id,
-      p_reason: rejectReason.trim(),
-    });
-    setRejectSubmitting(false);
-    if (error) { toast.error('Fehler: ' + error.message); return; }
-    toast.success('Auftrag abgelehnt');
-
     try {
-      let prof = profilesMap[rejectOrder.user_id];
-      if (!prof?.email) {
-        console.log('[send-stock-email] fetching profile for', rejectOrder.user_id);
-        const { data: freshProf } = await supabase
-          .from('profiles')
-          .select('id, email, first_name, last_name')
-          .eq('id', rejectOrder.user_id)
-          .maybeSingle();
-        prof = freshProf;
-      }
-      if (prof?.email) {
-        const fullName = [prof.first_name, prof.last_name].filter(Boolean).join(' ');
-        console.log('[send-stock-email] invoking rejected for', prof.email);
-        const { data: em, error: emErr } = await supabase.functions.invoke('send-stock-email', {
-          body: {
-            type: 'rejected',
-            to: prof.email,
-            user_name: fullName || null,
-            order: {
-              symbol: rejectOrder.symbol,
-              side: rejectOrder.side,
-              quantity: Number(rejectOrder.quantity),
-              requested_price: rejectOrder.requested_price != null ? Number(rejectOrder.requested_price) : null,
-              currency: priceMap[rejectOrder.symbol]?.currency || 'USD',
-              note: rejectOrder.note,
-              rejection_reason: rejectReason.trim(),
-              created_at: rejectOrder.created_at,
-            },
-          },
+      // Session 82.90d — Reject via neuen 82.90b-Endpoint (CAS + Coupon-Release).
+      await api.post(`/admin/portfolio/orders/${encodeURIComponent(rejectOrder.id)}/reject`, {
+        decision_note: rejectReason.trim(),
+      });
+      toast.success('Auftrag abgelehnt');
+      try {
+        await api.post(`/admin/portfolio/orders/${encodeURIComponent(rejectOrder.id)}/notify`, {
+          event_type: 'rejected',
+          channel: 'email',
+          subject: `Auftrag abgelehnt · ${rejectOrder.symbol}`,
+          body_preview: rejectReason.trim().slice(0, 500),
         });
-        if (emErr) console.warn('[send-stock-email] rejected error:', emErr);
-        else console.log('[send-stock-email] rejected ok:', em);
-      } else {
-        console.warn('[send-stock-email] rejected: no email for user', rejectOrder.user_id);
-      }
-    } catch (e3) {
-      console.warn('[send-stock-email] outer catch:', e3);
+      } catch { /* Email-Fehler ändert Financial-State nie */ }
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err?.message || ''));
+      setRejectSubmitting(false);
+      return;
     }
-
+    setRejectSubmitting(false);
     setRejectOrder(null);
     setRejectReason('');
     fetchAll();
