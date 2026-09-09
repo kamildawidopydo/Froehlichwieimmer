@@ -4825,6 +4825,26 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.98 (Preview · Sept 9 2026) · Admin Realtime → Polling Cutover ✅
+- **Frontend cutover 0 Supabase-Refs im Scope**: `AdminGlobalNotifications.jsx` (9 Realtime-Channels + 2 removeChannel) und `AdminDashboardLayout.jsx` (1 Aggregat-Channel + 16 direkte `.from().select(count)`) vollständig auf focus-aware Polling gegen `GET /api/admin/notifications/counts` umgestellt.
+- **Neuer Backend-Endpoint** `routes/admin_notifications.py` · `GET /api/admin/notifications/counts`: aggregierte Read-Only-Zählung über 16 Legacy-Keys. Reale Counts aus 5 vorhandenen Mongo-Collections (`stock_orders`, `bond_purchase_requests`, `ipo_requests`, `support_tickets`, `offer_interests`) — 11 Legacy-Supabase-Namen liefern **faithful `null`** (kein Fake-0), Frontend blendet die Badges automatisch aus.
+- **Polling-Vertrag**: `POLL_INTERVAL_MS = 30 000` · `document.visibilityState === 'visible'`-Gate · sofortiger Refresh bei `visibilitychange` und `window.focus` · InFlight-Guard verhindert Doppel-Requests · Baseline-Snapshot beim Mount unterdrückt initiale Toasts.
+- **Toast-Diff-Logik**: nur bei `after > before` und beide `number` und Route nicht auf Ziel-Path → EIN Toast mit „Öffnen"-Action. Null↔Number-Übergänge werden bewusst ignoriert (keine synthetischen Notifications).
+- **Security-Matrix (3/3)**: unauth → 401 · Kunde → 403 · Admin → 200 mit `counts` und `generated_at`.
+- **Verbleibende `.channel/removeChannel`-Fundstellen (außerhalb Scope 82.98)**: `NotificationCenter.js` (Kunden-Feed) — geplant für 82.101.
+- **Regression**: Coupon 16/16 + Market-Data 47/47 pytest grün.
+
+### FINAL REPORT (Session 82.98)
+- FILES_CHANGED: 3 (`backend/routes/admin_notifications.py` neu, `backend/server.py` include_router, `AdminGlobalNotifications.jsx`, `AdminDashboardLayout.jsx`)
+- REALTIME_CHANNELS_BEFORE: 10 (9 Toast-Channels + 1 Aggregat-Channel im Layout)
+- **REALTIME_CHANNELS_AFTER: 0** im Admin-Scope · **REMOVECHANNEL_REFS_AFTER: 0** im Admin-Scope
+- POLL_INTERVAL: 30 s · FOCUS_REFRESH: YES (window.focus + visibilitychange) · VISIBILITY_PAUSE: YES (document.hidden)
+- NEW_READ_ENDPOINTS: 1 (`/api/admin/notifications/counts`)
+- **FAKE_NOTIFICATIONS: 0 · FAKE_COUNTS: 0 · FINANCIAL_WRITES: 0 · SUPABASE_REALTIME_AFTER: 0 · WEBSOCKET_ADDED: NO**
+- ADMIN_REALTIME_SUPABASE_FREE: **YES**
+- REMAINING_GLOBAL_SUPABASE_TOUCHES: ~19 Dateien (Kunden-Scope + Legacy-Admin-Reads, siehe 82.95-Audit; `NotificationCenter.js` behält bis 82.101 zwei `.channel()`-Aufrufe)
+- READY_FOR_82.99: **YES** · READY_FOR_PROD: NO
+
 ## Session 82.97 (Preview · Sept 9 2026) · Admin Stocks Cutover ✅
 - **Frontend cutover 0 Supabase-Refs**: `AdminStocks.js` und `lib/market/chartOverviewConfig.js` vollständig auf FastAPI umgestellt (8+1 Aufrufe entfernt).
 - **Read-Source**: `GET /api/stocks/catalog?with_quotes=true` (27 kuratierte Symbole aus `_META`/`ALLOWED` in `routes/stock_catalog.py` — keine Mongo-Collection `stocks`). Enrichment inkl. `price`, `day_high`, `day_low`, `data_status` (fresh/stale/unavailable).

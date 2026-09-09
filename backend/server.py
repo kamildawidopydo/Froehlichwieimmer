@@ -5189,6 +5189,10 @@ from routes import formular_access as _formular_access_routes  # noqa: E402
 app.include_router(_formular_access_routes.public_router)
 app.include_router(_formular_access_routes.admin_router)
 
+# Session 82.98 — Admin Notification-Counts (Poll-Ersatz für Realtime).
+from routes import admin_notifications as _admin_notifications_routes  # noqa: E402
+app.include_router(_admin_notifications_routes.router)
+
 
 @app.on_event("startup")
 async def _news_public_indexes():
