@@ -10,7 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { supabase } from '@/lib/supabase';
+// Session 82.90c — Supabase-Cutover: Legacy-Mutationen entfernt, Delete durch
+// FastAPI-Archive-Endpoint aus 82.90b ersetzt.
 import { toast } from 'sonner';
 import {
   AdminSubpageLayout,
@@ -260,60 +261,37 @@ const AdminBondRequests = () => {
     }
   };
 
-  // Legacy-Supabase-Aktionen — bleiben für historische Rows verfügbar.
-  const approveLegacy = async (row) => {
-    const kuponInput = window.prompt('Kupon (% p.a.) eingeben (Pflichtfeld):', '');
-    if (kuponInput == null) return;
-    const kuponRate = Number(String(kuponInput).replace(',', '.'));
-    if (!Number.isFinite(kuponRate) || kuponRate < 0) {
-      toast.error('Bitte einen gültigen Kupon-Wert eingeben.');
-      return;
-    }
-    const maturityInput = window.prompt('Fälligkeit eingeben (optional, YYYY-MM-DD):', '') || null;
-    const note = window.prompt('Optionaler Admin-Kommentar für die Freigabe:', '') || null;
-    setProcessingId(row.id);
-    const { error } = await supabase.rpc('approve_bond_purchase_request', {
-      p_request_id: row.id,
-      p_decision_note: note,
-      p_kupon_rate: kuponRate,
-      p_faelligkeitsdatum: maturityInput,
-    });
-    setProcessingId(null);
-    if (error) {
-      toast.error('Freigabe fehlgeschlagen: ' + error.message);
-      return;
-    }
-    toast.success('Legacy-Anfrage genehmigt und Position erstellt');
-    load();
+  // Session 82.90c — Legacy-Supabase-Aktionen entfernt. Historische Rows
+  // sind READ-ONLY; neue Anfragen laufen ausschließlich über FastAPI/Saga.
+  const approveLegacy = async (_row) => {
+    toast.info('Legacy-Anfragen sind schreibgeschützt. Bitte neue Mongo-Anfrage anlegen.');
   };
 
-  const rejectLegacy = async (row) => {
-    const reason = window.prompt('Ablehnungsgrund (optional):', '') || null;
-    setProcessingId(row.id);
-    const { error } = await supabase.rpc('reject_bond_purchase_request', {
-      p_request_id: row.id,
-      p_decision_note: reason,
-    });
-    setProcessingId(null);
-    if (error) {
-      toast.error('Ablehnung fehlgeschlagen: ' + error.message);
-      return;
-    }
-    toast.success('Legacy-Anfrage abgelehnt');
-    load();
+  const rejectLegacy = async (_row) => {
+    toast.info('Legacy-Anfragen sind schreibgeschützt. Bitte neue Mongo-Anfrage anlegen.');
   };
 
   const removeLegacy = async (row) => {
-    if (!window.confirm('Diese Legacy-Anfrage wirklich dauerhaft löschen?')) return;
-    setProcessingId(row.id);
-    const { error } = await supabase.from('bond_purchase_requests').delete().eq('id', row.id);
-    setProcessingId(null);
-    if (error) {
-      toast.error('Löschen fehlgeschlagen: ' + error.message);
+    // Session 82.90c — Nur Mongo-native Requests können via FastAPI archiviert
+    // werden (Soft-Delete). Legacy-Supabase-Rows bleiben unangetastet.
+    if (row.backend !== 'mongo') {
+      toast.info('Legacy-Rows nicht löschbar. Nur Mongo-native Requests archivierbar.');
       return;
     }
-    toast.success('Legacy-Anfrage gelöscht');
-    setItems((prev) => prev.filter((item) => item.id !== row.id));
+    if (!window.confirm('Diese Anfrage archivieren (Soft-Delete, nur bei rejected/cancelled)?')) return;
+    setProcessingId(row.id);
+    try {
+      await fetchJson(`/api/admin/bonds/requests/${encodeURIComponent(row.id)}/archive`, {
+        method: 'POST',
+        body: JSON.stringify({ archive_note: 'via admin ui' }),
+      });
+      toast.success('Anfrage archiviert (Soft-Delete)');
+      setItems((prev) => prev.filter((item) => item.id !== row.id));
+    } catch (err) {
+      toast.error('Archive fehlgeschlagen: ' + err.message);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const execNominal = parseDecStr(executeForm.nominalAmount);

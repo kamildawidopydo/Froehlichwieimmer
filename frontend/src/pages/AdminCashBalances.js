@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -59,6 +60,13 @@ const formatDateTime = (iso) =>
     })
     : '–';
 
+const API = getApiBase();
+
+// Session 82.90c — Cash-Balances vollständig auf FastAPI/Mongo-Ledger.
+// Reads: /api/admin/users (mit cash_balance-Enrichment) und
+// /api/admin/portfolio/cash/summary?user_id=X für Detail-Historie.
+// Writes: /api/admin/portfolio/cash/{deposit,adjustment} — Ledger-basiert.
+
 const AdminCashBalances = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,18 +86,19 @@ const AdminCashBalances = () => {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, email, country, cash_balance, last_seen_at')
-      .neq('role', 'admin')
-      .order('first_name', { ascending: true });
-    if (error) {
-      toast.error('Fehler beim Laden: ' + error.message);
+    try {
+      const { data } = await axios.get(`${API}/api/admin/users?include_balances=true`, {
+        withCredentials: true,
+      });
+      const list = (Array.isArray(data) ? data : data?.items || []).filter(
+        (u) => (u.role || 'user') !== 'admin',
+      );
+      setUsers(list);
+    } catch (err) {
+      toast.error('Fehler beim Laden: ' + (err?.response?.data?.detail || err.message));
+    } finally {
       setLoading(false);
-      return;
     }
-    setUsers(data || []);
-    setLoading(false);
   };
 
   const openTxModal = (user, presetSign = null) => {
@@ -125,39 +134,52 @@ const AdminCashBalances = () => {
     }
 
     setSaving(true);
-    const { data, error } = await supabase.rpc('apply_cash_transaction', {
-      p_user_id: txModal.id,
-      p_amount: signedAmount,
-      p_type: txForm.type,
-      p_description: txForm.description.trim() || null,
-    });
-    setSaving(false);
-
-    if (error) {
-      toast.error('Fehler: ' + error.message);
-      return;
+    try {
+      // Session 82.90c — Ledger-basiert: deposit für Einzahlungen/Zinsen,
+      // adjustment für Withdrawal/Fee/Adjustment. Kein direkter Balance-Write.
+      const endpoint = signedAmount >= 0 && txForm.type === 'deposit'
+        ? '/api/admin/portfolio/cash/deposit'
+        : '/api/admin/portfolio/cash/adjustment';
+      const payload = {
+        user_id: txModal.id,
+        amount: String(Math.abs(signedAmount)),
+        direction: signedAmount >= 0 ? 'credit' : 'debit',
+        event_type: txForm.type,
+        description: txForm.description.trim() || null,
+      };
+      await axios.post(`${API}${endpoint}`, payload, { withCredentials: true });
+      toast.success('Buchung gespeichert.');
+      closeTxModal();
+      fetchUsers();
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err.message));
+    } finally {
+      setSaving(false);
     }
-
-    toast.success(`Buchung gespeichert. Neuer Saldo: ${formatEUR(data)}`);
-    closeTxModal();
-    fetchUsers();
   };
 
   const openHistory = async (user) => {
     setHistoryModal(user);
     setHistoryLoading(true);
-    const { data, error } = await supabase
-      .from('user_cash_transactions')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(200);
+    try {
+      const { data } = await axios.get(
+        `${API}/api/admin/portfolio/cash/summary?user_id=${encodeURIComponent(user.id)}`,
+        { withCredentials: true },
+      );
+      setHistoryRows(Array.isArray(data?.history) ? data.history : []);
+    } catch (err) {
+      toast.error('Fehler beim Laden: ' + (err?.response?.data?.detail || err.message));
+    } finally {
+      setHistoryLoading(false);
+    }
+    return;
+  };
+  const _unused_openHistory_legacy = async (user) => {
     setHistoryLoading(false);
-    if (error) {
-      toast.error('Fehler beim Laden: ' + error.message);
+    if (false) {
       return;
     }
-    setHistoryRows(data || []);
+    setHistoryRows([]);
   };
 
   const closeHistory = () => {

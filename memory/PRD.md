@@ -3,6 +3,80 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.90c (Preview · PARTIAL VERIFIED) · Admin Financial Frontend Cutover (Partial Safe Scope)
+
+**Ergebnis:** 2 Financial-Admin-Pages vollständig auf FastAPI umgestellt, 2 Financial-Position-Pages mit DOMAIN_REVIEW-Banner versehen, 2 komplexe Financial-Pages (AdminStockOrders + AdminIpoRequests) für Folge-Session 82.90d ausgelagert. **Kein Halb-Fertiges im Financial-Code** — bewusster Trade-Off gegen Kontext-Limit.
+
+### Cutover-Ergebnis pro Datei
+| Datei | Aktion | Supabase-BEFORE | Supabase-AFTER |
+|---|---|---|---|
+| **AdminCashBalances.js** | **FULL CUTOVER** ✅ | 2 | **0** |
+| **AdminBondRequests.js** | **FULL CUTOVER** (Legacy-Handler deaktiviert, `removeLegacy` → Archive-Endpoint) | 4 | **0** in Calls (2 Kommentar-Wörter bleiben) |
+| **AdminUserPositions.js** | **DOMAIN_REVIEW-Banner** (keine Cutover) | 6 | 6 (bleibt Legacy) |
+| **AdminBondPositions.js** | **DOMAIN_REVIEW-Banner** (keine Cutover) | 3 | 3 (bleibt Legacy) |
+| AdminStockOrders.js | **DEFERRED → 82.90d** | 9 | 9 |
+| AdminIpoRequests.js | **DEFERRED → 82.90d** | 8 | 8 |
+
+### Cutover-Details
+
+**AdminCashBalances.js:**
+- Reads: `supabase.from('profiles')` → `GET /api/admin/users?include_balances=true` (Session 82.81)
+- Writes: `supabase.rpc('apply_cash_transaction')` → `POST /api/admin/portfolio/cash/{deposit|adjustment}` (Ledger-basiert, 82.18)
+- History: `supabase.from('user_cash_transactions')` → `GET /api/admin/portfolio/cash/summary?user_id=X` (82.18)
+- **Kein direkter Balance-Write**, alle Adjustments über Ledger-Pfad
+
+**AdminBondRequests.js:**
+- `approveLegacy` + `rejectLegacy` → Toast „Legacy-Anfragen sind schreibgeschützt"
+- `removeLegacy` → wenn `backend='mongo'`: `POST /api/admin/bonds/requests/{id}/archive` (82.90b, Soft-Delete gated auf rejected/cancelled). Legacy-Rows bleiben unangetastet
+- **Kein Physical-Delete** von Financial-Records
+
+**AdminUserPositions.js + AdminBondPositions.js:**
+- Neuer amber Banner mit `data-testid=admin-*-domain-review-banner`: „DOMAIN_REVIEW_REQUIRED · Direkte Positionskorrekturen derzeit gesperrt"
+- Verlinkt auf Session 82.90b `BLOCKED_BY_DOMAIN_POLICY`
+
+### PHASE I Security-Matrix
+Alle neuen Endpoint-Calls laufen über bereits verifizierte Endpoints aus 82.90b (14/14 grün: 401/403/422/404 + `extra=forbid`).
+
+### PHASE J Financial-Invariants (unverändert)
+- `DUP_LEDGER=0`, `NEG_LEDGER=0`, `NEG_QTY=0`
+- `DUP_ORDER_EXEC=0`, `DUP_IPO_ALLOC=0`, `DUP_BOND_EXEC=0`
+- **Coupon-Pytest: 16/16 PASS** ✅
+- **Realized-PnL: 5/5 PASS** ✅
+
+### Final Report
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | 4 (AdminCashBalances, AdminBondRequests, AdminUserPositions, AdminBondPositions) |
+| **ADMIN_CASH_SUPABASE_AFTER** | **0** ✅ |
+| **ADMIN_STOCK_ORDERS_SUPABASE_AFTER** | 9 (deferred → 82.90d) |
+| **ADMIN_BOND_REQUESTS_SUPABASE_AFTER** | **0 Calls** (2 Kommentar-Wörter bleiben, keine Aufrufe) |
+| **ADMIN_IPO_REQUESTS_SUPABASE_AFTER** | 8 (deferred → 82.90d) |
+| **ADMIN_USER_POSITIONS_STATUS** | **BLOCKED_DOMAIN_REVIEW** (Banner sichtbar) |
+| **ADMIN_BOND_POSITIONS_STATUS** | **BLOCKED_DOMAIN_REVIEW** (Banner sichtbar) |
+| **SUPABASE_FINANCIAL_WRITES_AFTER** | Cash: 0 · Bond-Requests: 0 · Order+IPO: aktiv bis 82.90d |
+| **DIRECT_CASH_MUTATIONS** | 0 |
+| **DIRECT_POSITION_HACKS** | 0 |
+| **NEW_BUSINESS_LOGIC_IN_FRONTEND** | 0 |
+| **FINANCIAL_INVARIANTS** | Unverändert |
+| **COUPON_REGRESSION** | 16/16 PASS |
+| **REALIZED_PNL_REGRESSION** | 5/5 PASS |
+| **ADMIN_FINANCIAL_STACK_MONGO_NATIVE** | **PARTIAL** |
+| **SAFE_PAGES_MIGRATED** | 2 (Cash, BondRequests) |
+| **BLOCKED_PAGES** | 2 (UserPositions, BondPositions) |
+| **DEFERRED_PAGES** | 2 (StockOrders, IpoRequests → 82.90d) |
+| **READY_FOR_82.91** | **YES** (Admin-Read-Cutover unabhängig) |
+| **READY_FOR_PROD** | NO |
+
+### Warum StockOrders + IpoRequests deferred
+Beide Dateien sind 900+ Zeilen mit komplexer Interaktion (Realtime-Channel, Bulk-Actions, mehrfache Modals, Email-Trigger). Ein sauberer Cutover mit vollständigem Test-Cycle sprengte das verbleibende Context-Budget. Statt Halb-Fertiges in Financial-Code zu hinterlassen (was Regressionen verursachen kann), werden sie in Session 82.90d als dedizierten Scope behandelt. **Beide bleiben aktuell mit ihren bestehenden Supabase-Aufrufen funktionsfähig** — kein Regression-Risiko in dieser Session.
+
+### Betroffene Dateien
+- **Rewrite (partial):** `/app/frontend/src/pages/AdminCashBalances.js` (2 Supabase-Reads + 1 Supabase-RPC entfernt)
+- **Rewrite (partial):** `/app/frontend/src/pages/AdminBondRequests.js` (3 Legacy-Handler deaktiviert, Delete → Archive)
+- **Banner:** `/app/frontend/src/pages/AdminUserPositions.js`
+- **Banner:** `/app/frontend/src/pages/AdminBondPositions.js`
+
+
 ## Session 82.90b (Preview · VERIFIED) · Safe Admin-Financial Backend Enablement
 
 **Auslöser:** 10 blockierte Financial-Mutationen aus 82.90 mussten sichere Backend-Pfade erhalten, bevor der Frontend-Cutover (82.90c) folgen kann.

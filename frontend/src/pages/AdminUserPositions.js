@@ -27,6 +27,9 @@ const EMPTY_FORM = {
 };
 
 const AdminUserPositions = () => {
+  // Session 82.90c — DOMAIN_REVIEW_REQUIRED: Direkte Stock-Position-Mutationen
+  // (Upsert/Delete) bleiben blockiert bis dedizierter Adjustment-Service mit
+  // Ledger-Trail existiert. Diese Seite bleibt aktuell auf Legacy-Supabase.
   const [positions, setPositions] = useState([]);
   const [profilesMap, setProfilesMap] = useState({});
   const [profilesList, setProfilesList] = useState([]);
