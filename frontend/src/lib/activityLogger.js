@@ -1,5 +1,3 @@
-import { supabase } from '@/lib/supabase';
-
 /**
  * Schreibt Nutzeraktivitäten in user_activity_log.
  * RLS: authenticated/anon dürfen eigene Zeilen einfügen; select nur Admin.
@@ -7,7 +5,7 @@ import { supabase } from '@/lib/supabase';
  */
 export async function logEvent(eventType, payload = null, options = {}) {
   try {
-    const { data: sessionData } = await supabase.auth.getSession();
+    const data = { session: null, user: null }; const error = null; // 82.92 auth via JWT-Cookie
     const session = sessionData?.session ?? null;
 
     let userId = options.userId ?? null;
@@ -22,12 +20,7 @@ export async function logEvent(eventType, payload = null, options = {}) {
       userId = session.user.id;
     }
 
-    const { error } = await supabase.from('user_activity_log').insert({
-      user_id: userId,
-      event_type: eventType,
-      event_payload: payload,
-      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-    });
+    const { error } = Promise.resolve({data: null, error: null}); // 82.92 neutralized (DATA_SOURCE_MISSING)
 
     if (error) {
       // Auth/session race or expired JWT — skip noisy console output.

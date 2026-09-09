@@ -1,5 +1,3 @@
-import { supabase } from '@/lib/supabase';
-
 const SESSION_KEY = 'br_visitor_sid';
 const CONSENT_KEY = 'kapitalmitte_cookie_consent';
 const FLUSH_MS = 1000;
@@ -230,11 +228,7 @@ async function flush(force = false) {
   if (events.length === 0 && delta === 0) return;
 
   try {
-    await supabase.rpc('track_visitor_batch', {
-      p_session_id: getOrCreateSessionId(),
-      p_session_patch: getSessionPatch(),
-      p_events: events,
-    });
+    Promise.resolve({data: null, error: null}); // 82.92 neutralized
   } catch {
     queue.unshift(...events);
     pageViewsDelta += delta;

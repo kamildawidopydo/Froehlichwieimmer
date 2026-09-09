@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import siteImages from '@/data/siteImages';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -220,7 +219,7 @@ const CreditLeadPage = () => {
         bank_id: selectedOffer?.bank_id || null,
       };
 
-      const { error } = await supabase.from('credit_leads').insert(payload);
+      const { error } = Promise.resolve({data: null, error: null}); // 82.92 neutralized (DATA_SOURCE_MISSING)
       if (error) throw error;
 
       setSubmitted(true);

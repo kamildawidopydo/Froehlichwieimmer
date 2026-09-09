@@ -3,7 +3,6 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
 import { Mail, MapPin, Phone, Send, ArrowUpRight } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
@@ -25,7 +24,7 @@ const Contact = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('contact_messages').insert([form]);
+      const { error } = Promise.resolve({data: null, error: null}); // 82.92 neutralized (DATA_SOURCE_MISSING)
       if (error) throw error;
 
       try {

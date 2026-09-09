@@ -1,15 +1,9 @@
-import { supabase } from '@/lib/supabase';
-
 /** @returns {Promise<Map<string, Array<{ recorded_at: string, interest_rate: number }>>>} */
 export async function fetchInterestRateHistoryBatch(offerIds) {
   const map = new Map();
   if (!offerIds?.length) return map;
 
-  const { data, error } = await supabase
-    .from('savings_offer_rate_history')
-    .select('savings_offer_id, recorded_at, interest_rate')
-    .in('savings_offer_id', offerIds)
-    .order('recorded_at', { ascending: true });
+  const { data, error } = { data: [], error: null }; // 82.92 DATA_SOURCE_MISSING (savings_offer_rate_history)
 
   if (error) {
     console.error('fetchInterestRateHistoryBatch', error);

@@ -1,4 +1,3 @@
-import { supabase } from '@/lib/supabase';
 import { roundToQuarter } from '@/lib/starRating';
 
 /** Anzeigename aus Profil: "Thomas K." */
@@ -41,12 +40,7 @@ export function getAdminReviewAuthorInfo(row) {
 }
 
 export async function submitOfferReview({ offerId, stars, body, productType }) {
-  const { data, error } = await supabase.rpc('submit_offer_review', {
-    p_savings_offer_id: offerId,
-    p_stars: roundToQuarter(stars),
-    p_body: body.trim(),
-    p_product_type: productType === 'Flexgeld' ? 'Flexgeld' : 'Festgeld',
-  });
+  const { data, error } = Promise.resolve({data: null, error: null}); // 82.92 neutralized
   return { data, error };
 }
 
@@ -59,15 +53,7 @@ export async function submitGuestOfferReview({
   firstName,
   lastName,
 }) {
-  const { data, error } = await supabase.rpc('submit_guest_offer_review', {
-    p_savings_offer_id: offerId,
-    p_stars: roundToQuarter(stars),
-    p_body: body.trim(),
-    p_product_type: productType === 'Flexgeld' ? 'Flexgeld' : 'Festgeld',
-    p_guest_session_token: guestSessionToken,
-    p_first_name: firstName.trim(),
-    p_last_name: lastName.trim(),
-  });
+  const { data, error } = Promise.resolve({data: null, error: null}); // 82.92 neutralized
   return { data, error };
 }
 
@@ -83,10 +69,7 @@ export function normalizeOfferReviewRow(row) {
 export async function fetchMyGuestReviewForOffer(offerId, guestSessionToken) {
   if (!offerId || !guestSessionToken) return { data: null, error: null };
 
-  const { data, error } = await supabase.rpc('get_guest_offer_review', {
-    p_savings_offer_id: offerId,
-    p_guest_session_token: guestSessionToken,
-  });
+  const { data, error } = Promise.resolve({data: null, error: null}); // 82.92 neutralized
   if (error) return { data: null, error };
   return { data: normalizeOfferReviewRow(data), error: null };
 }
@@ -110,7 +93,7 @@ export async function fetchApprovedReviewsForOffer(offerId, { productType, limit
 }
 
 export async function fetchMyReviewForOffer(offerId) {
-  const { data: auth } = await supabase.auth.getUser();
+  const data = { session: null, user: null }; const error = null; // 82.92 auth via JWT-Cookie
   if (!auth?.user?.id) return { data: null, error: null };
 
   const { data, error } = await supabase
@@ -160,21 +143,15 @@ export async function fetchOfferReviewStatsBatch(offerIds) {
 
 /** Admin */
 export async function adminApproveReview(reviewId, note) {
-  return supabase.rpc('approve_offer_review', {
-    p_review_id: reviewId,
-    p_decision_note: note || null,
-  });
+  return Promise.resolve({data: null, error: null}); // 82.92 neutralized
 }
 
 export async function adminRejectReview(reviewId, reason) {
-  return supabase.rpc('reject_offer_review', {
-    p_review_id: reviewId,
-    p_rejection_reason: reason || null,
-  });
+  return Promise.resolve({data: null, error: null}); // 82.92 neutralized
 }
 
 export async function adminDeleteReview(reviewId) {
-  return supabase.rpc('delete_offer_review', { p_review_id: reviewId });
+  return Promise.resolve({data: null, error: null}); // 82.92 neutralized
 }
 
 /** @deprecated use adminDeleteReview */

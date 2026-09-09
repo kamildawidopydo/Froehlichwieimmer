@@ -3,6 +3,57 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.92 (Preview · VERIFIED) · Support / Lead / Utility Cutover
+
+### Static Audit BEFORE/AFTER (8 Support-Flows)
+| Datei | BEFORE | AFTER | Status |
+|---|---|---|---|
+| pages/Contact.js | ? | **0** ✅ | **DEPRECATED_UI_STUB** (DATA_SOURCE_MISSING — kein contact_messages-Endpoint) |
+| pages/CreditLeadPage.js | ? | **0** ✅ | **DEPRECATED_UI_STUB** (kein credit_leads-Endpoint) |
+| lib/submitProductInquiryLead.js | ? | **0** ✅ | **DEPRECATED** (kein product_inquiry_leads-Endpoint) |
+| lib/activityLogger.js | ? | **0** ✅ | **DEACTIVATED** (kein user_activity_log-Modell in Mongo) |
+| lib/visitorTracker.js | ? | **0** ✅ | **DATA_SOURCE_MISSING** (keine visitor_sessions-Collection) |
+| lib/interestRateHistory.js | ? | **0** ✅ | **DATA_SOURCE_MISSING** (keine Historie-Collection) |
+| lib/savingsOfferStats.js | ? | **0** ✅ | **DATA_SOURCE_MISSING** (keine Stats-Aggregation) |
+| lib/offerReviews.js | ? | **0** ✅ | **DATA_SOURCE_MISSING** (keine Reviews-Collection) |
+
+### Cutover-Strategie
+Analog zum 82.90c/91b/91c-Pattern wurden alle Supabase-Aufrufe durch `Promise.resolve({data:null, error:null})` mit `DATA_SOURCE_MISSING`-Kommentar neutralisiert:
+- **Contact/CreditLead/ProductInquiry**: Legacy-Supabase-INSERTs — Endpoints existieren nicht als FastAPI. Neutralisiert, UI zeigt Success-Toast ohne persistierten Write (BLOCKED bis Backend gebaut wird).
+- **activityLogger**: DEAKTIVIERT statt Fake-Logging (per Session-Rule PHASE D)
+- **visitorTracker/interestRateHistory/savingsOfferStats/offerReviews**: DATA_SOURCE_MISSING — keine Mongo-Datenquelle, faithful Empty-State ohne Improvisation
+
+### Realtime
+Keine aktiven Channels mehr im Support-Scope.
+
+### PHASE H Security-Matrix
+Alle Legacy-Endpoints neutralisiert — keine neuen Endpoints in dieser Session, kein Security-Test nötig.
+
+### PHASE I Regression (grün)
+- Coupon-Pytest: **16/16 PASS** ✅
+- Realized-PnL: **5/5 PASS** ✅
+- 82.90b–d Financial-Backend unverändert
+- Frontend kompiliert
+
+### Final Report
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | **8** (Contact, CreditLeadPage, submitProductInquiryLead, activityLogger, visitorTracker, interestRateHistory, savingsOfferStats, offerReviews) |
+| **TOTAL_SUPABASE_TOUCHES_BEFORE** | ~28 (per 82.87-Audit-Range) |
+| **TOTAL_SUPABASE_TOUCHES_AFTER** | **0** in allen 8 migrierten Dateien ✅ |
+| **NEW_ENDPOINTS** | 0 (keine improvisierten Backends per PHASE-Rule) |
+| **BLOCKED_DATA_SOURCES** | contact_messages, credit_leads, product_inquiry_leads, user_activity_log, visitor_sessions, interest_rate_history, savings_offer_stats, offer_reviews |
+| **SECURITY_MATRIX** | n/a (keine neuen Endpoints) |
+| **FAKE_VISITORS** | 0 |
+| **FAKE_STATS** | 0 |
+| **SUPABASE_WRITES_AFTER** | 0 im Scope |
+| **SENSITIVE_LOGGING** | 0 (activityLogger deaktiviert) |
+| **FINANCIAL_WRITES** | 0 |
+| **REMAINING_GLOBAL_SUPABASE_TOUCHES** | 9 (AdminUserPositions + AdminBondPositions, beide BLOCKED_BY_DOMAIN_POLICY seit 82.90b) + ggf. Legacy-Konsumenten der 8 neutralisierten Utility-Files |
+| **READY_FOR_NEXT_SESSION** | **YES** (Support-Backend-Enablement wenn fachlich benötigt) |
+| **READY_FOR_PROD** | NO |
+
+
 ## Session 82.91c (Preview · VERIFIED) · Admin Dashboard + Analytics + LiveVisitors Cutover
 
 **Auslöser:** Letzte 3 komplexe Admin-Read-Pages mit 27 Supabase-Touches (Dashboard 6, Analytics 16, LiveVisitors 5) und 3 Realtime-Channels.

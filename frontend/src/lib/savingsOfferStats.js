@@ -1,4 +1,3 @@
-import { supabase } from '@/lib/supabase';
 import { isExcludedSavingsBankSlug } from '@/lib/comparisonCatalog';
 import {
   COMPARISON_MIN_DEPOSIT_EUR,
@@ -49,10 +48,7 @@ export function buildStatsByProductType(offers) {
 }
 
 export async function fetchActiveComparisonOffers() {
-  const { data, error } = await supabase
-    .from('savings_offers')
-    .select('interest_rate, investment_type, deposit_term, min_deposit, banks(slug)')
-    .eq('is_active', true);
+  const { data, error } = { data: [], error: null }; // 82.92 DATA_SOURCE_MISSING (savings_offers stats)
 
   if (error) throw error;
   return (data || []).filter((o) => !isExcludedSavingsBankSlug(o.banks?.slug));
