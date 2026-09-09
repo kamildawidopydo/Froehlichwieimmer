@@ -5175,6 +5175,11 @@ app.include_router(_news_public_routes.router)
 from routes import forex as _forex_routes  # noqa: E402
 app.include_router(_forex_routes.router)
 
+# Session 82.91a — Admin Read Backend Enablement: banks/offers/apps/
+# depot-contracts/activity/dashboard-summary. Additiv, keine Writes.
+from routes import admin_reads as _admin_reads_routes  # noqa: E402
+app.include_router(_admin_reads_routes.router)
+
 
 @app.on_event("startup")
 async def _news_public_indexes():

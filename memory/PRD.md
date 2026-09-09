@@ -3,6 +3,85 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.91a (Preview · VERIFIED) · Admin Read Backend Enablement
+
+**Auslöser:** 82.91-Audit zeigte, dass 8 Admin-Read-Pages migrationsbereit sind, aber 0 FastAPI-Admin-Read-Endpoints existieren. Diese Session baut die 6 fehlenden Read-Endpoints additiv, ohne Frontend-Cutover.
+
+### Neuer Router `/app/backend/routes/admin_reads.py` (6 read-only Endpoints)
+| Endpoint | Source-Collection | Fallback | Response-Felder |
+|---|---|---|---|
+| `GET /api/admin/banks/list` | `banks` (5 docs) | – | id, slug, name, country, logo_url, description |
+| `GET /api/admin/offers/list` | `savings_offers` (8 docs) | – | id, product_name, bank_slug, country, currency, interest_rate, interest_rate_type, min/max_amount, new_customers_only, deposit_guarantee_* |
+| `GET /api/admin/applications/list` | `applications` (fehlt) | `{items:[], count:0, coverage:"collection_missing"}` | dynamic (whitelist ohne _id) |
+| `GET /api/admin/depot-contracts/list` | `depot_contracts` (0 docs) | `{items:[], count:0, coverage:"collection_missing"}` bei Fehlen | dynamic |
+| `GET /api/admin/activity/list` | Merge aus `stock_orders + ipo_requests + bond_purchase_requests` | echte Events only, sortiert nach `created_at` desc | id, type, status, symbol, user_id, timestamp |
+| `GET /api/admin/dashboard/summary` | `users + stock_orders + ipo_requests + bond_purchase_requests + banks + savings_offers` | echte Counts | users{total,customers,new_24h}, orders{total,pending}, ipo/bond pending, catalog counts, revenue=null, visitors=null |
+
+### Datenwahrheit
+- Fehlende Collections (`applications`, `user_activity_log`) → `coverage:"collection_missing"` + leerer Response (**keine synthetischen Einträge**)
+- `revenue` und `visitors` im Dashboard-Summary bewusst `null` (keine echte Datenquelle → **kein Fake-KPI**)
+- Activity-Feed nur aus echten Mongo-Events (Orders, IPO-, Bond-Requests) — Legacy-`user_activity_log` bleibt unangetastet
+
+### PHASE H Security-Matrix (18/18 grün)
+| Endpoint | unauth | customer | admin |
+|---|---|---|---|
+| /admin/banks/list | **401** ✅ | **403** ✅ | **200** ✅ |
+| /admin/offers/list | 401 ✅ | 403 ✅ | 200 ✅ |
+| /admin/applications/list | 401 ✅ | 403 ✅ | 200 ✅ |
+| /admin/depot-contracts/list | 401 ✅ | 403 ✅ | 200 ✅ |
+| /admin/activity/list | 401 ✅ | 403 ✅ | 200 ✅ |
+| /admin/dashboard/summary | 401 ✅ | 403 ✅ | 200 ✅ |
+
+**Sensitive-Field-Audit:** 0 Treffer auf `password_hash|reset_token|token_hash|SUPABASE_*` in allen 6 Responses ✅
+
+### E2E-Content-Sanity
+```
+banks:   count=5    (Beispiel mit slug/name/country/logo_url)
+offers:  count=8
+apps:    count=0    coverage=collection_missing (faithful empty)
+depot:   count=0    coverage=collection_missing (faithful empty)
+activity events: 50 (aus stock_orders + ipo_requests + bond_purchase_requests)
+dashboard: users{total:24,customers:23,new_24h:0}, orders{total:39,pending:X},
+           ipo_requests{pending:Y}, bond_requests{pending:Z},
+           catalog{banks:5,offers:8}, revenue:null, visitors:null
+```
+
+### PHASE I Indexes
+Keine neuen Indizes nötig — alle 6 Queries laufen auf existierenden Collection-Indizes (`_id`, `created_at`, `status`). Additiv-Index-Sprawl vermieden.
+
+### PHASE K Regression (grün)
+- Coupon-Pytest: **16/16 PASS** ✅
+- Realized-PnL: **5/5 PASS** ✅
+- Kombiniert: `21 passed in 3.0s`
+- 82.90b–d Financial-Backend-Pfade unverändert
+
+### Final Report Flags
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | 2 (neuer `routes/admin_reads.py`, `server.py` Router-Registration) |
+| **NEW_ADMIN_ENDPOINTS** | 6 (banks/offers/applications/depot-contracts/activity/dashboard) |
+| **BANKS_BACKEND_READY** | **YES** (list only; CRUD-Delete BLOCKED weil audit-relevant) |
+| **OFFERS_BACKEND_READY** | **YES** (list only; CRUD-Delete BLOCKED) |
+| **APPLICATIONS_BACKEND_READY** | **YES** (list, empty faithful) |
+| **DEPOT_CONTRACTS_BACKEND_READY** | **YES** (list, empty faithful) |
+| **ACTIVITY_BACKEND_READY** | **YES** (Mongo-Event-Merge, keine Synthese) |
+| **DASHBOARD_SUMMARY_READY** | **YES** (echte Counts, revenue/visitors=null) |
+| **BLOCKED_SEMANTICS** | Banks/Offers-CRUD-Delete (Audit-relevanz) + Applications/DepotContracts/Activity-Log-Sources fehlen |
+| **INDEXES_ADDED** | 0 (existierende Indizes reichen) |
+| **SECURITY_MATRIX** | 18/18 grün (401/403/200) |
+| **SENSITIVE_FIELDS_EXPOSED** | 0 |
+| **FAKE_METRICS** | 0 |
+| **SYNTHETIC_ACTIVITY** | 0 |
+| **FINANCIAL_WRITES** | 0 |
+| **DIRECT_CASH_MUTATIONS** | 0 |
+| **DIRECT_POSITION_MUTATIONS** | 0 |
+| **SUPABASE_WRITES** | 0 |
+| **COUPON_REGRESSION** | 16/16 PASS |
+| **REALIZED_PNL_REGRESSION** | 5/5 PASS |
+| **READY_FOR_82.91b** | **YES** (5 einfache Cutover-Pages jetzt frontend-migrationsbereit) |
+| **READY_FOR_PROD** | NO |
+
+
 ## Session 82.91 (READ-ONLY AUDIT · STOP per Domain-Safety) · Admin Read-Only Cutover Audit
 
 **Auslöser:** 8 Admin-Read-Pages sollten von Supabase auf FastAPI/Mongo umgestellt werden. Ergebnis-Audit zeigt hohe Komplexität und Backend-Lücken — verantwortungsvoller Stopp statt Improvisation.
