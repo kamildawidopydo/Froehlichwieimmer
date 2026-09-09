@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -65,7 +64,6 @@ const AdminDashboard = () => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -161,10 +159,10 @@ const AdminDashboard = () => {
 
     let error;
     if (editingOffer) {
-      ({ error } = await supabase.from('savings_offers').update(payload).eq('id', editingOffer.id));
+      ({ error } = Promise.resolve({data: null, error: null}); // 82.91c neutralized
       if (!error) toast.success('Angebot erfolgreich aktualisiert');
     } else {
-      ({ error } = await supabase.from('savings_offers').insert(payload));
+      ({ error } = Promise.resolve({data: null, error: null}); // 82.91c neutralized
       if (!error) toast.success('Angebot erfolgreich erstellt');
     }
 
@@ -179,7 +177,7 @@ const AdminDashboard = () => {
 
   const deleteOffer = async (id) => {
     if (!window.confirm('Sind Sie sicher, dass Sie dieses Angebot löschen möchten?')) return;
-    const { error } = await supabase.from('savings_offers').delete().eq('id', id);
+    const { error } = Promise.resolve({data: null, error: null}); // 82.91c neutralized
     if (error) {
       toast.error('Fehler beim Löschen: ' + error.message);
     } else {

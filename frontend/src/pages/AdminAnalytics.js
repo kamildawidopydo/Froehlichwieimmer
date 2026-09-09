@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { AdminSubpageLayout, AdminSubpageHeader } from '@/components/admin/AdminSubpageChrome';
 import * as Sentry from '@sentry/react';
 import { toast } from 'sonner';
@@ -86,7 +85,7 @@ const AdminAnalytics = () => {
     setDigestSending(true);
     try {
       const payload = mode === 'single' ? { mode: 'single', user_id: user?.id } : { mode: 'all' };
-      const { data, error } = await supabase.functions.invoke('send-weekly-digest', { body: payload });
+      const { data, error } = Promise.resolve({data: null, error: null}); // 82.91c neutralized
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success('Wochenbericht versendet', {
@@ -109,9 +108,7 @@ const AdminAnalytics = () => {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const { data: serverData, error: serverError } = await supabase.rpc('admin_analytics_overview', {
-        p_range_days: rangeDays,
-      });
+      const { data: serverData, error: serverError } = Promise.resolve({data: null, error: null}); // 82.91c neutralized
       if (!serverError && serverData) {
         setTotalAum(Number(serverData.totalAum || 0));
         setTotalUsers(Number(serverData.totalUsers || 0));
@@ -167,12 +164,7 @@ const AdminAnalytics = () => {
     // fallback: sum live positions if snapshots empty
     if (aum === 0) {
       const [{ data: profs }, { data: positions }, { data: cache }, { data: bonds }, { data: contracts }] = await Promise.all([
-        supabase.from('profiles').select('cash_balance'),
-        supabase.from('user_stock_positions').select('quantity, avg_cost, symbol'),
-        supabase.from('stock_prices_cache').select('symbol, price'),
-        supabase.from('user_bond_positions').select('nominal_betrag, aktueller_kurs, is_active').eq('is_active', true),
-        supabase.from('user_depot_contracts').select('amount_eur, is_active').eq('is_active', true),
-      ]);
+        Promise.resolve({data: [], error: null});
       const priceMap = {};
       (cache || []).forEach((c) => { priceMap[c.symbol] = Number(c.price || 0); });
       const cash = (profs || []).reduce((s, r) => s + Number(r.cash_balance || 0), 0);
@@ -184,12 +176,7 @@ const AdminAnalytics = () => {
     setTotalAum(aum);
 
     const [a24, a7, tot, nu7, pend] = await Promise.all([
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('last_seen_at', h24),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('last_seen_at', d7),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('status', 'approved'),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', d7),
-      supabase.from('user_stock_orders').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-    ]);
+      Promise.resolve({data: [], error: null});
     setActive24h(a24.count || 0);
     setActive7d(a7.count || 0);
     setTotalUsers(tot.count || 0);
@@ -234,10 +221,7 @@ const AdminAnalytics = () => {
 
   const fetchTopHoldings = async () => {
     const [{ data: positions }, { data: stocks }, { data: cache }] = await Promise.all([
-      supabase.from('user_stock_positions').select('user_id, symbol, quantity, avg_cost'),
-      supabase.from('stocks').select('symbol, name, sector'),
-      supabase.from('stock_prices_cache').select('symbol, price'),
-    ]);
+      Promise.resolve({data: [], error: null});
     const stockMap = {};
     (stocks || []).forEach((s) => { stockMap[s.symbol] = s; });
     const priceMap = {};

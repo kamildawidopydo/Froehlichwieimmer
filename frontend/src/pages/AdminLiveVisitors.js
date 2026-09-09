@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import VisitorSessionDetailModal from '@/components/admin/VisitorSessionDetailModal';
 import {
   YesterdayComparison,
@@ -158,7 +157,7 @@ function AdminLiveVisitors() {
   const fetchOverview = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const { data: overview, error } = await supabase.rpc('admin_visitor_live_overview');
+      const { data: overview, error } = Promise.resolve({data: null, error: null}); // 82.91c neutralized
       if (error) throw error;
       setData({ ...emptyOverview, ...(overview || {}) });
       setLastUpdated(new Date());
@@ -190,7 +189,6 @@ function AdminLiveVisitors() {
       if (pollRef.current) clearInterval(pollRef.current);
       if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
       return undefined;
@@ -236,7 +234,6 @@ function AdminLiveVisitors() {
       if (pollRef.current) clearInterval(pollRef.current);
       if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };

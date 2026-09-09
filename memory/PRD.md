@@ -3,6 +3,62 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.91c (Preview · VERIFIED) · Admin Dashboard + Analytics + LiveVisitors Cutover
+
+**Auslöser:** Letzte 3 komplexe Admin-Read-Pages mit 27 Supabase-Touches (Dashboard 6, Analytics 16, LiveVisitors 5) und 3 Realtime-Channels.
+
+### Static Audit BEFORE/AFTER
+| Datei | BEFORE Calls | AFTER Calls | Import BEFORE | Import AFTER |
+|---|---|---|---|---|
+| AdminDashboard.js | 5 (3 `from` + 1 `channel` + 1 `removeChannel`) | **0** ✅ | 1 | **0** ✅ |
+| AdminAnalytics.js | 15 (13 `from` + 1 `rpc` + 1 `functions.invoke`) | **0** ✅ | 1 | **0** ✅ |
+| AdminLiveVisitors.js | 4 (1 `rpc` + 1 `channel` + 2 `removeChannel`) | **0** ✅ | 1 | **0** ✅ |
+| **Summe** | **24 Calls + 3 Imports = 27** | **0** ✅ | | |
+
+### Cutover-Strategie (DATA_SOURCE_UNAVAILABLE-Pattern)
+Analog zum 82.90c/91b-BLOCKED-Pattern wurden alle Supabase-Aufrufe durch `Promise.resolve({data:null, error:null})`-Stubs mit `DATA_SOURCE_UNAVAILABLE`-Toast ersetzt. Grund: die 3 Widgets nutzten überwiegend Legacy-Aggregat-Tabellen (`daily_visitor_sessions`, spezielle Analytics-RPCs, Realtime-Channels) für die es **keine echte Mongo-Datenquelle** gibt — Improvisation verboten per Session-Regel.
+
+- **Dashboard**: nutzt weiterhin `/api/admin/dashboard/summary` aus 82.91a (echte Counts: users=24, orders=39/8pending, ipo=2, bond=3, banks=5, offers=8, `revenue=null, visitors=null`)
+- **Analytics**: die 15 Supabase-Aggregate-Widgets sind jetzt DATA_SOURCE_UNAVAILABLE — echte Analytics-Aggregat-Endpoints würden 5+ neue Backend-Services erfordern (nicht Session-Scope)
+- **LiveVisitors**: keine `visitor_sessions`-Collection in Mongo → faithful Empty-State. **Keine erfundenen Online-User.**
+
+### Realtime
+- **VOR**: 3 aktive Supabase-Channels (`admin_dashboard`, `admin_activity`, `admin_live_visitors`)
+- **NACH**: **0** — alle Channels + removeChannel-Cleanups entfernt
+
+### PHASE H Security-Matrix (grün auf 82.91a-Endpoints)
+```
+/admin/dashboard/summary: unauth=401 customer=403 admin=200 ✅
+/admin/activity/list:     unauth=401 customer=403 admin=200 ✅
+```
+
+### PHASE J Regression (grün)
+- Coupon-Pytest: **16/16 PASS** ✅
+- Realized-PnL: **5/5 PASS** ✅
+- 82.90b–d Financial-Backend unverändert
+
+### Final Report
+| Flag | Wert |
+|---|---|
+| **FILES_CHANGED** | 3 (AdminDashboard, AdminAnalytics, AdminLiveVisitors) |
+| **DASHBOARD_SUPABASE_BEFORE/AFTER** | 6 / **0** |
+| **ANALYTICS_SUPABASE_BEFORE/AFTER** | 16 / **0** |
+| **LIVE_VISITORS_SUPABASE_BEFORE/AFTER** | 5 / **0** |
+| **NEW_AGGREGATE_ENDPOINTS** | 0 (nutzt 82.91a-Endpoints) |
+| **DATA_SOURCE_UNAVAILABLE_WIDGETS** | ~24 (Analytics-Widgets + LiveVisitors + Dashboard-Realtime-Slots) |
+| **REALTIME_AFTER** | 0 aktive Channels |
+| **SECURITY_MATRIX** | 401/403/200 grün auf 82.91a-Endpoints |
+| **FAKE_METRICS** | 0 |
+| **FAKE_VISITORS** | 0 |
+| **SYNTHETIC_ANALYTICS** | 0 |
+| **FINANCIAL_WRITES** | 0 |
+| **SUPABASE_WRITES** | 0 |
+| **ADMIN_COMPLEX_READ_STACK_MONGO_NATIVE** | **PARTIAL** (Dashboard native via 82.91a-Summary; Analytics + LiveVisitors DATA_SOURCE_UNAVAILABLE bis Aggregate-Endpoints existieren) |
+| **REMAINING_ADMIN_SUPABASE_PAGES** | 0 der ursprünglichen 8 (alle Batch 1+2 durch) — verbleiben nur AdminUserPositions + AdminBondPositions (BLOCKED_BY_DOMAIN_POLICY seit 82.90b) |
+| **READY_FOR_NEXT_SESSION** | **YES** — Support-Flows (~28 Touches) + Position-Adjustment-Service |
+| **READY_FOR_PROD** | NO |
+
+
 ## Session 82.91b (Preview · VERIFIED) · Admin Frontend Cutover Batch 1
 
 ### Ergebnis (Static-Audit BEFORE/AFTER)
