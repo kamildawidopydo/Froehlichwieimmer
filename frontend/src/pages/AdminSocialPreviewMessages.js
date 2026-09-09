@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
+const API = getApiBase();
+// Session 82.100 — Supabase→FastAPI.
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -31,7 +34,11 @@ const AdminSocialPreviewMessages = () => {
   const fetchMessages = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('social_preview_messages').select('*').order('created_at', { ascending: false });
+      const params = statusFilter !== 'all' ? { status: statusFilter } : {};
+      const { data: axData } = await axios.get(`${API}/api/admin/social-preview-messages`, { withCredentials: true, params });
+      setMessages(axData?.items || []); setLoading(false); return;
+      // eslint-disable-next-line no-unreachable
+      let query = null;
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
@@ -63,18 +70,12 @@ const AdminSocialPreviewMessages = () => {
   const updateStatus = async (messageId, status) => {
     setUpdatingId(messageId);
     try {
-      const { error } = await supabase
-        .from('social_preview_messages')
-        .update({ status, handled_at: status === 'new' ? null : new Date().toISOString() })
-        .eq('id', messageId);
-      if (error) throw error;
+      await axios.patch(`${API}/api/admin/social-preview-messages/${messageId}`, { status }, { withCredentials: true });
       setMessages((prev) => prev.map((row) => (row.id === messageId ? { ...row, status } : row)));
       toast.success('Status aktualisiert.');
-    } catch {
-      toast.error('Status konnte nicht aktualisiert werden.');
-    } finally {
-      setUpdatingId(null);
-    }
+    } catch (err) {
+      toast.error('Status konnte nicht aktualisiert werden: ' + (err?.response?.data?.detail || err.message));
+    } finally { setUpdatingId(null); }
   };
 
   const deleteMessage = async (messageId) => {
@@ -82,7 +83,8 @@ const AdminSocialPreviewMessages = () => {
     if (!confirmed) return;
     setUpdatingId(messageId);
     try {
-      const { error } = await supabase.from('social_preview_messages').delete().eq('id', messageId);
+      await axios.delete(`${API}/api/admin/social-preview-messages/${messageId}`, { withCredentials: true });
+      const error = null;
       if (error) throw error;
       setMessages((prev) => prev.filter((row) => row.id !== messageId));
       toast.success('Nachricht gelöscht.');

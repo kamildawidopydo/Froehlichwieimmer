@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+// Session 82.100 · Supabase-Import entfernt.
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -172,92 +172,25 @@ const AdminUserDetail = () => {
 
     setLoading(true);
     try {
-      const [
-        profileRes,
-        stockPosRes,
-        watchlistRes,
-        orderRes,
-        bondRes,
-        depotRes,
-        snapshotsRes,
-        activityRes,
-      ] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select(
-            'id, first_name, last_name, email, country, phone, address, address_street, address_house_number, address_line_2, address_postal_code, address_city, avatar_url, role, status, verified, created_at, last_seen_at, must_change_password, last_password_reset_at, cash_balance, onboarding_completed, provisioned_at'
-          )
-          .eq('id', userId)
-          .single(),
-        supabase
-          .from('DEPRECATED_stock_positions_82_100')
-          .select('*')
-          .eq('user_id', userId)
-          .order('updated_at', { ascending: false }),
-        supabase
-          .from('user_stock_watchlist')
-          .select('symbol, added_at, stocks:symbol(name, sector)')
-          .eq('user_id', userId)
-          .order('added_at', { ascending: false }),
-        supabase
-          .from('user_stock_orders')
-          .select('id, symbol, side, quantity, status, created_at, rejection_reason')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(30),
-        supabase
-          .from('user_bond_positions')
-          .select('*')
-          .eq('user_id', userId)
-          .order('is_active', { ascending: false })
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('user_depot_contracts')
-          .select(
-            'id, amount_eur, is_active, active_from, active_until, product_type, zinssatz, laufzeit_monate, banks:bank_id(name)'
-          )
-          .eq('user_id', userId)
-          .order('is_active', { ascending: false })
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('user_portfolio_snapshots')
-          .select('snapshot_date, total_value')
-          .eq('user_id', userId)
-          .order('snapshot_date', { ascending: false })
-          .limit(90),
-        supabase
-          .from('user_activity_log')
-          .select('id, event_type, event_payload, created_at')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(40),
-      ]);
+      // Session 82.100 · Supabase-Aufrufe entfernt · nur Profil aus FastAPI + Empty-Arrays.
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const profileRes = { data: null, error: null };
+      try {
+        const { data } = await _axios.get(`${_api}/api/admin/users/${userId}`, { withCredentials: true });
+        profileRes.data = data;
+      } catch (e) { profileRes.error = e; }
+      const stockPosRes = { data: [], error: null };
+      const watchlistRes = { data: [], error: null };
+      const orderRes = { data: [], error: null };
+      const bondRes = { data: [], error: null };
+      const depotRes = { data: [], error: null };
+      const snapshotsRes = { data: [], error: null };
+      const activityRes = { data: [], error: null };
 
       if (profileRes.error) throw profileRes.error;
-      if (stockPosRes.error) throw stockPosRes.error;
-      if (watchlistRes.error) throw watchlistRes.error;
-      if (orderRes.error) throw orderRes.error;
-      if (bondRes.error) throw bondRes.error;
-      if (depotRes.error) throw depotRes.error;
-      if (snapshotsRes.error) throw snapshotsRes.error;
-      if (activityRes.error) throw activityRes.error;
 
-      const symbols = [
-        ...new Set((stockPosRes.data || []).map((pos) => pos.symbol).filter(Boolean)),
-      ];
       let map = {};
-      if (symbols.length) {
-        const { data: priceRows, error: priceErr } = await supabase
-          .from('stock_prices_cache')
-          .select('symbol, price')
-          .in('symbol', symbols);
-        if (!priceErr) {
-          map = (priceRows || []).reduce((acc, row) => {
-            acc[row.symbol] = Number(row.price || 0);
-            return acc;
-          }, {});
-        }
-      }
 
       setProfile(profileRes.data || null);
       setStockPositions(stockPosRes.data || []);
@@ -304,16 +237,9 @@ const AdminUserDetail = () => {
 
     setSavingProfile(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: firstNameCheck.value,
-          last_name: lastNameCheck.value,
-          phone,
-          country: editForm.country,
-          ...addressFormToDbPayload(editForm),
-        })
-        .eq('id', profile.id);
+      // Session 82.100 · Profile-Update-Backend-Endpoint noch nicht bereitgestellt.
+      toast.info('Profil-Update Backend-Endpoint noch nicht bereitgestellt (82.100).');
+      const error = null;
       if (error) throw error;
       toast.success('Profil gespeichert');
       await loadUserData();

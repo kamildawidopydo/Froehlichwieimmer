@@ -5197,6 +5197,10 @@ app.include_router(_admin_notifications_routes.router)
 from routes import storage_files as _storage_files_routes  # noqa: E402
 app.include_router(_storage_files_routes.router)
 
+# Session 82.100 — Legacy Admin Reads (Credit, Product-Inquiry, Social, Contract).
+from routes import admin_legacy_reads as _admin_legacy_reads_routes  # noqa: E402
+app.include_router(_admin_legacy_reads_routes.router)
+
 @app.on_event("startup")
 async def _init_storage_at_startup():
     try:

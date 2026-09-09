@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+// Session 82.100 — Supabase-CRUD durch FastAPI-Admin-Endpoints ersetzt (dynamic axios import).
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -59,29 +59,22 @@ const AdminCreditOffers = () => {
   const [saving, setSaving] = useState(false);
 
   const fetchBanks = async () => {
-    const { data, error } = await supabase
-      .from('banks')
-      .select('id, name, country, is_active')
-      .order('name', { ascending: true });
-    if (error) {
-      toast.error('Banken konnten nicht geladen werden.');
-      return;
-    }
-    setBanks(data || []);
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/banks/list`, { withCredentials: true });
+      setBanks(data?.items || []);
+    } catch { toast.error('Banken konnten nicht geladen werden.'); }
   };
 
   const fetchOffers = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('credit_offers')
-      .select('*, banks(id, name, country)')
-      .order('sort_priority', { ascending: true })
-      .order('effective_rate_from', { ascending: true });
-    if (error) {
-      toast.error('Kredit-Angebote konnten nicht geladen werden.');
-    } else {
-      setOffers(data || []);
-    }
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/credit-offers`, { withCredentials: true });
+      setOffers(data?.items || []);
+    } catch { toast.error('Kredit-Angebote konnten nicht geladen werden.'); }
     setLoading(false);
   };
 
@@ -169,9 +162,9 @@ const AdminCreditOffers = () => {
 
     let error;
     if (modalMode === 'add') {
-      ({ error } = await supabase.from('credit_offers').insert(payload));
+      try { const _axios = (await import('axios')).default; const _api = (await import('@/lib/apiBase')).getApiBase(); await _axios.post(`${_api}/api/admin/credit-offers`, payload, { withCredentials: true }); error = null; } catch (e) { error = { message: e?.response?.data?.detail || e.message }; }
     } else {
-      ({ error } = await supabase.from('credit_offers').update(payload).eq('id', editingOffer.id));
+      try { const _axios = (await import('axios')).default; const _api = (await import('@/lib/apiBase')).getApiBase(); await _axios.patch(`${_api}/api/admin/credit-offers/${editingOffer.id}`, payload, { withCredentials: true }); error = null; } catch (e) { error = { message: e?.response?.data?.detail || e.message }; }
     }
 
     if (error) {
@@ -186,7 +179,8 @@ const AdminCreditOffers = () => {
 
   const handleDelete = async (offer) => {
     if (!window.confirm(`Angebot von "${offer.banks?.name || 'Unbekannt'}" wirklich löschen?`)) return;
-    const { error } = await supabase.from('credit_offers').delete().eq('id', offer.id);
+    let error = null;
+    try { const _axios = (await import('axios')).default; const _api = (await import('@/lib/apiBase')).getApiBase(); await _axios.delete(`${_api}/api/admin/credit-offers/${offer.id}`, { withCredentials: true }); } catch (e) { error = { message: e?.response?.data?.detail || e.message }; }
     if (error) {
       toast.error(`Fehler: ${error.message}`);
       return;

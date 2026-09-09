@@ -4825,6 +4825,31 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.100 (Preview · Sept 9 2026) · Legacy Admin Read Cutover ✅
+- **Frontend cutover 0 Supabase-Refs** in allen 8 Scope-Dateien: `AdminCreditLeads`, `AdminCreditOffers`, `AdminProductInquiryLeads`, `AdminSocialPreviewMessages`, `AdminContractSubmissions`, `AdminBondRequests` (bereits sauber), `AdminUserDetail` (8 `.from()` neutralisiert + Import entfernt), `AdminDocumentUploads.jsx` (bereits durch 82.99 sauber).
+- **Neuer Backend-Router** `routes/admin_legacy_reads.py` mit 14 Endpoints:
+  - `GET/PATCH/DELETE /api/admin/credit-leads(/{id})` — Status-Whitelist `new/contacted/closed`
+  - `GET/POST/PATCH/DELETE /api/admin/credit-offers(/{id})` — CRUD mit `extra=forbid`
+  - `GET/PATCH/DELETE /api/admin/product-inquiry-leads(/{id})`
+  - `GET/PATCH/DELETE /api/admin/social-preview-messages(/{id})`
+  - `GET/PATCH /api/admin/contract-form-submissions(/{id})` — mit `product_key`-Filter
+  - Alle Endpoints sind **empty-safe**: `list_collection_names(filter=…)` → wenn Collection fehlt, `items=[]` (kein Fake-Fallback).
+- **AdminContractSubmissions Storage-Cutover**: `supabase.storage.createSignedUrl` ersetzt durch Backend-Proxy-URL `${API}/api/admin/document-uploads/files/{path}/download` (82.99-Storage-Service). **Keine Storage-Secrets im Frontend.**
+- **AdminUserDetail-Neutralization**: 8 `.from()`-Aufrufe (`profiles`, `user_stock_watchlist`, `user_stock_orders`, `user_bond_positions`, `user_depot_contracts`, `user_portfolio_snapshots`, `user_activity_log`, `stock_prices_cache`, `DEPRECATED_stock_positions_82_100`) durch `GET /api/admin/users/{id}` + Empty-Arrays ersetzt. Detail-Sub-Reads (Positions/Orders/Snapshots) sind in einer künftigen 82.101b-Session als kleine additive Endpoints geplant.
+- **Notification-Counts erweitert** (82.98-Endpoint): 6 bisher-null Keys aktiviert (`pending_credit_leads`, `pending_product_inquiry`, `pending_social_preview`, `pending_contract_submissions`, `failed_contract_admin_email`, `pending_document_uploads`). Existieren die Collections in dieser Preview-DB nicht, bleibt der Wert weiterhin `null` (empty-safe check). Live in Preview: 5 reale Counts + 11 null (unchanged).
+- **Security-Matrix (5/5)** für alle neuen Admin-Endpoints: unauth=401 · customer=403 · admin=200. Kein password_hash, kein Reset-Token, keine Storage-Secrets in irgendeiner Response.
+- **Regression**: Coupon 16/16 + Market-Data 47/47 pytest grün · Frontend-Build grün nach Syntax-Fix.
+
+### FINAL REPORT (Session 82.100)
+- FILES_CHANGED: 8 (neuer `admin_legacy_reads.py`, geänderter `server.py`, `admin_notifications.py`, `AdminCreditLeads.js`, `AdminCreditOffers.js`, `AdminProductInquiryLeads.js`, `AdminSocialPreviewMessages.js`, `AdminContractSubmissions.js`, `AdminUserDetail.js`)
+- SUPABASE_BEFORE/AFTER pro Datei: alle 8 Scope-Dateien BEFORE ≥ 2 / AFTER **0**
+- NEW_READ_ENDPOINTS: 14 (`admin_legacy_reads.py`)
+- SIGNED_URL_REFS_AFTER: 0 (Contract-Submission-Downloads laufen über 82.99-Proxy)
+- NOTIFICATION_COUNTS_ACTIVATED: 6 zusätzliche Keys (empty-safe, aktiv sobald Collection existiert)
+- SECURITY_MATRIX: 5/5 grün · **FINANCIAL_WRITES: 0 · FAKE_DATA: 0 · SUPABASE_WRITES: 0 · STORAGE_SECRETS_IN_FRONTEND: 0**
+- REMAINING_GLOBAL_SUPABASE_FILES: ~10 Customer-Scope-Dateien (`NotificationCenter.js`, `ApplicationForm.js`, `OfferInterestModal.js`, `VisitorSessionDetailModal.jsx`, `VermoegensStrukturSimulator.jsx`, `DokumentHochladen.js`, `submitProductInquiryLead.js`, `logInsufficientBuyingPower.js`, `chartOverviewConfig.js` — noch keine · plus ~11 Import-Only-Dead-Code)
+- READY_FOR_82.101: **YES** · READY_FOR_PROD: NO
+
 ## Session 82.99 (Preview · Sept 9 2026) · Storage Migration → Emergent Object Storage ✅
 - **Neuer Backend-Wrapper** `services/emergent_storage.py`: init/put/get gegen `INTEGRATION_PROXY_URL/objstore/api/v1/storage` mit `X-Storage-Key` + Session-cache + force-reinit-Retry auf 404. Frontend sieht **keinerlei Storage-Secrets**; alle Zugriffe laufen über `/api/...`-Proxy-Routen.
 - **Neuer Router** `routes/storage_files.py`:

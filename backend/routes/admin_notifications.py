@@ -75,18 +75,20 @@ async def admin_notification_counts(
     counts["pending_support"] = await _support_unread_total()
     counts["pending_offer_interests"] = await _count_or_none("offer_interests", {})
 
-    # Legacy-Supabase-Collections — noch nicht migriert (siehe 82.95-Audit).
-    # Bewusst null (Badge im UI wird ausgeblendet).
-    counts["pending_users"] = None                       # `profiles.status=pending`
-    counts["pending_credit_leads"] = None                # `credit_leads.status=new`
-    counts["pending_product_inquiry"] = None             # `product_inquiry_leads.status=new`
-    counts["pending_social_preview"] = None              # `social_preview_messages.status=new`
+    # Session 82.100 · aktiviert für Collections mit neuen Mongo-Endpoints.
+    # Existiert die Collection nicht → `_count_or_none` liefert weiterhin null.
+    counts["pending_credit_leads"] = await _count_or_none("credit_leads", {"status": "new"})
+    counts["pending_product_inquiry"] = await _count_or_none("product_inquiry_leads", {"status": "new"})
+    counts["pending_social_preview"] = await _count_or_none("social_preview_messages", {"status": "new"})
+    counts["pending_contract_submissions"] = await _count_or_none("contract_form_submissions", {"status": "new"})
+    counts["failed_contract_admin_email"] = await _count_or_none("contract_form_submissions", {"admin_email_sent": False})
+    counts["pending_document_uploads"] = await _count_or_none("document_upload_submissions", {"status": "new"})
+
+    # Nicht migriert (siehe 82.95-Audit)
+    counts["pending_users"] = None                       # `profiles.status=pending` — Legacy
     counts["pending_applications"] = None                # `applications.status=Neu`
     counts["pending_offer_reviews"] = None               # `offer_reviews.status=pending`
     counts["failed_application_email"] = None            # `application_email_outbox.status=failed`
-    counts["failed_contract_admin_email"] = None         # `contract_form_submissions.admin_email_sent=false`
-    counts["pending_contract_submissions"] = None        # `contract_form_submissions.status=new`
-    counts["pending_document_uploads"] = None            # `document_upload_submissions.status=new`
     counts["pending_insufficient_buying_power"] = None   # `insufficient_buying_power_events.status=new`
 
     return {

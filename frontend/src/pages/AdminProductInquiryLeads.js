@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
+const API = getApiBase();
+// Session 82.100 — Supabase→FastAPI.
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -39,7 +42,11 @@ const AdminProductInquiryLeads = () => {
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('product_inquiry_leads').select('*').order('created_at', { ascending: false });
+      const params = statusFilter !== 'all' ? { status: statusFilter } : {};
+      const { data: axData } = await axios.get(`${API}/api/admin/product-inquiry-leads`, { withCredentials: true, params });
+      setLeads(axData?.items || []); setLoading(false); return;
+      // eslint-disable-next-line no-unreachable
+      let query = null;
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
@@ -93,18 +100,12 @@ const AdminProductInquiryLeads = () => {
   const updateStatus = async (leadId, status) => {
     setUpdatingId(leadId);
     try {
-      const { error } = await supabase
-        .from('product_inquiry_leads')
-        .update({ status, handled_at: status === 'new' ? null : new Date().toISOString() })
-        .eq('id', leadId);
-      if (error) throw error;
+      await axios.patch(`${API}/api/admin/product-inquiry-leads/${leadId}`, { status }, { withCredentials: true });
       setLeads((prev) => prev.map((lead) => (lead.id === leadId ? { ...lead, status } : lead)));
       toast.success('Status aktualisiert.');
-    } catch {
-      toast.error('Status konnte nicht aktualisiert werden.');
-    } finally {
-      setUpdatingId(null);
-    }
+    } catch (err) {
+      toast.error('Status konnte nicht aktualisiert werden: ' + (err?.response?.data?.detail || err.message));
+    } finally { setUpdatingId(null); }
   };
 
   const deleteLead = async (leadId) => {
@@ -112,7 +113,8 @@ const AdminProductInquiryLeads = () => {
     if (!confirmed) return;
     setUpdatingId(leadId);
     try {
-      const { error } = await supabase.from('product_inquiry_leads').delete().eq('id', leadId);
+      await axios.delete(`${API}/api/admin/product-inquiry-leads/${leadId}`, { withCredentials: true });
+      const error = null;
       if (error) throw error;
       setLeads((prev) => prev.filter((lead) => lead.id !== leadId));
       setSelected((prev) => {

@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
+// Session 82.100 — Supabase-RPC + Storage-Signed-URL entfernt.
+// Reads: `GET /api/admin/contract-form-submissions`; Downloads laufen über
+// den 82.99-Storage-Proxy `GET /api/admin/document-uploads/files/{id}/download`.
+const API = getApiBase();
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -102,42 +107,14 @@ const AdminContractSubmissions = () => {
   const fetchRows = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_list_contract_form_submissions', {
-        p_limit: 200,
+      const params = { limit: 200 };
+      if (productFilter !== 'all') params.product_key = productFilter;
+      const { data } = await axios.get(`${API}/api/admin/contract-form-submissions`, {
+        withCredentials: true, params,
       });
-
-      let data = rpcData;
-      if (rpcError) {
-        let query = supabase
-          .from('contract_form_submissions')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(200);
-
-        if (productFilter !== 'all') {
-          query = query.eq('product_key', productFilter);
-        }
-
-        const fallback = await query;
-        if (fallback.error) throw fallback.error;
-        data = fallback.data;
-      }
-
-      const rows = (data || []).filter((row) =>
-        productFilter === 'all' ? true : row.product_key === productFilter,
-      );
-      setRows(rows);
-      if (rows.length === 0) {
-        console.info('[contract-submissions] keine Zeilen (Tabelle leer oder keine Admin-Berechtigung)');
-      }
+      setRows(data?.items || []);
     } catch (err) {
-      console.error(err);
-      const hint = err?.message?.includes('contract_form_submissions')
-        ? ' — Migration ausführen: supabase db push'
-        : err?.message?.includes('permission') || err?.code === '42501'
-          ? ' — Profil braucht role=admin in Supabase'
-          : '';
-      toast.error(`Vertrags-Einreichungen konnten nicht geladen werden${hint ? `: ${err.message}` : '.'}`);
+      toast.error('Vertrags-Einreichungen konnten nicht geladen werden: ' + (err?.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
     }
@@ -158,26 +135,18 @@ const AdminContractSubmissions = () => {
   }, [rows, searchTerm]);
 
   const resolveSignedUrl = async (storagePath) => {
+    // Session 82.100 · Downloads laufen über Backend-Proxy — keine Signed-URL nötig.
     if (!storagePath) return null;
-    if (signedUrls[storagePath]) return signedUrls[storagePath];
-    const { data, error } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .createSignedUrl(storagePath, 3600);
-    if (error) {
-      console.warn('Signed URL failed:', error.message);
-      return null;
-    }
-    setSignedUrls((prev) => ({ ...prev, [storagePath]: data.signedUrl }));
-    return data.signedUrl;
+    return `${API}/api/admin/document-uploads/files/${encodeURIComponent(storagePath)}/download`;
   };
 
   const markHandled = async (id) => {
-    const { error } = await supabase
-      .from('contract_form_submissions')
-      .update({ status: 'handled' })
-      .eq('id', id);
-    if (error) {
-      toast.error('Fehler: ' + error.message);
+    try {
+      await axios.patch(`${API}/api/admin/contract-form-submissions/${id}`, { status: 'handled' }, { withCredentials: true });
+      toast.success('Als erledigt markiert');
+      fetchRows();
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err.message));
       return;
     }
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'handled' } : r)));

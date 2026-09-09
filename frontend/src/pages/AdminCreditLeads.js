@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import axios from 'axios';
+import { getApiBase } from '@/lib/apiBase';
+// Session 82.100 — Supabase-Reads/Writes durch FastAPI-Admin-Endpoints ersetzt.
+const API = getApiBase();
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -25,15 +28,13 @@ const AdminCreditLeads = () => {
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('credit_leads').select('*').order('created_at', { ascending: false });
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      setLeads(data || []);
-    } catch (error) {
-      toast.error('Fehler beim Laden der Kreditanfragen.');
+      const params = statusFilter !== 'all' ? { status: statusFilter } : {};
+      const { data } = await axios.get(`${API}/api/admin/credit-leads`, {
+        withCredentials: true, params,
+      });
+      setLeads(data?.items || []);
+    } catch (err) {
+      toast.error('Fehler beim Laden: ' + (err?.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
     }
@@ -56,31 +57,25 @@ const AdminCreditLeads = () => {
   const updateStatus = async (leadId, status) => {
     setUpdatingId(leadId);
     try {
-      const { error } = await supabase
-        .from('credit_leads')
-        .update({ status, handled_at: status === 'new' ? null : new Date().toISOString() })
-        .eq('id', leadId);
-      if (error) throw error;
+      await axios.patch(`${API}/api/admin/credit-leads/${leadId}`, { status }, { withCredentials: true });
       setLeads((prev) => prev.map((lead) => (lead.id === leadId ? { ...lead, status } : lead)));
       toast.success('Status aktualisiert.');
-    } catch {
-      toast.error('Status konnte nicht aktualisiert werden.');
+    } catch (err) {
+      toast.error('Status konnte nicht aktualisiert werden: ' + (err?.response?.data?.detail || err.message));
     } finally {
       setUpdatingId(null);
     }
   };
 
   const deleteLead = async (leadId) => {
-    const confirmed = window.confirm('Diese Kreditanfrage wirklich dauerhaft löschen?');
-    if (!confirmed) return;
+    if (!window.confirm('Diese Kreditanfrage wirklich dauerhaft löschen?')) return;
     setUpdatingId(leadId);
     try {
-      const { error } = await supabase.from('credit_leads').delete().eq('id', leadId);
-      if (error) throw error;
+      await axios.delete(`${API}/api/admin/credit-leads/${leadId}`, { withCredentials: true });
       setLeads((prev) => prev.filter((lead) => lead.id !== leadId));
       toast.success('Kreditanfrage gelöscht.');
-    } catch {
-      toast.error('Kreditanfrage konnte nicht gelöscht werden.');
+    } catch (err) {
+      toast.error('Löschen fehlgeschlagen: ' + (err?.response?.data?.detail || err.message));
     } finally {
       setUpdatingId(null);
     }
