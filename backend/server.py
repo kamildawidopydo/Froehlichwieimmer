@@ -5193,6 +5193,19 @@ app.include_router(_formular_access_routes.admin_router)
 from routes import admin_notifications as _admin_notifications_routes  # noqa: E402
 app.include_router(_admin_notifications_routes.router)
 
+# Session 82.99 — Avatar + Document Storage (Emergent Object Storage).
+from routes import storage_files as _storage_files_routes  # noqa: E402
+app.include_router(_storage_files_routes.router)
+
+@app.on_event("startup")
+async def _init_storage_at_startup():
+    try:
+        from services.emergent_storage import init_storage as _init_storage
+        _init_storage()
+    except Exception as _e:
+        import logging as _l
+        _l.getLogger("kapitalmitte").warning(f"Storage init deferred: {_e}")
+
 
 @app.on_event("startup")
 async def _news_public_indexes():

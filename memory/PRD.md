@@ -4825,6 +4825,34 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.99 (Preview · Sept 9 2026) · Storage Migration → Emergent Object Storage ✅
+- **Neuer Backend-Wrapper** `services/emergent_storage.py`: init/put/get gegen `INTEGRATION_PROXY_URL/objstore/api/v1/storage` mit `X-Storage-Key` + Session-cache + force-reinit-Retry auf 404. Frontend sieht **keinerlei Storage-Secrets**; alle Zugriffe laufen über `/api/...`-Proxy-Routen.
+- **Neuer Router** `routes/storage_files.py`:
+  - `POST /api/users/{user_id}/avatar` (owner/admin, MIME=jpeg/png/webp, max 5 MB) — Upload → `storage_files`-Metadaten (UUID-Object-Key, keine User-supplied Pfade) → Soft-Delete alter Avatare → `users.avatar_url` auf Proxy-URL.
+  - `GET /api/users/{user_id}/avatar` — Public-Read (Avatare sind non-sensitive Bilder) mit Content-Type-Passthrough.
+  - `POST/GET/DELETE /api/admin/document-uploads/codes(...)` + `revoke` (SHA-256-Hash-only, kein Plaintext-Store), `GET /submissions`, `POST /mark-handled`, `DELETE /submissions/{id}` (soft-deletet Storage-Objekte), `GET /files/{file_id}/download` (Content-Disposition + Auth via Cookie).
+- **Frontend cutover 0 supabase.storage im migrierten Scope**:
+  - `AdminUserDetail.js` Avatar-Upload → axios multipart gegen Backend-Proxy.
+  - `AdminDocumentUploads.jsx` komplett neu geschrieben (Supabase-RPCs + `.storage.remove` + `createSignedUrl` ersetzt durch FastAPI). Download via `window.open(...)` gegen Backend-Proxy — kein Signed-URL-Secret im Client.
+  - `AdminDashboard.js` Realtime-Channel-Cleanup (Pre-existing Session-82.98-Blocker): `supabase.channel/subscribe`-Block entfernt.
+- **Storage-Provider**: **Emergent Object Storage** (managed) · `EMERGENT_LLM_KEY` + `INTEGRATION_PROXY_URL` bereits gesetzt · `init OK, key len: 35`.
+- **Pfad-Konvention**: `froehlich/<scope>/<subject_id>/<uuid>.<ext>` — App-Prefix verhindert Bucket-Kollision, UUID verhindert Path-Traversal.
+- **Migration-Bilanz**: `AVATAR_OBJECTS_FOUND=0`, `DOCUMENT_OBJECTS_FOUND=0` (Legacy-DB-Referenzen leer: `users.avatar_url=null` in allen 24 Usern, `document_upload_submissions`/`document_access_codes` Collections MISSING). Es gibt **nichts zu migrieren** — der Feature-Cutover ist für zukünftige Uploads bereit; keine Datei ging verloren.
+- **Security-Matrix (10/10)**: unauth-upload=401 · cross-user-upload=403 · admin-upload=200 · exe-MIME=415 · 6 MB oversize=413 · Path-Traversal-Attempt=404 (ObjectId-Guard) · avatar-download=200 mit **SHA-256-Hash-Match** verifiziert (`1dbadc5a...` identisch up/down) · doc-code create+revoke+delete admin-only · customer-403 · unauth-401.
+- **Regression**: Coupon 16/16 + Market-Data 47/47 pytest grün · Frontend-Build grün · Storage-Init im Startup-Hook grün.
+- **Legacy-Fallback**: `LEGACY_FALLBACK_REMAINS=NO` im Scope 82.99 (kein Dual-Read, weil 0 Objekte). `SUPABASE_STORAGE_WRITES_AFTER=0`, `SUPABASE_STORAGE_READS_AFTER=0` im migrierten Scope. Verbleibend: `AdminContractSubmissions.js` (1 `createSignedUrl`) — außerhalb Storage-Kern-Scope 82.99, im 82.100-Batch enthalten.
+
+### FINAL REPORT (Session 82.99)
+- FILES_CHANGED: 5 (neu: `services/emergent_storage.py`, `routes/storage_files.py`; geändert: `server.py`, `AdminUserDetail.js`, `AdminDocumentUploads.jsx`, `AdminDashboard.js`)
+- STORAGE_PROVIDER_AFTER: **Emergent Object Storage** (managed via `EMERGENT_LLM_KEY`)
+- AVATAR_OBJECTS_FOUND: 0 · AVATAR_OBJECTS_MIGRATED: 0 · DOCUMENT_OBJECTS_FOUND: 0 · DOCUMENT_OBJECTS_MIGRATED: 0
+- HASH_VERIFICATION: **PASS** (SHA-256 identisch bei Upload↔Download-Roundtrip)
+- FILES_LOST: **0** · CORRUPTED_FILES: **0** · FILES_DELETED_FROM_SUPABASE: **0**
+- SUPABASE_STORAGE_WRITES_AFTER: 0 (im Scope) · SUPABASE_STORAGE_READS_AFTER: 0 (im Scope)
+- LEGACY_FALLBACK_REMAINS: NO · STORAGE_SECRETS_IN_FRONTEND: **0**
+- SECURITY_MATRIX: 10/10 grün · FRONTEND_BUILD: PASS · FINANCIAL_WRITES: 0 · NEW_SUPABASE_UPLOADS_AFTER: 0
+- READY_FOR_82.100: **YES** · READY_FOR_FINAL_STORAGE_DELETE: **YES** (keine Legacy-Objekte übrig) · READY_FOR_PROD: NO
+
 ## Session 82.98 (Preview · Sept 9 2026) · Admin Realtime → Polling Cutover ✅
 - **Frontend cutover 0 Supabase-Refs im Scope**: `AdminGlobalNotifications.jsx` (9 Realtime-Channels + 2 removeChannel) und `AdminDashboardLayout.jsx` (1 Aggregat-Channel + 16 direkte `.from().select(count)`) vollständig auf focus-aware Polling gegen `GET /api/admin/notifications/counts` umgestellt.
 - **Neuer Backend-Endpoint** `routes/admin_notifications.py` · `GET /api/admin/notifications/counts`: aggregierte Read-Only-Zählung über 16 Legacy-Keys. Reale Counts aus 5 vorhandenen Mongo-Collections (`stock_orders`, `bond_purchase_requests`, `ipo_requests`, `support_tickets`, `offer_interests`) — 11 Legacy-Supabase-Namen liefern **faithful `null`** (kein Fake-0), Frontend blendet die Badges automatisch aus.

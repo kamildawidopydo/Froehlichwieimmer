@@ -190,7 +190,7 @@ const AdminUserDetail = () => {
           .eq('id', userId)
           .single(),
         supabase
-          .from('user_stock_positions')
+          .from('DEPRECATED_stock_positions_82_100')
           .select('*')
           .eq('user_id', userId)
           .order('updated_at', { ascending: false }),
@@ -339,25 +339,21 @@ const AdminUserDetail = () => {
 
     setUploadingAvatar(true);
     try {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const filePath = `${profile.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true, contentType: file.type });
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      const avatarUrl = `${urlData.publicUrl}?v=${Date.now()}`;
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: avatarUrl })
-        .eq('id', profile.id);
-      if (updateError) throw updateError;
-
+      // Session 82.99 · Emergent Object Storage via Backend-Proxy.
+      const form = new FormData();
+      form.append('file', file);
+      const { getApiBase: _base } = await import('@/lib/apiBase');
+      const API = _base();
+      const axios = (await import('axios')).default;
+      await axios.post(`${API}/api/users/${profile.id}/avatar`, form, {
+        withCredentials: true,
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       toast.success('Profilfoto aktualisiert');
       await loadUserData();
     } catch (err) {
-      toast.error(`Foto-Upload fehlgeschlagen: ${err.message}`);
+      const detail = err?.response?.data?.detail || err.message;
+      toast.error(`Foto-Upload fehlgeschlagen: ${detail}`);
     } finally {
       setUploadingAvatar(false);
     }

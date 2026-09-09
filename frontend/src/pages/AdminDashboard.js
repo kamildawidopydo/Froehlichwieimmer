@@ -55,16 +55,8 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     refreshDashboardData();
-
-    const channel = supabase
-      .channel('admin_dashboard_orders_count')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_stock_orders' }, () => {
-        fetchPendingOrderCount();
-      })
-      .subscribe();
-
-    return () => {
-    };
+    // Session 82.98 · Realtime-Channel entfernt. Polling erfolgt über
+    // AdminGlobalNotifications → GET /api/admin/notifications/counts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
