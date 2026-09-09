@@ -4825,6 +4825,48 @@ Kein Prod-Deploy · Bond-Filter/Cap unverändert · Portfolio unverändert · IP
 ### Constraints
 Kein Prod-Deploy · Keine Portfolio-Migration · Kein Cron aktiviert · Kein Delete · Keine Fake-Daten · IPO-Sync/History/CSV/Requests/DashboardDataContext/Supabase/Auth/Header/News/Cron-Config unverändert.
 
+## Session 82.95 (Preview · Sept 9 2026) · Global Supabase Cleanup — AUDIT ONLY · STOP
+- **Ergebnis PHASE A**: `ACTIVE_RUNTIME_SUPABASE_BEFORE > 0` — Cleanup **abgebrochen**. Keine Datei gelöscht, kein Package entfernt, keine `.env`-Zeile entfernt, kein npm-Script entfernt.
+- **Klassifikation** (nur reine Runtime-Aufrufe zählen: `.from/.rpc/.functions.invoke/.channel/.storage/.removeChannel`):
+  - **ACTIVE_RUNTIME** ≥ 22 Dateien (Frontend): `AdminStocks.js` (8), `AdminGlobalNotifications.jsx` (10 · 9 Realtime-Channels), `AdminDocumentUploads.jsx` (6 · Storage-Bucket), `AdminFormularAccess.jsx` (3 · RPCs), `AdminCreditOffers.js` (3), `AdminContractSubmissions.js` (2 · RPC), `AdminSocialPreviewMessages.js` (2), `AdminProductInquiryLeads.js` (2), `AdminCreditLeads.js` (2), `AdminUserDetail.js` (2 · Storage-Avatar), `ApplicationForm.js` (2 · Edge-Function E-Mail), `DokumentHochladen.js` (1 · RPC), `PasswordPage.js` (1 · RPC), `hooks/useFormularConditions.js` (1 · RPC), `lib/market/chartOverviewConfig.js` (1 · Edge-Function), `lib/logInsufficientBuyingPower.js` (1 · insert), `components/admin/VisitorSessionDetailModal.jsx` (1 · RPC), `components/social/SocialAnlagenprofisMessageModal.jsx` (1 · insert), `components/FormularProtectedRoute.js` (1), `components/dashboard/AdminDashboardLayout.jsx` (1 · removeChannel), `NotificationCenter.js` (Bond-Feed `.from()`), `AdminBondRequests.js` (Legacy-Fetch).
+  - **DEAD_CODE / IMPORT_ONLY** (Import ohne aktive Calls — meist `isSupabaseConfigured`-Guards): `App.js`, `lib/submitProductInquiryLead.js`, `OfferInterestModal.js`, `VermoegensStrukturSimulator.jsx`, `AdminOfferReviews.js`, `PartnerBanks.js`, `FormularConditionsDialog.jsx`, `Home.js`, `AdminInsufficientBuyingPower.js`, `SavingsComparison.js`, `AdminCreditBankDetails.js` — insgesamt ~11 Dateien.
+  - **COMMENT_ONLY** (Backend): `backend/routes/forex.py`, `backend/routes/news_public.py`, `backend/routes/users.py` — nur Docstring-Erwähnungen als Migrations-Kontext, keine Runtime-Calls.
+  - **CONFIG_ONLY**: `/app/frontend/.env` → `REACT_APP_SUPABASE_URL`, `REACT_APP_SUPABASE_ANON_KEY` · `/app/backend/.env` → `SUPABASE_URL`, `SUPABASE_ANON_KEY` (KEIN `SUPABASE_SERVICE_ROLE_KEY` mehr — Session 82.87 bestätigt).
+  - **PACKAGE**: `frontend/package.json` → `@supabase/supabase-js@^2.99.2` + `supabase@^2.93.0` + 15 npm-Scripts (`supabase:deploy:*`, `supabase:invoke:*`, `supabase:version`, `supabase:link`). Yarn-Lock enthält 2 Auflösungen.
+- **STORAGE-CHECK**: Zwei aktive Nutzungen gefunden:
+  - `AdminUserDetail.js:349` — `supabase.storage.from('avatars').getPublicUrl(...)` (Avatar-Rendering)
+  - `AdminDocumentUploads.jsx:190` — `supabase.storage.from(STORAGE_BUCKET).remove(paths)` (Dokument-Löschung)
+  → `STORAGE_STILL_DEPENDENT=YES`. Nicht anfassen, sonst Datenverlust.
+- **PACKAGE nicht entfernt**: `SUPABASE_PACKAGE_REMOVED=NO`. `lib/supabase.js` bleibt bestehen (`SUPABASE_CLIENT_FILE_REMOVED=NO`).
+- **PRD-Empfehlung Nachfolge-Sessions** (in Reihenfolge):
+  1. **82.96 — Formular-Access & Password-Portal Cutover**: `PasswordPage.js`, `DokumentHochladen.js`, `AdminFormularAccess.jsx`, `useFormularConditions.js`, `FormularProtectedRoute.js`, `FormularConditionsDialog.jsx` — RPC-basiertes Access-Code-System auf FastAPI portieren.
+  2. **82.97 — Admin Stocks Catalog Cutover**: `AdminStocks.js` (8 aktive Calls) + `chartOverviewConfig.js` (Edge-Function) → FastAPI-Endpoints für Stock-Katalog + Price-Sync.
+  3. **82.98 — Realtime Admin Notifications**: `AdminGlobalNotifications.jsx` (9 Realtime-Channels) + `AdminDashboardLayout.jsx` → Polling- oder SSE-Ersatz.
+  4. **82.99 — Storage Migration (P0)**: Avatar-Bucket + Document-Bucket auf Object-Storage-Integration umziehen (Playbook via `integration_playbook_expert_v2`).
+  5. **82.100 — Legacy-Admin-Read-Pages Cutover**: `AdminCreditLeads.js`, `AdminCreditOffers.js`, `AdminCreditBankDetails.js`, `AdminProductInquiryLeads.js`, `AdminSocialPreviewMessages.js`, `AdminContractSubmissions.js`, `AdminDocumentUploads.jsx` (write-Anteile), `AdminUserDetail.js`, `AdminBondRequests.js`.
+  6. **82.101 — Customer-Rest**: `ApplicationForm.js` (Edge-Function E-Mail), `NotificationCenter.js`, `OfferInterestModal.js`, `SocialAnlagenprofisMessageModal.jsx`, `VisitorSessionDetailModal.jsx`, `VermoegensStrukturSimulator.jsx`, `submitProductInquiryLead.js`.
+  7. **82.102 — Import-Only-Dead-Code Sweep**: 11 Dateien mit unnutzten `supabase`-Imports entfernen (rein syntaktisch, keine Runtime-Impact).
+  8. **82.103 — Package & ENV Purge**: `@supabase/supabase-js` + `supabase` CLI aus package.json + Scripts entfernen · `.env`-Zeilen entfernen · `lib/supabase.js` löschen · Backend-Docstring-Referenzen ausdünnen.
+
+### FINAL REPORT (Session 82.95)
+- ACTIVE_RUNTIME_SUPABASE_BEFORE ≈ 22 Dateien / >60 Call-Sites
+- ACTIVE_RUNTIME_SUPABASE_AFTER = **UNCHANGED** (kein Cleanup ausgeführt)
+- TEST_ONLY_REFS: 0 (keine Test-Dateien mit direkten Supabase-Aufrufen gefunden)
+- COMMENT_ONLY_REFS: 3 Backend-Dateien (docstring-only)
+- DEAD_CODE_REFS: ~11 Frontend-Dateien (Import ohne Call)
+- CONFIG_REFS_REMOVED: 0
+- SUPABASE_PACKAGE_REMOVED: NO
+- SUPABASE_CLIENT_FILE_REMOVED: NO
+- SUPABASE_ENV_REMOVED: NO
+- STORAGE_STILL_DEPENDENT: YES (Avatars + Dokumente)
+- FRONTEND_BUILD: NOT_RUN (kein Cleanup ausgeführt)
+- BACKEND_TESTS: NOT_RUN
+- FINANCIAL_REGRESSION: NOT_RUN (Session 82.94 blieb 100 % grün — kein Regress erwartet)
+- GLOBAL_SUPABASE_FREE: NO
+- READY_FOR_FINAL_PROD_READINESS_AUDIT: NO
+- READY_FOR_PROD: NO
+- BUSINESS_LOGIC_CHANGED: NO · FINANCIAL_WRITES: 0 · FILES_LOST: 0
+
 ## Session 82.94 (Preview · Sept 9 2026) · Admin Position Pages FastAPI Cutover ✅
 - **Frontend cutover**: `AdminUserPositions.js` (Aktien) + `AdminBondPositions.js` (Anleihen) komplett von Supabase auf FastAPI/Mongo. Direkte quantity-/nominal-Writes, Delete und Cost-Basis-Edit entfernt. Einzige Mutation: `AdjustmentModal` mit Increase/Decrease-Radio + absolutem Betrag + Reason-Dropdown (`corporate_action`, `migration_correction`, `inheritance_transfer`, `data_repair`) + Notiz.
 - **Backend Fix (Session-82.93-Bug behoben)**: `routes/position_adjustments.py` zielte fälschlich auf leere Collections `user_stock_positions`/`user_bond_positions`. Korrektur auf reale `stock_positions`/`bond_positions` + Bond-Feld `nominal_amount` (vorher `nominal_value`).
