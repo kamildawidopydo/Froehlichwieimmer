@@ -198,7 +198,8 @@ def test_sparkline_supported_indices():
         assert r.status_code == 200, sym
         data = r.json()
         assert len(data["points"]) >= 2
-        assert data["data_source"] in {"alpha_vantage", "cache", "fallback"}
+        # Session 82.104 — yfinance in Whitelist (Session 82.15+ Provider-Erweiterung).
+        assert data["data_source"] in {"alpha_vantage", "cache", "fallback", "yfinance"}
         assert data["prev_close"] > 0
 
 

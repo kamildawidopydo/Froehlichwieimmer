@@ -73,15 +73,28 @@ def test_seed_admin_updates_existing_hash_when_password_changes(monkeypatch):
     }
 
     class FakeUsers:
+        # Session 82.104 — Test robust gegen ADMIN_EXTRAS-Seed (patron account).
+        # `seed_admin()` iteriert über primären Admin + ADMIN_EXTRAS. Der Test
+        # verifiziert nur das Update-Verhalten für primären Admin — Extras
+        # dürfen still-ignore returnieren (FakeUsers.find_one → None).
         def __init__(self):
             self.update = None
 
         async def find_one(self, query):
-            assert query == {"email": "admin@example.test"}
-            return existing
+            if query.get("email") == "admin@example.test":
+                return existing
+            return None
 
         async def update_one(self, query, update):
-            self.update = (query, update)
+            # Nur das erste Update (primärer Admin) capturen.
+            if self.update is None:
+                self.update = (query, update)
+
+        async def insert_one(self, doc):
+            # ADMIN_EXTRAS erzeugt evtl. Insert-Calls für neue Accounts — no-op.
+            class _R:
+                inserted_id = "test-extra-id"
+            return _R()
 
     users = FakeUsers()
     monkeypatch.setattr(server, "db", SimpleNamespace(users=users))
