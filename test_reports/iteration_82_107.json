@@ -1,0 +1,40 @@
+{
+  "summary": "Session 82.107 — Bestandskunden-Bestätigung Admin-Tool: 12/12 Backend-Tests grün (pytest, JUnit-XML), UI-Flow vollständig verifiziert (Login → Sidebar → Formular → Validierung → PDF-Generation → View/Download/Print/E-Mail). Alle Auth-Guards greifen (401 unauth), Resend-E-Mail-Versand funktioniert mit delivered@resend.dev, keine öffentlichen PDF-Leaks.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/admin/customer-confirmations/{id}/send-email", "issue": "Bei nicht-verifiziertem Empfänger blockiert Resend den Versand mit 422 'undeliverable_recipient' und der Endpoint gibt 502 zurück. Für echte Produktivnutzung ist das Verhalten korrekt (Fail-Fast). Für QA/UI-Tests muss Admin explizit delivered@resend.dev nutzen — dies sollte in der UI als Hint/Placeholder erscheinen, sonst wirkt der Toast 'E-Mail-Fehler: E-Mail-Versand fehlgeschlagen: ...' verwirrend."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/admin/customer-confirmations", "issues": ["Formular hat 3-Spalten-Grid — auf 1280–1440px lesbar, aber die Feld-Labels 'Aufnahmedatum (leer = heute)' und 'User-ID (optional, für „Meine Dokumente\")' werden ggf. abgeschnitten. Hint-Text wäre besser als Sub-Label unter dem Input.", "Kein Placeholder oder Hint, dass für QA-Zwecke 'delivered@resend.dev' als Empfänger genutzt werden sollte (Resend-Sandbox-Verhalten)."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_customer_confirmations.py",
+    "/app/test_reports/pytest/customer_confirmations.xml"
+  ],
+  "action_items": [
+    "Optional (Minor): Admin-UI könnte im E-Mail-Modal einen dezenten Hinweis anzeigen: 'Test-Empfänger: delivered@resend.dev (Sandbox)' oder Placeholder im Empfängerfeld, um QA-Konfusion bei Resend-Blocks zu vermeiden.",
+    "Optional: Response-Code für Resend-Undeliverable könnte statt 502 auf 422 (Client-side Fehler, User soll andere Empfänger-Mail wählen) gemappt werden — momentan wirft der Endpoint 502 als 'Bad Gateway', obwohl der Provider bewusst blockiert."
+  ],
+  "critical_code_review_comments": [
+    "customer_confirmations.py:32 — Direkter Import aus server.py (`from server import ...`) erzeugt zirkuläre Import-Risiken. Falls server.py wächst, sollte _send_email_via_emergent + require_admin + get_current_user in ein eigenes shared-Modul (backend/deps.py) ausgelagert werden.",
+    "customer_confirmations.py:36-37 — Neuer eigener MongoClient wird angelegt (unabhängig vom server.py-Client). Bei mehr als 5–10 Modulen mit gleicher Praxis werden Connection-Pools duplziert. Empfehlung: gemeinsamen client/db-Singleton exportieren.",
+    "customer_confirmations.py:94 — Speicherung des kompletten PDFs base64-encoded in MongoDB. Bei ~16 KB pro PDF & 4x Größenzuwachs durch base64 pro Doc → ok für MVP, aber >1000 Docs sollten in GridFS oder Object-Storage (S3-kompat.) migriert werden.",
+    "AdminCustomerConfirmations.js:32 — Dynamischer axios+apiBase-Import bei jedem Klick ist unnötig teuer; ein top-level Import wäre effizienter."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_customer_confirmations.py"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100% (alle geprüften Flows grün)"},
+  "test_credentials": "admin@kapitalmitte.com / admin123 (aus /app/memory/test_credentials.md)",
+  "seed_data_creation": "Mehrere Test-PDFs mit Kundennummer KM-TEST-42 und KM-UI-TEST-1 in customer_confirmations Collection erzeugt. Cleanup übernimmt Main-Agent.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend-Tests laufen mit `pytest backend/tests/test_customer_confirmations.py -v` (12 Tests, ~2s). WICHTIG: E-Mail-Endpoint MUSS mit delivered@resend.dev getestet werden — jede andere Adresse wird von Resend als undeliverable geblockt und Endpoint liefert 502. UI-Test muss den Visitor-Welcome-Gate zunächst dismissen: 2 <select>-Elemente füllen, dann 'Akzeptieren'-Button klicken. Alle 12 data-testids auf der Seite vorhanden und funktional.",
+  "rca_of_the_issue": "Kein Bug — Feature funktioniert wie designed. Einziger Reibungspunkt: Resend-Sandbox blockiert nicht-verifizierte Empfänger, was zu 502 statt 4xx führt und für Tester ohne Kontext irreführend wirkt."
+}

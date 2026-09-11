@@ -8,6 +8,58 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+## Session 82.107 (Preview · VERIFIED) · Bestandskunden-Bestätigung Admin PDF-Generator
+
+### Feature
+Internes Admin-Tool unter `/admin/customer-confirmations`, das aus einem sicheren Formular dynamisch eine "Bestandskunden-Bestätigung" als PDF generiert (WeasyPrint), speichert (Mongo `customer_confirmations`), anzeigt, herunterlädt, druckt und via Resend als PDF-Anhang versendet.
+
+### Neuer Router `/app/backend/routes/customer_confirmations.py` (7 Endpoints)
+| Endpoint | Zweck | Guard |
+|---|---|---|
+| `POST /api/admin/customer-confirmations` | Formulardaten → WeasyPrint-PDF → Mongo-Insert | require_admin |
+| `GET /api/admin/customer-confirmations` | Liste (ohne PDF-Base64) | require_admin |
+| `GET /api/admin/customer-confirmations/{cid}/view` | Inline-PDF | require_admin |
+| `GET /api/admin/customer-confirmations/{cid}/download` | Attachment-PDF | require_admin |
+| `POST /api/admin/customer-confirmations/{cid}/send-email` | Resend-Versand mit PDF-Anhang | require_admin |
+| `GET /api/users/documents` | Kunden-„Meine Dokumente" | get_current_user |
+| `GET /api/users/documents/{cid}/download` | Kunde eigene PDF | get_current_user (Owner-Check) |
+
+### Highlights
+- **E-Mail-Bridge**: nutzt `_send_email_via_emergent` aus `server.py` (Resend via Emergent-Managed-Proxy), Base64-Attachment ≤10 MB.
+- **Resend-Undeliverable-Mapping**: Provider-Block (unverifizierte Empfänger) → **422** statt 502 mit umsetzbarem Detail-Text.
+- **Pydantic `extra="forbid"`** auf ConfirmationPayload und SendEmailPayload (Mass-Assignment-Schutz).
+- **Keine öffentlichen PDFs**: `/downloads`-Ordner ist von Kundendokumenten leer, alle PDFs auth-guarded.
+- **Admin-Sidebar**: neuer Link in Sektion „Betrieb & Kunden" → „Bestandskunden-Bestätigung".
+
+### E2E (Testing Agent — 12/12 Backend PASS, alle UI-Flows PASS)
+| Test | Ergebnis |
+|---|---|
+| Login → Sidebar → Formular rendern | ✅ |
+| Pflichtfeld-Validierung (Vorname/Nachname/Kundennummer) | ✅ Toast |
+| POST create (200 + id + size_bytes) | ✅ |
+| GET view (200 + PDF-Magic `%PDF`) | ✅ 16.8 KB |
+| GET download (200 + attachment-Header) | ✅ |
+| Print (window.open + print) | ✅ |
+| POST send-email (delivered@resend.dev) | ✅ 200 |
+| Unauth → 401 auf allen 5 Admin-Endpoints | ✅ |
+| Resend-Block (nicht-verifiziert) → **422** mit Klartext | ✅ (nach Fix) |
+
+### Betroffene Dateien
+- **Neu:** `/app/backend/routes/customer_confirmations.py`
+- **Neu:** `/app/backend/templates/bestandskunden_bestaetigung.html`
+- **Neu:** `/app/frontend/src/pages/AdminCustomerConfirmations.js`
+- **Neu:** `/app/backend/tests/test_customer_confirmations.py` (12 Pytest-Cases)
+- **Geändert:** `/app/backend/server.py` (Router-Registration Line 5311)
+- **Geändert:** `/app/frontend/src/App.js` (lazy import + Route)
+- **Geändert:** `/app/frontend/src/components/dashboard/AdminDashboardLayout.jsx` (Sidebar-Link)
+
+### Backlog / Follow-ups (nicht blockend)
+- Codereview-Hint: gemeinsamen Mongo-Client-Singleton statt eigenem `AsyncIOMotorClient` pro Router.
+- Codereview-Hint: `_send_email_via_emergent` + `require_admin` in `backend/deps.py` extrahieren (zirkuläre Import-Risiken).
+- PDF-Persistenz: bei >1000 Docs auf GridFS oder Object-Storage migrieren (aktuell Base64-in-Doc).
+
+
+
 ## Session 82.93 (Preview · VERIFIED) · Position Adjustment Service Domain Review + Safe Backend
 
 ### Neuer Router `/app/backend/routes/position_adjustments.py` (3 Endpoints)

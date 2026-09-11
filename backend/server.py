@@ -5307,6 +5307,10 @@ app.include_router(_admin_credit_bank_details_routes.router)
 from routes import admin_insufficient_buying_power as _admin_ibp_routes  # noqa: E402
 app.include_router(_admin_ibp_routes.router)
 
+# Session 82.107 — Bestandskunden-Bestätigung Generator
+from routes import customer_confirmations as _ccf_routes  # noqa: E402
+app.include_router(_ccf_routes.router)
+
 # Session 82.102 — Public Applications Submit + Resend-Mail.
 from routes import applications as _applications_routes  # noqa: E402
 app.include_router(_applications_routes.router)

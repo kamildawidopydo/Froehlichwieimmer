@@ -127,6 +127,7 @@ const AdminOffers = lazy(() => import('@/pages/AdminOffers'));
 const AdminUsers = lazy(() => import('@/pages/AdminUsers'));
 const AdminUserDetail = lazy(() => import('@/pages/AdminUserDetail'));
 const AdminApplications = lazy(() => import('@/pages/AdminApplications'));
+const AdminCustomerConfirmations = lazy(() => import('@/pages/AdminCustomerConfirmations'));
 const AdminOfferInterests = lazy(() => import('@/pages/AdminOfferInterests'));
 const AdminDepotContracts = lazy(() => import('@/pages/AdminDepotContracts'));
 const AdminActivity = lazy(() => import('@/pages/AdminActivity'));
@@ -814,6 +815,7 @@ function App() {
                   <Route path="banks" element={<AdminBanks />} />
                   <Route path="offers" element={<AdminOffers />} />
                   <Route path="applications" element={<AdminApplications />} />
+                  <Route path="customer-confirmations" element={<AdminCustomerConfirmations />} />
                   <Route path="offer-interests" element={<AdminOfferInterests />} />
                   <Route path="depot-contracts" element={<AdminDepotContracts />} />
                   <Route path="activity" element={<AdminActivity />} />

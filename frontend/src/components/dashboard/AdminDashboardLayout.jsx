@@ -105,6 +105,7 @@ const AdminDashboardLayout = () => {
         { to: '/admin/activity', label: t('shell.admin.activity', { defaultValue: 'Aktivität' }), icon: Activity },
         { to: '/admin/formular-access', label: t('shell.admin.formularAccess', { defaultValue: 'Formular-Zugang' }), icon: FileSignature },
         { to: '/admin/document-uploads', label: t('shell.admin.documentUploads', { defaultValue: 'Dokument-Upload' }), icon: Upload, badge: b('pending_document_uploads') },
+        { to: '/admin/customer-confirmations', label: t('shell.admin.customerConfirmations', { defaultValue: 'Bestandskunden-Bestätigung' }), icon: FileText },
       ],
     },
     {
