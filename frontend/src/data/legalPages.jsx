@@ -2,15 +2,20 @@ import React from 'react';
 import {
   AlertTriangle,
   Building2,
+  Copyright,
   ExternalLink,
   FileText,
+  Gavel,
   Globe,
+  Info,
   Landmark,
+  Link2,
   Mail,
   MapPin,
   Scale,
   Shield,
   ShieldAlert,
+  ShieldCheck,
   Undo2,
   Users,
 } from 'lucide-react';
@@ -32,21 +37,31 @@ const COMPANY = {
   country: 'Deutschland',
   hrb: 'HRB 23436',
   registerCourt: 'Amtsgericht Bad Kreuznach',
+  legalForm: 'Gesellschaft mit beschränkter Haftung (GmbH)',
+  shareCapital: '25.000 EUR',
   // TODO(Fröhlich Vermögensberatung): USt-IdNr. ergänzen, sobald erteilt.
   vatId: null,
   managingDirector: 'Manfred Franz Fröhlich',
-  website: 'kapital-direkt24.de',
-  websiteHref: 'https://kapital-direkt24.de/',
+  phoneDisplay: '+49 0 671 88 647 688',
+  phoneTel: '+4906718864 7688',
+  email: 'kundenservice@essenceinvest.com',
+  website: 'www.essenceinvest.com',
+  websiteHref: 'https://www.essenceinvest.com/',
 };
 
 const impressumBody = (
   <div className="space-y-12">
-    <p className="text-[15px] leading-relaxed text-bank-text-muted">
-      Angaben gemäß § 5 TMG sowie gemäß Dienstleistungs-Informationspflichten-Verordnung (DL-InfoV)
-    </p>
+    <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:items-start">
+      <p className="text-[15px] leading-relaxed text-bank-text-muted">
+        Hier finden Sie die gesetzlich vorgeschriebenen Informationen zur {COMPANY.name} sowie Hinweise zu unseren rechtlichen Rahmenbedingungen.
+      </p>
+      <LegalNotice variant="info" icon={ShieldCheck} title="Transparenz schafft Vertrauen.">
+        Wir legen Wert auf klare und verständliche Informationen – auch in rechtlichen Fragen.
+      </LegalNotice>
+    </div>
 
-    <div className="grid gap-12 lg:grid-cols-2 lg:gap-10">
-      <LegalSection id="verantwortlich" icon={Building2} title="Verantwortlich für den Inhalt">
+    <div className="grid gap-10 lg:grid-cols-2">
+      <LegalSection id="anbieter" icon={Building2} badge="1." title="Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG)">
         <LegalInfoCard icon={MapPin} title={COMPANY.name}>
           {COMPANY.street}
           <br />
@@ -55,82 +70,139 @@ const impressumBody = (
           {COMPANY.country}
           <br />
           <br />
-          Telefon:{' '}
-          <a href={`tel:${siteContact.phoneTel}`}>{siteContact.phoneDisplay}</a>
+          Telefon: <a href={`tel:${COMPANY.phoneTel}`}>{COMPANY.phoneDisplay}</a>
           <br />
-          E-Mail: <a href={`mailto:${siteContact.email}`}>{siteContact.email}</a>
+          E-Mail: <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>
           <br />
           Website:{' '}
           <a href={COMPANY.websiteHref} target="_blank" rel="noopener noreferrer">
             {COMPANY.website}
           </a>
-          <br />
-          <br />
-          Handelsregister: {COMPANY.registerCourt}, {COMPANY.hrb}
-          <br />
-          {/* TODO(Fröhlich Vermögensberatung): USt-IdNr. gemäß § 27a UStG hier ergänzen, sobald erteilt. */}
-          USt-IdNr.: <span className="italic text-bank-text-muted/80">wird ergänzt</span>
         </LegalInfoCard>
       </LegalSection>
 
-      <LegalSection id="geschaeftsfuehrer" icon={Users} title="Geschäftsführer">
-        <p>{COMPANY.managingDirector}</p>
+      <LegalSection id="vertretung" icon={Users} badge="2." title="Vertretungsberechtigter">
+        <p>Die Gesellschaft wird vertreten durch:</p>
+        <p>
+          <strong>{COMPANY.managingDirector}</strong>
+          <br />
+          Geschäftsführer
+        </p>
       </LegalSection>
     </div>
 
-    <LegalSection id="aufsicht" icon={Landmark} title="Zuständige Aufsichtsbehörde">
-      <LegalNotice variant="neutral">
-        {/*
-          TODO(Fröhlich Vermögensberatung): Konkrete Aufsichtsbehörde (z. B. BaFin nach § 32 KWG,
-          IHK nach § 34f/§ 34c GewO) sowie Registrierungs-/Vermittlernummer einsetzen.
-          Ohne bestätigten Zulassungsstatus bewusst offen gelassen — nicht raten.
-        */}
+    <LegalSection id="handelsregister" icon={Landmark} badge="3." title="Handelsregister">
+      <div className="grid gap-y-2 text-[15px] leading-relaxed text-bank-text-muted sm:grid-cols-[max-content_1fr] sm:gap-x-6">
+        <span className="text-bank-text">Registergericht:</span>
+        <span>{COMPANY.registerCourt}</span>
+        <span className="text-bank-text">Registernummer:</span>
+        <span>{COMPANY.hrb}</span>
+        <span className="text-bank-text">Rechtsform:</span>
+        <span>{COMPANY.legalForm}</span>
+        <span className="text-bank-text">Stammkapital:</span>
+        <span>{COMPANY.shareCapital}</span>
+      </div>
+    </LegalSection>
+
+    <div className="grid gap-10 lg:grid-cols-2">
+      <LegalSection id="aufsicht" icon={ShieldCheck} badge="4." title="Aufsichtsrechtliche Angaben">
         <p>
-          Angaben zur zuständigen Aufsichtsbehörde sowie zur Registrierung nach § 34c bzw. § 34f GewO oder nach dem KWG
-          werden nach Vorliegen der finalen Zulassungsbescheide an dieser Stelle ergänzt.
+          Die {COMPANY.name} ist als vertraglich gebundener Vermittler gemäß § 3 Abs. 2 WpIG tätig und erbringt Anlagevermittlung und Anlageberatung ausschließlich für Rechnung und unter der Haftung eines entsprechenden Wertpapierinstituts.
         </p>
-      </LegalNotice>
-    </LegalSection>
-
-    <LegalSection id="berufsrecht" icon={FileText} title="Berufsrechtliche Angaben">
-      <LegalNotice variant="neutral">
-        {/*
-          TODO(Fröhlich Vermögensberatung): Berufsbezeichnung, Kammer, Verleihungsstaat und
-          maßgebliche berufsrechtliche Regelungen (z. B. FinVermV) nach Zulassung eintragen.
-        */}
         <p>
-          Berufsbezeichnung, verleihender Staat und die maßgeblichen berufsrechtlichen Regelungen werden ergänzt,
-          sobald die entsprechenden Bescheide vorliegen.
+          Die aufsichtsrechtliche Zuständigkeit und die Details zum haftenden Institut sowie die jeweilige Eintragung im BaFin-Register stellen wir im Rahmen der gesetzlichen Vorgaben auf Anfrage zur Verfügung.
         </p>
-      </LegalNotice>
-    </LegalSection>
+      </LegalSection>
 
-    <LegalSection id="streitbeilegung" icon={Scale} title="Verbraucherstreitbeilegung / Online-Streitbeilegung">
-      <p>
-        Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:{' '}
-        <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer">
-          https://ec.europa.eu/consumers/odr
-        </a>
-      </p>
-      <p>Unsere E-Mail-Adresse finden Sie oben im Impressum.</p>
-      <LegalNotice variant="neutral">
-        Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
-        teilzunehmen.
-      </LegalNotice>
-    </LegalSection>
+      <LegalSection id="berufsrecht" icon={Gavel} badge="5." title="Berufsrechtliche Regelungen">
+        <p>Unsere Tätigkeit unterliegt insbesondere folgenden berufsrechtlichen Regelungen:</p>
+        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-[15px] leading-relaxed text-bank-text-muted marker:text-bank-primary">
+          <li>Wertpapierinstitutsgesetz (WpIG)</li>
+          <li>Gewerbeordnung (GewO), insbesondere § 34f GewO (Finanzanlagenvermittlung), soweit einschlägig</li>
+          <li>Verordnung über die Finanzanlagenvermittlung (FinVermV)</li>
+          <li>Verordnung (EU) 2017/565 (Delegierte Verordnung MiFID II), soweit einschlägig</li>
+          <li>Weitere einschlägige europäische und nationale Vorschriften</li>
+        </ul>
+      </LegalSection>
+    </div>
 
-    <LegalSection id="geltungsbereich" icon={Globe} title="Geltungsbereich">
-      <p>
-        Dieses Impressum gilt für die Website {COMPANY.website} sowie für damit verbundene elektronische
-        Kommunikationswege der {COMPANY.name}, soweit gesetzlich vorgeschrieben.
-      </p>
-    </LegalSection>
+    <div className="grid gap-10 lg:grid-cols-2">
+      <LegalSection id="streitbeilegung" icon={Scale} badge="6." title="Verbraucherstreitbeilegung">
+        <p>
+          Wir sind zur Teilnahme an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle weder verpflichtet noch bereit.
+        </p>
+        <p>
+          Für Verbraucher können sich aus § 36 Verbraucherstreitbeilegungsgesetz (VSBG) weitere Informationspflichten ergeben.
+        </p>
+        <p>
+          Die Europäische Kommission stellt Informationen zur außergerichtlichen Streitbeilegung bereit (allgemeine Informationen):{' '}
+          <a href="https://commission.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer">
+            https://commission.europa.eu/consumers/odr
+          </a>
+        </p>
+      </LegalSection>
 
-    <LegalSection id="aenderungen" icon={FileText} title="Änderungsvorbehalt">
+      <LegalSection id="haftung-inhalte" icon={FileText} badge="7." title="Haftung für Inhalte">
+        <p>
+          Die Inhalte unserer Website wurden mit größtmöglicher Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte übernehmen wir jedoch keine Gewähr, soweit nicht zwingende gesetzliche Bestimmungen (etwa nach § 7 Abs. 1 DDG) eine weitergehende Haftung vorsehen.
+        </p>
+      </LegalSection>
+    </div>
+
+    <div className="grid gap-10 lg:grid-cols-2">
+      <LegalSection id="haftung-links" icon={Link2} badge="8." title="Haftung für externe Links">
+        <p>
+          Unsere Website enthält Links zu externen Webseiten Dritter, auf deren Inhalte wir keinen Einfluss haben. Für diese fremden Inhalte übernehmen wir keine Gewähr. Zum Zeitpunkt der Verlinkung wurden die externen Inhalte auf rechtswidrige Inhalte geprüft. Bei Bekanntwerden von Rechtsverletzungen entfernen wir entsprechende Links unverzüglich, soweit dies technisch und rechtlich möglich ist (vgl. § 7 Abs. 2 DDG).
+        </p>
+      </LegalSection>
+
+      <LegalSection id="urheberrecht" icon={Copyright} badge="9." title="Urheberrecht">
+        <p>
+          Die durch die {COMPANY.name} erstellten Inhalte, Werke und sonstigen Beiträge auf dieser Website unterliegen dem deutschen Urheberrecht (§§ 1 ff. UrhG). Eine Vervielfältigung, Bearbeitung, Verbreitung oder sonstige Nutzung außerhalb der Grenzen des Urheberrechts bedarf der vorherigen schriftlichen Zustimmung des jeweiligen Rechteinhabers.
+        </p>
+      </LegalSection>
+    </div>
+
+    <div className="grid gap-10 lg:grid-cols-2">
+      <LegalSection id="keine-anlageberatung" icon={ShieldAlert} badge="10." title="Keine Anlageberatung durch Website-Inhalte">
+        <LegalNotice variant="neutral">
+          <p>
+            Die auf dieser Website bereitgestellten Informationen dienen ausschließlich allgemeinen Informationszwecken und stellen keine individuelle Anlageberatung, keine Anlageempfehlung und keine Aufforderung zum Erwerb oder zur Veräußerung von Finanzinstrumenten dar.
+          </p>
+          <p>
+            Eine persönliche Empfehlung erfolgt ausschließlich im Rahmen einer individuellen Beratung unter Berücksichtigung Ihrer persönlichen Verhältnisse und Anlageziele.
+          </p>
+        </LegalNotice>
+      </LegalSection>
+
+      <LegalSection id="produkte-zinsen" icon={Info} badge="11." title="Produkt- und Zinsinformationen">
+        <p>
+          Angaben zu Produkten, Zinssätzen, Laufzeiten, Verfügbarkeiten und sonstigen Konditionen können sich jederzeit ändern. Die Darstellung auf dieser Website stellt keine verbindliche Zinszusage dar. Maßgeblich sind die im Einzelfall vereinbarten Konditionen sowie die jeweiligen Vertrags- und Produktunterlagen.
+        </p>
+      </LegalSection>
+    </div>
+
+    <div className="grid gap-10 lg:grid-cols-2">
+      <LegalSection id="einlagensicherung" icon={Shield} badge="12." title="Einlagensicherung und Risikohinweise">
+        <p>
+          Für Bankeinlagen können gesetzliche und gegebenenfalls zusätzliche freiwillige Einlagensicherungssysteme gelten. Art, Umfang und Voraussetzungen der Einlagensicherung richten sich nach dem jeweiligen Kreditinstitut und dem anwendbaren Sicherungssystem. Bei ausländischen Instituten können die Sicherungssysteme des jeweiligen Sitzstaates maßgeblich sein.
+        </p>
+        <p>Weitergehende Informationen erhalten Sie in den jeweiligen Produktunterlagen.</p>
+      </LegalSection>
+
+      <LegalSection id="datenschutz" icon={ShieldCheck} badge="13." title="Datenschutz">
+        <p>
+          Informationen zur Verarbeitung personenbezogener Daten sowie zu Ihren Rechten finden Sie in unserer{' '}
+          <a href="/legal/privacy">Datenschutzerklärung</a>.
+        </p>
+      </LegalSection>
+    </div>
+
+    <LegalSection id="aenderungen" icon={FileText} badge="14." title="Änderungsvorbehalt / Aktualität">
       <p>
-        Die {COMPANY.name} behält sich vor, dieses Impressum jederzeit anzupassen. Die jeweils aktuelle Fassung ist auf{' '}
-        {COMPANY.website} abrufbar.
+        Die {COMPANY.name} behält sich vor, dieses Impressum jederzeit anzupassen, wenn sich gesetzliche Anforderungen, Unternehmensangaben oder aufsichtsrechtliche Rahmenbedingungen ändern.
       </p>
+      <p className="mt-4 text-[13px] uppercase tracking-[0.14em] text-bank-text-muted/90">Stand: September 2026</p>
     </LegalSection>
   </div>
 );
@@ -558,16 +630,23 @@ export const legalPages = {
     title: 'Impressum',
     icon: Building2,
     description:
-      'Impressum der Fröhlich Vermögensberatung GmbH — Anbieterkennung, Register, Kooperationspartner und Kontakt für kapital-direkt24.de.',
+      'Impressum der Fröhlich Vermögensberatung GmbH — Anbieterkennung, Register, Aufsicht und Kontakt für essenceinvest.com.',
     body: impressumBody,
     toc: [
-      { id: 'verantwortlich', label: 'Verantwortlich' },
-      { id: 'geschaeftsfuehrer', label: 'Geschäftsführer' },
-      { id: 'aufsicht', label: 'Aufsichtsbehörde' },
-      { id: 'berufsrecht', label: 'Berufsrechtliche Angaben' },
-      { id: 'streitbeilegung', label: 'Streitbeilegung' },
-      { id: 'geltungsbereich', label: 'Geltungsbereich' },
-      { id: 'aenderungen', label: 'Änderungen' },
+      { id: 'anbieter', label: '1. Anbieter' },
+      { id: 'vertretung', label: '2. Vertretung' },
+      { id: 'handelsregister', label: '3. Handelsregister' },
+      { id: 'aufsicht', label: '4. Aufsicht' },
+      { id: 'berufsrecht', label: '5. Berufsrecht' },
+      { id: 'streitbeilegung', label: '6. Streitbeilegung' },
+      { id: 'haftung-inhalte', label: '7. Haftung Inhalte' },
+      { id: 'haftung-links', label: '8. Externe Links' },
+      { id: 'urheberrecht', label: '9. Urheberrecht' },
+      { id: 'keine-anlageberatung', label: '10. Keine Anlageberatung' },
+      { id: 'produkte-zinsen', label: '11. Produkte & Zinsen' },
+      { id: 'einlagensicherung', label: '12. Einlagensicherung' },
+      { id: 'datenschutz', label: '13. Datenschutz' },
+      { id: 'aenderungen', label: '14. Änderungsvorbehalt' },
     ],
   },
   privacy: {

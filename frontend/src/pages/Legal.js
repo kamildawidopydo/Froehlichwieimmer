@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import siteContact from '@/data/siteContact';
 import { legalPages } from '@/data/legalPages';
 
-const LEGAL_STAND = '9. Mai 2026';
+const LEGAL_STAND = 'September 2026';
 
 const legalNav = [
   { slug: 'impressum', label: 'Impressum' },
