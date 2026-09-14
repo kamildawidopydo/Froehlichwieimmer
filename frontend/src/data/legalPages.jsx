@@ -99,8 +99,6 @@ const impressumBody = (
         <span>{COMPANY.hrb}</span>
         <span className="text-bank-text">Rechtsform:</span>
         <span>{COMPANY.legalForm}</span>
-        <span className="text-bank-text">Stammkapital:</span>
-        <span>{COMPANY.shareCapital}</span>
       </div>
     </LegalSection>
 
