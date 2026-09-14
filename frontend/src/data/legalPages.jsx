@@ -97,8 +97,6 @@ const impressumBody = (
         <span>{COMPANY.registerCourt}</span>
         <span className="text-bank-text">Registernummer:</span>
         <span>{COMPANY.hrb}</span>
-        <span className="text-bank-text">Rechtsform:</span>
-        <span>{COMPANY.legalForm}</span>
       </div>
     </LegalSection>
 
