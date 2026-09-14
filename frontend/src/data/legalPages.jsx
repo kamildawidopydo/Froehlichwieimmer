@@ -92,11 +92,37 @@ const impressumBody = (
     </div>
 
     <LegalSection id="handelsregister" icon={Landmark} badge="3." title="Handelsregister">
-      <div className="grid gap-y-2 text-[15px] leading-relaxed text-bank-text-muted sm:grid-cols-[max-content_1fr] sm:gap-x-6">
+      <p>
+        Die {COMPANY.name} ist im Handelsregister eingetragen. Die Eintragung dokumentiert unsere unternehmerische Verlässlichkeit, Transparenz und langjährige Marktpräsenz.
+      </p>
+      <div className="mt-6 grid gap-y-3 text-[15px] leading-relaxed text-bank-text-muted sm:grid-cols-[max-content_1fr] sm:gap-x-8">
         <span className="text-bank-text">Registergericht:</span>
         <span>{COMPANY.registerCourt}</span>
         <span className="text-bank-text">Registernummer:</span>
         <span>{COMPANY.hrb}</span>
+        <span className="text-bank-text">Rechtsform:</span>
+        <span>{COMPANY.legalForm}</span>
+        <span className="text-bank-text">Sitz der Gesellschaft:</span>
+        <span>Bad Kreuznach</span>
+        <span className="text-bank-text">Eintragung im Handelsregister seit:</span>
+        <span>2015</span>
+        <span className="text-bank-text">Geschäftsgegenstand:</span>
+        <span>
+          Vermögensberatung, Finanzberatung und -finanzvermittlung im Rahmen der gesetzlichen Bestimmungen sowie alle hiermit im Zusammenhang stehenden Tätigkeiten.
+        </span>
+        <span className="text-bank-text">Aktueller Registerstand:</span>
+        <span>
+          Abrufbar unter{' '}
+          <a href="https://www.handelsregister.de" target="_blank" rel="noopener noreferrer">
+            www.handelsregister.de
+          </a>
+        </span>
+      </div>
+      <div className="mt-6 rounded-xl border-l-4 border-bank-primary bg-bank-primary/[0.04] px-5 py-4">
+        <p className="font-display text-[1.05rem] font-medium text-bank-primary">Vertrauen durch Transparenz</p>
+        <p className="mt-2 text-[14px] leading-relaxed text-bank-text-muted">
+          Unsere Eintragung im Handelsregister steht für Seriosität, rechtliche Sicherheit und eine nachhaltige Unternehmensführung – Werte, auf die unsere Kunden seit vielen Jahren vertrauen.
+        </p>
       </div>
     </LegalSection>
 
