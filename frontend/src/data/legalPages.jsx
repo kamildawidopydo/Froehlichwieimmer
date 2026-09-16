@@ -55,14 +55,14 @@ const impressumBody = (
       <p className="text-[15px] leading-relaxed text-bank-text-muted">
         Hier finden Sie die gesetzlich vorgeschriebenen Informationen zur {COMPANY.name} sowie Hinweise zu unseren rechtlichen Rahmenbedingungen.
       </p>
-      <LegalNotice variant="info" icon={ShieldCheck} title="Transparenz schafft Vertrauen.">
+      <LegalNotice variant="info" title="Transparenz schafft Vertrauen.">
         Wir legen Wert auf klare und verständliche Informationen – auch in rechtlichen Fragen.
       </LegalNotice>
     </div>
 
     <div className="grid gap-10 lg:grid-cols-2">
-      <LegalSection id="anbieter" icon={Building2} badge="1." title="Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG)">
-        <LegalInfoCard icon={MapPin} title={COMPANY.name}>
+      <LegalSection id="anbieter" badge="1." title="Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG)">
+        <LegalInfoCard title={COMPANY.name}>
           {COMPANY.street}
           <br />
           {COMPANY.city}
@@ -81,7 +81,7 @@ const impressumBody = (
         </LegalInfoCard>
       </LegalSection>
 
-      <LegalSection id="vertretung" icon={Users} badge="2." title="Vertretungsberechtigter">
+      <LegalSection id="vertretung" badge="2." title="Vertretungsberechtigter">
         <p>Die Gesellschaft wird vertreten durch:</p>
         <p>
           <strong>{COMPANY.managingDirector}</strong>
@@ -91,7 +91,7 @@ const impressumBody = (
       </LegalSection>
     </div>
 
-    <LegalSection id="handelsregister" icon={Landmark} badge="3." title="Handelsregister">
+    <LegalSection id="handelsregister" badge="3." title="Handelsregister">
       <div className="grid gap-y-2 text-[15px] leading-relaxed text-bank-text-muted sm:grid-cols-[max-content_1fr] sm:gap-x-6">
         <span className="text-bank-text">Registergericht:</span>
         <span>{COMPANY.registerCourt}</span>
@@ -101,7 +101,7 @@ const impressumBody = (
     </LegalSection>
 
     <div className="grid gap-10 lg:grid-cols-2">
-      <LegalSection id="aufsicht" icon={ShieldCheck} badge="4." title="Aufsichtsrechtliche Angaben">
+      <LegalSection id="aufsicht" badge="4." title="Aufsichtsrechtliche Angaben">
         <p>
           Die {COMPANY.name} ist als vertraglich gebundener Vermittler gemäß § 3 Abs. 2 WpIG tätig und erbringt Anlagevermittlung und Anlageberatung ausschließlich für Rechnung und unter der Haftung eines entsprechenden Wertpapierinstituts.
         </p>
@@ -110,7 +110,7 @@ const impressumBody = (
         </p>
       </LegalSection>
 
-      <LegalSection id="berufsrecht" icon={Gavel} badge="5." title="Berufsrechtliche Regelungen">
+      <LegalSection id="berufsrecht" badge="5." title="Berufsrechtliche Regelungen">
         <p>Unsere Tätigkeit unterliegt insbesondere folgenden berufsrechtlichen Regelungen:</p>
         <ul className="mt-3 list-disc space-y-1.5 pl-5 text-[15px] leading-relaxed text-bank-text-muted marker:text-bank-primary">
           <li>Wertpapierinstitutsgesetz (WpIG)</li>
@@ -123,7 +123,7 @@ const impressumBody = (
     </div>
 
     <div className="grid gap-10 lg:grid-cols-2">
-      <LegalSection id="streitbeilegung" icon={Scale} badge="6." title="Verbraucherstreitbeilegung">
+      <LegalSection id="streitbeilegung" badge="6." title="Verbraucherstreitbeilegung">
         <p>
           Wir sind zur Teilnahme an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle weder verpflichtet noch bereit.
         </p>
@@ -138,7 +138,7 @@ const impressumBody = (
         </p>
       </LegalSection>
 
-      <LegalSection id="haftung-inhalte" icon={FileText} badge="7." title="Haftung für Inhalte">
+      <LegalSection id="haftung-inhalte" badge="7." title="Haftung für Inhalte">
         <p>
           Die Inhalte unserer Website wurden mit größtmöglicher Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte übernehmen wir jedoch keine Gewähr, soweit nicht zwingende gesetzliche Bestimmungen (etwa nach § 7 Abs. 1 DDG) eine weitergehende Haftung vorsehen.
         </p>
@@ -146,13 +146,13 @@ const impressumBody = (
     </div>
 
     <div className="grid gap-10 lg:grid-cols-2">
-      <LegalSection id="haftung-links" icon={Link2} badge="8." title="Haftung für externe Links">
+      <LegalSection id="haftung-links" badge="8." title="Haftung für externe Links">
         <p>
           Unsere Website enthält Links zu externen Webseiten Dritter, auf deren Inhalte wir keinen Einfluss haben. Für diese fremden Inhalte übernehmen wir keine Gewähr. Zum Zeitpunkt der Verlinkung wurden die externen Inhalte auf rechtswidrige Inhalte geprüft. Bei Bekanntwerden von Rechtsverletzungen entfernen wir entsprechende Links unverzüglich, soweit dies technisch und rechtlich möglich ist (vgl. § 7 Abs. 2 DDG).
         </p>
       </LegalSection>
 
-      <LegalSection id="urheberrecht" icon={Copyright} badge="9." title="Urheberrecht">
+      <LegalSection id="urheberrecht" badge="9." title="Urheberrecht">
         <p>
           Die durch die {COMPANY.name} erstellten Inhalte, Werke und sonstigen Beiträge auf dieser Website unterliegen dem deutschen Urheberrecht (§§ 1 ff. UrhG). Eine Vervielfältigung, Bearbeitung, Verbreitung oder sonstige Nutzung außerhalb der Grenzen des Urheberrechts bedarf der vorherigen schriftlichen Zustimmung des jeweiligen Rechteinhabers.
         </p>
@@ -160,7 +160,7 @@ const impressumBody = (
     </div>
 
     <div className="grid gap-10 lg:grid-cols-2">
-      <LegalSection id="keine-anlageberatung" icon={ShieldAlert} badge="10." title="Keine Anlageberatung durch Website-Inhalte">
+      <LegalSection id="keine-anlageberatung" badge="10." title="Keine Anlageberatung durch Website-Inhalte">
         <LegalNotice variant="neutral">
           <p>
             Die auf dieser Website bereitgestellten Informationen dienen ausschließlich allgemeinen Informationszwecken und stellen keine individuelle Anlageberatung, keine Anlageempfehlung und keine Aufforderung zum Erwerb oder zur Veräußerung von Finanzinstrumenten dar.
@@ -171,7 +171,7 @@ const impressumBody = (
         </LegalNotice>
       </LegalSection>
 
-      <LegalSection id="produkte-zinsen" icon={Info} badge="11." title="Produkt- und Zinsinformationen">
+      <LegalSection id="produkte-zinsen" badge="11." title="Produkt- und Zinsinformationen">
         <p>
           Angaben zu Produkten, Zinssätzen, Laufzeiten, Verfügbarkeiten und sonstigen Konditionen können sich jederzeit ändern. Die Darstellung auf dieser Website stellt keine verbindliche Zinszusage dar. Maßgeblich sind die im Einzelfall vereinbarten Konditionen sowie die jeweiligen Vertrags- und Produktunterlagen.
         </p>
@@ -179,14 +179,14 @@ const impressumBody = (
     </div>
 
     <div className="grid gap-10 lg:grid-cols-2">
-      <LegalSection id="einlagensicherung" icon={Shield} badge="12." title="Einlagensicherung und Risikohinweise">
+      <LegalSection id="einlagensicherung" badge="12." title="Einlagensicherung und Risikohinweise">
         <p>
           Für Bankeinlagen können gesetzliche und gegebenenfalls zusätzliche freiwillige Einlagensicherungssysteme gelten. Art, Umfang und Voraussetzungen der Einlagensicherung richten sich nach dem jeweiligen Kreditinstitut und dem anwendbaren Sicherungssystem. Bei ausländischen Instituten können die Sicherungssysteme des jeweiligen Sitzstaates maßgeblich sein.
         </p>
         <p>Weitergehende Informationen erhalten Sie in den jeweiligen Produktunterlagen.</p>
       </LegalSection>
 
-      <LegalSection id="datenschutz" icon={ShieldCheck} badge="13." title="Datenschutz">
+      <LegalSection id="datenschutz" badge="13." title="Datenschutz">
         <p>
           Informationen zur Verarbeitung personenbezogener Daten sowie zu Ihren Rechten finden Sie in unserer{' '}
           <a href="/legal/privacy">Datenschutzerklärung</a>.
@@ -194,7 +194,7 @@ const impressumBody = (
       </LegalSection>
     </div>
 
-    <LegalSection id="aenderungen" icon={FileText} badge="14." title="Änderungsvorbehalt / Aktualität">
+    <LegalSection id="aenderungen" badge="14." title="Änderungsvorbehalt / Aktualität">
       <p>
         Die {COMPANY.name} behält sich vor, dieses Impressum jederzeit anzupassen, wenn sich gesetzliche Anforderungen, Unternehmensangaben oder aufsichtsrechtliche Rahmenbedingungen ändern.
       </p>
