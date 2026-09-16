@@ -42,8 +42,8 @@ const COMPANY = {
   // TODO(Fröhlich Vermögensberatung): USt-IdNr. ergänzen, sobald erteilt.
   vatId: null,
   managingDirector: 'Manfred Franz Fröhlich',
-  phoneDisplay: '+49 0 671 88 647 688',
-  phoneTel: '+4906718864 7688',
+  phoneDisplay: '06966 7785 941',
+  phoneTel: '+4969667785941',
   email: 'kundenservice@essenceinvest.com',
   website: 'www.essenceinvest.com',
   websiteHref: 'https://www.essenceinvest.com/',

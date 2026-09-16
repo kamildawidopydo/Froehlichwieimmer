@@ -24,18 +24,19 @@ export function formatGermanPhoneDisplay(tel, nationalGroups) {
   return `+49${NBSP}${formatNationalGroups(national, nationalGroups)}`;
 }
 
-// TODO(Fröhlich Vermögensberatung): echte Telefonnummer(n) bestätigen — technischer Platzhalter.
-const PRIMARY_PHONE_TEL = '+4940334657988';
+// Kundenservice-Hauptnummer (Frankfurt) — projektweit verwendet.
+const PRIMARY_PHONE_TEL = '+4969667785941';
+const PRIMARY_PHONE_DISPLAY = '06966 7785 941';
 
 const siteContact = {
   email: CUSTOMER_SERVICE_EMAIL,
   /** Primary Kundenservice line — site-wide, emails, PDFs, support. */
   phoneTel: PRIMARY_PHONE_TEL,
-  phoneDisplay: formatGermanPhoneDisplay(PRIMARY_PHONE_TEL, [2, 3, 3, 3]),
+  phoneDisplay: PRIMARY_PHONE_DISPLAY,
   phoneLabel: 'Kundenservice',
   // TODO(Fröhlich Vermögensberatung): Sekundärnummer (falls vorhanden) ergänzen.
   phoneSecondaryTel: PRIMARY_PHONE_TEL,
-  phoneSecondaryDisplay: formatGermanPhoneDisplay(PRIMARY_PHONE_TEL, [2, 3, 3, 3]),
+  phoneSecondaryDisplay: PRIMARY_PHONE_DISPLAY,
   companyName: 'Fröhlich Vermögensberatung GmbH',
   street: 'Bösgrunder Weg 62',
   postalCity: '55543 Bad Kreuznach',
