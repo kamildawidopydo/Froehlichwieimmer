@@ -132,8 +132,8 @@ const impressumBody = (
         </p>
         <p>
           Die Europäische Kommission stellt Informationen zur außergerichtlichen Streitbeilegung bereit (allgemeine Informationen):{' '}
-          <a href="https://commission.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer">
-            https://commission.europa.eu/consumers/odr
+          <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener noreferrer">
+            https://ec.europa.eu/consumers/odr/
           </a>
         </p>
       </LegalSection>
