@@ -141,10 +141,10 @@ const Register = () => {
             <div className="mt-8 flex items-center justify-center gap-3 border-t border-bank-border pt-7 font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted">
               <Mail className="h-3.5 w-3.5" strokeWidth={1.5} />
               <a
-                href="mailto:kundenservice@kapital-direkt24.de"
+                href="mailto:kundenservice@essenceinvest.com"
                 className="text-bank-primary underline-offset-4 hover:underline"
               >
-                kundenservice@kapital-direkt24.de
+                kundenservice@essenceinvest.com
               </a>
             </div>
 

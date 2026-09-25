@@ -398,7 +398,7 @@ const IdentityInterviewFlow = ({
                     <p className="font-semibold text-bank-text">Fragen? Wir sind für Sie da.</p>
                     <div className="mt-2 grid gap-2 sm:grid-cols-2 text-sm text-bank-text-muted break-all">
                       <p>Tel: {siteContact.phoneDisplay}</p>
-                      <p>E-Mail: kundenservice@kapital-direkt24.de</p>
+                      <p>E-Mail: kundenservice@essenceinvest.com</p>
                     </div>
                   </div>
                 </div>

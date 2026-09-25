@@ -159,7 +159,7 @@ export default function Leistungen() {
             <Link to="/contact" data-testid="leistungen-cta-contact" className={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'inline-flex cursor-pointer')}>
               Persönliches Gespräch vereinbaren <ArrowUpRight className="ml-2 h-4 w-4" strokeWidth={1.6} aria-hidden />
             </Link>
-            <a href="mailto:kundenservice@kapital-direkt24.de" className={cn(buttonVariants({ variant: 'outline-ink', size: 'lg' }), 'inline-flex cursor-pointer')}>Kundenservice</a>
+            <a href="mailto:kundenservice@essenceinvest.com" className={cn(buttonVariants({ variant: 'outline-ink', size: 'lg' }), 'inline-flex cursor-pointer')}>Kundenservice</a>
           </div>
         </div>
       </section>

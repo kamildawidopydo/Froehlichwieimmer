@@ -533,7 +533,7 @@ export async function generateBunqPdf(formData) {
   }
 
   parTitle(s, 'W', 'Widerruf \u00FCber Fröhlich Vermögensberatung');
-  drawWrapped(s, ML, 'Der Widerruf Ihres Vertrags l\u00E4uft \u00FCber unseren Vermittler Fröhlich Vermögensberatung, damit der gesamte Vorgang f\u00FCr Sie besonders einfach, \u00FCbersichtlich und unkompliziert ist. Zur Wahrung der 14-t\u00E4gigen Frist gen\u00FCgt es, wenn Sie Ihren Widerruf rechtzeitig an kundenservice@kapital-direkt24.de senden.', r, 5, CW, MID_TEXT, 6.5);
+  drawWrapped(s, ML, 'Der Widerruf Ihres Vertrags l\u00E4uft \u00FCber unseren Vermittler Fröhlich Vermögensberatung, damit der gesamte Vorgang f\u00FCr Sie besonders einfach, \u00FCbersichtlich und unkompliziert ist. Zur Wahrung der 14-t\u00E4gigen Frist gen\u00FCgt es, wenn Sie Ihren Widerruf rechtzeitig an kundenservice@essenceinvest.com senden.', r, 5, CW, MID_TEXT, 6.5);
   s.y -= 2;
 
   parTitle(s, 'F', 'Widerrufsfolgen');

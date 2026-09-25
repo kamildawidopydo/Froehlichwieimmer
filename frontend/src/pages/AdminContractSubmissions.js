@@ -339,7 +339,7 @@ const AdminContractSubmissions = () => {
                 </p>
                 <p className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-bank-text-muted" />
-                  Admin (kundenservice@kapital-direkt24.de):{' '}
+                  Admin (kundenservice@essenceinvest.com):{' '}
                   {selected.admin_email_sent ? 'versendet' : 'fehlgeschlagen'}
                   {selected.admin_resend_id && (
                     <span className="text-xs text-bank-text-muted">(ID: {selected.admin_resend_id})</span>
@@ -351,7 +351,7 @@ const AdminContractSubmissions = () => {
                   </p>
                 )}
                 <p className="text-xs text-bank-text-muted">
-                  Es wird nur eine Admin-Benachrichtigung an kundenservice@kapital-direkt24.de gesendet (Betreff: „Neuer …antrag“).
+                  Es wird nur eine Admin-Benachrichtigung an kundenservice@essenceinvest.com gesendet (Betreff: „Neuer …antrag“).
                 </p>
               </div>
 

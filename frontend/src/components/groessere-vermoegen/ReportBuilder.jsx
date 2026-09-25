@@ -477,7 +477,7 @@ export default function ReportBuilder({ phase1, phase2, struct, ladder, scenario
               </ul>
               <div className="mt-10 border-t border-bank-border pt-6 text-[12.5px] leading-[1.7] text-bank-text-muted">
                 <p><strong>Vermögensgespräch vereinbaren:</strong> Fröhlich Vermögensberatung GmbH · Bösgrunder Weg 62 · 55543 Bad Kreuznach</p>
-                <p className="mt-1">Kundenservice: kundenservice@kapital-direkt24.de · Mo–Fr · 09:00 – 18:00</p>
+                <p className="mt-1">Kundenservice: kundenservice@essenceinvest.com · Mo–Fr · 09:00 – 18:00</p>
                 <Link data-print-hide to="/contact" className="mt-4 inline-flex items-center gap-1.5 font-semibold text-bank-primary hover:text-bank-primary/80">Gespräch online vereinbaren <ArrowUpRight size={13} strokeWidth={1.8} aria-hidden /></Link>
               </div>
               <p className="mt-10 border-t border-bank-border pt-4 text-[10.5px] leading-relaxed text-bank-text-soft">{DISCLAIMER}</p>

@@ -262,8 +262,8 @@ const IngFestgeldVertrag = () => {
           </p>
           <p className="text-sm text-gray-500 mb-8">
             Unser Team wird sich in Kürze bei Ihnen melden. Bei Rückfragen erreichen Sie uns unter{' '}
-            <a href="mailto:kundenservice@kapital-direkt24.de" className="text-bank-primary hover:underline">
-              kundenservice@kapital-direkt24.de
+            <a href="mailto:kundenservice@essenceinvest.com" className="text-bank-primary hover:underline">
+              kundenservice@essenceinvest.com
             </a>
             .
           </p>
@@ -835,7 +835,7 @@ const IngFestgeldVertrag = () => {
               { title: '§ 4 Zinsen und Verzinsung', content: 'Der Festgeldbetrag wird für die gesamte vertragliche Laufzeit zu dem im Antrag vereinbarten festen Zinssatz verzinst. Dieser Zinssatz ist während der gesamten Laufzeit garantiert und unabhängig von Marktzinsschwankungen. Die Zinsberechnung erfolgt auf Basis von 365 Tagen pro Jahr (act/365).' },
               { title: '§ 5 Auszahlung und Fälligkeit', content: 'Die Zinsen und das angelegte Kapital werden bei Fälligkeit dem im Vertrag benannten Referenzkonto gutgeschrieben. Sofern eine jährliche Zinsgutschrift vereinbart wurde, werden die Zinsen jeweils zum Jahrestag der Anlage auf das Referenzkonto überwiesen. Eine automatische Verlängerung der Festgeldanlage findet nicht statt.' },
               { title: '§ 6 Vorzeitige Freigabe', content: 'Eine vorzeitige Verfügung über das Festgeld ist während der gesamten Laufzeit grundsätzlich ausgeschlossen. In begründeten Ausnahmefällen kann die Bank auf Antrag des Anlegers eine vorzeitige Freigabe gewähren. In diesem Fall wird ein reduzierter Zinssatz angewendet, der deutlich unter dem vertraglich vereinbarten Zinssatz liegt.' },
-              { title: '§ 7 Widerrufsrecht', content: 'Der Anleger kann seine Vertragserklärung innerhalb von 14 Tagen ohne Angabe von Gründen in Textform widerrufen. Die Frist beginnt nach Erhalt des Vertrags und aller vertragsrelevanten Informationen. Zur Wahrung der Frist genügt die rechtzeitige Absendung des Widerrufs an kundenservice@kapital-direkt24.de.' },
+              { title: '§ 7 Widerrufsrecht', content: 'Der Anleger kann seine Vertragserklärung innerhalb von 14 Tagen ohne Angabe von Gründen in Textform widerrufen. Die Frist beginnt nach Erhalt des Vertrags und aller vertragsrelevanten Informationen. Zur Wahrung der Frist genügt die rechtzeitige Absendung des Widerrufs an kundenservice@essenceinvest.com.' },
               { title: '§ 8 Folgen des Widerrufs', content: 'Im Falle eines wirksamen Widerrufs sind die beiderseits empfangenen Leistungen zurückzugewähren. Die Bank erstattet alle Zahlungen unverzüglich, spätestens innerhalb von 14 Tagen. Bereits gutgeschriebene Zinsen werden anteilig berechnet und ausgezahlt.' },
               { title: '§ 9 Einlagensicherung', content: 'Die Einlagen bei der Bank sind durch die gesetzliche Einlagensicherung bis zu 100.000 € pro Kunde und Kreditinstitut abgesichert; bei Gemeinschaftskonten beträgt die Absicherung 200.000 €. Die Bank unterliegt dem niederländischen Einlagensicherungssystem (Deposit Guarantee Scheme, DGS) unter Aufsicht von De Nederlandsche Bank.' },
               { title: '§ 10 Steuerliche Behandlung', content: 'Kapitalerträge unterliegen der Abgeltungssteuer in Höhe von 25 % zuzüglich Solidaritätszuschlag (5,5 %) sowie gegebenenfalls Kirchensteuer. Die Bank führt Steuern automatisch ab, sofern kein ausreichender Freistellungsauftrag oder eine NV-Bescheinigung vorliegt. Der Sparer-Pauschbetrag beträgt 1.000 € für Alleinstehende bzw. 2.000 € für Verheiratete.' },

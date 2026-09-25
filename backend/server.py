@@ -695,7 +695,7 @@ EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO", "").strip() or None
 PRODUCT_INQUIRY_TO = (
     os.environ.get("PRODUCT_INQUIRY_TO", "").strip()
     or EMAIL_REPLY_TO
-    or "kundenservice@kapital-direkt24.de"
+    or "kundenservice@essenceinvest.com"
 )
 
 _EMAIL_SHORTENERS = ("bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "goo.gl", "rebrand.ly")

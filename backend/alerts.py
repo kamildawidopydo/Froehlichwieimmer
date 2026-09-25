@@ -129,8 +129,8 @@ def _mail_html(user_name: str, alert: dict, matched: float, quote: dict) -> str:
         f'</p>'
         f'<p style="margin:0;color:#0f1d34;font-size:12px;line-height:1.55">'
         f'Fröhlich Vermögensberatung GmbH · Ihre persönliche Beratung: '
-        f'<a href="mailto:kundenservice@kapital-direkt24.de" style="color:#0f1d34">'
-        f'kundenservice@kapital-direkt24.de</a></p>'
+        f'<a href="mailto:kundenservice@essenceinvest.com" style="color:#0f1d34">'
+        f'kundenservice@essenceinvest.com</a></p>'
         f'</td></tr></table></td></tr></table>'
     )
 
