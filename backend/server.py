@@ -3092,10 +3092,40 @@ async def _cache_put(symbol: str, quote: dict, ttl_s: int) -> None:
 # async loop free.
 
 def _yf_fetch_sync(yf_symbol: str) -> Optional[dict]:
+    """Fetch a single quote from Yahoo Finance.
+
+    Primary path uses `Ticker.history(period="2d", interval="1d")` — the same
+    endpoint that reliably serves `/api/stocks/{sym}/history`. Yahoo's
+    `fast_info` / `.info` is rate-limited far more aggressively and has been
+    returning empty payloads for common DE tickers (RHM.DE, SIE.DE, IFX.DE),
+    which used to force the caller onto the deterministic snapshot fallback.
+    Falling back to `fast_info` only when `history()` is truly empty keeps
+    behaviour intact for edge tickers without breaking the main flow.
+    """
     try:
         import yfinance as yf  # type: ignore
     except Exception:  # noqa: BLE001
         return None
+    # (1) Preferred: Ticker.history — proven-stable code path.
+    try:
+        t = yf.Ticker(yf_symbol)
+        hist = t.history(period="2d", interval="1d", prepost=False, auto_adjust=False)
+        if hist is not None and not hist.empty:
+            closes = [float(c) for c in hist["Close"].tolist() if c and float(c) > 0]
+            if closes:
+                price = closes[-1]
+                prev = closes[-2] if len(closes) >= 2 else None
+                change = (price - prev) if (prev and prev > 0) else 0.0
+                change_pct = (change / prev * 100.0) if (prev and prev > 0) else 0.0
+                return {
+                    "price": round(price, 4),
+                    "change": round(change, 4),
+                    "change_percent": round(change_pct, 3),
+                    "previous_close": round(prev, 4) if prev else None,
+                }
+    except Exception as exc:  # noqa: BLE001
+        logger.info("yfinance history %s error: %s", yf_symbol, str(exc)[:120])
+    # (2) Legacy fallback: fast_info — only if history returned nothing.
     try:
         t = yf.Ticker(yf_symbol)
         fi = t.fast_info
@@ -3112,7 +3142,7 @@ def _yf_fetch_sync(yf_symbol: str) -> Optional[dict]:
             "previous_close": round(prev, 4) if prev else None,
         }
     except Exception as exc:  # noqa: BLE001
-        logger.info("yfinance %s error: %s", yf_symbol, str(exc)[:120])
+        logger.info("yfinance fast_info %s error: %s", yf_symbol, str(exc)[:120])
         return None
 
 
@@ -3242,7 +3272,13 @@ async def _fetch_quote(cfg: dict) -> Optional[dict]:
         return q
 
     # (1) yfinance — real values for indices / commodities futures / FX.
+    # Session 83 — Stocks: use `av_symbol` as the yfinance ticker when no
+    # dedicated `yf_symbol` is configured. Yahoo accepts the same suffix
+    # notation Alpha Vantage uses ("SAP.DE", "NVDA", ...), so re-using the
+    # existing config avoids a second symbol table.
     yf_sym = cfg.get("yf_symbol")
+    if not yf_sym and cfg.get("asset_class") == "stock":
+        yf_sym = cfg.get("av_symbol")
     if yf_sym:
         parsed = await _yf_call(yf_sym)
         if parsed:
@@ -3285,9 +3321,11 @@ async def _fetch_quote(cfg: dict) -> Optional[dict]:
             q["is_delayed"] = True
             return q
 
-    # (4) Data integrity: indices/commodities/fx must NEVER show hardcoded fake
-    # prices. Signal skip to the caller by returning None.
-    if cfg.get("asset_class") in ("index", "commodity", "fx"):
+    # (4) Data integrity: neither indices/commodities/fx NOR stocks may show
+    # hardcoded fake prices. Signal skip to the caller by returning None so
+    # the endpoint can filter the instrument. `_FALLBACK_QUOTES` for stocks
+    # remains defined but is intentionally no longer used here — Session 83.
+    if cfg.get("asset_class") in ("index", "commodity", "fx", "stock"):
         return None
 
     reason = "no_api_key" if not ALPHA_VANTAGE_KEY else "provider_unavailable"
@@ -3307,7 +3345,7 @@ async def _fetch_many(configs: List[dict]) -> List[dict]:
             q = await _fetch_quote(cfg)
         except Exception as exc:  # noqa: BLE001
             logger.exception("market fetch error for %s: %s", cfg.get("symbol"), type(exc).__name__)
-            q = None if cfg.get("asset_class") in ("index", "commodity", "fx") else _fallback_quote(cfg, reason="internal_error")
+            q = None if cfg.get("asset_class") in ("index", "commodity", "fx", "stock") else _fallback_quote(cfg, reason="internal_error")
         if q is not None:
             results.append(q)
     return results
