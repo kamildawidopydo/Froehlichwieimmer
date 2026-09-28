@@ -77,3 +77,16 @@ crons:
     endpoint: "{{BASE_URL}}/api/cron/monthly-statements"
     method: POST
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+
+  # Schritt 14 · Täglicher Yahoo-Analystenkonsens-Refresh.
+  # 04:15 UTC — vor Marktöffnung, damit die Homepage tagsüber aktuellen
+  # Consensus zeigt. Reine analyst-only Sync — Aktienkurs-/FX-Logik unverändert.
+  # Idempotent per (ticker, ingestion_source, record_type) → keine neuen
+  # Duplikate. `published` bleibt unverändert (kein auto_publish). Bei
+  # Providerfehlern werden bestehende Rows nicht überschrieben.
+  # Bearer via WEBHOOK_CRON_SECRET. Ack 2xx sofort, Sync als Background-Task.
+  - name: stock-research-analyst-sync
+    description: "Täglich Yahoo-Analystenkonsens für provider_consensus-Rows aktualisieren"
+    cron: "15 4 * * *"
+    endpoint: "{{BASE_URL}}/api/cron/stock-research-analyst-sync"
+    method: POST

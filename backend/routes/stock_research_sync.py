@@ -23,20 +23,22 @@ Design principles:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import secrets as _secrets
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from providers.base import MarketPriceProvider, AnalystResearchProvider, AnalystRow
 from providers.market_price_internal import InternalQuoteProvider
 from providers.analyst_null import NullAnalystProvider
 
 # `server` provides the shared db handle + require_admin dependency.
-from server import db, require_admin
+from server import db, require_admin, _verify_cron_bearer
 from routes.stock_research import (  # reuse existing helpers, no duplication
     _duplicate_key,
     _ensure_indexes_once,
@@ -433,3 +435,47 @@ async def admin_sync_history(_user: dict = Depends(require_admin)):
             "analyst": doc.get("analyst"),
         })
     return {"items": items}
+
+
+# ---------------------------------------------------------------------------
+# Cron endpoint — täglicher Yahoo-Analystenkonsens-Refresh (Schritt 14)
+# ---------------------------------------------------------------------------
+# Bearer via `WEBHOOK_CRON_SECRET`. Endpoint ackt 2xx sofort und startet den
+# eigentlichen Sync als asyncio-Background-Task (analog zu den anderen Crons
+# in server.py), damit die 5s-Cron-Ack-Deadline sicher eingehalten wird.
+#
+# Idempotenz: `_run_sync(sync_type="analyst", auto_publish_analysts=False)`
+# nutzt den in Schritt 13 eingeführten Upsert auf
+# `(ticker, ingestion_source, record_type)` — der Job legt bei bestehenden
+# provider_consensus-Rows KEINE neuen Duplikate an und lässt `published`
+# unverändert. Bei Provider-Fehlern werden bestehende gültige Rows nicht
+# überschrieben (siehe `_sync_analysts` Try/Except-Wrapper).
+
+
+@router.post("/cron/stock-research-analyst-sync", summary="Täglicher Analystenkonsens-Refresh (Cron)")
+async def cron_stock_research_analyst_sync(request: Request):
+    _verify_cron_bearer(request.headers.get("authorization"))
+    run_id = _secrets.token_hex(8)
+    started = datetime.now(timezone.utc).isoformat()
+
+    async def _job() -> None:
+        try:
+            result = await _run_sync(
+                auto_publish_analysts=False,
+                tickers=None,
+                sync_type="analyst",
+            )
+            logger.info(
+                "cron_stock_research_analyst_sync ok run_id=%s analyst=%s duration_ms=%s",
+                run_id, result.get("analyst"), result.get("duration_ms"),
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("cron_stock_research_analyst_sync failed run_id=%s", run_id)
+
+    asyncio.create_task(_job())
+    return {
+        "accepted": True,
+        "run_id": run_id,
+        "job": "stock-research-analyst-sync",
+        "started_at": started,
+    }

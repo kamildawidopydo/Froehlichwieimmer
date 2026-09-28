@@ -1,9 +1,9 @@
 import { getApiBase } from '@/lib/apiBase';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import axios from 'axios';
-import { ArrowRight, LineChart } from 'lucide-react';
+import { ArrowRight, Info, LineChart } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,6 @@ const TABLE_COLUMNS = [
   { key: 'target', label: 'Kursziel', align: 'right' },
   { key: 'upside', label: 'Abstand', align: 'right' },
   { key: 'analyst', label: 'Analyst', align: 'left' },
-  { key: 'asOf', label: 'Stand', align: 'right' },
 ];
 
 const INFO_CARDS = [
@@ -169,24 +168,6 @@ const ResearchTable = ({ rows }) => (
                   </p>
                 ) : null}
               </td>
-              <td className="px-6 py-5 text-right align-top">
-                <div className="flex items-center justify-end gap-3">
-                  <span className="font-mono text-[11.5px] uppercase tracking-[0.16em] text-bank-text-muted">
-                    {formatDate(row.asOfDate)}
-                  </span>
-                  <span
-                    className="hidden font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-primary-strong opacity-70 transition-opacity group-hover:opacity-100 lg:inline"
-                    data-testid={`stock-research-open-analysis-${row.ticker.toLowerCase()}`}
-                  >
-                    Analyse öffnen
-                  </span>
-                  <ArrowRight
-                    className="h-3.5 w-3.5 shrink-0 text-bank-primary-strong opacity-40 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100"
-                    strokeWidth={LUCIDE_STROKE}
-                    aria-hidden
-                  />
-                </div>
-              </td>
             </tr>
           ))}
         </tbody>
@@ -241,13 +222,7 @@ const ResearchTable = ({ rows }) => (
                 <dd className="mt-0.5 text-[11.5px] text-bank-text-muted">Quelle: {row.source}</dd>
               ) : null}
             </div>
-            <div className="col-span-2 flex items-center justify-between">
-              <div>
-                <dt className="font-mono text-[10px] uppercase tracking-[0.2em] text-bank-text-muted">Datenstand</dt>
-                <dd className="mt-0.5 font-mono text-[11.5px] uppercase tracking-[0.14em] text-bank-text-muted">
-                  {formatDate(row.asOfDate)}
-                </dd>
-              </div>
+            <div className="col-span-2 flex items-center justify-end">
               <span className="inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-primary-strong">
                 Analyse öffnen
                 <ArrowRight className="h-3.5 w-3.5" strokeWidth={LUCIDE_STROKE} aria-hidden />
@@ -336,6 +311,7 @@ const StockResearchSection = ({ rows: rowsProp }) => {
   const prefersReduced = useReducedMotion();
   const [fetched, setFetched] = useState(null); // null while loading
   const [asOf, setAsOf] = useState(null);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
 
   useEffect(() => {
     if (rowsProp !== undefined) {
@@ -411,7 +387,11 @@ const StockResearchSection = ({ rows: rowsProp }) => {
             upsidePct,
             currencyMismatch: !!(live && liveCcy && liveCcy !== targetCcy),
             analyst: it.analyst || it.research_house || '—',
-            asOfDate: it.research_date,
+            // Schritt 14 · `researchFetchedAt` ist der Zeitpunkt, zu dem
+            // EssenceInvest den externen Analystenkonsens abgerufen hat —
+            // NICHT das Datum einer Analystenmeinung. Für provider_consensus-
+            // Rows entspricht research_date dem fetched_at (siehe Schritt 13).
+            researchFetchedAt: it.fetched_at || it.research_date || null,
             source: it.source_name,
             sourceUrl: it.source_url,
             // Legacy alias for existing ResearchTable readers.
@@ -431,6 +411,29 @@ const StockResearchSection = ({ rows: rowsProp }) => {
   const rows = fetched || [];
   const isLoading = fetched === null;
   const hasData = !isLoading && rows.length > 0;
+
+  // Schritt 14 · Tooltip-Text am ⓘ. Wenn ALLE Zeilen denselben Abruf-Zeitpunkt
+  // teilen, zeigen wir das Datum. Bei unterschiedlichen fetched_at-Werten
+  // wird KEIN gemeinsamer Zeitpunkt erfunden — dann generischer Text.
+  const tooltipText = useMemo(() => {
+    const stamps = rows.map((r) => r.researchFetchedAt).filter(Boolean);
+    if (stamps.length === 0 || stamps.length !== rows.length) {
+      return 'Kursziele basieren auf einem externen Analystenkonsens und werden regelmäßig aktualisiert.';
+    }
+    const unique = new Set(stamps.map((s) => new Date(s).getTime()));
+    if (unique.size !== 1) {
+      return 'Kursziele basieren auf einem externen Analystenkonsens und werden regelmäßig aktualisiert.';
+    }
+    try {
+      const dt = new Intl.DateTimeFormat('de-DE', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      }).format(new Date(stamps[0]));
+      return `Kursziele basieren auf einem externen Analystenkonsens. Zuletzt abgerufen am ${dt}.`;
+    } catch {
+      return 'Kursziele basieren auf einem externen Analystenkonsens und werden regelmäßig aktualisiert.';
+    }
+  }, [rows]);
 
   const reveal = (i = 0) => ({
     initial: { opacity: 0, y: 18 },
@@ -452,9 +455,35 @@ const StockResearchSection = ({ rows: rowsProp }) => {
           <Eyebrow>Exklusive Analysen</Eyebrow>
           <h2
             id="home-stock-research-heading"
-            className="mt-5 font-display text-[2rem] font-light leading-[1.1] tracking-tight text-bank-text sm:text-[2.5rem] lg:text-[2.75rem]"
+            className="mt-5 inline-flex items-center justify-center gap-2 font-display text-[2rem] font-light leading-[1.1] tracking-tight text-bank-text sm:text-[2.5rem] lg:text-[2.75rem]"
           >
-            Aktien mit Potenzial
+            <span>Aktien mit Potenzial</span>
+            {hasData ? (
+              <span className="relative inline-flex" data-testid="stock-research-info-tooltip-wrapper">
+                <button
+                  type="button"
+                  aria-label="Hinweis zum Datenstand des Analystenkonsens"
+                  aria-expanded={tooltipOpen}
+                  data-testid="stock-research-info-tooltip-trigger"
+                  onClick={() => setTooltipOpen((v) => !v)}
+                  onMouseEnter={() => setTooltipOpen(true)}
+                  onMouseLeave={() => setTooltipOpen(false)}
+                  onBlur={() => setTooltipOpen(false)}
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-bank-text-muted transition-colors hover:text-bank-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/40 focus-visible:ring-offset-2 sm:h-7 sm:w-7"
+                >
+                  <Info className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={LUCIDE_STROKE} aria-hidden />
+                </button>
+                {tooltipOpen ? (
+                  <span
+                    role="tooltip"
+                    data-testid="stock-research-info-tooltip-content"
+                    className="absolute left-1/2 top-full z-30 mt-2 w-[min(88vw,320px)] -translate-x-1/2 rounded-xl border border-bank-border bg-white p-3 text-left text-[12.5px] font-normal leading-relaxed text-bank-text-muted shadow-md sm:w-[340px] sm:text-[13px]"
+                  >
+                    {tooltipText}
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
           </h2>
           <div aria-hidden className="mx-auto mt-7 flex h-px w-16 items-center justify-center gap-2">
             <span className="h-px flex-1 bg-gradient-to-r from-transparent to-bank-primary/45" />
@@ -475,7 +504,6 @@ const StockResearchSection = ({ rows: rowsProp }) => {
         {hasData ? (
           <>
             <p className="mt-5 text-center font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted" data-testid="stock-research-as-of">
-              {asOf ? `Datenstand: ${new Date(asOf).toLocaleString('de-DE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ` : ''}
               Quellen: Analysten-/Research-Angaben der jeweils genannten Anbieter
             </p>
             {/* Session 80.98 — Compare-Handoff aus Investment-Cockpit */}
