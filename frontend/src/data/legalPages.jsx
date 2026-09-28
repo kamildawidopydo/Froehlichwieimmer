@@ -39,9 +39,13 @@ const COMPANY = {
   registerCourt: 'Amtsgericht Bad Kreuznach',
   legalForm: 'Gesellschaft mit beschränkter Haftung (GmbH)',
   shareCapital: '25.000 EUR',
-  // TODO(Fröhlich Vermögensberatung): USt-IdNr. ergänzen, sobald erteilt.
-  vatId: null,
+  vatId: 'DE709655399',
+  vatIdLegalRef: 'USt-IdNr. gemäß § 27a UStG',
   managingDirector: 'Manfred Franz Fröhlich',
+  visdpName: 'Dr. Susanne',
+  visdpRef: 'verantwortlich für den Inhalt i. S. d. § 18 Abs. 2 MStV',
+  chiefEditor: 'Mark Schubert',
+  editorialLeadGuide: 'Anna Sommer und Ralf Thomas Ada',
   phoneDisplay: '06966 7785 941',
   phoneTel: '+4969667785941',
   email: 'kundenservice@essenceinvest.com',
@@ -81,12 +85,17 @@ const impressumBody = (
         </LegalInfoCard>
       </LegalSection>
 
-      <LegalSection id="vertretung" badge="2." title="Vertretungsberechtigter">
+      <LegalSection id="vertretung" badge="2." title="Geschäftsführer und V.i.S.d.P.">
         <p>Die Gesellschaft wird vertreten durch:</p>
         <p>
           <strong>{COMPANY.managingDirector}</strong>
           <br />
           Geschäftsführer
+        </p>
+        <p>
+          <strong>{COMPANY.visdpName}</strong>
+          <br />
+          {COMPANY.visdpRef}
         </p>
       </LegalSection>
     </div>
@@ -97,6 +106,17 @@ const impressumBody = (
         <span>{COMPANY.registerCourt}</span>
         <span className="text-bank-text">Registernummer:</span>
         <span>{COMPANY.hrb}</span>
+        <span className="text-bank-text">{COMPANY.vatIdLegalRef}:</span>
+        <span>{COMPANY.vatId}</span>
+      </div>
+    </LegalSection>
+
+    <LegalSection id="redaktion" badge="3a." title="Redaktion">
+      <div className="grid gap-y-2 text-[15px] leading-relaxed text-bank-text-muted sm:grid-cols-[max-content_1fr] sm:gap-x-6">
+        <span className="text-bank-text">Chefredakteur:</span>
+        <span>{COMPANY.chiefEditor}</span>
+        <span className="text-bank-text">Redaktionsleitung Ratgeber:</span>
+        <span>{COMPANY.editorialLeadGuide}</span>
       </div>
     </LegalSection>
 
