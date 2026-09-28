@@ -20,8 +20,15 @@
         href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap"
         rel="stylesheet" />
 
-    <!-- Favicon — Einbindung deaktiviert (auf Wunsch entfernt). Die
-         Icon-Assets unter /assets/favicon/* bleiben unverändert bestehen. -->
+    <!-- Favicon — Einbindung auf Wunsch entfernt. Der leere data:-Icon-Link
+         überschreibt aktiv den aggressiven Browser-Favicon-Cache, damit
+         bestehende Chrome/Firefox-Nutzer nicht weiterhin das alte Icon aus
+         ihrem Local-Cache sehen. Die alten Icon-Assets unter
+         /assets/favicon/* bleiben physisch vorhanden (für spätere Wieder-
+         verwendung), werden aber nicht mehr referenziert. -->
+    <link rel="icon" href="data:," />
+    <link rel="shortcut icon" href="data:," />
+    <link rel="apple-touch-icon" href="data:," />
 
     <title>Fröhlich Vermögensberatung | Ihre Investments. Alle Banken. Eine Plattform.</title>
     <script>window.addEventListener("error", function (e) { if (e.error instanceof DOMException && e.error.name === "DataCloneError" && e.message && e.message.includes("PerformanceServerTiming")) { e.stopImmediatePropagation(); e.preventDefault() } }, true);</script>
