@@ -140,6 +140,9 @@ const impressumBody = (
           Die {COMPANY.name} ist als vertraglich gebundener Vermittler gemäß § 3 Abs. 2 WpIG tätig und erbringt Anlagevermittlung und Anlageberatung ausschließlich für Rechnung und unter der Haftung eines entsprechenden Wertpapierinstituts.
         </p>
         <p>
+          Die {COMPANY.name} ist Darlehensvermittler gemäß § 34 c Abs. 1 S. 1 Nr. 2 GewO (IHK).
+        </p>
+        <p>
           Die aufsichtsrechtliche Zuständigkeit und die Details zum haftenden Institut sowie die jeweilige Eintragung im BaFin-Register stellen wir im Rahmen der gesetzlichen Vorgaben auf Anfrage zur Verfügung.
         </p>
       </LegalSection>
