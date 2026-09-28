@@ -401,10 +401,36 @@ async def _ensure_indexes_once() -> None:
 @router.get("/stock-research")
 async def public_stock_research(limit: int = Query(default=8, ge=1, le=PUBLIC_LIMIT_MAX)):
     await _ensure_indexes_once()
-    cursor = db.stock_research.find({"published": True}).sort([("research_date", -1)]).limit(limit)
+    # Schritt 13 — Sicherheitsnetz: pro Ticker darf höchstens EINE
+    # provider_consensus-Row nach außen sichtbar sein. Falls durch einen
+    # Fehler mehrere published provider_consensus-Rows desselben Tickers in
+    # der DB liegen, zeigt das öffentliche API nur die jüngste (nach
+    # research_date, tiebreak fetched_at) an. Manuell gepflegte Rows
+    # (record_type != "provider_consensus") bleiben unverändert und können
+    # weiterhin mehrfach pro Ticker erscheinen.
+    #
+    # Wir holen bewusst mehr als `limit` Rows, dedupieren dann in Python und
+    # kürzen anschließend zurück auf `limit`. Der Overfetch-Faktor ist klein
+    # (limit ≤ 12, worst case × 3 Duplikate) und vermeidet einen komplexen
+    # aggregation pipeline.
+    overfetch = max(limit * 3, limit + 10)
+    cursor = (
+        db.stock_research
+        .find({"published": True})
+        .sort([("research_date", -1), ("fetched_at", -1), ("_id", -1)])
+        .limit(overfetch)
+    )
+    seen_consensus_tickers: set[str] = set()
     items: List[Dict[str, Any]] = []
     latest_updated: Optional[datetime] = None
     async for doc in cursor:
+        if len(items) >= limit:
+            break
+        if doc.get("record_type") == "provider_consensus":
+            tk = (doc.get("ticker") or "").upper()
+            if tk in seen_consensus_tickers:
+                continue
+            seen_consensus_tickers.add(tk)
         items.append(serialize_public(doc))
         upd = doc.get("updated_at") or doc.get("created_at")
         if isinstance(upd, datetime) and (latest_updated is None or upd > latest_updated):

@@ -304,6 +304,34 @@ async def _sync_analysts(tickers: List[str], *, auto_publish: bool = False) -> D
                 stored["published"] = True
             except HTTPException:
                 stored["published"] = False
+
+        # Schritt 13 — Provider-Consensus-Rows werden pro
+        # (ticker, ingestion_source, record_type) upsertet, damit ein täglicher
+        # Sync KEINE neuen Duplikate mehr erzeugt. Manuell gepflegte Rows und
+        # andere record_types folgen weiterhin dem historischen dedupe_key-Pfad.
+        # Der `published`-Status wird bei provider_consensus-UPDATES IMMER
+        # bewahrt (auch bei auto_publish=True) — die einmalige Freigabe-
+        # Entscheidung eines Admins soll ein Refresh-Sync nie überschreiben.
+        if record_type == "provider_consensus":
+            lookup = {
+                "ticker": stored["ticker"],
+                "ingestion_source": provider.name,
+                "record_type": "provider_consensus",
+            }
+            existing_doc = await db.stock_research.find_one(
+                lookup, {"_id": 1, "published": 1}, sort=[("fetched_at", -1)]
+            )
+            if existing_doc:
+                stored.pop("published", None)  # published bleibt unverändert
+                await db.stock_research.update_one({"_id": existing_doc["_id"]}, {"$set": stored})
+                updated += 1
+            else:
+                stored["created_at"] = now
+                stored.setdefault("published", False)  # Draft-First für neue Rows
+                await db.stock_research.insert_one(stored)
+                inserted += 1
+            continue
+
         exists = await db.stock_research.find_one({"dedupe_key": stored["dedupe_key"]}, {"_id": 1})
         if exists:
             if not auto_publish:
