@@ -131,25 +131,35 @@ const ResearchTable = ({ rows }) => (
                 </Link>
               </td>
               <td className="px-6 py-5 text-right align-top">
-                <span className="rate-figure text-[15px] tabular-nums text-bank-text" data-numeric>
-                  {formatPrice(row.currentPrice, row.currency)}
-                </span>
+                {row.priceUnavailable ? (
+                  <span className="font-mono text-[11.5px] uppercase tracking-[0.14em] text-bank-text-muted" data-testid={`stock-research-price-unavailable-${row.ticker.toLowerCase()}`}>
+                    Kurs derzeit nicht verfügbar
+                  </span>
+                ) : (
+                  <span className="rate-figure text-[15px] tabular-nums text-bank-text" data-numeric>
+                    {formatPrice(row.currentPrice, row.currentPriceCurrency || row.currency)}
+                  </span>
+                )}
               </td>
               <td className="px-6 py-5 text-right align-top">
                 <span className="rate-figure text-[15px] tabular-nums text-bank-text" data-numeric>
-                  {formatPrice(row.priceTarget, row.currency)}
+                  {formatPrice(row.priceTarget, row.targetCurrency || row.currency)}
                 </span>
               </td>
               <td className="px-6 py-5 text-right align-top">
-                <span
-                  className={cn(
-                    'inline-flex items-baseline font-mono text-[13.5px] font-semibold tabular-nums',
-                    row.upsidePct >= 0 ? 'text-bank-primary-strong' : 'text-bank-text-muted',
-                  )}
-                  data-numeric
-                >
-                  {formatUpside(row.upsidePct)}
-                </span>
+                {row.upsidePct == null ? (
+                  <span className="font-mono text-[11.5px] uppercase tracking-[0.14em] text-bank-text-muted">—</span>
+                ) : (
+                  <span
+                    className={cn(
+                      'inline-flex items-baseline font-mono text-[13.5px] font-semibold tabular-nums',
+                      row.upsidePct >= 0 ? 'text-bank-primary-strong' : 'text-bank-text-muted',
+                    )}
+                    data-numeric
+                  >
+                    {formatUpside(row.upsidePct)}
+                  </span>
+                )}
               </td>
               <td className="px-6 py-5 align-top">
                 <p className="text-[13.5px] leading-snug text-bank-text">{row.analyst}</p>
@@ -213,13 +223,15 @@ const ResearchTable = ({ rows }) => (
             <div>
               <dt className="font-mono text-[10px] uppercase tracking-[0.2em] text-bank-text-muted">Aktuell</dt>
               <dd className="mt-0.5 tabular-nums text-bank-text" data-numeric>
-                {formatPrice(row.currentPrice, row.currency)}
+                {row.priceUnavailable
+                  ? <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted">Kurs nicht verfügbar</span>
+                  : formatPrice(row.currentPrice, row.currentPriceCurrency || row.currency)}
               </dd>
             </div>
             <div>
               <dt className="font-mono text-[10px] uppercase tracking-[0.2em] text-bank-text-muted">Kursziel</dt>
               <dd className="mt-0.5 tabular-nums text-bank-text" data-numeric>
-                {formatPrice(row.priceTarget, row.currency)}
+                {formatPrice(row.priceTarget, row.targetCurrency || row.currency)}
               </dd>
             </div>
             <div className="col-span-2">
@@ -332,31 +344,79 @@ const StockResearchSection = ({ rows: rowsProp }) => {
     }
     let alive = true;
     const controller = new AbortController();
-    axios
-      .get(`${API_BASE}/api/stock-research`, { signal: controller.signal, params: { limit: 12 } })
-      .then(({ data }) => {
+    (async () => {
+      try {
+        // (1) Analyst-Research (Kursziel + Analyst) laden.
+        const { data } = await axios.get(`${API_BASE}/api/stock-research`, {
+          signal: controller.signal, params: { limit: 12 },
+        });
         if (!alive) return;
         const items = Array.isArray(data?.items) ? data.items : [];
-        // Map API shape → row shape used by ResearchTable
-        setFetched(items.map((it) => ({
-          company: it.company_name,
-          ticker: it.ticker,
-          currentPrice: Number(it.current_price),
-          priceTarget: Number(it.target_price),
-          upsidePct: Number(it.upside_pct),
-          analyst: it.analyst || it.research_house || '—',
-          asOfDate: it.research_date,
-          source: it.source_name,
-          sourceUrl: it.source_url,
-          currency: it.currency || 'EUR',
-        })));
+        if (items.length === 0) { setFetched([]); return; }
+
+        // (2) Session 87 · Trust — Aktuelle Börsenkurse zentral in EINEM Batch
+        // beziehen. `stock_research.current_price` wird ausdrücklich NICHT
+        // mehr als aktueller Kurs verwendet.
+        const symbols = items.map((it) => String(it.ticker || '').toUpperCase()).filter(Boolean);
+        let liveMap = {};
+        try {
+          const { data: liveResp } = await axios.get(`${API_BASE}/api/news-markte/market/quotes`, {
+            params: { symbols: symbols.join(',') }, signal: controller.signal,
+          });
+          const liveItems = Array.isArray(liveResp?.items) ? liveResp.items : [];
+          liveItems.forEach((q) => {
+            const sym = String(q.symbol || '').toUpperCase();
+            const price = Number(q.price);
+            if (sym && Number.isFinite(price)) {
+              liveMap[sym] = {
+                price,
+                currency: q.currency || q.display_currency || null,
+                asOf: q.as_of || q.last_updated || null,
+              };
+            }
+          });
+        } catch (_e) { /* Live-Kurse optional — Research bleibt sichtbar */ }
+
+        if (!alive) return;
+        setFetched(items.map((it) => {
+          const ticker = String(it.ticker || '').toUpperCase();
+          const target = Number(it.target_price);
+          const targetCcy = (it.target_price_currency || it.currency || 'EUR').toUpperCase();
+          const live = liveMap[ticker] || null;
+          const livePrice = live ? live.price : null;
+          const liveCcy = live && live.currency ? live.currency.toUpperCase() : null;
+          // Kurspotenzial nur, wenn Live-Kurs vorhanden UND Währungen gleich.
+          const canComputeUpside =
+            Number.isFinite(livePrice) && livePrice > 0 &&
+            Number.isFinite(target) && target > 0 &&
+            liveCcy && liveCcy === targetCcy;
+          const upsidePct = canComputeUpside ? ((target - livePrice) / livePrice) * 100 : null;
+          return {
+            company: it.company_name,
+            ticker,
+            currentPrice: Number.isFinite(livePrice) ? livePrice : null,
+            currentPriceCurrency: liveCcy,
+            priceUnavailable: !Number.isFinite(livePrice),
+            priceAsOf: live?.asOf || null,
+            priceTarget: Number.isFinite(target) ? target : null,
+            targetCurrency: targetCcy,
+            upsidePct,
+            currencyMismatch: !!(live && liveCcy && liveCcy !== targetCcy),
+            analyst: it.analyst || it.research_house || '—',
+            asOfDate: it.research_date,
+            source: it.source_name,
+            sourceUrl: it.source_url,
+            // Legacy alias for existing ResearchTable readers.
+            currency: liveCcy || targetCcy || 'EUR',
+          };
+        }));
         setAsOf(data?.as_of || null);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (axios.isCancel?.(err) || err?.name === 'CanceledError') return;
         if (!alive) return;
-        setFetched([]); // fall back to empty state on error
-      });
+        setFetched([]);
+      }
+    })();
     return () => { alive = false; controller.abort(); };
   }, [rowsProp]);
 
