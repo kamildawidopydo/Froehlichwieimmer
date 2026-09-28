@@ -3024,11 +3024,15 @@ def _now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _build_quote(cfg: dict, price: float, change: float, change_percent: float, source: str, note: Optional[str] = None) -> dict:
+def _build_quote(cfg: dict, price: float, change: float, change_percent: float, source: str, note: Optional[str] = None, as_of: Optional[str] = None) -> dict:
     is_delayed = source != "provider_realtime"
     native_currency = cfg.get("native_currency") or cfg.get("currency")  # None for indices/FX
     asset_class = cfg.get("asset_class", "stock")
     price_r = round(float(price), 4)
+    now_iso = _now_utc().isoformat()
+    # Session 84 · Trust — `as_of` reflects the ACTUAL market data timestamp
+    # (last provider bar or cached quote). When it is unknown we do NOT
+    # substitute the API-call time; the caller can decide how to display it.
     return {
         "symbol": cfg["symbol"],
         "name": cfg["name"],
@@ -3048,7 +3052,8 @@ def _build_quote(cfg: dict, price: float, change: float, change_percent: float, 
         "fx_updated_at": None,
         "conversion_available": True,
         # meta
-        "last_updated": _now_utc().isoformat(),
+        "as_of": as_of,
+        "last_updated": now_iso,
         "market_status": "delayed" if is_delayed else "live",
         "data_source": source,
         "is_delayed": is_delayed,
@@ -3101,6 +3106,11 @@ def _yf_fetch_sync(yf_symbol: str) -> Optional[dict]:
     which used to force the caller onto the deterministic snapshot fallback.
     Falling back to `fast_info` only when `history()` is truly empty keeps
     behaviour intact for edge tickers without breaking the main flow.
+
+    Returns a dict with an `as_of` ISO-8601 timestamp taken from the last
+    market bar (Session 84 · Trust). Callers must propagate it so cached
+    quotes preserve the ORIGINAL market data timestamp instead of the time
+    the API happened to answer.
     """
     try:
         import yfinance as yf  # type: ignore
@@ -3117,11 +3127,22 @@ def _yf_fetch_sync(yf_symbol: str) -> Optional[dict]:
                 prev = closes[-2] if len(closes) >= 2 else None
                 change = (price - prev) if (prev and prev > 0) else 0.0
                 change_pct = (change / prev * 100.0) if (prev and prev > 0) else 0.0
+                # Extract the actual market timestamp of the last bar.
+                as_of = None
+                try:
+                    last_idx = hist.index[-1]
+                    ts = last_idx.to_pydatetime() if hasattr(last_idx, "to_pydatetime") else last_idx
+                    if getattr(ts, "tzinfo", None) is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                    as_of = ts.astimezone(timezone.utc).isoformat()
+                except Exception:  # noqa: BLE001
+                    as_of = None
                 return {
                     "price": round(price, 4),
                     "change": round(change, 4),
                     "change_percent": round(change_pct, 3),
                     "previous_close": round(prev, 4) if prev else None,
+                    "as_of": as_of,
                 }
     except Exception as exc:  # noqa: BLE001
         logger.info("yfinance history %s error: %s", yf_symbol, str(exc)[:120])
@@ -3140,6 +3161,9 @@ def _yf_fetch_sync(yf_symbol: str) -> Optional[dict]:
             "change": round(change, 4),
             "change_percent": round(change_pct, 3),
             "previous_close": round(prev, 4) if prev else None,
+            # fast_info does not expose a bar timestamp — leave as_of unset so
+            # the caller marks the data as "unknown age" rather than lying.
+            "as_of": None,
         }
     except Exception as exc:  # noqa: BLE001
         logger.info("yfinance fast_info %s error: %s", yf_symbol, str(exc)[:120])
@@ -3268,7 +3292,11 @@ async def _fetch_quote(cfg: dict) -> Optional[dict]:
     if cached and cached.get("expires_at") and cached["expires_at"] > _now_utc():
         q = dict(cached["quote"])
         q["data_source"] = "cache"
-        q["last_updated"] = (cached.get("cached_at") or _now_utc()).isoformat() if isinstance(cached.get("cached_at"), datetime) else q.get("last_updated")
+        # Session 84 · Trust — cached quotes must keep the ORIGINAL market
+        # data timestamp (`as_of`). `last_updated` continues to reflect when
+        # the cache row itself was written for backwards compatibility.
+        if not q.get("as_of"):
+            q["as_of"] = q.get("last_updated")
         return q
 
     # (1) yfinance — real values for indices / commodities futures / FX.
@@ -3283,7 +3311,7 @@ async def _fetch_quote(cfg: dict) -> Optional[dict]:
         parsed = await _yf_call(yf_sym)
         if parsed:
             quote = _build_quote(cfg, parsed["price"], parsed["change"], parsed["change_percent"],
-                                 source="yfinance", note=cfg.get("note"))
+                                 source="yfinance", note=cfg.get("note"), as_of=parsed.get("as_of"))
             quote["previous_close"] = parsed.get("previous_close")
             quote["provider_symbol"] = yf_sym
             await _cache_put(symbol, quote, ttl)

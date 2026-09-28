@@ -61,6 +61,10 @@ const mapQuoteToRow = (q, cfg = {}) => ({
   decimals: cfg.decimals ?? null,
   compareColor: cfg.compareColor ?? null,
   lastUpdated: q.last_updated ?? null,
+  // Session 84 · Trust — `asOf` is the market-data timestamp; `lastUpdated`
+  // remains the cache/API-call time so existing consumers stay unbroken.
+  asOf: q.as_of ?? null,
+  marketStatus: q.market_status ?? null,
   dataSource: q.data_source ?? null,
   isDelayed: q.is_delayed ?? true,
   note: q.note ?? null,
@@ -159,6 +163,8 @@ async function _fetchStocks(displayCurrency) {
       unit: q.unit ?? null,
       conversionAvailable: q.conversion_available ?? true,
       lastUpdated: q.last_updated ?? null,
+      asOf: q.as_of ?? null,
+      marketStatus: q.market_status ?? null,
       dataSource: q.data_source ?? null,
       isDelayed: q.is_delayed ?? true,
     })).filter((r) => r.price != null);
@@ -200,7 +206,15 @@ export async function fetchSidebarStockGroups(displayCurrency) {
     .filter((r) => Number(r.changePct) < 0)
     .sort((a, b) => Number(a.changePct) - Number(b.changePct))
     .slice(0, 5);
-  return { popular, gainers, losers, total: rows.length };
+  // Session 84 · Trust — surface the OLDEST `asOf` across shown groups so
+  // the sidebar "Kurs verzögert · Stand …" line never overstates freshness.
+  const stamps = [...popular, ...gainers, ...losers]
+    .map((r) => r.asOf)
+    .filter(Boolean)
+    .map((s) => new Date(s).getTime())
+    .filter(Number.isFinite);
+  const oldestAsOf = stamps.length ? new Date(Math.min(...stamps)).toISOString() : null;
+  return { popular, gainers, losers, total: rows.length, oldestAsOf };
 }
 
 /** Curated "Aktien im Fokus" — insertion order. */

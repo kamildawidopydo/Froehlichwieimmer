@@ -113,6 +113,24 @@ const fmtStamp = (iso) => {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())} Uhr`;
 };
 
+// Session 84 · Trust — dezente "Kurs verzögert · Stand …"-Formatierung.
+// Zeigt HH:MM Uhr in Europe/Berlin; wenn der Datenstand NICHT vom heutigen
+// Handelstag stammt, ergänzen wir das Datum, damit ein Freitags-Schlusskurs
+// am Montag nicht wie ein aktueller Kurs aussieht.
+const fmtDelayedStamp = (iso) => {
+  if (!iso) return '–';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '–';
+  const tz = 'Europe/Berlin';
+  const now = new Date();
+  const dayFmt = new Intl.DateTimeFormat('de-DE', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeFmt = new Intl.DateTimeFormat('de-DE', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+  const sameDay = dayFmt.format(d) === dayFmt.format(now);
+  return sameDay
+    ? `${timeFmt.format(d)} Uhr`
+    : `${dayFmt.format(d)}, ${timeFmt.format(d)} Uhr`;
+};
+
 /* ─── Rechte Spalte: Markt-Sidebar (strukturell) ─────────────────────────── */
 
 const MarketRow = ({ tile, sparkline, prominent }) => {
@@ -263,8 +281,14 @@ const MarketSidebar = () => {
     fetchSidebarStockGroups('EUR')
       .then((g) => {
         if (!alive) return;
-        const stamp = g.popular[0]?.lastUpdated || g.gainers[0]?.lastUpdated || g.losers[0]?.lastUpdated || null;
-        setGroups({ loading: false, error: g.total === 0, popular: g.popular, gainers: g.gainers, losers: g.losers, lastUpdated: stamp });
+        // Session 84 · Trust — prefer the oldest market-data `asOf` of the
+        // visible rows; fall back to lastUpdated only if no bar timestamp
+        // is available (e.g. yfinance fast_info path).
+        const stamp = g.oldestAsOf
+          || g.popular[0]?.asOf || g.gainers[0]?.asOf || g.losers[0]?.asOf
+          || g.popular[0]?.lastUpdated || g.gainers[0]?.lastUpdated || g.losers[0]?.lastUpdated
+          || null;
+        setGroups({ loading: false, error: g.total === 0, popular: g.popular, gainers: g.gainers, losers: g.losers, lastUpdated: stamp, asOfKnown: !!(g.oldestAsOf || g.popular[0]?.asOf || g.gainers[0]?.asOf || g.losers[0]?.asOf) });
       })
       .catch(() => { if (alive) setGroups((s) => ({ ...s, loading: false, error: true })); });
     return () => { alive = false; };
@@ -360,9 +384,13 @@ const MarketSidebar = () => {
       />
       {!groups.loading && !groups.error && groups.lastUpdated && (
         <p className="mt-4 text-[10.5px] leading-relaxed text-bank-text-muted" data-testid="home-market-stocks-timestamp">
-          <span className="text-bank-text-strong">Aktienstand:</span>{' '}
-          <time dateTime={groups.lastUpdated} className="tabular-nums">{fmtStamp(groups.lastUpdated)}</time>
-          <br />Kurse können zeitverzögert sein
+          Kurs verzögert · Stand{' '}
+          <time dateTime={groups.lastUpdated} className="tabular-nums">{fmtDelayedStamp(groups.lastUpdated)}</time>
+        </p>
+      )}
+      {!groups.loading && groups.error && (
+        <p className="mt-4 text-[10.5px] leading-relaxed text-bank-text-muted" data-testid="home-market-stocks-unavailable">
+          Kurs derzeit nicht verfügbar
         </p>
       )}
     </aside>
