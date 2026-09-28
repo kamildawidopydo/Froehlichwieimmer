@@ -356,8 +356,11 @@ def _yf_fundamentals_sync(yf_sym: str) -> Optional[Dict[str, Any]]:
                 return info.get(key)
             return None
 
+        # Public symbol for curated-label fallback (Session 86): strip exchange
+        # suffix so "ADS.DE" → "ADS", "NVDA" → "NVDA".
+        pub_sym = (yf_sym or "").split(".")[0].upper()
         result: Dict[str, Any] = {
-            "company_name": _pick("longName") or _pick("shortName"),
+            "company_name": _pick("longName") or _pick("shortName") or COMPANY_LABELS.get(pub_sym),
             "sector": _pick("sector"),
             "industry": _pick("industry"),
             "exchange": _pick("exchange") or _pick("fullExchangeName"),
@@ -412,9 +415,35 @@ NEWS_ALIASES: Dict[str, List[str]] = {
 }
 # Company display names for the section headline.
 COMPANY_LABELS: Dict[str, str] = {
-    "NVDA": "NVIDIA", "AAPL": "Apple", "MSFT": "Microsoft", "GOOGL": "Alphabet",
-    "AMZN": "Amazon", "SAP": "SAP", "SIE": "Siemens", "ALV": "Allianz",
-    "DBK": "Deutsche Bank", "IFX": "Infineon", "RHM": "Rheinmetall",
+    # US mega caps (with legal suffix used by Yahoo/Wikipedia)
+    "NVDA": "NVIDIA Corporation",
+    "AAPL": "Apple Inc.",
+    "MSFT": "Microsoft Corporation",
+    "GOOGL": "Alphabet Inc.",
+    "AMZN": "Amazon.com, Inc.",
+    # DAX blue chips (offizielle Handelsregister-Namen)
+    "SAP":  "SAP SE",
+    "SIE":  "Siemens AG",
+    "ALV":  "Allianz SE",
+    "DBK":  "Deutsche Bank AG",
+    "IFX":  "Infineon Technologies AG",
+    "RHM":  "Rheinmetall AG",
+    "ADS":  "adidas AG",
+    "DTE":  "Deutsche Telekom AG",
+    "MUV2": "Münchener Rückversicherungs-Gesellschaft AG",
+    "BAS":  "BASF SE",
+    "MBG":  "Mercedes-Benz Group AG",
+    "BMW":  "Bayerische Motoren Werke AG",
+    "VOW3": "Volkswagen AG",
+    "EOAN": "E.ON SE",
+    "RWE":  "RWE AG",
+    "HEN3": "Henkel AG & Co. KGaA",
+    "BEI":  "Beiersdorf AG",
+    "ENR":  "Siemens Energy AG",
+    "DHL":  "DHL Group",
+    "VNA":  "Vonovia SE",
+    "FRE":  "Fresenius SE & Co. KGaA",
+    "CBK":  "Commerzbank AG",
 }
 NEWS_TTL_S = 30 * 60  # 30 min cache
 

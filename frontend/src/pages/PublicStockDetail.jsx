@@ -105,12 +105,12 @@ export default function PublicStockDetail() {
         symbol: hist?.symbol || sym,
         providerSymbol: hist?.yf_symbol || null,
         price: Number.isFinite(price) ? price : null,
-        currency: hist?.currency || fund?.data?.currency || 'EUR',
+        currency: hist?.currency || fund?.currency || fund?.data?.currency || 'EUR',
         change,
         changePct,
         asOf: last?.timestamp || hist?.stats?.last_timestamp || null,
         dataSource: hist?.data_source || null,
-        companyName: fund?.data?.long_name || fund?.data?.short_name || null,
+        companyName: fund?.company_name || fund?.data?.company_name || fund?.long_name || fund?.short_name || null,
       });
     }).catch(() => { if (alive) setLive(false); });
     return () => { alive = false; controller.abort(); };
@@ -171,7 +171,9 @@ function StockContent({ stock, live }) {
   // Seite. Wenn nur einer der beiden Datenpunkte vorhanden ist, wird der
   // jeweils andere entsprechend heruntergestuft.
   const tickerSymbol = (stock?.ticker || live?.symbol || '').toUpperCase();
-  const companyName = stock?.company_name || live?.companyName || tickerSymbol;
+  const rawCompanyName = stock?.company_name || live?.companyName || null;
+  const hasRealName = !!rawCompanyName && rawCompanyName.trim().toUpperCase() !== tickerSymbol;
+  const companyName = hasRealName ? rawCompanyName : tickerSymbol;
   const currency = stock?.currency || live?.currency || 'EUR';
   const liveCurrent = Number.isFinite(Number(live?.price)) ? Number(live.price) : null;
   const researchCurrent = Number.isFinite(Number(stock?.current_price)) ? Number(stock.current_price) : null;
@@ -209,8 +211,8 @@ function StockContent({ stock, live }) {
           {companyName}
         </h1>
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11.5px] uppercase tracking-[0.18em] text-bank-text-muted">
-          <span>{tickerSymbol}</span>
-          {currency && <span>· {currency}</span>}
+          {hasRealName && <span>{tickerSymbol}</span>}
+          {currency && <span>{hasRealName ? '· ' : ''}{currency}</span>}
         </div>
 
         <div className="mt-8 flex flex-wrap items-baseline gap-x-6 gap-y-3">
