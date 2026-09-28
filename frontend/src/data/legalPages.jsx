@@ -43,6 +43,8 @@ const COMPANY = {
   vatIdLegalRef: null,
   crefoNumber: '6010244899',
   crefoLegalRef: 'Unternehmenskennziffer bei Creditreform',
+  branchCode: '66.19.9',
+  branchCodeLabel: 'Branchencode',
   managingDirector: 'Manfred Franz Fröhlich',
   visdpName: 'Dr. Susanne Müller',
   visdpRef: 'verantwortlich für den Inhalt i. S. d. § 18 Abs. 2 MStV',
@@ -114,6 +116,8 @@ const impressumBody = (
           <br />
           <span className="text-[13px] text-bank-text-muted/90">{COMPANY.crefoLegalRef}</span>
         </span>
+        <span className="text-bank-text">{COMPANY.branchCodeLabel}:</span>
+        <span>{COMPANY.branchCode}</span>
       </div>
     </LegalSection>
 
