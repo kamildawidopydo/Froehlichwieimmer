@@ -354,9 +354,15 @@ const StockResearchSection = ({ rows: rowsProp }) => {
         const items = Array.isArray(data?.items) ? data.items : [];
         if (items.length === 0) { setFetched([]); return; }
 
-        // (2) Session 87 · Trust — Aktuelle Börsenkurse zentral in EINEM Batch
+        // (2) Session 88 · Trust — Aktuelle Börsenkurse zentral in EINEM Batch
         // beziehen. `stock_research.current_price` wird ausdrücklich NICHT
         // mehr als aktueller Kurs verwendet.
+        //
+        // WICHTIG (Schritt 11): Wir verwenden `original_price` + `original_currency`
+        // aus dem Batch-Response (native Börsenwährung, z. B. USD für NVDA).
+        // Der EUR-konvertierte Feld `price`/`currency` wird bewusst NICHT genutzt,
+        // damit die Währung mit dem Analysten-Kursziel (`target_price_currency`)
+        // übereinstimmt und `upside_pct` korrekt berechenbar ist.
         const symbols = items.map((it) => String(it.ticker || '').toUpperCase()).filter(Boolean);
         let liveMap = {};
         try {
@@ -366,11 +372,13 @@ const StockResearchSection = ({ rows: rowsProp }) => {
           const liveItems = Array.isArray(liveResp?.items) ? liveResp.items : [];
           liveItems.forEach((q) => {
             const sym = String(q.symbol || '').toUpperCase();
-            const price = Number(q.price);
-            if (sym && Number.isFinite(price)) {
+            const nativePrice = Number(q.original_price);
+            const nativeCcy = q.original_currency ? String(q.original_currency).toUpperCase() : null;
+            // Nur übernehmen, wenn BEIDE native Felder vorhanden sind.
+            if (sym && Number.isFinite(nativePrice) && nativePrice > 0 && nativeCcy) {
               liveMap[sym] = {
-                price,
-                currency: q.currency || q.display_currency || null,
+                price: nativePrice,
+                currency: nativeCcy,
                 asOf: q.as_of || q.last_updated || null,
               };
             }
