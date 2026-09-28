@@ -2,7 +2,7 @@ import { getApiBase } from '@/lib/apiBase';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Info } from 'lucide-react';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import SafeNewsImage from '@/components/news/SafeNewsImage';
 import { fetchMarketOverview, fetchSidebarStockGroups, formatDisplayPrice, formatChangePct, formatMarketPrice } from '@/services/marketService';
@@ -314,7 +314,25 @@ const MarketSidebar = () => {
       aria-label="Marktübersicht"
     >
       <Eyebrow>Marktüberblick</Eyebrow>
-      <h3 className="mt-3 font-serif text-[24px] leading-tight text-bank-text">Aktuelle Kurse.</h3>
+      <h3 className="mt-3 flex items-baseline gap-1.5 font-serif text-[24px] leading-tight text-bank-text">
+        Aktuelle Kurse.
+        <span
+          tabIndex={0}
+          role="button"
+          aria-label="Hinweis zu den Kursdaten"
+          title="Kursdaten können zeitverzögert sein. Datenstand und Verfügbarkeit können je nach Börsenplatz variieren."
+          data-testid="home-market-delayed-info"
+          className="group relative -translate-y-0.5 cursor-help text-bank-text-muted transition-colors hover:text-bank-primary focus-visible:text-bank-primary focus-visible:outline-none"
+        >
+          <Info size={13} strokeWidth={1.8} aria-hidden />
+          <span
+            role="tooltip"
+            className="pointer-events-none absolute right-0 top-full z-10 mt-2 w-64 -translate-y-1 rounded border border-bank-border/60 bg-white p-3 text-[11px] font-normal normal-case leading-relaxed text-bank-text-muted opacity-0 shadow-md transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+          >
+            Kursdaten können zeitverzögert sein. Datenstand und Verfügbarkeit können je nach Börsenplatz variieren.
+          </span>
+        </span>
+      </h3>
 
       {state.loading ? (
         <div className="mt-6 space-y-3">
@@ -337,10 +355,8 @@ const MarketSidebar = () => {
             {rest.map((t) => <MarketRow key={t.symbol} tile={t} sparkline={sparks[t.symbol]} />)}
           </ul>
           {state.lastUpdated && (
-            <p className="mt-4 text-[10.5px] leading-relaxed text-bank-text-muted" data-testid="home-market-sidebar-timestamp">
-              <span className="text-bank-text-strong">Kursstand:</span>{' '}
-              <time dateTime={state.lastUpdated} className="tabular-nums">{fmtStamp(state.lastUpdated)}</time>
-              {state.isDelayed && <><br />Kurse können zeitverzögert sein</>}
+            <p className="sr-only" data-testid="home-market-sidebar-timestamp">
+              <time dateTime={state.lastUpdated}>{fmtStamp(state.lastUpdated)}</time>
             </p>
           )}
           <Link
@@ -383,9 +399,8 @@ const MarketSidebar = () => {
         emptyText="Aktuell keine markanten Verlierer."
       />
       {!groups.loading && !groups.error && groups.lastUpdated && (
-        <p className="mt-4 text-[10.5px] leading-relaxed text-bank-text-muted" data-testid="home-market-stocks-timestamp">
-          Kurs verzögert · Stand{' '}
-          <time dateTime={groups.lastUpdated} className="tabular-nums">{fmtDelayedStamp(groups.lastUpdated)}</time>
+        <p className="sr-only" data-testid="home-market-stocks-timestamp">
+          <time dateTime={groups.lastUpdated}>{fmtDelayedStamp(groups.lastUpdated)}</time>
         </p>
       )}
       {!groups.loading && groups.error && (
