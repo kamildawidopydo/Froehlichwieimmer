@@ -42,7 +42,7 @@ const COMPANY = {
   vatId: 'DE709655399',
   vatIdLegalRef: 'USt-IdNr. gemäß § 27a UStG',
   managingDirector: 'Manfred Franz Fröhlich',
-  visdpName: 'Dr. Susanne',
+  visdpName: 'Dr. Susanne Müller',
   visdpRef: 'verantwortlich für den Inhalt i. S. d. § 18 Abs. 2 MStV',
   chiefEditor: 'Mark Schubert',
   editorialLeadGuide: 'Anna Sommer und Ralf Thomas Ada',
