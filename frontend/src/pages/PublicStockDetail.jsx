@@ -53,6 +53,7 @@ const formatUpside = (pct) => {
 export default function PublicStockDetail() {
   const { symbol } = useParams();
   const [rows, setRows] = useState(null);   // null = loading
+  const [live, setLive] = useState(null);   // null = loading, false = unavailable
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -73,13 +74,58 @@ export default function PublicStockDetail() {
     return () => { alive = false; controller.abort(); };
   }, []);
 
+  // Session 85 · Trust — echte Börsendaten unabhängig vom Research-Feed laden.
+  // Nutzt die zentrale, in Schritt 3 reparierte yfinance-Pipeline
+  // (`/api/stocks/{sym}/history`) plus Fundamentals für den Firmennamen.
+  useEffect(() => {
+    if (!symbol) return undefined;
+    let alive = true;
+    const controller = new AbortController();
+    const sym = String(symbol).toUpperCase();
+    Promise.allSettled([
+      axios.get(`${API_BASE}/api/stocks/${encodeURIComponent(sym)}/history`, {
+        params: { range: '5d' }, signal: controller.signal,
+      }),
+      axios.get(`${API_BASE}/api/stocks/${encodeURIComponent(sym)}/fundamentals`, {
+        signal: controller.signal,
+      }),
+    ]).then(([hRes, fRes]) => {
+      if (!alive) return;
+      const hist = hRes.status === 'fulfilled' ? hRes.value.data : null;
+      const fund = fRes.status === 'fulfilled' ? fRes.value.data : null;
+      const points = Array.isArray(hist?.points) ? hist.points : [];
+      if (points.length === 0) { setLive(false); return; }
+      const last = points[points.length - 1] || {};
+      const prev = points.length >= 2 ? points[points.length - 2] : null;
+      const price = Number(last.close);
+      const prevClose = prev ? Number(prev.close) : NaN;
+      const change = Number.isFinite(prevClose) && prevClose > 0 ? price - prevClose : null;
+      const changePct = change != null && prevClose > 0 ? (change / prevClose) * 100 : null;
+      setLive({
+        symbol: hist?.symbol || sym,
+        providerSymbol: hist?.yf_symbol || null,
+        price: Number.isFinite(price) ? price : null,
+        currency: hist?.currency || fund?.data?.currency || 'EUR',
+        change,
+        changePct,
+        asOf: last?.timestamp || hist?.stats?.last_timestamp || null,
+        dataSource: hist?.data_source || null,
+        companyName: fund?.data?.long_name || fund?.data?.short_name || null,
+      });
+    }).catch(() => { if (alive) setLive(false); });
+    return () => { alive = false; controller.abort(); };
+  }, [symbol]);
+
   const stock = useMemo(() => {
     if (!rows) return null;
     const target = String(symbol || '').toUpperCase();
     return rows.find((r) => String(r.ticker || '').toUpperCase() === target) || null;
   }, [rows, symbol]);
 
-  const isLoading = rows === null;
+  const isLoading = rows === null || live === null;
+  const hasResearch = !!stock;
+  const hasLive = !!live && live !== false && live.price != null;
+  const notFound = !isLoading && !hasResearch && !hasLive;
 
   return (
     <main className="min-h-screen bg-bank-bg pb-24" data-testid="public-stock-detail">
@@ -99,46 +145,71 @@ export default function PublicStockDetail() {
           </div>
         )}
 
-        {!isLoading && !stock && (
+        {!isLoading && notFound && (
           <div className="mt-16 rounded-2xl border border-bank-border bg-white p-10 text-center dark:bg-bank-surface" data-testid="public-stock-not-found">
             <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-bank-primary-strong">Aktie nicht gefunden</p>
             <h1 className="mt-3 font-display text-[1.75rem] font-light text-bank-text">
-              Zu „{symbol}" liegen aktuell keine veröffentlichten Analystendaten vor.
+              Zu „{symbol}" liegen aktuell keine Börsendaten vor.
             </h1>
             <p className="mt-4 text-[14.5px] leading-relaxed text-bank-text-muted">
-              Möglicherweise wurde die Aktie noch nicht in unser Research aufgenommen — oder der Datenstand ist abgelaufen.
+              Das Symbol ist möglicherweise nicht bekannt oder aktuell nicht handelbar.
             </p>
           </div>
         )}
 
-        {stock && <StockContent stock={stock} error={error} />}
+        {!isLoading && !notFound && <StockContent stock={stock} live={live && live !== false ? live : null} error={error} />}
       </div>
     </main>
   );
 }
 
-function StockContent({ stock }) {
-  const currency = stock.currency || 'EUR';
-  const current = Number(stock.current_price);
-  const target = Number(stock.target_price);
-  const upside = typeof stock.upside_pct === 'number' ? stock.upside_pct
-    : (isFinite(current) && current > 0 && isFinite(target)) ? ((target - current) / current) * 100 : null;
+function StockContent({ stock, live }) {
+  // Session 85 · Trust — Kurs kommt aus dem zentralen yfinance-Pfad (`live`),
+  // Analystendaten kommen aus dem Research-Feed (`stock`). Beide Bereiche
+  // rendern unabhängig; fehlende Analystendaten führen nur zu einem
+  // dezenten Hinweis im Analystenbereich statt zur ganzen „nicht gefunden"-
+  // Seite. Wenn nur einer der beiden Datenpunkte vorhanden ist, wird der
+  // jeweils andere entsprechend heruntergestuft.
+  const tickerSymbol = (stock?.ticker || live?.symbol || '').toUpperCase();
+  const companyName = stock?.company_name || live?.companyName || tickerSymbol;
+  const currency = stock?.currency || live?.currency || 'EUR';
+  const liveCurrent = Number.isFinite(Number(live?.price)) ? Number(live.price) : null;
+  const researchCurrent = Number.isFinite(Number(stock?.current_price)) ? Number(stock.current_price) : null;
+  const current = liveCurrent ?? researchCurrent;
+  const change = Number.isFinite(Number(live?.change)) ? Number(live.change) : null;
+  const changePct = Number.isFinite(Number(live?.changePct)) ? Number(live.changePct) : null;
+  const target = Number.isFinite(Number(stock?.target_price)) ? Number(stock.target_price) : null;
+  const upside = typeof stock?.upside_pct === 'number' ? stock.upside_pct
+    : (current != null && current > 0 && target != null) ? ((target - current) / current) * 100 : null;
 
-  const analystLabel = stock.analyst || stock.research_house;
+  const analystLabel = stock?.analyst || stock?.research_house;
   const showAnalystName = analystLabel && analystLabel !== '—';
+  const priceUpdatedAt = live?.asOf || stock?.price_updated_at || null;
+  const changeTone = changePct == null ? 'text-bank-text-muted'
+    : changePct > 0 ? 'text-emerald-700 dark:text-emerald-400'
+    : changePct < 0 ? 'text-red-700 dark:text-red-400'
+    : 'text-bank-text-muted';
+  const fmtChange = () => {
+    if (change == null || changePct == null) return null;
+    const sign = change > 0 ? '+' : change < 0 ? '−' : '±';
+    const abs = Math.abs(change).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const absPct = Math.abs(changePct).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${sign}${abs} ${currency} · ${sign}${absPct} %`;
+  };
+  const changeStr = fmtChange();
 
   return (
     <>
       {/* HERO */}
       <header className="mt-10 border-b border-bank-border pb-10 sm:mt-14 sm:pb-14" data-testid="public-stock-hero">
         <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-bank-primary-strong">
-          Analystenresearch
+          {stock ? 'Analystenresearch' : 'Aktie'}
         </p>
         <h1 className="mt-4 font-display text-[2.25rem] font-light leading-[1.05] tracking-tight text-bank-text sm:text-[3rem]">
-          {stock.company_name}
+          {companyName}
         </h1>
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11.5px] uppercase tracking-[0.18em] text-bank-text-muted">
-          <span>{stock.ticker}</span>
+          <span>{tickerSymbol}</span>
           {currency && <span>· {currency}</span>}
         </div>
 
@@ -146,27 +217,33 @@ function StockContent({ stock }) {
           <div className="rate-figure text-[2.75rem] font-light tabular-nums text-bank-text" data-numeric>
             {formatPrice(current, currency)}
           </div>
-          {stock.price_updated_at && (
+          {changeStr && (
+            <span className={`font-mono text-[13px] font-medium tabular-nums ${changeTone}`} data-testid="public-stock-change">
+              {changeStr}
+            </span>
+          )}
+          {priceUpdatedAt && (
             <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-bank-text-muted">
-              Kursstand · {formatDate(stock.price_updated_at, true)} Uhr
+              Kursstand · {formatDate(priceUpdatedAt, true)} Uhr
             </p>
           )}
         </div>
 
         <p className="mt-5 max-w-[42rem] text-[13px] leading-relaxed text-bank-text-muted">
-          Kurse können zeitverzögert sein. Angabe basiert auf dem letzten Datenstand des Research-Providers.
+          Kursdaten können zeitverzögert sein. Datenstand und Verfügbarkeit können je nach Börsenplatz variieren.
         </p>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <Suspense fallback={null}>
-            <StockWatchButton symbol={stock.ticker} displayName={stock.company_name} />
-            <StockAlertButton symbol={stock.ticker} displayName={stock.company_name} currency={currency} />
+            <StockWatchButton symbol={tickerSymbol} displayName={companyName} />
+            <StockAlertButton symbol={tickerSymbol} displayName={companyName} currency={currency} />
           </Suspense>
         </div>
       </header>
 
-      {/* ANALYST TARGET */}
-      <section className="mt-12 rounded-2xl border border-bank-border bg-white p-8 dark:bg-bank-surface sm:p-10" data-testid="public-stock-target">
+      {/* ANALYST TARGET — nur wenn Research vorhanden, sonst dezenter Hinweis */}
+      {stock ? (
+        <section className="mt-12 rounded-2xl border border-bank-border bg-white p-8 dark:bg-bank-surface sm:p-10" data-testid="public-stock-target">
         <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-bank-primary-strong">
           Analystenkursziel
         </p>
@@ -223,21 +300,29 @@ function StockContent({ stock }) {
             </div>
           )}
         </div>
-      </section>
+        </section>
+      ) : (
+        <section className="mt-12 rounded-2xl border border-bank-border bg-white p-8 dark:bg-bank-surface sm:p-10" data-testid="public-stock-no-research">
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-bank-primary-strong">Analystenresearch</p>
+          <p className="mt-4 text-[14px] leading-relaxed text-bank-text-muted">
+            Für diese Aktie liegen derzeit keine Analystendaten vor.
+          </p>
+        </section>
+      )}
 
       {/* Reihenfolge (Session 80.77): Chart → Investment-Rechner → Analystenkonsens
            → Dividenden → Earnings → Fundamentals → News. Alle Sektionen zeigen
            nur echte yfinance-Daten und blenden fehlende Felder aus. */}
       <Suspense fallback={null}>
-        <StockResearch symbol={stock.ticker} />
-        <StockPriceChart symbol={stock.ticker} />
-        <StockInvestmentCalculator symbol={stock.ticker} currency={currency} />
-        <StockAnalystConsensus symbol={stock.ticker} />
-        <StockDividends symbol={stock.ticker} />
-        <StockEarnings symbol={stock.ticker} />
-        <StockFundamentals symbol={stock.ticker} currentPrice={current} />
-        <StockCompare baseSymbol={stock.ticker} />
-        <StockNews symbol={stock.ticker} />
+        <StockResearch symbol={tickerSymbol} />
+        <StockPriceChart symbol={tickerSymbol} />
+        <StockInvestmentCalculator symbol={tickerSymbol} currency={currency} />
+        <StockAnalystConsensus symbol={tickerSymbol} />
+        <StockDividends symbol={tickerSymbol} />
+        <StockEarnings symbol={tickerSymbol} />
+        <StockFundamentals symbol={tickerSymbol} currentPrice={current} />
+        <StockCompare baseSymbol={tickerSymbol} />
+        <StockNews symbol={tickerSymbol} />
       </Suspense>
 
       {/* DISCLAIMER */}
