@@ -3097,56 +3097,122 @@ async def _cache_put(symbol: str, quote: dict, ttl_s: int) -> None:
 # async loop free.
 
 def _yf_fetch_sync(yf_symbol: str) -> Optional[dict]:
-    """Fetch a single quote from Yahoo Finance.
+    """Fetch a single intraday quote from Yahoo Finance (Schritt 16).
 
-    Primary path uses `Ticker.history(period="2d", interval="1d")` — the same
-    endpoint that reliably serves `/api/stocks/{sym}/history`. Yahoo's
-    `fast_info` / `.info` is rate-limited far more aggressively and has been
-    returning empty payloads for common DE tickers (RHM.DE, SIE.DE, IFX.DE),
-    which used to force the caller onto the deterministic snapshot fallback.
-    Falling back to `fast_info` only when `history()` is truly empty keeps
-    behaviour intact for edge tickers without breaking the main flow.
+    Primary path (Schritt 16): `Ticker.history(period="5d", interval="5m")`
+    — the close of the last 5-minute bar serves as `price`, and its bar
+    timestamp becomes `as_of`. This replaces the previous daily-bar path
+    (`period="2d", interval="1d"`) whose synthetic timestamps (04:00Z for
+    US tickers / 22:00Z for XETRA) made the `as_of` field misleading.
 
-    Returns a dict with an `as_of` ISO-8601 timestamp taken from the last
-    market bar (Session 84 · Trust). Callers must propagate it so cached
-    quotes preserve the ORIGINAL market data timestamp instead of the time
-    the API happened to answer.
+    `previous_close` is computed from a SEPARATE daily-bar query
+    (`period="5d", interval="1d"`) — the last complete daily close prior
+    to the current session. This keeps `change` / `change_percent` a
+    genuine day-over-day comparison (not a 5-minute delta).
+
+    Fallback: `fast_info` when both history calls are empty.
+
+    Not implemented / intentionally omitted:
+      • no `market_status` field (avoid a second API roundtrip)
+      • no "Live"/"Realtime" labels — API keeps neutral `data_source`
+      • no hardcoded stock fallback prices (integrity)
     """
     try:
         import yfinance as yf  # type: ignore
     except Exception:  # noqa: BLE001
         return None
-    # (1) Preferred: Ticker.history — proven-stable code path.
+
+    price: Optional[float] = None
+    as_of: Optional[str] = None
+    prev: Optional[float] = None
+    intraday_interval: Optional[str] = None
+    intraday_date = None
+    intraday_local_date = None
+
+    # (1) Intraday-Kerze für price + as_of (5-minute bars, 5-day window)
     try:
         t = yf.Ticker(yf_symbol)
-        hist = t.history(period="2d", interval="1d", prepost=False, auto_adjust=False)
+        hist = t.history(period="5d", interval="5m", prepost=False, auto_adjust=False)
         if hist is not None and not hist.empty:
-            closes = [float(c) for c in hist["Close"].tolist() if c and float(c) > 0]
-            if closes:
-                price = closes[-1]
-                prev = closes[-2] if len(closes) >= 2 else None
-                change = (price - prev) if (prev and prev > 0) else 0.0
-                change_pct = (change / prev * 100.0) if (prev and prev > 0) else 0.0
-                # Extract the actual market timestamp of the last bar.
-                as_of = None
+            valid = [
+                (idx, float(c))
+                for idx, c in zip(hist.index, hist["Close"].tolist())
+                if c is not None and float(c) > 0
+            ]
+            if valid:
+                last_idx, last_close = valid[-1]
+                price = last_close
+                intraday_interval = "5m"
                 try:
-                    last_idx = hist.index[-1]
                     ts = last_idx.to_pydatetime() if hasattr(last_idx, "to_pydatetime") else last_idx
                     if getattr(ts, "tzinfo", None) is None:
                         ts = ts.replace(tzinfo=timezone.utc)
-                    as_of = ts.astimezone(timezone.utc).isoformat()
+                    ts_utc = ts.astimezone(timezone.utc)
+                    as_of = ts_utc.isoformat()
+                    intraday_date = ts_utc.date()
+                    # For matching against daily bars we also want the
+                    # exchange-local date (yfinance stamps daily bars in the
+                    # exchange's local tz). Use the raw pandas Timestamp's
+                    # date() rather than the UTC-converted one so that
+                    # SAP.DE (Europe/Berlin 00:00 → 22:00Z prev day) still
+                    # matches today's intraday bar.
+                    try:
+                        intraday_local_date = last_idx.date() if hasattr(last_idx, "date") else intraday_date
+                    except Exception:  # noqa: BLE001
+                        intraday_local_date = intraday_date
                 except Exception:  # noqa: BLE001
                     as_of = None
-                return {
-                    "price": round(price, 4),
-                    "change": round(change, 4),
-                    "change_percent": round(change_pct, 3),
-                    "previous_close": round(prev, 4) if prev else None,
-                    "as_of": as_of,
-                }
     except Exception as exc:  # noqa: BLE001
-        logger.info("yfinance history %s error: %s", yf_symbol, str(exc)[:120])
-    # (2) Legacy fallback: fast_info — only if history returned nothing.
+        logger.info("yfinance intraday history %s error: %s", yf_symbol, str(exc)[:120])
+
+    # (2) Daily-Kerze für previous_close — Schlusskurs des Vortages
+    if price is not None:
+        try:
+            t_daily = yf.Ticker(yf_symbol)
+            daily = t_daily.history(period="5d", interval="1d", prepost=False, auto_adjust=False)
+            if daily is not None and not daily.empty:
+                daily_pairs = [
+                    (idx, float(c))
+                    for idx, c in zip(daily.index, daily["Close"].tolist())
+                    if c is not None and float(c) > 0
+                ]
+                if daily_pairs:
+                    # If the last daily bar's DATE matches the intraday bar's date
+                    # (Yahoo already stamped today's session close), the previous
+                    # trading day's close is the SECOND-to-last daily row.
+                    # Otherwise (intraday ahead of last daily bar → today's session
+                    # not yet closed on daily feed) the LAST daily row IS the
+                    # previous-day close.
+                    last_daily_idx, last_daily_close = daily_pairs[-1]
+                    prev_daily_close = daily_pairs[-2][1] if len(daily_pairs) >= 2 else None
+                    # Use the pandas Timestamp's OWN date() — this returns the
+                    # exchange-local calendar day (yfinance stamps daily bars
+                    # in the exchange's tz). Converting to UTC first would
+                    # shift Europe/Berlin daily bars back by one day.
+                    try:
+                        last_daily_date = last_daily_idx.date() if hasattr(last_daily_idx, "date") else None
+                    except Exception:  # noqa: BLE001
+                        last_daily_date = None
+                    if intraday_local_date and last_daily_date and last_daily_date >= intraday_local_date:
+                        prev = prev_daily_close
+                    else:
+                        prev = last_daily_close
+        except Exception as exc:  # noqa: BLE001
+            logger.info("yfinance daily history %s error: %s", yf_symbol, str(exc)[:120])
+
+    if price is not None:
+        change = (price - prev) if (prev and prev > 0) else 0.0
+        change_pct = (change / prev * 100.0) if (prev and prev > 0) else 0.0
+        return {
+            "price": round(price, 4),
+            "change": round(change, 4),
+            "change_percent": round(change_pct, 3),
+            "previous_close": round(prev, 4) if prev else None,
+            "as_of": as_of,
+            "intraday_interval": intraday_interval,
+        }
+
+    # (3) fast_info Fallback — nur wenn Intraday-History leer.
     try:
         t = yf.Ticker(yf_symbol)
         fi = t.fast_info
