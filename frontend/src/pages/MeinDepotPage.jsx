@@ -80,7 +80,7 @@ const MeinDepotPage = () => (
     >
       <PageMeta
         title="Mein Depot"
-        description="Ihre Depotübersicht auf kapital-direkt24.de — Positionen, Depotstruktur, Ausschüttungen."
+        description="Ihre Depotübersicht auf EssenceInvest — Positionen, Depotstruktur, Ausschüttungen."
         path="/mein-depot"
         noIndex
       />

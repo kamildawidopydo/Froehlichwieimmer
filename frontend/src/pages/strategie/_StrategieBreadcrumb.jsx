@@ -10,7 +10,7 @@ const StrategieBreadcrumb = ({ items }) => {
       '@type': 'ListItem',
       position: i + 1,
       name: it.label,
-      item: it.path ? `https://kapital-direkt24.de${it.path}` : undefined,
+      item: it.path ? `https://essenceinvest.com${it.path}` : undefined,
     })),
   };
   return (

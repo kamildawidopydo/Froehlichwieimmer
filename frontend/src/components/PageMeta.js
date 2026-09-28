@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet-async';
  * Session 82.47 — Zentrale SEO-Metatag-Komponente.
  *
  * Regeln:
- * 1. Kanonische Prod-Origin ist fix `https://kapital-direkt24.de`. Es wird NIE
+ * 1. Kanonische Prod-Origin ist fix `https://essenceinvest.com`. Es wird NIE
  *    die Preview-Domain oder `window.location.origin` verwendet, damit Preview-
  *    Deployments niemals canonical werden können.
  * 2. Der übergebene `path` wird zum absoluten Canonical/OG-URL zusammengesetzt.
@@ -22,13 +22,13 @@ const DEFAULT_DESCRIPTION =
 const DEFAULT_IMAGE = '/assets/logo/frohlich-logo.png?v=4';
 
 // Kanonische Prod-Origin — bewusst hart codiert, nie aus window.location abgeleitet.
-export const CANONICAL_ORIGIN = 'https://kapital-direkt24.de';
+export const CANONICAL_ORIGIN = 'https://essenceinvest.com';
 
 /**
  * Normalisiert einen Pfad zu einem absoluten Canonical-URL ohne Query/Hash.
- *   buildCanonicalUrl('/news/test?utm=x#foo') → 'https://kapital-direkt24.de/news/test'
- *   buildCanonicalUrl('news/test')             → 'https://kapital-direkt24.de/news/test'
- *   buildCanonicalUrl('/')                     → 'https://kapital-direkt24.de/'
+ *   buildCanonicalUrl('/news/test?utm=x#foo') → 'https://essenceinvest.com/news/test'
+ *   buildCanonicalUrl('news/test')             → 'https://essenceinvest.com/news/test'
+ *   buildCanonicalUrl('/')                     → 'https://essenceinvest.com/'
  */
 export function buildCanonicalUrl(rawPath) {
   const input = typeof rawPath === 'string' && rawPath.length > 0 ? rawPath : '/';

@@ -214,7 +214,7 @@ export default function GroessereVermoegen() {
     <div className="min-h-screen w-full min-w-0 overflow-x-clip bg-bank-bg text-bank-text" data-testid="groessere-vermoegen-page">
       <PageMeta
         title="Größere Vermögen · Individuelle Lösungen"
-        description="Kapital-Direkt24 für größere Anlagevermögen: Liquidität, verzinsliche Anlagen, Wertpapiere, Diversifikation und persönliche Beratung im Zusammenspiel."
+        description="EssenceInvest für größere Anlagevermögen: Liquidität, verzinsliche Anlagen, Wertpapiere, Diversifikation und persönliche Beratung im Zusammenspiel."
         path="/groessere-vermoegen"
       />
 

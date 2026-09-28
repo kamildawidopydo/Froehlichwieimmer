@@ -34,8 +34,8 @@ export const facebookProfile = {
     phone: siteContact.phoneDisplay,
     phoneTel: siteContact.phoneTel,
     // Marketing-Domain
-    website: 'kapital-direkt24.de',
-    websiteHref: 'https://kapital-direkt24.de/',
+    website: 'essenceinvest.com',
+    websiteHref: 'https://essenceinvest.com/',
     street: siteContact.street,
     city: siteContact.postalCity,
     hours: siteContact.businessHoursLine,

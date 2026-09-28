@@ -5,7 +5,7 @@
  *   categories: [{ slug, title, eyebrow, intro, topics: [{ slug, title, ... }] }]
  *
  * Alle Texte:
- *   - eigenständig für Kapital-Direkt24 geschrieben (keine 1:1 Kopien),
+ *   - eigenständig für EssenceInvest geschrieben (keine 1:1 Kopien),
  *   - keine Renditeversprechen, keine individuellen Anlageempfehlungen,
  *   - für Normal-Anleger verständlich, fachlich seriös.
  */

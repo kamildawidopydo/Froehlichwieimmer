@@ -232,7 +232,7 @@ export default function ReportBuilder({ phase1, phase2, struct, ladder, scenario
           <article data-report-root data-testid="gv-report-preview" className="mx-auto my-6 max-w-[820px] bg-white px-6 py-10 text-bank-text shadow-editorial-sm sm:px-10 sm:py-14">
             {/* SEITE 1 — Cover */}
             <section className="report-page avoid-break" aria-labelledby="gv-report-preview-title">
-              <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-bank-gold">Fröhlich Vermögensberatung · Kapital-Direkt24</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-bank-gold">Fröhlich Vermögensberatung · EssenceInvest</p>
               <h1 id="gv-report-preview-title" className="mt-6 font-display text-[2.5rem] font-light leading-[1.05] tracking-[-0.02em] sm:text-[3rem]" style={{ fontVariationSettings: "'opsz' 144, 'SOFT' 100" }}>
                 Ihr Vermögensreport
               </h1>

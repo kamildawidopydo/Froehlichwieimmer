@@ -41,7 +41,7 @@ BANNED_PHRASES = (
     "verkaufsempfehlung", "sicherer gewinn", "risikolos", "todsicher",
 )
 
-SITE_BASE = os.environ.get("PUBLIC_SITE_URL", "https://kapital-direkt24.de")
+SITE_BASE = os.environ.get("PUBLIC_SITE_URL", "https://essenceinvest.com")
 
 
 def canonical_article_url(slug: str) -> str:

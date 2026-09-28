@@ -1,8 +1,8 @@
 /** Single source for Fröhlich Vermögensberatung contact blocks (Kontaktseite, Spezial-AIF CTA, etc.). */
 
 /** Zentrale Domain- und Kontakt-Konfiguration — Änderungen hier greifen projektweit. */
-export const SITE_URL = 'https://kapital-direkt24.de/';
-export const SITE_DOMAIN = 'kapital-direkt24.de';
+export const SITE_URL = 'https://essenceinvest.com/';
+export const SITE_DOMAIN = 'essenceinvest.com';
 export const CUSTOMER_SERVICE_EMAIL = 'kundenservice@essenceinvest.com';
 
 const NBSP = '\u00A0';

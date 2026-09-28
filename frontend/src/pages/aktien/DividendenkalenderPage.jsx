@@ -280,7 +280,7 @@ const DividendenkalenderPage = () => {
     <div className="bg-white" data-testid="dividendenkalender-page">
       <PageMeta
         title="Dividendenkalender"
-        description="Ex-Dividenden-Termine, Ausschüttungen und Dividendenkennzahlen ausgewählter Unternehmen auf kapital-direkt24.de."
+        description="Ex-Dividenden-Termine, Ausschüttungen und Dividendenkennzahlen ausgewählter Unternehmen auf EssenceInvest."
         path="/aktien/dividendenkalender"
       />
 

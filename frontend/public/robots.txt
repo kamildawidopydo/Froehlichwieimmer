@@ -2,4 +2,4 @@ User-agent: *
 Disallow: /admin
 Disallow: /register
 
-Sitemap: https://kapital-direkt24.de/sitemap.xml
+Sitemap: https://essenceinvest.com/sitemap.xml

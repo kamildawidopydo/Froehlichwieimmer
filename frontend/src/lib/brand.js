@@ -17,6 +17,6 @@ export const BRAND_LOGO_ON_DARK_SRC = '/assets/logo/frohlich-logo-clear.png?v=1'
  *  don't handle alpha PNGs reliably, e.g. some mail renderers). */
 export const BRAND_LOGO_PNG_SRC = '/assets/logo/frohlich-logo-clear.png?v=1';
 export const BRAND_LOGO_EMAIL_SRC =
-  'https://kapital-direkt24.de/assets/logo/frohlich-logo.png?v=4';
+  'https://essenceinvest.com/assets/logo/frohlich-logo.png?v=4';
 
 export const BRAND_MARK_SRC = '/assets/logo/frohlich-mark.png?v=4';

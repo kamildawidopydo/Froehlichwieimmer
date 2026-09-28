@@ -648,7 +648,7 @@ export const legalPages = {
   privacy: {
     title: 'Datenschutzerklärung',
     icon: Shield,
-    description: 'Datenschutzerklärung — Verarbeitung personenbezogener Daten bei kapital-direkt24.de.',
+    description: 'Datenschutzerklärung — Verarbeitung personenbezogener Daten bei essenceinvest.com.',
     body: privacyBody,
     toc: [
       { id: 'verantwortlicher', label: 'Verantwortlicher' },

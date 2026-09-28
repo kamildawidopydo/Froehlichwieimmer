@@ -2369,7 +2369,7 @@ async def create_review_invite(payload: ReviewInviteInput, user: dict = Depends(
         "used_email": None,
     }
     await db.review_invites.insert_one(doc)
-    frontend = os.environ.get("FRONTEND_URL", "").rstrip("/") or "https://kapital-direkt24.de"
+    frontend = os.environ.get("FRONTEND_URL", "").rstrip("/") or "https://essenceinvest.com"
     share_url = f"{frontend}/kundenstimmen?einladung={token}"
 
     # Send the invitation email via the Emergent-managed provider.

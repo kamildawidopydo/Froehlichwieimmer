@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * Three fresh brand-mark proposals for "Kapital Direkt24" — Fröhlich Vermögensberatung-style
+ * Three fresh brand-mark proposals for "EssenceInvest" — Fröhlich Vermögensberatung-style
  * lockup (round emblem + wordmark, small date/tagline above). Each variant uses
  * an original geometric mark and its own colourway. Route: /logo-preview.
  */
@@ -189,7 +189,7 @@ export default function LogoPreview() {
         <header className="mb-10">
           <p className="mb-2 text-xs uppercase tracking-[0.24em] text-[#5B6172]">Internal · Brand Preview</p>
           <h1 className="text-3xl font-semibold text-[#0F1420] sm:text-4xl">
-            Kapital Direkt24 — 3 Entwürfe im Fröhlich Vermögensberatung-Stil
+            EssenceInvest — 3 Entwürfe im Fröhlich Vermögensberatung-Stil
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-[#5B6172]">
             Kreis-Emblem + Wordmark, kleine "— 24 —" Überzeile analog zu Fröhlich Vermögensberatung&apos;s

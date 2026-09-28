@@ -68,8 +68,8 @@ export const instagramProfile = {
     'Keine Anlageberatung über Social Media.',
   ].join('\n'),
   linkInBio: {
-    label: 'kapital-direkt24.de',
-    href: 'https://kapital-direkt24.de/',
+    label: 'essenceinvest.com',
+    href: 'https://essenceinvest.com/',
   },
   assets: {
     avatar: PROFILE_AVATAR,
