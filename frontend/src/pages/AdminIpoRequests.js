@@ -452,7 +452,7 @@ const AdminIpoRequests = () => {
       return;
     }
     setSubmitting(true);
-    const error = null; try { await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/${encodeURIComponent(row.id)}/valuation`, { method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ decision_note: null }) }); } catch(e) { /* noop */ }
+    const error = null; try { await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/${encodeURIComponent(editRow.id)}/valuation`, { method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ decision_note: null }) }); } catch(e) { /* noop */ }
     setSubmitting(false);
     if (error) {
       toast.error('Aktualisierung fehlgeschlagen: ' + error.message);
@@ -488,7 +488,7 @@ const AdminIpoRequests = () => {
       parseOptionalNum(manualForm.amountEur),
       manualForm.ipoId,
     );
-    let error = null; try { const r = await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/create-for-user`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ user_id: newForm.user_id, ipo_id: newForm.ipo_id, shares_requested: Number(newForm.shares_requested)||1 }) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ error = { message: e.message }; }
+    let error = null; try { const r = await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/create-for-user`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ user_id: manualForm.userId, ipo_id: manualForm.ipoId, shares_requested: Math.round(shares) }) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ error = { message: e.message }; }
     setSubmitting(false);
     if (error) {
       toast.error('Zuweisung fehlgeschlagen: ' + error.message);
