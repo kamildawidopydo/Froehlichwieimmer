@@ -45,6 +45,8 @@ const COMPANY = {
   crefoLegalRef: 'Unternehmenskennziffer bei Creditreform',
   branchCode: '66.19.9',
   branchCodeLabel: 'Branchencode',
+  cin: 'T2101_HRB23436',
+  cinLabel: 'CIN',
   managingDirector: 'Manfred Franz Fröhlich',
   visdpName: 'Dr. Susanne Müller',
   visdpRef: 'verantwortlich für den Inhalt i. S. d. § 18 Abs. 2 MStV',
@@ -118,6 +120,8 @@ const impressumBody = (
         </span>
         <span className="text-bank-text">{COMPANY.branchCodeLabel}:</span>
         <span>{COMPANY.branchCode}</span>
+        <span className="text-bank-text">{COMPANY.cinLabel}:</span>
+        <span>{COMPANY.cin}</span>
       </div>
     </LegalSection>
 
