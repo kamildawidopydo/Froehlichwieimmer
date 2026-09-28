@@ -39,8 +39,10 @@ const COMPANY = {
   registerCourt: 'Amtsgericht Bad Kreuznach',
   legalForm: 'Gesellschaft mit beschränkter Haftung (GmbH)',
   shareCapital: '25.000 EUR',
-  vatId: 'DE709655399',
-  vatIdLegalRef: 'USt-IdNr. gemäß § 27a UStG',
+  vatId: null,
+  vatIdLegalRef: null,
+  crefoNumber: '6010244899',
+  crefoLegalRef: 'Unternehmenskennziffer bei Creditreform',
   managingDirector: 'Manfred Franz Fröhlich',
   visdpName: 'Dr. Susanne Müller',
   visdpRef: 'verantwortlich für den Inhalt i. S. d. § 18 Abs. 2 MStV',
@@ -106,8 +108,12 @@ const impressumBody = (
         <span>{COMPANY.registerCourt}</span>
         <span className="text-bank-text">Registernummer:</span>
         <span>{COMPANY.hrb}</span>
-        <span className="text-bank-text">{COMPANY.vatIdLegalRef}:</span>
-        <span>{COMPANY.vatId}</span>
+        <span className="text-bank-text">Crefo-Nr.:</span>
+        <span>
+          {COMPANY.crefoNumber}
+          <br />
+          <span className="text-[13px] text-bank-text-muted/90">{COMPANY.crefoLegalRef}</span>
+        </span>
       </div>
     </LegalSection>
 
