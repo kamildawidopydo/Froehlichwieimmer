@@ -61,6 +61,66 @@ Zukünftige Live-Feed-Integrationen fügen Datensätze mit `is_demo: False`, `da
 ### Feature
 Internes Admin-Tool unter `/admin/customer-confirmations`, das aus einem sicheren Formular dynamisch eine "Bestandskunden-Bestätigung" als PDF generiert (WeasyPrint), speichert (Mongo `customer_confirmations`), anzeigt, herunterlädt, druckt und via Resend als PDF-Anhang versendet.
 
+## Session 93 (Preview · Phase 4) · Premium-Frontend, Vertrauen & Zinsverlauf
+
+### Neue Frontend-Routen
+- `/banken` — Bankverzeichnis mit Suche, Länder-, Produkttyp- und Alphabet-Filter (74 Institute mit Offer-Counts).
+- `/banken/:slug` — Bank-Detail mit Tagesgeld/Festgeld-Listen + Einlagensicherungs-Box.
+- `/tagesgeld/:country` und `/festgeld/:country` — Länder-Landingpages (Slugs `deutschland·oesterreich·niederlande·belgien·frankreich·spanien·italien·portugal·irland·luxemburg·estland·lettland·litauen·finnland·schweden`). Enthält Kennzahlen (Banken, Angebote, höchster Zins, Einlagensicherung) + noindex bei Demo-Anteil.
+- `/so-funktioniert-der-vergleich` (Alias von `/how-it-works`) — Transparenzseite (Datenerfassung, Rechen-Logik, Freshness-Label, Sortierung, Einlagensicherung, Demo-Daten, Affiliate).
+
+### Neue Komponenten
+- `components/bank/BankLogo.jsx` — einheitliche Fallback-Kette (logo_url → Initialen); Ladefehler → Initialen. Fixe Quadrat-Größe → kein Layout-Shift.
+- `components/comparison/CentralCalculator.jsx` — zentraler Hero-Rechner (Betrag · Tagesgeld/Festgeld · dynamische Laufzeiten aus Facets · Live-Fakten „N Angebote · N Banken · N Länder" ohne Hardcode · Demo-Hinweis, wenn `has_demo`).
+- `components/comparison/OfferDetailDrawer.jsx` — Right-Side-Drawer mit Sticky-Header, Zins+Ertrag-Metric-Bar, Sektionen Anlagebedingungen · Einlagensicherung · Über die Bank · Zinsverlauf · Datenquelle. Sticky-CTA „Zum Angebot" **nur bei aktivem OfferLink**; bei Affiliate ein Transparenz-Hinweis. ESC schließt.
+- `components/comparison/RateHistoryChart.jsx` — SVG-Line-Chart ohne Library-Bloat; ≥2 Punkte → Zeichnung, sonst Hinweis „nicht genügend historische Zinsdaten".
+
+### Neue/Erweiterte Public-APIs
+- `GET /api/public/banks` — Verzeichnis mit `offer_count`.
+- `GET /api/public/banks/{slug}` — Bank-Detail inkl. sortierter Offers.
+- `GET /api/public/offer-links/{offer_id}` — nur aktive Links (Prio: affiliate > direct > information), `has_affiliate`-Flag, `primary`.
+- Bestehende `/api/public/savings-offers` liefert weiter `freshness` + `source_id` pro Item.
+
+### Admin-Only (require_admin, 401 wenn unauth)
+- `POST /api/admin/offer-links` — neuer Link (Pydantic + HttpUrl-Validation).
+- `PATCH /api/admin/offer-links/{id}` — Update.
+- `DELETE /api/admin/offer-links/{id}` — Soft-Deaktivierung (`status="disabled"`).
+- `GET /api/admin/offer-links` — Liste (optional `offer_id`-Filter).
+
+### Data-Quality-UI
+- `freshness.label` sichtbar im Drawer: `fresh` → „Zuletzt geprüft: DD.MM.YYYY", `stale` → „Kondition wird überprüft", `demo` → „Demo-Konditionen", `expired` → „Angebot abgelaufen", `unknown` → kein falscher Trust-Badge.
+- Datenquelle-Sektion im Drawer erklärt bei Demo klar den Charakter der Zahlen.
+- CTA-Gating: „Zum Angebot" erscheint **nur** wenn OfferLink aktiv und gültig; sonst neutraler Hinweis.
+
+### Tests · 68/68 grün
+- Phase 1: 8 · Phase 2: 26 · Phase 3: 29 · **Phase 4 neu: 12** (OfferLink-Priorität · Validity-Regeln · Admin-Auth-Guards · Public-Endpoints · Freshness-Regression: Demo niemals „fresh" · Rate-History-E2E mit synthetischer History · Backwards-Compat Phases 1–3).
+- Alle 63 Bestandstests weiter grün.
+
+### Verifiziert Desktop UND Mobile
+- Desktop (1920×800): `/comparison` (Calculator + Drawer + Country Explorer + Category Highlights), `/banken` (Verzeichnis mit Filter-Sidebar), `/banken/ing` (Detail), `/tagesgeld/deutschland` (Länderseite), `/so-funktioniert-der-vergleich` (Transparenz).
+- Mobile (390×844): kein horizontales Layout-Overflow (nur Country-Chip-Scroll-Container reportet Overflow – gewollt scroll-x).
+
+### Bewusst NICHT umgesetzt (per Vorgabe)
+- Kein „Zinsverlauf der Woche"-Widget (§21) – History-Datentiefe zu dünn.
+- Kein Sparalarm (§22) – erst nach echten Live-Feeds.
+- Kein Raisin/WeltSparen-Adapter (§23) – generische Import-Pipeline reicht.
+- Keine automatischen Bankbeschreibungen erfunden.
+- Keine Google-/Suchmaschinen-Logos übernommen — Initialen-Fallback aktiv.
+
+### Bekannte Einschränkungen
+- OfferLinks sind aktuell in DB leer → CTAs zeigen den neutralen Hinweis. Ist gewünschtes Verhalten bis Affiliate-Beziehungen angelegt werden.
+- Bank-Logos für 69 Demo-Banken weiterhin leer (Initialen).
+- Bestehender `OfferDetailModal` wird nicht mehr geöffnet (Drawer ersetzt ihn); Datei bleibt aus Backwards-Compat vorerst im Repo.
+
+### Empfehlung Phase 5
+1. Admin-UI (Formular) für BankAlias-Auflösung von `needs_review`-Cases + OfferLink-CRUD.
+2. Backend-Job „Freshness-Sweeper" (Cron) markiert `stale`/`expired` automatisch.
+3. Erst-Import realer Konditionen für 1 Pilotbank via bestehender Pipeline + Verifikations-Flow.
+4. Bank-Logos: manuelles Upload-Feature ins Admin-UI.
+5. Länder-Landingpage-Content-Erweiterung, sobald Content-Ressourcen vorhanden.
+
+
+
 ## Session 93 (Preview · Phase 3) · Real-Data-Ready & Zins-Historie
 
 ### Neue Modelle & Collections

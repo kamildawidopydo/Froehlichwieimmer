@@ -6,6 +6,8 @@ import { X, RefreshCw, SlidersHorizontal, Search, LayoutGrid, Table2, Info } fro
 
 import OfferDetailModal from '@/components/OfferDetailModal';
 import OfferInterestModal from '@/components/OfferInterestModal';
+import OfferDetailDrawer from '@/components/comparison/OfferDetailDrawer';
+import CentralCalculator from '@/components/comparison/CentralCalculator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
@@ -449,7 +451,7 @@ const SavingsComparison = () => {
   const [viewMode, setViewMode] = useState('cards');
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [interestOffer, setInterestOffer] = useState(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
   const [showInterestModal, setShowInterestModal] = useState(false);
   const [showCompareModal, setShowCompareModal] = useState(false);
 
@@ -642,7 +644,7 @@ const SavingsComparison = () => {
 
   const handleOpenDetail = (offer) => {
     setSelectedOffer(offer);
-    setShowDetailModal(true);
+    setShowDrawer(true);
   };
   const handleOpenInterest = (offer) => {
     setInterestOffer(offer);
@@ -748,6 +750,29 @@ const SavingsComparison = () => {
           />
 
           <MarketContextStrip />
+
+          {/* Session 93 · Phase 4 — Zentraler Rechner direkt über den Ergebnissen */}
+          <div className="my-8">
+            <CentralCalculator
+              facets={facets ? { ...facets, __bank_count: new Set((facets.countries || []).map((c) => c.code)).size ? undefined : null } : null}
+              initialAmount={filters.amount ? Number(filters.amount) : 25000}
+              initialType={filters.product_type || 'tagesgeld'}
+              initialTerm={filters.term_min || null}
+              hasDemo={hasDemo}
+              onCompare={(v) => {
+                updateFilter({
+                  amount: v.amount,
+                  product_type: v.product_type,
+                  term_min: v.term_min,
+                  term_max: v.term_max,
+                });
+                setTimeout(() => {
+                  const el = document.querySelector('[data-testid="result-count"]');
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 120);
+              }}
+            />
+          </div>
 
           {/* Category highlights (computed from filtered results) */}
           {!loading && offers.length > 0 && <CategoryHighlights offers={offers} />}
@@ -1059,18 +1084,12 @@ const SavingsComparison = () => {
         />
       )}
 
-      {/* Detail / Interest Modals */}
+      {/* Detail Drawer (Phase 4) + Interest Modal */}
       {selectedOffer && (
-        <OfferDetailModal
+        <OfferDetailDrawer
           offer={selectedOffer}
-          rateHistory={rateHistoryMap.get(selectedOffer.id) || []}
-          isOpen={showDetailModal}
-          onClose={() => setShowDetailModal(false)}
-          onInterestClick={(offer) => {
-            setShowDetailModal(false);
-            handleOpenInterest(offer);
-          }}
-          onApply={(offer) => navigate('/apply', { state: { offer } })}
+          isOpen={showDrawer}
+          onClose={() => setShowDrawer(false)}
         />
       )}
       {interestOffer && (

@@ -5474,6 +5474,11 @@ app.include_router(_public_reads_routes.router)
 from routes import admin_imports as _admin_imports_routes  # noqa: E402
 app.include_router(_admin_imports_routes.router)
 
+# Session 93 · Phase 4 — OfferLink Public + Admin
+from routes import offer_links as _offer_links_routes  # noqa: E402
+app.include_router(_offer_links_routes.public_router)
+app.include_router(_offer_links_routes.admin_router)
+
 @app.on_event("startup")
 async def _init_storage_at_startup():
     try:

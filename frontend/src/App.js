@@ -22,6 +22,9 @@ import '@/App.css';
 const Home = lazy(() => import('@/pages/Home'));
 const PublicStockDetail = lazy(() => import('@/pages/PublicStockDetail'));
 const SavingsComparison = lazy(() => import('@/pages/SavingsComparison'));
+const BankDirectory = lazy(() => import('@/pages/BankDirectory'));
+const BankDetail = lazy(() => import('@/pages/BankDetail'));
+const CountryLandingPage = lazy(() => import('@/pages/CountryLandingPage'));
 const CalculatorPage = lazy(() => import('@/pages/Calculator'));
 const HowItWorks = lazy(() => import('@/pages/HowItWorks'));
 const Security = lazy(() => import('@/pages/Security'));
@@ -239,6 +242,11 @@ function App() {
                   {/* Public */}
                   <Route path="/" element={<Home />} />
                   <Route path="/comparison" element={<SavingsComparison />} />
+                  <Route path="/banken" element={<BankDirectory />} />
+                  <Route path="/banken/:slug" element={<BankDetail />} />
+                  <Route path="/tagesgeld/:country" element={<CountryLandingPage productType="tagesgeld" />} />
+                  <Route path="/festgeld/:country" element={<CountryLandingPage productType="festgeld" />} />
+                  <Route path="/so-funktioniert-der-vergleich" element={<HowItWorks />} />
                   <Route path="/produkte/:slug" element={<SavingsProductGuidePage />} />
                   <Route path="/calculator" element={<CalculatorPage />} />
                   <Route path="/how-it-works" element={<HowItWorks />} />

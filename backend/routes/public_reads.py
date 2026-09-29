@@ -9,7 +9,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from motor.motor_asyncio import AsyncIOMotorClient
 
 # lib.savings_calculator ist ein Sibling-Modul zu `routes/` (siehe /app/backend/lib/).
@@ -521,6 +521,55 @@ async def list_data_sources() -> Dict[str, Any]:
             "source_url": s.get("source_url") if s.get("is_public_source_url") else None,
             "last_success_at": _iso(s.get("last_success_at")),
         })
+    return {"items": items, "count": len(items)}
+
+
+# ---------------------------------------------------------------------------
+# /api/public/banks/{slug} — Bank-Detail (Phase 4)
+# ---------------------------------------------------------------------------
+@router.get("/banks/{slug}")
+async def public_bank_detail(slug: str) -> Dict[str, Any]:
+    if not await _coll_exists("banks"):
+        raise HTTPException(status_code=404, detail="not found") if False else None  # type: ignore
+    bank = await _db.banks.find_one({"slug": slug})
+    if not bank or bank.get("is_active") is False:
+        return {"bank": None, "offers": [], "count": 0}
+    offers: List[Dict[str, Any]] = []
+    if await _coll_exists("savings_offers"):
+        banks_by_slug = {slug: bank}
+        async for o in _db.savings_offers.find({
+            "bank_slug": slug,
+            "is_active": {"$ne": False},
+        }).sort("interest_rate", -1):
+            offers.append(_serialize_offer(o, bank, None))
+    return {
+        "bank": _serialize_bank(bank),
+        "offers": offers,
+        "count": len(offers),
+    }
+
+
+# ---------------------------------------------------------------------------
+# /api/public/banks — Bank-Verzeichnis (Phase 4)
+# ---------------------------------------------------------------------------
+@router.get("/banks")
+async def public_bank_directory() -> Dict[str, Any]:
+    if not await _coll_exists("banks"):
+        return {"items": [], "count": 0}
+    # Anzahl aktiver Angebote pro Bank
+    offer_counts: Dict[str, int] = {}
+    if await _coll_exists("savings_offers"):
+        pipeline = [
+            {"$match": {"is_active": {"$ne": False}}},
+            {"$group": {"_id": "$bank_slug", "count": {"$sum": 1}}},
+        ]
+        async for row in _db.savings_offers.aggregate(pipeline):
+            offer_counts[row["_id"]] = row["count"]
+    items = []
+    async for b in _db.banks.find({"is_active": {"$ne": False}}).sort([("country_code", 1), ("name", 1)]):
+        payload = _serialize_bank(b)
+        payload["offer_count"] = offer_counts.get(b.get("slug"), 0)
+        items.append(payload)
     return {"items": items, "count": len(items)}
 
 
