@@ -1,0 +1,276 @@
+{
+  "dry_run": true,
+  "generated_at": "2026-09-29",
+  "notice": "DRY-RUN ONLY — noch nicht in credit_offers persistiert. Keine Vergleichsportal-Quellen verwendet.",
+  "candidates": [
+    {
+      "bank_slug": "ing",
+      "bank_name": "ING Deutschland",
+      "record": {
+        "bank_id": null,
+        "product_name": "Ratenkredit",
+        "min_amount_eur": 5000,
+        "max_amount_eur": 100000,
+        "min_term_months": 12,
+        "max_term_months": 120,
+        "effective_rate_from": 3.69,
+        "effective_rate_to": 10.99,
+        "nominal_rate_from": 3.62,
+        "nominal_rate_to": 10.47,
+        "monthly_rate_from": null,
+        "purposes": ["Freie Verwendung"],
+        "features": [
+          "Zinsrabatt −0,20 % ab Kreditbetrag 40.001 €"
+        ],
+        "affiliate_url": null,
+        "source_id": "ing_official_kredit_konditionen",
+        "source_url": "https://www.ing.de/kredit/kredit-konditionen/",
+        "source_retrieved_at": "2026-09-29",
+        "verified_at": "2026-09-29",
+        "verification_method": "web_crawl_official_kredit_konditionen_page",
+        "is_active": true,
+        "is_demo": false
+      },
+      "unknown_fields": ["monthly_rate_from"],
+      "representative_example_only": {
+        "amount_eur": 15000,
+        "term_months": 120,
+        "effective_rate": 7.22,
+        "sollzins": 6.99,
+        "monatsrate": 174.09,
+        "gesamtbetrag": 20889.99
+      },
+      "notes": [
+        "Zinsspanne bonitätsabhängig (§17 PAngV Repräsentatives Beispiel getrennt).",
+        "Feste Zinsfestschreibung über gesamte Laufzeit.",
+        "monthly_rate_from = null, weil individuelle Bonität → keine seriöse Monatsrate ohne persönlichen Zins."
+      ],
+      "match_20k_84m_freie_verwendung": true,
+      "match_10k_60m_freie_verwendung": true,
+      "match_30k_72m_freie_verwendung": true
+    },
+    {
+      "bank_slug": "dkb",
+      "bank_name": "DKB",
+      "record": {
+        "bank_id": null,
+        "product_name": "Privatkredit",
+        "min_amount_eur": 2500,
+        "max_amount_eur": 100000,
+        "min_term_months": 12,
+        "max_term_months": 120,
+        "effective_rate_from": 7.29,
+        "effective_rate_to": 7.29,
+        "nominal_rate_from": 7.06,
+        "nominal_rate_to": 7.06,
+        "monthly_rate_from": null,
+        "purposes": ["Freie Verwendung"],
+        "features": [
+          "Bonitätsunabhängiger Einheitszins",
+          "Kostenlose Sondertilgungen",
+          "Bis zu 3 Ratenpausen möglich"
+        ],
+        "affiliate_url": null,
+        "source_id": "dkb_official_privatkredit",
+        "source_url": "https://www.dkb.de/privatkunden/kredite/privatkredit",
+        "source_retrieved_at": "2026-09-29",
+        "verified_at": "2026-09-29",
+        "verification_method": "web_crawl_official_dkb_produktseite",
+        "is_active": true,
+        "is_demo": false
+      },
+      "unknown_fields": ["monthly_rate_from"],
+      "representative_example_only": null,
+      "notes": [
+        "Einheitszins seit 09/2026 (angehoben von 6,79 % → 7,29 %). Kein Bonitäts-Spread.",
+        "Ausgeschlossen: Selbstständige & Freiberufler.",
+        "Für Bestandskunden im Banking-Portal identische Kondition.",
+        "monthly_rate_from berechenbar (7,06 % Sollzins ist fix), wurde jedoch nicht in offizieller Quelle als Feldwert publiziert → null bleibt."
+      ],
+      "match_20k_84m_freie_verwendung": true,
+      "match_10k_60m_freie_verwendung": true,
+      "match_30k_72m_freie_verwendung": true
+    },
+    {
+      "bank_slug": "postbank",
+      "bank_name": "Postbank",
+      "record": {
+        "bank_id": null,
+        "product_name": "Privatkredit direkt",
+        "min_amount_eur": 3000,
+        "max_amount_eur": 80000,
+        "min_term_months": 12,
+        "max_term_months": 120,
+        "effective_rate_from": 3.25,
+        "effective_rate_to": 14.30,
+        "nominal_rate_from": 3.21,
+        "nominal_rate_to": 13.45,
+        "monthly_rate_from": null,
+        "purposes": ["Freie Verwendung"],
+        "features": [
+          "Kostenlose Sondertilgungen",
+          "Ratenpausen vertraglich möglich"
+        ],
+        "affiliate_url": null,
+        "source_id": "postbank_official_privatkredit_direkt",
+        "source_url": "https://www.postbank.de/privatkunden/produkte/kredite/privatkredit-direkt.html",
+        "source_retrieved_at": "2026-09-29",
+        "verified_at": "2026-09-29",
+        "verification_method": "web_crawl_official_postbank_produktseite",
+        "is_active": true,
+        "is_demo": false
+      },
+      "unknown_fields": ["monthly_rate_from"],
+      "representative_example_only": {
+        "amount_eur": 10000,
+        "term_months": 84,
+        "effective_rate": 9.27,
+        "sollzins": 8.90,
+        "monatsrate": 162,
+        "gesamtbetrag": 13558
+      },
+      "notes": [
+        "Konditionen bonitätsabhängig, Stand 10.08.2026.",
+        "Umschuldungskontext kann bis 14,90 % gehen — konservativ 14,30 % übernommen (Standardprodukt).",
+        "monthly_rate_from = null (bonitätsabhängig)."
+      ],
+      "match_20k_84m_freie_verwendung": true,
+      "match_10k_60m_freie_verwendung": true,
+      "match_30k_72m_freie_verwendung": true
+    },
+    {
+      "bank_slug": "santander",
+      "bank_name": "Santander (Openbank Deutschland AG)",
+      "record": {
+        "bank_id": null,
+        "product_name": "BestCredit / Ratenkredit",
+        "min_amount_eur": 1000,
+        "max_amount_eur": 75000,
+        "min_term_months": 12,
+        "max_term_months": 96,
+        "effective_rate_from": 2.99,
+        "effective_rate_to": 11.98,
+        "nominal_rate_from": 2.95,
+        "nominal_rate_to": 11.37,
+        "monthly_rate_from": null,
+        "purposes": ["Freie Verwendung"],
+        "features": [
+          "Auszahlung per Instant Payment möglich",
+          "Aufstockung bei entsprechender Bonität"
+        ],
+        "affiliate_url": null,
+        "source_id": "santander_official_ratenkredit",
+        "source_url": "https://www.santander.de/privatkunden/kredite-und-finanzierungen/alle-kredite/ratenkredit/",
+        "source_retrieved_at": "2026-09-29",
+        "verified_at": "2026-09-29",
+        "verification_method": "web_crawl_official_santander_produktseite",
+        "is_active": true,
+        "is_demo": false
+      },
+      "unknown_fields": ["monthly_rate_from"],
+      "representative_example_only": {
+        "amount_eur": 10000,
+        "term_months": 84,
+        "effective_rate": 7.27,
+        "sollzins": 7.04,
+        "monatsrate": 151.11,
+        "gesamtbetrag": 12693.24
+      },
+      "notes": [
+        "Bonitätsabhängig.",
+        "Maximale Laufzeit 96 Monate (nicht 120 wie bei ING/DKB/Postbank/Norisbank) — Testfall 84 Monate passt noch, aber 120-Monats-Anfragen würden nicht matchen."
+      ],
+      "match_20k_84m_freie_verwendung": true,
+      "match_10k_60m_freie_verwendung": true,
+      "match_30k_72m_freie_verwendung": true
+    },
+    {
+      "bank_slug": "norisbank",
+      "bank_name": "Norisbank",
+      "record": {
+        "bank_id": null,
+        "product_name": "Top-Kredit",
+        "min_amount_eur": 1000,
+        "max_amount_eur": 65000,
+        "min_term_months": 12,
+        "max_term_months": 120,
+        "effective_rate_from": 3.69,
+        "effective_rate_to": 14.40,
+        "nominal_rate_from": 3.63,
+        "nominal_rate_to": 13.52,
+        "monthly_rate_from": null,
+        "purposes": ["Freie Verwendung"],
+        "features": [
+          "Payment Holiday / Ratenpause verfügbar"
+        ],
+        "affiliate_url": null,
+        "source_id": "norisbank_official_ratenkredit",
+        "source_url": "https://www.norisbank.de/kredit/privatkredit/ratenkredit.html",
+        "source_retrieved_at": "2026-09-29",
+        "verified_at": "2026-09-29",
+        "verification_method": "web_crawl_official_norisbank_produktseite",
+        "is_active": true,
+        "is_demo": false
+      },
+      "unknown_fields": ["monthly_rate_from"],
+      "representative_example_only": {
+        "amount_eur": 10000,
+        "term_months": 48,
+        "effective_rate": 7.90,
+        "sollzins": 7.62,
+        "monatsrate": 242.98,
+        "gesamtbetrag": 11661.06
+      },
+      "notes": [
+        "Bonitätsabhängig.",
+        "Payment Holiday erhöht Laufzeit + Gesamtbetrag + effektiven Jahreszins (Zins auf Restschuld läuft weiter).",
+        "monthly_rate_from = null (bonitätsabhängig)."
+      ],
+      "match_20k_84m_freie_verwendung": true,
+      "match_10k_60m_freie_verwendung": true,
+      "match_30k_72m_freie_verwendung": true
+    }
+  ],
+  "validation_summary": {
+    "all_have_source_url": true,
+    "all_have_verified_at": true,
+    "all_have_verification_method": true,
+    "all_have_effective_rate_from": true,
+    "all_have_amount_range": true,
+    "all_have_term_range": true,
+    "monthly_rate_from_missing_reason": "Bonitätsabhängig — würde ohne individuellen Zins erfunden werden. Konsequent null.",
+    "bank_id_missing_reason": "Vor Apply müssen 5 Bank-Docs in `banks` existieren oder angelegt werden; bank_id-Zuweisung erfolgt beim Apply."
+  },
+  "test_matrix": {
+    "20000_eur_84m_freie_verwendung": {
+      "matches": ["ing", "dkb", "postbank", "santander", "norisbank"],
+      "count": 5,
+      "sorted_by_effective_rate_asc": ["santander (2,99 %)", "postbank (3,25 %)", "ing (3,69 %)", "norisbank (3,69 %)", "dkb (7,29 %)"]
+    },
+    "10000_eur_60m_freie_verwendung": {
+      "matches": ["ing", "dkb", "postbank", "santander", "norisbank"],
+      "count": 5,
+      "sorted_by_effective_rate_asc": ["santander (2,99 %)", "postbank (3,25 %)", "ing (3,69 %)", "norisbank (3,69 %)", "dkb (7,29 %)"]
+    },
+    "30000_eur_72m_freie_verwendung": {
+      "matches": ["ing", "dkb", "postbank", "santander", "norisbank"],
+      "count": 5,
+      "sorted_by_effective_rate_asc": ["santander (2,99 %)", "postbank (3,25 %)", "ing (3,69 %)", "norisbank (3,69 %)", "dkb (7,29 %)"]
+    }
+  },
+  "sources_used": [
+    "https://www.ing.de/kredit/kredit-konditionen/",
+    "https://www.ing.de/kredit/ratenkredit/verbraucherschutzinformationen/",
+    "https://www.dkb.de/privatkunden/kredite/privatkredit",
+    "https://www.dkb.de/privatkunden/kredite/kredit-zinsen",
+    "https://www.postbank.de/privatkunden/produkte/kredite/privatkredit-direkt.html",
+    "https://www.santander.de/privatkunden/kredite-und-finanzierungen/alle-kredite/ratenkredit/",
+    "https://www.santander.de/content/pdf/preise-leistungen/preisverzeichnis.pdf",
+    "https://www.norisbank.de/kredit/privatkredit/ratenkredit.html"
+  ],
+  "sources_explicitly_rejected": [
+    "Consorsbank (kein eigener Ratenkredit — vermittelt an Consors Finanz / SWK Bank; erfordert eigene Recherche der Kreditgeber-Konditionen mit anderem bank_slug)",
+    "Vergleichsportale (verboten per Vorgabe)"
+  ],
+  "next_step_when_approved": "Apply-Reihenfolge nach effektivem Einstiegszins asc: santander → postbank → ing → norisbank → dkb. Pro Bank: (1) banks-Doc anlegen falls nicht vorhanden, (2) credit_offers-Insert via bestehender Admin-CRUD-Route POST /api/admin/credit-offers, (3) Verifikation via GET /api/public/credit-offers, (4) audit_log-Eintrag."
+}
