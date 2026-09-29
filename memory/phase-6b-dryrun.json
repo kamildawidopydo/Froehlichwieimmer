@@ -1,0 +1,114 @@
+{
+  "dkb_official": {
+    "dry_run": true,
+    "records_received": 1,
+    "counts": {
+      "create": 0,
+      "update": 1,
+      "unchanged": 0,
+      "needs_review": 0,
+      "invalid": 0
+    },
+    "diffs": [
+      {
+        "action": "update",
+        "offer_id": "6abb7515f1dcd0c6d8a8d2d6",
+        "bank_slug": "dkb",
+        "changes": [
+          {
+            "field": "interest_rate",
+            "type": "rate_changed",
+            "old": 3.28,
+            "new": 1.0,
+            "delta_pp": -2.28
+          },
+          {
+            "field": "min_amount",
+            "type": "minimum_changed",
+            "old": 1,
+            "new": null
+          },
+          {
+            "field": "max_amount",
+            "type": "maximum_changed",
+            "old": 250000,
+            "new": null
+          },
+          {
+            "field": "promo_rate",
+            "type": "promo_changed",
+            "old": 3.28,
+            "new": null
+          },
+          {
+            "field": "promo_duration_months",
+            "type": "promo_changed",
+            "old": 6,
+            "new": null
+          },
+          {
+            "field": "standard_rate_after_promo",
+            "type": "promo_changed",
+            "old": 1.81,
+            "new": null
+          }
+        ],
+        "warnings": []
+      }
+    ]
+  },
+  "consorsbank_official": {
+    "dry_run": true,
+    "records_received": 1,
+    "counts": {
+      "create": 0,
+      "update": 1,
+      "unchanged": 0,
+      "needs_review": 0,
+      "invalid": 0
+    },
+    "diffs": [
+      {
+        "action": "update",
+        "offer_id": "6abb7515f1dcd0c6d8a8d2e9",
+        "bank_slug": "consorsbank",
+        "changes": [
+          {
+            "field": "interest_rate",
+            "type": "rate_changed",
+            "old": 3.36,
+            "new": 3.8,
+            "delta_pp": 0.44
+          },
+          {
+            "field": "min_amount",
+            "type": "minimum_changed",
+            "old": 1000,
+            "new": null
+          },
+          {
+            "field": "promo_rate",
+            "type": "promo_changed",
+            "old": 3.36,
+            "new": 3.8
+          },
+          {
+            "field": "promo_duration_months",
+            "type": "promo_changed",
+            "old": 12,
+            "new": 5
+          },
+          {
+            "field": "standard_rate_after_promo",
+            "type": "promo_changed",
+            "old": 1.72,
+            "new": null
+          }
+        ],
+        "warnings": [
+          "promo without standard_rate_after_promo \u2192 Folgezins unbekannt"
+        ]
+      }
+    ]
+  }
+}
