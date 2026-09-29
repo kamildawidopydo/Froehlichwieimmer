@@ -61,6 +61,59 @@ Zukünftige Live-Feed-Integrationen fügen Datensätze mit `is_demo: False`, `da
 ### Feature
 Internes Admin-Tool unter `/admin/customer-confirmations`, das aus einem sicheren Formular dynamisch eine "Bestandskunden-Bestätigung" als PDF generiert (WeasyPrint), speichert (Mongo `customer_confirmations`), anzeigt, herunterlädt, druckt und via Resend als PDF-Anhang versendet.
 
+## Session 93 (Preview · Phase 5) · Production Data Operations & Go-Live Readiness
+
+**Fokus:** Datenintegrität → Review-Prozess → sichere Veröffentlichung → Monitoring. Keine erfundenen Live-Zinsen, kein Auto-Publish.
+
+### Neu implementiert
+- **Admin-Router** `/api/admin/savings/*` (require_admin, 401 unauth):
+  - `GET /dashboard` — dynamische KPIs (aktive Banken/Angebote, Demo/Real, fresh/stale/expired-Counts via zentraler Freshness-Config, imports_24h, imports_failed_24h, aktueller `demo_mode_enabled`).
+  - `GET /review-items` + `POST /review-items/{id}` mit `action ∈ {approve, reject, edit_and_approve}` → schreibt Offer, aktualisiert Review-Status, schreibt Audit-Log.
+  - `POST /demo-replace` — sicherer Demo→Real-Workflow: Demo-Offer wird deaktiviert (Historie bleibt), realer Datensatz wird über die bestehende Import-Pipeline validiert und mit Provenance persistiert; rollt Deaktivierung bei Validation-Fehler zurück.
+  - `GET/POST /data-sources` — CRUD inkl. `trust_level ∈ {manual, review_required, trusted}`; Default bleibt `review_required` → kein Auto-Publish in Phase 5.
+  - `GET /source-monitoring` — pro Quelle: Typ, Trust-Level, letzter Erfolg/Fehler, Offer-Count, offene Reviews.
+  - `GET /audit-log` — filterbar nach `entity_type`/`entity_id`; jede Admin-Aktion (create/update/approve/reject/deactivate/link_change) wird protokolliert (nur konditionsrelevante Felder, keine Secrets).
+- **Quality-Rules** (`evaluate_change_flags`): Zinssprung ≥ `SAVINGS_RATE_DELTA_REVIEW_PP` (default 0.75 pp), Max-Deposit-Faktor ≥ `SAVINGS_MAX_DEPOSIT_DELTA_FACTOR` (default 3x), DGS-, Country-, Produkttyp-Wechsel → Review-Flag.
+- **Public-API-Erweiterung**:
+  - Neue Query-Params `data_status=all|verified|demo` und `include_expired=false|true` (Default: expired ausblenden, aber Historie erhalten).
+  - `DEMO_MODE_ENABLED=false` blendet alle Demo-Angebote systemweit aus dem öffentlichen Ergebnis aus, ohne DB-Löschung → schrittweise Länderumstellung möglich.
+- **Security-Hardening**:
+  - URL-Whitelist `http/https` mit Host-Pflicht → `javascript:`, `data:`, `file:` → 422.
+  - CSV-Injection-Guard escaped Zellen mit `= + - @` als Präfix (`'`-Vorsatz).
+  - Import-Größenlimit (5 000) & Payload-Validation via Pydantic bleiben aktiv.
+  - Öffentliche API weiter read-only; kein serverseitiger Fetch beliebiger URLs.
+- **`PartnerFeedAdapter`** — Abstract-Interface (parse/normalize/validate/map_bank/build_diff). Keine Raisin/WeltSparen-Implementierung ohne autorisierte Spezifikation.
+- **Cleanup**: `OfferDetailModal` und dessen Import in `SavingsComparison.js` entfernt (durch Drawer ersetzt).
+
+### Tests · 96/96 grün
+- Phase 1–4 (75) unverändert grün.
+- **Phase 5 neu (21)**: Admin-Auth-Guards für 4 Routen · URL-Validation (JS/Data/File/HTTPS/Host) · CSV-Injection · 5 Quality-Rule-Regeln · `data_status`-Filter (all/verified/demo) · `include_expired`-Default · **End-to-End-Test**: Bank anlegen → Real-Import → Public-API zeigt Real-Offer mit Provenance → Zinsänderung → History mit geschlossenem Zeitraum und offenem Nachfolger → Deaktivierung → Offer verschwindet aus Vergleich, Historie bleibt · PartnerFeedAdapter-Interface · Phase-1–4-Regression-Guard.
+
+### Konkrete Voraussetzungen für den ersten echten Datenimport
+1. `POST /api/admin/savings/data-sources` mit `{slug, name, type, source_url, trust_level="review_required"}` anlegen.
+2. Konditionen als JSON (`{records: [...]}`) an `POST /api/admin/imports/savings-offers/dry-run` senden → Diff prüfen.
+3. Bei OK → `POST /api/admin/imports/savings-offers/apply` mit `source_slug`, `source_url`, `verification_method="manual_review"` → schreibt Offer + History + Audit.
+4. Quality-Rules erzeugen automatisch `review_items` bei kritischen Diffs → im Admin abarbeiten.
+5. Für schrittweise Länder-Umstellung: `DEMO_MODE_ENABLED=false` setzen oder pro Land Demo-Offers per Admin deaktivieren.
+
+### Backup/Recovery-Notiz
+- Kritische Collections: `banks · savings_offers · interest_rate_history · data_sources · review_items · audit_log · offer_links`.
+- Rollback fehlerhafter Import: Betroffene Offers via `PATCH is_active=false` deaktivieren (Historie bleibt) → Re-Import mit korrigierten Daten. **Nie destruktives Delete.**
+- Jeder `import_runs`-Eintrag ermöglicht Nachvollziehbarkeit (records_received/valid/invalid/changed/unchanged/needs_review).
+
+### Bewusst nicht umgesetzt (per Vorgabe)
+- Kein „Was ist neu?"-Widget öffentlich aktiv (§22) · kein Sparalarm (§23) · kein Raisin/WeltSparen-Adapter (§18/23) · keine erfundenen Real-Daten für E2E — Test verwendet ausschließlich `_e2e_bank`-Fixture.
+- **Vollpolierte Admin-UI-Pages** wurden auf Phase-6-Backlog gestellt: Alle Endpunkte + Business-Logik + Audit sind produktionsreif; das Rendering des Admin-Dashboards ist ein reines Frontend-Delta.
+
+### Empfehlung Phase 6
+1. Admin-UI (React-Pages) für Dashboard, Review-Queue, DataSources, Bank/Alias-Management, Import-Preview mit Diff-View.
+2. Freshness-Sweeper-Cron: markiert `stale`/`expired` automatisch, schreibt Audit-Log.
+3. Onboarding-Wizard „Erstes echtes Angebot" mit Provenance-Pflicht.
+4. Logo-Upload-Feature mit MIME-Validation + Preview.
+5. Erst danach: erste reale Datenquelle produktiv anbinden, `trust_level="review_required"` beibehalten.
+
+
+
 ## Session 93 (Preview · Phase 4) · Premium-Frontend, Vertrauen & Zinsverlauf
 
 ### Neue Frontend-Routen

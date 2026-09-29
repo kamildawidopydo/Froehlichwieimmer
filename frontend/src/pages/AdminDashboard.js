@@ -25,6 +25,11 @@ import {
   BarChart3,
   Ticket,
   ListChecks,
+  LayoutDashboard,
+  ShieldAlert,
+  Upload,
+  Database,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NewsFreshnessTile from '@/components/admin/NewsFreshnessTile';
@@ -228,6 +233,19 @@ const AdminDashboard = () => {
         { to: '/admin/banks', title: 'Banken', desc: `${banks.length} aktiv`, icon: Building2 },
         { to: '/admin/offers', title: 'Angebote', desc: `${offers.length} insgesamt`, icon: Plus },
         { to: '/admin/applications', title: 'Anträge', desc: 'Festgeldanträge', icon: FileText },
+      ],
+    },
+    {
+      kicker: 'IV',
+      title: 'Sparvergleich · Daten-Ops',
+      description: 'Import, Review-Queue, Audit-Log und Demo→Real-Ersetzung.',
+      items: [
+        { to: '/admin/savings/dashboard', title: 'Daten-Dashboard', desc: 'KPIs · Freshness · Demo-Mode', icon: LayoutDashboard },
+        { to: '/admin/savings/reviews', title: 'Review-Queue', desc: 'Offene Vorschläge freigeben', icon: ShieldAlert },
+        { to: '/admin/savings/import', title: 'Daten-Import', desc: 'JSON/CSV · Dry-Run · Apply', icon: Upload },
+        { to: '/admin/savings/sources', title: 'Datenquellen', desc: 'Trust-Level & Monitoring', icon: Database },
+        { to: '/admin/savings/audit', title: 'Audit-Log', desc: 'Jede Admin-Aktion', icon: Activity },
+        { to: '/admin/savings/demo-replace', title: 'Demo → Real', desc: 'Demo-Daten sicher ersetzen', icon: ArrowRightLeft },
       ],
     },
   ];

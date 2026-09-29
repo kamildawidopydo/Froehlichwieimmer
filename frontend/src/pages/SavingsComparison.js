@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { X, RefreshCw, SlidersHorizontal, Search, LayoutGrid, Table2, Info } from 'lucide-react';
 
-import OfferDetailModal from '@/components/OfferDetailModal';
 import OfferInterestModal from '@/components/OfferInterestModal';
 import OfferDetailDrawer from '@/components/comparison/OfferDetailDrawer';
 import CentralCalculator from '@/components/comparison/CentralCalculator';
@@ -458,16 +457,22 @@ const SavingsComparison = () => {
   const debouncedSearch = useDebounced(filters.search, 350);
   const debouncedAmount = useDebounced(filters.amount, 400);
 
-  // Persist filters → URL
+  // Stable primitive-string derived from filters + debounced search/amount.
+  // Wird für Fetch-Deps und URL-Sync verwendet, sodass rein UI-lokale State-Changes
+  // (compare, favorites) keinen erneuten Fetch/Reroute auslösen.
+  const queryString = useMemo(
+    () => buildQuery({ ...filters, search: debouncedSearch, amount: debouncedAmount }),
+    [filters, debouncedSearch, debouncedAmount],
+  );
+
+  // Persist filters → URL. Nur die querystringrelevanten Felder werden gespiegelt.
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
     writeFilters(next, filters);
-    // Nur ersetzen, wenn tatsächlich abweichend, um Loop zu verhindern.
     if (next.toString() !== searchParams.toString()) {
       setSearchParams(next, { replace: true });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
+  }, [filters, searchParams, setSearchParams]);
 
   // Fetch facets (once, and when product_type changes to keep counts aligned).
   useEffect(() => {
@@ -498,9 +503,8 @@ const SavingsComparison = () => {
     try {
       const _axios = (await import('axios')).default;
       const _api = (await import('@/lib/apiBase')).getApiBase();
-      const q = buildQuery({ ...filters, search: debouncedSearch, amount: debouncedAmount });
       const { data: res } = await _axios.get(
-        `${_api}/api/public/savings-offers?${q}`,
+        `${_api}/api/public/savings-offers?${queryString}`,
         { withCredentials: true }
       );
       const items = (res?.items || [])
@@ -537,19 +541,7 @@ const SavingsComparison = () => {
     } finally {
       setLoading(false);
     }
-  }, [
-    filters.product_type,
-    filters.countries.join(','),
-    filters.dgs_countries.join(','),
-    filters.rate_min,
-    filters.rate_max,
-    filters.term_min,
-    filters.term_max,
-    filters.new_customers_only,
-    filters.sort,
-    debouncedSearch,
-    debouncedAmount,
-  ]);
+  }, [queryString]);
 
   useEffect(() => {
     fetchOffers();

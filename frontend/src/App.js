@@ -59,6 +59,13 @@ const AdminInvestmentTopicEdit = lazy(() => import('@/pages/admin/AdminInvestmen
 const AdminNewsArticles = lazy(() => import('@/pages/admin/AdminNewsArticles'));
 const AdminSocialContent = lazy(() => import('@/pages/admin/AdminSocialContent'));
 const AdminStockResearch = lazy(() => import('@/pages/admin/AdminStockResearch'));
+// Session 93 · Phase 5 — Sparvergleich Daten-Ops UI
+const AdminSavingsDashboard = lazy(() => import('@/pages/admin/AdminSavingsDashboard'));
+const AdminSavingsReviews = lazy(() => import('@/pages/admin/AdminSavingsReviews'));
+const AdminSavingsImport = lazy(() => import('@/pages/admin/AdminSavingsImport'));
+const AdminSavingsSources = lazy(() => import('@/pages/admin/AdminSavingsSources'));
+const AdminSavingsAudit = lazy(() => import('@/pages/admin/AdminSavingsAudit'));
+const AdminSavingsDemoReplace = lazy(() => import('@/pages/admin/AdminSavingsDemoReplace'));
 const CreditLeadPage = lazy(() => import('@/pages/CreditLeadPage'));
 const Bewertungen = lazy(() => import('@/pages/Bewertungen'));
 const Kundenstimmen = lazy(() => import('@/pages/Kundenstimmen'));
@@ -860,6 +867,13 @@ function App() {
                   <Route path="news-articles" element={<AdminNewsArticles />} />
                   <Route path="social-content" element={<AdminSocialContent />} />
                   <Route path="stock-research" element={<AdminStockResearch />} />
+                  {/* Session 93 · Phase 5 — Sparvergleich Daten-Ops */}
+                  <Route path="savings/dashboard" element={<AdminSavingsDashboard />} />
+                  <Route path="savings/reviews" element={<AdminSavingsReviews />} />
+                  <Route path="savings/import" element={<AdminSavingsImport />} />
+                  <Route path="savings/sources" element={<AdminSavingsSources />} />
+                  <Route path="savings/audit" element={<AdminSavingsAudit />} />
+                  <Route path="savings/demo-replace" element={<AdminSavingsDemoReplace />} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />

@@ -241,6 +241,8 @@ def _sort_key(item: Dict[str, Any], sort: str):
 @router.get("/savings-offers")
 async def savings_offers(
     active_only: bool = Query(default=True),
+    include_expired: bool = Query(default=False),
+    data_status: str = Query(default="all", description="all|verified|demo"),
     limit: int = Query(default=500, ge=1, le=2000),
     page: int = Query(default=1, ge=1),
     product_type: Optional[str] = Query(default=None),
@@ -274,8 +276,20 @@ async def savings_offers(
     docs = await _db.savings_offers.find(q).to_list(2000)
     items: List[Dict[str, Any]] = []
     search_lc = (search or "").strip().lower()
+    now = datetime.now(timezone.utc)
+    # DEMO_MODE gate (env-configurable) — wenn deaktiviert, alle Demo-Angebote
+    # aus öffentlichen Ergebnissen ausblenden.
+    _demo_mode_enabled = os.environ.get("DEMO_MODE_ENABLED", "true").lower() in ("1", "true", "yes")
     for o in docs:
         if not _amount_matches(o, amount):
+            continue
+        if not include_expired and isinstance(o.get("valid_until"), datetime) and o["valid_until"] < now:
+            continue
+        if not _demo_mode_enabled and bool(o.get("is_demo")):
+            continue
+        if data_status == "verified" and bool(o.get("is_demo")):
+            continue
+        if data_status == "demo" and not bool(o.get("is_demo")):
             continue
         bank = None
         if o.get("bank_slug"):
