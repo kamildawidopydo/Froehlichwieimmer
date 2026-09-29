@@ -3,6 +3,53 @@
 <!-- Session 82.105 Preflight — bereit für Prod-Deploy nachdem Emergent Deploy-ENV gesetzt ist. Siehe Session-82.105-Block unten. -->
 
 
+## Session 94 (Preview · Kreditvergleich E2E-Fertigstellung) — VERIFIED
+
+**Fokus:** Technische Anbindung des Kreditvergleichs. Backend Public-Endpoint gebaut, Frontend an neuen Endpoint angeschlossen, kanonisches Schema harmonisiert, Regression-Tests aufgebaut. **KEINE Fake-Angebote seeded.** `credit_offers`-Collection bleibt leer bis autorisierte Datenquelle vorliegt.
+
+### Backend
+- **Neu**: `/app/backend/routes/public_credit.py` — `GET /api/public/credit-offers`
+  - Query-Params: `amount` (float, ≥0), `term_months` (int, 1–600), `purpose` (str), `sort` (default `effective_rate_asc`), `limit` (default 100), `include_demo` (default `false`)
+  - Serverseitige Filterung: `is_active != false`, Amount-Range (min/max inklusiv), Term-Range, Purpose-Match ODER `Freie Verwendung`-Fallback
+  - Sortierung: `effective_rate_asc | effective_rate_desc | monthly_rate_asc | created_desc`
+  - Bank-Join (`banks{name, country, slug, logo_url}`) inline; `data_status` (`verified | unverified | demo | inactive`) analog Savings Phase 6B
+  - Faithful Empty: fehlende Collection → `{items:[], count:0, reason:"collection_missing"}`
+- **`admin_legacy_reads.py::CreditOfferPayload`** auf kanonisches Schema harmonisiert (Provenance-first, `extra="forbid"`).
+- **Registriert** in `server.py` nach `admin_credit_bank_details`.
+
+### Kanonisches Schema (Backend ↔ Frontend ↔ Public API)
+`bank_id · product_name · min_amount_eur · max_amount_eur · min_term_months · max_term_months · effective_rate_from · effective_rate_to · nominal_rate_from · nominal_rate_to · monthly_rate_from · purposes[] · features[] · affiliate_url · source_id · source_url · source_retrieved_at · verified_at · verification_method · is_active · is_demo · data_status` (Legacy-Felder `provider`, `interest_rate`, `min_amount`, `max_amount`, `details` entfernt).
+
+### Frontend
+- **`CreditLeadPage.js::fetchOffers`** reaktiviert: `axios.get(REACT_APP_BACKEND_URL + '/api/public/credit-offers?amount=&term_months=&purpose=&sort=')`. Der 82.103c-Stub `setOffers([])` ist entfernt.
+- **`useEffect`** re-fetches bei Änderung von `requestedAmount`, `requestedTermMonths`, `purpose`, `sortBy` → serverseitige Filterung wird korrekt bei jeder Nutzereingabe getriggert.
+- **Loading-, Error-, Empty-State** funktionieren unverändert; Design nicht angetastet.
+- **Sortierdropdown**: `effective_rate_asc`/`monthly_rate_asc` werden 1:1 an Backend durchgereicht; `rating_desc` bleibt clientseitig (Ratings werden bank-basiert separat gefetched, aktuell leer).
+
+### Tests · 13/13 grün · `tests/test_public_credit.py`
+`test_endpoint_reachable_empty · test_amount_filter · test_term_filter · test_purpose_filter_and_freie_verwendung_fallback · test_sorting_effective_rate_asc · test_inactive_offer_excluded · test_demo_excluded_by_default · test_full_scenario_20k_84m_freie_verwendung · test_bank_join_present · test_regression_10k_60m · test_regression_30k_72m · test_data_status_verified_when_provenance_complete · test_data_status_unverified_when_missing_provenance`
+
+Fixtures schreiben mit dem Präfix `__p94_credit_fx__` in `banks` und `credit_offers` und werden vor + nach jedem Test aufgeräumt — **keine dauerhaften Fake-Angebote**. Savings-Regression (61 Tests inkl. Phase 6B) parallel bestätigt grün.
+
+### VORHER vs. NACHHER
+- **VORHER**: Frontend rief keinen Endpoint auf (`setOffers([])` als Stub). Backend hatte keinen Public-Endpoint. 20k/84M/Freie Verwendung → 0 Angebote wegen Frontend-Disconnect.
+- **NACHHER**: Frontend ist technisch vollständig angeschlossen. Backend liefert `{items:[], count:0, filters:{amount:20000, term_months:84, purpose:"Freie Verwendung"}}` für 20k/84M/Freie Verwendung — 0 Ergebnisse jetzt, weil die `credit_offers`-Collection in Produktion (Preview-DB) tatsächlich **leer** ist, nicht mehr aus technischen Gründen.
+
+### Bewusst NICHT gemacht (per Auftrag)
+- Keine Fake-Angebote im DB persistiert.
+- Keine Import-Pipeline gebaut.
+- Keine Banken gecrawlt.
+- Keine Demo-Angebote erzeugt.
+- Design/Layout unverändert.
+
+### Datei-Referenzen
+- `/app/backend/routes/public_credit.py` (neu, 191 LOC)
+- `/app/backend/routes/admin_legacy_reads.py` (Payload-Schema harmonisiert)
+- `/app/backend/server.py` (Router-Registration)
+- `/app/frontend/src/pages/CreditLeadPage.js` (fetchOffers reaktiviert)
+- `/app/backend/tests/test_public_credit.py` (neu, 13 Tests)
+
+
 ## Session 94 (Preview · Phase 6B · Schritt 3) · DKB Demo → Real APPLIED — VERIFIED
 
 **Fokus:** Erster verifizierter Real-Datensatz produktiv veröffentlicht. DKB Tagesgeldkonto (1,00 % p.a., DE_EDB, keine Mindest-/Höchstgrenze, volle Provenance). Consorsbank unangetastet (bleibt Review Candidate).

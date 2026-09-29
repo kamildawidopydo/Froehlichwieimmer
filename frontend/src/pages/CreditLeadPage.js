@@ -96,13 +96,31 @@ const CreditLeadPage = () => {
   };
 
   const fetchOffers = async () => {
-    // Session 82.103c · Supabase entfernt. Public-Credit-Offers-Endpoint (mit Bank + Product-Info + Guidelines) fehlt noch.
-    // Bis dahin faithful Empty-State — kein Fake-Feed.
+    // Session 94 · Kreditvergleich E2E-Fertigstellung.
+    // Public-Endpoint: GET /api/public/credit-offers mit serverseitigem
+    // Filter (amount/term_months/purpose) und Sortierung. Kein Fake-Fallback
+    // — wenn keine Angebote importiert sind, liefert der Endpoint items=[].
     setLoading(true);
     try {
-      setOffers([]);
+      const axios = (await import('axios')).default;
+      const apiBase = process.env.REACT_APP_BACKEND_URL || '';
+      const params = new URLSearchParams();
+      const amount = Number(filters.requestedAmount || 0);
+      const term = Number(filters.requestedTermMonths || 0);
+      if (amount > 0) params.set('amount', String(amount));
+      if (term > 0) params.set('term_months', String(term));
+      if (filters.purpose) params.set('purpose', filters.purpose);
+      params.set('sort', sortBy === 'effective_rate_asc' ? 'effective_rate_asc'
+                       : sortBy === 'monthly_rate_asc' ? 'monthly_rate_asc'
+                       : 'effective_rate_asc');
+      const { data } = await axios.get(
+        `${apiBase}/api/public/credit-offers?${params.toString()}`,
+        { withCredentials: false }
+      );
+      setOffers(Array.isArray(data?.items) ? data.items : []);
       setRatingsByBankId({});
-    } catch {
+    } catch (err) {
+      setOffers([]);
       toast.error('Kredit-Angebote konnten nicht geladen werden.');
     } finally {
       setLoading(false);
@@ -111,7 +129,8 @@ const CreditLeadPage = () => {
 
   useEffect(() => {
     fetchOffers();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.requestedAmount, filters.requestedTermMonths, filters.purpose, sortBy]);
 
   const amountPreview = useMemo(
     () => Number(filters.requestedAmount || 0).toLocaleString('de-DE'),

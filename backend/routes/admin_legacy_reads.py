@@ -103,15 +103,33 @@ async def delete_credit_lead(lead_id: str, _admin: dict = Depends(require_admin)
 
 # ─── CREDIT OFFERS (CRUD) ───────────────────────────────────────────────
 class CreditOfferPayload(BaseModel):
-    provider: Optional[str] = None
+    """Kanonisches Schema (Session 94). Gemeinsam mit Frontend und
+    Public-Endpoint `/api/public/credit-offers`. Provenance-Felder analog
+    Savings Phase 6B, damit ein späterer Import-Import genauso strikt
+    verifiziert werden kann wie DKB."""
+    bank_id: Optional[str] = None
     product_name: Optional[str] = None
-    interest_rate: Optional[float] = None
-    min_amount: Optional[float] = None
-    max_amount: Optional[float] = None
+    # Ranges (statt Singleton). Für „exakter Zins" `..._from == ..._to` setzen.
+    min_amount_eur: Optional[float] = None
+    max_amount_eur: Optional[float] = None
     min_term_months: Optional[int] = None
     max_term_months: Optional[int] = None
+    effective_rate_from: Optional[float] = None
+    effective_rate_to: Optional[float] = None
+    nominal_rate_from: Optional[float] = None
+    nominal_rate_to: Optional[float] = None
+    monthly_rate_from: Optional[float] = None
+    purposes: Optional[List[str]] = None
+    features: Optional[List[str]] = None
+    affiliate_url: Optional[str] = None
+    # Provenance
+    source_id: Optional[str] = None
+    source_url: Optional[str] = None
+    source_retrieved_at: Optional[datetime] = None
+    verified_at: Optional[datetime] = None
+    verification_method: Optional[str] = None
     is_active: Optional[bool] = True
-    details: Optional[Dict[str, Any]] = None
+    is_demo: Optional[bool] = False
     model_config = {"extra": "forbid"}
 
 

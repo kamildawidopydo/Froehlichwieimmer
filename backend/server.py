@@ -5446,6 +5446,9 @@ app.include_router(_admin_legacy_reads_routes.router)
 # Session 82.103c — Admin Kredit-Bankdetails + Kaufkraft-Warnungen.
 from routes import admin_credit_bank_details as _admin_credit_bank_details_routes  # noqa: E402
 app.include_router(_admin_credit_bank_details_routes.router)
+# Session 94 — Public Credit Comparison Endpoint.
+from routes import public_credit as _public_credit_routes  # noqa: E402
+app.include_router(_public_credit_routes.router)
 from routes import admin_insufficient_buying_power as _admin_ibp_routes  # noqa: E402
 app.include_router(_admin_ibp_routes.router)
 
