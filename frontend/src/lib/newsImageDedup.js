@@ -1,73 +1,118 @@
 /**
- * Session 94 · News-Bild-Deduplikation (Client-seitig, robust).
+ * Session 94 · News-Bild- & Artikel-Deduplikation (endgültige Version).
  *
- * Zweck: Innerhalb einer Renderpage (`/news`) soll dasselbe Artikelbild nicht
- * mehrfach erscheinen. Der Algorithmus arbeitet nicht-mutierend, iteriert die
- * Artikelgruppen in visueller Reihenfolge und setzt für jeden Duplicate-Hit
- * `image_url = null`, damit die bestehenden Sub-Komponenten (HeroTopNews,
- * FondsEtfTopNews, WeitereBeitraege, AnlegerInteressant) ohne Änderung auf
- * ihren neutralen Kategorie-Fallback in `SafeNewsImage` zurückfallen.
+ * Zwei Dedup-Achsen in einer gemeinsamen Pipeline:
  *
- * Robuste Normalisierung — verhindert False-Negatives durch:
- *   1. Unsplash Photo-IDs (`photo-XXXXXXXXXXXXX`) — stabile Assetkennung,
- *      unabhängig von Größenvarianten `?w=...` oder Tracking-Parametern.
- *   2. Imgix/Cloudinary/SafeNewsImage-Proxy-URLs — extrahiert die zugrunde
- *      liegende Source-URL via URL-Query-Parameter `url=` bzw. Pfadsegment.
- *   3. Fallback: Full-URL nach Strip von Query/Hash, lowercase.
+ *   1. Article-ID / slug — verhindert, dass derselbe Artikel in mehreren
+ *      Backend-Sektionen (z. B. `top` + `overview`) mit demselben Bild
+ *      erneut erscheint. Dedup-Priorität: `id > slug > (title|source_url)`.
  *
- * Alles rein & deterministisch.
+ *   2. Image-Key — stabiler Bildschlüssel unabhängig von URL-Varianten:
+ *        a) explizite Asset-Kennung im Article-Objekt: `image_asset_id`,
+ *           `image_id`, `media_id`
+ *        b) Unsplash Photo-ID (`photo-<hex>`)
+ *        c) URL innerhalb eines Proxy-Queries (`?url=`, `?src=`, `?image=`)
+ *        d) Full-URL nach Strip von Query/Hash, lowercase
+ *
+ * Beide Sets werden gemeinsam in der visuellen Renderreihenfolge geführt.
+ * Bei Duplikat-Treffer setzt der Reducer `image_url = null` — die
+ * Sub-Komponente rendert dann ihren neutralen Kategorie-Fallback.
+ *
+ * Rein & deterministisch, mutiert keine Eingaben.
  */
 
 const RE_UNSPLASH_PHOTO_ID = /photo-([0-9a-f]{10,})/i;
-const RE_UNSPLASH_HOST = /images\.unsplash\.com/i;
 
-const extractStableAssetKey = (url) => {
+const _articleIdentityKey = (a) => {
+  if (!a || typeof a !== 'object') return null;
+  return a.id || a.slug || a.article_id
+    || (a.source_url && a.title ? `${a.source_url}::${a.title}` : null)
+    || a.title
+    || null;
+};
+
+const _imageKey = (article) => {
+  if (!article) return null;
+  // (a) explizite Asset-Kennung
+  const explicit = article.image_asset_id || article.image_id || article.media_id;
+  if (explicit) return `asset:${String(explicit).toLowerCase()}`;
+  const url = article.image_url;
   if (!url || typeof url !== 'string') return null;
   const trimmed = url.trim();
   if (!trimmed) return null;
 
-  // Fall 1: SafeNewsImage-/CDN-Proxy — Query-Param `url=` enthält das Original.
+  // (c) Proxy-Query mit eingebetteter Original-URL
   try {
-    const parsed = new URL(trimmed, 'https://placeholder.local');
-    const inner = parsed.searchParams.get('url')
-      || parsed.searchParams.get('src')
-      || parsed.searchParams.get('image');
+    const p = new URL(trimmed, 'https://placeholder.local');
+    const inner = p.searchParams.get('url') || p.searchParams.get('src') || p.searchParams.get('image');
     if (inner) {
-      const rec = extractStableAssetKey(inner);
-      if (rec) return rec;
+      const sub = _imageKey({ image_url: inner });
+      if (sub) return sub;
     }
-  } catch (_) { /* not a valid URL */ }
+  } catch (_) { /* not a URL */ }
 
-  // Fall 2: Unsplash Photo-ID.
+  // (b) Unsplash Photo-ID
   const m = trimmed.match(RE_UNSPLASH_PHOTO_ID);
   if (m) return `unsplash:${m[1].toLowerCase()}`;
 
-  // Fall 3: Fallback — strip query/hash/trailing slash, lowercase.
+  // (d) URL-Fallback
   const noQuery = trimmed.split('?')[0].split('#')[0].replace(/\/+$/, '').toLowerCase();
-  return noQuery || null;
+  return noQuery ? `url:${noQuery}` : null;
 };
 
-export const normalizeImageUrl = (url) => extractStableAssetKey(url);
+export const normalizeImageUrl = (url) => _imageKey({ image_url: url });
 
 /**
- * @param {Array<Array<object>|null|undefined>} arrayGroups — Artikelgruppen in
- *   visueller Reihenfolge auf der Page.
- * @returns {Array<Array<object>>} — Kopien der Arrays mit `image_url=null` für
- *   Duplicate-Treffer. Original bleibt unangetastet.
+ * Zentrale Pipeline. Erwartet Artikelgruppen in visueller Renderreihenfolge.
+ *
+ * @param {Array<{section: string, articles: Array<object>}>} sections
+ * @param {{debug?: boolean}} [opts]
+ * @returns {{
+ *   groups: Array<Array<object>>,
+ *   audit: Array<{section, article_id, title, original_image_url, image_key, article_key, duplicate: boolean, reason: string|null}>
+ * }}
  */
-export const dedupeArticleImages = (arrayGroups) => {
-  const seen = new Set();
-  return arrayGroups.map((group) => {
-    if (!Array.isArray(group)) return group;
-    return group.map((article) => {
-      if (!article || typeof article !== 'object') return article;
-      const key = extractStableAssetKey(article.image_url);
-      if (!key) return article;
-      if (seen.has(key)) {
-        return { ...article, image_url: null };
+export const dedupeArticlesAcrossSections = (sections, opts = {}) => {
+  const usedArticleKeys = new Set();
+  const usedImageKeys = new Set();
+  const audit = [];
+  const groups = sections.map(({ section, articles }) => {
+    if (!Array.isArray(articles)) return articles;
+    return articles.map((original) => {
+      const artKey = _articleIdentityKey(original);
+      const imgKey = _imageKey(original);
+      let duplicate = false;
+      let reason = null;
+      if (artKey && usedArticleKeys.has(artKey)) {
+        duplicate = true; reason = 'duplicate_article';
+      } else if (imgKey && usedImageKeys.has(imgKey)) {
+        duplicate = true; reason = 'duplicate_image';
       }
-      seen.add(key);
-      return article;
+      if (artKey) usedArticleKeys.add(artKey);
+      if (imgKey && !duplicate) usedImageKeys.add(imgKey);
+      audit.push({
+        section, article_id: original?.id ?? null,
+        title: (original?.title || '').slice(0, 80),
+        original_image_url: original?.image_url ?? null,
+        image_key: imgKey, article_key: artKey,
+        duplicate, reason,
+      });
+      if (duplicate) {
+        return { ...original, image_url: null };
+      }
+      return original;
     });
   });
+  if (opts.debug && typeof window !== 'undefined' && typeof window.console !== 'undefined') {
+    /* eslint-disable no-console */
+    console.info('[news-dedup] audit', audit);
+    /* eslint-enable no-console */
+  }
+  return { groups, audit };
+};
+
+/** Backwards-kompat für existierende Aufrufer. */
+export const dedupeArticleImages = (arrayGroups) => {
+  const named = arrayGroups.map((articles, i) => ({ section: `group_${i}`, articles }));
+  return dedupeArticlesAcrossSections(named).groups;
 };

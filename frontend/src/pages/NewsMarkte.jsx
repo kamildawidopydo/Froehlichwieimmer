@@ -17,6 +17,7 @@ import UnsereEinschaetzung from '@/components/news-markte/UnsereEinschaetzung';
 import Beobachtungslisten from '@/components/news-markte/Beobachtungslisten';
 import PhilosophieCTA from '@/components/news-markte/PhilosophieCTA';
 import { dedupeArticleImages } from '@/lib/newsImageDedup';
+import { dedupeArticlesAcrossSections } from '@/lib/newsImageDedup';
 import {
   useNewsFeed, useMarketInsights, useEditorial,
   useAnlagetrends, useInvestmentRadar, useMarketVoices,
@@ -47,15 +48,24 @@ const NewsMarkte = () => {
   const weitere = feed.data?.weitere ?? [];
   const anleger = feed.data?.anleger ?? [];
 
-  // Session 94 · Client-seitige Bild-Deduplikation.
-  // Reihenfolge = visuelle Reihenfolge auf der Page:
-  //   1) Hero (top) · 2) News im Überblick · 3) Fonds/ETF · 4) Weitere · 5) Anleger
-  // Duplikate erhalten image_url=null → Sub-Komponente rendert neutralen
-  // Kategorie-Fallback (SafeNewsImage), keine anderen Änderungen.
-  const [topDedup, overviewDedup, fundsEtfDedup, weitereDedup, anlegerDedup] = useMemo(
-    () => dedupeArticleImages([top, overview, fundsEtf.data, weitere, anleger]),
+  // Session 94 · Endgültige Bild- + Artikel-Deduplikation.
+  // Zentrale Pipeline in visueller Renderreihenfolge:
+  //   1) Hero (top) · 2) News-Überblick (overview) · 3) Fonds/ETF · 4) Weitere · 5) Anleger
+  // Dedup auf zwei Achsen:
+  //   - stabiler image_key (asset-id / unsplash photo-id / proxy-url / url-fallback)
+  //   - article_key (id / slug / title) → verhindert dass derselbe Artikel
+  //     aus mehreren Backend-Sektionen mit demselben Bild wiederkommt.
+  const dedupResult = useMemo(
+    () => dedupeArticlesAcrossSections([
+      { section: 'hero-top-news',   articles: top },
+      { section: 'news-ueberblick', articles: overview },
+      { section: 'fonds-etf-top',   articles: fundsEtf.data },
+      { section: 'weitere',         articles: weitere },
+      { section: 'anleger',         articles: anleger },
+    ], { debug: true }),
     [top, overview, fundsEtf.data, weitere, anleger],
   );
+  const [topDedup, overviewDedup, fundsEtfDedup, weitereDedup, anlegerDedup] = dedupResult.groups;
 
   return (
     <div className="bg-white" data-testid="news-markte-page">

@@ -2,8 +2,8 @@ import { dedupeArticleImages, normalizeImageUrl } from './newsImageDedup';
 
 describe('newsImageDedup', () => {
   test('normalizeImageUrl strips query, hash, trailing slash, lowercases', () => {
-    expect(normalizeImageUrl('https://example.com/IMG.JPG?w=800#x')).toBe('https://example.com/img.jpg');
-    expect(normalizeImageUrl('https://example.com/foo/')).toBe('https://example.com/foo');
+    expect(normalizeImageUrl('https://example.com/IMG.JPG?w=800#x')).toBe('url:https://example.com/img.jpg');
+    expect(normalizeImageUrl('https://example.com/foo/')).toBe('url:https://example.com/foo');
     expect(normalizeImageUrl(null)).toBeNull();
     expect(normalizeImageUrl('')).toBeNull();
     expect(normalizeImageUrl('  ')).toBeNull();
