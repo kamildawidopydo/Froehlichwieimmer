@@ -122,6 +122,10 @@ class CreditOfferPayload(BaseModel):
     purposes: Optional[List[str]] = None
     features: Optional[List[str]] = None
     affiliate_url: Optional[str] = None
+    # Repräsentatives §17-PAngV-Beispiel (getrennt von effective_rate_from/to).
+    # Reines Read-Feld für UI-Anzeige. Enthält typischerweise:
+    # {amount_eur, term_months, effective_rate, sollzins, monatsrate, gesamtbetrag}
+    representative_example: Optional[Dict[str, Any]] = None
     # Provenance
     source_id: Optional[str] = None
     source_url: Optional[str] = None

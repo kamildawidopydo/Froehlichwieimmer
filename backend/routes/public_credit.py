@@ -103,6 +103,7 @@ def _serialize_offer(o: Dict[str, Any], bank_ref: Optional[Dict[str, Any]]) -> D
         "source_retrieved_at": source_retrieved_at,
         "verified_at": verified_at,
         "verification_method": o.get("verification_method"),
+        "representative_example": o.get("representative_example"),
         "is_active": bool(o.get("is_active", True)),
         "is_demo": bool(o.get("is_demo", False)),
         "data_status": _credit_data_status(o),

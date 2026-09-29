@@ -1,0 +1,36 @@
+{
+  "applied_at": "2026-09-29T13:08:36.431555+00:00",
+  "inserted": [
+    {
+      "slug": "ing",
+      "id": "6abbb85418f21cfeefdfd883",
+      "product": "Ratenkredit",
+      "rate": 3.69
+    },
+    {
+      "slug": "dkb",
+      "id": "6abbb85418f21cfeefdfd884",
+      "product": "Privatkredit Sofort",
+      "rate": 6.99
+    },
+    {
+      "slug": "postbank",
+      "id": "6abbb85418f21cfeefdfd885",
+      "product": "Privatkredit direkt",
+      "rate": 3.25
+    },
+    {
+      "slug": "santander",
+      "id": "6abbb85418f21cfeefdfd886",
+      "product": "BestCredit / Ratenkredit (Openbank Deutschland AG)",
+      "rate": 2.99
+    },
+    {
+      "slug": "norisbank",
+      "id": "6abbb85418f21cfeefdfd887",
+      "product": "Top-Kredit",
+      "rate": 3.69
+    }
+  ],
+  "total_active_now": 5
+}

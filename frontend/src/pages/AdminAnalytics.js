@@ -180,35 +180,6 @@ const AdminAnalytics = () => {
     // Aggregation über echte Positionen deaktiviert bis Admin-Enrichment-
     // Endpoint (Aggregation + Preise) verfügbar ist. Kein Fake-Ranking.
     setTopHoldings([]);
-    return;
-    // eslint-disable-next-line no-unreachable
-    const stockMap = {};
-    (stocks || []).forEach((s) => { stockMap[s.symbol] = s; });
-    const priceMap = {};
-    (cache || []).forEach((c) => { priceMap[c.symbol] = Number(c.price || 0); });
-    const agg = new Map();
-    (positions || []).forEach((p) => {
-      const qty = Number(p.quantity || 0);
-      const price = priceMap[p.symbol] ?? Number(p.avg_cost || 0);
-      const mv = qty * price;
-      const curr = agg.get(p.symbol) || { symbol: p.symbol, qty: 0, value: 0, users: new Set() };
-      curr.qty += qty;
-      curr.value += mv;
-      curr.users.add(p.user_id);
-      agg.set(p.symbol, curr);
-    });
-    const arr = Array.from(agg.values())
-      .map((r) => ({
-        symbol: r.symbol,
-        name: stockMap[r.symbol]?.name || r.symbol,
-        sector: stockMap[r.symbol]?.sector,
-        qty: r.qty,
-        value: r.value,
-        userCount: r.users.size,
-      }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
-    setTopHoldings(arr);
   };
 
   const fetchTopUsers = async () => {

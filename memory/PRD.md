@@ -3,6 +3,54 @@
 <!-- Session 82.105 Preflight — bereit für Prod-Deploy nachdem Emergent Deploy-ENV gesetzt ist. Siehe Session-82.105-Block unten. -->
 
 
+## Session 94 (Preview · Kreditvergleich · Erst-Import) — VERIFIED
+
+**Fokus:** 5 verifizierte Real-Kreditangebote von offiziellen Bank-Quellen eingespielt. `credit_offers`-Collection erstmals produktiv mit echten Daten befüllt. Bank-Records wiederverwendet, nur 1 neuer (Norisbank).
+
+### Angewandte Konditions-Updates (Re-Verifikation unmittelbar vor Apply)
+- **DKB Korrektur**: Von 7,29 % (Klassisch) auf **6,99 %** effektiv (Privatkredit **Sofort** mit 0,3 pp Rabatt), Quelle: dkb.de/…/sofortkredit. Alte 7,29-%-Zahl verworfen.
+- **Santander/Norisbank** unverändert bestätigt Stand 09/2026.
+- **ING/Postbank** unverändert bestätigt Stand 09/2026 (ING seit 07.09.2026 aktuell).
+
+### 5 importierte Angebote (alle `data_status=verified`, `is_demo=false`, `is_active=true`)
+| Bank (bank_id) | Produkt | Betrag | Laufzeit | Eff. ab/bis | Repr. §17 |
+|---|---|---|---|---|---|
+| ING (6a82fe2eb0ef4c52da900a86) | Ratenkredit | 5.000 – 100.000 € | 12 – 120 M | **3,69 %** – 10,99 % | 15.000 € / 120 M / 7,22 % |
+| DKB (6abb7515f1dcd0c6d8a8d28b) | Privatkredit Sofort | 2.500 – 100.000 € | 12 – 120 M | **6,99 %** (Einheit) | – |
+| Postbank (6a82fe2eb0ef4c52da900a87) | Privatkredit direkt | 3.000 – 80.000 € | 12 – 120 M | **3,25 %** – 14,30 % | 10.000 € / 84 M / 9,27 % |
+| Santander (6abb7515f1dcd0c6d8a8d2ad, Banco Santander/Openbank DE) | BestCredit | 1.000 – 75.000 € | 12 – 96 M | **2,99 %** – 11,98 % | 10.000 € / 84 M / 7,27 % |
+| Norisbank (6abbb85418f21cfeefdfd882, neu) | Top-Kredit | 1.000 – 65.000 € | 12 – 120 M | **3,69 %** – 14,40 % | 10.000 € / 48 M / 7,90 % |
+
+### Schema-Erweiterung (kompatibel, nicht breaking)
+- `representative_example: Optional[Dict]` in `CreditOfferPayload` + `_serialize_offer` — trennt §17-PAngV-Beispiel sauber von `effective_rate_from/to`. UI kann die 2/3-Klausel rechtssauber getrennt anzeigen.
+
+### Frontend „ab X %"-Convention bereits aktiv
+- Karten-Rate (Z. 523 CreditLeadPage.js): `ab {offer.effective_rate_from} %` — kein individueller Kundenzins.
+- Monatsrate (Z. 537): `ab {monthlyRate}` — kein individueller Kundenzins.
+- Tarifdetails (Z. 583): `effektiver Jahreszins ab …` — Berechnungsbasis explizit ausgewiesen.
+
+### Verifikation gegen die 3 Testfälle
+Sortierung `effective_rate_asc` identisch stabil bei allen 3 Kombinationen:
+- **20.000 € / 84 M / Freie Verwendung**: 5 Treffer · Santander (2,99) → Postbank (3,25) → ING (3,69) → Norisbank (3,69) → DKB (6,99)
+- **10.000 € / 60 M / Freie Verwendung**: 5 Treffer, identische Reihenfolge
+- **30.000 € / 72 M / Freie Verwendung**: 5 Treffer, identische Reihenfolge
+
+### Tests · 61/61 grün
+`test_public_credit.py (13) + test_savings_platform.py + test_savings_platform_filters.py + test_savings_calculator.py + test_phase6b_publish_and_replace.py`. Keine Regression.
+
+### Bank-Referenzen (keine Dubletten angelegt)
+- ING, DKB, Postbank, Santander: bestehende Records wiederverwendet.
+- Nur Norisbank neu angelegt (existierte nicht in `banks`).
+- Santander: Referenz auf bestehenden „Banco Santander" (country=Spain) — bewusst KEINE Dublette; Openbank Deutschland AG ist Kreditgeber, im Produktnamen dokumentiert.
+
+### Artefakte
+- `/app/scripts/session94_credit_apply.py` (Apply-Skript, idempotent)
+- `/app/memory/session94-credit-apply-report.json`
+- `/app/memory/session94-credit-dryrun.json` (Vorab-Recherche)
+- `/app/backend/routes/public_credit.py` (Endpoint mit `representative_example` serialisiert)
+- `/app/backend/routes/admin_legacy_reads.py` (Schema um `representative_example` erweitert)
+
+
 ## Session 94 (Preview · Kreditvergleich E2E-Fertigstellung) — VERIFIED
 
 **Fokus:** Technische Anbindung des Kreditvergleichs. Backend Public-Endpoint gebaut, Frontend an neuen Endpoint angeschlossen, kanonisches Schema harmonisiert, Regression-Tests aufgebaut. **KEINE Fake-Angebote seeded.** `credit_offers`-Collection bleibt leer bis autorisierte Datenquelle vorliegt.
