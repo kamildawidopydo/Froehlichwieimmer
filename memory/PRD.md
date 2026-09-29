@@ -9,6 +9,41 @@ Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. 
 
 
 
+## Session 93 (Preview · Phase 6B · Schritt 1) · Publish-Status, Calc-Guard, Demo-Replace-Fix — VERIFIED
+
+**Fokus:** Backend-only. Kein Apply, kein DKB-Publish, keine Produktionsdaten verändert.
+
+### Backend-Änderungen (5 gezielte Punkte)
+- **`lib/import_pipeline.py::build_diff`** — Matcher filtert jetzt `is_active != False` und `is_demo != True`. Verhindert, dass `demo-replace` das deaktivierte Demo in-place überschreibt.
+- **`lib/data_freshness.py`** — Neue rein-berechnete Funktionen `publish_status(offer)` und `publish_status_reasons(offer)`. Orthogonal zu `data_status`. Reasons: `missing_dgs`, `missing_follow_on_rate`, `needs_review_flag`.
+- **`lib/savings_calculator.py`** — Calculation-Guard: bei Promo-Offer ohne `standard_rate_after_promo` und Horizont > Promo-Dauer → `calculation_complete=false`, `gross_return_eur=None`, `partial_gross_return_eur=<Teilertrag>`, `calculation_reasons=["missing_follow_on_rate"]`. Kein erfundener Ertrag.
+- **`routes/public_reads.py::_serialize_offer`** — Serialisiert zusätzlich `publish_status`, `publish_status_reasons`, `no_min_amount`, `no_max_amount` (aus `conditions`-Markern).
+- **no-min/no-max-Konvention:** `min_amount=null + conditions.no_min_amount=true` = ausdrücklich keine Mindestanlage. `min_amount=null` allein = unbekannt. Keine Umwandlung zu 0/Infinity.
+
+### Bug-Ursache und Fix
+`build_diff` matchte per `(bank_slug, product_type, term_months)` ohne is_active/is_demo-Filter. Beim Demo-Replace würde daher der frisch deaktivierte Demo-Datensatz als Update-Target zurückkommen — Ergebnis: Demo-ID würde in-place mutiert statt neuer Real-ID erzeugt. Fix: 2 Filter-Bedingungen ergänzt (`is_active != False`, `is_demo != True`).
+
+### publish_status-Regeln
+- `needs_review` — `offer.needs_review=True` gesetzt.
+- `incomplete` — DGS fehlt ODER Promo-Offer ohne Folgezins.
+- `complete` — alle für Anzeige/Berechnung nötigen Felder vorhanden.
+- Orthogonal: `data_status=verified` + `publish_status=incomplete` ist möglich (Consorsbank-Szenario).
+
+### Calculation-Guard-Verhalten
+Promo 3,80 % · 5 Monate · Folgezins null:
+- Horizont 5 M → `gross=158.33`, `complete=true`
+- Horizont 12 M → `gross=None`, `partial_gross=158.33`, `complete=false`, `reasons=["missing_follow_on_rate"]`
+- Für Yield-Sortierung: `gross_return_eur=None` verhindert 0-€-Falscheinordnung.
+
+### Testresultate
+- **Neue Tests:** 14 (test_phase6b_publish_and_replace.py) — publish_status × 6, Calc-Guard × 5, Demo-Replace-Fixture × 1 (mit vollständigem Cleanup + Rate-History-Isolation), no_min/no_max × 1, incomplete-Sort × 1.
+- **Regression sequentiell:** 146/146 grün. Der xdist-Race in `test_pagination_page_size` bleibt bei parallelem Run bestehen (nicht Phase-6B-verursacht), sequentiell OK.
+
+### Nicht gemacht (per Anweisung)
+- Kein Apply, kein DKB-Publish, keine Consorsbank-Produktionsänderung, keine Datenmutation.
+- Frontend nicht angepasst — kommt in Schritt 2.
+
+
 ## Session 93 (Preview · Phase 6A.1) · Verified-Semantik repariert — VERIFIED
 
 **Fokus:** `data_status=verified` liefert nur noch Offers mit vollständiger Provenance. Legacy-Real-Records erscheinen als `unverified`. Public UI zeigt keine „Zuletzt geprüft"-Claims mehr ohne verifizierten Nachweis. Real-first Sortierung als Standard.

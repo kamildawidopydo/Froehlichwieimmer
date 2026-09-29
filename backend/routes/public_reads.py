@@ -17,7 +17,12 @@ _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 from lib.savings_calculator import compute_yield  # noqa: E402
-from lib.data_freshness import freshness_summary, is_fully_verified, data_status as _data_status  # noqa: E402
+from lib.data_freshness import (  # noqa: E402
+    freshness_summary, is_fully_verified,
+    data_status as _data_status,
+    publish_status as _publish_status,
+    publish_status_reasons as _publish_reasons,
+)
 
 _db = AsyncIOMotorClient(os.environ["MONGO_URL"], tz_aware=True)[os.environ["DB_NAME"]]
 router = APIRouter(prefix="/api/public", tags=["public-reads"])
@@ -152,8 +157,18 @@ def _serialize_offer(o: dict, bank: Optional[dict], amount: Optional[float]) -> 
     # Phase 6A.1 — Provenance-Klarstellung. UI darf ausschließlich
     # data_status=="verified" für "Zuletzt geprüft"-Aussagen nutzen.
     item["data_status"] = _data_status(o)
+    item["publish_status"] = _publish_status(o)
+    item["publish_status_reasons"] = _publish_reasons(o)
     item["verification_method"] = o.get("verification_method")
     item["source_retrieved_at"] = _iso(o.get("source_retrieved_at"))
+    # Phase 6B · no_min/no_max-Semantik. Marker liegen in `conditions`.
+    cond = o.get("conditions") or {}
+    if isinstance(cond, dict):
+        item["no_min_amount"] = bool(cond.get("no_min_amount"))
+        item["no_max_amount"] = bool(cond.get("no_max_amount"))
+    else:
+        item["no_min_amount"] = False
+        item["no_max_amount"] = False
     return item
 
 

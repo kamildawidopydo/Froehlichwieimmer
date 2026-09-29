@@ -131,10 +131,18 @@ async def build_diff(
             continue
 
         bank_slug = resolved["slug"]
+        # Phase 6B · Demo-Replace-Fix: der Matcher darf NIE auf einen
+        # deaktivierten (`is_active=False`) oder Demo-Datensatz zeigen. Sonst
+        # würde `demo-replace` das gerade deaktivierte Demo in-place
+        # überschreiben statt einen neuen Real-Datensatz mit eigener ID zu
+        # erzeugen. Auch generell: ein Import soll nur aktive Real-Records
+        # aktualisieren.
         existing = await offers_collection.find_one({
             "bank_slug": bank_slug,
             "product_type": rec.get("product_type"),
             "term_months": rec.get("term_months"),
+            "is_active": {"$ne": False},
+            "is_demo": {"$ne": True},
         })
         if existing is None:
             counts["create"] += 1

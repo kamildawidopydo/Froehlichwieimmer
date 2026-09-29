@@ -63,6 +63,48 @@ def is_fully_verified(offer: dict) -> bool:
     return True
 
 
+# ---------------------------------------------------------------------------
+# Phase 6B · Publish-Status — rein berechnet, keine persistierte 2. Wahrheit.
+# `data_status` beweist Herkunft/Provenance, `publish_status` prüft fachliche
+# Vollständigkeit für Darstellung und Berechnung.
+# ---------------------------------------------------------------------------
+PublishStatus = Literal["complete", "incomplete", "needs_review"]
+
+
+def publish_status(offer: dict) -> PublishStatus:
+    """Semantische Vollständigkeit für Anzeige und Berechnung.
+
+    - `needs_review` — Validation-Warnung / offener Review-Vorschlag.
+    - `incomplete` — kann angezeigt werden, aber Pflichtfelder fehlen
+      (DGS oder Promo-Folgezins bei Promo-Laufzeit).
+    - `complete` — alle für die Darstellung/Berechnung nötigen Felder vorhanden.
+    """
+    if bool(offer.get("needs_review")):
+        return "needs_review"
+    reasons = []
+    if not (offer.get("deposit_guarantee_country") or offer.get("deposit_guarantee_scheme_code")):
+        reasons.append("missing_dgs")
+    # Promo ohne Folgezins → incomplete, weil Yield-Rechnung > Promo-Dauer nicht deckbar ist.
+    if (offer.get("promo_rate") is not None
+            and offer.get("promo_duration_months") is not None
+            and offer.get("standard_rate_after_promo") is None):
+        reasons.append("missing_follow_on_rate")
+    return "incomplete" if reasons else "complete"
+
+
+def publish_status_reasons(offer: dict) -> list:
+    r = []
+    if not (offer.get("deposit_guarantee_country") or offer.get("deposit_guarantee_scheme_code")):
+        r.append("missing_dgs")
+    if (offer.get("promo_rate") is not None
+            and offer.get("promo_duration_months") is not None
+            and offer.get("standard_rate_after_promo") is None):
+        r.append("missing_follow_on_rate")
+    if bool(offer.get("needs_review")):
+        r.append("needs_review_flag")
+    return r
+
+
 def data_status(offer: dict) -> Literal["verified", "unverified", "demo"]:
     """Klassifiziert die Provenance-Herkunft eines Angebots.
 
