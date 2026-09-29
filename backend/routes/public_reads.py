@@ -17,6 +17,7 @@ _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 from lib.savings_calculator import compute_yield  # noqa: E402
+from lib.data_freshness import freshness_summary  # noqa: E402
 
 _db = AsyncIOMotorClient(os.environ["MONGO_URL"], tz_aware=True)[os.environ["DB_NAME"]]
 router = APIRouter(prefix="/api/public", tags=["public-reads"])
@@ -146,6 +147,8 @@ def _serialize_offer(o: dict, bank: Optional[dict], amount: Optional[float]) -> 
         item["expected_yield"] = compute_yield(o, amount)
     else:
         item["expected_yield"] = None
+    item["freshness"] = freshness_summary(o)
+    item["source_id"] = o.get("source_id")
     return item
 
 
@@ -471,6 +474,52 @@ async def list_dgs() -> Dict[str, Any]:
             "coverage_limit_eur": d.get("coverage_limit_eur"),
             "authority": d.get("authority"),
             "source_url": d.get("source_url"),
+        })
+    return {"items": items, "count": len(items)}
+
+
+# ---------------------------------------------------------------------------
+# /api/public/savings-offers/{id}/rate-history — Zinsverlauf (Phase 3)
+# ---------------------------------------------------------------------------
+@router.get("/savings-offers/{offer_id}/rate-history")
+async def offer_rate_history(offer_id: str) -> Dict[str, Any]:
+    if not await _coll_exists("interest_rate_history"):
+        return {"items": [], "count": 0, "offer_id": offer_id}
+    items: List[Dict[str, Any]] = []
+    async for h in _db.interest_rate_history.find({"offer_id": offer_id}).sort("valid_from", 1):
+        items.append({
+            "id": str(h.get("_id")),
+            "rate": h.get("rate"),
+            "rate_type": h.get("rate_type", "standard"),
+            "valid_from": _iso(h.get("valid_from")),
+            "valid_until": _iso(h.get("valid_until")),
+            "source_id": h.get("source_id"),
+            "source_url": h.get("source_url") if h.get("is_demo") is not True else None,
+            "verified_at": _iso(h.get("verified_at")),
+            "verification_method": h.get("verification_method"),
+            "is_demo": bool(h.get("is_demo", False)),
+        })
+    return {"offer_id": offer_id, "items": items, "count": len(items)}
+
+
+# ---------------------------------------------------------------------------
+# /api/public/data-sources — nur öffentlich sichtbare Quellen
+# ---------------------------------------------------------------------------
+@router.get("/data-sources")
+async def list_data_sources() -> Dict[str, Any]:
+    if not await _coll_exists("data_sources"):
+        return {"items": [], "count": 0}
+    items = []
+    async for s in _db.data_sources.find({"status": {"$ne": "disabled"}}).sort("slug", 1):
+        items.append({
+            "slug": s.get("slug"),
+            "name": s.get("name"),
+            "type": s.get("type"),
+            "provider": s.get("provider"),
+            "country_code": s.get("country_code"),
+            "status": s.get("status"),
+            "source_url": s.get("source_url") if s.get("is_public_source_url") else None,
+            "last_success_at": _iso(s.get("last_success_at")),
         })
     return {"items": items, "count": len(items)}
 

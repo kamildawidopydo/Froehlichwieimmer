@@ -61,6 +61,70 @@ Zukünftige Live-Feed-Integrationen fügen Datensätze mit `is_demo: False`, `da
 ### Feature
 Internes Admin-Tool unter `/admin/customer-confirmations`, das aus einem sicheren Formular dynamisch eine "Bestandskunden-Bestätigung" als PDF generiert (WeasyPrint), speichert (Mongo `customer_confirmations`), anzeigt, herunterlädt, druckt und via Resend als PDF-Anhang versendet.
 
+## Session 93 (Preview · Phase 3) · Real-Data-Ready & Zins-Historie
+
+### Neue Modelle & Collections
+- `data_sources` — DataSource (slug, type, provider, source_url, update_frequency_hours, last_success_at/last_failure_at, is_public_source_url). Types: `official_bank · official_document · partner_feed · manual_verified · api · import · demo_seed`.
+- `bank_aliases` — canonical_slug ⇄ alias/normalized/external_ids (BIC, Raisin-ID etc.).
+- `offer_links` — Vorbereitung für Affiliate/Direct/Information-CTAs (Datenmodell fertig, UI folgt in Phase 4).
+- `import_runs` — Audit-Log (started/finished, records_received/valid/invalid/changed/unchanged/needs_review, applied_by, error_summary).
+- `interest_rate_history` — echte Historisierung mit `valid_from/valid_until`, `rate_type` (`standard·promotional·bonus·tier`), `source_id/source_url/verified_at/verification_method`, `is_demo`.
+- `savings_offers` erweitert um: `source_id · source_url · source_retrieved_at · verified_at · verification_method · valid_from/valid_until · source_snapshot_hash · status`.
+
+### Services (`/app/backend/lib/`)
+- **`data_freshness.py`** — zentrale Frist-Regeln (`FRESH_MAX_DAYS=7`, `STALE_MAX_DAYS=30`, ENV-konfigurierbar). Labels: `fresh · stale · expired · demo · unknown`. **Demo wird niemals „fresh".**
+- **`validation_engine.py`** — plausible-Ranges (rate 0–8 %, term 1–120 M, ENV-konfigurierbar), Festgeld-Term-Pflicht, Tagesgeld-Term-Verbot, Promo-Konsistenz, Min/Max-Deposit-Ordering, Country/DGS-Existenz.
+- **`duplicate_detection.py`** — `normalize_name()` mit Rechtsform-Stopwords (AG/GmbH/S.A./N.V./PLC …), Jaccard-Bigramm-Similarity, Alias-Lookup, Fuzzy-Match nur bei `≥0.9`, sonst `needs_review` (nie automatisch neue Bank anlegen).
+- **`rate_change_service.py`** — atomarer `update_offer_rate()`: no-op bei unverändertem Zins, sonst History-Close + neuer Entry + Offer-Update mit `partial`-Flag.
+- **`import_pipeline.py`** — Normalizer (CSV/JSON) → Validator → `build_diff()` (`create·update·unchanged·needs_review·invalid` + Feld-Diff `rate_changed·minimum_changed·maximum_changed·promo_changed·term_changed·conditions_changed` inkl. `delta_pp`) → `apply_diff()` mit Provenance-Setzung und History-Insert. Max 5 000 Records/Run.
+
+### Neue API-Endpunkte
+- `GET /api/public/savings-offers/{id}/rate-history` — chronologische History; `source_url` bei Demo-Einträgen ausgeblendet.
+- `GET /api/public/data-sources` — nur `is_public_source_url=true` durchgereicht.
+- `GET /api/public/savings-offers` liefert zusätzlich pro Item: `freshness: {label, verified_at, valid_until, fresh_max_days, stale_max_days}` und `source_id`.
+- **Admin-only** (`require_admin`):
+  - `POST /api/admin/imports/savings-offers/dry-run` — Diff-Preview ohne DB-Änderungen.
+  - `POST /api/admin/imports/savings-offers/apply` — atomarer Apply + Audit.
+  - `GET /api/admin/imports/runs` — Audit-Log-Liste.
+
+### Security
+- Public API strikt read-only.
+- Import-Endpunkte hinter `require_admin`.
+- Kein Server-seitiger HTTP-Fetch beliebiger URLs (SSRF-Schutz durch Nicht-Implementierung).
+- Import-Größe hart begrenzt (`MAX_RECORDS=5000`).
+- Payload-Validation via Pydantic (`extra="allow"` in `ImportRecord`, Business-Validation im Engine).
+
+### Demo→Real-Schutz
+- `is_demo=False` wird ausschließlich vom `apply_diff()` gesetzt und verlangt zwingend `source_id + verification_method + verified_at`.
+- `is_demo=False`-Legacy-Offers (bunq/postbank/ing/knab/bbva) bleiben unberührt.
+- Demo-Historie erscheint mit `is_demo=true` in der Rate-History-API und `source_url` wird ausgeblendet.
+
+### Tests · 63/63 grün
+- `test_savings_calculator.py` (8) · `test_savings_platform.py` (8) · `test_savings_platform_filters.py` (18) — Phase-1/2-Regression **weiter grün**.
+- `test_data_platform.py` (29): Freshness (6) · Validation (7) · Duplicate-Detection (3) · Rate-Change-Service (2) · Import-Pipeline (5) · Public API rate-history/data-sources/freshness (3) · Phase-1/2-Regression-Guard (1) · Legacy-Kompat (1) · Rate-Change-Diff (1) · needs_review (1).
+
+### Rate-Change-Beispiel-Diff (aus Test)
+```json
+{"action":"update","offer_id":"...","changes":[
+  {"field":"interest_rate","type":"rate_changed","old":3.2,"new":3.4,"delta_pp":0.2}
+]}
+```
+
+### Bekannte Einschränkungen
+- Kein automatisches Web-Scraping (per Vorgabe).
+- OfferLink-Datenmodell fertig, aber CRUD-Endpoints noch nicht exponiert → CTA-„Zum Angebot" folgt in Phase 4.
+- Frontend zeigt `freshness.label` noch nicht sichtbar an; Datenbasis ist da, UI-Integration ist Phase-4-Aufgabe.
+- Bank-Logos weiterhin leer bei Demo-Banken (bewusst kein Erfinden).
+
+### Empfehlung Phase 4
+1. Frontend-Data-Quality-UI (verified_at, Quelle, Stale-Badge) unter Verwendung von `freshness.label`.
+2. `OfferLink`-CRUD + Admin-UI + „Zum Angebot"-CTA nur bei aktivem Affiliate-Link.
+3. `BankAlias`-Admin-UI zum manuellen Auflösen von `needs_review`-Fällen.
+4. Partner-Feed-Adapter (z. B. Raisin/WeltSparen) über die bestehende Import-Pipeline.
+5. Sparalarm (E-Mail bei Zinssprung in einer per URL gespeicherten Filterkombination).
+
+
+
 ## Session 93 (Preview · Phase 2) · Professionelle Vergleichsengine
 
 ### Kernstücke

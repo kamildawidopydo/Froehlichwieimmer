@@ -4560,6 +4560,16 @@ async def on_startup():
     await db.login_attempts.create_index("identifier")
     await db.banks.create_index("slug", unique=True)
     await db.savings_offers.create_index([("bank_slug", 1), ("product_type", 1)])
+    # Session 93 · Phase 3 — Provenance-, History- und Alias-Indizes.
+    await db.savings_offers.create_index([("bank_slug", 1), ("product_type", 1), ("term_months", 1)])
+    await db.savings_offers.create_index("is_demo")
+    await db.savings_offers.create_index("source_id")
+    await db.interest_rate_history.create_index([("offer_id", 1), ("valid_from", -1)])
+    await db.interest_rate_history.create_index([("offer_id", 1), ("rate_type", 1), ("valid_until", 1)])
+    await db.data_sources.create_index("slug", unique=True)
+    await db.bank_aliases.create_index("normalized")
+    await db.bank_aliases.create_index("canonical_slug")
+    await db.import_runs.create_index([("started_at", -1)])
     await db.news.create_index("slug", unique=True)
     await db.news.create_index([("published_at", -1)])
     # Product-Inquiry-E-Mail-Idempotenz (Session 74.9): atomare Reservierung
@@ -5459,6 +5469,10 @@ app.include_router(_reviews_routes.admin_router)
 # Session 82.103b — Public Savings-Offers + Partner-Banks + Home-Stats.
 from routes import public_reads as _public_reads_routes  # noqa: E402
 app.include_router(_public_reads_routes.router)
+
+# Session 93 · Phase 3 — Admin Import Pipeline
+from routes import admin_imports as _admin_imports_routes  # noqa: E402
+app.include_router(_admin_imports_routes.router)
 
 @app.on_event("startup")
 async def _init_storage_at_startup():
