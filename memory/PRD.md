@@ -61,6 +61,39 @@ Zukünftige Live-Feed-Integrationen fügen Datensätze mit `is_demo: False`, `da
 ### Feature
 Internes Admin-Tool unter `/admin/customer-confirmations`, das aus einem sicheren Formular dynamisch eine "Bestandskunden-Bestätigung" als PDF generiert (WeasyPrint), speichert (Mongo `customer_confirmations`), anzeigt, herunterlädt, druckt und via Resend als PDF-Anhang versendet.
 
+## Session 93 (Preview · Phase 2) · Professionelle Vergleichsengine
+
+### Kernstücke
+- **Calculation Engine** (`/app/backend/lib/savings_calculator.py` + `/app/frontend/src/lib/savingsCalculator.js`): reine Business-Logik. Tagesgeld linear (Simple Annual), Promo→Standard-Gewichtung transparent, Festgeld über Vertragslaufzeit (oder gekürzt bei kürzerem Horizont). Beispiel 4,00 % / 3 M → 2,10 % Standard / 25 000 € / 12 M Horizont: 643,75 € Ertrag (nicht 1 000 €). Keine Steuer.
+- **Server-Side API** (`/api/public/savings-offers`): Filter `product_type · countries · dgs_countries · rate_min/max · term_min/max · amount · new_customers_only · search`. Sort `expected_yield · rate · term · term_desc · min_amount · bank_name`. Pagination `page · limit`. Response `{items, count, total, has_more, has_demo, demo_count, sort}`. `expected_yield` pro Item, wenn `amount` gesetzt.
+- **Facets-Endpoint** (`/api/public/savings-offers/facets`): Country-Counts, DGS-Country-Counts, Produkttyp-Counts, `terms_available` inkl. `null` (Tagesgeld/flexibel — keine 12/24/36-Hardcodes), `interest_frequencies`, `rate_range`, `amount_range`. Frontend-Filter wird dynamisch aus diesem Endpoint gespeist.
+
+### Frontend-Refactor (SavingsComparison.js von 1 029 → ~740 Zeilen)
+- **URL-Query-State**: alle Filter, Sort und Auswahl sind teilbar (`?type=festgeld&countries=DE,AT&amount=25000&sort=expected_yield&compare=id1,id2`). Browser Back/Forward funktioniert.
+- **Country-Explorer** (`components/comparison/CountryExplorer.jsx`): horizontal scrollbare Chip-Row mit Live-Counts. Klick toggelt Länder-Filter — kein Pseudo-Ranking.
+- **Kategorie-Highlights** ersetzen den Top-3-Spotlight: „Hoher erwarteter Ertrag / Hoher Zinssatz / Langfristige Kondition" werden **rechnerisch aus dem aktuell gefilterten Result** abgeleitet.
+- **Vergleichsauswahl** (`components/comparison/ComparisonBar.jsx` + `ComparisonModal.jsx`): max. 4 Angebote, sticky Bar erscheint ab 2 Auswahlen. Modal zeigt Bank · Land · Zinssatz · Aktionsdauer · Folgezins · erwarteter Ertrag · min/max · Laufzeit · Zinsgutschrift · Einlagensicherung + Land · Neukunden. Unterschiede werden farblich markiert, keine subjektiven „Sieger".
+- **Dynamische Filter**: Slider-Bounds kommen aus Facets. Country-/DGS-Checkboxen mit Counts. Betrag-Presets 5/10/25/50/100 T €. Neukunden-Toggle. Alles kombinierbar; aktive Filter als Chips oberhalb der Ergebnisse mit Einzel-Entfernen.
+- **Sort-Dropdown**: 6 Optionen inkl. „Erwarteter Ertrag" (default).
+- **Karten-Aufwertung**: Expected-Yield-Badge (`≈ 2 475 € in 36 M`) + Compare-Toggle (`data-testid="compare-toggle-*"`).
+- **Performance**: serverseitige Filter/Sort/Pagination (`limit=100` pro Seite), Debouncing (Suche 350 ms · Betrag 400 ms), Facets werden nur bei Produkttyp-Wechsel neu geladen.
+
+### Regression-Tests (34 Tests grün)
+- `test_savings_calculator.py` — 8 Tests: Simple-Annual · Promo→Standard · Promo=Horizon-Edge · Festgeld-Default · Horizon > Term · 0-Amount-Guard · None-Rate-Guard · flexible term_months (z. B. 9 M).
+- `test_savings_platform_filters.py` — 18 Tests: Facets · Produkttyp · Country · DGS · Amount-min/max · Rate-Range · Neukunden · Kombination · Sort (Rate/Bank/Yield) · Pagination · Expected-Yield vorhanden ⇄ null · Phase-1-Regression.
+- `test_savings_platform.py` — 8 Tests: unverändert grün (Country/DGS-Count, Bank-Join, no invented rating, no verified_at on demo).
+
+### Explizit nicht enthalten
+- Kein Admin-CRUD (folgt später).
+- Keine echten Live-Zinsen (Demo-Kennzeichnung bleibt aktiv, Demo-Banner sichtbar).
+- Keine Fake-„Zum Angebot"-CTAs — der primäre Button wird erst mit `affiliate_url` freigeschaltet.
+
+### Datei-Referenzen
+- Backend: `lib/savings_calculator.py`, `routes/public_reads.py`, `tests/test_savings_calculator.py`, `tests/test_savings_platform_filters.py`.
+- Frontend: `lib/savingsCalculator.js`, `pages/SavingsComparison.js`, `components/comparison/{CountryExplorer,ComparisonBar,ComparisonModal}.jsx`, `lib/countryFlags.js` (ISO-2-Lookup ergänzt).
+
+
+
 ### Neuer Router `/app/backend/routes/customer_confirmations.py` (7 Endpoints)
 | Endpoint | Zweck | Guard |
 |---|---|---|

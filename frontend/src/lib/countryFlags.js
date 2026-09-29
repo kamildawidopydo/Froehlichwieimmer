@@ -87,6 +87,14 @@ export function getCountryIso(country) {
 export function getCountryLabelDe(country, { uppercase = false } = {}) {
   if (!country) return '';
   const key = String(country).trim();
+  // ISO-2 direkt via englischen Namen auflösen
+  if (/^[a-zA-Z]{2}$/.test(key)) {
+    const en = Object.entries(COUNTRY_ISO).find(([, iso]) => iso === key.toUpperCase())?.[0];
+    if (en && COUNTRY_DE[en]) {
+      const text = COUNTRY_DE[en];
+      return uppercase ? text.toUpperCase() : text;
+    }
+  }
   const text = COUNTRY_DE[key] || key;
   return uppercase ? text.toUpperCase() : text;
 }
