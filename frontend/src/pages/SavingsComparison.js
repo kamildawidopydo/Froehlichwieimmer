@@ -947,7 +947,7 @@ const SavingsComparison = () => {
                       />
                       Vergleichen
                     </button>
-                    {/* Expected yield badge */}
+                    {/* Expected yield badge — nur wenn Berechnung vollständig */}
                     {offer.expected_yield?.gross_return_eur != null && (
                       <div
                         data-testid={`expected-yield-${offer.id}`}
@@ -955,6 +955,15 @@ const SavingsComparison = () => {
                       >
                         ≈ {formatEur(offer.expected_yield.gross_return_eur)} in{' '}
                         {offer.expected_yield.horizon_months} M
+                      </div>
+                    )}
+                    {offer.expected_yield?.calculation_complete === false && (
+                      <div
+                        data-testid={`expected-yield-incomplete-${offer.id}`}
+                        className="absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 border border-amber-500/60 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-800"
+                        title="Der Zinssatz nach Ablauf der Zinsgarantie ist nicht bekannt."
+                      >
+                        Ertrag nicht vollständig
                       </div>
                     )}
                     <ComparisonOfferCard

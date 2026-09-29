@@ -1,0 +1,101 @@
+{
+  "consorsbank_plv": {
+    "source_url": "https://www.consorsbank.de/content/dam/de-cb/b2c/content/pdf/transversal/agb/CB.80.089_403-OL_PLV-Depot-Ver.K-TG.K-Girokonto-NK.pdf",
+    "plv_stand": "07/2026 (v9. Oktober 2025)",
+    "einlagensicherung_w\u00f6rtlich": "Die Bank ist dem Einlagensicherungsfonds des Bundesverbandes deutscher Banken e. V. angeschlossen (freiwillig, \u00a7 20 AGB)",
+    "statutory_dgs_im_plv": null,
+    "bank_rechtsform": "BNP Paribas S.A. Niederlassung Deutschland (Zweigniederlassung franz\u00f6sischer Aktiengesellschaft)",
+    "aufsicht": "EZB + BaFin (+ ACPR, AMF, Banque de France)",
+    "tagesgeld_zinssatz_im_plv": null,
+    "aktionszins_im_plv": null,
+    "folgezins_im_plv": null,
+    "verweis": "Zinss\u00e4tze variabel; nachlesen unter www.consorsbank.de oder telefonisch"
+  },
+  "fixture_replace": {
+    "status": 200,
+    "body": {
+      "ok": true,
+      "counts": {
+        "create": 1,
+        "update": 0,
+        "unchanged": 0,
+        "needs_review": 0,
+        "invalid": 0
+      },
+      "applied": {
+        "created": 1,
+        "updated": 0,
+        "unchanged": 0,
+        "skipped": 0
+      },
+      "deactivated_demo_id": "6abbae489903e96c52b85346"
+    }
+  },
+  "fixture_assertions": {
+    "A_neq_B": true,
+    "A_still_demo_true": true,
+    "A_inactive": true,
+    "B_is_demo_false": true,
+    "B_has_source_id": true,
+    "B_verified_at": true,
+    "B_verification_method": true,
+    "B_source_retrieved_at": true,
+    "B_data_status_verified_eligible": true,
+    "B_history_count_is_1": true,
+    "A_demo_history_preserved": true,
+    "public_only_B_visible_no_duplicate": true,
+    "audit_deactivation_recorded": true
+  },
+  "rollback": {
+    "real_removed": true,
+    "demo_restored_active": true
+  },
+  "cleanup_residues": {
+    "offers": 0,
+    "banks": 0,
+    "sources": 0
+  },
+  "dkb_dry_run_v2": {
+    "dry_run": true,
+    "records_received": 1,
+    "counts": {
+      "create": 1,
+      "update": 0,
+      "unchanged": 0,
+      "needs_review": 0,
+      "invalid": 0
+    },
+    "diffs": [
+      {
+        "action": "create",
+        "record": {
+          "bank_slug": "dkb",
+          "product_type": "tagesgeld",
+          "product_name": "DKB Tagesgeldkonto",
+          "interest_rate": 1.0,
+          "interest_rate_type": "variable",
+          "term_months": null,
+          "min_amount": null,
+          "max_amount": null,
+          "currency": "EUR",
+          "interest_credit_frequency": "quarterly",
+          "new_customers_only": false,
+          "country": "DE",
+          "deposit_guarantee_country": "DE",
+          "deposit_guarantee_scheme_code": "DE_EDB",
+          "conditions": {
+            "no_min_amount": true,
+            "no_max_amount": true,
+            "source_note": "PLV: keine Mindest-/H\u00f6chstbetr\u00e4ge"
+          },
+          "source_url": "https://dok.dkb.de/pdf/plv_pk_sparprodukte.pdf",
+          "source_retrieved_at": "2026-09-29T12:25:44.215149+00:00",
+          "verified_at": "2026-09-29T12:25:44.215149+00:00",
+          "verification_method": "web_crawl_official_plv_pdf"
+        },
+        "change_hash": "b08a818ebcc3a1211bfeecb27699ac92e14cf9c821bf9afc812b13b7f1d58339",
+        "warnings": []
+      }
+    ]
+  }
+}

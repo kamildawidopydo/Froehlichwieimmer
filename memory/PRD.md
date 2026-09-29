@@ -9,7 +9,36 @@ Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. 
 
 
 
-## Session 93 (Preview · Phase 6B · Schritt 1) · Publish-Status, Calc-Guard, Demo-Replace-Fix — VERIFIED
+## Session 93 (Preview · Phase 6B · Schritt 2) · Frontend + Live-Fixture + Consorsbank-PLV — VERIFIED
+
+**Fokus:** Frontend an publish_status/calculation_complete/no_min/no_max angebunden. Live-Fixture-Demo-Replace 13/13 Assertions grün. Consorsbank-PLV geladen und ausgewertet. KEIN Apply, KEIN DKB-Publish, KEINE Produktionsänderung.
+
+### Frontend-Änderungen
+- **`OfferDetailDrawer.jsx`**: `publish_status`-Hinweisblock (nur bei nicht-complete + nicht-demo). Yield-Bereich: bei `calculation_complete=false` → „nicht vollständig" statt Betrag, plus Partial-Ertrag-Anzeige + Tooltip „Der Zinssatz nach Ablauf der Zinsgarantie ist nicht bekannt". Min/Max unterscheidet `no_min_amount`/`no_max_amount` (Marker in `conditions`) von `null` (Keine Angabe).
+- **`SavingsComparison.js`**: OfferCard-Badge: bei `calculation_complete=false` amber „Ertrag nicht vollständig" statt Yield-Betrag. Sortierung bleibt Backend-getrieben.
+- Frontend kompiliert clean (1 externe mediapipe-Warnung, keine neuen Hook-Warnings).
+
+### Live-Fixture Demo-Replace (13/13 Assertions grün)
+Vollständiger Preview-DB-Zyklus mit Temp-Fixture-Bank `__p6b_fx_<hex>`:
+`A_neq_B ✓ · A_still_demo_true ✓ · A_inactive ✓ · B_is_demo_false ✓ · B_has_source_id ✓ · B_verified_at ✓ · B_verification_method ✓ · B_source_retrieved_at ✓ · B_data_status_verified_eligible ✓ · B_history_count_is_1 ✓ · A_demo_history_preserved ✓ · public_only_B_visible_no_duplicate ✓ · audit_deactivation_recorded ✓`
+Rollback: `real_removed=true, demo_restored_active=true`. Cleanup: 0 Rest-Offers, 0 Rest-Banks, 0 Rest-Sources.
+
+### DKB Dry-Run V2
+`action=create` (nicht Update auf deaktiviertes Demo — Bug-Fix aus Schritt 1 wirkt). Vollständiger Datensatz mit `conditions.no_min_amount=true, no_max_amount=true`, DGS `DE_EDB`, alle 4 Provenance-Felder gesetzt. Warnings: keine. Erwarteter `data_status=verified`, `publish_status=complete` nach Apply.
+
+### Consorsbank PLV (CB.80.089_403, Stand 07/2026)
+- **Einlagensicherung wörtlich (S. 12):** „Die Bank ist dem Einlagensicherungsfonds des Bundesverbandes deutscher Banken e. V. angeschlossen" — nur **freiwilliger BdB-ESF**. Statutory-DGS wird im PLV **nicht wörtlich benannt**. Bank-Rechtsform: „BNP Paribas S.A. Niederlassung Deutschland (Zweigniederlassung französischer Aktiengesellschaft)". Aufsicht: EZB + BaFin + ACPR/AMF/Banque de France.
+- **Tagesgeld-Zinssatz/Aktion/Folgezins im PLV: nicht enthalten** — PLV verweist auf „www.consorsbank.de nachlesen".
+- Konsequenz: `deposit_guarantee_scheme_code=null`, `standard_rate_after_promo=null` bleiben. Statt Vermutung → `publish_status=incomplete` mit reasons `[missing_dgs, missing_follow_on_rate]`.
+
+### Testresultate
+- **Savings-Regression:** 160/160 grün (Phase 1–6B, incl. neue calc-guard + demo-replace-fixture).
+- **Gesamt-Testlauf:** 388/457 pass — die 69 „Fehler" stammen aus akkumulierten Rate-Limit-429 nach mehrfachen Login-Tests in `test_reviews.py`, `test_assistant_handoff.py`, `test_customer_confirmations.py` — Test-Infrastruktur-Schuld (nicht durch Phase 6B verursacht; separat zu adressieren).
+
+### Empfehlung für Schritt 3
+1. DKB-Apply über `/api/admin/savings/demo-replace` (Demo-ID des DKB-Tagesgeld = `6abb7515f1dcd0c6d8a8d2d6`) mit dem V2-Record.
+2. Danach Verifikation: `data_status=verified` filter zeigt DKB, Public Comparison, OfferDetailDrawer Provenance-Anzeige, `publish_status=complete`, Berechnung 10 000 € / 12 M = 100 €, Demo-ID inaktiv, kein Duplikat, Audit + RateHistory sauber.
+3. Consorsbank bleibt **Review-Candidate** — Statutory-DGS + Folgezins müssten aus einer weiteren offiziellen Quelle nachgeliefert werden (BaFin-Institutsregister für FGDR/EdB-Zuordnung; Consorsbank-Konditionsübersicht mit Folgezins-Zusicherung).
 
 **Fokus:** Backend-only. Kein Apply, kein DKB-Publish, keine Produktionsdaten verändert.
 

@@ -171,21 +171,54 @@ export default function OfferDetailDrawer({ offer, isOpen, onClose }) {
                 <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted">
                   Erwarteter Ertrag
                 </p>
-                <p className="rate-figure mt-1 text-3xl text-bank-text" data-numeric>
+                <p className="rate-figure mt-1 text-3xl text-bank-text" data-numeric data-testid="drawer-expected-yield">
                   {yieldForAmount?.gross_return_eur != null
                     ? formatEur(yieldForAmount.gross_return_eur)
+                    : yieldForAmount?.calculation_complete === false
+                    ? 'nicht vollständig'
                     : '—'}
                 </p>
-                <p className="mt-1 text-[11.5px] text-bank-text-muted">
-                  {yieldForAmount?.horizon_months
-                    ? `bei 25.000 € · ${yieldForAmount.horizon_months} M`
-                    : ''}
-                </p>
+                {yieldForAmount?.calculation_complete === false ? (
+                  <p className="mt-1 text-[11.5px] text-amber-700" data-testid="drawer-incomplete-hint">
+                    Vollständiger Ertrag nicht berechenbar
+                    {yieldForAmount?.partial_gross_return_eur != null && offer.promo_duration_months
+                      ? ` · Für ${offer.promo_duration_months} M berechenbar: ${formatEur(yieldForAmount.partial_gross_return_eur)}`
+                      : ''}
+                    <br />
+                    <span className="text-bank-text-muted">Der Zinssatz nach Ablauf der Zinsgarantie ist nicht bekannt.</span>
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[11.5px] text-bank-text-muted">
+                    {yieldForAmount?.horizon_months
+                      ? `bei 25.000 € · ${yieldForAmount.horizon_months} M`
+                      : ''}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto px-6 py-6 text-[13.5px] text-bank-text">
+              {/* Phase 6B · publish_status Hinweis (nur bei nicht-complete + nicht-demo) */}
+              {!offer.is_demo && offer.publish_status && offer.publish_status !== 'complete' && (
+                <div
+                  data-testid={`publish-status-${offer.publish_status}`}
+                  className={`mb-4 border px-3 py-2 text-[12px] ${
+                    offer.publish_status === 'needs_review'
+                      ? 'border-amber-500/60 bg-amber-500/10 text-amber-800'
+                      : 'border-bank-border bg-bank-bg text-bank-text-muted'
+                  }`}
+                >
+                  {offer.publish_status === 'needs_review'
+                    ? 'Hinweis: Diese Kondition befindet sich in redaktioneller Prüfung.'
+                    : 'Hinweis: Einzelne Konditionsangaben sind noch unvollständig.'}
+                  {Array.isArray(offer.publish_status_reasons) && offer.publish_status_reasons.length > 0 && (
+                    <span className="ml-1 font-mono text-[10.5px] uppercase tracking-[0.14em] opacity-70">
+                      · {offer.publish_status_reasons.join(' · ')}
+                    </span>
+                  )}
+                </div>
+              )}
               <section className="mb-6" aria-labelledby="sec-conditions">
                 <h3 id="sec-conditions" className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted">
                   Anlagebedingungen
@@ -193,11 +226,23 @@ export default function OfferDetailDrawer({ offer, isOpen, onClose }) {
                 <dl className="grid grid-cols-1 gap-y-2 sm:grid-cols-2">
                   <div className="flex justify-between border-b border-bank-border py-1.5">
                     <dt className="text-bank-text-muted">Mindestanlage</dt>
-                    <dd>{offer.min_amount != null ? `${offer.min_amount.toLocaleString('de-DE')} €` : '—'}</dd>
+                    <dd data-testid="offer-min-amount">
+                      {offer.min_amount != null
+                        ? `${offer.min_amount.toLocaleString('de-DE')} €`
+                        : offer.no_min_amount
+                        ? 'Keine Mindestanlage'
+                        : 'Keine Angabe'}
+                    </dd>
                   </div>
                   <div className="flex justify-between border-b border-bank-border py-1.5 sm:border-l sm:pl-3">
                     <dt className="text-bank-text-muted">Maximalanlage</dt>
-                    <dd>{offer.max_amount != null ? `${offer.max_amount.toLocaleString('de-DE')} €` : '—'}</dd>
+                    <dd data-testid="offer-max-amount">
+                      {offer.max_amount != null
+                        ? `${offer.max_amount.toLocaleString('de-DE')} €`
+                        : offer.no_max_amount
+                        ? 'Keine Höchstgrenze'
+                        : 'Keine Angabe'}
+                    </dd>
                   </div>
                   <div className="flex justify-between border-b border-bank-border py-1.5">
                     <dt className="text-bank-text-muted">Zinsgutschrift</dt>
