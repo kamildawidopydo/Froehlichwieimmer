@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import PageMeta from '@/components/PageMeta';
 import DisplayCurrencyToggle from '@/components/DisplayCurrencyToggle';
@@ -16,6 +16,7 @@ import AnlegerInteressant from '@/components/news-markte/AnlegerInteressant';
 import UnsereEinschaetzung from '@/components/news-markte/UnsereEinschaetzung';
 import Beobachtungslisten from '@/components/news-markte/Beobachtungslisten';
 import PhilosophieCTA from '@/components/news-markte/PhilosophieCTA';
+import { dedupeArticleImages } from '@/lib/newsImageDedup';
 import {
   useNewsFeed, useMarketInsights, useEditorial,
   useAnlagetrends, useInvestmentRadar, useMarketVoices,
@@ -46,6 +47,16 @@ const NewsMarkte = () => {
   const weitere = feed.data?.weitere ?? [];
   const anleger = feed.data?.anleger ?? [];
 
+  // Session 94 · Client-seitige Bild-Deduplikation.
+  // Reihenfolge = visuelle Reihenfolge auf der Page:
+  //   1) Hero (top) · 2) News im Überblick · 3) Fonds/ETF · 4) Weitere · 5) Anleger
+  // Duplikate erhalten image_url=null → Sub-Komponente rendert neutralen
+  // Kategorie-Fallback (SafeNewsImage), keine anderen Änderungen.
+  const [topDedup, overviewDedup, fundsEtfDedup, weitereDedup, anlegerDedup] = useMemo(
+    () => dedupeArticleImages([top, overview, fundsEtf.data, weitere, anleger]),
+    [top, overview, fundsEtf.data, weitere, anleger],
+  );
+
   return (
     <div className="bg-white" data-testid="news-markte-page">
       <PageMeta
@@ -70,7 +81,7 @@ const NewsMarkte = () => {
               das langfristige Vermögen unserer Anleger.
             </p>
           </div>
-          <HeroTopNews articles={top} loading={feed.loading} />
+          <HeroTopNews articles={topDedup} loading={feed.loading} />
 
           {/* Sub-Nav: Marktüberblick · Aktien · Watchlist · Nachrichten */}
           <nav className="mt-10 flex flex-wrap gap-2 border-t border-bank-border pt-6" data-testid="news-subnav" aria-label="News-Bereichsnavigation">
@@ -113,14 +124,14 @@ const NewsMarkte = () => {
 
         {/* 2. News im Überblick + Kategorien */}
         <NewsUeberblick
-          articles={overview}
+          articles={overviewDedup}
           loading={feed.loading}
           activeCategory={category}
           onCategoryChange={setCategory}
         />
 
         {/* 3. Fonds & ETF Top-News */}
-        <FondsEtfTopNews articles={fundsEtf.data} loading={fundsEtf.loading} />
+        <FondsEtfTopNews articles={fundsEtfDedup} loading={fundsEtf.loading} />
 
         {/* 4. Investment-Radar */}
         <InvestmentRadar items={radar.data} loading={radar.loading} />
@@ -129,7 +140,7 @@ const NewsMarkte = () => {
         <Anlagetrends trends={trends.data} loading={trends.loading} />
 
         {/* 6. Weitere Beiträge */}
-        <WeitereBeitraege articles={weitere} loading={feed.loading} />
+        <WeitereBeitraege articles={weitereDedup} loading={feed.loading} />
 
         {/* 7. Stimmen zum Markt + Unsere Einordnung */}
         <StimmenZumMarkt
@@ -139,7 +150,7 @@ const NewsMarkte = () => {
         />
 
         {/* 8. Für unsere Anleger interessant */}
-        <AnlegerInteressant articles={anleger} loading={feed.loading} />
+        <AnlegerInteressant articles={anlegerDedup} loading={feed.loading} />
 
         {/* 9. Unsere Einschätzung (redaktionelle Vollansicht) */}
         <UnsereEinschaetzung posts={editorial.data} loading={editorial.loading} />
