@@ -296,6 +296,7 @@ const SavingsComparison = () => {
   const { user } = useAuth();
 
   const [offers, setOffers] = useState([]);
+  const [hasDemoOffers, setHasDemoOffers] = useState(false);
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState([]);
   const [selectedOffer, setSelectedOffer] = useState(null);
@@ -341,6 +342,7 @@ const SavingsComparison = () => {
       const _api = (await import('@/lib/apiBase')).getApiBase();
       const { data: res } = await _axios.get(`${_api}/api/public/savings-offers`, { withCredentials: true });
       const data = res?.items || [];
+      setHasDemoOffers(Boolean(res?.has_demo));
       const mapped = data
         .map((o) => ({
           ...o,
@@ -664,6 +666,24 @@ const SavingsComparison = () => {
       <div className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 lg:flex lg:items-start lg:gap-12 lg:px-12 lg:py-14">
         {/* Main column */}
         <div className="min-w-0 flex-1">
+          {/* Session 93 — Demo-Daten-Hinweis, sichtbar wenn mindestens ein
+              Angebot als is_demo markiert ist. */}
+          {hasDemoOffers && (
+            <div
+              data-testid="savings-demo-banner"
+              className="mb-8 border-l-2 border-bank-gold bg-bank-gold/10 px-5 py-4 text-[13px] leading-relaxed text-bank-text"
+            >
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-gold">
+                Hinweis · Demo-Daten
+              </p>
+              <p className="mt-2">
+                Dieser Vergleich enthält aktuell <strong>Demo-Konditionen</strong> ausgewählter europäischer
+                Banken zu Test- und Vorschauzwecken. Die Zinssätze sind <strong>keine Live-Marktdaten</strong>
+                {' '}und stellen keine Anlageberatung dar. Sobald ein autorisierter Datenfeed angebunden ist,
+                werden die Werte automatisch durch verifizierte Live-Zinsen ersetzt.
+              </p>
+            </div>
+          )}
           {/* Session 80.37 — Market context strip: EZB + Top-Rates aus Live-API */}
           <MarketContextStrip />
           {/* Spotlight — editorial premium strip */}

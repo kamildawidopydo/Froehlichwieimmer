@@ -8,6 +8,54 @@
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
 
 
+
+## Session 93 (Preview · Phase 1) · Savings Comparison Platform — Europa-Erweiterung
+
+### Ziel
+Vergleichs-Plattform von 8 Legacy-Angeboten auf eine skalierbare Struktur (500+ Banken, tausende Angebote) heben. Additiv, migrationssicher, bestehende Produktion nicht überschrieben.
+
+### Neues Datenmodell (`/app/backend/models/savings_platform.py`)
+- `Country` (ISO-2, name_de) · `DepositGuaranteeScheme` · `Bank` · `SavingsProduct` (impliziter `product_key`) · `SavingsOffer` (Zinsperiode) · `Rating` (optional, im Demo leer) · `InterestRateHistory` (nur Struktur, noch nicht befüllt).
+- CRUD-Ready-Felder auf allen Entitäten: `status`, `is_active`, `is_demo`, `data_source`, `verified_at`, `valid_from`, `valid_until`, `created_at`, `updated_at`.
+
+### Seed-System (`/app/backend/seeds/`)
+- Dry-Run/Apply-CLI mit `--reset-demo` und Produktionsschutz (überschreibt nie `is_demo=False`).
+- 15 Länder: DE, AT, NL, BE, FR, ES, IT, PT, IE, LU, EE, LV, LT, FI, SE.
+- 15 EU-Einlagensicherungssysteme (nach DGSD-Mindestbetrag 100 000 EUR).
+- 74 Banken (69 neu + 5 Bestand angereichert). Verteilung: DE 12 · FR 10 · ES 10 · AT 8 · NL 8 · IT 4 · SE 3 · IE 3 · PT 3 · BE 3 · EE 2 · LV 2 · LT 2 · LU 2 · FI 2.
+- 297 Savings-Angebote (289 neu Demo + 8 Legacy erhalten). Pro Bank: 1× Tagesgeld (Promo→Standard) + 3× Festgeld (12/24/36 M — Modell unterstützt beliebige Laufzeiten).
+- **Alle Demo-Datensätze zwingend** `is_demo: True`, `data_source: "demo_seed"`, `verified_at: None`. Ratings bewusst leer (nichts erfunden).
+
+### Public-API (backwards-kompatibel)
+- `GET /api/public/savings-offers` → jetzt `count`, `demo_count`, `has_demo` + neue Felder (`product_key`, `country_code`, `affiliate_url`, `conditions`, `online_account_opening`, `available_for_de_customers`, `existing_customers_offer`, `status`, `is_demo`, `data_source`, `verified_at`, `valid_from`, `valid_until`).
+- `GET /api/public/partner-banks` → tolerant (Legacy-Docs ohne `is_active` bleiben sichtbar), sortiert nach Land+Name, 74 Banken.
+- Neu: `GET /api/public/countries` (15) · `GET /api/public/deposit-guarantee-schemes` (15).
+
+### Frontend
+- Sichtbares Demo-Banner (`data-testid="savings-demo-banner"`) in `SavingsComparison.js`, sobald `has_demo=true`. Wortlaut markiert Zinsen klar als **keine Live-Marktdaten**.
+- Bestehende Filter/Slider (Zins, Laufzeit, Betrag, Land, Frequenz) unverändert, füllen sich automatisch aus dem erweiterten Datensatz.
+
+### Regression-Tests (`/app/backend/tests/test_savings_platform.py`)
+8 Tests grün: 15 Länder · 15 DGS · Bank-Join · Tagesgeld+Festgeld · alle neuen Felder · **Guard: keine erfundenen Ratings/verified_at bei Demo-Daten**.
+
+### Migrationssicherheit
+- Nur additive Felder in `banks` und `savings_offers`.
+- Legacy-Angebote (bunq/postbank/ing/knab/bbva) bleiben unangetastet — Seed überspringt Kombis mit vorhandenem Non-Demo-Offer (`skipped_non_demo_exists: 7`).
+- Legacy-Banken werden ausschließlich mit fehlenden Referenzfeldern angereichert (`non_demo_enriched: 5`, keine Overwrites).
+- Indizes: `countries.code (unique)` · `deposit_guarantee_schemes.code (unique)` · `banks.country_code` · `banks.is_demo` · `savings_offers.is_demo` · compound `(bank_slug, product_type, term_months, is_demo)`.
+
+### Datei-Referenzen
+- `/app/backend/models/savings_platform.py`
+- `/app/backend/seeds/seed_banks_savings.py`
+- `/app/backend/seeds/data/{countries,deposit_guarantee_schemes,banks_demo,savings_offers_demo}.py`
+- `/app/backend/routes/public_reads.py` (erweitert)
+- `/app/backend/tests/test_savings_platform.py`
+- `/app/frontend/src/pages/SavingsComparison.js` (Demo-Banner)
+
+### Bestandsschutz-Regel
+Zukünftige Live-Feed-Integrationen fügen Datensätze mit `is_demo: False`, `data_source: "api:<provider>"`, `verified_at: <ts>` ein. Der Seed berührt diese Dokumente nicht.
+
+
 ## Session 82.107 (Preview · VERIFIED) · Bestandskunden-Bestätigung Admin PDF-Generator
 
 ### Feature

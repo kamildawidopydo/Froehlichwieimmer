@@ -19,19 +19,43 @@ async def _coll_exists(n: str) -> bool:
 
 
 def _serialize_bank(b: dict) -> Dict[str, Any]:
+    # Session 93 — erweiterte Bank-Serialisierung (Country/DGS/Rating/Governance).
+    cr = b.get("credit_rating")
+    if isinstance(cr, dict):
+        # nur die drei bekannten Rating-Agenturen exponieren (nichts erfinden).
+        cr_out = {
+            "fitch": cr.get("fitch"),
+            "moodys": cr.get("moodys"),
+            "sp": cr.get("sp"),
+        }
+        # ganz weglassen, wenn alles None
+        if all(v in (None, "") for v in cr_out.values()):
+            cr_out = None
+    else:
+        cr_out = None
     return {
         "id": str(b.get("_id")) if b.get("_id") is not None else None,
         "name": b.get("name"),
+        "legal_name": b.get("legal_name"),
         "slug": b.get("slug"),
         "country": b.get("country"),
+        "country_code": b.get("country_code"),
+        "dgs_code": b.get("dgs_code"),
+        "deposit_guarantee_country_code": b.get("deposit_guarantee_country_code"),
         "logo_url": b.get("logo_url"),
         "website_url": b.get("website_url"),
         "deposit_protection": b.get("deposit_protection"),
         "deposit_protection_amount": b.get("deposit_protection_amount"),
         "founded_year": b.get("founded_year"),
-        "credit_rating": b.get("credit_rating"),
+        "credit_rating": cr_out,
         "regulator_name": b.get("regulator_name"),
+        "available_for_de_customers": bool(b.get("available_for_de_customers", True)),
+        "online_account_opening": bool(b.get("online_account_opening", True)),
+        "status": b.get("status") or ("active" if b.get("is_active", True) else "inactive"),
         "is_active": bool(b.get("is_active", True)),
+        "is_demo": bool(b.get("is_demo", False)),
+        "data_source": b.get("data_source"),
+        "verified_at": _iso(b.get("verified_at")),
     }
 
 
@@ -100,10 +124,14 @@ async def savings_offers(
                 deposit_term = 0
             else:
                 deposit_term = o.get("term_months")
+        # Country-Feld für Frontend: bevorzugt bank.country (Display-Name),
+        # sonst ISO-Code aus dem Offer, sonst None.
+        offer_country_display = o.get("country") or (bank.get("country") if bank else None)
         items.append({
             "id": str(o.get("_id")),
             "bank_id": str(o.get("bank_id")) if o.get("bank_id") is not None else None,
             "bank_slug": o.get("bank_slug"),
+            "product_key": o.get("product_key"),
             "interest_rate": o.get("interest_rate"),
             "interest_rate_type": o.get("interest_rate_type"),
             "promo_rate": o.get("promo_rate"),
@@ -119,18 +147,72 @@ async def savings_offers(
             "min_amount": o.get("min_amount"),
             "max_amount": o.get("max_amount"),
             "currency": o.get("currency", "EUR"),
-            "country": o.get("country") or (bank.get("country") if bank else None),
+            "country": offer_country_display,
+            "country_code": o.get("country") if isinstance(o.get("country"), str) and len(o.get("country") or "") == 2 else (bank.get("country_code") if bank else None),
             "new_customers_only": bool(o.get("new_customers_only", False)),
+            "existing_customers_offer": bool(o.get("existing_customers_offer", True)),
             "welcome_bonus": o.get("welcome_bonus"),
             "notes": o.get("notes"),
+            "conditions": o.get("conditions"),
+            "affiliate_url": o.get("affiliate_url"),
+            "online_account_opening": bool(o.get("online_account_opening", True)),
+            "available_for_de_customers": bool(o.get("available_for_de_customers", True)),
             "interest_frequency": o.get("interest_frequency"),
-            "deposit_protection": o.get("deposit_protection") or o.get("deposit_guarantee_country"),
-            "deposit_protection_amount": o.get("deposit_guarantee_limit") or o.get("deposit_protection_amount"),
-            "deposit_protection_authority": o.get("deposit_protection_authority"),
+            "deposit_protection": o.get("deposit_protection") or o.get("deposit_guarantee_country") or (bank.get("deposit_protection") if bank else None),
+            "deposit_protection_amount": o.get("deposit_guarantee_limit") or o.get("deposit_protection_amount") or (bank.get("deposit_protection_amount") if bank else None),
+            "deposit_protection_authority": o.get("deposit_protection_authority") or (bank.get("regulator_name") if bank else None),
+            "deposit_guarantee_country": o.get("deposit_guarantee_country") or (bank.get("deposit_guarantee_country_code") if bank else None),
+            "deposit_guarantee_limit": o.get("deposit_guarantee_limit"),
             "source_name": o.get("source_name"),
             "source_url": o.get("source_url"),
+            "status": o.get("status") or ("active" if o.get("is_active", True) else "inactive"),
             "is_active": bool(o.get("is_active", True)),
+            "is_demo": bool(o.get("is_demo", False)),
+            "data_source": o.get("data_source"),
+            "verified_at": _iso(o.get("verified_at")),
+            "valid_from": _iso(o.get("valid_from")),
+            "valid_until": _iso(o.get("valid_until")),
             "banks": _serialize_bank(bank) if bank else None,
+        })
+    demo_count = sum(1 for it in items if it.get("is_demo"))
+    return {
+        "items": items,
+        "count": len(items),
+        "demo_count": demo_count,
+        "has_demo": demo_count > 0,
+    }
+
+
+@router.get("/countries")
+async def list_countries() -> Dict[str, Any]:
+    """Liste der unterstützten Länder (Referenz-Collection)."""
+    if not await _coll_exists("countries"):
+        return {"items": [], "count": 0}
+    items = []
+    async for c in _db.countries.find({"is_active": {"$ne": False}}).sort("name_de", 1):
+        items.append({
+            "code": c.get("code"),
+            "name": c.get("name"),
+            "name_de": c.get("name_de"),
+            "region": c.get("region"),
+        })
+    return {"items": items, "count": len(items)}
+
+
+@router.get("/deposit-guarantee-schemes")
+async def list_dgs() -> Dict[str, Any]:
+    """Liste aller registrierten Einlagensicherungs-Systeme."""
+    if not await _coll_exists("deposit_guarantee_schemes"):
+        return {"items": [], "count": 0}
+    items = []
+    async for d in _db.deposit_guarantee_schemes.find({}).sort("country_code", 1):
+        items.append({
+            "code": d.get("code"),
+            "country_code": d.get("country_code"),
+            "name": d.get("name"),
+            "coverage_limit_eur": d.get("coverage_limit_eur"),
+            "authority": d.get("authority"),
+            "source_url": d.get("source_url"),
         })
     return {"items": items, "count": len(items)}
 
@@ -139,8 +221,10 @@ async def savings_offers(
 async def partner_banks() -> Dict[str, Any]:
     if not await _coll_exists("banks"):
         return {"items": [], "count": 0}
+    # Tolerant: nur explizit is_active=False ausschließen (Legacy-Docs ohne Feld
+    # sollen weiterhin sichtbar sein).
     items = []
-    async for b in _db.banks.find({"is_active": True}):
+    async for b in _db.banks.find({"is_active": {"$ne": False}}).sort([("country_code", 1), ("name", 1)]):
         items.append(_serialize_bank(b))
     return {"items": items, "count": len(items)}
 
