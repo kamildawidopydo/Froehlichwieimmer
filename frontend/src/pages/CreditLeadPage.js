@@ -147,10 +147,14 @@ const CreditLeadPage = () => {
       const termOk =
         (!offer.min_term_months || term >= Number(offer.min_term_months)) &&
         (!offer.max_term_months || term <= Number(offer.max_term_months));
+      // Session 94 fix · Backend liefert `purposes` (Array). Der alte Singular
+      // `offer.purpose` war immer `undefined` → alle Items wurden clientseitig
+      // ausgefiltert obwohl der Server bereits korrekt gematcht hatte.
+      const offerPurposes = Array.isArray(offer.purposes) ? offer.purposes : [];
       const purposeOk =
         !filters.purpose ||
-        offer.purpose === filters.purpose ||
-        offer.purpose === 'Freie Verwendung';
+        offerPurposes.includes(filters.purpose) ||
+        offerPurposes.includes('Freie Verwendung');
       return amountOk && termOk && purposeOk;
     });
 
