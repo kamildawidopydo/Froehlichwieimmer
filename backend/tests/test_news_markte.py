@@ -67,9 +67,15 @@ class TestFeed:
         assert len(d["top"]) == 3, f"top={len(d['top'])}"
         assert 1 <= len(d["overview"]) <= 15
         assert len(d["weitere"]) <= 9 and len(d["weitere"]) >= 1
-        assert 1 <= len(d["anleger"]) <= 6
-        assert len(d["categories"]) == 6
-        assert {c["slug"] for c in d["categories"]} == {
+        # Session 94 — Feed-globale Cross-Section-Dedup: `anleger` enthält
+        # nur noch highlight_investor-Artikel, die NICHT bereits in top/
+        # overview/weitere sitzen. Bei kleinem Corpus kann diese Menge legitim
+        # leer sein — keine Fake-Auffüllung.
+        assert 0 <= len(d["anleger"]) <= 6
+        # Session 94 — categories-Liste wurde inzwischen auf 12 Rubriken erweitert
+        # (`CATEGORY_LABELS`). Historische Erwartung `== 6` gelockert.
+        assert len(d["categories"]) >= 6
+        assert {c["slug"] for c in d["categories"]} >= {
             "maerkte", "aktien", "wirtschaft", "unternehmen", "zinsen", "international"
         }
         art = d["top"][0]

@@ -1058,6 +1058,13 @@ async def news_markte_feed(category: Optional[str] = None, limit: int = 30):
     # sind, ziehen wir die aktuellen synthetisierten Artikel dieser Kategorie
     # aus der Haupt-Kollektion nach — mit identischer 48h-Freshness und
     # `published_at DESC`-Sortierung, kein Nachrücken älterer Artikel.
+    #
+    # Session 94 — Feed-seitige Dedup auf zwei Achsen:
+    #   1. article_id → jede id erscheint nur in EINER Sektion (Priorität:
+    #      top > overview > weitere > anleger).
+    #   2. image_key → dieselbe Unsplash-Photo-ID / Asset-ID darf innerhalb
+    #      des Feed-Payloads nur einmal vergeben werden. Bei Kollision wird
+    #      auf image_url=null gesetzt (keine erfundenen Ersatzbilder).
     cutoff = _current_feed_cutoff()
     q: dict = {"published_at": {"$gte": cutoff}}
     if category and category != "alle":
@@ -1095,24 +1102,86 @@ async def news_markte_feed(category: Optional[str] = None, limit: int = 30):
             d.setdefault("excerpt", d.get("summary", ""))
             d.setdefault("source", (d.get("source_names") or ["Fröhlich Redaktion"])[0])
     all_articles = [_article_to_out(d) for d in all_docs]
-    top = [a for a in all_articles if a["featured"]][:3]
+
+    # ---- Sektionen aufbauen ----
+    top: List[dict] = [a for a in all_articles if a.get("featured")][:3]
     if len(top) < 3:
-        seen = {a["id"] for a in top}
+        seen_top = {a["id"] for a in top}
         for a in all_articles:
-            if a["id"] not in seen:
+            if a["id"] not in seen_top:
                 top.append(a)
                 if len(top) >= 3:
                     break
     top_ids = {a["id"] for a in top}
-    weitere = [a for a in articles if a["id"] not in top_ids][:9]
-    anleger = [a for a in all_articles if a["highlight_investor"]][:6]
+    overview_pool = [a for a in articles if a["id"] not in top_ids][:15]
+    overview_ids = top_ids | {a["id"] for a in overview_pool}
+    weitere_pool = [a for a in articles if a["id"] not in overview_ids][:9]
+    weitere_ids = overview_ids | {a["id"] for a in weitere_pool}
+    anleger_pool = [a for a in all_articles
+                    if a.get("highlight_investor") and a["id"] not in weitere_ids][:6]
+
+    # ---- Feed-globale Image-Key-Deduplikation ----
+    # Ein image_asset/photo-id darf pro Feed-Payload nur einmal vergeben werden.
+    # Reihenfolge folgt der visuellen Rendersequenz auf /news.
+    used_image_keys: set = set()
+    sections_in_render_order = [top, overview_pool, weitere_pool, anleger_pool]
+    for section in sections_in_render_order:
+        for art in section:
+            key = _news_image_key(art.get("image_url"))
+            if key is None:
+                continue
+            if key in used_image_keys:
+                # Kollision → kein Bild anzeigen (Frontend zeigt neutralen
+                # Kategorie-Placeholder). KEIN erfundenes Ersatzbild.
+                art["image_url"] = None
+            else:
+                used_image_keys.add(key)
+
     return {
         "top": top,
-        "overview": articles[:15],
-        "weitere": weitere,
-        "anleger": anleger,
+        "overview": overview_pool,
+        "weitere": weitere_pool,
+        "anleger": anleger_pool,
         "categories": [{"slug": k, "label": v} for k, v in CATEGORY_LABELS.items()],
     }
+
+
+_UNSPLASH_PHOTO_RE = re.compile(r"photo-([0-9a-f]{10,})", re.IGNORECASE)
+
+
+def _news_image_key(url: Optional[str]) -> Optional[str]:
+    """Session 94 — Stabiler Bild-Schlüssel für Feed-Dedup.
+
+    Priorität:
+      1. Unsplash Photo-ID (`photo-<hex>`) — unabhängig von Größenvarianten.
+      2. Proxy-Query mit eingebettetem `?url=` / `?src=` / `?image=`.
+      3. Normalisierte URL (Query/Hash/Trailing-Slash entfernt, lowercase).
+    """
+    if not url or not isinstance(url, str):
+        return None
+    trimmed = url.strip()
+    if not trimmed:
+        return None
+    # Proxy-Query
+    try:
+        from urllib.parse import urlparse, parse_qs
+        parsed = urlparse(trimmed)
+        qs = parse_qs(parsed.query)
+        for k in ("url", "src", "image"):
+            inner = qs.get(k, [None])[0]
+            if inner:
+                rec = _news_image_key(inner)
+                if rec:
+                    return rec
+    except Exception:
+        pass
+    # Unsplash Photo-ID
+    m = _UNSPLASH_PHOTO_RE.search(trimmed)
+    if m:
+        return f"unsplash:{m.group(1).lower()}"
+    # Normalisierter Fallback
+    base = trimmed.split("?")[0].split("#")[0].rstrip("/").lower()
+    return f"url:{base}" if base else None
 
 
 async def news_markte_markets(display_currency: Optional[str] = None):
