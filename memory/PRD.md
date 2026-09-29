@@ -9,6 +9,41 @@ Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. 
 
 
 
+## Session 93 (Preview · Phase 6A.1) · Verified-Semantik repariert — VERIFIED
+
+**Fokus:** `data_status=verified` liefert nur noch Offers mit vollständiger Provenance. Legacy-Real-Records erscheinen als `unverified`. Public UI zeigt keine „Zuletzt geprüft"-Claims mehr ohne verifizierten Nachweis. Real-first Sortierung als Standard.
+
+### Backend
+- **`/app/backend/lib/data_freshness.py`** — neue Public-Helper:
+  - `VERIFIED_REQUIRED_FIELDS = (source_id, verified_at, verification_method, source_retrieved_at)`
+  - `is_fully_verified(offer)` — is_demo=False AND is_active AND status=='active' AND alle 4 Provenance-Felder nicht-leer.
+  - `data_status(offer)` → `verified | unverified | demo`.
+  - `compute_freshness` bleibt kompatibel (weiterhin `unknown` bei fehlendem verified_at); Provenance-Semantik läuft ausschliesslich über `data_status`.
+- **`/app/backend/routes/public_reads.py`**:
+  - Serializer liefert je Offer `data_status`, `verification_method`, `source_retrieved_at`, sowie `freshness.provenance_complete`.
+  - Query-Param `data_status=all|verified|unverified|demo` (strikt). `verified` erfordert `is_fully_verified(o) == True`.
+  - Query-Param `real_first=true` (Default) — Sortierung nach `data_status`-Rang (verified > unverified > demo) mit stabilem ID-Tiebreaker; `real_first=false` = reine Kriteriumsortierung (Kompatibilitätsmodus).
+
+### Frontend
+- **`OfferDetailDrawer.jsx`** — „Zuletzt geprüft am …" wird ausschliesslich gerendert, wenn `offer.data_status === 'verified' && offer.verified_at`. Legacy-Records bekommen den neutralen Hinweis „Für dieses Angebot liegt noch kein vollständiger Quellennachweis (Quelle · Prüfmethode · Prüfzeitpunkt) vor.". FRESHNESS-Label „unverified" nur als UI-Chip, nie als Verifikations-Aussage.
+
+### Regression-Tests
+- **`/app/backend/tests/test_phase6a_verified.py`** (18 neue Tests): jedes einzelne Verified-Kriterium (verified_at, source_id, verification_method, source_retrieved_at, status active, is_active); Demo trotz voller Felder nie verified; blank string → nicht verified; expired Real nie active; Public-API-Filter `verified/unverified/demo/all`; Real-first-Sortierung; Legacy-Offers weder gelöscht noch als demo klassifiziert.
+- **Bestehende Tests** blieben bis auf 3 minimal aufgewertete Sort-Regressionen unverändert; diese wurden auf `real_first=false` umgestellt (semantisch stärker, weil sie jetzt explizit sowohl Real-first- als auch reines Kriterium-Ordering testen).
+
+### Ist-Zustand (Preview)
+- `data_status=verified` → **0 Offers** (Phase-6A-Pilot noch nicht gestartet — korrekt).
+- `data_status=unverified` → **8 Legacy-Real-Offers** (chase/ikano/dhb/vw/ing/knab/bbva·bbva).
+- `data_status=demo` → **289 Demos**.
+- `data_status=all` → 297.
+- Real-first: 8 unverified vor 289 Demos (auch bei sort=rate — verified/unverified rate=4,0 % vor Demo 3,79 %).
+
+### Explizit NICHT gemacht (per User-Anweisung)
+- **Keine ING/Postbank-DGS-Ergänzung** — bleibt `null`, muss über Quelle geprüft werden.
+- **Keine Legacy-Offers gelöscht oder auf Demo umgestellt** — sind weiterhin `is_demo=False`, jetzt korrekt als `unverified` sichtbar.
+- **Kein Real-Data-Import** — Phase 6A wartet weiter auf autorisierte Quellen (siehe `/app/memory/phase-6a-blocked.md`).
+
+
 ## Session 93 (Preview · Phase 5 · FRONTEND) · Admin Data-Operations UI — VERIFIED
 
 **Fokus:** Frontend-Werkzeuge für den kompletten Datenlebenszyklus (Import → Dry-Run → Review → Apply → Audit → Historie → Demo→Real). Konsistent im bestehenden Admin-Look ohne neues Design-System. E2E vom Testing-Agent bestätigt.

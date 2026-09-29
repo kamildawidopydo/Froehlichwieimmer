@@ -16,6 +16,7 @@ const FRESHNESS_LABEL = {
   stale: 'Kondition wird überprüft',
   expired: 'Angebot abgelaufen',
   demo: 'Demo-Konditionen',
+  unverified: 'Quellennachweis noch nicht vollständig',
   unknown: '',
 };
 
@@ -24,6 +25,7 @@ const FRESHNESS_STYLES = {
   stale: 'border-amber-500/50 bg-amber-500/10 text-amber-700',
   expired: 'border-rose-500/50 bg-rose-500/10 text-rose-700',
   demo: 'border-bank-gold/50 bg-bank-gold/10 text-bank-gold',
+  unverified: 'border-bank-border bg-bank-bg text-bank-text-muted',
   unknown: 'border-bank-border bg-bank-bg text-bank-text-muted',
 };
 
@@ -292,14 +294,15 @@ export default function OfferDetailDrawer({ offer, isOpen, onClose }) {
                     Vorschauzwecken. Sobald ein autorisierter Datenfeed angebunden ist, wird der
                     Wert automatisch durch verifizierte Live-Zinsen ersetzt.
                   </p>
-                ) : offer.verified_at ? (
+                ) : offer.data_status === 'verified' && offer.verified_at ? (
                   <p>
                     Zuletzt geprüft am <strong>{fmtDate(offer.verified_at)}</strong>
                     {offer.data_source ? ` · Quelle: ${offer.data_source}` : ''}.
                   </p>
                 ) : (
                   <p className="text-bank-text-muted">
-                    Für dieses Angebot liegt kein bestätigter Prüfzeitpunkt vor.
+                    Für dieses Angebot liegt noch kein vollständiger Quellennachweis
+                    (Quelle · Prüfmethode · Prüfzeitpunkt) vor.
                   </p>
                 )}
               </section>

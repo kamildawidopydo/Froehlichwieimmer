@@ -17,7 +17,7 @@ _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 from lib.savings_calculator import compute_yield  # noqa: E402
-from lib.data_freshness import freshness_summary  # noqa: E402
+from lib.data_freshness import freshness_summary, is_fully_verified, data_status as _data_status  # noqa: E402
 
 _db = AsyncIOMotorClient(os.environ["MONGO_URL"], tz_aware=True)[os.environ["DB_NAME"]]
 router = APIRouter(prefix="/api/public", tags=["public-reads"])
@@ -149,6 +149,11 @@ def _serialize_offer(o: dict, bank: Optional[dict], amount: Optional[float]) -> 
         item["expected_yield"] = None
     item["freshness"] = freshness_summary(o)
     item["source_id"] = o.get("source_id")
+    # Phase 6A.1 — Provenance-Klarstellung. UI darf ausschließlich
+    # data_status=="verified" für "Zuletzt geprüft"-Aussagen nutzen.
+    item["data_status"] = _data_status(o)
+    item["verification_method"] = o.get("verification_method")
+    item["source_retrieved_at"] = _iso(o.get("source_retrieved_at"))
     return item
 
 
@@ -211,28 +216,48 @@ def _amount_matches(o: dict, amount: Optional[float]) -> bool:
     return True
 
 
-def _sort_key(item: Dict[str, Any], sort: str):
+def _data_status_rank(item: Dict[str, Any]) -> int:
+    """Real-first-Sortierpriorität: verified (0) → unverified (1) → demo (2)."""
+    ds = item.get("data_status")
+    if ds == "verified":
+        return 0
+    if ds == "unverified":
+        return 1
+    if ds == "demo":
+        return 2
+    return 3
+
+
+def _sort_key(item: Dict[str, Any], sort: str, real_first: bool = True):
+    """Sortier-Key. Wenn `real_first`, hat data_status Vorrang (verified vor
+    unverified vor demo), sonst reines Kriteriumsort.
+
+    Der stabile Tiebreaker ist die Offer-ID — verhindert nicht-deterministische
+    Pagination bei gleichen Primärwerten (z. B. Demos mit gleichem Zins).
+    """
+    rank = _data_status_rank(item) if real_first else 0
+    tiebreaker = str(item.get("id") or "")
     if sort == "expected_yield":
         v = (item.get("expected_yield") or {}).get("gross_return_eur")
-        return -(v or 0.0)
+        return (rank, -(v or 0.0), tiebreaker)
     if sort == "expected_yield_asc":
         v = (item.get("expected_yield") or {}).get("gross_return_eur")
-        return (v if v is not None else 1e18)
+        return (rank, (v if v is not None else 1e18), tiebreaker)
     if sort == "rate":
-        return -(item.get("interest_rate") or 0.0)
+        return (rank, -(item.get("interest_rate") or 0.0), tiebreaker)
     if sort == "rate_asc":
-        return (item.get("interest_rate") or 0.0)
+        return (rank, (item.get("interest_rate") or 0.0), tiebreaker)
     if sort == "term":
-        return (item.get("term_months") or 0)
+        return (rank, (item.get("term_months") or 0), tiebreaker)
     if sort == "term_desc":
-        return -(item.get("term_months") or 0)
+        return (rank, -(item.get("term_months") or 0), tiebreaker)
     if sort == "min_amount":
-        return (item.get("min_amount") or 0)
+        return (rank, (item.get("min_amount") or 0), tiebreaker)
     if sort == "min_amount_desc":
-        return -(item.get("min_amount") or 0)
+        return (rank, -(item.get("min_amount") or 0), tiebreaker)
     if sort == "bank_name":
-        return ((item.get("banks") or {}).get("name") or "").lower()
-    return -(item.get("interest_rate") or 0.0)
+        return (rank, ((item.get("banks") or {}).get("name") or "").lower(), tiebreaker)
+    return (rank, -(item.get("interest_rate") or 0.0), tiebreaker)
 
 
 # ---------------------------------------------------------------------------
@@ -242,7 +267,7 @@ def _sort_key(item: Dict[str, Any], sort: str):
 async def savings_offers(
     active_only: bool = Query(default=True),
     include_expired: bool = Query(default=False),
-    data_status: str = Query(default="all", description="all|verified|demo"),
+    data_status: str = Query(default="all", description="all|verified|unverified|demo"),
     limit: int = Query(default=500, ge=1, le=2000),
     page: int = Query(default=1, ge=1),
     product_type: Optional[str] = Query(default=None),
@@ -255,6 +280,7 @@ async def savings_offers(
     amount: Optional[float] = Query(default=None, description="Anlagebetrag EUR"),
     new_customers_only: Optional[bool] = Query(default=None),
     sort: str = Query(default="expected_yield", description="expected_yield|rate|term|term_desc|min_amount|bank_name"),
+    real_first: bool = Query(default=True, description="Phase 6A.1 · Real-first Sortierung (verified > unverified > demo)"),
     search: Optional[str] = Query(default=None, description="Freitext Bank/Land"),
 ) -> Dict[str, Any]:
     if not await _coll_exists("savings_offers"):
@@ -287,8 +313,15 @@ async def savings_offers(
             continue
         if not _demo_mode_enabled and bool(o.get("is_demo")):
             continue
-        if data_status == "verified" and bool(o.get("is_demo")):
+        # Phase 6A.1 — strikte Verified-Semantik. `verified` erfordert
+        # vollständige Provenance und aktiven Status; is_demo=False allein
+        # reicht NICHT.
+        if data_status == "verified" and not is_fully_verified(o):
             continue
+        if data_status == "unverified":
+            # Real (nicht Demo), aber unvollständige Provenance.
+            if bool(o.get("is_demo")) or is_fully_verified(o):
+                continue
         if data_status == "demo" and not bool(o.get("is_demo")):
             continue
         bank = None
@@ -308,7 +341,7 @@ async def savings_offers(
         items.append(_serialize_offer(o, bank, amount))
 
     total = len(items)
-    items.sort(key=lambda x: _sort_key(x, sort))
+    items.sort(key=lambda x: _sort_key(x, sort, real_first=real_first))
 
     # Pagination in Python (Datenmenge < 5k realistisch).
     start = (page - 1) * limit

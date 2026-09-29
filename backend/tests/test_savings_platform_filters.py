@@ -102,20 +102,23 @@ def test_filter_combined_yields_intersection() -> None:
 
 
 # --------- Sort ----------------------------------------------------------
+# Phase 6A.1: Die Public-API sortiert per Default „real-first"
+# (verified > unverified > demo, dann Kriterium). Die Legacy-Tests bleiben
+# valide mit `real_first=false`, weil sie reine Kriteriumsortierung testen.
 def test_sort_rate_desc() -> None:
-    d = _get("/api/public/savings-offers?sort=rate&limit=50")
+    d = _get("/api/public/savings-offers?sort=rate&real_first=false&limit=50")
     rates = [it["interest_rate"] for it in d["items"] if it["interest_rate"] is not None]
     assert rates == sorted(rates, reverse=True)
 
 
 def test_sort_bank_name() -> None:
-    d = _get("/api/public/savings-offers?sort=bank_name&limit=50")
+    d = _get("/api/public/savings-offers?sort=bank_name&real_first=false&limit=50")
     names = [(it["banks"] or {}).get("name") or "" for it in d["items"]]
     assert names == sorted(names, key=lambda s: s.lower())
 
 
 def test_sort_expected_yield_when_amount_given() -> None:
-    d = _get("/api/public/savings-offers?sort=expected_yield&amount=25000&limit=50")
+    d = _get("/api/public/savings-offers?sort=expected_yield&amount=25000&real_first=false&limit=50")
     yields = [
         (it.get("expected_yield") or {}).get("gross_return_eur")
         for it in d["items"]
