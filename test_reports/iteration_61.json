@@ -1,0 +1,54 @@
+{
+  "summary": "Phase 5 (Production Data Ops) — backend guard tests + frontend UI E2E validated. All 6 admin savings pages (dashboard, sources, import, reviews, audit, demo-replace) render and interact correctly. Auth-guards on all 7 admin endpoints return 401/403 for unauth requests. Public /api/public/savings-offers regressions intact. Demo-replace security invariants (unsafe URL rejection, source_slug/url required) confirmed. Full savings regression 72 tests still green.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Import dry-run for unknown bank_slug",
+        "issue": "Task description expected 'invalid' warning for unknown bank_slug='_e2e_bank_ui', but pipeline classified it as 'needs_review=1' (invalid=0). This is a semantic classification choice — pipeline still surfaces the record for human review, so the safety invariant holds. Recommend documenting the expected behaviour or aligning classification with the task spec.",
+        "affected_selectors": ["dryrun-count-invalid", "dryrun-count-needs_review"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase5_ui_ops.py",
+    "/app/test_reports/pytest/phase5_ui_ops.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: Reconcile task spec vs actual pipeline behaviour — task expected 'invalid' action for records with unknown bank_slug during dry-run, but the pipeline classifies them as 'needs_review'. Both are safe outcomes (no auto-publish); this is documentation-only unless product requires stricter behaviour."
+  ],
+  "critical_code_review_comments": [
+    "Good: All 6 admin subpages use consistent AdminSubpageLayout/AdminSubpageHeader/AdminToolbarCard chrome — DRY.",
+    "Good: All interactive elements carry data-testid attributes.",
+    "Good: Demo-replace explicitly requires source_slug + source_url and rejects javascript:/data:/file: URLs at backend (verified 422).",
+    "Good: Import Apply gated behind window.confirm() + explicit Dry-Run → Diff-Preview flow; never triggered on upload.",
+    "Note: AdminSavingsSources.jsx uses dynamic imports of axios/@/lib/apiBase inside handlers. Not incorrect but marginally hurts perceived latency on first click — could be hoisted to module scope.",
+    "Note: sources 'trusted' trust level requires explicit checkbox confirmation — matches product invariant that Trusted must be manually enabled."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase5_ui_ops.py (new — 13 tests: 7 auth guards, 3 public regression, 2 demo-replace security, 1 dashboard KPI shape)"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 phase5 UI ops guard tests + 31/31 phase5_admin + 41/41 savings regression = 85/85)",
+    "frontend": "100% (all 13 dashboard KPIs, sources CRUD, import dry-run, reviews tab, audit filters, demo-replace side-by-side + seed all working)"
+  },
+  "test_credentials": "admin@kapitalmitte.com / admin123",
+  "seed_data_creation": "Created test_e2e_source data-source via UI (E2E Test Source, manual_verified, review_required trust). Dry-run created 1 needs_review preview record for bank_slug='_e2e_bank_ui' — no data written to real offers. No fabricated bank data introduced.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase 5 UI is production-ready. If retesting: (1) may need to unlock login_attempts if rate-limited; (2) test_e2e_source data-source now exists in preview Mongo — safe to reuse; (3) demo offers count=289, real offers count=8; (4) dashboard KPIs are data-testid stable.",
+  "ui_verification_details": {
+    "dashboard_kpis": {"banks_active": 74, "offers_active": 297, "offers_real": 8, "offers_demo": 289, "quality_real_share": "3%", "demo_mode_env": "AN", "all_13_testids_present": true},
+    "sources_add": "test_e2e_source row created and rendered in table",
+    "import_dry_run": {"create": 0, "update": 0, "unchanged": 0, "needs_review": 1, "invalid": 0},
+    "reviews_tab": "reviews-tab-open present",
+    "audit_filter": "audit-filter-entity-type + audit-refresh present, filter apply works",
+    "demo_replace": "100 demo rows rendered, side-by-side DEMO|REAL renders, seed-btn fills real JSON textarea (351 chars)",
+    "mobile_390x844": "Dashboard collapses to single column, usable"
+  }
+}

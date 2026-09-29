@@ -9,6 +9,62 @@ Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. 
 
 
 
+## Session 93 (Preview · Phase 5 · FRONTEND) · Admin Data-Operations UI — VERIFIED
+
+**Fokus:** Frontend-Werkzeuge für den kompletten Datenlebenszyklus (Import → Dry-Run → Review → Apply → Audit → Historie → Demo→Real). Konsistent im bestehenden Admin-Look ohne neues Design-System. E2E vom Testing-Agent bestätigt.
+
+### Neu implementiert (Frontend)
+- **6 Admin-Pages** unter `/admin/savings/*`:
+  - `/dashboard` — 13 KPI-Tiles (Banken, Offers, Real/Demo, Fresh/Stale/Expired, Needs Review, Imports 24h, fehlgeschlagene Imports, Real-Anteil, Demo-Mode-Status). Demo-Mode ist bewusst read-only, weil das Backend keinen sicheren Write-Endpoint dafür hat.
+  - `/reviews` — Review-Queue mit Tabs (offen/freigegeben/abgelehnt), before/after-Diff-Tabelle je Item, Actions Approve / Reject / Edit-and-Approve mit expliziter Modal-Bestätigung. Kritische Änderungen (DGS/Country/Product-Type) werden rot markiert. Keine Bulk-Aktionen.
+  - `/import` — 6-Step-Wizard (Upload → Validate → Dry-Run → Preview → Review → Apply). Apply wird nie beim Upload ausgeführt; Confirm-Dialog vor jedem Publish. Zusammenfassung zeigt new/update/unchanged/needs_review/invalid.
+  - `/sources` — CRUD für DataSources + Monitoring-View (Offer-Count, Review-Count, letzter Erfolg/Fehler). `trusted`-Freischaltung erfordert zusätzliche Bestätigungs-Checkbox.
+  - `/audit` — Audit-Log-Viewer mit Filtern (Entity-Type, Entity-ID, Action, Zeitraum). Diff menschenlesbar; Raw-JSON optional aufklappbar.
+  - `/demo-replace` — Side-by-Side DEMO ↔ REAL-Candidate, „Aus Demo vorbelegen"-Button, obligatorische Provenance-Felder. Server-seitig Rollback bei Validation-Fehler garantiert.
+- **Routing/Navigation**: `App.js` mit 6 neuen Routen (Lazy-imports), `AdminDashboard.js` neue Sektion IV „Sparvergleich · Daten-Ops".
+- **Chrome-Konsistenz**: Alle Pages verwenden `AdminSubpageLayout`, `AdminSubpageHeader`, `AdminToolbarCard`, `AdminSurfaceCard` — kein paralleles Design-System.
+
+### P0-Cleanup
+- `SavingsComparison.js` Hook-Warnings sauber behoben durch `queryString`-Memo (kein `eslint-disable`). Webpack kompiliert clean.
+
+### Regression + Security
+- `test_phase5_ui_ops.py` (13 neue Tests): 7 Auth-Guards, 3 Public-API-Regression, 2 Demo-Replace-Security (unsafe URL + fehlende Provenance), 1 Dashboard-KPI-Shape.
+- **Alle 85 savings-relevanten Backend-Tests grün** (Phase 1–5).
+- **Security-Invarianten bestätigt**:
+  - Demo darf nie versehentlich als Real veröffentlicht werden (server-seitige `is_demo=False` + `verified_at`-Guard).
+  - Real ohne Provenance wird abgelehnt (422 wenn source_slug/source_url fehlt).
+  - `javascript:`, `data:`, `file:` URLs werden verworfen.
+  - `trusted` Auto-Publish erfordert explizite UI-Bestätigung.
+  - Rollback bei fehlgeschlagenem Demo→Real garantiert (Demo bleibt aktiv).
+
+### Getesteter E2E-Umfang
+Login → Datenquelle → Import Dry-Run → Diff-Preview → (needs_review-Klassifizierung) → Review-Queue → Audit-Log-Sichtbarkeit → Demo→Real-Layout & Seed. Der komplette Real-Data-Lebenszyklus (Import → History → Deaktivierung → History bleibt) ist zusätzlich via `test_phase5_admin.py::test_end_to_end_real_data_flow` abgedeckt.
+
+### Bekannte kleine Einschränkungen
+1. **Demo-Mode-Toggle**: Bewusst kein UI-Toggle. Änderung erfordert Deploy mit ENV `DEMO_MODE_ENABLED`.
+2. **Frontend Legacy-Warnings**: In anderen Dateien (StockDetail, ProfilePage, Handeln, AdminApplications etc.) existieren weiter React-Hook-Warnings — sie stammen aus früheren Sessions und wurden gemäß Auftrag nicht angefasst.
+3. **Dynamic imports** in Handlern (axios/apiBase) — hoisting wäre marginal schneller, aber Muster ist konsistent mit anderen Admin-Pages.
+
+### Voraussetzungen für erste echte Bank-Daten
+1. **Datenquelle anlegen** unter `/admin/savings/sources` (Provider, öffentliche URL, Trust-Level ≠ trusted).
+2. **JSON/CSV vorbereiten** — je Datensatz Pflicht: `bank_slug` (muss in Mongo `banks` existieren, sonst `needs_review`), `product_type`, `interest_rate`, plus optional `term_months`, `min_amount`, `max_amount`, `country`, `deposit_guarantee_country`.
+3. **Import ausführen** über `/admin/savings/import` mit `source_slug`, öffentlicher `source_url` und Verification-Method.
+4. **Dry-Run prüfen** — Änderungen/Warnings kontrollieren.
+5. **Apply** nach expliziter Bestätigung. Automatische Review-Flags landen in `/admin/savings/reviews`.
+6. **Demo→Real** einzeln: `/admin/savings/demo-replace` zum kontrollierten Ablösen eines Demo-Angebots mit rollback-sicherer Aktivierung.
+
+### Datei-Referenzen (neu)
+- `/app/frontend/src/pages/admin/AdminSavingsDashboard.jsx`
+- `/app/frontend/src/pages/admin/AdminSavingsReviews.jsx`
+- `/app/frontend/src/pages/admin/AdminSavingsImport.jsx`
+- `/app/frontend/src/pages/admin/AdminSavingsSources.jsx`
+- `/app/frontend/src/pages/admin/AdminSavingsAudit.jsx`
+- `/app/frontend/src/pages/admin/AdminSavingsDemoReplace.jsx`
+- `/app/frontend/src/App.js` (Routen 862–870, lazy-imports 61–68)
+- `/app/frontend/src/pages/AdminDashboard.js` (Section IV)
+- `/app/backend/tests/test_phase5_ui_ops.py` (neu — 13 Tests)
+
+
 ## Session 93 (Preview · Phase 1) · Savings Comparison Platform — Europa-Erweiterung
 
 ### Ziel
