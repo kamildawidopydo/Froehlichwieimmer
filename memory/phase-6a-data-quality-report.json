@@ -1,0 +1,164 @@
+{
+  "generated_at": "2026-09-29T10:12:53.531497+00:00",
+  "market": "DE",
+  "real_banks_count": 2,
+  "real_offers_count": 3,
+  "real_offers_pass_gate": 0,
+  "real_offers_fail_gate": 8,
+  "missing_provenance": [
+    "chase/tagesgeld/nAm",
+    "ikano/tagesgeld/nAm",
+    "dhb/tagesgeld/nAm",
+    "volkswagen-bank/festgeld/6m",
+    "ing/festgeld/12m",
+    "knab/festgeld/12m",
+    "bbva/festgeld/24m",
+    "bbva/festgeld/36m"
+  ],
+  "gate_criteria": [
+    "source_id_present",
+    "source_url_present_and_product_specific",
+    "verified_at_present",
+    "verification_method_present",
+    "dgs_country_present",
+    "source_retrieved_at_present"
+  ],
+  "per_offer": [
+    {
+      "bank_slug": "chase",
+      "product_type": "tagesgeld",
+      "term_months": null,
+      "interest_rate": 4.0,
+      "gate": {
+        "source_id_present": false,
+        "source_url_present_and_product_specific": false,
+        "verified_at_present": false,
+        "verification_method_present": false,
+        "dgs_country_present": true,
+        "source_retrieved_at_present": false
+      },
+      "passes": false,
+      "current_source_url": "https://www.chase.de",
+      "country": "DE"
+    },
+    {
+      "bank_slug": "ikano",
+      "product_type": "tagesgeld",
+      "term_months": null,
+      "interest_rate": 3.91,
+      "gate": {
+        "source_id_present": false,
+        "source_url_present_and_product_specific": false,
+        "verified_at_present": false,
+        "verification_method_present": false,
+        "dgs_country_present": true,
+        "source_retrieved_at_present": false
+      },
+      "passes": false,
+      "current_source_url": "https://www.ikanobank.de",
+      "country": "SE"
+    },
+    {
+      "bank_slug": "dhb",
+      "product_type": "tagesgeld",
+      "term_months": null,
+      "interest_rate": 3.4,
+      "gate": {
+        "source_id_present": false,
+        "source_url_present_and_product_specific": false,
+        "verified_at_present": false,
+        "verification_method_present": false,
+        "dgs_country_present": true,
+        "source_retrieved_at_present": false
+      },
+      "passes": false,
+      "current_source_url": "https://www.dhbbank.de",
+      "country": "NL"
+    },
+    {
+      "bank_slug": "volkswagen-bank",
+      "product_type": "festgeld",
+      "term_months": 6,
+      "interest_rate": 3.1,
+      "gate": {
+        "source_id_present": false,
+        "source_url_present_and_product_specific": false,
+        "verified_at_present": false,
+        "verification_method_present": false,
+        "dgs_country_present": true,
+        "source_retrieved_at_present": false
+      },
+      "passes": false,
+      "current_source_url": "https://www.vwfs.de",
+      "country": "DE"
+    },
+    {
+      "bank_slug": "ing",
+      "product_type": "festgeld",
+      "term_months": 12,
+      "interest_rate": 3.1,
+      "gate": {
+        "source_id_present": false,
+        "source_url_present_and_product_specific": false,
+        "verified_at_present": false,
+        "verification_method_present": false,
+        "dgs_country_present": true,
+        "source_retrieved_at_present": false
+      },
+      "passes": false,
+      "current_source_url": "https://www.ing.de",
+      "country": "DE"
+    },
+    {
+      "bank_slug": "knab",
+      "product_type": "festgeld",
+      "term_months": 12,
+      "interest_rate": 3.2,
+      "gate": {
+        "source_id_present": false,
+        "source_url_present_and_product_specific": false,
+        "verified_at_present": false,
+        "verification_method_present": false,
+        "dgs_country_present": true,
+        "source_retrieved_at_present": false
+      },
+      "passes": false,
+      "current_source_url": "https://www.knab.nl",
+      "country": "NL"
+    },
+    {
+      "bank_slug": "bbva",
+      "product_type": "festgeld",
+      "term_months": 24,
+      "interest_rate": 3.25,
+      "gate": {
+        "source_id_present": false,
+        "source_url_present_and_product_specific": false,
+        "verified_at_present": false,
+        "verification_method_present": false,
+        "dgs_country_present": true,
+        "source_retrieved_at_present": false
+      },
+      "passes": false,
+      "current_source_url": "https://www.bbva.de",
+      "country": "ES"
+    },
+    {
+      "bank_slug": "bbva",
+      "product_type": "festgeld",
+      "term_months": 36,
+      "interest_rate": 3.3,
+      "gate": {
+        "source_id_present": false,
+        "source_url_present_and_product_specific": false,
+        "verified_at_present": false,
+        "verification_method_present": false,
+        "dgs_country_present": true,
+        "source_retrieved_at_present": false
+      },
+      "passes": false,
+      "current_source_url": "https://www.bbva.de",
+      "country": "ES"
+    }
+  ]
+}
