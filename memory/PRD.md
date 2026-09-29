@@ -3,6 +3,59 @@
 <!-- Session 82.105 Preflight — bereit für Prod-Deploy nachdem Emergent Deploy-ENV gesetzt ist. Siehe Session-82.105-Block unten. -->
 
 
+## Session 94 (Preview · Phase 6B · Schritt 3) · DKB Demo → Real APPLIED — VERIFIED
+
+**Fokus:** Erster verifizierter Real-Datensatz produktiv veröffentlicht. DKB Tagesgeldkonto (1,00 % p.a., DE_EDB, keine Mindest-/Höchstgrenze, volle Provenance). Consorsbank unangetastet (bleibt Review Candidate).
+
+### Apply-Ergebnis
+- **OLD DEMO A** `6abb7515f1dcd0c6d8a8d2d6`: `is_demo=true`, **`is_active=false`**, `status=disabled` (audit-log persistent, für History erhalten)
+- **NEW REAL B** `6abbb21044eaa604a8dfbb62`: `is_demo=false`, `is_active=true`, `status=active`, `rate=1.00`, `dgs=DE_EDB`
+  - Provenance: `source_id=dkb_official_plv` · `source_url=https://dok.dkb.de/pdf/plv_pk_sparprodukte.pdf` · `verified_at=2026-09-29T12:41:52Z` · `verification_method=web_crawl_official_plv_pdf`
+  - `conditions.no_min_amount=true`, `no_max_amount=true`
+  - `data_status=verified`, `publish_status=complete`, `publish_status_reasons=[]`
+
+### Pre-Apply Hard-Stop Gate (alle 11 Bedingungen erfüllt)
+Dry-Run action=create · Demo-ID unverändert · Demo aktiv/demo=true · Zins 1,00 · DGS DE_EDB · no_min_amount=true · no_max_amount=true · alle Provenance-Felder gesetzt · keine Warnings · keine needs_review · keine invalid.
+
+### 31/31 Core Invariants POST-APPLY
+`A_still_exists · A_still_is_demo · A_is_inactive · A_status_disabled · B_id_new · B_is_demo_false · B_is_active · B_status_active · B_source_id · B_source_url · B_source_retrieved_at · B_verified_at · B_verification_method · B_data_status_verified · B_publish_status_complete · B_dgs_DE_EDB · B_no_min_true · B_no_max_true · B_rate_1.00 · no_duplicate_active_dkb_tg · real_has_initial_history · real_history_rate_1 · real_history_not_demo · real_history_valid_from_set · real_history_source_set · calc_complete · calc_100_eur · audit_deactivation_logged · verified_filter_1 · demo_filter_0 · unverified_filter_0` — **alle grün**.
+
+### Calculation Engine (10 000 € · 12 M · 1,00 % p.a.)
+`gross_return_eur=100.00 · effective_rate=1.0 · calculation_complete=true · reasons=[]` (Simple Annual, konservativ, ohne Zinseszins innerhalb 12 M).
+
+### Rate-History
+- Real B: 1 Eintrag (`rate=1.0` · `is_demo=false` · `source_id=dkb_official_plv` · `valid_from=2026-09-29`) — sauber initialisiert.
+- Demo A: 0 Einträge — Demo-History wurde nicht auf Real übertragen (Isolation bestätigt).
+
+### Audit
+Deaktivierung von Demo A als `savings_offer/deactivate` mit Actor `admin@kapitalmitte.com` im `audit_log` protokolliert. Replacement-Beziehung über deactivated_demo_id nachvollziehbar. Keine sensitiven Daten dupliziert (nur konditionsrelevante Felder).
+
+### Public API (DKB Tagesgeld nach Apply)
+- Aktive DKB-Tagesgeld-Angebote: **genau 1** (kein Duplikat)
+- `data_status=verified` filter → 1 DKB · `data_status=demo` → 0 · `data_status=unverified` → 0
+- Dashboard-Counts Delta: `verified_provenance +1` · `active_demo -1` · `active_real 0→1` · `total 297→298` (deaktiviertes Demo erhalten)
+
+### Frontend (visuell verifiziert)
+- Vergleichsliste zeigt DKB korrekt mit 1,00 %, Deutschland-Flag, ohne Demo-Badge, ohne „Quellennachweis unvollständig"-Warnung.
+- OfferDetailDrawer rendert alle Pflichtelemente: „Zuletzt geprüft: 29.09.2026" · Zinssatz 1,00 % · „Keine Mindestanlage" · „Keine Höchstgrenze" · DGS „100.000 € nach dem gesetzlichen System in 🇩🇪 Deutschland" · Bankinfo (BaFin, Deutsche Kreditbank AG, gegründet 1990) · Datenquelle „dkb_official_plv" · Zinsverlauf-Hinweis „noch nicht genügend historische Zinsdaten" (korrekt bei 1 Eintrag).
+
+### Tests + Build
+- **Savings Backend**: `test_savings_calculator.py + test_savings_platform.py + test_savings_platform_filters.py + test_phase6b_publish_and_replace.py + test_data_platform.py + test_phase5_admin.py + test_phase5_ui_ops.py + test_phase6a_verified.py` = **115/115 grün** nach Apply
+- Frontend Build: `yarn build` erfolgreich (nur bekannte Legacy-Warnings, keine neuen Regressions).
+- Bekannte 429-Test-Infra-Schuld (test_reviews/assistant_handoff/customer_confirmations) explizit deferred, nicht durch Apply verursacht.
+
+### Consorsbank Status
+**Unverändert.** Bleibt Review Candidate. Kein Apply, keine Demo-Deaktivierung. Die 5-Monats-Testberechnung mit `calculation_complete=false` bleibt bestehen als Test-Fall (nicht als veröffentlichtes Real-Angebot).
+
+### Artefakte
+- `/app/memory/phase-6b-step3-report.json` (Full Snapshots + Invariants + Audit + History + Calc)
+- `/app/scripts/phase6b_step3_apply.py` (Inline-Copy von demo_replace, idempotent gebaut)
+- `/app/scripts/phase6b_step3_verify.py` (Verifikations-Batterie, no writes)
+
+### Empfehlung Schritt 4
+STOPP. Kein zweiter Anbieter. Erwarten weiterer User-Freigabe (Consorsbank/BaFin-Register Follow-Up oder nächste DE-Bank).
+
+
 # PRD — Fröhlich Vermögensberatung / Kapital-Direkt24 · FastAPI + MongoDB
 
 Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.

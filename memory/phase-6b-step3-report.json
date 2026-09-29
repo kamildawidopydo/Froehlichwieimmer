@@ -1,0 +1,83 @@
+{
+  "verification_ts": "2026-09-29T12:42:49.887210+00:00",
+  "invariants": {
+    "A_still_exists": true,
+    "A_still_is_demo": true,
+    "A_is_inactive": true,
+    "A_status_disabled": true,
+    "B_id_new": true,
+    "B_is_demo_false": true,
+    "B_is_active": true,
+    "B_status_active": true,
+    "B_source_id": true,
+    "B_source_url": true,
+    "B_source_retrieved_at": true,
+    "B_verified_at": true,
+    "B_verification_method": true,
+    "B_data_status_verified": true,
+    "B_publish_status_complete": true,
+    "B_dgs_DE_EDB": true,
+    "B_no_min_true": true,
+    "B_no_max_true": true,
+    "B_rate_1.00": true,
+    "no_duplicate_active_dkb_tg": true,
+    "real_has_initial_history": true,
+    "real_history_rate_1": true,
+    "real_history_not_demo": true,
+    "real_history_valid_from_set": true,
+    "real_history_source_set": true,
+    "calc_complete": true,
+    "calc_100_eur": true,
+    "audit_deactivation_logged": true,
+    "verified_filter_1": true,
+    "demo_filter_0": true,
+    "unverified_filter_0": true
+  },
+  "all_pass": true,
+  "audit_trail": [
+    {
+      "at": "2026-09-29 12:41:52.419000+00:00",
+      "entity": "savings_offer",
+      "id": "6abb7515f1dcd0c6d8a8d2d6",
+      "action": "deactivate",
+      "by": "admin@kapitalmitte.com"
+    }
+  ],
+  "history": {
+    "real_count": 1,
+    "demo_count_preserved": 0,
+    "real_entries": [
+      {
+        "rate": 1.0,
+        "valid_from": "2026-09-29 12:41:52.419000+00:00",
+        "source_id": "dkb_official_plv",
+        "is_demo": false
+      }
+    ]
+  },
+  "public_dkb_tagesgeld": {
+    "active_count": 1,
+    "verified": 1,
+    "demo": 0,
+    "unverified": 0
+  },
+  "calc_10k_12m": {
+    "gross_return_eur": 100.0,
+    "partial_gross_return_eur": null,
+    "effective_rate": 1.0,
+    "nominal_rate": 1.0,
+    "horizon_months": 12,
+    "breakdown": [
+      {
+        "months": 12,
+        "rate": 1.0,
+        "amount": 10000.0,
+        "gross_eur": 100.0,
+        "label": "Zinssatz"
+      }
+    ],
+    "notes": [],
+    "calculation_complete": true,
+    "calculation_reasons": []
+  }
+}
