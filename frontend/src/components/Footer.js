@@ -203,7 +203,17 @@ const Footer = () => {
 
       <div className="border-t border-bank-border bg-white text-bank-text-muted">
         <div className="mx-auto max-w-[1440px] px-5 py-4 sm:px-8 lg:px-12">
-          <p className="text-center text-[12px] text-bank-text-soft">
+          <p className="text-center text-[12px] text-bank-text-soft" data-testid="footer-operator-line">
+            EssenceInvest ist ein Angebot der{' '}
+            <Link
+              to="/legal/impressum"
+              className="text-bank-text-strong underline-offset-2 hover:text-bank-primary-strong hover:underline"
+            >
+              Fröhlich Vermögensberatung GmbH
+            </Link>
+            {' '}· Bösgrunder Weg 62, 55543 Bad Kreuznach · Amtsgericht Bad Kreuznach HRB 23436.
+          </p>
+          <p className="mt-2 text-center text-[12px] text-bank-text-soft">
             {footerCopy.copyright(year)}
           </p>
           <p className="mx-auto mt-4 max-w-5xl text-center text-[11px] leading-relaxed text-bank-text-soft sm:mt-5 sm:text-[12px]">

@@ -660,7 +660,7 @@ const revocationBody = (
 
 export const legalPages = {
   impressum: {
-    title: 'Impressum',
+    title: 'Impressum | Fröhlich Vermögensberatung GmbH | EssenceInvest',
     icon: Building2,
     description:
       'Impressum der Fröhlich Vermögensberatung GmbH — Anbieterkennung, Register, Aufsicht und Kontakt für essenceinvest.com.',

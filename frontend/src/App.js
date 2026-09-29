@@ -170,6 +170,7 @@ const AdminCreditBankDetails = lazy(() => import('@/pages/AdminCreditBankDetails
 
 const StockDetail = lazy(() => import('@/pages/StockDetail'));
 const ApplicationForm = lazy(() => import('@/pages/ApplicationForm'));
+import StructuredData from '@/components/seo/StructuredData';
 const LogoPreview = lazy(() => import('@/pages/LogoPreview'));
 const BBVAContractForm = lazy(() => import('@/pages/BBVAContractForm'));
 const Legal = lazy(() => import('@/pages/Legal'));
@@ -232,6 +233,7 @@ function App() {
         <DisplayCurrencyProvider>
         <SocialPreviewProvider>
         <BrowserRouter>
+          <StructuredData />
           <ScrollToTop />
           <MotionConfig reducedMotion="user">
           <div className="App overflow-x-clip">
