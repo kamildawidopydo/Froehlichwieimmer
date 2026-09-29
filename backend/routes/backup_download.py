@@ -59,7 +59,9 @@ def backup_file(name: str = Query(...), token: str = Query(...)) -> FileResponse
     safe_name = os.path.basename(name)
     if safe_name != name:
         raise HTTPException(400, "Invalid filename.")
-    if not (safe_name.startswith("backup_") and (".zip" in safe_name)):
+    if not safe_name.startswith("backup_"):
+        raise HTTPException(400, "Invalid filename.")
+    if not (safe_name.endswith(".tar.gz") or ".zip" in safe_name):
         raise HTTPException(400, "Invalid filename.")
     p = EXPORT_DIR / safe_name
     if not p.exists():
