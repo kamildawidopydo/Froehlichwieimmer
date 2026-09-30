@@ -1,0 +1,2 @@
+fonts-dejavu=2.37-6
+fonts-inter=4.0~beta7+ds-1

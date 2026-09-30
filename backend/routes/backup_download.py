@@ -62,7 +62,11 @@ def _resolve_backup_path(name: str) -> Path:
         raise HTTPException(400, "Invalid filename.")
     if not safe_name.startswith("backup_"):
         raise HTTPException(400, "Invalid filename.")
-    if not (safe_name.endswith(".tar.gz") or ".zip" in safe_name):
+    if not (
+        safe_name.endswith(".tar.gz")
+        or safe_name.endswith(".pdf")
+        or ".zip" in safe_name
+    ):
         raise HTTPException(400, "Invalid filename.")
     p = EXPORT_DIR / safe_name
     if not p.exists():
