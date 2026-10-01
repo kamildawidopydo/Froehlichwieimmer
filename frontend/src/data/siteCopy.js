@@ -1,5 +1,5 @@
 /**
- * Central marketing copy — kapital-direkt24.de.
+ * Central marketing copy — essenceinvest.com.
  * Formal-warm German tone; Nähe + Internationalität.
  */
 

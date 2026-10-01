@@ -338,7 +338,7 @@ export async function generateBunqPdf(formData) {
 
   secBar(s, 'Vereinbarung \u00FCber eine Fest- und Flexgeldanlage');
 
-  infoBox(s, 'Dieses Dokument best\u00E4tigt die Vereinbarung zwischen dem Anleger (nachfolgend Anleger genannt) und der Bunq B.V. (nachfolgend Bank genannt), vermittelt durch Fröhlich Vermögensberatung, kapital-direkt24.de.');
+  infoBox(s, 'Dieses Dokument best\u00E4tigt die Vereinbarung zwischen dem Anleger (nachfolgend Anleger genannt) und der Bunq B.V. (nachfolgend Bank genannt), vermittelt durch Fröhlich Vermögensberatung, essenceinvest.com.');
 
   subTitle(s, 'Die Anlage umfasst folgende M\u00F6glichkeiten:');
 
@@ -356,7 +356,7 @@ export async function generateBunqPdf(formData) {
   s.pg.drawText('Die ersten 3 Monate fest, die folgenden 9 Monate flexibel.', { x: cx2 + 8, y: s.y - 16, size: 5.5, font: r, color: MID_TEXT });
   s.y -= 28;
 
-  warnBox(s, 'Die Vermittlung dieser Anlage erfolgt durch Fröhlich Vermögensberatung, kapital-direkt24.de. Mit der Unterzeichnung dieses Vertrages erkennen alle Parteien die in diesem Dokument festgelegten Konditionen und Bestimmungen als verbindlich an. Der Vertrag tritt mit dem Datum der Unterzeichnung in Kraft.');
+  warnBox(s, 'Die Vermittlung dieser Anlage erfolgt durch Fröhlich Vermögensberatung, essenceinvest.com. Mit der Unterzeichnung dieses Vertrages erkennen alle Parteien die in diesem Dokument festgelegten Konditionen und Bestimmungen als verbindlich an. Der Vertrag tritt mit dem Datum der Unterzeichnung in Kraft.');
 
   // ---------------------------------------------------------------------------
   // PAGE 2 - Applicant Data
