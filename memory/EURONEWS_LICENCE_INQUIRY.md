@@ -3,14 +3,14 @@ _Bereit zum Versand an `salesoperations@euronews.com` bzw. via https://www.euron
 
 ## 1) Deutsche Version
 
-**Betreff:** Anfrage kommerzielle Content-Lizenz — Deutschsprachige Artikel + Live-TV-Embed für kapital-direkt24.de
+**Betreff:** Anfrage kommerzielle Content-Lizenz — Deutschsprachige Artikel + Live-TV-Embed für essenceinvest.com
 
 Sehr geehrtes Euronews-Commercial-Team,
 
 wir bereiten aktuell die Einbindung deutschsprachiger Euronews-Nachrichten in einen neuen Nachrichtenbereich unserer kommerziellen Website vor und möchten die dafür erforderlichen Rechte offiziell klären bzw. lizenzieren.
 
 **Unternehmen:** Fröhlich Vermögensberatung GmbH
-**Domain:** https://kapital-direkt24.de
+**Domain:** https://essenceinvest.com
 **Zielmarkt:** DACH (Deutschland, Österreich, Schweiz)
 **Sprache:** Deutsch
 **Nutzungsart:** Kommerziell (unabhängige Vermögensberatung; keine Werbevermarktung Dritter innerhalb der Nachrichten-Sektion)
@@ -43,14 +43,14 @@ Fröhlich Vermögensberatung GmbH
 
 ## 2) English Version
 
-**Subject:** Commercial content licence request — German-language articles + live TV embed for kapital-direkt24.de
+**Subject:** Commercial content licence request — German-language articles + live TV embed for essenceinvest.com
 
 Dear Euronews Commercial Team,
 
 We are preparing a new news section on our commercial website and would like to officially clarify or license the rights required to embed Euronews German-language content.
 
 **Company:** Fröhlich Vermögensberatung GmbH
-**Domain:** https://kapital-direkt24.de
+**Domain:** https://essenceinvest.com
 **Target market:** DACH (Germany, Austria, Switzerland)
 **Language:** German
 **Type of use:** Commercial (independent wealth advisory; no third-party ad monetisation inside the news section)
@@ -87,7 +87,7 @@ Fröhlich Vermögensberatung GmbH
 |---|---|---|
 | 1 | Unternehmensname | Fröhlich Vermögensberatung GmbH |
 | 2 | Rechtsform + HRB | GmbH + HRB-Nr. eintragen |
-| 3 | Domain(s) | kapital-direkt24.de (+ Preview) |
+| 3 | Domain(s) | essenceinvest.com (+ Preview) |
 | 4 | Zielmärkte | Deutschland, Österreich, Schweiz |
 | 5 | Zielgruppe | Vermögende Privatanleger, HNWI |
 | 6 | Geschätzter Traffic | monatliche Sessions (schätzen) |

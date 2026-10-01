@@ -1,4 +1,4 @@
-# PRD — Fröhlich Vermögensberatung GmbH · KAPITAL-DIREKT24 (Preview)
+# PRD — Fröhlich Vermögensberatung GmbH · ESSENCEINVEST (Preview)
 
 <!-- Session 82.105 Preflight — bereit für Prod-Deploy nachdem Emergent Deploy-ENV gesetzt ist. Siehe Session-82.105-Block unten. -->
 
@@ -151,9 +151,9 @@ Deaktivierung von Demo A als `savings_offer/deactivate` mit Actor `admin@kapital
 STOPP. Kein zweiter Anbieter. Erwarten weiterer User-Freigabe (Consorsbank/BaFin-Register Follow-Up oder nächste DE-Bank).
 
 
-# PRD — Fröhlich Vermögensberatung / Kapital-Direkt24 · FastAPI + MongoDB
+# PRD — Fröhlich Vermögensberatung / Essence Invest · FastAPI + MongoDB
 
-Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://kapital-direkt24.de`.
+Sprache: **Deutsch**. Preview: `finance-platform-v2.preview.emergentagent.com`. Prod: `finance-platform-v2.emergent.host`. Kanonische Prod-Origin (SEO): `https://essenceinvest.com`.
 
 
 
@@ -2074,7 +2074,7 @@ Getestet: NVDA, AAPL, MSFT, GOOGL, AMZN · SAP, SIE, ALV, DBK, IFX, RHM, DTE, MU
 
 **List/Search/Pagination**:
 - `?limit=3` → `total=24, items=3` ✅
-- `?q=demo` → matches `demo.kunde@kapital-direkt24.de` ✅
+- `?q=demo` → matches `demo.kunde@essenceinvest.com` ✅
 - `?limit=3&offset=5` → `offset=5, items=3` ✅
 - Response-Felder pro User: **`{id, email, name, role, avatar_url, created_at, last_password_reset_at}`** — **kein** `password_hash` ✅
 
@@ -2441,7 +2441,7 @@ Keine der PARTIAL-Seiten ist tatsächlich "ready + leer": alle 10 hängen noch a
 
 ## Session 82.76 (Preview · IMPLEMENTED) · Dedicated Owner-Admin Setup + Verification
 
-**Ziel:** Sauberen dedizierten Admin-Zugang `admin@kapital-direkt24.de` im Preview anlegen + vollständig verifizieren. Kein Prod-Deploy, keine Financial-Änderung, keine Rolle client-seitig gesetzt.
+**Ziel:** Sauberen dedizierten Admin-Zugang `admin@essenceinvest.com` im Preview anlegen + vollständig verifizieren. Kein Prod-Deploy, keine Financial-Änderung, keine Rolle client-seitig gesetzt.
 
 ### Phase A · Audit
 - **ADMIN_USERS_EXISTING**: `admin@kapitalmitte.com` (6a82fe2eb0ef4c52da900a83), `patron@froehlich-vermoegensberatung.de` (6a9166b315fd11ecb3abddfd) — beide bcrypt-hashed, kein Plaintext
@@ -2451,7 +2451,7 @@ Keine der PARTIAL-Seiten ist tatsächlich "ready + leer": alle 10 hängen noch a
 - **ADMIN_FRONTEND_ROUTE**: `/admin` (App.js:814, `<ProtectedRoute requireAdmin>` mit AdminDashboardLayout + 40+ Sub-Routen)
 
 ### Phase B–D · Account Creation
-- **Neuer Admin erzeugt** (nicht Duplikat): `admin@kapital-direkt24.de` · id `6aa01969c92bd083631c78a5`
+- **Neuer Admin erzeugt** (nicht Duplikat): `admin@essenceinvest.com` · id `6aa01969c92bd083631c78a5`
 - **Passwort**: 24-Zeichen zufällig (Python `secrets.choice`) · bcrypt-hashed via `hash_password` · kein Plaintext in Mongo/PRD/Logs · in `test_credentials.md` als Verweis auf Session-82.76-Abschlussreport dokumentiert (Passwort nicht persistiert)
 - **Methode**: einmaliges idempotentes Python-Script direkt gegen Preview-Mongo — kein Frontend-Payload, keine Supabase-Auth, keine client-side Rolle · Assertions: `role="admin"`, `password_hash.startswith("$2b$")`, kein `password`-Feld
 - **ADMIN_ACCOUNT_CREATED**: YES · **ADMIN_ACCOUNT_REUSED**: NO
@@ -2470,7 +2470,7 @@ Keine der PARTIAL-Seiten ist tatsächlich "ready + leer": alle 10 hängen noch a
 
 ### Phase G · Frontend Admin Access
 - `/admin` mit unauth Session → redirect `/login?next=%2Fadmin` ✅ (ProtectedRoute funktioniert)
-- `/admin` mit neuem Admin (API-cookie-login) → **rendert AdminDashboardLayout** mit vollständiger Sidebar: Benutzer, Aktien-Aufträge, Kaufkraft-Warnungen, Aktien-Gutscheine, Anträge, Vertrags-Einreichungen, Interessenten, Kundenbewertungen, Kredit-Anfragen, Produkt-Anfragen, Assistent-Anfragen, Social-Nachrichten, Aktivität, Formular-Zugang, Dokument-Upload, Vermögen & Depot (Kontoguthaben, Bond, IPO, Aktien, …), Support ✅ · Header-Badge zeigt „Admin (Kapital-Direkt24)"
+- `/admin` mit neuem Admin (API-cookie-login) → **rendert AdminDashboardLayout** mit vollständiger Sidebar: Benutzer, Aktien-Aufträge, Kaufkraft-Warnungen, Aktien-Gutscheine, Anträge, Vertrags-Einreichungen, Interessenten, Kundenbewertungen, Kredit-Anfragen, Produkt-Anfragen, Assistent-Anfragen, Social-Nachrichten, Aktivität, Formular-Zugang, Dokument-Upload, Vermögen & Depot (Kontoguthaben, Bond, IPO, Aktien, …), Support ✅ · Header-Badge zeigt „Admin (Essence Invest)"
 
 ### Phase H · Role-Escalation Test
 - `PATCH /api/auth/me` als demo.kunde mit Payload `{"role":"admin","name":"HackerAttempt"}` → HTTP 200, **`role` blieb `"user"`** ✅ (nur `name` geändert — Server ignoriert `role`-Feld · Mass-Assignment SAFE)
@@ -2483,7 +2483,7 @@ Keine der PARTIAL-Seiten ist tatsächlich "ready + leer": alle 10 hängen noch a
 
 ### FINAL REPORT Flags
 - ADMIN_ACCOUNT_CREATED: **YES** · ADMIN_ACCOUNT_REUSED: **NO**
-- ADMIN_EMAIL: `admin@kapital-direkt24.de` · ADMIN_ROLE: `admin` · ADMIN_USER_ID: `6aa01969c92bd083631c78a5`
+- ADMIN_EMAIL: `admin@essenceinvest.com` · ADMIN_ROLE: `admin` · ADMIN_USER_ID: `6aa01969c92bd083631c78a5`
 - PASSWORD_HASHED: **YES** ✅ (bcrypt $2b$) · PLAINTEXT_PASSWORD_IN_DB: **NO** ✅ · PLAINTEXT_IN_PRD: **NO** ✅ · PLAINTEXT_IN_LOGS: **NO** ✅
 - LOGIN: **PASS** · AUTH_ME_ROLE: **PASS** · ADMIN_API_ACCESS: **PASS**
 - CUSTOMER_ADMIN_ACCESS: **403** ✅ (alle 4 getesteten Routen) · UNAUTH_ADMIN_ACCESS: **401** ✅ (alle 4)
@@ -2500,7 +2500,7 @@ Keine der PARTIAL-Seiten ist tatsächlich "ready + leer": alle 10 hängen noch a
 **Ziel:** Vollständiger Customer-Flow live verifizieren — Coupon → Buy-Order → Reservation → Matcher → Execution → Cash-Debit → Position-Apply → Coupon-Consume → Order-Completed → Notification → Bell-UI. Kein Prod-Deploy, keine neue Business-Logik.
 
 ### Testartefakte (persistiert als QA-Audit-Trail)
-- USER: `demo.kunde@kapital-direkt24.de` (`6a9a8ff9b7e467c362ff91c8`)
+- USER: `demo.kunde@essenceinvest.com` (`6a9a8ff9b7e467c362ff91c8`)
 - SYMBOL: `SAP` (Preis fresh 232.10 EUR)
 - COUPON: `QA8275_1788876347` (10% · preview_only · qa_session="82.75" · id `6aa0163b25c84e0b556c1603`)
 - BUY-ORDER: `6aa0164b25c84e0b556c1604` (limit 235.00, qty 1, coupon 10%)
@@ -2616,7 +2616,7 @@ TOTAL:                                   21/21 PASS  (2.07s)
 
 ### E2E Verifikation (Preview)
 ```
-GET /api/portfolio/orders?limit=10  (demo.kunde@kapital-direkt24.de)
+GET /api/portfolio/orders?limit=10  (demo.kunde@essenceinvest.com)
   buy MSFT  pending    realized_pnl=None
   buy AAPL  cancelled  realized_pnl=None
   buy SAP   executed   realized_pnl=None
@@ -4110,7 +4110,7 @@ Per Phase-B-Constraint „**Falls für einen Supabase-Read KEIN Mongo-nativer Er
 - BY TYPE: `legacy_price_alert: 4` (aus früheren Cron-Läufen, ohne `type`-Feld — via 82.52-Serializer als `price_alert_triggered` gerendert)
 - `order_executed`: 0 · `ipo_allocated`: 0 · `bond_executed`: 0
 
-**Phase B — Test User:** `demo.kunde@kapital-direkt24.de` (id `6a9a8ff9…`, role=user). Ledger-Sum unverändert `8.008,26 €`, 7 Stock-Positions, 6 Bond-Positions (nominal=0, historisch entwertet).
+**Phase B — Test User:** `demo.kunde@essenceinvest.com` (id `6a9a8ff9…`, role=user). Ledger-Sum unverändert `8.008,26 €`, 7 Stock-Positions, 6 Bond-Positions (nominal=0, historisch entwertet).
 
 **Phase C/D/E — Completed Sagas since 82.52 Restart (2026-09-08 10:49:39 UTC):**
 - `order_executions` completed: **0**
@@ -4186,7 +4186,7 @@ Per Phase-B-Constraint „**Falls für einen Supabase-Read KEIN Mongo-nativer Er
 **Ziel:** Preview-/QA-Finanzdaten aus 82.26–82.52 sauber vom zukünftigen produktiven Kundenbestand isolieren, **ohne** cash_ledger-Semantik zu verletzen. Append-only strikt eingehalten.
 
 **Phase A — QA Inventory (Read-Only):**
-- QA-User (Alleinbetroffener): **`demo.kunde@kapital-direkt24.de`** (id `6a9a8ff9b7e467c362ff91c8`, role=user) — 1/23 User im System betroffen.
+- QA-User (Alleinbetroffener): **`demo.kunde@essenceinvest.com`** (id `6a9a8ff9b7e467c362ff91c8`, role=user) — 1/23 User im System betroffen.
 - Andere Users: **0** von 22 sind touched.
 
 | Collection | QA-Docs |
@@ -4253,7 +4253,7 @@ Für alle Financial Test-Positionen (PT1AG, PT_BOND_*, IPO-Orphan-Docs, Bond-Orp
 - `/api/news/nachrichten?limit=1` → 200 ✅
 
 **FINAL REPORT (Session 82.53):**
-- CUSTOMER: `6a9a8ff9…` (demo.kunde@kapital-direkt24.de, role=user, gelistet in `test_credentials.md`)
+- CUSTOMER: `6a9a8ff9…` (demo.kunde@essenceinvest.com, role=user, gelistet in `test_credentials.md`)
 - LEDGER_EVENTS_BEFORE: 36 QA-marker + N total (unverändert)
 - LEDGER_EVENTS_AFTER: identisch (unverändert)
 - LEDGER_EVENTS_DELETED: **0** ✅
@@ -4552,7 +4552,7 @@ Der Strict-Offender-Sweep filtert `visibility:hidden`, `display:none`, `opacity:
 
 ## Session 82.48 (Preview) · Sitemap Foreign-Domain Purge
 
-**Ziel:** Fremde `www.kapitalmitte.com`-URLs (18 Einträge) aus `public/sitemap.xml` entfernen. Sicherstellen, dass ausschließlich kontrollierte `kapital-direkt24.de`-URLs zu tatsächlich existierenden Routen ausgeliefert werden. **Kein Prod-Deploy.**
+**Ziel:** Fremde `www.kapitalmitte.com`-URLs (18 Einträge) aus `public/sitemap.xml` entfernen. Sicherstellen, dass ausschließlich kontrollierte `essenceinvest.com`-URLs zu tatsächlich existierenden Routen ausgeliefert werden. **Kein Prod-Deploy.**
 
 **Phase A Audit (Ist vor 82.48):**
 - `SITEMAP_TOTAL_BEFORE`: **36**
@@ -4580,26 +4580,26 @@ Der Strict-Offender-Sweep filtert `visibility:hidden`, `display:none`, `opacity:
 **Phase D Route Check:** Alle 18 verbleibenden Pfade sind `/strategie[*]`. `App.js` liefert dazu drei passende Routen (`/strategie` → `StrategieOverview`, `/strategie/:category` → `StrategieCategory`, `/strategie/:category/:topic` → `StrategieDetail`). Kein Legacy-News-Detail-Pfad, kein Redirect-Ziel, kein Not-Found-Pfad. 82.46/82.47-Regeln eingehalten (keine `/nachrichten/:slug`, `/news/nachrichten/:slug`; `/news/:slug` kanonisch nicht in Sitemap, da News-Detail `noIndex`).
 
 **Phase E Robots/Canonical Regression:**
-- `robots.txt` Sitemap-Link unverändert korrekt: `Sitemap: https://kapital-direkt24.de/sitemap.xml` ✅
-- `PageMeta.js::CANONICAL_ORIGIN` weiterhin `https://kapital-direkt24.de` ✅
+- `robots.txt` Sitemap-Link unverändert korrekt: `Sitemap: https://essenceinvest.com/sitemap.xml` ✅
+- `PageMeta.js::CANONICAL_ORIGIN` weiterhin `https://essenceinvest.com` ✅
 - Statischer `<link rel="canonical">` in `index.html` weiterhin entfernt (nicht zurückgekehrt) ✅
 - Live-Verifikation: pro gerenderter Seite genau **1** Canonical-Tag (Home, News-Overview, News-Detail, Legacy-Redirect-Target, Euronews, Unknown-Slug, `/strategie`) ✅
 
 **Phase F Regression Smoke:**
 | Route | Status | Canonical |
 |---|---|---|
-| `/` | 200 · lädt | `https://kapital-direkt24.de/` |
-| `/news` | 200 · lädt | `https://kapital-direkt24.de/news` |
-| `/news/{real-slug}` | 200 · Artikel rendert | `https://kapital-direkt24.de/news/{slug}` |
-| `/nachrichten/{slug}?utm=t` → Redirect | 82.46 aktiv | `https://kapital-direkt24.de/news/{slug}` |
-| `/news/euronews/{slug}` | 200 · rendert | `https://kapital-direkt24.de/news/euronews/{slug}` |
+| `/` | 200 · lädt | `https://essenceinvest.com/` |
+| `/news` | 200 · lädt | `https://essenceinvest.com/news` |
+| `/news/{real-slug}` | 200 · Artikel rendert | `https://essenceinvest.com/news/{slug}` |
+| `/nachrichten/{slug}?utm=t` → Redirect | 82.46 aktiv | `https://essenceinvest.com/news/{slug}` |
+| `/news/euronews/{slug}` | 200 · rendert | `https://essenceinvest.com/news/euronews/{slug}` |
 | `/news/definitely-nonexistent-…-8248` | Not-Found-State | canonical passt zur URL, `noindex,nofollow` |
-| `/strategie` | 200 · rendert | `https://kapital-direkt24.de/strategie` |
+| `/strategie` | 200 · rendert | `https://essenceinvest.com/strategie` |
 
 82.45 Provider-Fallback: ✅ · 82.46 Route Consolidation: ✅ · 82.47 Canonical Handling: ✅ · Keine Backend-/Depot-/Financial-Änderungen.
 
 **Files Changed:**
-- `frontend/public/sitemap.xml` (18 fremde `www.kapitalmitte.com`-Einträge entfernt, Header-Kommentar hinzugefügt der die Session dokumentiert; verbleibende 18 kapital-direkt24-`/strategie/*`-URLs unverändert)
+- `frontend/public/sitemap.xml` (18 fremde `www.kapitalmitte.com`-Einträge entfernt, Header-Kommentar hinzugefügt der die Session dokumentiert; verbleibende 18 essenceinvest-`/strategie/*`-URLs unverändert)
 - `memory/PRD.md`
 
 **Constraints eingehalten:** Nur Preview · Kein Prod-Deploy · Keine URL-Umschreibungen · Keine erfundenen Seiten · Keine noindex-Aufnahme · Kein Auto-News-Feed-Import · News-Detail-Routing (82.46) unverändert · Canonical-Strategie (82.47) unverändert · Provider-Fallback (82.45) unverändert · Backend/Depot/Financial-Code nicht angefasst · `robots.txt` unverändert.
@@ -4612,17 +4612,17 @@ Der Strict-Offender-Sweep filtert `visibility:hidden`, `display:none`, `opacity:
 **Ziel:** Die in 82.46 konsolidierten News-Detailrouten SEO-seitig sauber vereinheitlichen — genau EIN kanonisches `<link rel="canonical">` pro Seite, absolute Prod-Origin, Query/Hash-frei. **Kein Prod-Deploy.**
 
 **Phase A Audit (Ist-Zustand vor 82.47):**
-- `STATIC_INDEX_CANONICAL`: `<link rel="canonical" href="https://kapital-direkt24.de/">` + `<meta property="og:url" content="https://kapital-direkt24.de/">` fix in `public/index.html`
+- `STATIC_INDEX_CANONICAL`: `<link rel="canonical" href="https://essenceinvest.com/">` + `<meta property="og:url" content="https://essenceinvest.com/">` fix in `public/index.html`
 - `DYNAMIC_CANONICAL`: `PageMeta.js` emittierte `href="#${path}"` (Anchor-Fragment, ohne Origin)
 - Effekt: **2 Canonical-Tags pro Seite** (statisch + Helmet) — Duplicate-Signal für Suchmaschinen
-- `PRODUCTION_ORIGIN`: `https://kapital-direkt24.de` (aus `data/siteContact.js::SITE_URL` — bestätigt als Prod-Domain)
+- `PRODUCTION_ORIGIN`: `https://essenceinvest.com` (aus `data/siteContact.js::SITE_URL` — bestätigt als Prod-Domain)
 - `PREVIEW_SEO_POLICY`: `PublicNewsDetailPage` setzt bereits `noIndex,nofollow` → Preview-Safe
 - `SITEMAP_SOURCE`: Statisches `public/sitemap.xml` (kein dynamischer Generator vorhanden)
 - `LEGACY_NEWS_DETAIL_URLS_IN_SITEMAP`: **0** (Sitemap enthält keinerlei News-Detail-URLs)
 - `JSON-LD / NewsArticle`: nicht vorhanden auf News-Detail — `NOT PRESENT` (nur auf `StrategieDetail`/`_StrategieBreadcrumb`)
 
 **Phase B–D Canonical Strategy (Prod-Origin, Query/Hash-frei):**
-- `PageMeta.js` refactored: `CANONICAL_ORIGIN = 'https://kapital-direkt24.de'` (hart codiert). Neue Helper-Funktion `buildCanonicalUrl(path)` strippt Query & Hash und komponiert absolute URL: `https://kapital-direkt24.de/news/{slug}`.
+- `PageMeta.js` refactored: `CANONICAL_ORIGIN = 'https://essenceinvest.com'` (hart codiert). Neue Helper-Funktion `buildCanonicalUrl(path)` strippt Query & Hash und komponiert absolute URL: `https://essenceinvest.com/news/{slug}`.
 - `window.location.origin` wird **nicht** verwendet → Preview-Domain kann nie canonical werden.
 - OG-Image auf absolute URL normalisiert (externe URLs bleiben unangetastet).
 
@@ -4631,9 +4631,9 @@ Der Strict-Offender-Sweep filtert `visibility:hidden`, `display:none`, `opacity:
 - Weitere URL-spezifische Static-Tags gestrafft (nur noch Site-Level-Defaults: og:type, og:site_name, og:image, twitter:card, twitter:image).
 - Ergebnis: **CANONICAL_TAG_COUNT = 1** pro gerenderter Seite.
 
-**Phase E Legacy Redirects unverändert:** 82.46-Redirects `/nachrichten/:slug` und `/news/nachrichten/:slug` → `/news/:slug` bleiben aktiv, Query+Hash bleiben beim Redirect erhalten. Nach dem Redirect: Canonical zeigt korrekt auf `https://kapital-direkt24.de/news/{slug}` (kein Legacy-Canonical).
+**Phase E Legacy Redirects unverändert:** 82.46-Redirects `/nachrichten/:slug` und `/news/nachrichten/:slug` → `/news/:slug` bleiben aktiv, Query+Hash bleiben beim Redirect erhalten. Nach dem Redirect: Canonical zeigt korrekt auf `https://essenceinvest.com/news/{slug}` (kein Legacy-Canonical).
 
-**Phase F Euronews:** `/news/euronews/:slug` bleibt eigenständig; Canonical korrekt auf `https://kapital-direkt24.de/news/euronews/{slug}`; keine Kollision mit Root-Canonical.
+**Phase F Euronews:** `/news/euronews/:slug` bleibt eigenständig; Canonical korrekt auf `https://essenceinvest.com/news/euronews/{slug}`; keine Kollision mit Root-Canonical.
 
 **Phase G OG / Structured Data:** og:url, og:title, og:description, og:image auf allen News-Detail-Seiten korrekt gesetzt (verifiziert). JSON-LD/NewsArticle nicht vorhanden → `NOT PRESENT` (kein Backwards-Add ohne Scope).
 
@@ -4641,28 +4641,28 @@ Der Strict-Offender-Sweep filtert `visibility:hidden`, `display:none`, `opacity:
 
 **Phase I Sitemap Validation:** XML valide · TOTAL=36 · Duplicates=0 · Legacy=0 · Preview=0 · Localhost=0 · Query=0 · Hash=0 · HTTP=0 ✅
 
-**Phase J Robots.txt:** Sitemap-Link von obsoletem `https://www.kapitalmitte.com/sitemap.xml` auf kanonische Prod-Origin `https://kapital-direkt24.de/sitemap.xml` korrigiert. Cloudflare-Managed-Content-Signals bleiben (Kein neues Preview-noindex, da Infra-Verhalten unklar — Policy eingehalten).
+**Phase J Robots.txt:** Sitemap-Link von obsoletem `https://www.kapitalmitte.com/sitemap.xml` auf kanonische Prod-Origin `https://essenceinvest.com/sitemap.xml` korrigiert. Cloudflare-Managed-Content-Signals bleiben (Kein neues Preview-noindex, da Infra-Verhalten unklar — Policy eingehalten).
 
 **Phase K QA-Testmatrix (Preview verifiziert):**
 | Test | URL | Canonical | Pass |
 |---|---|---|---|
-| T1 kanonisch | `/news/{slug}` | `https://kapital-direkt24.de/news/{slug}` | ✅ 1 Tag |
-| T2 mit Query+Hash | `/news/{slug}?utm=test#anchor` | `https://kapital-direkt24.de/news/{slug}` (ohne ?/#) | ✅ 1 Tag |
-| T3 Legacy A → Redirect | `/nachrichten/{slug}?utm=t3` | `https://kapital-direkt24.de/news/{slug}` | ✅ 1 Tag |
-| T4 Legacy B → Redirect | `/news/nachrichten/{slug}?utm=t4` | `https://kapital-direkt24.de/news/{slug}` | ✅ 1 Tag |
-| T5 Euronews | `/news/euronews/{slug}` | `https://kapital-direkt24.de/news/euronews/{slug}` | ✅ 1 Tag |
+| T1 kanonisch | `/news/{slug}` | `https://essenceinvest.com/news/{slug}` | ✅ 1 Tag |
+| T2 mit Query+Hash | `/news/{slug}?utm=test#anchor` | `https://essenceinvest.com/news/{slug}` (ohne ?/#) | ✅ 1 Tag |
+| T3 Legacy A → Redirect | `/nachrichten/{slug}?utm=t3` | `https://essenceinvest.com/news/{slug}` | ✅ 1 Tag |
+| T4 Legacy B → Redirect | `/news/nachrichten/{slug}?utm=t4` | `https://essenceinvest.com/news/{slug}` | ✅ 1 Tag |
+| T5 Euronews | `/news/euronews/{slug}` | `https://essenceinvest.com/news/euronews/{slug}` | ✅ 1 Tag |
 | T6 Archive-Artikel | via Legacy → Redirect → Detail | canonical `/news/{slug}` | ✅ |
 | T7 Provider-Fallback (82.45) | Slugs aus `/api/news/nachrichten` | canonical `/news/{slug}` | ✅ (T3/T4 nutzen genau diesen Slug) |
 | T8 Unknown slug | `/news/definitely-nonexistent-…` | canonical korrekt zur URL, `noindex,nofollow`, Not-Found-State | ✅ |
-| Regression Home | `/` | `https://kapital-direkt24.de/` | ✅ 1 Tag |
-| Regression News Overview | `/news` | `https://kapital-direkt24.de/news` | ✅ 1 Tag |
+| Regression Home | `/` | `https://essenceinvest.com/` | ✅ 1 Tag |
+| Regression News Overview | `/news` | `https://essenceinvest.com/news` | ✅ 1 Tag |
 
 **Phase L Regression:** 82.45 Provider-Fallback (`/api/content/news/:slug` = 200 für Aggregator-Slug) ✅ · 82.46 Redirects mit Query+Hash-Preservation ✅ · News Overview lädt ✅ · Home lädt ✅. Depot/Auth/Financial-Code nicht angefasst.
 
 **Files Changed:**
 - `frontend/public/index.html` (statisches Canonical + og:url + URL-Twitter-Tags entfernt, Defaults gestrafft)
 - `frontend/src/components/PageMeta.js` (rewrite: `CANONICAL_ORIGIN`, `buildCanonicalUrl`, absolute Prod-URLs, Query/Hash-Stripping, OG-Image-Normalisierung)
-- `frontend/public/robots.txt` (Sitemap-URL auf `kapital-direkt24.de` korrigiert)
+- `frontend/public/robots.txt` (Sitemap-URL auf `essenceinvest.com` korrigiert)
 - `memory/PRD.md`
 
 **Constraints eingehalten:** Kein Prod-Deploy · Nur Preview · Keine News-Datenänderung · Keine Content-Löschung · Provider-Fallback (82.45) unverändert · Redirects (82.46) unverändert · Übersichtsrouten unverändert · `/news/euronews/:slug` unverändert · `window.location.origin` niemals als Canonical · Robots-Regeln nicht spekulativ erweitert · Depot/Auth/Financial-Code nicht angefasst.

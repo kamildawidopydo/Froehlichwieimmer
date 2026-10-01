@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkfrontend=self.webpackChunkfrontend||[]).push([[2482],{52482(e,n,t){t.r(n),t.d(n,{default:()=>a});var o=t(41413),s=t(44414);const a=()=>{const e=(0,o.g)().symbol;return(0,s.jsx)(o.C5,{to:"/dashboard/aktien/".concat(encodeURIComponent(e||"")),replace:!0})}}}]);
