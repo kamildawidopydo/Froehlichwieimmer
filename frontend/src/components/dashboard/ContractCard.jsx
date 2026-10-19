@@ -2,13 +2,16 @@ import React from 'react';
 import {
   AlertTriangle,
   CheckCircle,
+  ChevronRight,
   Clock,
   Landmark,
   Lock,
   PauseCircle,
+  ShieldCheck,
   TrendingDown,
 } from 'lucide-react';
 import BankLogo from '@/components/BankLogo';
+import CountryFlagIcon from '@/components/CountryFlagIcon';
 import LockProgressBar from '@/components/dashboard/LockProgressBar';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import {
@@ -33,7 +36,7 @@ const ACCENTS = {
   primary: PRIMARY_ACCENT,
 };
 
-const ContractCard = ({ contract, accent = 'amber', detailed = true }) => {
+const ContractCard = ({ contract, accent = 'amber', detailed = true, onClick }) => {
   const { computeContractMetrics } = useDashboardData();
   const m = computeContractMetrics(contract);
   const c = contract;
@@ -42,48 +45,85 @@ const ContractCard = ({ contract, accent = 'amber', detailed = true }) => {
   const isFestgeld = productType === 'festgeld';
   const isTagesgeld = productType === 'tagesgeld';
   const isFlexgeld = productType === 'flexgeld';
+  const bankCountry =
+    c.banks?.country_code ||
+    c.banks?.country ||
+    c.banks?.deposit_guarantee_country_code ||
+    null;
+  const hasInsurance =
+    !!(c.banks?.deposit_protection || c.banks?.deposit_protection_amount || c.banks?.deposit_guarantee_country_code);
+  const Container = onClick ? 'button' : 'div';
+  const containerProps = onClick
+    ? {
+        type: 'button',
+        onClick,
+        'data-testid': `contract-card-${c.id}`,
+        className: `group w-full text-left bg-white border rounded-lg overflow-hidden transition-all hover:border-bank-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/30 ${c.is_active ? 'border-bank-border/80' : 'border-bank-border/60 opacity-75'}`,
+      }
+    : {
+        'data-testid': `contract-card-${c.id}`,
+        className: `bg-white border rounded-lg overflow-hidden ${c.is_active ? 'border-bank-border/80' : 'border-bank-border/60 opacity-75'}`,
+      };
 
   return (
-    <div
-      className={`bg-white border rounded-2xl shadow-sm overflow-hidden ${c.is_active ? 'border-bank-border/80' : 'border-bank-border/60 opacity-75'}`}
-    >
-      <div className="flex items-center justify-between gap-4 px-5 py-4 bg-bank-bg/50 border-b border-bank-border/70">
-        <div className="flex items-center gap-3 min-w-0">
+    <Container {...containerProps}>
+      <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-bank-border/70">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div
-            className={`flex shrink-0 items-center justify-center ${c.banks?.logo_url ? '' : `h-10 w-10 rounded-full ${colors.bubble}`}`}
+            className={`flex shrink-0 items-center justify-center ${c.banks?.logo_url ? '' : `h-11 w-11 rounded-md ${colors.bubble}`}`}
           >
             {c.banks?.logo_url ? (
-              <BankLogo logo={c.banks.logo_url} bankName={c.banks?.name} size="sm" className="!h-10 !w-10" />
+              <BankLogo logo={c.banks.logo_url} bankName={c.banks?.name} size="sm" className="!h-11 !w-11" />
             ) : (
-              <Landmark size={18} className={colors.icon} />
+              <Landmark size={20} className={colors.icon} />
             )}
           </div>
-          <div className="min-w-0">
-            <p className="font-semibold text-bank-text truncate">
-              {c.banks?.name || PRODUCT_LABEL[c.product_type] || 'Vertrag'}
-            </p>
-            <p className="text-xs text-bank-text-muted truncate">
-              <span
-                className={`inline-flex text-[10px] font-semibold px-1.5 py-0.5 rounded-full border mr-2 ${PRODUCT_BADGE[c.product_type] || ''}`}
-              >
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="font-semibold text-bank-text truncate" data-testid="contract-bank-name">
+                {c.banks?.name || PRODUCT_LABEL[c.product_type] || 'Vertrag'}
+              </p>
+              <ChevronRight size={14} className="shrink-0 text-bank-text-muted" aria-hidden />
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-bank-text-muted">
+              {bankCountry && (
+                <span className="inline-flex items-center gap-1.5" data-testid="contract-country">
+                  <CountryFlagIcon country={bankCountry} size="xs" />
+                  <span className="text-bank-text-muted">{c.banks?.country || bankCountry}</span>
+                </span>
+              )}
+              <span className="text-bank-text-muted/60">·</span>
+              <span className="font-medium text-bank-text-muted">
                 {PRODUCT_LABEL[c.product_type] || c.product_type}
               </span>
-              {c.laufzeit_monate ? `${c.laufzeit_monate} Monate` : ''}
-              {c.vertragsnummer ? ` · Vertragsnr. ${c.vertragsnummer}` : ''}
-            </p>
+            </div>
+            {hasInsurance && (
+              <span
+                className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10.5px] font-medium text-emerald-700"
+                data-testid="contract-insurance-badge"
+              >
+                <ShieldCheck size={11} strokeWidth={2} />
+                Einlagensicherung
+              </span>
+            )}
           </div>
         </div>
-        <div className="text-right shrink-0">
-          <p className={`text-xl font-bold ${colors.rate}`}>
-            {c.zinssatz != null ? `${Number(c.zinssatz).toLocaleString('de-DE')}% ` : '– '}
-            <span className="text-sm font-medium text-bank-text-muted">p.a.</span>
-          </p>
-          <span
-            className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border mt-1 ${c.is_active ? 'bg-bank-success/10 text-bank-success border-bank-success/25' : 'bg-bank-border/20 text-bank-text-muted border-bank-border'}`}
-          >
-            {c.is_active ? <CheckCircle size={10} /> : <PauseCircle size={10} />}
-            {c.is_active ? 'Aktiv' : 'Inaktiv'}
-          </span>
+        <div className="text-right shrink-0 flex items-start gap-2">
+          <div>
+            <p className={`text-2xl font-semibold tabular-nums ${colors.rate}`}>
+              {c.zinssatz != null ? `${Number(c.zinssatz).toLocaleString('de-DE')}% ` : '– '}
+              <span className="text-sm font-medium text-bank-text-muted">p.a.</span>
+            </p>
+            <span
+              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border mt-1 ${c.is_active ? 'bg-bank-success/10 text-bank-success border-bank-success/25' : 'bg-bank-border/20 text-bank-text-muted border-bank-border'}`}
+            >
+              {c.is_active ? <CheckCircle size={10} /> : <PauseCircle size={10} />}
+              {c.is_active ? 'Aktiv' : 'Inaktiv'}
+            </span>
+          </div>
+          {onClick && (
+            <ChevronRight size={20} className="shrink-0 text-bank-text-muted mt-2 transition-transform group-hover:translate-x-0.5" aria-hidden />
+          )}
         </div>
       </div>
 
@@ -296,7 +336,7 @@ const ContractCard = ({ contract, accent = 'amber', detailed = true }) => {
           )}
         </div>
       )}
-    </div>
+    </Container>
   );
 };
 
