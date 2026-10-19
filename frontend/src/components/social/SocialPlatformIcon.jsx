@@ -5,6 +5,7 @@ const ICONS = {
   facebook: '/assets/social/icons/facebook.svg',
   linkedin: '/assets/social/icons/linkedin.svg',
   instagram: '/assets/social/icons/instagram.svg',
+  xing: '/assets/social/icons/xing.svg',
 };
 
 /** Official brand glyph for footer buttons and in-preview nav bars. */

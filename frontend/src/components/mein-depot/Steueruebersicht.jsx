@@ -18,7 +18,7 @@ import { formatEUR } from '@/lib/dashboardFormatters';
  * Keine Steuerberatung, keine „Sie sollten"-Aussagen. Nur Datenanzeige.
  */
 
-const Steuerübersicht = () => {
+const Steueruebersicht = () => {
   const { loading, taxPrefs } = useDashboardData();
 
   const allowance = Number(taxPrefs?.allowanceEur || 0);
@@ -91,4 +91,4 @@ const Steuerübersicht = () => {
   );
 };
 
-export default Steuerübersicht;
+export default Steueruebersicht;

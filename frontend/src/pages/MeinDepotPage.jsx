@@ -16,7 +16,7 @@ import Faelligkeiten from '@/components/mein-depot/Faelligkeiten';
 import LiquiditaetBanken from '@/components/mein-depot/LiquiditaetBanken';
 import Aktivitaet from '@/components/mein-depot/Aktivitaet';
 import Ertraege from '@/components/mein-depot/Ertraege';
-import Steuerübersicht from '@/components/mein-depot/Steuerübersicht';
+import Steueruebersicht from '@/components/mein-depot/Steueruebersicht';
 import Dokumente from '@/components/mein-depot/Dokumente';
 import Service from '@/components/mein-depot/Service';
 
@@ -63,7 +63,7 @@ const MeinDepotContent = () => (
       <LiquiditaetBanken />
       <Aktivitaet />
       <Ertraege />
-      <Steuerübersicht />
+      <Steueruebersicht />
       <Dokumente />
       <Service />
     </div>

@@ -10,6 +10,11 @@ const PLATFORMS = [
   { id: 'facebook', label: 'Fröhlich Vermögensberatung GmbH auf Facebook — Vorschau öffnen' },
   { id: 'linkedin', label: 'Fröhlich Vermögensberatung GmbH auf LinkedIn — Vorschau öffnen' },
   { id: 'instagram', label: 'Fröhlich Vermögensberatung GmbH auf Instagram — Vorschau öffnen' },
+  {
+    id: 'xing',
+    label: 'Fröhlich Vermögensberatung GmbH auf Xing — Profil öffnen',
+    externalUrl: 'https://www.xing.com/pages/froehlich-vermoegensberatung-gmbh',
+  },
 ];
 
 const SocialFooterIcons = ({ className }) => {
@@ -17,18 +22,32 @@ const SocialFooterIcons = ({ className }) => {
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      {PLATFORMS.map(({ id, label }) => (
-        <button
-          key={id}
-          type="button"
-          className={iconBtn}
-          aria-label={label}
-          data-testid={`social-footer-icon-${id}`}
-          onClick={() => openPreview(id)}
-        >
-          <SocialPlatformIcon platform={id} className="h-full w-full" />
-        </button>
-      ))}
+      {PLATFORMS.map(({ id, label, externalUrl }) =>
+        externalUrl ? (
+          <a
+            key={id}
+            href={externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={iconBtn}
+            aria-label={label}
+            data-testid={`social-footer-icon-${id}`}
+          >
+            <SocialPlatformIcon platform={id} className="h-full w-full" />
+          </a>
+        ) : (
+          <button
+            key={id}
+            type="button"
+            className={iconBtn}
+            aria-label={label}
+            data-testid={`social-footer-icon-${id}`}
+            onClick={() => openPreview(id)}
+          >
+            <SocialPlatformIcon platform={id} className="h-full w-full" />
+          </button>
+        ),
+      )}
     </div>
   );
 };
