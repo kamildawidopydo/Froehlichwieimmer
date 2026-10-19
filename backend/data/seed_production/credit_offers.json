@@ -1,0 +1,189 @@
+[
+ {
+  "_id": "6abbb85418f21cfeefdfd883",
+  "bank_id": "6a82fe2eb0ef4c52da900a86",
+  "product_name": "Ratenkredit",
+  "min_amount_eur": 5000,
+  "max_amount_eur": 100000,
+  "min_term_months": 12,
+  "max_term_months": 120,
+  "effective_rate_from": 3.69,
+  "effective_rate_to": 10.99,
+  "nominal_rate_from": 3.62,
+  "nominal_rate_to": 10.47,
+  "monthly_rate_from": null,
+  "purposes": [
+   "Freie Verwendung"
+  ],
+  "features": [
+   "Zinsrabatt −0,20 % ab Kreditbetrag 40.001 €"
+  ],
+  "representative_example": {
+   "amount_eur": 15000,
+   "term_months": 120,
+   "effective_rate": 7.22,
+   "sollzins": 6.99,
+   "monatsrate": 174.09,
+   "gesamtbetrag": 20889.99,
+   "quote": "§17 PAngV — mindestens zwei Drittel der Kunden"
+  },
+  "source_id": "ing_official_kredit_konditionen",
+  "source_url": "https://www.ing.de/kredit/kredit-konditionen/",
+  "source_retrieved_at": "2026-09-29T13:08:36.431000",
+  "verified_at": "2026-09-29T13:08:36.431000",
+  "verification_method": "web_crawl_official_kredit_konditionen_page",
+  "is_active": true,
+  "is_demo": false,
+  "created_at": "2026-09-29T13:08:36.431000",
+  "updated_at": "2026-09-29T13:08:36.431000"
+ },
+ {
+  "_id": "6abbb85418f21cfeefdfd884",
+  "bank_id": "6abb7515f1dcd0c6d8a8d28b",
+  "product_name": "Privatkredit Sofort",
+  "min_amount_eur": 2500,
+  "max_amount_eur": 100000,
+  "min_term_months": 12,
+  "max_term_months": 120,
+  "effective_rate_from": 6.99,
+  "effective_rate_to": 6.99,
+  "nominal_rate_from": null,
+  "nominal_rate_to": null,
+  "monthly_rate_from": null,
+  "purposes": [
+   "Freie Verwendung"
+  ],
+  "features": [
+   "Sofort-Auszahlung nach digitalem Kontocheck",
+   "Automatischer Zinsvorteil −0,30 pp gegenüber Klassisch",
+   "Kostenlose Sondertilgungen",
+   "Bis zu 3 Ratenpausen möglich"
+  ],
+  "representative_example": null,
+  "source_id": "dkb_official_sofortkredit",
+  "source_url": "https://www.dkb.de/privatkunden/kredite/sofortkredit",
+  "source_retrieved_at": "2026-09-29T13:08:36.431000",
+  "verified_at": "2026-09-29T13:08:36.431000",
+  "verification_method": "web_crawl_official_dkb_produktseite",
+  "is_active": true,
+  "is_demo": false,
+  "created_at": "2026-09-29T13:08:36.431000",
+  "updated_at": "2026-09-29T13:08:36.431000"
+ },
+ {
+  "_id": "6abbb85418f21cfeefdfd885",
+  "bank_id": "6a82fe2eb0ef4c52da900a87",
+  "product_name": "Privatkredit direkt",
+  "min_amount_eur": 3000,
+  "max_amount_eur": 80000,
+  "min_term_months": 12,
+  "max_term_months": 120,
+  "effective_rate_from": 3.25,
+  "effective_rate_to": 14.3,
+  "nominal_rate_from": 3.21,
+  "nominal_rate_to": 13.45,
+  "monthly_rate_from": null,
+  "purposes": [
+   "Freie Verwendung"
+  ],
+  "features": [
+   "Kostenlose Sondertilgungen",
+   "Ratenpausen vertraglich möglich"
+  ],
+  "representative_example": {
+   "amount_eur": 10000,
+   "term_months": 84,
+   "effective_rate": 9.27,
+   "sollzins": 8.9,
+   "monatsrate": 162.0,
+   "gesamtbetrag": 13558.0,
+   "quote": "§17 PAngV — mindestens zwei Drittel der Kunden"
+  },
+  "source_id": "postbank_official_privatkredit_direkt",
+  "source_url": "https://www.postbank.de/privatkunden/produkte/kredite/privatkredit-direkt.html",
+  "source_retrieved_at": "2026-09-29T13:08:36.431000",
+  "verified_at": "2026-09-29T13:08:36.431000",
+  "verification_method": "web_crawl_official_postbank_produktseite",
+  "is_active": true,
+  "is_demo": false,
+  "created_at": "2026-09-29T13:08:36.431000",
+  "updated_at": "2026-09-29T13:08:36.431000"
+ },
+ {
+  "_id": "6abbb85418f21cfeefdfd886",
+  "bank_id": "6abb7515f1dcd0c6d8a8d2ad",
+  "product_name": "BestCredit / Ratenkredit (Openbank Deutschland AG)",
+  "min_amount_eur": 1000,
+  "max_amount_eur": 75000,
+  "min_term_months": 12,
+  "max_term_months": 96,
+  "effective_rate_from": 2.99,
+  "effective_rate_to": 11.98,
+  "nominal_rate_from": 2.95,
+  "nominal_rate_to": 11.37,
+  "monthly_rate_from": null,
+  "purposes": [
+   "Freie Verwendung"
+  ],
+  "features": [
+   "Auszahlung per Instant Payment möglich",
+   "Aufstockung bei entsprechender Bonität"
+  ],
+  "representative_example": {
+   "amount_eur": 10000,
+   "term_months": 84,
+   "effective_rate": 7.27,
+   "sollzins": 7.04,
+   "monatsrate": 151.11,
+   "gesamtbetrag": 12693.24,
+   "quote": "§17 PAngV — mindestens zwei Drittel der Kunden"
+  },
+  "source_id": "santander_official_ratenkredit",
+  "source_url": "https://www.santander.de/privatkunden/kredite-und-finanzierungen/alle-kredite/ratenkredit/",
+  "source_retrieved_at": "2026-09-29T13:08:36.431000",
+  "verified_at": "2026-09-29T13:08:36.431000",
+  "verification_method": "web_crawl_official_santander_produktseite",
+  "is_active": true,
+  "is_demo": false,
+  "created_at": "2026-09-29T13:08:36.431000",
+  "updated_at": "2026-09-29T13:08:36.431000"
+ },
+ {
+  "_id": "6abbb85418f21cfeefdfd887",
+  "bank_id": "6abbb85418f21cfeefdfd882",
+  "product_name": "Top-Kredit",
+  "min_amount_eur": 1000,
+  "max_amount_eur": 65000,
+  "min_term_months": 12,
+  "max_term_months": 120,
+  "effective_rate_from": 3.69,
+  "effective_rate_to": 14.4,
+  "nominal_rate_from": 3.63,
+  "nominal_rate_to": 13.52,
+  "monthly_rate_from": null,
+  "purposes": [
+   "Freie Verwendung"
+  ],
+  "features": [
+   "Payment Holiday / Ratenpause verfügbar"
+  ],
+  "representative_example": {
+   "amount_eur": 10000,
+   "term_months": 48,
+   "effective_rate": 7.9,
+   "sollzins": 7.62,
+   "monatsrate": 242.98,
+   "gesamtbetrag": 11661.06,
+   "quote": "§17 PAngV — mindestens zwei Drittel der Kunden"
+  },
+  "source_id": "norisbank_official_ratenkredit",
+  "source_url": "https://www.norisbank.de/kredit/privatkredit/ratenkredit.html",
+  "source_retrieved_at": "2026-09-29T13:08:36.431000",
+  "verified_at": "2026-09-29T13:08:36.431000",
+  "verification_method": "web_crawl_official_norisbank_produktseite",
+  "is_active": true,
+  "is_demo": false,
+  "created_at": "2026-09-29T13:08:36.431000",
+  "updated_at": "2026-09-29T13:08:36.431000"
+ }
+]

@@ -4676,6 +4676,13 @@ async def on_startup():
         await seed_reviews_from_snapshot(db)
     except Exception as exc:
         logger.warning("reviews_seed startup failed: %s", exc)
+    # Session 95: idempotenter Prod-Seed für Banken, Spar- und Kredit-Angebote
+    # (ehemals Preview-DB-exklusiv). Snapshots in backend/data/seed_production/.
+    try:
+        from production_seed_loader import seed_production_core
+        await seed_production_core(db)
+    except Exception as exc:
+        logger.warning("production_seed startup failed: %s", exc)
     logger.info("Startup complete")
 
 
