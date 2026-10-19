@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Zinsen im Blick behalten">
+  <rect width="1080" height="1080" fill="#ECF3FA"/>
+  <line x1="100" y1="810" x2="600" y2="810" stroke="#1F2937" stroke-width="3"/>
+  <line x1="100" y1="810" x2="100" y2="240" stroke="#1F2937" stroke-width="3"/>
+  <g fill="#4C7CBA">
+    <rect x="130" y="620" width="82" height="190" rx="6"/>
+    <rect x="240" y="500" width="82" height="310" rx="6"/>
+    <rect x="350" y="380" width="82" height="430" rx="6"/>
+    <rect x="460" y="250" width="82" height="560" rx="6"/>
+  </g>
+  <polyline points="171,620 281,500 391,380 501,250" stroke="#3A6499" stroke-width="5" fill="none" stroke-dasharray="10 8"/>
+  <circle cx="171" cy="620" r="10" fill="#3A6499"/>
+  <circle cx="281" cy="500" r="10" fill="#3A6499"/>
+  <circle cx="391" cy="380" r="10" fill="#3A6499"/>
+  <circle cx="501" cy="250" r="14" fill="#1F2937"/>
+  <text x="171" y="865" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-size="18" fill="#6B7280">Q1</text>
+  <text x="281" y="865" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-size="18" fill="#6B7280">Q2</text>
+  <text x="391" y="865" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-size="18" fill="#6B7280">Q3</text>
+  <text x="501" y="865" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="700" font-size="18" fill="#1F2937">Q4</text>
+  <text x="820" y="500" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="800" font-size="360" fill="#4C7CBA">%</text>
+  <text x="820" y="610" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="700" font-size="46" fill="#1F2937">3,50 – 3,85</text>
+  <text x="540" y="945" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="600" font-size="52" fill="#1F2937">Zinsen im Blick</text>
+  <text x="540" y="995" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-size="26" fill="#3A6499">Konditionen im Vergleich</text>
+</svg>

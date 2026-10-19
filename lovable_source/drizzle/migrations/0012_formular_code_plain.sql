@@ -1,0 +1,1 @@
+ALTER TABLE public.formular_access_codes ADD COLUMN IF NOT EXISTS code_plain text;

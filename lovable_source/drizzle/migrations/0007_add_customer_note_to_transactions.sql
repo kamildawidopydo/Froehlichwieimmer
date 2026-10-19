@@ -1,0 +1,2 @@
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS customer_note text;
+COMMENT ON COLUMN public.transactions.customer_note IS 'Notiz der Kundin/des Kunden zur Bestellung oder Zeichnungsanfrage.';

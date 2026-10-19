@@ -1,0 +1,46 @@
+User-agent: Googlebot
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /panel
+Disallow: /mein-depot
+Disallow: /onboarding
+Disallow: /api/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /panel
+Disallow: /mein-depot
+Disallow: /onboarding
+Disallow: /api/
+
+User-agent: Twitterbot
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /panel
+Disallow: /mein-depot
+Disallow: /onboarding
+Disallow: /api/
+
+User-agent: facebookexternalhit
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /panel
+Disallow: /mein-depot
+Disallow: /onboarding
+Disallow: /api/
+
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /panel
+Disallow: /mein-depot
+Disallow: /onboarding
+Disallow: /api/
+
+Sitemap: https://essenceinvest.com/sitemap.xml

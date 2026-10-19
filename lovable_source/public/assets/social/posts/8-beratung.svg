@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Langfristige Zusammenarbeit beginnt mit Vertrauen">
+  <rect width="1080" height="1080" fill="#ECF3FA"/>
+  <path d="M0 800 Q 360 720 720 780 T 1080 740 L 1080 1080 L 0 1080 Z" fill="#4C7CBA" opacity="0.08"/>
+
+  <!-- Table -->
+  <rect x="180" y="600" width="720" height="24" rx="6" fill="#1F2937"/>
+  <rect x="220" y="624" width="20" height="140" fill="#1F2937"/>
+  <rect x="840" y="624" width="20" height="140" fill="#1F2937"/>
+
+  <!-- Document on table -->
+  <rect x="440" y="540" width="200" height="70" rx="6" fill="#FFFFFF" stroke="#4C7CBA" stroke-width="3"/>
+  <line x1="470" y1="562" x2="610" y2="562" stroke="#4C7CBA" stroke-width="4" stroke-linecap="round"/>
+  <line x1="470" y1="580" x2="580" y2="580" stroke="#B5CBE2" stroke-width="3" stroke-linecap="round"/>
+  <line x1="470" y1="596" x2="600" y2="596" stroke="#B5CBE2" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Left figure -->
+  <g transform="translate(320 380)">
+    <circle cx="0" cy="0" r="60" fill="#4C7CBA"/>
+    <path d="M -110 220 Q -110 110 0 90 Q 110 110 110 220 Z" fill="#4C7CBA"/>
+    <path d="M -110 220 Q -110 110 0 90 Q 110 110 110 220 Z" fill="none" stroke="#3A6499" stroke-width="4"/>
+  </g>
+
+  <!-- Right figure -->
+  <g transform="translate(760 380)">
+    <circle cx="0" cy="0" r="60" fill="#3A6499"/>
+    <path d="M -110 220 Q -110 110 0 90 Q 110 110 110 220 Z" fill="#3A6499"/>
+    <path d="M -110 220 Q -110 110 0 90 Q 110 110 110 220 Z" fill="none" stroke="#1F2937" stroke-width="4"/>
+  </g>
+
+  <!-- Chat bubbles / dialogue indicators -->
+  <g fill="#FFFFFF" stroke="#4C7CBA" stroke-width="3">
+    <path d="M 420 260 h 100 a 12 12 0 0 1 12 12 v 42 a 12 12 0 0 1 -12 12 h -70 l -20 20 v -20 h -10 a 12 12 0 0 1 -12 -12 v -42 a 12 12 0 0 1 12 -12 z"/>
+    <circle cx="450" cy="293" r="4" stroke="none" fill="#4C7CBA"/>
+    <circle cx="470" cy="293" r="4" stroke="none" fill="#4C7CBA"/>
+    <circle cx="490" cy="293" r="4" stroke="none" fill="#4C7CBA"/>
+  </g>
+  <g fill="#FFFFFF" stroke="#3A6499" stroke-width="3">
+    <path d="M 550 200 h 120 a 12 12 0 0 1 12 12 v 50 a 12 12 0 0 1 -12 12 h -30 l 15 22 -30 -22 h -75 a 12 12 0 0 1 -12 -12 v -50 a 12 12 0 0 1 12 -12 z"/>
+    <circle cx="590" cy="237" r="4" stroke="none" fill="#3A6499"/>
+    <circle cx="610" cy="237" r="4" stroke="none" fill="#3A6499"/>
+    <circle cx="630" cy="237" r="4" stroke="none" fill="#3A6499"/>
+  </g>
+
+  <text x="540" y="890" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="600" font-size="50" fill="#1F2937">Beratung mit Perspektive</text>
+  <text x="540" y="945" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-size="26" fill="#3A6499">Langfristige Zusammenarbeit beginnt mit Vertrauen</text>
+</svg>

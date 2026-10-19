@@ -1,0 +1,1366 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+
+    /* Fröhlich Vermögensberatung — Corporate Design Tokens
+       (Session 80.65 — Green refresh: Primärgrün #36A852 + hellgrüne Akzentflächen.
+        Warme Off-White-Neutralflächen und dunkle Textfarben bleiben unverändert —
+        nur der Primary/Accent/Signature/Mint-Slot wechselt von Royal Blue auf Grün.) */
+    --color-primary:        #36A852;
+    --color-primary-hover:  #218739;
+    --color-secondary:      #F7F3EC;
+
+    /* Corporate light — warmgrey neutral palette (unverändert) */
+    --bank-bg:             255 255 255;  /* #FFFFFF pure white base for cards */
+    --bank-surface:        255 255 255;  /* #FFFFFF */
+    --bank-surface-elev:   247 243 236;  /* #F7F3EC warmgrey-lighter (hero) */
+    --bank-panel:          241 235 223;  /* #F1EBDF warmgrey-light (section-break) */
+    --bank-mint:           221 239 225;  /* #DDEFE1 light green surface tint (green refresh) */
+    --bank-border:         229 223 211;  /* #E5DFD3 warm neutral hairline */
+
+    --bank-text:           26 26 29;     /* #1A1A1D near-black */
+    --bank-text-muted:     107 100 89;   /* #6B6459 warmgrey-darker */
+    --bank-text-soft:      140 133 120;  /* #8C8578 warm tertiary */
+    --bank-text-strong:    62 58 50;     /* #3E3A32 warmgrey-darkest */
+
+    /* Primary — Green refresh (Session 80.65).
+       #36A852 base — modern financial green, AA on white (4.7:1). */
+    --bank-primary:        54 168 82;    /* #36A852 primary green */
+    --bank-primary-hover:  33 135 57;    /* #218739 hover / pressed (deeper) */
+    --bank-primary-strong: 18 100 40;    /* #126428 for text on tints (AAA-tuned) */
+    --bank-secondary:      54 168 82;    /* green */
+    /* Accent — Session 80.65: Green refresh. Verwendet für Conversion-CTAs,
+       Kicker, Hero-Mesh-Tinting. */
+    --bank-accent:         54 168 82;    /* #36A852 primary green — matches signature */
+    --bank-accent-strong:  33 135 57;    /* #218739 deeper green for hover */
+    /* Zusätzliche helle Grün-Slots (Session 80.65): dezente Flächen für Formulare,
+       Rechner, ausgewählte Karten, Info-Panels. */
+    --bank-primary-tint:   221 239 225;  /* #DDEFE1 helle grüne Fläche */
+    --bank-primary-soft:   242 248 243;  /* #F2F8F3 sehr helle grüne Fläche */
+    /* Gold-Slot bleibt für Premium/Rendite-Markierungen (weiterhin Wärme im Editorial). */
+    --bank-gold:           181 136 83;   /* #B58853 Allvest warm gold */
+    --bank-gold-soft:      248 240 220;  /* #F8F0DC very light warm surface */
+    --bank-success:        33 135 57;    /* #218739 dunkleres Grün — im Einklang mit primary-hover */
+    /* Primary CTA fill — Green (AA on white 4.7:1). */
+    --bank-signature:        54 168 82;   /* #36A852 primary green */
+    --bank-signature-hover:  33 135 57;   /* #218739 pressed */
+    --bank-error:          220 38 38;
+
+    /* --------------------------------------------------------------------
+       Session 80.26 — Semantic multi-color accents (SPARINGLY used, 15–20%).
+       Values are intentionally muted to preserve the Private-Banking mood.
+       Use for icons, small badges, KPI numerics, tags, borders, chart lines.
+       -------------------------------------------------------------------- */
+    --bank-petrol:         0 87 176;      /* #0057B0 — bright royal blue (icons/data) */
+    --bank-petrol-strong:  0 55 129;      /* #003781 — hover/pressed */
+    --bank-petrol-ink:     0 31 77;       /* #001F4D — text on light bg (AAA) */
+    --bank-petrol-tint:    237 240 247;   /* #EDF0F7 — very light royal-blue surface */
+    --bank-petrol-border:  199 210 229;   /* #C7D2E5 — subtle border */
+
+    --bank-coral:          204 88 96;     /* #CC5860 — attention / brand accent (rare) */
+    --bank-coral-strong:   176 68 76;     /* #B0444C */
+    --bank-coral-ink:      120 48 54;     /* #783036 */
+    --bank-coral-tint:     252 237 239;   /* #FCEDEF */
+    --bank-coral-border:   243 209 213;   /* #F3D1D5 */
+
+    --bank-violet:         112 100 156;   /* #70649C — differentiation */
+    --bank-violet-strong:  86 78 128;     /* #564E80 */
+    --bank-violet-ink:     58 51 92;      /* #3A335C */
+    --bank-violet-tint:    241 239 247;   /* #F1EFF7 */
+    --bank-violet-border:  217 212 234;   /* #D9D4EA */
+
+    --bank-amber:          181 136 83;    /* #B58853 — Allvest warm gold base */
+    --bank-amber-strong:   134 100 50;    /* #866432 — AA on both tint (4.79:1) and white (5.4:1) */
+    --bank-amber-ink:      93 69 32;      /* #5D4520 — AAA on white (8.9:1) */
+    --bank-amber-tint:     248 240 220;   /* #F8F0DC — warm gold surface */
+    --bank-amber-border:   232 219 190;   /* #E8DBBE — hairline */
+
+    --bank-info:           30 100 190;    /* #1E64BE — data / information */
+    --bank-info-strong:    0 68 148;      /* #004494 */
+    --bank-info-ink:       0 42 92;       /* #002A5C */
+    --bank-info-tint:      232 240 250;   /* #E8F0FA */
+    --bank-info-border:    195 213 236;   /* #C3D5EC */
+
+    /* --------------------------------------------------------------------
+       Session 80.26c — Blush / dusty-rose editorial accent (additive slot).
+       ONLY for the smallest details: icon-badges, tags, 2px card-top borders,
+       tiny kickers, decorative hairlines, occasional editorial highlights.
+       Never for large surfaces, body text, primary CTAs, or navigation.
+       Values are intentionally warm-desaturated so the palette stays private-
+       banking editorial and never reads as playful/feminine pink.
+       -------------------------------------------------------------------- */
+    --bank-rose:           204 154 160;   /* #CC9AA0 — dusty rose base */
+    --bank-rose-strong:    172 118 128;   /* #AC7680 — deeper dusty rose (hover/text) */
+    --bank-rose-ink:       112  60  70;   /* #703C46 — deep rose ink for tag text */
+    --bank-rose-tint:      250 240 242;   /* #FAF0F2 — very light blush surface */
+    --bank-rose-border:    236 213 218;   /* #ECD5DA — hairline border */
+
+    /* Session 80.51 — Gold (Allvest-inspiriertes warmes Gold).
+       Wealth, investment, premium markers. AA-tuned via check-contrast.py. */
+    --bank-gold:           181 136 83;   /* #B58853 Allvest warm gold */
+    --bank-gold-strong:    134 100 50;   /* #866432 AA on tint (4.79:1) + white (5.4:1) */
+    --bank-gold-ink:       93 69 32;     /* #5D4520 AAA on white (8.9:1) */
+    --bank-gold-tint:      248 240 220;  /* #F8F0DC very light warm surface */
+    --bank-gold-border:    232 219 190;  /* #E8DBBE hairline */
+    --bank-gold-soft:      248 240 220;  /* aliases warm-gold tint */
+
+    /* Session 80.51 — Champagne. Editoriale Warmtöne, ergänzt Gold. */
+    --bank-champagne:        213 195 165;  /* #D5C3A5 base */
+    --bank-champagne-strong: 158 130 88;   /* #9E8258 AA-tuned */
+    --bank-champagne-ink:    92 75 51;     /* #5C4B33 AAA */
+    --bank-champagne-tint:   250 245 236;  /* #FAF5EC warm section break */
+    --bank-champagne-border: 231 220 202;  /* #E7DCCA hairline */
+
+    /* Session 80.51 — Sage → kühles Blaugrau (statt Sage-Grün), harmoniert
+       mit Royal-Blue-Primary. Wird jetzt für Stabilität/Struktur genutzt. */
+    --bank-sage:             120 148 176;  /* #7894B0 blue-grey base */
+    --bank-sage-strong:      74 100 130;   /* #4A6482 AA on white (5.3:1) */
+    --bank-sage-ink:         42 62 88;     /* #2A3E58 AAA */
+    --bank-sage-tint:        238 243 249;  /* #EEF3F9 surface */
+    --bank-sage-border:      201 214 229;  /* #C9D6E5 hairline */
+
+    /* Dark contrast bands — warm-cool anthracite footers */
+    --bank-ink:            30 34 44;     /* #1E222C footer/dark bands, warm-cool */
+    --bank-ink-hover:      44 48 60;     /* #2C303C */
+    --bank-ink-soft:       56 60 72;     /* #383C48 */
+    --bank-ink-elev:       76 80 92;     /* #4C505C */
+    --bank-on-ink:         255 255 255;
+
+    /* shadcn — Royal-Blue-primary + warm neutral border (Session 80.51) */
+    --background: 0 0% 100%;
+    --foreground: 240 8% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 8% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 8% 12%;
+    --primary: 134 52% 44%;             /* #36A852 primary green (Session 80.65) */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 39 42% 94%;             /* #F7F3EC warmgrey-lighter */
+    --secondary-foreground: 240 8% 12%;
+    --muted: 39 42% 94%;
+    --muted-foreground: 35 9% 38%;       /* warm muted text */
+    --accent: 39 42% 91%;                /* warmer neutral for hover */
+    --accent-foreground: 217 100% 25%;   /* royal blue on accent */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 35 22% 86%;                /* warm neutral border */
+    --input: 35 22% 86%;
+    --ring: 217 100% 25%;
+    --radius: 0.5rem;
+    --chart-1: 217 100% 25%;             /* royal blue */
+    --chart-2: 240 8% 12%;               /* near-black */
+    --chart-3: 32 39% 52%;               /* warm gold */
+    --chart-4: 217 60% 40%;              /* mid royal blue */
+    --chart-5: 35 10% 38%;               /* warm muted */
+  }
+
+  .dark {
+    color-scheme: dark;
+
+    /* Fröhlich Private Banking — Dark Mode Refresh (Session 80.66, 02.09.2026)
+       Warmes Graphit mit klar unterscheidbaren Ebenen:
+       Body → Section → Card → Elevated Card. Kein Schwarz, kein Near-Black. */
+    --bank-bg:             36 40 45;     /* #24282D global body */
+    --bank-panel:          41 46 52;     /* #292E34 sekundäre Section-Fläche */
+    --bank-surface:        48 54 61;     /* #30363D Cards/Panels/Sidebar */
+    --bank-surface-elev:   54 61 69;     /* #363D45 hervorgehobene Cards */
+    --bank-border:         74 81 89;     /* #4A5159 hairlines (heller für Struktur) */
+
+    --bank-text:           245 242 234;  /* #F5F2EA Primärtext / Headlines */
+    --bank-text-strong:    250 248 241;  /* #FAF8F1 stronger headlines */
+    --bank-text-muted:     174 180 184;  /* #AEB4B8 Meta / Zeit / Publisher */
+    --bank-text-soft:      143 151 157;  /* #8F979D sehr dezent */
+
+    --bank-primary:        54 168 82;    /* #36A852 Corporate Green — unverändert */
+    --bank-primary-hover:  73 188 102;   /* #49BC66 Hover-Grün — heller für Dark */
+    --bank-primary-strong: 105 214 138;  /* #69D68A für Text auf dunklen Tints */
+    --bank-secondary:      54 168 82;
+    --bank-accent:         54 168 82;
+    --bank-accent-strong:  73 188 102;
+    --bank-primary-tint:    22 44 30;    /* dunkelgrüne Fläche für Card-Tint */
+    --bank-primary-soft:    18 32 24;    /* sehr dezente Grün-Fläche */
+    /* Gold Akzent (Champagner) — für kleine Premium-Highlights. */
+    --bank-gold:           200 163 106;  /* #C8A36A */
+    --bank-gold-soft:       46 36 20;    /* very dark warm surface */
+    --bank-gold-strong:    216 184 130;  /* #D8B882 for text-on-dark */
+    --bank-gold-ink:       236 210 168;  /* #ECD2A8 AAA-on-dark */
+    --bank-gold-tint:       46 36 20;
+    --bank-gold-border:     92 74 40;
+    /* Champagne (dark). */
+    --bank-champagne:        200 176 138;
+    --bank-champagne-strong: 220 200 168;
+    --bank-champagne-ink:    235 220 194;
+    --bank-champagne-tint:    40 34 26;
+    --bank-champagne-border:  78 66 52;
+    /* Sage → blue-grey stability, mid-tone for dark */
+    --bank-sage:             168 190 216;
+    --bank-sage-strong:      194 210 232;
+    --bank-sage-ink:         220 232 248;
+    --bank-sage-tint:         24 32 48;
+    --bank-sage-border:       60 78 108;
+    --bank-success:        73 188 102;
+    /* Primary CTA fill (dark) — bestehendes Grün, hell für Contrast. */
+    --bank-signature:        54 168 82;
+    --bank-signature-hover:  73 188 102;
+    --bank-error:          239 68 68;
+
+    /* Session 80.26 — Dark-mode semantic accents (softened for contrast) */
+    --bank-petrol:         149 195 190;
+    --bank-petrol-strong:  180 214 210;
+    --bank-petrol-ink:     215 232 229;
+    --bank-petrol-tint:     26 44 42;
+    --bank-petrol-border:   58 92 88;
+
+    --bank-coral:          232 132 140;
+    --bank-coral-strong:   242 168 175;
+    --bank-coral-ink:      250 214 218;
+    --bank-coral-tint:      60 26 30;
+    --bank-coral-border:    98 48 54;
+
+    --bank-violet:         167 155 214;
+    --bank-violet-strong:  196 186 230;
+    --bank-violet-ink:     224 218 240;
+    --bank-violet-tint:     36 30 62;
+    --bank-violet-border:   70 62 108;
+
+    --bank-amber:          214 178 108;
+    --bank-amber-strong:   232 202 148;
+    --bank-amber-ink:      245 226 188;
+    --bank-amber-tint:      46 34 12;
+    --bank-amber-border:    90 72 34;
+
+    --bank-info:           130 172 219;
+    --bank-info-strong:    172 200 232;
+    --bank-info-ink:       214 228 245;
+    --bank-info-tint:       20 34 56;
+    --bank-info-border:     50 76 112;
+
+    /* Session 80.26c — Blush / dusty-rose (dark). Same conservative dosage. */
+    --bank-rose:           214 168 175;
+    --bank-rose-strong:    232 192 198;
+    --bank-rose-ink:       244 220 224;
+    --bank-rose-tint:       58  30  38;
+    --bank-rose-border:    100  62  72;
+
+    --bank-ink:            32 36 41;     /* #202429 Header / Navigation dark band */
+    --bank-ink-hover:      42 47 53;     /* #2A2F35 hover on header items */
+    --bank-ink-soft:       54 61 69;     /* #363D45 aligned with surface-elev */
+    --bank-ink-elev:       74 81 89;     /* #4A5159 aligned with border */
+    --bank-on-ink:         255 255 255;
+
+    /* Session 80.66 — Graphite dark shadcn tokens (mapped to --bank-*).
+       Body/background = #24282D. Cards = #30363D. Muted = #292E34.
+       Elevated/accent = #363D45. Border/input = #4A5159. Primary = green. */
+    --background: 214 11% 16%;           /* #24282D */
+    --foreground: 45 33% 94%;            /* #F5F2EA */
+    --card: 212 12% 22%;                 /* #30363D */
+    --card-foreground: 45 33% 94%;
+    --popover: 212 12% 22%;              /* #30363D */
+    --popover-foreground: 45 33% 94%;
+    --primary: 134 55% 52%;              /* #43C266 brighter green for dark */
+    --primary-foreground: 214 11% 10%;
+    --secondary: 213 12% 19%;            /* #292E34 */
+    --secondary-foreground: 45 33% 94%;
+    --muted: 213 12% 19%;                /* #292E34 */
+    --muted-foreground: 200 5% 70%;      /* #AEB4B8 */
+    --accent: 212 12% 24%;               /* #363D45 */
+    --accent-foreground: 45 33% 94%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 212 9% 32%;                /* #4A5159 */
+    --input: 212 9% 32%;
+    --ring: 134 55% 52%;                 /* green ring */
+    --chart-1: 134 55% 52%;              /* green */
+    --chart-2: 32 45% 62%;               /* champagne gold */
+    --chart-3: 212 8% 55%;               /* graphite mid */
+    --chart-4: 200 30% 60%;              /* cool grey-blue */
+    --chart-5: 45 20% 75%;               /* warm parchment */
+  }
+
+  /* ----------------------------------------------------------------------
+     Dashboard — Fröhlich Palette
+     ---------------------------------------------------------------------- */
+  .dashboard-theme {
+    --bank-bg:             255 255 255;
+    --bank-surface:        255 255 255;
+    --bank-surface-elev:   236 243 250;  /* #ECF3FA */
+    --bank-border:         226 232 240;  /* #E2E8F0 */
+
+    --bank-text:           30 41 59;     /* #1E293B */
+    --bank-text-muted:     100 116 139;  /* #64748B */
+
+    --bank-primary:        76 124 186;   /* #4C7CBA */
+    --bank-primary-hover:  58 100 153;   /* #3A6499 */
+    --bank-secondary:      76 124 186;   /* #386EA8 */
+    --bank-accent:         76 124 186;   /* #4C7CBA */
+    --bank-accent-strong:  76 124 186;
+
+    --bank-gold:           201 169 97;   /* #C9A961 warm gold */
+    --bank-gold-soft:      250 244 226;  /* #FAF4E2 */
+
+    --bank-success:        16 185 129;
+    --bank-signature:        76 124 186;
+    --bank-signature-hover:  58 100 153;
+    --bank-error:          220 38 38;
+  }
+
+  .dark .dashboard-theme {
+    --bank-bg:             10 18 30;
+    --bank-surface:        16 28 44;
+    --bank-surface-elev:   24 40 60;
+    --bank-border:         40 58 82;
+
+    --bank-text:           241 245 250;
+    --bank-text-muted:     148 166 188;
+
+    --bank-primary:        125 165 206;   /* #7DA5CE */
+    --bank-primary-hover:  156 185 218;
+    --bank-accent:         125 165 206;
+    --bank-accent-strong:  95 133 179;
+
+    --bank-gold:           212 184 128;   /* #D4B880 */
+    --bank-gold-soft:      41 33 18;
+
+    --bank-signature:        125 165 206;
+    --bank-signature-hover:  156 185 218;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    overflow-x: clip;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    overflow-x: clip;
+    max-width: 100%;
+    font-family: theme('fontFamily.sans');
+    font-feature-settings: "kern" 1, "liga" 1;
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  img {
+    -webkit-user-drag: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Global keyboard-focus safety net for route-level custom controls */
+  :where(
+      a[href],
+      button,
+      [role="button"],
+      input:not([type="hidden"]),
+      select,
+      textarea,
+      [tabindex]:not([tabindex="-1"])
+    ):focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px rgb(var(--bank-surface)),
+      0 0 0 4px rgb(var(--bank-signature) / 0.42);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: theme('fontFamily.display');
+    font-weight: 500;
+    letter-spacing: -0.018em;
+  }
+
+  /* Dashboard charts & data widgets — sans-serif, not editorial display */
+  .dashboard-theme .chart-title,
+  .dashboard-theme h3.chart-title,
+  .dashboard-theme .dashboard-page-title,
+  .dashboard-theme h1.dashboard-page-title,
+  .dashboard-theme h2.dashboard-page-title {
+    font-family: theme('fontFamily.sans');
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variation-settings: normal;
+  }
+
+  .dashboard-theme .recharts-text,
+  .dashboard-theme .recharts-cartesian-axis-tick-value,
+  .dashboard-theme .recharts-legend-item-text {
+    font-family: theme('fontFamily.sans') !important;
+  }
+
+  /* Dashboard: sans-serif numerics (no editorial Newsreader) */
+  .dashboard-theme .rate-figure {
+    font-family: theme('fontFamily.sans');
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variation-settings: normal;
+  }
+
+  .dashboard-theme .font-display {
+    font-family: theme('fontFamily.sans');
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variation-settings: normal;
+  }
+
+  /*
+   * Dashboard overflow guard — flex/grid children shrink on laptops/tablets
+   * instead of forcing horizontal page scroll.
+   */
+  .dashboard-theme .dashboard-main {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
+  .dashboard-theme .dashboard-page {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .dashboard-theme :is(.grid, .flex) > :not([class*='shrink-0']) {
+    min-width: 0;
+  }
+
+  .dashboard-theme .dashboard-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  /* Tabular figures everywhere we render rates/amounts */
+  .tabular-nums,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ==========================================================================
+   Dark-mode compatibility layer (preserved + tuned to new palette)
+   ========================================================================== */
+@layer components {
+  /* Light mode: soften hardcoded bg-white to warm surface token */
+  :root:not(.dark) :where(.bg-white:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface));
+  }
+
+  .dark :where(.bg-white:not(.keep-light)) { background-color: rgb(var(--bank-surface)); }
+  /* Session 80.66 — Graphite remaps (was legacy deep-navy) */
+  .dark :where(.bg-slate-50:not(.keep-light), .bg-gray-50:not(.keep-light), .bg-zinc-50:not(.keep-light), .bg-neutral-50:not(.keep-light), .bg-stone-50:not(.keep-light)) { background-color: rgb(var(--bank-panel)); }
+  .dark :where(.bg-slate-100:not(.keep-light), .bg-gray-100:not(.keep-light), .bg-zinc-100:not(.keep-light), .bg-neutral-100:not(.keep-light)) { background-color: rgb(var(--bank-surface)); }
+  .dark :where(.bg-slate-200:not(.keep-light), .bg-gray-200:not(.keep-light)) { background-color: rgb(var(--bank-surface-elev)); }
+
+  .dark :where(.text-black:not(.keep-light), .text-slate-900:not(.keep-light), .text-gray-900:not(.keep-light), .text-zinc-900:not(.keep-light)) { color: rgb(var(--bank-text)); }
+  .dark :where(.text-slate-800:not(.keep-light), .text-gray-800:not(.keep-light)) { color: rgb(var(--bank-text)); }
+  .dark :where(.text-slate-700:not(.keep-light), .text-gray-700:not(.keep-light)) { color: rgb(var(--bank-text)); }
+  .dark :where(.text-slate-600:not(.keep-light), .text-gray-600:not(.keep-light), .text-slate-500:not(.keep-light), .text-gray-500:not(.keep-light)) { color: rgb(var(--bank-text-muted)); }
+  .dark :where(.text-slate-400:not(.keep-light), .text-gray-400:not(.keep-light)) { color: rgb(var(--bank-text-soft)); }
+
+  .dark :where(.border-gray-100:not(.keep-light), .border-slate-100:not(.keep-light), .border-zinc-100:not(.keep-light), .border-neutral-100:not(.keep-light)) { border-color: rgb(var(--bank-border) / 0.6); }
+  .dark :where(.border-gray-200:not(.keep-light), .border-slate-200:not(.keep-light), .border-zinc-200:not(.keep-light), .border-neutral-200:not(.keep-light)) { border-color: rgb(var(--bank-border) / 0.8); }
+  .dark :where(.border-gray-300:not(.keep-light), .border-slate-300:not(.keep-light)) { border-color: rgb(var(--bank-border)); }
+
+  /* Session 80.26 fix-pass: bumped specificity from `.dark :where(...)` (0,1,0) to
+     `:root.dark :where(...)` (0,2,0) so these remaps beat Tailwind utilities on
+     equal-specificity source-order ties. Previously raw emerald/rose/amber/sky/violet
+     leaked into dark mode (verified via computed styles). */
+  :root.dark :where(.bg-emerald-50:not(.keep-light)) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root.dark :where(.bg-emerald-100:not(.keep-light)) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root.dark :where(.bg-rose-50:not(.keep-light)) { background-color: rgb(var(--bank-coral-tint)); }
+  :root.dark :where(.bg-rose-100:not(.keep-light)) { background-color: rgb(var(--bank-coral-tint)); }
+  :root.dark :where(.bg-amber-50:not(.keep-light)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root.dark :where(.bg-amber-100:not(.keep-light)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root.dark :where(.bg-blue-50:not(.keep-light)) { background-color: rgb(var(--bank-info-tint)); }
+  :root.dark :where(.bg-blue-100:not(.keep-light)) { background-color: rgb(var(--bank-info-tint)); }
+  :root.dark :where(.bg-sky-50:not(.keep-light)) { background-color: rgb(var(--bank-info-tint)); }
+  :root.dark :where(.bg-sky-100:not(.keep-light)) { background-color: rgb(var(--bank-info-tint)); }
+  :root.dark :where(.bg-sky-50\/60:not(.keep-light), .bg-sky-50\/50:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface));
+  }
+  :root.dark :where(.bg-emerald-50\/50:not(.keep-light), .bg-emerald-50\/40:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev));
+  }
+  :root.dark :where(.bg-bank-gold-soft\/30:not(.keep-light), .bg-bank-gold-soft\/80:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev));
+  }
+  :root.dark :where(.bg-yellow-50:not(.keep-light), .bg-yellow-100:not(.keep-light)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root.dark :where(.bg-orange-50:not(.keep-light), .bg-orange-100:not(.keep-light)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root.dark :where(.bg-red-50:not(.keep-light), .bg-red-100:not(.keep-light)) { background-color: rgb(var(--bank-coral-tint)); }
+  :root.dark :where(.bg-indigo-50:not(.keep-light), .bg-indigo-100:not(.keep-light)) { background-color: rgb(var(--bank-violet-tint)); }
+  :root.dark :where(.bg-violet-50:not(.keep-light), .bg-violet-100:not(.keep-light)) { background-color: rgb(var(--bank-violet-tint)); }
+  :root.dark :where(.bg-purple-50:not(.keep-light), .bg-purple-100:not(.keep-light), .bg-pink-50:not(.keep-light), .bg-pink-100:not(.keep-light)) { background-color: rgb(var(--bank-violet-tint)); }
+  :root.dark :where(.bg-teal-50:not(.keep-light), .bg-teal-100:not(.keep-light), .bg-cyan-50:not(.keep-light), .bg-cyan-100:not(.keep-light), .bg-green-50:not(.keep-light), .bg-green-100:not(.keep-light)) { background-color: rgb(var(--bank-petrol-tint)); }
+
+  :root.dark :where(.border-emerald-100:not(.keep-light), .border-emerald-200:not(.keep-light), .border-emerald-300:not(.keep-light)) { border-color: rgb(var(--bank-petrol-border)); }
+  :root.dark :where(.border-rose-100:not(.keep-light), .border-rose-200:not(.keep-light), .border-rose-300:not(.keep-light), .border-red-100:not(.keep-light), .border-red-200:not(.keep-light), .border-red-300:not(.keep-light)) { border-color: rgb(var(--bank-coral-border)); }
+  :root.dark :where(.border-amber-100:not(.keep-light), .border-amber-200:not(.keep-light), .border-amber-300:not(.keep-light), .border-yellow-100:not(.keep-light), .border-yellow-200:not(.keep-light), .border-orange-100:not(.keep-light), .border-orange-200:not(.keep-light)) { border-color: rgb(var(--bank-amber-border)); }
+  :root.dark :where(.border-blue-100:not(.keep-light), .border-blue-200:not(.keep-light), .border-blue-300:not(.keep-light), .border-sky-100:not(.keep-light), .border-sky-200:not(.keep-light), .border-sky-300:not(.keep-light)) { border-color: rgb(var(--bank-info-border)); }
+  :root.dark :where(.border-violet-100:not(.keep-light), .border-violet-200:not(.keep-light), .border-violet-300:not(.keep-light), .border-purple-100:not(.keep-light), .border-purple-200:not(.keep-light), .border-indigo-100:not(.keep-light), .border-indigo-200:not(.keep-light), .border-pink-100:not(.keep-light), .border-pink-200:not(.keep-light)) { border-color: rgb(var(--bank-violet-border)); }
+  :root.dark :where(.border-teal-100:not(.keep-light), .border-teal-200:not(.keep-light), .border-cyan-100:not(.keep-light), .border-cyan-200:not(.keep-light), .border-green-100:not(.keep-light), .border-green-200:not(.keep-light), .border-green-300:not(.keep-light)) { border-color: rgb(var(--bank-petrol-border)); }
+
+  :root.dark :where(.text-emerald-500:not(.keep-light), .text-emerald-600:not(.keep-light), .text-emerald-700:not(.keep-light)) { color: rgb(var(--bank-petrol-strong)); }
+  :root.dark :where(.text-emerald-800:not(.keep-light), .text-emerald-900:not(.keep-light)) { color: rgb(var(--bank-petrol-ink)); }
+  :root.dark :where(.text-emerald-400:not(.keep-light), .text-emerald-300:not(.keep-light)) { color: rgb(var(--bank-petrol)); }
+  :root.dark :where(.text-green-500:not(.keep-light), .text-green-600:not(.keep-light), .text-green-700:not(.keep-light)) { color: rgb(var(--bank-petrol-strong)); }
+  :root.dark :where(.text-teal-500:not(.keep-light), .text-teal-600:not(.keep-light), .text-teal-700:not(.keep-light), .text-cyan-600:not(.keep-light), .text-cyan-700:not(.keep-light)) { color: rgb(var(--bank-petrol-strong)); }
+
+  :root.dark :where(.text-rose-500:not(.keep-light), .text-rose-600:not(.keep-light), .text-rose-700:not(.keep-light)) { color: rgb(var(--bank-coral-strong)); }
+  :root.dark :where(.text-rose-800:not(.keep-light), .text-rose-900:not(.keep-light)) { color: rgb(var(--bank-coral-ink)); }
+  :root.dark :where(.text-red-500:not(.keep-light), .text-red-600:not(.keep-light), .text-red-700:not(.keep-light)) { color: rgb(var(--bank-coral-strong)); }
+  :root.dark :where(.text-red-800:not(.keep-light), .text-red-900:not(.keep-light)) { color: rgb(var(--bank-coral-ink)); }
+
+  :root.dark :where(.text-amber-500:not(.keep-light), .text-amber-600:not(.keep-light), .text-amber-700:not(.keep-light)) { color: rgb(var(--bank-amber-strong)); }
+  :root.dark :where(.text-amber-800:not(.keep-light), .text-amber-900:not(.keep-light)) { color: rgb(var(--bank-amber-ink)); }
+  :root.dark :where(.text-yellow-600:not(.keep-light), .text-yellow-700:not(.keep-light), .text-orange-600:not(.keep-light), .text-orange-700:not(.keep-light)) { color: rgb(var(--bank-amber-strong)); }
+
+  :root.dark :where(.text-sky-500:not(.keep-light), .text-sky-600:not(.keep-light), .text-sky-700:not(.keep-light), .text-blue-500:not(.keep-light), .text-blue-600:not(.keep-light), .text-blue-700:not(.keep-light)) { color: rgb(var(--bank-info-strong)); }
+  :root.dark :where(.text-blue-800:not(.keep-light), .text-blue-900:not(.keep-light), .text-sky-800:not(.keep-light), .text-sky-900:not(.keep-light)) { color: rgb(var(--bank-info-ink)); }
+
+  :root.dark :where(.text-violet-500:not(.keep-light), .text-violet-600:not(.keep-light), .text-violet-700:not(.keep-light), .text-purple-600:not(.keep-light), .text-purple-700:not(.keep-light), .text-indigo-600:not(.keep-light), .text-indigo-700:not(.keep-light), .text-fuchsia-600:not(.keep-light), .text-fuchsia-700:not(.keep-light)) { color: rgb(var(--bank-violet-strong)); }
+  :root.dark :where(.text-violet-800:not(.keep-light), .text-violet-900:not(.keep-light)) { color: rgb(var(--bank-violet-ink)); }
+
+  /* Hardcoded hex text on comparison cards — remap to bank tokens in dark mode. */
+  .dark :where(.text-\[\#1a4295\]:not(.keep-light)) { color: rgb(var(--bank-primary)); }
+  .dark :where(.text-\[\#111827\]:not(.keep-light)) { color: rgb(var(--bank-text)); }
+  .dark :where(.text-\[\#374151\]:not(.keep-light)) { color: rgb(var(--bank-text-muted)); }
+  .dark :where(.text-\[\#6b7280\]:not(.keep-light), .text-\[\#9ca3af\]:not(.keep-light)) { color: rgb(var(--bank-text-muted)); }
+  .dark :where(.text-\[\#003459\]:not(.keep-light)) { color: rgb(var(--bank-primary)); }
+
+
+  .dark .recharts-cartesian-grid-horizontal line,
+  .dark .recharts-cartesian-grid-vertical line {
+    stroke: rgba(148, 163, 184, 0.14) !important;
+  }
+  .dark .recharts-cartesian-axis-tick-value,
+  .dark .recharts-text,
+  .dark .recharts-legend-item-text {
+    fill: rgb(var(--bank-text-muted)) !important;
+    color: rgb(var(--bank-text-muted)) !important;
+  }
+  .dark .recharts-default-tooltip {
+    background-color: rgb(var(--bank-surface-elev)) !important;
+    border-color: rgb(var(--bank-border)) !important;
+    color: rgb(var(--bank-text)) !important;
+  }
+  .dark .recharts-tooltip-label { color: rgb(var(--bank-text)) !important; }
+  .dark .recharts-tooltip-item { color: rgb(var(--bank-text)) !important; }
+  .dark .recharts-reference-line-line {
+    stroke: rgba(148, 163, 184, 0.25) !important;
+  }
+
+  .dark .news-market-chart {
+    background-color: rgb(var(--bank-surface) / 0.55);
+    border-color: rgb(var(--bank-border) / 0.6);
+  }
+  .dark .news-market-chart text {
+    fill: rgb(var(--bank-text-muted)) !important;
+  }
+
+  .dark :where(.shadow-sm:not(.keep-light), .shadow:not(.keep-light), .shadow-md:not(.keep-light), .shadow-lg:not(.keep-light), .shadow-xl:not(.keep-light)) {
+    --tw-shadow-color: rgba(0, 0, 0, 0.5);
+  }
+
+  /* --------------------------------------------------------------------------
+     Session 80.26 — Global harmonisation layer (LIGHT mode).
+     Remaps Tailwind's raw palette utilities to muted, editorial bank tokens
+     so accent colours across the app feel like one cohesive Private-Banking
+     system instead of a bright SaaS pastel grid. Semantics are preserved:
+       emerald → petrol (growth / positive)
+       rose    → coral  (attention / decline)
+       amber   → amber  (warning / warm highlight)
+       violet  → violet (differentiation)
+       sky     → info   (data / information)
+       blue    → info   (data / information)
+     Only touches light mode; dark mode retains the existing overrides above.
+     Escape hatch: any element with `.keep-raw` opts out.
+     -------------------------------------------------------------------------- */
+  :root:not(.dark) :where(.text-emerald-500:not(.keep-raw), .text-emerald-600:not(.keep-raw), .text-emerald-700:not(.keep-raw)) { color: rgb(var(--bank-petrol-strong)); }
+  :root:not(.dark) :where(.text-emerald-800:not(.keep-raw), .text-emerald-900:not(.keep-raw)) { color: rgb(var(--bank-petrol-ink)); }
+  :root:not(.dark) :where(.text-emerald-400:not(.keep-raw), .text-emerald-300:not(.keep-raw)) { color: rgb(var(--bank-petrol)); }
+  :root:not(.dark) :where(.bg-emerald-50:not(.keep-raw), .bg-emerald-100:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root:not(.dark) :where(.bg-emerald-500:not(.keep-raw), .bg-emerald-600:not(.keep-raw)) { background-color: rgb(var(--bank-petrol)); }
+  :root:not(.dark) :where(.bg-emerald-700:not(.keep-raw), .bg-emerald-800:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-strong)); }
+  :root:not(.dark) :where(.border-emerald-100:not(.keep-raw), .border-emerald-200:not(.keep-raw), .border-emerald-300:not(.keep-raw)) { border-color: rgb(var(--bank-petrol-border)); }
+  :root:not(.dark) :where(.border-emerald-400:not(.keep-raw), .border-emerald-500:not(.keep-raw), .border-emerald-600:not(.keep-raw)) { border-color: rgb(var(--bank-petrol)); }
+
+  :root:not(.dark) :where(.text-rose-500:not(.keep-raw), .text-rose-600:not(.keep-raw), .text-rose-700:not(.keep-raw)) { color: rgb(var(--bank-coral-strong)); }
+  :root:not(.dark) :where(.text-rose-800:not(.keep-raw), .text-rose-900:not(.keep-raw)) { color: rgb(var(--bank-coral-ink)); }
+  :root:not(.dark) :where(.text-rose-400:not(.keep-raw), .text-rose-300:not(.keep-raw)) { color: rgb(var(--bank-coral)); }
+  :root:not(.dark) :where(.bg-rose-50:not(.keep-raw), .bg-rose-100:not(.keep-raw)) { background-color: rgb(var(--bank-coral-tint)); }
+  :root:not(.dark) :where(.bg-rose-500:not(.keep-raw), .bg-rose-600:not(.keep-raw)) { background-color: rgb(var(--bank-coral)); }
+  :root:not(.dark) :where(.bg-rose-700:not(.keep-raw), .bg-rose-800:not(.keep-raw)) { background-color: rgb(var(--bank-coral-strong)); }
+  :root:not(.dark) :where(.border-rose-100:not(.keep-raw), .border-rose-200:not(.keep-raw), .border-rose-300:not(.keep-raw)) { border-color: rgb(var(--bank-coral-border)); }
+  :root:not(.dark) :where(.border-rose-400:not(.keep-raw), .border-rose-500:not(.keep-raw)) { border-color: rgb(var(--bank-coral)); }
+
+  /* Red = destructive; keep semantically red but softened to coral family */
+  :root:not(.dark) :where(.text-red-500:not(.keep-raw), .text-red-600:not(.keep-raw), .text-red-700:not(.keep-raw)) { color: rgb(var(--bank-coral-strong)); }
+  :root:not(.dark) :where(.text-red-800:not(.keep-raw), .text-red-900:not(.keep-raw)) { color: rgb(var(--bank-coral-ink)); }
+  :root:not(.dark) :where(.bg-red-50:not(.keep-raw), .bg-red-100:not(.keep-raw)) { background-color: rgb(var(--bank-coral-tint)); }
+  :root:not(.dark) :where(.border-red-100:not(.keep-raw), .border-red-200:not(.keep-raw), .border-red-300:not(.keep-raw)) { border-color: rgb(var(--bank-coral-border)); }
+
+  :root:not(.dark) :where(.text-amber-500:not(.keep-raw), .text-amber-600:not(.keep-raw), .text-amber-700:not(.keep-raw)) { color: rgb(var(--bank-amber-strong)); }
+  :root:not(.dark) :where(.text-amber-800:not(.keep-raw), .text-amber-900:not(.keep-raw)) { color: rgb(var(--bank-amber-ink)); }
+  :root:not(.dark) :where(.text-amber-400:not(.keep-raw), .text-amber-300:not(.keep-raw)) { color: rgb(var(--bank-amber)); }
+  :root:not(.dark) :where(.bg-amber-50:not(.keep-raw), .bg-amber-100:not(.keep-raw)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root:not(.dark) :where(.bg-amber-500:not(.keep-raw), .bg-amber-600:not(.keep-raw)) { background-color: rgb(var(--bank-amber)); }
+  :root:not(.dark) :where(.border-amber-100:not(.keep-raw), .border-amber-200:not(.keep-raw), .border-amber-300:not(.keep-raw)) { border-color: rgb(var(--bank-amber-border)); }
+  :root:not(.dark) :where(.border-amber-400:not(.keep-raw), .border-amber-500:not(.keep-raw)) { border-color: rgb(var(--bank-amber)); }
+
+  /* Yellow / orange share the amber slot in the muted palette */
+  :root:not(.dark) :where(.text-yellow-600:not(.keep-raw), .text-yellow-700:not(.keep-raw), .text-orange-600:not(.keep-raw), .text-orange-700:not(.keep-raw)) { color: rgb(var(--bank-amber-strong)); }
+  :root:not(.dark) :where(.bg-yellow-50:not(.keep-raw), .bg-yellow-100:not(.keep-raw), .bg-orange-50:not(.keep-raw), .bg-orange-100:not(.keep-raw)) { background-color: rgb(var(--bank-amber-tint)); }
+  :root:not(.dark) :where(.border-yellow-100:not(.keep-raw), .border-yellow-200:not(.keep-raw), .border-orange-100:not(.keep-raw), .border-orange-200:not(.keep-raw)) { border-color: rgb(var(--bank-amber-border)); }
+
+  :root:not(.dark) :where(.text-violet-500:not(.keep-raw), .text-violet-600:not(.keep-raw), .text-violet-700:not(.keep-raw)) { color: rgb(var(--bank-violet-strong)); }
+  :root:not(.dark) :where(.text-violet-800:not(.keep-raw), .text-violet-900:not(.keep-raw)) { color: rgb(var(--bank-violet-ink)); }
+  :root:not(.dark) :where(.text-violet-400:not(.keep-raw)) { color: rgb(var(--bank-violet)); }
+  :root:not(.dark) :where(.bg-violet-50:not(.keep-raw), .bg-violet-100:not(.keep-raw)) { background-color: rgb(var(--bank-violet-tint)); }
+  :root:not(.dark) :where(.bg-violet-500:not(.keep-raw), .bg-violet-600:not(.keep-raw)) { background-color: rgb(var(--bank-violet)); }
+  :root:not(.dark) :where(.border-violet-100:not(.keep-raw), .border-violet-200:not(.keep-raw), .border-violet-300:not(.keep-raw)) { border-color: rgb(var(--bank-violet-border)); }
+
+  /* Purple / indigo / fuchsia / pink share the violet slot */
+  :root:not(.dark) :where(.text-purple-600:not(.keep-raw), .text-purple-700:not(.keep-raw), .text-indigo-600:not(.keep-raw), .text-indigo-700:not(.keep-raw), .text-fuchsia-600:not(.keep-raw), .text-fuchsia-700:not(.keep-raw)) { color: rgb(var(--bank-violet-strong)); }
+  :root:not(.dark) :where(.bg-purple-50:not(.keep-raw), .bg-purple-100:not(.keep-raw), .bg-indigo-50:not(.keep-raw), .bg-indigo-100:not(.keep-raw), .bg-fuchsia-50:not(.keep-raw), .bg-pink-50:not(.keep-raw), .bg-pink-100:not(.keep-raw)) { background-color: rgb(var(--bank-violet-tint)); }
+  :root:not(.dark) :where(.border-purple-100:not(.keep-raw), .border-purple-200:not(.keep-raw), .border-indigo-100:not(.keep-raw), .border-indigo-200:not(.keep-raw), .border-pink-100:not(.keep-raw), .border-pink-200:not(.keep-raw)) { border-color: rgb(var(--bank-violet-border)); }
+
+  :root:not(.dark) :where(.text-sky-500:not(.keep-raw), .text-sky-600:not(.keep-raw), .text-sky-700:not(.keep-raw), .text-blue-500:not(.keep-raw), .text-blue-600:not(.keep-raw), .text-blue-700:not(.keep-raw)) { color: rgb(var(--bank-info-strong)); }
+  :root:not(.dark) :where(.text-sky-800:not(.keep-raw), .text-sky-900:not(.keep-raw), .text-blue-800:not(.keep-raw), .text-blue-900:not(.keep-raw)) { color: rgb(var(--bank-info-ink)); }
+  :root:not(.dark) :where(.text-sky-400:not(.keep-raw), .text-blue-400:not(.keep-raw)) { color: rgb(var(--bank-info)); }
+  :root:not(.dark) :where(.bg-sky-50:not(.keep-raw), .bg-sky-100:not(.keep-raw), .bg-blue-50:not(.keep-raw), .bg-blue-100:not(.keep-raw)) { background-color: rgb(var(--bank-info-tint)); }
+  :root:not(.dark) :where(.bg-sky-500:not(.keep-raw), .bg-sky-600:not(.keep-raw), .bg-blue-500:not(.keep-raw), .bg-blue-600:not(.keep-raw)) { background-color: rgb(var(--bank-info)); }
+  :root:not(.dark) :where(.border-sky-100:not(.keep-raw), .border-sky-200:not(.keep-raw), .border-sky-300:not(.keep-raw), .border-blue-100:not(.keep-raw), .border-blue-200:not(.keep-raw), .border-blue-300:not(.keep-raw)) { border-color: rgb(var(--bank-info-border)); }
+  :root:not(.dark) :where(.border-sky-500:not(.keep-raw), .border-blue-500:not(.keep-raw)) { border-color: rgb(var(--bank-info)); }
+
+  /* Teal / cyan share the petrol slot */
+  :root:not(.dark) :where(.text-teal-500:not(.keep-raw), .text-teal-600:not(.keep-raw), .text-teal-700:not(.keep-raw), .text-cyan-600:not(.keep-raw), .text-cyan-700:not(.keep-raw)) { color: rgb(var(--bank-petrol-strong)); }
+  :root:not(.dark) :where(.bg-teal-50:not(.keep-raw), .bg-teal-100:not(.keep-raw), .bg-cyan-50:not(.keep-raw), .bg-cyan-100:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root:not(.dark) :where(.border-teal-100:not(.keep-raw), .border-teal-200:not(.keep-raw), .border-cyan-100:not(.keep-raw), .border-cyan-200:not(.keep-raw)) { border-color: rgb(var(--bank-petrol-border)); }
+
+  /* Green (some components use green-*) shares petrol */
+  :root:not(.dark) :where(.text-green-500:not(.keep-raw), .text-green-600:not(.keep-raw), .text-green-700:not(.keep-raw)) { color: rgb(var(--bank-petrol-strong)); }
+  :root:not(.dark) :where(.text-green-800:not(.keep-raw), .text-green-900:not(.keep-raw)) { color: rgb(var(--bank-petrol-ink)); }
+  :root:not(.dark) :where(.bg-green-50:not(.keep-raw), .bg-green-100:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root:not(.dark) :where(.border-green-100:not(.keep-raw), .border-green-200:not(.keep-raw), .border-green-300:not(.keep-raw)) { border-color: rgb(var(--bank-petrol-border)); }
+
+  /* Session 80.66: BrandLogo is now `frohlich-logo-clear.png` — RGBA mit echter
+     Alpha-Kanal-Transparenz (Hintergrund entfernt via Alpha-Threshold + Anti-Alias-
+     Ramp). Filter darf jetzt einfach sein: `brightness(0) invert(1)` färbt die
+     Navy-Wortmarke sauber zu Weiß, ohne dass ein Hintergrund-Rechteck übrig bleibt.
+     Kein `mix-blend-mode: screen` mehr nötig (verhinderte vorher, dass der weiße
+     PNG-Hintergrund als Kasten sichtbar wurde). */
+  :root.dark img.brand-logo-invertible,
+  img.brand-logo-invertible.dark-force-invert {
+    filter: brightness(0) invert(1) !important;
+  }
+
+  /* Neutrals (gray/slate/zinc/neutral/stone -50) → warm bank surface tint,
+     so bland "SaaS grey" strips read as editorial cream. */
+  :root:not(.dark) :where(.bg-gray-50:not(.keep-raw):not(.keep-light), .bg-slate-50:not(.keep-raw):not(.keep-light), .bg-zinc-50:not(.keep-raw):not(.keep-light), .bg-neutral-50:not(.keep-raw):not(.keep-light), .bg-stone-50:not(.keep-raw):not(.keep-light)) { background-color: rgb(var(--bank-surface-elev)); }
+
+  /* Hover-state harmonisation (light mode) — keeps interactive accents in the
+     muted bank palette, not the raw Tailwind neons. */
+  :root:not(.dark) .hover\:bg-emerald-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-emerald-100:hover:not(.keep-raw) { background-color: rgb(var(--bank-petrol-tint)); }
+  :root:not(.dark) .hover\:text-emerald-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-emerald-700:hover:not(.keep-raw) { color: rgb(var(--bank-petrol-strong)); }
+  :root:not(.dark) .hover\:border-emerald-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-emerald-300:hover:not(.keep-raw) { border-color: rgb(var(--bank-petrol-border)); }
+
+  :root:not(.dark) .hover\:bg-rose-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-rose-100:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-red-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-red-100:hover:not(.keep-raw) { background-color: rgb(var(--bank-coral-tint)); }
+  :root:not(.dark) .hover\:text-rose-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-rose-700:hover:not(.keep-raw), :root:not(.dark) .hover\:text-red-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-red-700:hover:not(.keep-raw) { color: rgb(var(--bank-coral-strong)); }
+  :root:not(.dark) .hover\:border-rose-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-rose-300:hover:not(.keep-raw), :root:not(.dark) .hover\:border-red-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-red-300:hover:not(.keep-raw) { border-color: rgb(var(--bank-coral-border)); }
+
+  :root:not(.dark) .hover\:bg-amber-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-amber-100:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-yellow-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-orange-50:hover:not(.keep-raw) { background-color: rgb(var(--bank-amber-tint)); }
+  :root:not(.dark) .hover\:text-amber-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-amber-700:hover:not(.keep-raw) { color: rgb(var(--bank-amber-strong)); }
+  :root:not(.dark) .hover\:border-amber-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-amber-300:hover:not(.keep-raw) { border-color: rgb(var(--bank-amber-border)); }
+
+  :root:not(.dark) .hover\:bg-violet-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-violet-100:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-purple-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-indigo-50:hover:not(.keep-raw) { background-color: rgb(var(--bank-violet-tint)); }
+  :root:not(.dark) .hover\:text-violet-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-violet-700:hover:not(.keep-raw), :root:not(.dark) .hover\:text-purple-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-purple-700:hover:not(.keep-raw) { color: rgb(var(--bank-violet-strong)); }
+
+  :root:not(.dark) .hover\:bg-sky-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-sky-100:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-blue-50:hover:not(.keep-raw), :root:not(.dark) .hover\:bg-blue-100:hover:not(.keep-raw) { background-color: rgb(var(--bank-info-tint)); }
+  :root:not(.dark) .hover\:text-sky-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-sky-700:hover:not(.keep-raw), :root:not(.dark) .hover\:text-blue-600:hover:not(.keep-raw), :root:not(.dark) .hover\:text-blue-700:hover:not(.keep-raw) { color: rgb(var(--bank-info-strong)); }
+  :root:not(.dark) .hover\:border-sky-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-sky-300:hover:not(.keep-raw), :root:not(.dark) .hover\:border-blue-200:hover:not(.keep-raw), :root:not(.dark) .hover\:border-blue-300:hover:not(.keep-raw) { border-color: rgb(var(--bank-info-border)); }
+
+  /* Opacity variants of the -50/-100 surface tints (bg-*-50/60 etc.) */
+  :root:not(.dark) :where(.bg-emerald-50\/40:not(.keep-raw), .bg-emerald-50\/50:not(.keep-raw), .bg-emerald-50\/60:not(.keep-raw), .bg-emerald-50\/70:not(.keep-raw), .bg-emerald-50\/80:not(.keep-raw), .bg-emerald-50\/90:not(.keep-raw)) { background-color: rgb(var(--bank-petrol-tint) / 0.7); }
+  :root:not(.dark) :where(.bg-rose-50\/40:not(.keep-raw), .bg-rose-50\/50:not(.keep-raw), .bg-rose-50\/60:not(.keep-raw), .bg-rose-50\/70:not(.keep-raw), .bg-rose-50\/80:not(.keep-raw)) { background-color: rgb(var(--bank-coral-tint) / 0.7); }
+  :root:not(.dark) :where(.bg-amber-50\/40:not(.keep-raw), .bg-amber-50\/50:not(.keep-raw), .bg-amber-50\/60:not(.keep-raw), .bg-amber-50\/70:not(.keep-raw), .bg-amber-50\/80:not(.keep-raw)) { background-color: rgb(var(--bank-amber-tint) / 0.7); }
+  :root:not(.dark) :where(.bg-sky-50\/40:not(.keep-raw), .bg-sky-50\/50:not(.keep-raw), .bg-sky-50\/60:not(.keep-raw), .bg-sky-50\/70:not(.keep-raw), .bg-blue-50\/40:not(.keep-raw), .bg-blue-50\/50:not(.keep-raw), .bg-blue-50\/60:not(.keep-raw), .bg-blue-50\/70:not(.keep-raw)) { background-color: rgb(var(--bank-info-tint) / 0.7); }
+  :root:not(.dark) :where(.bg-violet-50\/40:not(.keep-raw), .bg-violet-50\/50:not(.keep-raw), .bg-violet-50\/60:not(.keep-raw), .bg-violet-50\/70:not(.keep-raw)) { background-color: rgb(var(--bank-violet-tint) / 0.7); }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty  { text-wrap: pretty; }
+
+  /* Strong dark overrides after utilities so they win reliably. */
+  .dark :where(.bg-white:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface)) !important;
+  }
+  .dark :where(.bg-white\/70:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev) / 0.92) !important;
+  }
+  .dark :where(.bg-white\/80:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev) / 0.94) !important;
+  }
+  .dark :where(.bg-white\/90:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev) / 0.96) !important;
+  }
+  .dark :where(.bg-white\/95:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface-elev) / 0.98) !important;
+  }
+  .dark :where(.bg-bank-surface:not(.keep-light)) {
+    background-color: rgb(var(--bank-surface)) !important;
+  }
+  .dark :where(.bg-bank-bg:not(.keep-light)) {
+    background-color: rgb(var(--bank-bg)) !important;
+  }
+  .dark :where(.text-bank-text:not(.keep-light)) {
+    color: rgb(var(--bank-text)) !important;
+  }
+  .dark :where(.text-bank-text-muted:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted)) !important;
+  }
+  .dark :where(.border-bank-border:not(.keep-light)) {
+    border-color: rgb(var(--bank-border)) !important;
+  }
+  /* Safety net: prevent low-contrast text inside dark ink surfaces. */
+  .dark :where(.bg-bank-ink) :where(.text-bank-text:not(.keep-light)) {
+    color: rgb(var(--bank-on-ink)) !important;
+  }
+  .dark :where(.bg-bank-ink) :where(.text-bank-text-muted:not(.keep-light)) {
+    color: rgb(255 255 255 / 0.78) !important;
+  }
+
+  /*
+   * text-bank-ink is intentionally stable (always navy) for ink surfaces.
+   * On themed surfaces that flip dark, remap to readable light text.
+   */
+  .dark :where(.text-bank-ink:not(.keep-light)) {
+    color: rgb(var(--bank-text)) !important;
+  }
+  .dark :where(.text-bank-ink\/35:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.65) !important;
+  }
+  .dark :where(.text-bank-ink\/45:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.75) !important;
+  }
+  .dark :where(.text-bank-ink\/70:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.92) !important;
+  }
+  .dark :where(.bg-bank-ink) :where(.text-bank-ink:not(.keep-light)) {
+    color: rgb(var(--bank-on-ink)) !important;
+  }
+  .dark :where(.bg-bank-ink) :where(.text-bank-ink\/35:not(.keep-light), .text-bank-ink\/45:not(.keep-light), .text-bank-ink\/70:not(.keep-light)) {
+    color: rgb(255 255 255 / 0.72) !important;
+  }
+
+  .dark :where(.text-bank-secondary:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted)) !important;
+  }
+
+  /* Opacity-muted captions — lift floor so they stay legible in dark rooms. */
+  .dark :where(.text-bank-text-muted\/50:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.78) !important;
+  }
+  .dark :where(.text-bank-text-muted\/60:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.85) !important;
+  }
+  .dark :where(.text-bank-text-muted\/70:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.92) !important;
+  }
+  .dark :where(.text-bank-text-muted\/80:not(.keep-light)) {
+    color: rgb(var(--bank-text-muted) / 0.96) !important;
+  }
+  .dark :where(.placeholder\:text-bank-text-muted\/50)::placeholder,
+  .dark :where(.placeholder\:text-bank-text-muted\/70)::placeholder {
+    color: rgb(var(--bank-text-muted) / 0.88) !important;
+  }
+
+  /*
+   * Social platform previews mimic Facebook/LinkedIn/Instagram light UIs.
+   * Restore native light surfaces + text inside this shell only.
+   */
+  .dark .social-preview-light {
+    color-scheme: light;
+    --bank-bg: 255 255 255;
+    --bank-surface: 255 255 255;
+    --bank-surface-elev: 236 243 250;
+    --bank-border: 226 232 240;
+    --bank-text: 30 41 59;
+    --bank-text-muted: 100 116 139;
+    --bank-primary: 76 124 186;
+    --bank-secondary: 76 124 186;
+    --bank-ink: 76 124 186;
+    --foreground: 215 25% 17%;
+    --muted-foreground: 215 16% 47%;
+    --background: 210 40% 100%;
+  }
+
+  .dark .social-preview-light :where(.bg-white:not(.keep-light)),
+  .dark .social-preview-light :where(.hover\:bg-white:hover:not(.keep-light)),
+  .dark .social-preview-light :where(.focus\:bg-white:focus) {
+    background-color: rgb(255 255 255) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/60:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.6) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/70:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.7) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/75:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.75) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/80:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.8) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/90:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.9) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/95:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.95) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/10:not(.keep-light)),
+  .dark .social-preview-light :where(.hover\:bg-white\/10:hover:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.1) !important;
+  }
+  .dark .social-preview-light :where(.bg-white\/15:not(.keep-light)),
+  .dark .social-preview-light :where(.hover\:bg-white\/15:hover:not(.keep-light)) {
+    background-color: rgb(255 255 255 / 0.15) !important;
+  }
+
+  .dark .social-preview-light :where(.text-bank-text:not(.keep-light)) {
+    color: rgb(11 18 32) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-text-muted:not(.keep-light)) {
+    color: rgb(74 93 115) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-ink:not(.keep-light)) {
+    color: rgb(11 18 32) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-ink\/35:not(.keep-light)) {
+    color: rgb(11 18 32 / 0.35) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-ink\/45:not(.keep-light)) {
+    color: rgb(11 18 32 / 0.45) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-ink\/55:not(.keep-light)) {
+    color: rgb(11 18 32 / 0.55) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-ink\/70:not(.keep-light)) {
+    color: rgb(11 18 32 / 0.7) !important;
+  }
+  .dark .social-preview-light :where(.text-bank-secondary:not(.keep-light)) {
+    color: rgb(30 45 64) !important;
+  }
+
+  .dark .social-preview-light :where(.text-black:not(.keep-light)),
+  .dark .social-preview-light :where(.text-slate-900:not(.keep-light)),
+  .dark .social-preview-light :where(.text-gray-900:not(.keep-light)) {
+    color: rgb(17 24 39) !important;
+  }
+  .dark .social-preview-light :where(.text-slate-800:not(.keep-light)),
+  .dark .social-preview-light :where(.text-gray-800:not(.keep-light)) {
+    color: rgb(31 41 55) !important;
+  }
+  .dark .social-preview-light :where(.text-slate-700:not(.keep-light)),
+  .dark .social-preview-light :where(.text-gray-700:not(.keep-light)) {
+    color: rgb(55 65 81) !important;
+  }
+  .dark .social-preview-light :where(.text-slate-600:not(.keep-light)),
+  .dark .social-preview-light :where(.text-gray-600:not(.keep-light)),
+  .dark .social-preview-light :where(.text-slate-500:not(.keep-light)),
+  .dark .social-preview-light :where(.text-gray-500:not(.keep-light)) {
+    color: rgb(107 114 128) !important;
+  }
+  .dark .social-preview-light :where(.text-gray-400:not(.keep-light)),
+  .dark .social-preview-light :where(.text-slate-400:not(.keep-light)) {
+    color: rgb(156 163 175) !important;
+  }
+
+  .dark .social-preview-light :where(.text-\[\#1a4295\]:not(.keep-light)) {
+    color: #1a4295 !important;
+  }
+  .dark .social-preview-light :where(.text-\[\#111827\]:not(.keep-light)) {
+    color: #111827 !important;
+  }
+  .dark .social-preview-light :where(.text-\[\#374151\]:not(.keep-light)) {
+    color: #374151 !important;
+  }
+  .dark .social-preview-light :where(.text-\[\#6b7280\]:not(.keep-light)) {
+    color: #6b7280 !important;
+  }
+  .dark .social-preview-light :where(.text-\[\#9ca3af\]:not(.keep-light)) {
+    color: #9ca3af !important;
+  }
+
+  /* Editorial mono kicker — standardised three-step scale.
+     Use these instead of ad-hoc `font-mono text-[10.5px] uppercase tracking-[0.22em]`. */
+  .kicker {
+    font-family: theme('fontFamily.mono');
+    font-size: 10.5px;
+    line-height: 1;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+  }
+  .kicker-loose {
+    font-family: theme('fontFamily.mono');
+    font-size: 10.5px;
+    line-height: 1;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+  }
+  .kicker-tight {
+    font-family: theme('fontFamily.mono');
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  /* Editorial section shell — DRY container with max-w + responsive gutters. */
+  .editorial-shell {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 1440px;
+    padding-left: 1.25rem;   /* 5 */
+    padding-right: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .editorial-shell { padding-left: 2rem; padding-right: 2rem; }   /* sm:8 */
+  }
+  @media (min-width: 1024px) {
+    .editorial-shell { padding-left: 3rem; padding-right: 3rem; }   /* lg:12 */
+  }
+
+  /* Editorial drop-cap for magazine-style intros */
+  .drop-cap {
+    overflow-wrap: break-word;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .drop-cap::first-letter {
+    font-family: theme('fontFamily.display');
+    font-weight: 380;
+    font-size: 4.25em;
+    line-height: 0.86;
+    float: left;
+    padding: 0.04em 0.12em 0 0;
+    color: rgb(var(--bank-primary));
+  }
+  @media (max-width: 639px) {
+    .drop-cap::first-letter {
+      float: none;
+      display: inline-block;
+      font-size: 2.35em;
+      line-height: 0.9;
+      padding: 0;
+      margin-right: 0.04em;
+      vertical-align: baseline;
+    }
+  }
+
+  /* Long-form copy — prevent grid/float min-content overflow on narrow viewports */
+  .prose-copy {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .prose-copy > p,
+  .prose-copy > ul,
+  .prose-copy > ol {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  /* Subtle typographic numeric for rate display */
+  .rate-figure {
+    font-family: theme('fontFamily.display');
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Accent rule scale — 4-tier ladder (forest trust accent).
+     Tier 0: 4rem / 0.55 — eyebrow / section subtle.
+     Tier 1 (sm): 2.5rem / 0.45 — card accents.
+     Tier 3 (lg): 6rem / 0.70 — hero emphasis. */
+  .rule-accent,
+  .rule-accent-md {
+    background: linear-gradient(to right, rgb(var(--bank-accent-strong) / 0.55), transparent);
+    height: 1px;
+    width: 4rem;
+  }
+  .rule-brass,
+  .rule-brass-md {
+    background: linear-gradient(to right, rgb(var(--bank-accent) / 0.55), transparent);
+    height: 1px;
+    width: 4rem;
+  }
+  .rule-accent-sm {
+    background: linear-gradient(to right, rgb(var(--bank-accent-strong) / 0.45), transparent);
+    height: 1px;
+    width: 2.5rem;
+  }
+  .rule-brass-sm {
+    background: linear-gradient(to right, rgb(var(--bank-accent) / 0.42), transparent);
+    height: 1px;
+    width: 2.5rem;
+  }
+  .rule-accent-lg {
+    background: linear-gradient(to right, rgb(var(--bank-accent-strong) / 0.70), transparent);
+    height: 1px;
+    width: 6rem;
+  }
+  .rule-brass-lg {
+    background: linear-gradient(to right, rgb(var(--bank-accent) / 0.68), transparent);
+    height: 1px;
+    width: 6rem;
+  }
+
+  /* Fine dot matrix — subtle texture (replaces organic grain) */
+  .grain {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='1' cy='1' r='0.65' fill='%234C7CBA' fill-opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 24px 24px;
+  }
+
+  /* Geometric grid pattern — for dark bands and hero overlays */
+  .topo-pattern {
+    background-image:
+      linear-gradient(rgb(var(--bank-accent) / 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--bank-accent) / 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* Soft layered mesh — ink→accent→bg, diffused. Stable across themes. */
+  .mesh-navy {
+    background-image:
+      radial-gradient(120% 80% at 18% 12%, rgb(var(--bank-accent) / 0.28), transparent 55%),
+      radial-gradient(90%  70% at 82% 88%, rgb(var(--bank-accent-strong) / 0.14), transparent 60%),
+      radial-gradient(140% 100% at 50% 50%, rgb(var(--bank-ink)) 0%, rgb(var(--bank-ink)) 60%, rgb(var(--bank-ink-hover)) 100%);
+  }
+
+  /* Premium CTA shine sweep — CSS only */
+  @keyframes shine-sweep {
+    0%   { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+    20%  { opacity: 0.35; }
+    100% { transform: translateX(220%) skewX(-20deg); opacity: 0; }
+  }
+  .shine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .shine::after {
+    content: '';
+    position: absolute;
+    inset: 0 -40% 0 -40%;
+    background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
+    transform: translateX(-120%) skewX(-20deg);
+    pointer-events: none;
+  }
+  .shine:hover::after {
+    animation: shine-sweep 1100ms ease-out;
+  }
+
+  /* Marquee — silent ticker for live-rate strip */
+  @keyframes marquee-x {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .marquee-track {
+    animation: marquee-x 38s linear infinite;
+    will-change: transform;
+  }
+  .marquee-pause:hover .marquee-track { animation-play-state: paused; }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @media print {
+    aside[aria-label="Kundenservice"] {
+      display: none !important;
+      visibility: hidden !important;
+    }
+    .min-h-screen.flex.flex-col {
+      min-height: auto !important;
+      padding-bottom: 0 !important;
+    }
+  }
+
+  /* --------------------------------------------------------------------------
+     Session 80.26 — Editorial multi-color helpers.
+     Use these to add a *whisper* of colour to cards, KPIs and tags without
+     tipping the layout into full-fill pastel territory.
+     -------------------------------------------------------------------------- */
+  .card-accent-top {
+    position: relative;
+  }
+  .card-accent-top::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background-color: rgb(var(--bank-primary));
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+    pointer-events: none;
+  }
+  .card-accent-top-petrol::before { background-color: rgb(var(--bank-petrol)); }
+  .card-accent-top-coral::before  { background-color: rgb(var(--bank-coral)); }
+  .card-accent-top-violet::before { background-color: rgb(var(--bank-violet)); }
+  .card-accent-top-amber::before  { background-color: rgb(var(--bank-amber)); }
+  .card-accent-top-info::before   { background-color: rgb(var(--bank-info)); }
+  .card-accent-top-navy::before   { background-color: rgb(var(--bank-ink)); }
+  .card-accent-top-rose::before   { background-color: rgb(var(--bank-rose)); }
+  /* Session 80.42 — expanded editorial palette */
+  .card-accent-top-gold::before      { background-color: rgb(var(--bank-gold)); }
+  .card-accent-top-champagne::before { background-color: rgb(var(--bank-champagne)); }
+  .card-accent-top-sage::before      { background-color: rgb(var(--bank-sage)); }
+
+  /* Icon-badge — pastel square/circle wrapper for a lucide icon.
+     Keeps large surfaces neutral, colour lives only on the tiny badge. */
+  .icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background-color: rgb(var(--bank-petrol-tint));
+    color: rgb(var(--bank-petrol-strong));
+    flex-shrink: 0;
+  }
+  .icon-badge-sm { width: 1.5rem; height: 1.5rem; border-radius: 0.375rem; }
+  .icon-badge-lg { width: 2.5rem; height: 2.5rem; border-radius: 0.625rem; }
+  .icon-badge-petrol { background-color: rgb(var(--bank-petrol-tint)); color: rgb(var(--bank-petrol-strong)); }
+  .icon-badge-coral  { background-color: rgb(var(--bank-coral-tint));  color: rgb(var(--bank-coral-strong)); }
+  .icon-badge-violet { background-color: rgb(var(--bank-violet-tint)); color: rgb(var(--bank-violet-strong)); }
+  .icon-badge-amber  { background-color: rgb(var(--bank-amber-tint));  color: rgb(var(--bank-amber-strong)); }
+  .icon-badge-info   { background-color: rgb(var(--bank-info-tint));   color: rgb(var(--bank-info-strong)); }
+  .icon-badge-navy   { background-color: rgb(var(--bank-ink) / 0.06);  color: rgb(var(--bank-ink)); }
+  .icon-badge-rose   { background-color: rgb(var(--bank-rose-tint));   color: rgb(var(--bank-rose-strong)); }
+  /* Session 80.42 */
+  .icon-badge-gold      { background-color: rgb(var(--bank-gold-tint));      color: rgb(var(--bank-gold-strong)); }
+  .icon-badge-champagne { background-color: rgb(var(--bank-champagne-tint)); color: rgb(var(--bank-champagne-strong)); }
+  .icon-badge-sage      { background-color: rgb(var(--bank-sage-tint));      color: rgb(var(--bank-sage-strong)); }
+
+  /* KPI figure — coloured numeric value while label stays navy/neutral. */
+  .kpi-figure {
+    font-family: theme('fontFamily.display');
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--bank-ink));
+  }
+  .kpi-figure.kpi-petrol { color: rgb(var(--bank-petrol-strong)); }
+  .kpi-figure.kpi-coral  { color: rgb(var(--bank-coral-strong)); }
+  .kpi-figure.kpi-violet { color: rgb(var(--bank-violet-strong)); }
+  .kpi-figure.kpi-amber  { color: rgb(var(--bank-amber-strong)); }
+  .kpi-figure.kpi-info   { color: rgb(var(--bank-info-strong)); }
+  .kpi-figure.kpi-rose   { color: rgb(var(--bank-rose-strong)); }
+  /* Session 80.42 */
+  .kpi-figure.kpi-gold      { color: rgb(var(--bank-gold-strong)); }
+  .kpi-figure.kpi-champagne { color: rgb(var(--bank-champagne-strong)); }
+  .kpi-figure.kpi-sage      { color: rgb(var(--bank-sage-strong)); }
+
+  /* Tag — subtle pill (soft tint + strong-tone text + hairline border). */
+  .tag-editorial {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+  }
+  .tag-navy   { background-color: rgb(var(--bank-ink) / 0.06);      color: rgb(var(--bank-ink));            border-color: rgb(var(--bank-ink) / 0.14); }
+  .tag-petrol { background-color: rgb(var(--bank-petrol-tint));     color: rgb(var(--bank-petrol-ink));     border-color: rgb(var(--bank-petrol-border)); }
+  .tag-coral  { background-color: rgb(var(--bank-coral-tint));      color: rgb(var(--bank-coral-ink));      border-color: rgb(var(--bank-coral-border)); }
+  .tag-violet { background-color: rgb(var(--bank-violet-tint));     color: rgb(var(--bank-violet-ink));     border-color: rgb(var(--bank-violet-border)); }
+  .tag-amber  { background-color: rgb(var(--bank-amber-tint));      color: rgb(var(--bank-amber-ink));      border-color: rgb(var(--bank-amber-border)); }
+  .tag-info   { background-color: rgb(var(--bank-info-tint));       color: rgb(var(--bank-info-ink));       border-color: rgb(var(--bank-info-border)); }
+  .tag-rose   { background-color: rgb(var(--bank-rose-tint));       color: rgb(var(--bank-rose-ink));       border-color: rgb(var(--bank-rose-border)); }
+  /* Session 80.42 */
+  .tag-gold      { background-color: rgb(var(--bank-gold-tint));      color: rgb(var(--bank-gold-ink));      border-color: rgb(var(--bank-gold-border)); }
+  .tag-champagne { background-color: rgb(var(--bank-champagne-tint)); color: rgb(var(--bank-champagne-ink)); border-color: rgb(var(--bank-champagne-border)); }
+  .tag-sage      { background-color: rgb(var(--bank-sage-tint));      color: rgb(var(--bank-sage-ink));      border-color: rgb(var(--bank-sage-border)); }
+
+  /* Honor reduced-motion users globally */
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track { animation: none !important; }
+    .shine:hover::after { animation: none !important; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+
+/* =========================================================================
+   Session 80.52 — Rahmenloses Content-Design (globaler Override)
+   -----------------------------------------------------------------------
+   Ziel: „Whitespace → Text/Inhalt → Whitespace" statt „Rahmen → Inhalt → Rahmen".
+   
+   Angriff: Alle generischen Border-Farb-Utilities (bank-border, bank-primary,
+   bank-gold, bank-accent, bank-ink, alle -tint-/-border-Varianten, shadcn
+   border-border) werden auf transparent gesetzt. Funktionale UI-Elemente
+   bleiben unberührt via Restore-Selektoren.
+   
+   Behalten die Umrandung:
+     - <button>, <input>, <select>, <textarea>
+     - ARIA-Rollen: dialog (Modal), menu, menuitem, listbox, option, tab, tabpanel,
+                    switch, checkbox, radio, grid, row, cell, combobox
+     - <table>, <thead>, <tbody>, <tr>, <td>, <th>
+     - .tag-*, .kpi-*, .icon-badge-* (setzen border-color selbst weiter oben)
+     - Kalender/date-picker (rdp)
+     - Charts/interaktive Widgets ([data-chart])
+     - Anker im Button-Look (a.rounded-full, a[role=button])
+     - Opt-in-Escape: [data-preserve-border]
+   
+   Ebenso: kombiniertes shadow-* auf reinen Content-Cards entfernt.
+   Modal/Popover/Dropdown-Chrome behält seinen Schatten.
+   ========================================================================= */
+@layer utilities {
+  .border-bank-border,
+  .border-bank-primary,
+  .border-bank-gold,
+  .border-bank-accent,
+  .border-bank-accent-strong,
+  .border-bank-ink,
+  .border-bank-signature,
+  .border-bank-text,
+  .border-bank-petrol-strong,
+  .border-bank-petrol-border,
+  .border-bank-champagne-border,
+  .border-bank-sage-border,
+  .border-bank-amber-border,
+  .border-bank-violet-border,
+  .border-bank-rose-border,
+  .border-bank-info-border,
+  .border-bank-coral-border,
+  .border-bank-gold-border,
+  .border-bank-rose,
+  .border-border {
+    border-color: transparent;
+  }
+
+  /* Restore für funktionale UI (alle Selektoren gelten für alle Token-Klassen) */
+  button.border-bank-border, button.border-bank-primary, button.border-bank-gold,
+  button.border-bank-accent, button.border-bank-accent-strong, button.border-bank-ink,
+  button.border-bank-signature, button.border-bank-text, button.border-bank-petrol-strong,
+  button.border-bank-petrol-border, button.border-bank-champagne-border,
+  button.border-bank-sage-border, button.border-bank-amber-border,
+  button.border-bank-violet-border, button.border-bank-rose-border,
+  button.border-bank-info-border, button.border-bank-coral-border,
+  button.border-bank-gold-border, button.border-bank-rose, button.border-border,
+  input[class*="border-bank-"], input.border-border,
+  select[class*="border-bank-"], select.border-border,
+  textarea[class*="border-bank-"], textarea.border-border,
+  a[role="button"][class*="border-bank-"], a[role="button"].border-border,
+  a.rounded-full[class*="border-bank-"], a.rounded-full.border-border,
+  [role="dialog"][class*="border-bank-"], [role="dialog"].border-border,
+  [role="dialog"] [class*="border-bank-"], [role="dialog"] .border-border,
+  [role="menu"][class*="border-bank-"], [role="menu"].border-border,
+  [role="menu"] [class*="border-bank-"], [role="menu"] .border-border,
+  [role="menuitem"][class*="border-bank-"], [role="menuitem"].border-border,
+  [role="listbox"][class*="border-bank-"], [role="listbox"].border-border,
+  [role="listbox"] [class*="border-bank-"], [role="listbox"] .border-border,
+  [role="option"][class*="border-bank-"], [role="option"].border-border,
+  [role="tab"][class*="border-bank-"], [role="tab"].border-border,
+  [role="tabpanel"] [class*="border-bank-"], [role="tabpanel"] .border-border,
+  [role="switch"][class*="border-bank-"], [role="switch"].border-border,
+  [role="checkbox"][class*="border-bank-"], [role="checkbox"].border-border,
+  [role="radio"][class*="border-bank-"], [role="radio"].border-border,
+  [role="grid"] [class*="border-bank-"], [role="grid"] .border-border,
+  [role="row"][class*="border-bank-"], [role="row"].border-border,
+  [role="cell"][class*="border-bank-"], [role="cell"].border-border,
+  [role="combobox"][class*="border-bank-"], [role="combobox"].border-border,
+  table[class*="border-bank-"], table.border-border,
+  table [class*="border-bank-"], table .border-border,
+  thead[class*="border-bank-"], tbody[class*="border-bank-"], tr[class*="border-bank-"],
+  td[class*="border-bank-"], th[class*="border-bank-"],
+  [data-preserve-border][class*="border-bank-"], [data-preserve-border].border-border,
+  [data-preserve-border] [class*="border-bank-"], [data-preserve-border] .border-border,
+  .rdp [class*="border-bank-"], .rdp .border-border,
+  [data-chart][class*="border-bank-"], [data-chart].border-border,
+  [data-chart] [class*="border-bank-"], [data-chart] .border-border,
+  .form-control[class*="border-bank-"], .form-control.border-border,
+  .input-wrapper[class*="border-bank-"], .input-wrapper.border-border {
+    border-color: initial;
+  }
+
+  /* Restore mit korrekten Token-Farben — via CSS-Klassen-spezifische Fallbacks.
+     Da `initial` oben u.U. weiß liefert, hier explizite Farb-Restores: */
+  button.border-bank-border, input.border-bank-border, select.border-bank-border,
+  textarea.border-bank-border, [role="dialog"].border-bank-border,
+  [role="dialog"] .border-bank-border, [role="menu"].border-bank-border,
+  [role="menu"] .border-bank-border, [role="listbox"] .border-bank-border,
+  table.border-bank-border, [data-preserve-border].border-bank-border,
+  [data-preserve-border] .border-bank-border, a[role="button"].border-bank-border,
+  a.rounded-full.border-bank-border { border-color: rgb(var(--bank-border)); }
+
+  button.border-bank-primary, a[role="button"].border-bank-primary,
+  a.rounded-full.border-bank-primary, input.border-bank-primary,
+  [role="dialog"].border-bank-primary, [role="dialog"] .border-bank-primary,
+  [data-preserve-border].border-bank-primary { border-color: rgb(var(--bank-primary)); }
+
+  button.border-bank-gold, a[role="button"].border-bank-gold,
+  a.rounded-full.border-bank-gold, [role="dialog"].border-bank-gold,
+  [role="dialog"] .border-bank-gold, [data-preserve-border].border-bank-gold
+    { border-color: rgb(var(--bank-gold)); }
+
+  button.border-bank-accent, a[role="button"].border-bank-accent,
+  a.rounded-full.border-bank-accent, [role="dialog"].border-bank-accent,
+  [data-preserve-border].border-bank-accent { border-color: rgb(var(--bank-accent)); }
+
+  button.border-bank-signature, a[role="button"].border-bank-signature,
+  a.rounded-full.border-bank-signature, [role="dialog"].border-bank-signature,
+  [data-preserve-border].border-bank-signature { border-color: rgb(var(--bank-signature)); }
+
+  button.border-bank-ink, a[role="button"].border-bank-ink,
+  a.rounded-full.border-bank-ink, [role="dialog"].border-bank-ink,
+  [data-preserve-border].border-bank-ink { border-color: rgb(var(--bank-ink)); }
+
+  button.border-border, a[role="button"].border-border, a.rounded-full.border-border,
+  [role="dialog"].border-border, [role="dialog"] .border-border,
+  [role="menu"].border-border, [role="menu"] .border-border,
+  [role="listbox"].border-border, [role="listbox"] .border-border,
+  input.border-border, select.border-border, textarea.border-border,
+  table.border-border, [data-preserve-border].border-border,
+  [data-preserve-border] .border-border { border-color: hsl(var(--border)); }
+
+  /* Editorial-Shadow auf reinen Content-Karten entfernen */
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-sm,
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-md,
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-lg,
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-sm,
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-md,
+  [class*="border-bank-"]:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-lg,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-sm,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-md,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-lg,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-sm,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-md,
+  .border-border:not(button):not(input):not(select):not(textarea):not([role]):not(table):not(thead):not(tbody):not(tr):not(td):not(th):not([data-preserve-border]).shadow-editorial-lg {
+    box-shadow: none;
+  }
+}

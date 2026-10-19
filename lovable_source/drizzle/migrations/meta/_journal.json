@@ -1,0 +1,97 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791884041014,
+      "tag": "0000_admin_panel_core",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791884727450,
+      "tag": "0001_fix_execute_transaction",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791893116150,
+      "tag": "0002_market_products_ipo",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791897936983,
+      "tag": "0003_position_available_from",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791898220326,
+      "tag": "0004_execute_tx_dates",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791966683979,
+      "tag": "0005_execute_tx_ipo_price",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791968986256,
+      "tag": "0006_create_watchlist_and_price_alerts",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791969121053,
+      "tag": "0007_add_customer_note_to_transactions",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792096506577,
+      "tag": "0008_formular_access_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792145129005,
+      "tag": "0009_add_position_current_price",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792146996356,
+      "tag": "0010_discount_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792150210209,
+      "tag": "0011_ipo_listing_info",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792153944502,
+      "tag": "0012_formular_code_plain",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS ipo_date_label text, ADD COLUMN IF NOT EXISTS ipo_status text, ADD COLUMN IF NOT EXISTS market_cap numeric, ADD COLUMN IF NOT EXISTS shares_outstanding numeric, ADD COLUMN IF NOT EXISTS market_cap_note text;

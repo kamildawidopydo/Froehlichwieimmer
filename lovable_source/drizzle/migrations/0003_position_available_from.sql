@@ -1,0 +1,1 @@
+ALTER TABLE public.portfolio_positions ADD COLUMN IF NOT EXISTS available_from date;
