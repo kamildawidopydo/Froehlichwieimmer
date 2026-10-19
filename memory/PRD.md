@@ -1,6 +1,6 @@
 # Essence Invest / Fröhlich Vermögensberatung — Product Requirements Document
 
-**Letzte Aktualisierung**: Oktober 2026 (Session: Lovable→Emergent Full Migration)
+**Letzte Aktualisierung**: Februar 2026 (Session: Prod-DB-Sync via idempotenten Startup-Seeder + Redeploy)
 
 ## 1. Original Problem Statement
 
@@ -24,7 +24,19 @@ User betreibt eine Pan-European Savings/Credit-Comparison-Plattform „essencein
 
 ## 3. Was in dieser Session gemacht wurde
 
-### Session-Umfang: Lovable → Emergent Komplett-Migration
+### Session (Feb 2026): Prod-DB-Sync via Startup-Seeder + Redeploy
+1. ✅ Preview-DB-Snapshots exportiert nach `backend/data/seed_production/`:
+   - `banks.json` (75), `savings_offers.json` (298), `credit_offers.json` (5)
+2. ✅ Idempotenter Startup-Loader `backend/production_seed_loader.py` erstellt:
+   - Match-Logik: banks→slug · savings→source_id/composite · credit→source_id/(bank_id+product_name)
+   - Keine Overwrites bestehender Datensätze
+   - Kill-Switch: ENV `PRODUCTION_SEED_ENABLED=false`
+3. ✅ In `backend/server.py` → `on_startup()` nach `seed_reviews_from_snapshot` verdrahtet
+4. ✅ Smoke-Test gegen temporäre leere Test-DB bestanden: 75+298+5 inserted; zweiter Lauf 100% skipped_existing
+5. ✅ Preview-Logs zeigen bei jedem Boot: `production_seed: done — ... skipped_existing=75/298/5`
+6. ✅ Redeploy via `deployer_agent` angestoßen (job_id `4cb1a3eb-...`)
+
+### Vorsession (Okt 2026): Lovable → Emergent Komplett-Migration
 1. ✅ Lovable-Code via ZIP-Export analysiert (1254 Dateien, 47 MB)
 2. ✅ 90 %-Übereinstimmung mit Emergent-Code festgestellt
 3. ✅ Lovable-DB über Public-REST-API ausgelesen (75 Banken + 298 Angebote + 15 Länder)
@@ -53,10 +65,11 @@ customers, profiles, portfolios, portfolio_positions, transactions, kyc_document
 ## 5. Backlog (für Folge-Sessions)
 
 ### P0 — Nach Prod-Deployment zu verifizieren
-- Prod-MongoDB enthält 298 Sparangebote + 75 Banken (sonst via `/app/memory/lovable_migration/data/*.json` seeden)
+- ✅ Prod-MongoDB wird beim Backend-Boot automatisch mit 75 Banken + 298 Sparangeboten + 5 Kreditangeboten befüllt (via `production_seed_loader`)
+- Nach Deployment: Prod-Startup-Logs auf `production_seed: done` prüfen
 - `/legal/impressum` lädt mit vollem Dr. Susanne Müller / EUID / Crefo-Text
 - `/dashboard/flexgeld` zeigt Flaggen + Einlagensicherung-Badges auf Verträgen (login erforderlich)
-- `/vergleich` zeigt alle 297 Angebote inkl. „unverifiziert"-Hinweis
+- `/comparison` zeigt alle 297 Angebote inkl. „unverifiziert"-Hinweis
 
 ### P1 — DNS-Umzug
 - Registrar klären (User: „brauchen wir jetzt noch nicht")
