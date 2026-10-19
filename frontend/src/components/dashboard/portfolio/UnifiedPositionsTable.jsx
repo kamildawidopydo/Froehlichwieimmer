@@ -8,7 +8,7 @@ import BondLogo from '@/components/BondLogo';
 import Sparkline from '@/components/dashboard/charts/Sparkline';
 import { formatEUR } from '@/lib/dashboardFormatters';
 import { cn } from '@/lib/utils';
-import IpoPositionsTable from '@/components/dashboard/IpoPositionsTable';
+import SecurityPositionCard from '@/components/dashboard/portfolio/SecurityPositionCard';
 
 const PctBadge = ({ value }) => {
   if (value == null) return <span className="text-[12px] text-bank-text-muted">–</span>;
@@ -84,13 +84,10 @@ const UnifiedPositionsTable = ({ sparklines = {} }) => {
 
   return (
     <div className="space-y-4">
-      {hasIpoPositions && (
-        <IpoPositionsTable
-          metrics={stockMetrics}
-          stockPriceMap={stockPriceMap}
-          onRowClick={(m) => navigate(`/dashboard/aktien/${encodeURIComponent(m.symbol)}`)}
-        />
-      )}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {(stockMetrics || []).map((m) => <SecurityPositionCard key={m.id} metric={m} quote={stockPriceMap[m.symbol]} />)}
+      </div>
+      {bondPositions.length > 0 && (
     <div className="overflow-hidden rounded-xl border border-bank-border bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -111,7 +108,7 @@ const UnifiedPositionsTable = ({ sparklines = {} }) => {
             </tr>
           </thead>
           <tbody ref={listRef} className="divide-y divide-bank-border/70">
-            {rows.map((r) => {
+            {rows.filter((r) => r.kind === 'bond').map((r) => {
               const up = (r.dayPct ?? r.gvPct ?? 0) >= 0;
               return (
                 <tr
@@ -170,6 +167,7 @@ const UnifiedPositionsTable = ({ sparklines = {} }) => {
         </table>
       </div>
     </div>
+      )}
     </div>
   );
 };

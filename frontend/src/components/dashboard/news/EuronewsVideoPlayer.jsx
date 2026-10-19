@@ -11,7 +11,7 @@ const isAllowedEmbed = (url) => {
   }
 };
 
-const EuronewsVideoPlayer = ({ embedUrl, thumbnailUrl, title, sourceUrl }) => {
+const EuronewsVideoPlayer = ({ embedUrl, thumbnailUrl, title, sourceUrl, sourceName }) => {
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [quality, setQuality] = useState('auto');
@@ -63,7 +63,7 @@ const EuronewsVideoPlayer = ({ embedUrl, thumbnailUrl, title, sourceUrl }) => {
             rel="noopener noreferrer"
             className="mt-4 inline-flex items-center rounded-md border border-white/30 bg-white/10 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.12em] text-white transition-colors hover:bg-white/20"
           >
-            Bei Euronews ansehen
+            {sourceName ? `Bei ${sourceName} ansehen` : 'Beim Anbieter ansehen'}
           </a>
         )}
       </div>
@@ -140,8 +140,8 @@ const EuronewsVideoPlayer = ({ embedUrl, thumbnailUrl, title, sourceUrl }) => {
           />
         )}
         <FallbackPanel
-          message="Video kann hier gerade nicht abgespielt werden."
-          submessage="Bitte später erneut versuchen."
+          message={url ? 'Video kann hier gerade nicht abgespielt werden.' : 'Dieses Video wird direkt beim Anbieter abgespielt.'}
+          submessage={url ? 'Bitte später erneut versuchen.' : 'Unten finden Sie die Zusammenfassung.'}
         />
       </div>
     );

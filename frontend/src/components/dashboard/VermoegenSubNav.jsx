@@ -22,7 +22,7 @@ const VermoegenSubNav = ({ className }) => {
     <nav
       aria-label={t('shell.user.wealth', { defaultValue: 'Vermögen' })}
       className={cn(
-        'mb-5 -mx-1 flex gap-1 overflow-x-auto pb-1 no-scrollbar',
+        'mb-6 flex gap-5 overflow-x-auto border-b border-bank-border no-scrollbar',
         className,
       )}
     >
@@ -33,10 +33,10 @@ const VermoegenSubNav = ({ className }) => {
           end={link.end}
           className={({ isActive }) =>
             cn(
-              'shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors',
+              'shrink-0 border-b-2 px-1 py-3 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bank-primary/30',
               isActive
-                ? 'border-bank-primary bg-bank-primary/10 text-bank-primary'
-                : 'border-bank-border bg-white text-bank-text-muted hover:border-bank-primary/30 hover:text-bank-text',
+                ? 'border-bank-primary text-bank-primary'
+                : 'border-transparent text-bank-text-muted hover:border-bank-border hover:text-bank-text',
             )
           }
         >

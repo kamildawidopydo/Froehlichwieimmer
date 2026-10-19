@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import StockLogo from '@/components/StockLogo';
-import { formatEURSigned } from '@/lib/dashboardFormatters';
+import { formatDate, formatEURSigned } from '@/lib/dashboardFormatters';
 
 const formatLotPrice = (value, currency = 'USD') => {
   if (value == null || !Number.isFinite(Number(value))) return '–';
@@ -36,15 +36,15 @@ const IpoPositionsTable = ({
   if (rows.length === 0) return null;
 
   return (
-    <div className={cn('overflow-hidden rounded-xl border border-violet-200/80 bg-white shadow-sm', className)}>
-      <div className="border-b border-violet-100 bg-violet-50/60 px-4 py-3">
+    <div className={cn('overflow-hidden rounded-lg border border-bank-border bg-bank-surface shadow-sm', className)}>
+      <div className="border-b border-bank-border bg-bank-bg/60 px-4 py-3">
         <p className="text-[14px] font-semibold text-bank-text">{title}</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px]">
           <thead className="border-b border-bank-border bg-bank-bg/50">
             <tr>
-              {['Position', 'Lots', 'Einstand/Lot', 'Listing', 'Gewinn', 'Marktwert'].map((h, i) => (
+              {['Position', 'Stückzahl', 'Kaufpreis je Stück', 'Kaufbetrag gesamt', 'Aktueller Stückpreis', 'Gewinn / Verlust', 'Aktueller Gesamtwert', 'Kaufdatum'].map((h, i) => (
                 <th
                   key={h}
                   className={cn(
@@ -59,7 +59,7 @@ const IpoPositionsTable = ({
           </thead>
           <tbody className="divide-y divide-bank-border/70">
             {rows.map((m) => {
-              const currency = stockPriceMap[m.symbol]?.currency || m.currency || 'USD';
+              const currency = m.currency || stockPriceMap[m.symbol]?.currency || 'EUR';
               const up = (m.gv ?? 0) >= 0;
               const einstand = m.ipoEinstandPerLot ?? m.avg;
               const listing = m.ipoListingPerLot ?? m.price;
@@ -93,10 +93,11 @@ const IpoPositionsTable = ({
                   <td className="px-4 py-3 text-right text-[13px] tabular-nums text-bank-text-muted">
                     {formatLotPrice(einstand, currency)}
                   </td>
+                  <td className="px-4 py-3 text-right text-[13px] tabular-nums text-bank-text">{formatLotPrice(m.einstand, currency)}</td>
                   <td className="px-4 py-3 text-right text-[13px] tabular-nums font-medium text-bank-text">
                     {formatLotPrice(listing, currency)}
                   </td>
-                  <td className={cn('px-4 py-3 text-right text-[13px] tabular-nums font-medium', up ? 'text-emerald-700' : 'text-rose-700')}>
+                  <td className={cn('px-4 py-3 text-right text-[13px] tabular-nums font-medium', up ? 'text-bank-success' : 'text-bank-error')}>
                     <div>{formatEURSigned(m.gv)}</div>
                     <div className="text-[11px]">{formatPct(m.pct)}</div>
                   </td>
@@ -106,6 +107,7 @@ const IpoPositionsTable = ({
                       currency: currency === 'EUR' ? 'EUR' : currency === 'GBP' ? 'GBP' : 'USD',
                     })}
                   </td>
+                  <td className="px-4 py-3 text-right text-xs text-bank-text-muted">{formatDate(m.purchase_date)}</td>
                 </tr>
               );
             })}

@@ -1,5 +1,6 @@
 import React from 'react';
-import Lottie from 'lottie-react';
+import LottieModule from 'lottie-react';
+const Lottie = LottieModule?.default ?? LottieModule;
 import { useReducedMotion } from 'framer-motion';
 import { BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';

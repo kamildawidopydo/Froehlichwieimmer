@@ -421,12 +421,12 @@ export default function GesamtuebersichtSection({ loading, showcase = false }) {
                 s.isIpoValuation && s.ipoListingPerLot != null
                   ? Number(s.ipoListingPerLot).toLocaleString('de-DE', {
                       style: 'currency',
-                      currency: p?.currency || 'USD',
+                      currency: s.currency || 'EUR',
                     })
                   : p?.price != null
                   ? Number(p.price).toLocaleString('de-DE', {
                       style: 'currency',
-                      currency: p?.currency || 'USD',
+                      currency: s.currency || 'EUR',
                     })
                   : null,
               gvPct: s.pct != null ? Number(s.pct) : null,

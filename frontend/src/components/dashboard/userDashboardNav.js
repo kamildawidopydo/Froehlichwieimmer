@@ -10,6 +10,7 @@ import {
   Bell,
   Receipt,
   FileText,
+  FileSignature,
 } from 'lucide-react';
 import { PRODUCT_ICONS } from '@/lib/productIcons';
 
@@ -57,6 +58,9 @@ export function createUserDashboardNavItems({
           icon: LayoutDashboard,
           end: true,
         },
+        { to: '/dashboard/mein-depot', label: 'Mein Depot', icon: Receipt, end: true },
+        { to: '/dashboard/markt', label: 'Markt & Handel', icon: TrendingUp, end: true },
+        { to: '/dashboard/verifizierung', label: 'Verifizierung', icon: FileText, end: true },
       ],
     },
     {
@@ -140,6 +144,7 @@ export function createUserDashboardNavItems({
           label: tr(t, 'shell.user.documents', 'Dokumente'),
           icon: FileText,
         },
+        { to: '/formular', label: 'Verträge (Code)', icon: FileSignature },
         { to: '/dashboard/profil', label: tr(t, 'shell.user.profile', 'Profil'), icon: UserCircle },
         {
           to: '/dashboard/support',

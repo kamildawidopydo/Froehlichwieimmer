@@ -81,9 +81,24 @@ const AdminDashboardLayout = () => {
 
   const items = [
     {
+      label: 'Plattform',
+      items: [
+        { to: '/admin', label: 'Dashboard', icon: LayoutGrid, end: true },
+        { to: '/admin/kunden', label: 'Kunden', icon: Users },
+        { to: '/admin/depots', label: 'Depots', icon: Briefcase },
+        { to: '/admin/produkte', label: 'Produkte', icon: Tag },
+        { to: '/admin/auftraege', label: 'Kauf- und Verkaufsaufträge', icon: ClipboardList },
+        { to: '/admin/kyc', label: 'KYC-Prüfung', icon: FileCheck },
+        { to: '/admin/preise', label: 'Preisverwaltung', icon: BarChart3 },
+        { to: '/admin/rabattcodes', label: 'Rabattcodes', icon: Tag },
+        { to: '/admin/audit-log', label: 'Audit-Log', icon: ListChecks },
+        { to: '/admin/einstellungen', label: 'Einstellungen', icon: FileSignature },
+      ],
+    },
+    {
       label: t('shell.admin.overview', { defaultValue: 'Übersicht' }),
       items: [
-        { to: '/admin', label: t('shell.admin.dashboard', { defaultValue: 'Dashboard' }), icon: LayoutGrid, end: true },
+        { to: '/admin/alt-dashboard', label: 'Altes Dashboard', icon: LayoutGrid },
         { to: '/admin/live-visitors', label: t('shell.admin.liveVisitors', { defaultValue: 'Besucher Live' }), icon: Radio },
       ],
     },
@@ -91,7 +106,7 @@ const AdminDashboardLayout = () => {
       label: t('shell.admin.operations', { defaultValue: 'Betrieb & Kunden' }),
       items: [
         { to: '/admin/users', label: t('shell.admin.users', { defaultValue: 'Benutzer' }), icon: Users, badge: b('pending_users') },
-        { to: '/admin/stock-orders', label: t('shell.admin.stockOrders', { defaultValue: 'Aktien-Aufträge' }), icon: ClipboardList, badge: b('pending_orders') },
+        { to: '/admin/auftraege', label: t('shell.admin.stockOrders', { defaultValue: 'Aktien-Aufträge' }), icon: ClipboardList, badge: b('pending_orders') },
         { to: '/admin/insufficient-buying-power', label: t('shell.admin.insufficientBuyingPower', { defaultValue: 'Kaufkraft-Warnungen' }), icon: AlertTriangle, badge: b('pending_insufficient_buying_power') },
         { to: '/admin/stock-coupons', label: t('shell.admin.stockCoupons', { defaultValue: 'Aktien-Gutscheine' }), icon: Ticket },
         { to: '/admin/applications', label: t('shell.admin.applications', { defaultValue: 'Anträge' }), icon: FileText, badge: b('pending_applications'), badgeSecondary: b('failed_application_email') },
@@ -113,6 +128,7 @@ const AdminDashboardLayout = () => {
       items: [
         { to: '/admin/cash-balances', label: t('shell.admin.cashBalances', { defaultValue: 'Kontoguthaben' }), icon: CreditCard },
         { to: '/admin/depot-contracts', label: t('shell.admin.depotContracts', { defaultValue: 'Depotverträge' }), icon: Wallet },
+        { to: '/admin/depot-statement-analysis', label: t('shell.admin.depotStatementAnalysis', { defaultValue: 'Depotauszug-Analyse' }), icon: FileText },
         { to: '/admin/bond-positions', label: t('shell.admin.bondPositions', { defaultValue: 'Kunden-Anleihen' }), icon: PRODUCT_ICONS.anleihen },
         { to: '/admin/bond-catalog', label: t('shell.admin.bondCatalog', { defaultValue: 'Anleihen-Katalog' }), icon: PRODUCT_ICONS.anleihen },
         { to: '/admin/bond-requests', label: t('shell.admin.bondRequests', { defaultValue: 'Anleihen-Anfragen' }), icon: Send, badge: b('pending_bond_requests') },

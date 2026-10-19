@@ -3,6 +3,7 @@ import { NavLink, Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ExternalLink } from 'lucide-react';
 import { BRAND_FAVICON_SRC } from '@/lib/brand';
+import { Button } from '@/components/ui/button';
 
 /** IBKR Client Portal–style sidebar: compact, sans-serif, row highlight active state. */
 
@@ -20,7 +21,7 @@ const SectionLabel = ({ children, compact = false }) => (
 const Badge = ({ value }) => {
   if (value == null || Number(value) <= 0) return null;
   return (
-    <span className="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-bank-primary px-1.5 text-[10px] font-semibold tabular-nums text-white">
+    <span className="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-bank-primary px-1.5 text-[10px] font-semibold tabular-nums text-primary-foreground">
       {Number(value) > 99 ? '99+' : value}
     </span>
   );
@@ -30,7 +31,7 @@ const itemActiveClass = (active, compact = false, nested = false) =>
   cn(
     'flex items-center gap-2 rounded-md font-medium transition-colors',
     nested
-      ? 'mx-2 py-1.5 pl-9 pr-3 text-[12px]'
+      ? 'mx-2 min-h-9 border-l-2 py-2 pl-3 pr-3 text-[13px]'
       : compact
         ? 'mx-2 px-2.5 py-1.5 text-[12px]'
         : 'mx-2 gap-2.5 px-3 py-2 text-[13px]',
@@ -38,6 +39,7 @@ const itemActiveClass = (active, compact = false, nested = false) =>
     active
       ? 'bg-bank-primary/10 text-bank-primary'
       : 'text-bank-text-muted hover:bg-bank-surface-elev/80 hover:text-bank-text',
+    nested && (active ? 'border-bank-primary' : 'border-transparent'),
   );
 
 const pathMatches = (pathname, to, end) => {
@@ -72,7 +74,7 @@ const SidebarItem = ({
       onClick={onClick}
       className={() => itemActiveClass(isActive, compact, nested)}
     >
-      {Icon && !nested ? (
+      {Icon ? (
         <Icon size={compact ? 14 : 16} strokeWidth={1.5} className="shrink-0 opacity-90" />
       ) : nested ? (
         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-50" aria-hidden />
@@ -116,7 +118,9 @@ const SidebarCollapsibleItem = ({ item, onNavigate, forceActive, compact = false
           <span className="truncate">{item.label}</span>
           <Badge value={item.badge} />
         </NavLink>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           type="button"
           aria-expanded={open}
           aria-label={open ? 'Untermenü einklappen' : 'Untermenü ausklappen'}
@@ -127,10 +131,10 @@ const SidebarCollapsibleItem = ({ item, onNavigate, forceActive, compact = false
           )}
         >
           <ChevronDown size={15} className={cn('transition-transform', open && 'rotate-180')} />
-        </button>
+        </Button>
       </div>
       {open && (
-        <div className="mt-0.5 space-y-0.5">
+        <div className="ml-5 mr-2 mt-1 space-y-0.5 border-l border-bank-border py-1">
           {(item.children || []).map((child) => (
             <SidebarItem
               key={child.to}
@@ -193,7 +197,7 @@ const DashboardSidebar = ({
 }) => (
   <aside
     className={cn(
-      'flex shrink-0 flex-col bg-white dark:bg-bank-surface',
+      'flex shrink-0 flex-col bg-bank-surface',
       mobile ? 'h-full w-full' : 'hidden w-[220px] border-r border-bank-border lg:flex',
       showcase && 'h-full min-h-0 overflow-hidden !flex',
       className,
@@ -204,7 +208,7 @@ const DashboardSidebar = ({
       onClick={onNavigate}
       className="flex shrink-0 items-center gap-2.5 border-b border-bank-border px-4 py-3.5 transition-colors hover:bg-bank-bg/50"
     >
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded border border-bank-border bg-white">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded border border-bank-border bg-bank-surface">
         <img
           src={brand?.logo || BRAND_FAVICON_SRC}
           alt=""
