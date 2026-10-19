@@ -12,6 +12,7 @@ import {
   Link2,
   Mail,
   MapPin,
+  Phone,
   Scale,
   Shield,
   ShieldAlert,
@@ -47,13 +48,19 @@ const COMPANY = {
   branchCodeLabel: 'Branchencode',
   cin: 'T2101_HRB23436',
   cinLabel: 'CIN',
+  euid: 'DETT2101V.HRB23436',
+  euidLabel: 'EUID',
+  euidHint: 'Europäischer Eindeutiger Identifier (eIDAS-Verordnung)',
   managingDirector: 'Manfred Franz Fröhlich',
   visdpName: 'Dr. Susanne Müller',
   visdpRef: 'verantwortlich für den Inhalt i. S. d. § 18 Abs. 2 MStV',
   chiefEditor: 'Mark Schubert',
   editorialLeadGuide: 'Anna Sommer und Ralf Thomas Ada',
-  phoneDisplay: '06966 7785 941',
+  phoneDisplay: '+49 (0) 6966 -7785 941',
   phoneTel: '+4969667785941',
+  /** Zentrale am Sitz Bad Kreuznach. */
+  phoneAlternateDisplay: '+49 (0) 671 8 -413 9022',
+  phoneAlternateTel: '+4967184139022',
   email: 'kundenservice@essenceinvest.com',
   website: 'www.essenceinvest.com',
   websiteHref: 'https://www.essenceinvest.com/',
@@ -73,21 +80,41 @@ const impressumBody = (
     <div className="grid gap-10 lg:grid-cols-2">
       <LegalSection id="anbieter" badge="1." title="Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG)">
         <LegalInfoCard title={COMPANY.name}>
-          {COMPANY.street}
-          <br />
-          {COMPANY.city}
-          <br />
-          {COMPANY.country}
-          <br />
-          <br />
-          Telefon: <a href={`tel:${COMPANY.phoneTel}`}>{COMPANY.phoneDisplay}</a>
-          <br />
-          E-Mail: <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>
-          <br />
-          Website:{' '}
-          <a href={COMPANY.websiteHref} target="_blank" rel="noopener noreferrer">
-            {COMPANY.website}
-          </a>
+          <ul className="mt-1 space-y-3">
+            <li className="flex items-start gap-3">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-bank-primary" aria-hidden="true" />
+              <span>
+                {COMPANY.street}
+                <br />
+                {COMPANY.city}
+                <br />
+                {COMPANY.country}
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <Phone className="mt-0.5 h-4 w-4 shrink-0 text-bank-primary" aria-hidden="true" />
+              <span className="space-y-1">
+                <span className="block">
+                  <span className="text-bank-text">Zentrale: </span>
+                  <a className="font-medium whitespace-nowrap" href={`tel:${COMPANY.phoneAlternateTel}`}>{COMPANY.phoneAlternateDisplay}</a>
+                </span>
+                <span className="block">
+                  <span className="text-bank-text">Telefon Frankfurt: </span>
+                  <a className="font-medium whitespace-nowrap" href={`tel:${COMPANY.phoneTel}`}>{COMPANY.phoneDisplay}</a>
+                </span>
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <Mail className="mt-0.5 h-4 w-4 shrink-0 text-bank-primary" aria-hidden="true" />
+              <a className="font-medium" href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>
+            </li>
+            <li className="flex items-start gap-3">
+              <Globe className="mt-0.5 h-4 w-4 shrink-0 text-bank-primary" aria-hidden="true" />
+              <a className="font-medium" href={COMPANY.websiteHref} target="_blank" rel="noopener noreferrer">
+                {COMPANY.website}
+              </a>
+            </li>
+          </ul>
         </LegalInfoCard>
       </LegalSection>
 
@@ -122,6 +149,12 @@ const impressumBody = (
         <span>{COMPANY.branchCode}</span>
         <span className="text-bank-text">{COMPANY.cinLabel}:</span>
         <span>{COMPANY.cin}</span>
+        <span className="text-bank-text">{COMPANY.euidLabel}:</span>
+        <span>
+          {COMPANY.euid}
+          <br />
+          <span className="text-[13px] text-bank-text-muted/90">{COMPANY.euidHint}</span>
+        </span>
       </div>
     </LegalSection>
 
@@ -197,18 +230,7 @@ const impressumBody = (
     </div>
 
     <div className="grid gap-10 lg:grid-cols-2">
-      <LegalSection id="keine-anlageberatung" badge="10." title="Keine Anlageberatung durch Website-Inhalte">
-        <LegalNotice variant="neutral">
-          <p>
-            Die auf dieser Website bereitgestellten Informationen dienen ausschließlich allgemeinen Informationszwecken und stellen keine individuelle Anlageberatung, keine Anlageempfehlung und keine Aufforderung zum Erwerb oder zur Veräußerung von Finanzinstrumenten dar.
-          </p>
-          <p>
-            Eine persönliche Empfehlung erfolgt ausschließlich im Rahmen einer individuellen Beratung unter Berücksichtigung Ihrer persönlichen Verhältnisse und Anlageziele.
-          </p>
-        </LegalNotice>
-      </LegalSection>
-
-      <LegalSection id="produkte-zinsen" badge="11." title="Produkt- und Zinsinformationen">
+      <LegalSection id="produkte-zinsen" badge="10." title="Produkt- und Zinsinformationen">
         <p>
           Angaben zu Produkten, Zinssätzen, Laufzeiten, Verfügbarkeiten und sonstigen Konditionen können sich jederzeit ändern. Die Darstellung auf dieser Website stellt keine verbindliche Zinszusage dar. Maßgeblich sind die im Einzelfall vereinbarten Konditionen sowie die jeweiligen Vertrags- und Produktunterlagen.
         </p>
@@ -216,14 +238,14 @@ const impressumBody = (
     </div>
 
     <div className="grid gap-10 lg:grid-cols-2">
-      <LegalSection id="einlagensicherung" badge="12." title="Einlagensicherung und Risikohinweise">
+      <LegalSection id="einlagensicherung" badge="11." title="Einlagensicherung und Risikohinweise">
         <p>
           Für Bankeinlagen können gesetzliche und gegebenenfalls zusätzliche freiwillige Einlagensicherungssysteme gelten. Art, Umfang und Voraussetzungen der Einlagensicherung richten sich nach dem jeweiligen Kreditinstitut und dem anwendbaren Sicherungssystem. Bei ausländischen Instituten können die Sicherungssysteme des jeweiligen Sitzstaates maßgeblich sein.
         </p>
         <p>Weitergehende Informationen erhalten Sie in den jeweiligen Produktunterlagen.</p>
       </LegalSection>
 
-      <LegalSection id="datenschutz" badge="13." title="Datenschutz">
+      <LegalSection id="datenschutz" badge="12." title="Datenschutz">
         <p>
           Informationen zur Verarbeitung personenbezogener Daten sowie zu Ihren Rechten finden Sie in unserer{' '}
           <a href="/legal/privacy">Datenschutzerklärung</a>.
@@ -231,7 +253,7 @@ const impressumBody = (
       </LegalSection>
     </div>
 
-    <LegalSection id="aenderungen" badge="14." title="Änderungsvorbehalt / Aktualität">
+    <LegalSection id="aenderungen" badge="13." title="Änderungsvorbehalt / Aktualität">
       <p>
         Die {COMPANY.name} behält sich vor, dieses Impressum jederzeit anzupassen, wenn sich gesetzliche Anforderungen, Unternehmensangaben oder aufsichtsrechtliche Rahmenbedingungen ändern.
       </p>
@@ -527,13 +549,6 @@ const disclaimerBody = (
       </p>
     </LegalSection>
 
-    <LegalSection id="keine-beratung" icon={ShieldAlert} title="Keine Beratung oder Empfehlung">
-      <LegalNotice variant="neutral" icon={ShieldAlert}>
-        Es werden keinerlei Beratungsleistungen im Sinne von Finanz-, Anlage-, Steuer-, Rechts- oder sonstiger Beratung
-        erbracht. Die Inhalte stellen keine Empfehlung, Aufforderung oder sonstige rechtsverbindliche Erklärung dar.
-      </LegalNotice>
-    </LegalSection>
-
     <LegalSection id="links" icon={ExternalLink} title="Externe Links">
       <p>
         Soweit auf externe Internetseiten verwiesen wird, sind für deren Inhalte ausschließlich deren Betreiber
@@ -675,11 +690,10 @@ export const legalPages = {
       { id: 'haftung-inhalte', label: '7. Haftung Inhalte' },
       { id: 'haftung-links', label: '8. Externe Links' },
       { id: 'urheberrecht', label: '9. Urheberrecht' },
-      { id: 'keine-anlageberatung', label: '10. Keine Anlageberatung' },
-      { id: 'produkte-zinsen', label: '11. Produkte & Zinsen' },
-      { id: 'einlagensicherung', label: '12. Einlagensicherung' },
-      { id: 'datenschutz', label: '13. Datenschutz' },
-      { id: 'aenderungen', label: '14. Änderungsvorbehalt' },
+      { id: 'produkte-zinsen', label: '10. Produkte & Zinsen' },
+      { id: 'einlagensicherung', label: '11. Einlagensicherung' },
+      { id: 'datenschutz', label: '12. Datenschutz' },
+      { id: 'aenderungen', label: '13. Änderungsvorbehalt' },
     ],
   },
   privacy: {
