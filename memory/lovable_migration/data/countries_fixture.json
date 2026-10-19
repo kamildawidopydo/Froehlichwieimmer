@@ -1,0 +1,152 @@
+[
+{
+"id": "6abb7515f1dcd0c6d8a8d26b",
+"code": "DE",
+"name": "Germany",
+"name_de": "Deutschland",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.423000",
+"created_at": "2026-09-29T08:21:41.423000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d26c",
+"code": "AT",
+"name": "Austria",
+"name_de": "Österreich",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.423000",
+"created_at": "2026-09-29T08:21:41.423000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d26d",
+"code": "NL",
+"name": "Netherlands",
+"name_de": "Niederlande",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.424000",
+"created_at": "2026-09-29T08:21:41.424000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d26e",
+"code": "BE",
+"name": "Belgium",
+"name_de": "Belgien",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.424000",
+"created_at": "2026-09-29T08:21:41.424000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d26f",
+"code": "FR",
+"name": "France",
+"name_de": "Frankreich",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.425000",
+"created_at": "2026-09-29T08:21:41.425000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d270",
+"code": "ES",
+"name": "Spain",
+"name_de": "Spanien",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.425000",
+"created_at": "2026-09-29T08:21:41.425000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d271",
+"code": "IT",
+"name": "Italy",
+"name_de": "Italien",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.426000",
+"created_at": "2026-09-29T08:21:41.426000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d272",
+"code": "PT",
+"name": "Portugal",
+"name_de": "Portugal",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.426000",
+"created_at": "2026-09-29T08:21:41.426000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d273",
+"code": "IE",
+"name": "Ireland",
+"name_de": "Irland",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.427000",
+"created_at": "2026-09-29T08:21:41.427000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d274",
+"code": "LU",
+"name": "Luxembourg",
+"name_de": "Luxemburg",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.427000",
+"created_at": "2026-09-29T08:21:41.427000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d275",
+"code": "EE",
+"name": "Estonia",
+"name_de": "Estland",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.427000",
+"created_at": "2026-09-29T08:21:41.427000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d276",
+"code": "LV",
+"name": "Latvia",
+"name_de": "Lettland",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.428000",
+"created_at": "2026-09-29T08:21:41.428000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d277",
+"code": "LT",
+"name": "Lithuania",
+"name_de": "Litauen",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.428000",
+"created_at": "2026-09-29T08:21:41.428000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d278",
+"code": "FI",
+"name": "Finland",
+"name_de": "Finnland",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.429000",
+"created_at": "2026-09-29T08:21:41.429000"
+},
+{
+"id": "6abb7515f1dcd0c6d8a8d279",
+"code": "SE",
+"name": "Sweden",
+"name_de": "Schweden",
+"region": "EU",
+"is_active": true,
+"updated_at": "2026-09-29T08:21:41.429000",
+"created_at": "2026-09-29T08:21:41.429000"
+}
+]
