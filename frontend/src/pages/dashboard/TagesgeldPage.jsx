@@ -196,7 +196,7 @@ const TagesgeldPage = () => {
           <Button
             variant="primary"
             size="default"
-            onClick={() => navigate('/comparison?product=tagesgeld')}
+            onClick={() => window.open('/comparison?product=tagesgeld', '_blank', 'noopener')}
           >
             <Plus size={14} strokeWidth={1.5} /> Tagesgeld eröffnen
           </Button>

@@ -82,7 +82,7 @@ const Service = () => {
           title="Persönliche Beratung"
           body="Sprechen Sie mit unserem Team über Ihre Anlagestrategie."
           cta="Kontakt aufnehmen"
-          to="/contact"
+          to="/dashboard/support"
           testId="mds-contact"
         />
         <ServiceCard
@@ -91,7 +91,7 @@ const Service = () => {
           title="Telefonische Beratung"
           body="Bevorzugen Sie ein Telefonat? Unsere Berater rufen Sie zurück."
           cta="Rückruf anfordern"
-          to="/contact#rueckruf"
+          to="/dashboard/support"
           testId="mds-callback"
         />
       </div>

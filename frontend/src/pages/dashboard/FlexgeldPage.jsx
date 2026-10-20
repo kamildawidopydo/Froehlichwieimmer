@@ -276,7 +276,7 @@ const FlexgeldPage = () => {
           <Button
             variant="primary"
             size="default"
-            onClick={() => navigate('/comparison?product=flexgeld')}
+            onClick={() => window.open('/comparison?product=flexgeld', '_blank', 'noopener')}
           >
             <Plus size={14} strokeWidth={1.5} /> Flexgeld eröffnen
           </Button>

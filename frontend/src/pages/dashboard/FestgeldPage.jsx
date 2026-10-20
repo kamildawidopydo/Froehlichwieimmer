@@ -271,7 +271,7 @@ const FestgeldPage = () => {
           <Button
             variant="primary"
             size="default"
-            onClick={() => navigate('/comparison?product=festgeld')}
+            onClick={() => window.open('/comparison?product=festgeld', '_blank', 'noopener')}
           >
             <Plus size={14} strokeWidth={1.5} /> Neues Festgeld eröffnen
           </Button>

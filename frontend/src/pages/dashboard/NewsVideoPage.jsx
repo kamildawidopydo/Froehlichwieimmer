@@ -63,6 +63,8 @@ const NewsVideoPage = () => {
         {video && (
           <Link
             to={`/news/v/${video.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-bank-text-muted transition-colors hover:text-bank-gold"
           >
             <ExternalLink size={12} strokeWidth={1.5} />

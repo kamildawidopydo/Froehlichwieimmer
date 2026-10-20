@@ -21,7 +21,7 @@ const FavoritesPage = () => {
           icon={Heart}
           description="Sparangebote, die Sie zur späteren Ansicht gespeichert haben."
           actions={
-            <Button variant="outline" size="default" onClick={() => navigate('/comparison')}>
+            <Button variant="outline" size="default" onClick={() => window.open('/comparison', '_blank', 'noopener')}>
               <Sparkles size={14} strokeWidth={1.5} /> Mehr Angebote entdecken
             </Button>
           }
@@ -32,7 +32,7 @@ const FavoritesPage = () => {
             <Heart size={32} strokeWidth={1.4} className="mx-auto mb-4 text-bank-text-muted/50" />
             <h3 className="text-[1.25rem] font-semibold text-bank-text">Noch keine Favoriten gespeichert</h3>
             <p className="mt-2 text-[13px] text-bank-text-muted">Durchsuchen Sie Angebote und speichern Sie Ihre Favoriten.</p>
-            <Button variant="primary" size="default" className="mt-4" onClick={() => navigate('/comparison')}>
+            <Button variant="primary" size="default" className="mt-4" onClick={() => window.open('/comparison', '_blank', 'noopener')}>
               <Sparkles size={14} strokeWidth={1.5} /> Angebote durchsuchen
             </Button>
           </div>
