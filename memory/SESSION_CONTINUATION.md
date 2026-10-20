@@ -1,68 +1,106 @@
-# Session-Fortsetzung · Prod-DB-Sync Deployment
+# Session-Fortsetzung · Prod-DB-Sync + Vertrags-E-Mail-Endpoints wiederhergestellt
 
 **Datum**: Februar 2026
-**Status**: Redeploy läuft (job_id `4cb1a3eb-243a-47a8-a2cd-9c32d6e04c42`)
+**Stand**: Alle Änderungen auf Preview getestet und von Emergent commitet. Bereit für Redeploy.
 
-## Was in dieser Session gemacht wurde
+---
 
-1. **Preview-Zustand gezeigt** über 5 Screenshots:
-   - `/` Homepage (News-Portal)
-   - `/comparison` (297 Sparangebote, 15 Länder)
-   - `/kredit` (Kreditvergleich-Lead)
-   - `/banken` (75 Institute mit Flaggen)
-   - `/leistungen` (Lovable-Design)
+## Teil 1 — Prod-DB-Sync via Startup-Seeder
 
-2. **Prod-DB-Sync-Mechanismus eingebaut**:
-   - Snapshots aus Preview-DB exportiert nach `/app/backend/data/seed_production/`:
-     - `banks.json` (75 Datensätze, 65 KB)
-     - `savings_offers.json` (298 Datensätze, 330 KB)
-     - `credit_offers.json` (5 Datensätze, 6 KB)
-   - Loader-Modul: `/app/backend/production_seed_loader.py`
-   - In `backend/server.py` → `on_startup()` nach `seed_reviews_from_snapshot` eingehängt (Zeilen 4682–4683).
-   - Match-Logik:
-     - `banks` → `slug`
-     - `savings_offers` → `source_id`, Fallback composite (`bank_slug` + `product_type` + `term_months` + `product_name`)
-     - `credit_offers` → `source_id`, Fallback (`bank_id` + `product_name`)
-   - Keine Overwrites bestehender Datensätze (Admin-Edits bleiben)
-   - Kill-Switch: ENV `PRODUCTION_SEED_ENABLED=false`
+### Was gebaut wurde
+- Preview-DB-Snapshots exportiert nach `/app/backend/data/seed_production/`:
+  - `banks.json` (75), `savings_offers.json` (298), `credit_offers.json` (5)
+- Idempotenter Loader: `/app/backend/production_seed_loader.py`
+  - Match-Logik: `banks`→`slug` · `savings`→`source_id`/composite · `credit`→`source_id`/(bank_id+product_name)
+  - Keine Overwrites bestehender Datensätze
+  - Kill-Switch via ENV `PRODUCTION_SEED_ENABLED=false`
+- In `backend/server.py` → `on_startup()` nach `seed_reviews_from_snapshot` eingehängt
 
-3. **Smoke-Test gegen temporäre leere Test-DB bestanden**:
-   - Erster Lauf: 75 + 298 + 5 inserted ✅
-   - Zweiter Lauf: 0 inserted / alle skipped_existing ✅
+### Smoke-Test bestanden
+- Leere Test-DB: 75 + 298 + 5 inserted ✅
+- Zweiter Lauf: 100% skipped_existing ✅
 
-4. **Redeploy angestoßen** via `emergent__send_to_deployer` (intent=deploy)
+---
 
-## Nach dem Deploy prüfen
+## Teil 2 — Vertrags-E-Mail-Endpoints wiederhergestellt (kritischer Bugfix)
 
-- Prod-Backend-Startup-Log muss zeigen: `production_seed: done — {...}`
-- `curl https://finance-platform-v2.emergent.host/api/public/savings-offers | wc -l` sollte ~297 Angebote liefern
-- Prod-Banken-Count sollte 75 betragen
+### Problem
+Beim Lovable→Emergent Umzug waren **13 Vercel-Edge-Functions** (`send-*-email`) nicht migriert worden. Konsequenz:
+- Kunde füllt BBVA/bunq/ING/Postbank/Knab Flex-/Festgeld-Formular aus
+- Erfolgs-Screen zeigt sich
+- Aber: **weder Admin noch Kunde erhielten E-Mail**, Vertrag landete **nicht** in `contract_form_submissions`
 
-## Verbleibende Backlog-Items (unverändert)
+### Lösung
+Neuer Router: `/app/backend/routes/contract_submissions.py`
+- 12 Vertrags-Endpoints + 1 Contact (`/api/send-email`)
+- Pattern: Config-Tabelle + One-Function-Handler + Loop-Registration
+- Persistenz in `contract_form_submissions` (vor Mail-Versand → Idempotenz-sicher)
+- Admin-Mail an `kundenservice@essenceinvest.com` mit Vertrags-PDF + Signatur-Attachments
+- **NEU**: Kunden-Bestätigungsmail mit Vertrag im Anhang (hatte Lovable nicht)
+- Rate-Limit (5/min/IP), Validierung via Pydantic
+
+### Branding-Fixes
+- `templates/bestandskunden_bestaetigung.html`: Header + Signatur „Kapitalmitte"→"Fröhlich"
+- `routes/customer_confirmations.py`: Betreff + Signatur-Zeile
+- Backend-weiter Grep auf „Kapitalmitte": 0 Treffer in `templates/`, `routes/`, `services/`
+
+### Alle 13 Endpoints
+
+| Endpoint | Produkt |
+|---|---|
+| `/api/send-contract-email` | BBVA Flexgeld |
+| `/api/send-bunq-contract-email` | bunq NL Flexgeld |
+| `/api/send-bunq-de-contract-email` | bunq DE Flexgeld |
+| `/api/send-ing-contract-email` | ING Flexgeld |
+| `/api/send-postbank-contract-email` | Postbank Flexgeld |
+| `/api/send-knab-email` | Knab Flexgeld |
+| `/api/send-festgeld-email` | BBVA Festgeld |
+| `/api/send-bunq-festgeld-email` | bunq NL Festgeld |
+| `/api/send-bunq-de-festgeld-email` | bunq DE Festgeld |
+| `/api/send-ing-festgeld-email` | ING Festgeld |
+| `/api/send-postbank-festgeld-email` | Postbank Festgeld |
+| `/api/send-knab-festgeld-email` | Knab Festgeld |
+| `/api/send-email` | Contact-Formular |
+
+### Tests
+- Alle 13 Endpoints: HTTP 200 ✅
+- Persistierung in Mongo verifiziert ✅
+- End-to-End-Mailversand nach Rate-Limit-Cooldown: `adminEmailSent=true`, `customerEmailSent=true` ✅
+
+---
+
+## Nach dem Deploy auf Prod zu prüfen
+
+1. Prod-Backend-Startup-Log muss zeigen: `production_seed: done — {...}`
+2. `curl https://finance-platform-v2.emergent.host/api/public/savings-offers | wc -l` → ~297
+3. Vertragsformular live absenden → Mail an `kundenservice@essenceinvest.com` + Kunde kommt an
+4. Admin-UI „Vertrags-Einreichungen" zeigt den Submission
+
+---
+
+## Verbleibende Backlog-Items
 
 ### P1 — DNS-Umzug
 - Essenceinvest.com-Registrar auf CNAME-Record für Emergent-Deployment umstellen
-- Erst nach erfolgter Prod-Validierung durchführen
+- Erst nach erfolgter Prod-Validierung
 
-### P2 — Weitere Qualitätssprünge
-- Admin-Button „Als verifiziert markieren" direkt in Angebotsliste
+### P2 — Qualitätssprünge
+- Admin-Button „Als verifiziert markieren" in Angebotsliste
 - „Was ist neu?"-Widget auf Startseite
 - Sparalarm per E-Mail bei Zinsänderungen
-- Automatisierte Scraping-Pipeline (nach rechtlicher Prüfung)
 - Rate-Limit-Mocks für Backend-Tests (429-Flakyness)
 
-## Wichtige Dateien dieser Session
+---
+
+## Dateien dieser Session (NEU/GEÄNDERT)
 
 - `/app/backend/production_seed_loader.py` (NEU)
 - `/app/backend/data/seed_production/banks.json` (NEU)
 - `/app/backend/data/seed_production/savings_offers.json` (NEU)
 - `/app/backend/data/seed_production/credit_offers.json` (NEU)
-- `/app/backend/server.py` (verändert — Loader im `on_startup` eingehängt)
+- `/app/backend/routes/contract_submissions.py` (NEU)
+- `/app/backend/server.py` (zwei Hooks + Router-Registrierung)
+- `/app/backend/templates/bestandskunden_bestaetigung.html` (Branding)
+- `/app/backend/routes/customer_confirmations.py` (Branding)
 - `/app/memory/PRD.md` (aktualisiert)
-
-## Letzte Commits (git log)
-
-```
-cb8d278 ## Prod-DB-Sync via idempotenten Startup-Seeder deployed
-eb8b015 ## ✅ Prod-DB-Sync-Mechanismus bereit und getestet
-```
+- `/app/memory/SESSION_CONTINUATION.md` (diese Datei)

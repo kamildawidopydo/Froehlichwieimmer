@@ -85,6 +85,8 @@ customers, profiles, portfolios, portfolio_positions, transactions, kyc_document
 ### P0 — Nach Prod-Deployment zu verifizieren
 - ✅ Prod-MongoDB wird beim Backend-Boot automatisch mit 75 Banken + 298 Sparangeboten + 5 Kreditangeboten befüllt (via `production_seed_loader`)
 - Nach Deployment: Prod-Startup-Logs auf `production_seed: done` prüfen
+- ✅ Vertragsformulare schreiben wieder in `contract_form_submissions` und senden Admin+Kunden-Mail (via `contract_submissions`-Router)
+- Nach Deployment: 1 Testantrag live absenden → beide Mails und Admin-UI-Eintrag prüfen
 - `/legal/impressum` lädt mit vollem Dr. Susanne Müller / EUID / Crefo-Text
 - `/dashboard/flexgeld` zeigt Flaggen + Einlagensicherung-Badges auf Verträgen (login erforderlich)
 - `/comparison` zeigt alle 297 Angebote inkl. „unverifiziert"-Hinweis
