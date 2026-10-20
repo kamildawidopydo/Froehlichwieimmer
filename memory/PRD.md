@@ -1,3 +1,10 @@
+## Update 2026-10-20 – Dashboard-Routing
+- FIXED: Fehlende Routen /dashboard/mein-depot, /dashboard/markt, /dashboard/verifizierung in App.js ergänzt (vorher Redirect auf Übersicht). Mein-Depot-Positionen verlinken im Dashboard auf /dashboard/aktien/:symbol.
+- Getestet (Desktop): alle 20 Sidebar-Links, Topbar und Deep-Link-Reload bleiben im Dashboard. Mobile (390px) NICHT getestet, weil die Credits aufgebraucht sind.
+- OFFEN (P0): Diese Links in den Seiten führen noch aus dem Dashboard hinaus: Service.jsx (/contact, /contact#rueckruf), Festgeld/Tagesgeld/Flexgeld "Neu eröffnen" (/comparison?product=...), FavoritesPage (/comparison, /apply), NewsDetailPage/NewsVideoPage "Auf der Website ansehen" (öffentliches /news/...).
+- OFFEN (P2): "Markt & Handel" und "Markt" in der Sidebar führen auf dieselbe Seite.
+
+
 # Essence Invest / Fröhlich Vermögensberatung — Product Requirements Document
 
 **Letzte Aktualisierung**: Februar 2026 (Session: Prod-DB-Sync via idempotenten Startup-Seeder + Redeploy)
