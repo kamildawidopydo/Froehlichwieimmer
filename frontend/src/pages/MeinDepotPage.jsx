@@ -31,11 +31,11 @@ import Service from '@/components/mein-depot/Service';
  * (Regressionsschutz). Datenlogik unverändert, kein zusätzlicher Request.
  */
 
-const MeinDepotContent = () => (
+export const MeinDepotContent = ({ backTo = '/' }) => (
   <>
     <div className="mx-auto max-w-[1440px] px-5 pt-8 sm:px-8 sm:pt-10 lg:px-12">
       <Link
-        to="/"
+        to={backTo}
         data-testid="mein-depot-back"
         className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-bank-text-muted transition-colors hover:text-bank-text focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-bank-gold"
       >
@@ -70,6 +70,12 @@ const MeinDepotContent = () => (
 
     <DepotPage showTopSummary={false} showLegacyPositionCards={false} showLegacyContractsSection={false} />
   </>
+);
+
+export const DashboardMeinDepotPage = () => (
+  <div data-testid="dashboard-mein-depot-page">
+    <MeinDepotContent backTo="/dashboard/uebersicht" />
+  </div>
 );
 
 const MeinDepotPage = () => (

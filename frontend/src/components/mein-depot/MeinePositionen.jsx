@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowUpRight, ArrowDownRight, ChevronRight, Search, ArrowUpDown } from 'lucide-react';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import StockLogo from '@/components/StockLogo';
@@ -93,6 +93,7 @@ const MeinePositionen = () => {
     gesamtvermoegen,
     dashboardFetchHadFailure,
   } = useDashboardData();
+  const stockBase = useLocation().pathname.startsWith('/dashboard') ? '/dashboard/aktien' : '/aktien';
 
   const [tab, setTab] = useState('all');
   const [sort, setSort] = useState('marktwert');
@@ -128,10 +129,10 @@ const MeinePositionen = () => {
         gvPct: Number.isFinite(Number(m.pct)) ? Number(m.pct) : null,
         weight,
         dayPct,
-        to: `/aktien/${encodeURIComponent(m.symbol)}`,
+        to: `${stockBase}/${encodeURIComponent(m.symbol)}`,
       };
     });
-  }, [stockMetrics, stockPriceMap, totalPortfolio]);
+  }, [stockMetrics, stockPriceMap, totalPortfolio, stockBase]);
 
   const bondRows = useMemo(() => {
     return (bondPositions || []).map((b) => {

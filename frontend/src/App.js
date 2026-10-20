@@ -110,6 +110,9 @@ const AnleihenKaufenPage = lazy(() => import('@/pages/dashboard/AnleihenKaufenPa
 const AktienPage = lazy(() => import('@/pages/dashboard/AktienPage'));
 const DividendenkalenderPage = lazy(() => import('@/pages/aktien/DividendenkalenderPage'));
 const MeinDepotPage = lazy(() => import('@/pages/MeinDepotPage'));
+const DashboardMeinDepotPage = lazy(() =>
+  import('@/pages/MeinDepotPage').then((m) => ({ default: m.DashboardMeinDepotPage })),
+);
 const IpoPage = lazy(() => import('@/pages/dashboard/IpoPage'));
 const DashboardHandelnPage = lazy(() => import('@/pages/dashboard/DashboardHandelnPage'));
 const DashboardStockDetailPage = lazy(() => import('@/pages/dashboard/DashboardStockDetailPage'));
@@ -787,6 +790,9 @@ function App() {
                 >
                   <Route index element={<DashboardLegacyRedirect />} />
                   <Route path="uebersicht" element={<UebersichtPage />} />
+                  <Route path="mein-depot" element={<DashboardMeinDepotPage />} />
+                  <Route path="markt" element={<DashboardHandelnPage />} />
+                  <Route path="verifizierung" element={<DokumentHochladen />} />
                   <Route path="vermoegen" element={<DepotPage />} />
                   <Route path="depot" element={<Navigate to="/dashboard/vermoegen" replace />} />
                   <Route path="festgeld" element={<FestgeldPage />} />
