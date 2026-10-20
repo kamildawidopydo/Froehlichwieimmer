@@ -5540,6 +5540,11 @@ app.include_router(_backup_routes.router)
 from routes import applications as _applications_routes  # noqa: E402
 app.include_router(_applications_routes.router)
 
+# Session 95.2 — Wiederhergestellte Vertrags-/Contact-Email-Endpoints
+# (ehemals Vercel-Edge-Functions in `legacy_source/api/send-*.js`).
+from routes import contract_submissions as _contract_subs_routes  # noqa: E402
+app.include_router(_contract_subs_routes.router)
+
 # Session 82.103a — Reviews (Public + Admin Moderation).
 from routes import reviews as _reviews_routes  # noqa: E402
 app.include_router(_reviews_routes.public_router)

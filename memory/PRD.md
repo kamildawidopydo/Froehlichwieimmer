@@ -24,7 +24,25 @@ User betreibt eine Pan-European Savings/Credit-Comparison-Plattform „essencein
 
 ## 3. Was in dieser Session gemacht wurde
 
-### Session (Feb 2026): Prod-DB-Sync via Startup-Seeder + Redeploy
+### Session (Feb 2026, Part 2): Vertrags-E-Mail-Endpoints wiederhergestellt
+Beim Lovable→Emergent Umzug waren **13 Vercel-Edge-Functions nicht mitmigriert worden**
+(alle `send-*-email`-Endpoints für BBVA/bunq-NL/bunq-DE/ING/Postbank/Knab × Flex+Fest + Contact).
+Konsequenz: Kunde füllt Vertragsformular aus → Erfolgs-Screen zeigt sich, aber **weder
+Admin noch Kunde erhielten E-Mail**, und der Vertrag landete **nicht** in `contract_form_submissions`.
+
+Umgesetzt:
+1. ✅ Neuer Router `/app/backend/routes/contract_submissions.py`
+   - 12 Vertrags-Endpoints + `/api/send-email` (Contact)
+   - Pattern: Config-Tabelle + One-Function-Handler + Loop-Registration
+   - Persistenz in `contract_form_submissions` (vor Mail-Versand → Idempotenz-sicher)
+   - Admin-Mail an `kundenservice@essenceinvest.com` mit Vertrags-PDF + Signatur-Attachments
+   - **NEU**: Kunden-Bestätigungsmail mit Vertrag im Anhang (Lovable hatte das nicht)
+   - Rate-Limit (5/min/IP), Validierung via Pydantic
+2. ✅ `templates/bestandskunden_bestaetigung.html`: „Kapitalmitte"→"Fröhlich" (Header + Signatur)
+3. ✅ `routes/customer_confirmations.py`: Betreff + Signatur-Zeile aktualisiert
+4. ✅ End-to-End-Test: alle 13 Endpoints HTTP 200, Submissions in DB
+
+### Session (Feb 2026, Part 1): Prod-DB-Sync via Startup-Seeder + Redeploy
 1. ✅ Preview-DB-Snapshots exportiert nach `backend/data/seed_production/`:
    - `banks.json` (75), `savings_offers.json` (298), `credit_offers.json` (5)
 2. ✅ Idempotenter Startup-Loader `backend/production_seed_loader.py` erstellt:

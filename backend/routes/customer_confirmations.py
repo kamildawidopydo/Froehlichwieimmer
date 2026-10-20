@@ -139,12 +139,12 @@ async def send_confirmation_email(cid: str, body: SendEmailPayload = Body(...), 
     html = (body.message or "").strip() or (
         "<p>Sehr geehrte Damen und Herren,<br>"
         "im Anhang finden Sie Ihre Bestandskunden-Bestätigung.<br><br>"
-        "Mit freundlichen Grüßen<br>Ihr Kundenservice von Kapitalmitte</p>"
+        "Mit freundlichen Grüßen<br>Ihr Kundenservice der Fröhlich Vermögensberatung</p>"
     )
     try:
         await _send_email_via_emergent(
             to=body.email,
-            subject="Ihre Bestandskunden-Bestätigung bei Kapitalmitte",
+            subject="Ihre Bestandskunden-Bestätigung — Fröhlich Vermögensberatung",
             html=html,
             attachments=[{
                 "filename": "Bestandskunden-Bestaetigung.pdf",
