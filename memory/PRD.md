@@ -1,3 +1,9 @@
+## Update 2026-10-21 – ING Belgien PDFs
+- Erstellt aus den Kunden-Vorlagen (ING NL Flexgeldvertrag, ING DE Produktinformationsblatt Flexgeld): ING_Belgien_Flexgeldvertrag.pdf und ING_Belgien_Produktinformationsblatt_Flexgeld.pdf.
+- Ablage: /app/memory/ing_belgien/ (Quelle + build.py in src/) und öffentlich unter /assets/documents/ing-belgien/.
+- Bankdaten (vom Kunden bestätigt): ING Belgien SA/NV, Avenue Marnix 24, 1000 Brüssel, Unternehmensnr. 0403.200.393; belgischer Garantiefonds bis 100.000 EUR. Steuer-Text wie Vorlage (deutsche Abgeltungsteuer). Konditionen unverändert.
+- Unverändert aus Vorlage: Ref-Nummern/Barcodes, Datum 11.06.2026.
+
 ## Update 2026-10-20 – Dashboard-Routing
 - FIXED: Fehlende Routen /dashboard/mein-depot, /dashboard/markt, /dashboard/verifizierung in App.js ergänzt (vorher Redirect auf Übersicht). Mein-Depot-Positionen verlinken im Dashboard auf /dashboard/aktien/:symbol.
 - Getestet (Desktop): alle 20 Sidebar-Links, Topbar und Deep-Link-Reload bleiben im Dashboard. Mobile (390px) NICHT getestet, weil die Credits aufgebraucht sind.
