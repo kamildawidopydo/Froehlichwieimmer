@@ -98,8 +98,8 @@ class Editor:
         out.append(cur)
         return out
 
-    def logo(self, n, rect, bg=None):
-        self.ops[n].append(("logo", rect, bg))
+    def logo(self, n, rect, bg=None, file="ing_logo.png"):
+        self.ops[n].append(("logo", rect, bg, file))
 
     def save(self, path):
         for n, ops in self.ops.items():
@@ -109,10 +109,10 @@ class Editor:
             p.insert_font(fontname="dinb", fontfile=BOLD)
             for op in ops:
                 if op[0] == "logo":
-                    _, rect, bg = op
+                    _, rect, bg, file = op
                     if bg is not None:
                         p.draw_rect(f.Rect(rect), color=None, fill=bg, overlay=True)
-                    p.insert_image(f.Rect(rect), filename=f"{SRC}/ing_logo.png", keep_proportion=True, overlay=True)
+                    p.insert_image(f.Rect(rect), filename=f"{SRC}/{file}", keep_proportion=True, overlay=True)
                     continue
                 x, y, segs = op
                 for text, bold, size, color in segs:
@@ -184,7 +184,7 @@ def build_produktinfo():
         p = ed.page(n)
         l = next(l for l in lines_of(p) if "".join(s["text"] for s in l["spans"]).strip() == "ING" and l["bbox"][1] < 30)
         ed.redact(n, l["bbox"])
-        ed.logo(n, (24, 6, 24 + 62, 6 + 16), bg=(1, 1, 1))
+        ed.logo(n, (24, 6, 24 + 62, 6 + 16), bg=(8 / 255, 32 / 255, 24 / 255), file="ing_logo_dark.png")
         ed.replace_line(n, "ING B.V. | Landsberger", ADDR_FOOT)
     ed.replace_line(1, "ING B.V. | Stand", f"{BANK} | Stand: 11.06.2026")
     for n in (2, 3, 4):
