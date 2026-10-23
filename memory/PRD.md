@@ -3,7 +3,8 @@
 - Getestet: A-Records (grau/orange) -> 1034; CNAME -> finance-platform-v2.emergent.host (grau/orange) -> 1014.
 - Aktuell eingetragen (seit Folgetest 2026-10-23): CNAME @ und www -> finance-platform-v2.emergent.host, orange (proxied) = Zielkonfiguration nach O2O-Freigabe; ergibt bis dahin 1014. Mail/SPF/DKIM unverändert.
 - Deployer-RCA: Emergent muss O2O / Custom-Hostnames 939187fd-727d-41c4-8a5e-120219ab555f und 64c7b588-3804-42a8-b49c-6122bfc3a14d neu validieren. Danach laut Deployer: CNAME @ und www -> finance-platform-v2.emergent.host, orange (proxied).
-- Auffällig (nicht geändert): mail./autoconfig./autodiscover. A-Records sind orange (proxied).
+- Korrigiert: mail./autoconfig./autodiscover. jetzt CNAME -> privateemail.com (grau), SRV _autodiscover._tcp ergänzt; Always-HTTPS an, Min-TLS 1.2. Kein privateemail-DKIM vorhanden (nur resend._domainkey).
+- Lovable-Daten (Supabase zvzbszdlnbbcxdemwhze) NICHT migriert: Kunde hat Service-Role-Key übersprungen; Alternative: Export aus Lovable.
 
 ## Update 2026-10-21 – ING Belgien PDFs
 - Erstellt aus den Kunden-Vorlagen (ING NL Flexgeldvertrag, ING DE Produktinformationsblatt Flexgeld): ING_Belgien_Flexgeldvertrag.pdf und ING_Belgien_Produktinformationsblatt_Flexgeld.pdf.
