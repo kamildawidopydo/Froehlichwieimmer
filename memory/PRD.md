@@ -1,7 +1,7 @@
 ## Update 2026-10-23 – Domain essenceinvest.com (BLOCKIERT, Plattform-Seite)
 - Kunde hat CLOUDFLARE_API_TOKEN (Zone-DNS) hinterlegt; Zone-ID d8c7e9e7b2e2e4ec8de12071906fed78.
 - Getestet: A-Records (grau/orange) -> 1034; CNAME -> finance-platform-v2.emergent.host (grau/orange) -> 1014.
-- Aktuell eingetragen: A @ 162.159.142.117 + 172.66.2.113 (DNS only), CNAME www -> essenceinvest.com (DNS only). Mail/SPF/DKIM unverändert.
+- Aktuell eingetragen (seit Folgetest 2026-10-23): CNAME @ und www -> finance-platform-v2.emergent.host, orange (proxied) = Zielkonfiguration nach O2O-Freigabe; ergibt bis dahin 1014. Mail/SPF/DKIM unverändert.
 - Deployer-RCA: Emergent muss O2O / Custom-Hostnames 939187fd-727d-41c4-8a5e-120219ab555f und 64c7b588-3804-42a8-b49c-6122bfc3a14d neu validieren. Danach laut Deployer: CNAME @ und www -> finance-platform-v2.emergent.host, orange (proxied).
 - Auffällig (nicht geändert): mail./autoconfig./autodiscover. A-Records sind orange (proxied).
 
