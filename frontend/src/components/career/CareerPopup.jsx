@@ -10,13 +10,13 @@ const SEEN_KEY = 'career_popup_seen_session';
 const HIDDEN_PREFIXES = ['/dashboard', '/admin', '/login', '/register', '/formular', '/reset-password', '/forgot-password'];
 
 const Done = ({ onClose }) => (
-  <div className="flex h-full flex-col justify-center" data-testid="career-popup-success">
-    <CheckCircle2 size={40} className="text-[#C9A54C]" strokeWidth={1.5} />
-    <h2 className="mt-4 font-display text-3xl text-white">Vielen Dank!</h2>
-    <p className="mt-3 text-sm leading-relaxed text-white/70">
+  <div className="flex flex-col items-center text-center" data-testid="career-popup-success">
+    <CheckCircle2 size={40} className="text-[#36A852]" strokeWidth={1.5} />
+    <h2 className="mt-4 font-display text-3xl text-[#1F4D3A]">Vielen Dank!</h2>
+    <p className="mt-3 max-w-sm text-sm leading-relaxed text-[#6B6459]">
       Ihre Bewerbung ist bei uns eingegangen. Sie erhalten eine Bestätigung per E-Mail, und wir melden uns zeitnah bei Ihnen.
     </p>
-    <button type="button" onClick={onClose} data-testid="career-popup-success-close-btn" className="mt-8 w-fit rounded-full border border-white/25 px-6 py-2.5 text-sm text-white transition-colors hover:border-[#C9A54C]">
+    <button type="button" onClick={onClose} data-testid="career-popup-success-close-btn" className="mt-8 rounded-full bg-[#1F4D3A] px-7 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#218739]">
       Schließen
     </button>
   </div>
@@ -56,23 +56,24 @@ const CareerPopup = () => {
     <Dialog open={open} onOpenChange={(v) => { if (!v) close(); }}>
       <DialogContent
         data-testid="career-popup"
-        className="max-h-[92vh] w-[calc(100%-1.5rem)] max-w-4xl gap-0 overflow-y-auto rounded-2xl border border-[#C9A54C]/25 bg-[#0F1B2D] p-0 shadow-2xl sm:overflow-hidden [&>button:last-child]:hidden"
+        className="max-h-[92vh] w-[calc(100%-1.5rem)] max-w-xl grid-cols-[minmax(0,1fr)] gap-0 overflow-y-auto overflow-x-hidden rounded-3xl border-0 bg-white p-0 shadow-2xl outline-none focus:outline-none [&>button:last-child]:hidden"
       >
         <DialogTitle className="sr-only">Wir suchen Finanzberater in Hamburg</DialogTitle>
         <DialogDescription className="sr-only">Bewerben Sie sich als Finanzberater im Raum Hamburg.</DialogDescription>
-        <div className="grid sm:grid-cols-[0.9fr_1.1fr]">
-          <div className="relative h-44 sm:h-auto sm:min-h-[560px]">
-            <img src="/assets/career/hamburg-speicherstadt.jpg" alt="Hamburger Speicherstadt im Abendlicht" className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0F1B2D]/80 via-transparent to-transparent sm:bg-gradient-to-r sm:from-transparent sm:via-transparent sm:to-[#0F1B2D]/30" />
-          </div>
-          <div className="relative min-w-0 px-6 py-8 sm:px-10 sm:py-10">
-            <span className="absolute left-0 top-10 hidden h-16 w-px bg-[#C9A54C] sm:block" />
+        <div>
+          {step !== 'form' && (
+            <div className="relative h-44 overflow-hidden sm:h-56">
+              <img src="/assets/career/hamburg-elbphilharmonie.jpg" alt="Elbphilharmonie in Hamburg" className="h-full w-full object-cover object-[center_40%]" />
+              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
+            </div>
+          )}
+          <div className="min-w-0 px-6 pb-8 pt-4 sm:px-12 sm:pb-10">
             {step === 'intro' && <CareerIntro onApply={() => setStep('form')} onLater={close} />}
             {step === 'form' && <CareerForm onBack={() => setStep('intro')} onDone={() => setStep('done')} />}
             {step === 'done' && <Done onClose={close} />}
           </div>
         </div>
-        <button type="button" onClick={close} aria-label="Schließen" data-testid="career-popup-close-btn" className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/30 text-white/80 backdrop-blur transition-colors hover:bg-black/50 hover:text-white">
+        <button type="button" onClick={close} aria-label="Schließen" data-testid="career-popup-close-btn" className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-[#1A1A1D] shadow-sm backdrop-blur transition-colors hover:bg-white">
           <X size={18} />
         </button>
       </DialogContent>
