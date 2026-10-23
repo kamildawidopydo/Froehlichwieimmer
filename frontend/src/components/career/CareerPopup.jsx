@@ -67,7 +67,7 @@ const CareerPopup = () => {
             </button>
           </div>
           {step !== 'form' && (
-            <img src="/assets/career/hamburg-hafen.jpg" alt="Hamburger Hafen mit Elbphilharmonie" className="h-40 w-full object-cover sm:h-56" />
+            <img src="/assets/career/hamburg-hafen.jpg" alt="Hamburger Hafen mit Elbphilharmonie" className="block h-auto w-full" />
           )}
           <div className={`min-w-0 px-6 pb-10 sm:px-12 ${step === 'form' ? 'pt-0' : 'pt-10 sm:pt-12'}`}>
             {step === 'intro' && <CareerIntro onApply={() => setStep('form')} onLater={close} />}
