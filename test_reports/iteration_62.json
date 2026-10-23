@@ -1,0 +1,35 @@
+{
+  "summary": "Career popup (Finanzberater Hamburg) + POST /api/career/apply tested. Backend: 6/6 pytest pass (invalid email 400, consent=false 400, missing name 422, .txt CV 400, >8MB CV 400, rate limit 3/min -> 429). UI desktop: the popup shows after about 1.2s on / and /kredit. It does not show on /login, /admin or /dashboard/*, both logged out and logged in as admin patron. Without a visitor profile it waits for the welcome gate and appears only after 'Akzeptieren'. X, 'Später' and ESC all close it and set the session flag. It does not reopen on other public pages in the same session and shows again in a new session. 'Jetzt bewerben' opens the form, and 'Zurück' goes back to the intro. HTML5 required checks block submit when name is empty or consent is unchecked. One valid submission (TEST_Bewerber, test@example.com, small PDF) returned 200, showed career-popup-success and was saved in career_applications with admin_email_sent=true; the doc was deleted afterwards. Mobile 390px: the image is on top and the popup scrolls, but the form step overflows sideways by 19px.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/career/apply", "issue": "_rate_limit uses the first X-Forwarded-For IP, which the client can spoof. A random XFF header per request gets past the 3/min limit (confirmed: a different spoofed IP per test gave no 429). Same shared helper as contract_submissions."},
+      {"endpoint": "POST /api/career/apply", "issue": "The CV is read fully into memory before the 8MB check. Consider reading at most _MAX_CV_BYTES+1 bytes. The Content-Type check trusts the client MIME type and does not check the file extension or magic bytes."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CareerPopup form step (mobile 390px)", "issue": "Horizontal overflow inside the dialog: scrollWidth 383 vs clientWidth 364. Inputs and the CV label run into the right edge with no right padding. Likely cause: the single grid column on mobile ('grid sm:grid-cols-[...]') is sized to min-content, and the CV label's 'truncate' nowrap text forces it wider. Fix: add 'grid-cols-1' or 'min-w-0' on the right column div and the label.", "selector": "[data-testid=career-popup] [data-testid=career-form-cv-label]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "CareerPopup desktop", "issues": ["The dialog is taller on the form step than on the intro, so it jumps up a little when switching steps (cosmetic)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_career_apply.py", "/app/test_reports/pytest/pytest_career.xml"],
+  "action_items": [
+    "Fix the 19px horizontal overflow in the mobile form step (min-w-0 / grid-cols-1 on the popup content column)",
+    "Optional: make the career rate limit harder to bypass via spoofed X-Forwarded-For (use the last trusted proxy hop / request.client)"
+  ],
+  "critical_code_review_comments": [
+    "career.py: _rate_limit runs before validation, so invalid submissions also use up the 3/min quota (acceptable)",
+    "career.py: the doc is inserted before sending email, and admin_email_sent is tracked (good)",
+    "CareerPopup: the HIDDEN_PREFIXES check uses startsWith('/admin'), which would also hide the popup on any public route starting with /admin* (fine at the moment)"
+  ],
+  "updated_files": ["/app/backend/tests/test_career_apply.py"],
+  "success_rate": {"backend": "100%", "frontend": "95%"},
+  "seed_data_creation": "One career_applications doc (TEST_Bewerber) was created and then deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "test_career_apply.py sends a random X-Forwarded-For per request to avoid the 3/min limit and makes no valid submissions (email burst limit). Run the valid flow once via the UI only. Skip the gate with the localStorage keys kapitalmitte_visitor_profile and kapitalmitte_cookie_consent. The session flag is sessionStorage career_popup_seen_session."
+}

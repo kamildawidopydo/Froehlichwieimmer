@@ -1,4 +1,11 @@
-## Update 2026-10-23 – Domain essenceinvest.com (BLOCKIERT, Plattform-Seite)
+## Update 2026-10-23 – Karriere-Popup „Finanzberater Hamburg“
+- Popup (Entwurf 1: Hamburg-Foto + Navy/Gold) auf allen öffentlichen Seiten, einmal pro Browser-Sitzung; nicht auf /dashboard, /admin, /login. Erscheint erst nach dem Besucher-Willkommensfenster.
+- „Jetzt bewerben“ -> Formular (Name, E-Mail, Telefon, Nachricht, Lebenslauf PDF/Word ≤ 8 MB, Einwilligung) -> POST /api/career/apply -> Mongo `career_applications` + E-Mail an Admin-Adresse (mit Anhang) + Bestätigung an Bewerber.
+- Dateien: backend/routes/career.py, frontend/src/components/career/*. Getestet (iteration_62): Backend 100 %, Frontend ok; Mobile-Überlauf behoben.
+- Noch nicht live auf Produktion (Redeploy nötig).
+
+## Update 2026-10-23 – Domain essenceinvest.com: LIVE (HTTP 200, apex + www, 4 A-Records DNS only nach Support-Vorgabe; Domain in Emergent manuell neu verknüpft)
+## Historie Domain-Debugging
 - Kunde hat CLOUDFLARE_API_TOKEN (Zone-DNS) hinterlegt; Zone-ID d8c7e9e7b2e2e4ec8de12071906fed78.
 - Getestet: A-Records (grau/orange) -> 1034; CNAME -> finance-platform-v2.emergent.host (grau/orange) -> 1014.
 - Aktuell eingetragen (seit Folgetest 2026-10-23): CNAME @ und www -> finance-platform-v2.emergent.host, orange (proxied) = Zielkonfiguration nach O2O-Freigabe; ergibt bis dahin 1014. Mail/SPF/DKIM unverändert.

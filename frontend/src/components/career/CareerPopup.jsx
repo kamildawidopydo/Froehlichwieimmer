@@ -65,7 +65,7 @@ const CareerPopup = () => {
             <img src="/assets/career/hamburg-speicherstadt.jpg" alt="Hamburger Speicherstadt im Abendlicht" className="absolute inset-0 h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0F1B2D]/80 via-transparent to-transparent sm:bg-gradient-to-r sm:from-transparent sm:via-transparent sm:to-[#0F1B2D]/30" />
           </div>
-          <div className="relative px-6 py-8 sm:px-10 sm:py-10">
+          <div className="relative min-w-0 px-6 py-8 sm:px-10 sm:py-10">
             <span className="absolute left-0 top-10 hidden h-16 w-px bg-[#C9A54C] sm:block" />
             {step === 'intro' && <CareerIntro onApply={() => setStep('form')} onLater={close} />}
             {step === 'form' && <CareerForm onBack={() => setStep('intro')} onDone={() => setStep('done')} />}

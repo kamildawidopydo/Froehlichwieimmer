@@ -57,7 +57,7 @@ export const CareerForm = ({ onBack, onDone }) => {
       </Field>
       <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-dashed border-white/20 px-3.5 py-2.5 text-sm text-white/70 transition-colors hover:border-[#C9A54C]" data-testid="career-form-cv-label">
         <Paperclip size={15} className="text-[#C9A54C]" />
-        <span className="truncate">{cv ? cv.name : 'Lebenslauf anhängen (PDF/Word, max. 8 MB)'}</span>
+        <span className="min-w-0 truncate">{cv ? cv.name : 'Lebenslauf anhängen (PDF/Word, max. 8 MB)'}</span>
         <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={(e) => setCv(e.target.files?.[0] || null)} data-testid="career-form-cv-input" />
       </label>
       <label className="flex items-start gap-2.5 text-xs leading-relaxed text-white/60">
