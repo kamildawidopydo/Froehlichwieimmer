@@ -1,5 +1,5 @@
 ## Update 2026-10-23 – Karriere-Popup „Finanzberater Hamburg“
-- Popup neu gestaltet (Modell 1: hell, Elbphilharmonie-Foto oben, Grün #1F4D3A) – vom Kunden gewählt. Bild lokal: /assets/career/hamburg-elbphilharmonie.jpg (Pexels).
+- Popup neu gestaltet exakt nach Mockup Modell 1 (weiße Kopfleiste mit X, Hafen-Panorama mit Elbphilharmonie, „Karriere in Hamburg“, „Finanzberater gesucht“, ein Satz, Buttons „Jetzt bewerben“/„Später“). Bild lokal: /assets/career/hamburg-hafen.jpg (Pexels).
 - Popup (ursprünglich Entwurf 1: Hamburg-Foto + Navy/Gold) auf allen öffentlichen Seiten, einmal pro Browser-Sitzung; nicht auf /dashboard, /admin, /login. Erscheint erst nach dem Besucher-Willkommensfenster.
 - „Jetzt bewerben“ -> Formular (Name, E-Mail, Telefon, Nachricht, Lebenslauf PDF/Word ≤ 8 MB, Einwilligung) -> POST /api/career/apply -> Mongo `career_applications` + E-Mail an Admin-Adresse (mit Anhang) + Bestätigung an Bewerber.
 - Dateien: backend/routes/career.py, frontend/src/components/career/*. Getestet (iteration_62): Backend 100 %, Frontend ok; Mobile-Überlauf behoben.

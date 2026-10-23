@@ -56,26 +56,25 @@ const CareerPopup = () => {
     <Dialog open={open} onOpenChange={(v) => { if (!v) close(); }}>
       <DialogContent
         data-testid="career-popup"
-        className="max-h-[92vh] w-[calc(100%-1.5rem)] max-w-xl grid-cols-[minmax(0,1fr)] gap-0 overflow-y-auto overflow-x-hidden rounded-3xl border-0 bg-white p-0 shadow-2xl outline-none focus:outline-none [&>button:last-child]:hidden"
+        className="max-h-[92vh] w-[calc(100%-1.5rem)] max-w-[660px] grid-cols-[minmax(0,1fr)] gap-0 overflow-y-auto overflow-x-hidden rounded-2xl border-0 bg-white p-0 shadow-2xl outline-none focus:outline-none [&>button:last-child]:hidden"
       >
         <DialogTitle className="sr-only">Wir suchen Finanzberater in Hamburg</DialogTitle>
         <DialogDescription className="sr-only">Bewerben Sie sich als Finanzberater im Raum Hamburg.</DialogDescription>
         <div>
+          <div className="flex h-14 items-center justify-end px-3 sm:h-16">
+            <button type="button" onClick={close} aria-label="Schließen" data-testid="career-popup-close-btn" className="flex h-10 w-10 items-center justify-center rounded-full text-[#1A1A1D] outline-none ring-0 transition-colors hover:bg-black/5 focus:outline-none focus:ring-0 focus:shadow-none">
+              <X size={24} strokeWidth={1.6} />
+            </button>
+          </div>
           {step !== 'form' && (
-            <div className="relative h-44 overflow-hidden sm:h-56">
-              <img src="/assets/career/hamburg-elbphilharmonie.jpg" alt="Elbphilharmonie in Hamburg" className="h-full w-full object-cover object-[center_40%]" />
-              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
-            </div>
+            <img src="/assets/career/hamburg-hafen.jpg" alt="Hamburger Hafen mit Elbphilharmonie" className="h-40 w-full object-cover sm:h-56" />
           )}
-          <div className="min-w-0 px-6 pb-8 pt-4 sm:px-12 sm:pb-10">
+          <div className={`min-w-0 px-6 pb-10 sm:px-12 ${step === 'form' ? 'pt-0' : 'pt-10 sm:pt-12'}`}>
             {step === 'intro' && <CareerIntro onApply={() => setStep('form')} onLater={close} />}
             {step === 'form' && <CareerForm onBack={() => setStep('intro')} onDone={() => setStep('done')} />}
             {step === 'done' && <Done onClose={close} />}
           </div>
         </div>
-        <button type="button" onClick={close} aria-label="Schließen" data-testid="career-popup-close-btn" className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-[#1A1A1D] shadow-sm backdrop-blur transition-colors hover:bg-white">
-          <X size={18} />
-        </button>
       </DialogContent>
     </Dialog>
   );
