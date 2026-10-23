@@ -1,3 +1,9 @@
+## Update 2026-10-23 – Lovable-Abgleich geprüft
+- 33 Lovable-Seiten auf Produktion (essenceinvest.com) + Vorschau durchgeklickt: 29 ok, 4 fehlten (landeten auf Startseite): /sparangebote, /datenschutz, /aktien, /inflation-und-vermoegensaufbau -> jetzt Weiterleitungen (comparison, legal/privacy, news/aktien, finanzwissen/was-anleger-ueber-inflation-wissen-sollten). Nur Vorschau, Redeploy nötig.
+- Produktion enthält bereits: Vertrags-E-Mail-Endpoints, Depot-Routing-Fixes. Fehlt in Produktion: Karriere-Popup, die 4 Weiterleitungen.
+- Bewusst nicht übernommen (siehe lovable_migration/07_AUDIT_REPORT.md): Lovable-DashboardDataContext, Münchner Telefonnummer, lokale JSON-Daten, PageMeta-Stub.
+- Lovable-Kundendaten (Supabase) nicht migriert.
+
 ## Update 2026-10-23 – Karriere-Popup „Finanzberater Hamburg“
 - Popup neu gestaltet exakt nach Mockup Modell 1 (weiße Kopfleiste mit X, Hafen-Panorama mit Elbphilharmonie, „Karriere in Hamburg“, „Finanzberater gesucht“, ein Satz, Buttons „Jetzt bewerben“/„Später“). Bild lokal: /assets/career/hamburg-hafen.jpg (Pexels).
 - Popup (ursprünglich Entwurf 1: Hamburg-Foto + Navy/Gold) auf allen öffentlichen Seiten, einmal pro Browser-Sitzung; nicht auf /dashboard, /admin, /login. Erscheint erst nach dem Besucher-Willkommensfenster.

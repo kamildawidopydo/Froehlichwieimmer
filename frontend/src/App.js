@@ -255,6 +255,10 @@ function App() {
                   {/* Public */}
                   <Route path="/" element={<Home />} />
                   <Route path="/comparison" element={<SavingsComparison />} />
+                  <Route path="/sparangebote" element={<Navigate to="/comparison" replace />} />
+                  <Route path="/datenschutz" element={<Navigate to="/legal/privacy" replace />} />
+                  <Route path="/aktien" element={<Navigate to="/news/aktien" replace />} />
+                  <Route path="/inflation-und-vermoegensaufbau" element={<Navigate to="/finanzwissen/was-anleger-ueber-inflation-wissen-sollten" replace />} />
                   <Route path="/banken" element={<BankDirectory />} />
                   <Route path="/banken/:slug" element={<BankDetail />} />
                   <Route path="/tagesgeld/:country" element={<CountryLandingPage productType="tagesgeld" />} />
