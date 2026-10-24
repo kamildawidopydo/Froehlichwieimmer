@@ -1,9 +1,9 @@
 ## Update 2026-10-24 – Lovable-Kunden importiert (Vorschau) + Seitenleiste
 - Lovable Cloud (Supabase aspdfftfjtajmyuctaau) per Admin-Login gelesen (nur lesend). Inhalt: 8 Profile (7 E-Mails, Kurt Del Missier doppelt -> zusammengeführt), 1 Newsletter, 1 bunq-Antrag (Testdaten), sonst alle Tabellen leer.
-- backend/data/lovable_import/import.json + lovable_import_loader.py (Startup, idempotent): legt Konten (imported_from=lovable, Zufallspasswort, must_change_password), Newsletter, Vertragsantrag an. Einladungs-Mail (Link essenceinvest.com/reset-password?token=…, 7 Tage gültig) nur außerhalb der Preview, einmal je Konto; test@test.de ausgenommen. petrowski616@outlook.com = admin (wie in Lovable).
-- In Vorschau importiert; Einladungs-Token-Flow getestet (Reset 200, Login 200, Token-Wiederverwendung 400).
+- backend/data/lovable_import/import.json + lovable_import_loader.py (Startup, idempotent): legt Konten (imported_from=lovable, Zufallspasswort, must_change_password), Newsletter, Vertragsantrag an. KEINE E-Mails an Kunden (ausdrücklicher Kundenwunsch 2026-10-24: Kunden nur kontaktieren, wenn er es sagt). petrowski616@outlook.com = admin (wie in Lovable).
+- In Vorschau importiert.
 - Seitenleiste: doppelter Eintrag „Markt & Handel“ entfernt; /dashboard/markt -> /dashboard/handeln.
-- Noch nicht live: Redeploy nötig (verschickt dann 6 echte Einladungen).
+- Noch nicht live: Redeploy nötig (verschickt KEINE E-Mails).
 
 ## Update 2026-10-23 – Lovable-Abgleich geprüft
 - 33 Lovable-Seiten auf Produktion (essenceinvest.com) + Vorschau durchgeklickt: 29 ok, 4 fehlten (landeten auf Startseite): /sparangebote, /datenschutz, /aktien, /inflation-und-vermoegensaufbau -> jetzt Weiterleitungen (comparison, legal/privacy, news/aktien, finanzwissen/was-anleger-ueber-inflation-wissen-sollten). Nur Vorschau, Redeploy nötig.
