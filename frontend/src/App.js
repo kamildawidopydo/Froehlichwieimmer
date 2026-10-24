@@ -144,6 +144,7 @@ const AdminApplications = lazy(() => import('@/pages/AdminApplications'));
 const AdminCustomerConfirmations = lazy(() => import('@/pages/AdminCustomerConfirmations'));
 const AdminOfferInterests = lazy(() => import('@/pages/AdminOfferInterests'));
 const AdminDepotContracts = lazy(() => import('@/pages/AdminDepotContracts'));
+const AdminDepotStatementAnalysis = lazy(() => import('@/pages/admin/AdminDepotStatementAnalysis'));
 const AdminActivity = lazy(() => import('@/pages/AdminActivity'));
 const AdminCashBalances = lazy(() => import('@/pages/AdminCashBalances'));
 const AdminBondPositions = lazy(() => import('@/pages/AdminBondPositions'));
@@ -846,6 +847,7 @@ function App() {
                   <Route path="customer-confirmations" element={<AdminCustomerConfirmations />} />
                   <Route path="offer-interests" element={<AdminOfferInterests />} />
                   <Route path="depot-contracts" element={<AdminDepotContracts />} />
+                  <Route path="depot-statement-analysis" element={<AdminDepotStatementAnalysis />} />
                   <Route path="activity" element={<AdminActivity />} />
                   <Route path="cash-balances" element={<AdminCashBalances />} />
                   <Route path="bond-positions" element={<AdminBondPositions />} />

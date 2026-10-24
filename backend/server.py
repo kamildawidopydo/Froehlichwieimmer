@@ -5551,6 +5551,8 @@ from routes import contract_submissions as _contract_subs_routes  # noqa: E402
 app.include_router(_contract_subs_routes.router)
 from routes import career as _career_routes  # noqa: E402
 app.include_router(_career_routes.router)
+from routes import admin_depot_analysis as _depot_analysis_routes  # noqa: E402
+app.include_router(_depot_analysis_routes.router)
 
 # Session 82.103a — Reviews (Public + Admin Moderation).
 from routes import reviews as _reviews_routes  # noqa: E402
