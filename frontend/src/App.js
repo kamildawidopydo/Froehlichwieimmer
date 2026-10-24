@@ -796,7 +796,7 @@ function App() {
                   <Route index element={<DashboardLegacyRedirect />} />
                   <Route path="uebersicht" element={<UebersichtPage />} />
                   <Route path="mein-depot" element={<DashboardMeinDepotPage />} />
-                  <Route path="markt" element={<DashboardHandelnPage />} />
+                  <Route path="markt" element={<Navigate to="/dashboard/handeln" replace />} />
                   <Route path="verifizierung" element={<DokumentHochladen />} />
                   <Route path="vermoegen" element={<DepotPage />} />
                   <Route path="depot" element={<Navigate to="/dashboard/vermoegen" replace />} />

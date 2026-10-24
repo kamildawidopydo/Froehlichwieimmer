@@ -59,7 +59,6 @@ export function createUserDashboardNavItems({
           end: true,
         },
         { to: '/dashboard/mein-depot', label: 'Mein Depot', icon: Receipt, end: true },
-        { to: '/dashboard/markt', label: 'Markt & Handel', icon: TrendingUp, end: true },
         { to: '/dashboard/verifizierung', label: 'Verifizierung', icon: FileText, end: true },
       ],
     },
