@@ -1,0 +1,30 @@
+{
+  "summary": "Depotauszug-Analyse tested end-to-end. Backend: 8/8 pytest pass (401 unauth, 403 non-admin, 422 for short/empty text, file without media_type, invalid base64, invalid media_type; real text analysis returns correct holder/date/total 27000/4 positions/allocation ~100%). Frontend (desktop 1920): admin login -> sidebar 'Depotauszug-Analyse' under Vermögen & Depot -> /admin/depot-statement-analysis; empty-input error shown correctly; pasted text -> loading state ('Wird ausgewertet …', button disabled) -> result with Depotinhaber, Stichtag, Gesamtwert, Zusammenfassung + observations, allocation bars, positions table. Mobile 390: PDF upload shows file chip, hides textarea, analysis succeeds, no page overflow (scrollWidth 390), table scrolls horizontally inside overflow-x-auto (707px in 356px container). Used 3 real LLM calls in total.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminDashboardLayout nav", "issue": "The 'Depotauszug-Analyse' nav item was listed twice (lines 131-132), which showed a duplicate sidebar link and caused a React duplicate-key warning. FIXED by testing agent.", "selector": "a[href='/admin/depot-statement-analysis']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Depotauszug-Analyse", "issues": ["File chip and its remove (X) button have no data-testid (suggest depot-analysis-file-chip / depot-analysis-file-remove-btn)", "Positions table rows and allocation rows have no data-testid"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_depot_statement_analysis.py", "/app/test_reports/pytest/pytest_depot_analysis.xml"],
+  "action_items": [
+    "Optional: add data-testids to the file chip, its remove button and the result rows",
+    "Optional: large PDFs going through the Cloudflare preview could exceed about 100 s. Consider a timeout/progress note or an async job if users report 502s"
+  ],
+  "critical_code_review_comments": [
+    "When a file is chosen, the pasted text is silently ignored (the textarea is hidden but its state is kept). This is acceptable, but the user could be told.",
+    "The allocation list uses key=row.category. If the LLM returns a category twice, React shows a duplicate-key warning. Use the index as a fallback.",
+    "Sorting the allocation by y.percent - x.percent is fine because the backend defaults percent to 0.",
+    "The backend validates base64 and the 10 MB limit, removes the temp file in finally, and requires admin. Nothing is persisted. Good."
+  ],
+  "updated_files": ["/app/frontend/src/components/dashboard/AdminDashboardLayout.jsx", "/app/backend/tests/test_depot_statement_analysis.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "One TEST non-admin user (test_depot_*@example.com) was created by the pytest fixture and deleted in teardown (verified 0 remain).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login on preview shows a consent/welcome modal: select an option in the 2nd <select> (Besucherrolle), then click 'Akzeptieren'. Admin creds: patron@froehlich-vermoegensberatung.de / 500Euro!. The test file makes 1 real LLM call (test_text_analysis); one analysis takes about 15-20 s."
+}

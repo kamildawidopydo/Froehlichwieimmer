@@ -1,3 +1,8 @@
+## Update 2026-10-24 – Depotauszug-Analyse (aus Lovable nachgebaut)
+- Admin-Seite /admin/depot-statement-analysis (Sidebar „Vermögen & Depot“), Upload PDF/Bild ≤10 MB, CSV/TXT oder Text; KI (Gemini gemini-3.1-pro-preview, Emergent LLM Key) liefert Inhaber, Stichtag, Gesamtwert, Positionen, Aufteilung, Zusammenfassung, Hinweise. Nichts wird gespeichert. Nur Admins (401/403).
+- Dateien: backend/routes/admin_depot_analysis.py, frontend/src/pages/admin/AdminDepotStatementAnalysis.jsx. Getestet iteration_63: 100 %.
+- Noch nicht live (Redeploy nötig).
+
 ## Update 2026-10-24 – Lovable-Kunden importiert (Vorschau) + Seitenleiste
 - Lovable Cloud (Supabase aspdfftfjtajmyuctaau) per Admin-Login gelesen (nur lesend). Inhalt: 8 Profile (7 E-Mails, Kurt Del Missier doppelt -> zusammengeführt), 1 Newsletter, 1 bunq-Antrag (Testdaten), sonst alle Tabellen leer.
 - backend/data/lovable_import/import.json + lovable_import_loader.py (Startup, idempotent): legt Konten (imported_from=lovable, Zufallspasswort, must_change_password), Newsletter, Vertragsantrag an. KEINE E-Mails an Kunden (ausdrücklicher Kundenwunsch 2026-10-24: Kunden nur kontaktieren, wenn er es sagt). petrowski616@outlook.com = admin (wie in Lovable).
