@@ -4683,6 +4683,11 @@ async def on_startup():
         await seed_production_core(db)
     except Exception as exc:
         logger.warning("production_seed startup failed: %s", exc)
+    try:
+        from lovable_import_loader import import_lovable_customers
+        asyncio.create_task(import_lovable_customers(db))
+    except Exception as exc:
+        logger.warning("lovable_import startup failed: %s", exc)
     logger.info("Startup complete")
 
 
