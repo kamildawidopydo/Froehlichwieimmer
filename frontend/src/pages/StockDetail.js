@@ -1,3 +1,5 @@
+import { getApiBase } from '@/lib/apiBase';
+
 import React, { useCallback, useEffect, useMemo, useState, useRef, Suspense, lazy } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { watchlistApi } from '@/services/watchlistApi';
@@ -554,7 +556,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
       // Session 82.58b — Mongo-native History via 82.58a-Endpoint. Backward-
       // compat: `points[].close` bleibt; additiv `open/high/low/volume` +
       // `stats`. Backend liefert `data_status` — bei "unavailable" leerer State.
-      const url = `${process.env.REACT_APP_BACKEND_URL}/api/stocks/${encodeURIComponent(symbol)}/history?range=${encodeURIComponent(range)}`;
+      const url = `${getApiBase()}/api/stocks/${encodeURIComponent(symbol)}/history?range=${encodeURIComponent(range)}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`history status ${res.status}`);
       const data = await res.json();
@@ -580,7 +582,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
     let active = true;
     (async () => {
       try {
-        const url = `${process.env.REACT_APP_BACKEND_URL}/api/stocks/${encodeURIComponent(symbol)}/history?range=1y`;
+        const url = `${getApiBase()}/api/stocks/${encodeURIComponent(symbol)}/history?range=1y`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`stats status ${res.status}`);
         const data = await res.json();

@@ -1,5 +1,7 @@
+import { getApiBase } from '@/lib/apiBase';
+
 // Session 82.72 — Mongo-native Fundamentals via /api/stocks/{symbol}/fundamentals.
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 
 function mapRow(row) {
   if (!row) return null;

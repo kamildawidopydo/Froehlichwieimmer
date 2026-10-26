@@ -1,3 +1,5 @@
+import { getApiBase } from '@/lib/apiBase';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AdminSubpageLayout,
@@ -22,7 +24,7 @@ import { RefreshCw, Tag, Ban, Copy, Search } from 'lucide-react';
 // Der Legacy „Löschen"-Knopf ist entfernt, weil kein authoritatives Delete-Endpoint
 // existiert (Revoke ist der einzige unterstützte Zustandsübergang aus „active").
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 
 const STATUS_LABEL = {
   active: { cls: 'border-emerald-300/55 bg-emerald-50 text-emerald-800', label: 'Aktiv' },

@@ -1,5 +1,7 @@
+import { getApiBase } from '@/lib/apiBase';
+
 // Session 82.72 — Mongo-native Dividends via /api/stocks/{symbol}/dividends (Fan-out).
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 
 async function fetchOne(symbol) {
   try {

@@ -1,3 +1,5 @@
+import { getApiBase } from '@/lib/apiBase';
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Send, Check, RefreshCw, Trash2, Plus, Edit, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -177,10 +179,10 @@ const AdminIpoRequests = () => {
     setLoading(true);
     try {
       const [reqRes, ipoRes, profRes, ratesRes, mongoRes] = await Promise.all([
-        ({ then: (cb) => fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: Array.isArray(d)?d:[], error: null })) }),
+        ({ then: (cb) => fetch(`${getApiBase()}/api/admin/ipo/requests`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: Array.isArray(d)?d:[], error: null })) }),
         // Session 82.90d — ipo_catalog jetzt via FastAPI-Endpoint
-        ({ then: (cb) => fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/ipo/catalog`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: (Array.isArray(d)?d:(d?.items||[])).map(x=>({id:x.id,company_name:x.company_name,ticker_proposed:x.ticker_proposed,price_currency:x.price_currency,price_range_low:x.price_range_low,price_range_high:x.price_range_high})), error: null })).catch(() => cb({ data: [], error: null })) }),
-        ({ then: (cb) => fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/users`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: (Array.isArray(d)?d:(d?.items||[])).map(u=>({id:u.id,email:u.email,first_name:u.first_name,last_name:u.last_name})), error: null })) }),
+        ({ then: (cb) => fetch(`${getApiBase()}/api/ipo/catalog`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: (Array.isArray(d)?d:(d?.items||[])).map(x=>({id:x.id,company_name:x.company_name,ticker_proposed:x.ticker_proposed,price_currency:x.price_currency,price_range_low:x.price_range_low,price_range_high:x.price_range_high})), error: null })).catch(() => cb({ data: [], error: null })) }),
+        ({ then: (cb) => fetch(`${getApiBase()}/api/admin/users`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: (Array.isArray(d)?d:(d?.items||[])).map(u=>({id:u.id,email:u.email,first_name:u.first_name,last_name:u.last_name})), error: null })) }),
         fetchEurBasedRates().catch(() => ({ EUR: 1 })),
         // Session 82.03 (Schritt 5) — Mongo-native Customer-Requests parallel laden.
         fetch('/api/admin/ipo/requests', { credentials: 'include' })
@@ -416,7 +418,7 @@ const AdminIpoRequests = () => {
     // RPC/Status-Update im Frontend.
     let error = null;
     try {
-      const r = await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/${encodeURIComponent(approveRow.id)}/approve`, {
+      const r = await fetch(`${getApiBase()}/api/admin/ipo/requests/${encodeURIComponent(approveRow.id)}/approve`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -452,7 +454,7 @@ const AdminIpoRequests = () => {
       return;
     }
     setSubmitting(true);
-    const error = null; try { await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/${encodeURIComponent(editRow.id)}/valuation`, { method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ decision_note: null }) }); } catch(e) { /* noop */ }
+    const error = null; try { await fetch(`${getApiBase()}/api/admin/ipo/requests/${encodeURIComponent(editRow.id)}/valuation`, { method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ decision_note: null }) }); } catch(e) { /* noop */ }
     setSubmitting(false);
     if (error) {
       toast.error('Aktualisierung fehlgeschlagen: ' + error.message);
@@ -488,7 +490,7 @@ const AdminIpoRequests = () => {
       parseOptionalNum(manualForm.amountEur),
       manualForm.ipoId,
     );
-    let error = null; try { const r = await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/create-for-user`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ user_id: manualForm.userId, ipo_id: manualForm.ipoId, shares_requested: Math.round(shares) }) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ error = { message: e.message }; }
+    let error = null; try { const r = await fetch(`${getApiBase()}/api/admin/ipo/requests/create-for-user`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ user_id: manualForm.userId, ipo_id: manualForm.ipoId, shares_requested: Math.round(shares) }) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ error = { message: e.message }; }
     setSubmitting(false);
     if (error) {
       toast.error('Zuweisung fehlgeschlagen: ' + error.message);
@@ -520,7 +522,7 @@ const AdminIpoRequests = () => {
         error = { message: err?.message || 'Netzwerkfehler' };
       }
     } else {
-      let res = { error: null }; try { const r = await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/${encodeURIComponent(row.id)}/reject`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ decision_note: reason || null }) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); res.error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ res.error = { message: e.message }; }
+      let res = { error: null }; try { const r = await fetch(`${getApiBase()}/api/admin/ipo/requests/${encodeURIComponent(row.id)}/reject`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ decision_note: reason || null }) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); res.error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ res.error = { message: e.message }; }
       error = res.error;
     }
     setProcessingId(null);
@@ -564,7 +566,7 @@ const AdminIpoRequests = () => {
   const removeRequest = async (row) => {
     if (!window.confirm('Anfrage wirklich löschen?')) return;
     setProcessingId(row.id);
-    let error = null; try { const r = await fetch(`${(process.env.REACT_APP_BACKEND_URL||'')}/api/admin/ipo/requests/${encodeURIComponent(row.id)}/archive`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({}) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ error = { message: e.message }; }
+    let error = null; try { const r = await fetch(`${getApiBase()}/api/admin/ipo/requests/${encodeURIComponent(row.id)}/archive`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({}) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ error = { message: e.message }; }
     setProcessingId(null);
     if (error) toast.error('Fehler: ' + error.message);
     else {

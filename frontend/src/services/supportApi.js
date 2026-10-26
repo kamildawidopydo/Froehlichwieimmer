@@ -1,5 +1,7 @@
+import { getApiBase } from '@/lib/apiBase';
+
 // Session 82.70 · Mongo-nativer Support-API-Client.
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 
 async function req(path, opts = {}) {
   const res = await fetch(`${BASE}${path}`, {

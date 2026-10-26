@@ -1,3 +1,5 @@
+import { getApiBase } from '@/lib/apiBase';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
@@ -23,7 +25,7 @@ import {
 //   Sync-History:       GET  /api/admin/stock-research/sync/history?limit=10
 // Keine Fake-Preise: fehlt price/as_of, wird das Symbol als "missing" gezeigt.
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 
 async function apiJson(path, opts = {}) {
   const res = await fetch(`${API_BASE}${path}`, {

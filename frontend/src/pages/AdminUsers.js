@@ -1,3 +1,5 @@
+import { getApiBase } from '@/lib/apiBase';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -35,7 +37,7 @@ import {
 // Approve/Reject bewusst entfernt — der `status`-Zustand existiert im Backend-
 // Datenmodell nicht (Session-82.81-Audit) und wird gemäß Mandat nicht erfunden.
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 const PAGE_SIZE = 50;
 
 async function apiJson(path, opts = {}) {

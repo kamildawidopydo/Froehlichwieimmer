@@ -54,6 +54,13 @@ export function resolveApiBase() {
   }
   if (!rawEnv) return '';
   if (isLegacyHost(rawEnv)) return '';
+  // Eigene Domain (z. B. essenceinvest.com): API liegt immer unter derselben Origin.
+  try {
+    const host = new URL(rawEnv).hostname;
+    if (host !== 'localhost' && host !== window.location.hostname) return '';
+  } catch {
+    return '';
+  }
   return rawEnv;
 }
 

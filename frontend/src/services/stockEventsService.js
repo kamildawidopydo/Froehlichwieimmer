@@ -1,5 +1,7 @@
+import { getApiBase } from '@/lib/apiBase';
+
 // Session 82.72 — Mongo-native Events via /api/stocks/{symbol}/earnings (Fan-out).
-const BASE = process.env.REACT_APP_BACKEND_URL;
+const BASE = getApiBase();
 
 async function fetchOne(symbol) {
   try {

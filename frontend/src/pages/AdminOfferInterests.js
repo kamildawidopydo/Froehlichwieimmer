@@ -1,3 +1,5 @@
+import { getApiBase } from '@/lib/apiBase';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   AdminSubpageLayout,
@@ -19,7 +21,7 @@ import { Input } from '@/components/ui/input';
 //   DELETE /api/admin/offer-interests/{id}
 // Preview: leere Collection ⇒ legitimer Empty State (kein Fake-Seed).
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL;
+const API_BASE = getApiBase();
 
 async function apiJson(path, opts = {}) {
   const res = await fetch(`${API_BASE}${path}`, {

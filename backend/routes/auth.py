@@ -16,6 +16,7 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
+from html import escape as html_escape
 
 import jwt
 from bson import ObjectId
@@ -57,6 +58,32 @@ from server import (
 )
 
 logger = logging.getLogger(__name__)
+
+_SITE_HOSTS = ("essenceinvest.com", ".emergent.host", ".preview.emergentagent.com")
+
+
+def _site_base(request: Request) -> str:
+    origin = (request.headers.get("origin") or "").rstrip("/")
+    host = origin.split("://")[-1]
+    if origin.startswith("https://") and any(host == h.lstrip(".") or host.endswith(h) for h in _SITE_HOSTS):
+        return origin
+    return "https://essenceinvest.com"
+
+
+def reset_email_html(name: str, link: str) -> str:
+    greet = f"Guten Tag {html_escape(name)}," if name else "Guten Tag,"
+    return f"""
+    <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:600px;margin:0 auto;color:#0B1F33;">
+      <div style="background:#0A2540;padding:24px;"><h1 style="color:#fff;font-size:18px;margin:0;">Passwort zurücksetzen</h1></div>
+      <div style="padding:24px;background:#fff;">
+        <p style="font-size:14px;">{greet}</p>
+        <p style="font-size:14px;">Sie haben angefordert, das Passwort für Ihr Kundenkonto zurückzusetzen. Klicken Sie auf den Knopf, um ein neues Passwort festzulegen:</p>
+        <p style="margin:24px 0;"><a href="{link}" style="background:#1F4D3A;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-size:14px;">Neues Passwort festlegen</a></p>
+        <p style="font-size:13px;color:#6B7C93;">Der Link ist 1 Stunde gültig und kann nur einmal verwendet werden. Wenn Sie das nicht angefordert haben, können Sie diese E-Mail ignorieren – Ihr Passwort bleibt unverändert.</p>
+        <p style="font-size:12px;color:#8894a6;margin-top:28px;line-height:1.5;">Fröhlich Vermögensberatung GmbH · Bösgrunder Weg 62 · 55543 Bad Kreuznach<br>Amtsgericht Bad Kreuznach · HRB 23436 · Geschäftsführer: Manfred Franz Fröhlich</p>
+      </div>
+    </div>
+    """
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -206,10 +233,16 @@ async def forgot_password(request: Request, payload: ForgotInput):
         # dann diese Funktion ausschließlich via Email-Payload.
         logger.info("password_reset_request email_domain=%s (token issued, expires 1h)",
                     email.split("@")[-1] if "@" in email else "-")
-        # Session 82.88 · Preview-Only: raw-Token einmalig zurückgeben, damit
-        # Tests + Frontend-Force-Flow ohne Email-Zustellung funktionieren.
-        # Im Prod-Deploy wird dieser Zweig durch die Email-Route ersetzt.
-        return {"status": "ok", "reset_token_preview": raw_token}
+        from server import _send_email_via_emergent
+        link = f"{_site_base(request)}/reset-password?token={raw_token}"
+        try:
+            await _send_email_via_emergent(
+                to=email,
+                subject="Passwort zurücksetzen — Fröhlich Vermögensberatung",
+                html=reset_email_html(user.get("name") or "", link),
+            )
+        except Exception as exc:
+            logger.warning("password_reset email failed: %s", exc)
     return {"status": "ok"}
 
 

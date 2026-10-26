@@ -1,3 +1,5 @@
+import { getApiBase } from '@/lib/apiBase';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import siteImages from '@/data/siteImages';
 import { Button } from '@/components/ui/button';
@@ -103,7 +105,7 @@ const CreditLeadPage = () => {
     setLoading(true);
     try {
       const axios = (await import('axios')).default;
-      const apiBase = process.env.REACT_APP_BACKEND_URL || '';
+      const apiBase = getApiBase();
       const params = new URLSearchParams();
       const amount = Number(filters.requestedAmount || 0);
       const term = Number(filters.requestedTermMonths || 0);
