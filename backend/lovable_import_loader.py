@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import secrets
 from datetime import datetime, timezone
 from pathlib import Path
@@ -73,6 +74,19 @@ async def _import_submissions(db, subs) -> int:
     return inserted
 
 
+async def _set_admin_password(db, hash_password) -> bool:
+    email = (os.environ.get("LOVABLE_ADMIN_EMAIL") or "").strip().lower()
+    password = (os.environ.get("LOVABLE_ADMIN_PASSWORD") or "").strip()
+    if not email or len(password) < 8:
+        return False
+    res = await db.users.update_one(
+        {"email": email, "imported_from": "lovable", "admin_password_from_env": {"$exists": False}},
+        {"$set": {"password_hash": hash_password(password), "role": "admin", "status": "active",
+                  "must_change_password": False, "admin_password_from_env": datetime.now(timezone.utc)}},
+    )
+    return bool(res.modified_count)
+
+
 async def import_lovable_customers(db) -> dict:
     try:
         from server import hash_password  # type: ignore
@@ -81,6 +95,7 @@ async def import_lovable_customers(db) -> dict:
         result = {
             "users": await _import_users(db, data["users"], hash_password),
             "submissions": await _import_submissions(db, data["submissions"]),
+            "admin_password_set": await _set_admin_password(db, hash_password),
         }
         logger.info("lovable_import: %s", result)
         return result

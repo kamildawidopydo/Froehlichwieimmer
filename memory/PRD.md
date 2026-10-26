@@ -1,3 +1,7 @@
+## Update 2026-10-26 – Admin-Konto petrowski616@outlook.com
+- Auf Kundenwunsch Admin mit eigenem Passwort (aus Secret LOVABLE_ADMIN_PASSWORD, kein Passwort im Code). Vorschau: Login, /admin und Depot geprüft.
+- Produktion: lovable_import_loader._set_admin_password setzt beim Start einmalig (Flag admin_password_from_env) das Passwort aus LOVABLE_ADMIN_EMAIL/LOVABLE_ADMIN_PASSWORD (live-Slots vorhanden). Greift erst nach dem nächsten Veröffentlichen.
+
 ## Update 2026-10-26 – Startseiten-Fehler auf essenceinvest.com + Kunden-Abläufe geprüft
 - Ursache: Produktion ruft API über finance-platform-v2.emergent.host auf (Cross-Origin von essenceinvest.com) -> CORS blockiert alles. Fix: frontend/src/lib/apiBase.js nutzt Same-Origin, wenn Hostname abweicht; 11 Dateien auf getApiBase() umgestellt. Getestet (iteration_64/67). LIVE erst nach Redeploy.
 - Sicherheitslücke behoben: /api/auth/forgot-password gab Reset-Token im JSON zurück (Kontoübernahme möglich). Jetzt nur {status:'ok'} + Reset-Mail (vom Kunden selbst ausgelöst, Link 1 h gültig, Hintergrund-Task).
