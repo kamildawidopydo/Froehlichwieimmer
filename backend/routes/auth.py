@@ -12,6 +12,7 @@ Response-Shapes. Reiner Struktur-Refactor.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import secrets
@@ -235,14 +236,18 @@ async def forgot_password(request: Request, payload: ForgotInput):
                     email.split("@")[-1] if "@" in email else "-")
         from server import _send_email_via_emergent
         link = f"{_site_base(request)}/reset-password?token={raw_token}"
-        try:
-            await _send_email_via_emergent(
-                to=email,
-                subject="Passwort zurücksetzen — Fröhlich Vermögensberatung",
-                html=reset_email_html(user.get("name") or "", link),
-            )
-        except Exception as exc:
-            logger.warning("password_reset email failed: %s", exc)
+
+        async def _send_reset() -> None:
+            try:
+                await _send_email_via_emergent(
+                    to=email,
+                    subject="Passwort zurücksetzen — Fröhlich Vermögensberatung",
+                    html=reset_email_html(user.get("name") or "", link),
+                )
+            except Exception as exc:
+                logger.warning("password_reset email failed: %s", exc)
+
+        asyncio.create_task(_send_reset())
     return {"status": "ok"}
 
 

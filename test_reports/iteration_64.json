@@ -1,0 +1,40 @@
+{
+  "summary": "Tested the fix for same-origin API calls (CORS) and the fix for the forgot-password token leak, plus the customer flows, on preview. Homepage loads news, the market sidebar and offers, and every /api request goes to the same origin with no CORS errors. The resolveApiBase logic was simulated in the browser: when the env hostname differs from the page hostname it returns ''; on preview and localhost it returns the env URL. Grep found no runtime use of process.env.REACT_APP_BACKEND_URL outside lib/apiBase.js; it appears only in comments in apiClient.js and newsMarkteApi.js. forgot-password returns exactly {status:'ok'} for unknown and existing emails with no token in the body; the reset email was sent and no email error was logged. Registration works and shows a 'Registrierung eingegangen' screen: the account waits for admin approval, so there is no redirect to the dashboard. Newsletter shows 'Vielen Dank' on signup and 'Sie sind bereits eingetragen' on a duplicate. On /dokument-upload an invalid code shows the error 'Ungültiger oder bereits verwendeter Zugangscode'. Admin pages users, ipo-requests, markt-daten, offer-interests, stock-coupons and document-uploads load data. /aktien/SAP loads fundamentals, dividends and history for 5d, 3m and 1y. /kredit loads credit offers. The support tickets API returns 200. One critical bug: codes created in Admin > Dokument-Uploads can never be used on /dokument-upload.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/admin/document-uploads/codes vs POST /api/formular-access/verify-document + POST /api/document-uploads/submit", "issue": "The admin page writes codes to document_access_codes (routes/storage_files.py:216). The public verify-document check (formular_access.py:202) and the submit check (storage_files.py:364) only read formular_access_codes. Every code created in /admin/document-uploads is rejected with 401 'Ungültiger oder bereits verwendeter Zugangscode'. Reproduced: create code -> verify-document -> 401. Customers cannot upload with codes from that page; only codes from /admin/formular-access work.", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/document-uploads/submit", "issue": "_check_public_upload_rl(request) sits inside try/except Exception: pass, so the HTTPException(429) it raises is swallowed. The rate limit has no effect."},
+      {"endpoint": "POST /api/auth/forgot-password", "issue": "The docstring comes after the _rl_check call, so it is no longer a docstring (cosmetic). The email is sent inline (awaited), so response time differs between existing and unknown emails. This is a small timing side-channel that reveals which emails exist; consider a background task."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin console (/admin/*), /aktien/SAP", "issues": ["The visitor welcome/cookie gate also shows over the admin console for a logged-in admin with fresh localStorage. Consider skipping it on /admin routes."]},
+      {"screen": "Homepage", "issues": ["The 'Karriere in Hamburg – Finanzberater gesucht' popup opens a few seconds after load, on top of the welcome gate and the 'Aktien im Fokus' toast. Three overlays stack up, and in automation the popup interrupted newsletter input. This is heavy for first-time visitors."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter64_cors_reset_flows.py", "/app/test_reports/pytest/pytest_iter64.xml"],
+  "action_items": [
+    "CRITICAL: Use one collection for document-upload codes. Either point the /api/admin/document-uploads/codes endpoints (create, list, revoke, delete) at formular_access_codes, or make verify-document and document-uploads/submit also accept document_access_codes. Then re-run test_iter64 test_document_uploads_admin_code_works_on_public_page.",
+    "Make the rate limit in document-uploads/submit actually raise 429 instead of being swallowed by except Exception: pass.",
+    "Optional: send the forgot-password email via a background task so response time is the same for existing and unknown emails.",
+    "Optional: StockDetail requests SAP history 1y and 3m twice each; dedupe the requests."
+  ],
+  "critical_code_review_comments": [
+    "storage_files.py: admin code CRUD uses document_access_codes, but public verify and submit use formular_access_codes. This breaks the admin flow.",
+    "storage_files.py public_submit_document_upload: the limiter block is a no-op and the exception swallowing disables the manual limit.",
+    "apiBase.js resolveApiBase is correct for a custom domain (returns ''), for preview (env URL) and for localhost."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter64_cors_reset_flows.py"],
+  "success_rate": {"backend": "90% (9/10)", "frontend": "100% of requested flows (document upload checked with an invalid code only)"},
+  "test_credentials": "Admin patron@froehlich-vermoegensberatung.de / 500Euro! works",
+  "seed_data_creation": "Created and deleted: test_reset_<rand>@example.com, test_reg_<rand>@example.com, test_nl_/test_nlui_ newsletter entries, one document-upload code labelled TEST_iter64 (revoked and deleted). Two forgot-password calls total (one for an existing user).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Route is /dokument-upload; /dokument-hochladen redirects to /. Admin market data page is /admin/markt-daten. Registration ends on a 'Registrierung eingegangen' screen by design. In Playwright, accept the welcome gate (select visitor-role index 1, then visitor-accept-btn) and dismiss the career popup ('Später') before filling forms.",
+  "rca of the issue": "Document-upload codes: AdminDocumentUploads.jsx calls /api/admin/document-uploads/codes, which inserts into document_access_codes. DokumentHochladen.js calls /api/formular-access/verify-document, which looks codes up in formular_access_codes. The code is never found, so the user gets 401. Fix: use a single collection."
+}

@@ -199,7 +199,9 @@ async def verify_document_code(
     await _ensure_indexes()
     await _rate_limit_check(request)
     code = body.code.strip().upper()
-    doc = await _db.formular_access_codes.find_one({"code_hash": _sha256(code)})
+    doc = await _db.document_access_codes.find_one({"code_hash": _sha256(code)})
+    if not doc:
+        doc = await _db.formular_access_codes.find_one({"code_hash": _sha256(code)})
     if not doc or doc.get("status") != _STATUS_ACTIVE:
         await _log_fail(request)
         raise HTTPException(status_code=401, detail="Ungültiger oder bereits verwendeter Zugangscode")

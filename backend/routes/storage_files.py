@@ -332,15 +332,7 @@ async def public_submit_document_upload(
     # Session 82.104a — inline Rate-Limit (slowapi-Decorator konfliktet mit
     # FastAPI's UploadFile-Signature-Analyse). Manuelle Check-Route über
     # limiter.limit()."check() gibt keine Exception zurück, wenn OK.
-    if _limiter is not None:
-        try:
-            # Nutzt gleiche Konfiguration wie andere Endpoints (5/minute).
-            with _limiter.limit("5/minute").exempt_when(lambda: False):
-                pass
-            # Alternative: manuelle Check-Logik über in-memory Map
-            _check_public_upload_rl(request)
-        except Exception:
-            pass
+    _check_public_upload_rl(request)
     """Öffentlicher, Access-Code-geschützter Multipart-Upload.
 
     Vertrag:
@@ -361,7 +353,13 @@ async def public_submit_document_upload(
     if not (4 <= len(code_val) <= 32):
         raise HTTPException(status_code=422, detail="Code ungültig")
     code_hash = _hashlib.sha256(code_val.encode()).hexdigest()
-    code_doc = await _db.formular_access_codes.find_one({"code_hash": code_hash})
+    code_coll = _db.document_access_codes
+    is_doc_code = True
+    code_doc = await code_coll.find_one({"code_hash": code_hash})
+    if not code_doc:
+        is_doc_code = False
+        code_coll = _db.formular_access_codes
+        code_doc = await code_coll.find_one({"code_hash": code_hash})
     if not code_doc or code_doc.get("status") != "active":
         raise HTTPException(status_code=401, detail="Ungültiger oder bereits verwendeter Zugangscode")
 
@@ -450,10 +448,18 @@ async def public_submit_document_upload(
         raise HTTPException(status_code=500, detail=f"Persistenz fehlgeschlagen: {e}")
 
     # 5) Code-Nutzung tracken (Legacy: Doc-Upload = einmalig verwendet)
-    await _db.formular_access_codes.update_one(
-        {"_id": code_doc["_id"]},
-        {"$set": {"last_used_at": now, "updated_at": now}, "$inc": {"use_count": 1}},
-    )
+    if is_doc_code:
+        await code_coll.update_one(
+            {"_id": code_doc["_id"]},
+            {"$set": {"status": "used", "used_at": now, "used_by_name": name,
+                      "user_agent": (user_agent or request.headers.get("user-agent") or "")[:200],
+                      "ip": (request.client.host if request.client else None)}},
+        )
+    else:
+        await code_coll.update_one(
+            {"_id": code_doc["_id"]},
+            {"$set": {"last_used_at": now, "updated_at": now}, "$inc": {"use_count": 1}},
+        )
     await _db.formular_access_logs.insert_one({
         "code_id": code_doc["_id"],
         "used_by_name": name,
