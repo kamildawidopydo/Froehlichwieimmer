@@ -273,6 +273,7 @@ const AdminOffers = () => {
                     <td className="py-3 px-4">
                       <button
                         onClick={() => handleToggleActive(offer)}
+                        data-testid={`toggle-offer-${offer.id}`}
                         className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${offer.is_active
                             ? 'bg-bank-success/10 text-bank-success border-bank-success/25 hover:bg-bank-success/15'
                             : 'bg-bank-border/15 text-bank-text-muted border-bank-border hover:bg-bank-border/25'
@@ -285,6 +286,7 @@ const AdminOffers = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => openEditModal(offer)}
+                          data-testid={`edit-offer-${offer.id}`}
                           className="p-1.5 hover:bg-bank-border/15 rounded-md text-bank-text-muted hover:text-bank-text-muted transition-colors"
                           title="Bearbeiten"
                         >
@@ -292,6 +294,7 @@ const AdminOffers = () => {
                         </button>
                         <button
                           onClick={() => handleDelete(offer.id)}
+                          data-testid={`delete-offer-${offer.id}`}
                           className="p-1.5 hover:bg-bank-error/10 rounded-md text-bank-text-muted/70 hover:text-bank-error transition-colors"
                           title="Löschen"
                         >

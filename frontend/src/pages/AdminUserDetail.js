@@ -568,6 +568,7 @@ const AdminUserDetail = () => {
                       Vorname
                     </p>
                     <Input
+                      data-testid="admin-profile-first-name"
                       value={editForm.first_name}
                       onChange={(e) =>
                         setEditForm((prev) => ({
@@ -582,6 +583,7 @@ const AdminUserDetail = () => {
                       Nachname
                     </p>
                     <Input
+                      data-testid="admin-profile-last-name"
                       value={editForm.last_name}
                       onChange={(e) =>
                         setEditForm((prev) => ({
@@ -598,6 +600,7 @@ const AdminUserDetail = () => {
                       Telefon
                     </p>
                     <Input
+                      data-testid="admin-profile-phone"
                       value={editForm.phone}
                       onChange={(e) =>
                         setEditForm((prev) => ({
@@ -612,6 +615,7 @@ const AdminUserDetail = () => {
                       Land
                     </p>
                     <select
+                      data-testid="admin-profile-country"
                       value={editForm.country}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, country: e.target.value }))}
                       className="h-10 w-full border border-bank-border bg-white px-3 text-sm focus:border-bank-gold/55 focus:outline-none focus:ring-2 focus:ring-bank-accent/35"
@@ -642,6 +646,7 @@ const AdminUserDetail = () => {
                   className="w-full"
                   onClick={saveProfile}
                   disabled={savingProfile}
+                  data-testid="admin-profile-save-btn"
                 >
                   {savingProfile ? 'Speichert…' : 'Profil speichern'}
                 </Button>

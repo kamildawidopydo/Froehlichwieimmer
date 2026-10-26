@@ -1,0 +1,56 @@
+{
+  "summary": "Tested admin customer assets, admin offers CRUD and the customer depot view. Backend: 12 of 12 pytest pass. Covered: authz (customer and anonymous get 401/403), contract/stock/bond/cash/document create and delete, profile PATCH, offers CRUD with toggle, document isolation against a temporary second customer, and 415 for a wrong file type. Frontend: Admin 'Öffnen' on tester@mester.de leads to the detail page with the name 'Tester Mester' (not Unbekannt) and the panel 'Bestand eintragen' with 5 tabs. Adding a Festgeld (Argenta 7.777 EUR), an Aktie (TESTUI), an Anleihe, a Gutschrift of 1000 and a Belastung of 250 (balance 750), and a PDF upload all show the success toast and appear in the list. KPIs update (Anleihen·Festgeld, Cash, Aktien). Admin download works. Delete with confirm dialog works for all types. Profile edit persists after reload. On the customer side the Festgeld page shows both contracts, Vermögen/Übersicht show the stocks, the cash 750 and the bonds by ISIN, and Dokumente shows 'Ihre persönlichen Dokumente' with a working download. On /admin and /admin/offers the 'Angebot hinzufügen' create, edit and delete work, plus the active toggle on /admin/offers. All test data was cleaned up. Caveat: tester@mester.de was stuck at /onboarding (onboarding_completed false), so the customer could not see the dashboard at all. I completed the onboarding flag via PATCH /api/users/onboarding as the customer.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "PATCH /api/admin/customers/{id}/profile", "issue": "Field-name mismatch. Admin writes address_street/address_house_number/address_postal_code/address_city/address_line_2, but the customer side (/api/users/*, auth me, onboarding, lovable import) uses street/house_number/postal_code/city/address_addition. Admin address edits are never seen by the customer. admin_users._serialize prefers the address_* fields, so customer changes become invisible to the admin once the admin has saved. DB currently has both sets for tester (street 'Teststr'/München vs address_street 'Teststr.'/Berlin).", "priority": "HIGH"},
+      {"endpoint": "POST /api/admin/customers/{id}/bond-positions", "issue": "No cost_basis or avg_cost is stored (GET /api/portfolio/bond-positions returns avg_cost 0.0). On the customer Übersicht the 'Unrealisierter G/V' becomes +11.850 € (+582,88 %) because the full bond market value is counted as gain. It should store cost_basis = nominal * kurs / 100, like bond_execution_service does.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "GET /api/admin/users/{id}", "issue": "_serialize omits onboarding_completed, verified and last_seen_at, so the admin detail page always shows Onboarding 'Offen' and Verifiziert 'Nein' (tester has onboarding_completed=true in DB)."},
+      {"endpoint": "POST /api/admin/portfolio/cash/adjustment", "issue": "There is no overdraft guard, so an admin 'Belastung' can push the cash balance negative."},
+      {"endpoint": "GET /api/admin/offers/list", "issue": "Default limit is 100, sorted by rate, and there are 298 offers. The admin lists (/admin, /admin/offers) show only the top 100 (header says '100 Angebote'), so a newly created offer with a rate below about 2.94% won't appear in the admin list."},
+      {"endpoint": "admin_customer_assets upload/download", "issue": "put_object/get_object are sync calls inside async routes, which blocks the event loop. Content-Disposition uses the raw filename, so non-latin-1 characters (e.g. €, Cyrillic) could raise a 500. Use RFC5987 filename*."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Customer bond display (Übersicht Top-Positionen, /dashboard/anleihen, /dashboard/vermoegen)", "issue": "Admin-added bonds show as generic 'Anleihe' plus ISIN; the bond name ('Bund 2032', 'TEST UI Anleihe') is not shown even though the API returns name.", "selector": "Top-Positionen rows", "priority": "MEDIUM"},
+      {"component": "AdminCustomerAssetsPanel", "issue": "After each successful add, loadUserData sets loading=true, which remounts the panel and resets the tab to 'Festgeld / Tagesgeld'. Adding several stocks in a row requires re-clicking the tab each time.", "selector": "[data-testid=admin-customer-assets-panel]", "priority": "LOW"},
+      {"component": "AdminUserDetail saveProfile", "issue": "The error toast uses err.message instead of response.data.detail, so the admin sees 'Request failed with status code 422' instead of the reason.", "selector": "[data-testid=admin-profile-save-btn]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Customer sees admin-added assets", "issue": "A customer with onboarding_completed=false (as tester@mester.de was) is forced to /onboarding by ProtectedRoute and cannot see the depot at all. Accounts provisioned by the admin should probably be marked onboarding-complete, or the owner must be told the customer has to finish onboarding first.", "affected_selectors": ["/dashboard/*"]}
+    ],
+    "design_issues": [
+      {"screen": "/admin/offers", "issues": ["Laufzeit column shows a lone 'M' for Tagesgeld (null term) instead of '–'", "Rates are shown as '9.66%' (dot) while /admin shows '9,55%' (German comma); this is inconsistent"]},
+      {"screen": "/admin dashboard offers table", "issues": ["Admin-created offers show the bank country code ('ES') while imported ones show 'GERMANY'"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter68_admin_customer_assets.py", "/app/test_reports/pytest/iter68.xml"],
+  "action_items": [
+    "Unify the address fields: admin profile PATCH should write street/house_number/address_addition/postal_code/city (or write both), and _serialize should read them consistently.",
+    "Store cost_basis (nominal*kurs/100) and avg_cost for admin-added bonds so the customer's unrealized G/V is correct.",
+    "Show bond_name/name for bonds in the customer Übersicht/Anleihen/Vermögen views instead of the generic 'Anleihe'.",
+    "Decide the onboarding gate for admin-managed customers (e.g. admin toggle or auto-complete), because otherwise the customer sees nothing.",
+    "Add onboarding_completed/verified/last_seen_at to admin_users._serialize.",
+    "Optional: paginate the admin offers lists or raise the limit; add an overdraft guard on admin debits; keep the active tab after saving in AdminCustomerAssetsPanel."
+  ],
+  "critical_code_review_comments": [
+    "admin_customer_assets.py: the sync storage put_object/get_object should run in run_in_threadpool.",
+    "my_contracts uses ObjectId(user['id']) only, while other queries use the _user_q str/ObjectId $in. This is fine for new rows but inconsistent.",
+    "Delete endpoints are not scoped to a customer. This is acceptable for an admin, but audit logging of admin asset changes is missing.",
+    "AdminUserDetail.js is 911 lines; it should be split."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter68_admin_customer_assets.py",
+    "/app/frontend/src/pages/AdminUserDetail.js (added data-testid admin-profile-first-name/last-name/phone/country/save-btn)",
+    "/app/frontend/src/pages/AdminOffers.js (added data-testid toggle-offer-/edit-offer-/delete-offer-{id})"
+  ],
+  "success_rate": {"backend": "100% (12/12 tests); 2 data-model bugs found by review and UI", "frontend": "~85% (all requested flows work; bond name display, P/L, onboarding gate and address sync are issues)"},
+  "seed_data_creation": "No permanent data. Temporary test_iso_* user created in Mongo and deleted. All TEST offers, stocks, bonds, docs and the Argenta contract were deleted. Cash was net-zeroed by a TEST QA Rückbuchung of 750 (balance 0). tester@mester.de now has onboarding_completed=true, phone '+49 30 7654321' and admin address fields Teststr./1/10115/Berlin. The main agent's data (ABN AMRO 50k, SAP 10, Bund DE0001102580, doc 'Vertrag') is untouched.",
+  "test_credentials": "Admin petrowski616@outlook.com / HHHKKK222; customer tester@mester.de / HHHKKK222 (work). demo.kunde@essenceinvest.com / KundeDemo2026! returns 401 (credentials file outdated).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run the pytest file with -n 0 (pytest.ini has xdist; the module fixtures need one worker). Visitor gate: remove [data-testid=visitor-welcome-gate] via JS. Rates on /admin use a German comma; on /admin/offers they use a dot. A new offer with a high rate (9.x) appears at the top of the list. Retest the address sync, bond cost basis/name and the onboarding gate after the fixes.",
+  "rca of the issue": "Address: admin_customer_assets.ProfileIn uses address_* keys, while users.py/auth.py use street/house_number/postal_code/city. Bond P/L: add_bond sets nominal_amount and average_purchase_price_pct but not cost_basis/avg_cost, which the customer bond-positions endpoint reads as 0. Customer sees nothing: ProtectedRoute redirects users with onboarding_completed falsy to /onboarding."
+}

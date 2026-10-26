@@ -225,6 +225,8 @@ async def add_bond(user_id: str, body: BondIn, _admin: dict = Depends(require_ad
         {"$set": {"bond_name": body.bond_name, "issuer": body.issuer, "currency": "EUR",
                   "nominal_betrag": body.nominal_betrag, "nominal_amount": Decimal128(str(body.nominal_betrag)),
                   "aktueller_kurs": body.kurs, "average_purchase_price_pct": Decimal128(str(body.kurs)),
+                  "avg_cost": body.kurs,
+                  "cost_basis": Decimal128(str(round(body.nominal_betrag * body.kurs / 100, 2))),
                   "coupon_rate": body.coupon_rate, "kupon_rate": body.coupon_rate,
                   "maturity_date": body.maturity_date, "is_active": True, "updated_at": now},
          "$setOnInsert": {"user_id": oid, "isin": isin, "created_at": now}},
@@ -322,6 +324,11 @@ async def update_profile(user_id: str, body: ProfileIn, _admin: dict = Depends(r
     oid = await _require_user(user_id)
     data = body.model_dump()
     data["name"] = f"{body.first_name} {body.last_name}".strip()
+    data.update({
+        "street": body.address_street, "house_number": body.address_house_number,
+        "address_addition": body.address_line_2, "postal_code": body.address_postal_code,
+        "city": body.address_city, "onboarding_completed": True,
+    })
     data["updated_at"] = datetime.now(timezone.utc)
     await db.users.update_one({"_id": oid}, {"$set": data})
     return {"updated": True}

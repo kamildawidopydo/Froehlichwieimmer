@@ -177,3 +177,14 @@ Siehe `/app/memory/test_credentials.md`
 - `/app/memory/lovable_migration/06_SESSION_STATUS.md`
 - `/app/memory/lovable_migration/data/*.json` (DB-Snapshots)
 - `/app/memory/lovable_migration/overwrite_backup/1792445481/` (Rollback-Punkt)
+
+## 8. Changelog 2026-10-26
+- Admin-Sidebar: alle Plattform-Links zeigen auf echte Seiten (vorher Startseite).
+- Admin legt Kunden an → Willkommens-Mail mit vorläufigem Passwort (must_change_password). Kunden löschen (nicht Admins).
+- Onboarding: Land bis 80 Zeichen.
+- Test-Kunde tester@mester.de via TEST_CUSTOMER_EMAIL/PASSWORD (Startup-Seed).
+- Marktübersicht-Charts unter eigener Domain repariert (marketSparklineService/stockHistoryService).
+- NEU routes/admin_customer_assets.py: Admin trägt pro Kunde Festgeld/Tagesgeld (depot_contracts), Aktien, Anleihen, Dokumente ein; Profil-PATCH; Sparangebote CRUD (/api/admin/offers). Kunde: /api/portfolio/depot-contracts, /api/portfolio/documents.
+- Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
+- Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
+
