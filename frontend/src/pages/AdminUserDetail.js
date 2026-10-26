@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { COUNTRIES } from '@/constants/countries';
+import AdminCustomerAssetsPanel from '@/components/admin/AdminCustomerAssetsPanel';
 
 const fmtMoney = (value) => Number(value || 0).toLocaleString('de-DE', {
   style: 'currency',
@@ -165,6 +166,7 @@ const AdminUserDetail = () => {
     ...emptyAddressForm(),
   });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [assets, setAssets] = useState({ depot_contracts: [], stock_positions: [], bond_positions: [], documents: [], cash_balance: 0 });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const loadUserData = async () => {
@@ -180,11 +182,17 @@ const AdminUserDetail = () => {
         const { data } = await _axios.get(`${_api}/api/admin/users/${userId}`, { withCredentials: true });
         profileRes.data = data;
       } catch (e) { profileRes.error = e; }
-      const stockPosRes = { data: [], error: null };
+      let assetData = { depot_contracts: [], stock_positions: [], bond_positions: [], documents: [], cash_balance: 0 };
+      try {
+        const { data } = await _axios.get(`${_api}/api/admin/customers/${userId}/assets`, { withCredentials: true });
+        assetData = data;
+      } catch (e) { toast.error('Bestand konnte nicht geladen werden'); }
+      setAssets(assetData);
+      const stockPosRes = { data: assetData.stock_positions, error: null };
       const watchlistRes = { data: [], error: null };
       const orderRes = { data: [], error: null };
-      const bondRes = { data: [], error: null };
-      const depotRes = { data: [], error: null };
+      const bondRes = { data: assetData.bond_positions, error: null };
+      const depotRes = { data: assetData.depot_contracts, error: null };
       const snapshotsRes = { data: [], error: null };
       const activityRes = { data: [], error: null };
 
@@ -192,7 +200,7 @@ const AdminUserDetail = () => {
 
       let map = {};
 
-      setProfile(profileRes.data || null);
+      setProfile(profileRes.data ? { ...profileRes.data, cash_balance: assetData.cash_balance } : null);
       setStockPositions(stockPosRes.data || []);
       setWatchlist(watchlistRes.data || []);
       setStockOrders(orderRes.data || []);
@@ -237,10 +245,19 @@ const AdminUserDetail = () => {
 
     setSavingProfile(true);
     try {
-      // Session 82.100 · Profile-Update-Backend-Endpoint noch nicht bereitgestellt.
-      toast.info('Profil-Update Backend-Endpoint noch nicht bereitgestellt (82.100).');
-      const error = null;
-      if (error) throw error;
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      await _axios.patch(`${_api}/api/admin/customers/${profile.id}/profile`, {
+        first_name: editForm.first_name.trim(),
+        last_name: editForm.last_name.trim(),
+        phone,
+        country: editForm.country,
+        address_street: editForm.address_street || null,
+        address_house_number: editForm.address_house_number || null,
+        address_line_2: editForm.address_line_2 || null,
+        address_postal_code: editForm.address_postal_code || null,
+        address_city: editForm.address_city || null,
+      }, { withCredentials: true });
       toast.success('Profil gespeichert');
       await loadUserData();
     } catch (err) {
@@ -330,7 +347,7 @@ const AdminUserDetail = () => {
     };
   }, [bondPositions, depotContracts, portfolioSnapshots, profile?.cash_balance, stockPositions, stockPriceMap]);
 
-  const fullName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Unbekannt';
+  const fullName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || profile?.name || 'Unbekannt';
 
   const initials = useMemo(() => {
     const parts = fullName.split(/\s+/).filter(Boolean);
@@ -774,6 +791,14 @@ const AdminUserDetail = () => {
                   </div>
                 </div>
               </div>
+            </SectionShell>
+
+            <SectionShell
+              title="Bestand eintragen"
+              description="Festgeld, Tagesgeld, Aktien, Anleihen, Guthaben und Dokumente für diesen Kunden"
+              icon={Wallet}
+            >
+              <AdminCustomerAssetsPanel userId={userId} assets={assets} onChanged={loadUserData} />
             </SectionShell>
 
             <SectionShell

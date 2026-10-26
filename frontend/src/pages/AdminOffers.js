@@ -123,11 +123,18 @@ const AdminOffers = () => {
       is_active: formData.is_active,
     };
 
-    let error;
-    if (modalMode === 'add') {
-      toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
-    } else {
-      toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.'); const error = { message: 'legacy_write_disabled' };
+    let error = null;
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      if (modalMode === 'add') {
+        await _axios.post(`${_api}/api/admin/offers`, payload, { withCredentials: true });
+      } else {
+        await _axios.put(`${_api}/api/admin/offers/${editingOffer.id}`, payload, { withCredentials: true });
+      }
+    } catch (err) {
+      const d = err?.response?.data?.detail;
+      error = { message: Array.isArray(d) ? d.map((x) => x.msg).join(', ') : d || err.message };
     }
 
     if (error) {
@@ -142,16 +149,25 @@ const AdminOffers = () => {
 
   const handleDelete = async (offerId) => {
     if (!window.confirm('Möchten Sie dieses Angebot wirklich löschen?')) return;
-    toast.info('Legacy-Mutation deaktiviert (Session 82.91b · BLOCKED_SEMANTICS). Neuer FastAPI-Endpoint noch nicht freigeschaltet.');
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      await _axios.delete(`${_api}/api/admin/offers/${offerId}`, { withCredentials: true });
+      toast.success('Angebot gelöscht');
+      await fetchOffers();
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err.message));
+    }
   };
 
-  const handleToggleActive = async () => {
-    // Session 82.103c · Legacy Toggle-Mutation deaktiviert (kein FastAPI-Endpoint).
-    toast.info('Legacy-Mutation deaktiviert (Session 82.103c). Kein FastAPI-Toggle-Endpoint verfügbar.');
-    return;
-    // eslint-disable-next-line no-unreachable
-    if (false) {
+  const handleToggleActive = async (offer) => {
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      await _axios.patch(`${_api}/api/admin/offers/${offer.id}/active?is_active=${!(offer.is_active ?? true)}`, null, { withCredentials: true });
       await fetchOffers();
+    } catch (err) {
+      toast.error('Fehler: ' + (err?.response?.data?.detail || err.message));
     }
   };
 

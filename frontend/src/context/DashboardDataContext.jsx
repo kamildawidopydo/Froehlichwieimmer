@@ -123,8 +123,8 @@ export const DashboardDataProvider = ({ children }) => {
     if (!user?.id) return true;
     update({ depotLoading: true });
     try {
-      // Depot-Verträge in Phase 1 noch nicht Migrations-Scope: sauberer Empty-State.
-      update({ depotContracts: [] });
+      const data = await fetchPortfolioJson('/api/portfolio/depot-contracts');
+      update({ depotContracts: Array.isArray(data) ? data : [] });
       return true;
     } catch (err) {
       Sentry.captureException(err);

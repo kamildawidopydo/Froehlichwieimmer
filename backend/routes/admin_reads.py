@@ -82,6 +82,8 @@ async def admin_offers_list(
         q["$or"] = [{"product_name": _rgx(search)}, {"bank_slug": _rgx(search)}]
     total = await _db.savings_offers.count_documents(q)
     docs = await _db.savings_offers.find(q).sort([("interest_rate", -1)]).skip(offset).limit(limit).to_list(limit)
+    slugs = list({d.get("bank_slug") for d in docs if d.get("bank_slug")})
+    bank_map = {b["slug"]: b async for b in _db.banks.find({"slug": {"$in": slugs}}, {"slug": 1, "name": 1, "country": 1, "logo_url": 1})}
     return {
         "items": [
             {
@@ -97,6 +99,16 @@ async def admin_offers_list(
                 "new_customers_only": d.get("new_customers_only"),
                 "deposit_guarantee_country": d.get("deposit_guarantee_country"),
                 "deposit_guarantee_limit": d.get("deposit_guarantee_limit"),
+                "bank_id": str(bank_map[d["bank_slug"]]["_id"]) if d.get("bank_slug") in bank_map else None,
+                "banks": {k: bank_map[d["bank_slug"]].get(k) for k in ("name", "country", "logo_url")} if d.get("bank_slug") in bank_map else None,
+                "deposit_term": d.get("term_months"),
+                "min_deposit": d.get("min_amount"),
+                "max_deposit": d.get("max_amount"),
+                "deposit_protection": d.get("deposit_protection") or (f"{d.get('deposit_guarantee_country')} · bis {int(d['deposit_guarantee_limit']):,} €".replace(",", ".") if d.get("deposit_guarantee_limit") else None),
+                "description": d.get("description"),
+                "bank_link": d.get("source_url"),
+                "investment_type": (d.get("product_type") or "festgeld").capitalize(),
+                "is_active": d.get("is_active", True),
             }
             for d in docs
         ],

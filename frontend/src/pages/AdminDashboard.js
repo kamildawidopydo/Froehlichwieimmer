@@ -158,12 +158,20 @@ const AdminDashboard = () => {
       is_active: offerForm.is_active,
     };
 
-    // Session 82.91c neutralized · Session 82.94 syntax repair
     let error = null;
-    if (editingOffer) {
-      if (!error) toast.success('Angebot erfolgreich aktualisiert (Legacy-Neutralized)');
-    } else {
-      if (!error) toast.success('Angebot erfolgreich erstellt (Legacy-Neutralized)');
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      if (editingOffer) {
+        await _axios.put(`${_api}/api/admin/offers/${editingOffer.id}`, payload, { withCredentials: true });
+        toast.success('Angebot aktualisiert');
+      } else {
+        await _axios.post(`${_api}/api/admin/offers`, payload, { withCredentials: true });
+        toast.success('Angebot erstellt');
+      }
+    } catch (err) {
+      const d = err?.response?.data?.detail;
+      error = { message: Array.isArray(d) ? d.map((x) => x.msg).join(', ') : d || err.message };
     }
 
     if (error) {
@@ -177,7 +185,14 @@ const AdminDashboard = () => {
 
   const deleteOffer = async (id) => {
     if (!window.confirm('Sind Sie sicher, dass Sie dieses Angebot löschen möchten?')) return;
-    const { error } = Promise.resolve({data: null, error: null}); // 82.91c neutralized
+    let error = null;
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      await _axios.delete(`${_api}/api/admin/offers/${id}`, { withCredentials: true });
+    } catch (err) {
+      error = { message: err?.response?.data?.detail || err.message };
+    }
     if (error) {
       toast.error('Fehler beim Löschen: ' + error.message);
     } else {
