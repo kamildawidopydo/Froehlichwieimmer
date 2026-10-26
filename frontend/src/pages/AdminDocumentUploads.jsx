@@ -156,7 +156,7 @@ const AdminDocumentUploads = () => {
         titleIcon={Upload}
         description="Einmal-Zugangscodes erzeugen, Nutzung nachverfolgen und eingereichte Dokumente verwalten."
         actions={
-          <Button variant="outline-ink" onClick={fetchData} disabled={loading} data-testid="du-refresh">
+          <Button variant="outline-ink" onClick={() => fetchData()} disabled={loading} data-testid="du-refresh">
             <RefreshCw size={14} strokeWidth={1.5} className={loading ? 'animate-spin' : ''} /> Aktualisieren
           </Button>
         }

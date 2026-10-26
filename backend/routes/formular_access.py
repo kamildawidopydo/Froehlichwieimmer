@@ -84,8 +84,13 @@ async def _ensure_indexes() -> None:
     )
 
 
+def _client_ip(request: Request) -> str:
+    xff = request.headers.get("x-forwarded-for", "")
+    return (xff.split(",")[-1].strip() if xff else (request.client.host if request.client else "")) or "unknown"
+
+
 async def _rate_limit_check(request: Request) -> None:
-    ip = (request.client.host if request.client else "unknown") or "unknown"
+    ip = _client_ip(request)
     now = datetime.now(timezone.utc)
     window_start = now - timedelta(minutes=_FAIL_WINDOW_MIN)
     fails = await _db.formular_access_fail_log.count_documents({
@@ -99,7 +104,7 @@ async def _rate_limit_check(request: Request) -> None:
 
 
 async def _log_fail(request: Request) -> None:
-    ip = (request.client.host if request.client else "unknown") or "unknown"
+    ip = _client_ip(request)
     await _db.formular_access_fail_log.insert_one({
         "ip": ip, "created_at": datetime.now(timezone.utc)
     })

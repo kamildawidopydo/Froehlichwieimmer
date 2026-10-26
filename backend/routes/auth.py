@@ -98,7 +98,7 @@ _AUTH_RL: dict = _defaultdict(lambda: _defaultdict(list))  # {rule: {ip: [timest
 
 def _rl_check(request: Request, rule_key: str, max_hits: int, window_s: int = 60) -> None:
     xff = request.headers.get("x-forwarded-for", "")
-    ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+    ip = xff.split(",")[-1].strip() if xff else (request.client.host if request.client else "unknown")
     now = _time_mod.time()
     hist = [t for t in _AUTH_RL[rule_key][ip] if t > now - window_s]
     if len(hist) >= max_hits:

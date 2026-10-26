@@ -1,0 +1,37 @@
+{
+  "summary": "Retested the iteration_65 follow-ups. Backend: 3 of 3 pytest pass (tests/test_iter66_doc_upload_email_rl.py). Frontend: 5 of 6 checks pass. There were 2 real uploads (1 API, 1 UI). Each set admin_email_sent=True with admin_email_error=None, and the email went to _admin_target() (CONTRACT_SUBMISSIONS_TO / EMAIL_REPLY_TO), not to the customer. The API submit took 0.85s including the email. 'E-Mail fehlgeschlagen' no longer appears on the new submission. Used codes show 'VERWENDET' plus 'TEST_UIKunde66 · date' (data-testid du-code-used-by-<id>). The upload rate limit holds against random spoofed first XFF entries: 401x4 then 429. forgot-password returns {status:'ok'} in under 2s with no token. The homepage loads with 0 CORS console errors. Bug: the plaintext code is visible right after 'Code erstellen', but it falls back to ····XXXX as soon as 'Aktualisieren' is clicked.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/forgot-password, /api/auth/login (routes/auth.py _rl_check), server.py _client_ip, applications.py, contract_submissions.py, server.py:1764", "issue": "These rate limits still key on the LEFT-most X-Forwarded-For entry, so they can be bypassed by spoofing. Verified: 6 forgot-password calls with a random XFF all returned 200, while the same calls without XFF returned 429 on the 3rd. Only storage_files._check_public_upload_rl was hardened."},
+      {"endpoint": "routes/formular_access.py:88,102 (fail log)", "issue": "Still uses request.client.host, which is the k8s ingress pod IP (10.49.x.x) shared by all visitors. The code-brute-force lockout is therefore effectively global: one attacker locks out every customer. This was an iteration_65 action item and is still open."},
+      {"endpoint": "/api/document-uploads/submit", "issue": "If EMERGENT_EMAIL_KEY is missing, _send_email_via_emergent returns None without raising (dry-run), and the submission is still marked admin_email_sent=True. Check the returned id before setting the flag."},
+      {"endpoint": "/api/document-uploads/submit", "issue": "The single-use code is checked with find_one(status=active) and only marked used after the storage writes, without an atomic find_one_and_update. Two parallel submits can both consume the same one-time code."},
+      {"endpoint": "/api/document-uploads/submit", "issue": "Not verified: whether the right-most XFF entry is the real client IP or an ingress/proxy hop. If it is a proxy IP, all users share one bucket of 5 uploads per minute. Please confirm the ingress XFF format."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminDocumentUploads refresh button", "issue": "onClick={fetchData} passes the click event as the 'fresh' argument, so fresh[r.id] is undefined. After clicking Aktualisieren, a freshly created code shows as ····9B88 instead of MAM39B88 and the copy button disappears. Fix: onClick={() => fetchData()}.", "selector": "[data-testid=du-refresh]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/dokument-upload", "issues": ["The career popup ([data-testid=career-popup]) opens over the transactional upload page and blocks the 'Dokumente senden' button until it is dismissed. Suppress it on /dokument-upload and similar form pages.", "The public upload page has no data-testid on the name, code, file and submit inputs."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter66_doc_upload_email_rl.py", "/app/test_reports/pytest/iter66.xml"],
+  "action_items": [
+    "AdminDocumentUploads: change the Aktualisieren onClick to () => fetchData() so fresh plaintext codes survive a refresh.",
+    "Use a single shared client-IP helper based on the right-most or trusted XFF entry in auth.py _rl_check, server.py _client_ip/1764, applications.py, contract_submissions.py and formular_access fail-log.",
+    "Only set admin_email_sent=True when _send_email_via_emergent returns a message id.",
+    "Make one-time code consumption atomic (find_one_and_update status active->used before storage writes, or roll back).",
+    "Do not show the career popup on /dokument-upload, and add data-testids to that page."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter66_doc_upload_email_rl.py"],
+  "success_rate": {"backend": "100% (3/3 requested items)", "frontend": "83% (5/6 checks; refresh loses plaintext)"},
+  "test_credentials": "Admin patron@froehlich-vermoegensberatung.de / 500Euro! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "TEST_iter66_* codes and submissions were created and then deleted. No users were created.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: pytest tests/test_iter66_doc_upload_email_rl.py -n0. The real upload counts toward the 5-per-minute upload bucket (shared by the container IP), so wait 60s before any UI upload. On /dokument-upload, press Escape to close [data-testid=career-popup] before clicking 'Dokumente senden'. Inputs are found via placeholders 'Vor- und Nachname' and 'ABCD1234'. Log in to the admin area via page.request.post('/api/auth/login') with an Origin header."
+}

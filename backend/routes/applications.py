@@ -37,7 +37,7 @@ _APP_RL: dict = _defaultdict(list)
 
 def _check_app_rl(request: Request) -> None:
     xff = request.headers.get("x-forwarded-for", "")
-    ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+    ip = xff.split(",")[-1].strip() if xff else (request.client.host if request.client else "unknown")
     now = _time_mod.time()
     hist = [t for t in _APP_RL[ip] if t > now - 60]
     if len(hist) >= 5:

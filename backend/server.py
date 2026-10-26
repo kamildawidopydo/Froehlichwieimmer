@@ -100,7 +100,7 @@ def _client_ip(request: Request) -> str:
     Fallback auf Remote-Address. Verhindert Spoofing per zweiter XFF-Zeile."""
     xff = request.headers.get("x-forwarded-for", "")
     if xff:
-        first = xff.split(",")[0].strip()
+        first = xff.split(",")[-1].strip()
         if first:
             return first
     return get_remote_address(request) if _SLOWAPI_AVAILABLE else (request.client.host if request.client else "unknown")
@@ -1761,7 +1761,7 @@ async def submit_review(payload: ReviewSubmit, request: Request):
 
     # Rate limit: proxy-aware — honor X-Forwarded-For (left-most) so the k8s
     # ingress IP doesn't throttle the whole site. Max 5 submissions per IP/h.
-    xff = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    xff = (request.headers.get("x-forwarded-for") or "").split(",")[-1].strip()
     ip = xff or (request.client.host if request.client else "unknown") or "unknown"
     now = datetime.now(timezone.utc)
     window_start = now - timedelta(hours=1)

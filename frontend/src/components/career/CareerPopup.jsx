@@ -7,7 +7,7 @@ import { CareerIntro } from './CareerIntro';
 import { CareerForm } from './CareerForm';
 
 const SEEN_KEY = 'career_popup_seen_session';
-const HIDDEN_PREFIXES = ['/dashboard', '/admin', '/login', '/register', '/formular', '/reset-password', '/forgot-password'];
+const HIDDEN_PREFIXES = ['/dashboard', '/admin', '/login', '/register', '/formular', '/reset-password', '/forgot-password', '/dokument-upload', '/apply', '/onboarding'];
 
 const Done = ({ onClose }) => (
   <div className="flex flex-col items-center text-center" data-testid="career-popup-success">

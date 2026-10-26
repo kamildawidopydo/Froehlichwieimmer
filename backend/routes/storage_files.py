@@ -473,7 +473,7 @@ async def public_submit_document_upload(
         from routes.contract_submissions import _admin_target
         import html as _html
         names = "".join(f"<li>{_html.escape(s.get('original_filename') or s.get('orig_name') or 'Datei')}</li>" for s in stored)
-        await _send_email_via_emergent(
+        msg_id = await _send_email_via_emergent(
             to=_admin_target(),
             subject=f"Neuer Dokument-Upload: {name}",
             html=(f"<p>Neue Dokumente wurden über das Upload-Portal eingereicht.</p>"
@@ -481,6 +481,8 @@ async def public_submit_document_upload(
                   f"<p><b>Dateien ({len(stored)}):</b></p><ul>{names}</ul>"
                   f"<p>Die Dateien finden Sie im Adminbereich unter „Dokument-Uploads“.</p>"),
         )
+        if not msg_id:
+            raise RuntimeError("E-Mail-Dienst nicht konfiguriert")
         await _db.document_upload_submissions.update_one({"_id": sub_id}, {"$set": {"admin_email_sent": True}})
     except Exception as e:
         await _db.document_upload_submissions.update_one({"_id": sub_id}, {"$set": {"admin_email_error": str(e)[:300]}})
