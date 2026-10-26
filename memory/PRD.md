@@ -1,3 +1,11 @@
+## Update 2026-10-26 – Startseiten-Fehler auf essenceinvest.com + Kunden-Abläufe geprüft
+- Ursache: Produktion ruft API über finance-platform-v2.emergent.host auf (Cross-Origin von essenceinvest.com) -> CORS blockiert alles. Fix: frontend/src/lib/apiBase.js nutzt Same-Origin, wenn Hostname abweicht; 11 Dateien auf getApiBase() umgestellt. Getestet (iteration_64/67). LIVE erst nach Redeploy.
+- Sicherheitslücke behoben: /api/auth/forgot-password gab Reset-Token im JSON zurück (Kontoübernahme möglich). Jetzt nur {status:'ok'} + Reset-Mail (vom Kunden selbst ausgelöst, Link 1 h gültig, Hintergrund-Task).
+- Dokument-Upload: Codes aus Admin > Dokument-Uploads funktionierten nie (falsche Collection) -> behoben, Einmal-Code wird als „verwendet“ mit Name markiert; Admin-Mail bei Upload; Klartext-Code bleibt nach Aktualisieren sichtbar; Upload-Rate-Limit greift wieder.
+- Rate-Limits nutzen rechten X-Forwarded-For-Eintrag (nicht mehr spoofbar); Formular-Code-Sperre pro echter Kunden-IP statt global.
+- Karriere-Popup nicht mehr auf /dokument-upload, /apply, /onboarding.
+- E-Mail-Vorschauen (8 Vorlagen) gerendert unter /root/mailvorschau (*.png).
+
 ## Update 2026-10-24 – Depotauszug-Analyse (aus Lovable nachgebaut)
 - Admin-Seite /admin/depot-statement-analysis (Sidebar „Vermögen & Depot“), Upload PDF/Bild ≤10 MB, CSV/TXT oder Text; KI (Gemini gemini-3.1-pro-preview, Emergent LLM Key) liefert Inhaber, Stichtag, Gesamtwert, Positionen, Aufteilung, Zusammenfassung, Hinweise. Nichts wird gespeichert. Nur Admins (401/403).
 - Dateien: backend/routes/admin_depot_analysis.py, frontend/src/pages/admin/AdminDepotStatementAnalysis.jsx. Getestet iteration_63: 100 %.

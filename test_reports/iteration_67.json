@@ -1,0 +1,17 @@
+{
+  "summary": "Final regression before redeploy, run on the preview environment. Backend: 5 of 5 pytest pass. Admin login and /auth/me work. Wrong-code verify-document returns 401 four times in a row (no 429). An empty body returns 422. Doc-upload code create, list (hint only) and delete work. /api/health returns 200. Frontend: all checks pass. The homepage loads news, DAX/S&P market overview, Tagesgeld/Festgeld offers and Kundenstimmen/Erfahrungen, with 0 CORS console errors. The only console errors are expected 401s for anonymous /auth/me-type calls. The career popup does not appear on /dokument-upload, /apply or /onboarding (which redirects to /login), with fresh sessionStorage and a seeded visitor profile. It does appear on /. Admin login works and /admin loads. On Admin > Dokument-Uploads the plaintext code VK76JAPN is visible after create and is still visible after clicking du-refresh, so the iteration_66 bug is fixed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_iter67_final_regression.py", "/app/test_reports/pytest/iter67.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "formular_access._client_ip and storage_files._check_public_upload_rl use the right-most XFF entry. On preview this currently resolves to the public client IP (136.110.146.181 was logged), which is fine. Older fail-log rows show internal 10.49.x.x ingress IPs, though. If the production proxy chain differs, all users behind one ingress pod could share a single fail bucket. Check the logged IPs in production after redeploy.",
+    "The career popup only shows once a visitor profile exists in localStorage (kapitalmitte_visitor_profile). This is expected, but worth knowing for QA."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter67_final_regression.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. The TEST_iter67 codes were deleted, and the fail-log rows for the test IP were removed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run: pytest tests/test_iter67_final_regression.py -n0. To test the career popup, seed localStorage kapitalmitte_visitor_profile and kapitalmitte_cookie_consent, then clear sessionStorage. After running the verify-document tests, clean up formular_access_fail_log for the test IP (limit is 10 per 15 min)."
+}
