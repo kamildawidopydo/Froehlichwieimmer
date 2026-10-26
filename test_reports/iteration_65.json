@@ -1,0 +1,43 @@
+{
+  "summary": "Retested iteration_64 fixes on preview. CRITICAL FIX VERIFIED: a code from /api/admin/document-uploads/codes passes verify-document (200). Submit with PDF returns 200 and the submission is listed in admin with a downloadable file. Reuse is rejected with 401 on both verify and submit. The admin list shows status=used with used_by_name (API) and 'VERWENDET' (UI). /admin/formular-access codes still work for upload and stay active. Full UI flow also passed: admin creates code, /dokument-upload verify, file upload, 'Vielen Dank!' screen, admin shows VERWENDET and the submission, reuse shows the error toast. Submit rate limit gives 401x5 then 429. forgot-password returns exactly {status:'ok'} in ~0.12s for both unknown and existing emails. Regression: homepage and /admin/users, /admin/formular-access, /admin/markt-daten, /admin/ipo-requests load with 0 CORS errors (the only home console errors are expected 401s from /api/auth/me when logged out). New issues: document-upload submissions never send an admin email, so every row shows 'E-Mail fehlgeschlagen'. The plaintext code is not kept in the admin table (stale closure). The rate limit can be bypassed by spoofing X-Forwarded-For.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/document-uploads/submit", "issue": "No admin notification email is ever sent. admin_email_sent stays False and admin_email_error stays None, so the admin UI marks every submission 'E-Mail fehlgeschlagen'. The user explicitly asked to verify emails, so the email is either missing or the label is wrong."},
+      {"endpoint": "POST /api/document-uploads/submit", "issue": "_check_public_upload_rl takes the FIRST X-Forwarded-For entry, which the client controls. Sending a random XFF on each request bypassed the limit: 7 requests all returned 401, never 429. Use the right-most trusted hop or the ingress-provided real IP."},
+      {"endpoint": "POST /api/formular-access/verify-document", "issue": "_rate_limit_check/_log_fail key on request.client.host, which is the ingress/proxy IP behind k8s. 10 failed codes in 15 min from ANY users can lock out ALL users with 429. This is pre-existing."},
+      {"endpoint": "POST /api/auth/forgot-password", "issue": "asyncio.create_task(_send_reset()) keeps no reference to the task, so it could be garbage-collected before it finishes. Use FastAPI BackgroundTasks or keep a set of tasks."},
+      {"endpoint": "POST /api/document-uploads/submit", "issue": "The docstring sits after the _check_public_upload_rl call, so it is no longer the function docstring (cosmetic)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminDocumentUploads createCode", "issue": "Stale closure: fetchData is memoised on the old freshCodes, so the newly created plaintext code is never merged into the table row (it shows ····XXXX). The admin only sees the full code in a toast that disappears, so the code can be lost.", "selector": "[data-testid='du-codes-table']", "priority": "MEDIUM"},
+      {"component": "AdminDocumentUploads codes table", "issue": "Used codes show 'VERWENDET' but not the customer name or used_at. The API returns used_by_name.", "selector": "[data-testid='du-codes-table']", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Document upload admin notification", "issue": "Every submission shows 'E-Mail fehlgeschlagen' because the backend never sends an email or sets admin_email_sent.", "affected_selectors": ["[data-testid='du-subs-empty']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter65_doc_upload_codes.py", "/app/test_reports/pytest/pytest_iter65.xml"],
+  "action_items": [
+    "Send an admin notification email after a public document upload (Resend/_send_email_via_emergent) and set admin_email_sent/admin_email_error. Otherwise stop showing 'E-Mail fehlgeschlagen' when no email is intended.",
+    "Fix the stale closure in AdminDocumentUploads.createCode: merge the new code directly, e.g. setCodes(prev => ...) or pass the fresh map to fetchData, so the plaintext stays visible in the table with a copy option.",
+    "Show used_by_name and used_at in the doc-codes table for used codes.",
+    "Harden the upload rate-limit IP extraction (do not trust the first XFF entry). Use a real client IP for the formular-access fail log too.",
+    "Keep a reference to the forgot-password background task or use BackgroundTasks."
+  ],
+  "critical_code_review_comments": [
+    "storage_files.py is 481 lines and mixes admin and public routes. Acceptable for now.",
+    "The in-memory _UPLOAD_RL works only because uvicorn runs with --workers 1. It breaks with multiple workers or pods.",
+    "_UPLOAD_RL.clear() once there are more than 500 IPs resets every bucket, which gives a trivial bypass when combined with XFF spoofing."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter65_doc_upload_codes.py"],
+  "success_rate": {"backend": "100% (5/5 requested checks pass; 3 new minor issues)", "frontend": "100% requested flows pass; 2 minor UI issues"},
+  "test_credentials": "patron@froehlich-vermoegensberatung.de / 500Euro! (works)",
+  "seed_data_creation": "None left. Cleaned up all TEST_ doc codes (including the main agent's TEST_doc_code and TEST_doc_code2), the TEST_ formular codes, TEST_ submissions (TEST_UIKunde, TEST_Kunde65*) and the test_fp65_* @example.com user. No TEST_Kunde submissions by the main agent remained when cleanup ran.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run the pytest with -n0 (pytest.ini enables xdist and the parametrised RAND differs between workers) and set ITER65_RAND. The rate-limit test uses a spoofed XFF bucket, so it does not block other tests. The forgot-password limit is 3 per IP, so avoid running iter64 and iter65 back to back. Welcome gate: page.select_option('[data-testid=visitor-role]', index=1), then click visitor-accept-btn. In the UI, log in via page.request.post('/api/auth/login')."
+}

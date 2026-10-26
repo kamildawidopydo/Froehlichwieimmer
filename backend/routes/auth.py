@@ -60,6 +60,7 @@ from server import (
 
 logger = logging.getLogger(__name__)
 
+_BG_TASKS: set = set()
 _SITE_HOSTS = ("essenceinvest.com", ".emergent.host", ".preview.emergentagent.com")
 
 
@@ -247,7 +248,9 @@ async def forgot_password(request: Request, payload: ForgotInput):
             except Exception as exc:
                 logger.warning("password_reset email failed: %s", exc)
 
-        asyncio.create_task(_send_reset())
+        task = asyncio.create_task(_send_reset())
+        _BG_TASKS.add(task)
+        task.add_done_callback(_BG_TASKS.discard)
     return {"status": "ok"}
 
 

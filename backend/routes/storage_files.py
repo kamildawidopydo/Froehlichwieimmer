@@ -50,7 +50,7 @@ _UPLOAD_RL: dict = _defaultdict(list)
 def _check_public_upload_rl(request: Request) -> None:
     """5 uploads / minute per IP. Raises 429 if exceeded."""
     xff = request.headers.get("x-forwarded-for", "")
-    ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+    ip = xff.split(",")[-1].strip() if xff else (request.client.host if request.client else "unknown")
     now = _time_mod.time()
     window = 60
     hist = [t for t in _UPLOAD_RL[ip] if t > now - window]
@@ -467,6 +467,23 @@ async def public_submit_document_upload(
         "user_agent": (user_agent or "")[:500] or None,
         "session_id": f"doc-upload-{sub_id}",
     })
+
+    try:
+        from server import _send_email_via_emergent
+        from routes.contract_submissions import _admin_target
+        import html as _html
+        names = "".join(f"<li>{_html.escape(s.get('original_filename') or s.get('orig_name') or 'Datei')}</li>" for s in stored)
+        await _send_email_via_emergent(
+            to=_admin_target(),
+            subject=f"Neuer Dokument-Upload: {name}",
+            html=(f"<p>Neue Dokumente wurden über das Upload-Portal eingereicht.</p>"
+                  f"<p><b>Name:</b> {_html.escape(name)}<br><b>Nachricht:</b> {_html.escape((message or '').strip() or '–')}</p>"
+                  f"<p><b>Dateien ({len(stored)}):</b></p><ul>{names}</ul>"
+                  f"<p>Die Dateien finden Sie im Adminbereich unter „Dokument-Uploads“.</p>"),
+        )
+        await _db.document_upload_submissions.update_one({"_id": sub_id}, {"$set": {"admin_email_sent": True}})
+    except Exception as e:
+        await _db.document_upload_submissions.update_one({"_id": sub_id}, {"$set": {"admin_email_error": str(e)[:300]}})
 
     return {"submission_id": str(sub_id), "files_count": len(stored)}
 

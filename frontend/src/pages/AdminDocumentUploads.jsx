@@ -41,7 +41,7 @@ const AdminDocumentUploads = () => {
   const [busyId, setBusyId] = useState(null);
   const [freshCodes, setFreshCodes] = useState({});
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (fresh = freshCodes) => {
     setLoading(true);
     try {
       const [c, s] = await Promise.all([
@@ -49,7 +49,7 @@ const AdminDocumentUploads = () => {
         axios.get(`${API}/api/admin/document-uploads/submissions?limit=200`, { withCredentials: true }),
       ]);
       const items = (c.data?.items || []).map((r) =>
-        freshCodes[r.id] ? { ...r, code: freshCodes[r.id] } : r,
+        fresh[r.id] ? { ...r, code: fresh[r.id] } : r,
       );
       setCodes(items);
       setSubmissions(s.data?.items || []);
@@ -90,9 +90,10 @@ const AdminDocumentUploads = () => {
       );
       if (data?.code && data?.id) {
         toast.success(`Zugangscode: ${data.code}`);
-        setFreshCodes((p) => ({ ...p, [data.id]: data.code }));
+        const next = { ...freshCodes, [data.id]: data.code };
+        setFreshCodes(next);
         setLabelInput('');
-        await fetchData();
+        await fetchData(next);
       }
     } catch (err) { toast.error('Fehler: ' + (err?.response?.data?.detail || err.message)); }
     finally { setCreating(false); }
@@ -207,6 +208,11 @@ const AdminDocumentUploads = () => {
                       <td className="px-4 py-2.5 text-[12px] text-bank-text">{r.admin_label || '–'}</td>
                       <td className="px-4 py-2.5">
                         <span className={`inline-flex border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] ${sm.cls}`}>{sm.label}</span>
+                        {r.status === 'used' && r.used_by_name && (
+                          <div className="mt-1 text-[11px] text-bank-text-muted" data-testid={`du-code-used-by-${r.id}`}>
+                            {r.used_by_name}{r.used_at ? ` · ${formatDate(r.used_at)}` : ''}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <div className="inline-flex flex-wrap justify-end gap-1">
