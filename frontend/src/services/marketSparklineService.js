@@ -32,7 +32,7 @@ const writeCache = (key, data) => {
 
 async function fetchOne(symbol) {
   const sym = String(symbol || '').toUpperCase();
-  if (!sym || !API_ROOT || UNSUPPORTED.has(sym)) {
+  if (!sym || UNSUPPORTED.has(sym)) {
     return { points: [], prevClose: null };
   }
   if (!SUPPORTED_SPARKLINE_SYMBOLS.has(sym)) {

@@ -31,7 +31,7 @@ const UNSUPPORTED = new Set();
  * @returns {Promise<{points: {t:string,c:number}[], currency:string, price:number|null, prevClose:number|null}>}
  */
 export async function fetchStockHistory(symbol, _range = '1mo', _interval) {
-  if (!symbol || !API_ROOT) return { ...EMPTY_RESULT };
+  if (!symbol) return { ...EMPTY_RESULT };
   const sym = String(symbol).toUpperCase();
   if (UNSUPPORTED.has(sym)) return { ...EMPTY_RESULT };
   if (!SUPPORTED_SPARKLINE_SYMBOLS.has(sym)) {
