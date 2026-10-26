@@ -14,6 +14,7 @@ import {
   KeyRound,
   Copy,
   Eye,
+  Trash2,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -116,12 +117,23 @@ const AdminUsers = () => {
       });
       setNewUserName('');
       setNewUserEmail('');
-      toast.success('Benutzer wurde angelegt. Temporäres Passwort nur einmal sichtbar.');
+      toast.success('Benutzer angelegt. Zugangsdaten wurden per E-Mail an den Kunden gesendet.');
       fetchUsers();
     } catch (err) {
       toast.error(err?.message || 'Fehler beim Erstellen.');
     } finally {
       setCreatingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (u) => {
+    if (!window.confirm(`Kunde "${u.name || u.email}" (${u.email}) endgültig löschen?`)) return;
+    try {
+      await apiJson(`/api/admin/users/${u.id}`, { method: 'DELETE' });
+      toast.success('Kunde wurde gelöscht.');
+      fetchUsers();
+    } catch (err) {
+      toast.error(err?.message || 'Löschen fehlgeschlagen.');
     }
   };
 
@@ -163,7 +175,7 @@ const AdminUsers = () => {
               Neuen Benutzer anlegen
             </h2>
             <p className="mt-2 max-w-xl text-[12.5px] leading-snug text-white/75">
-              Konto wird angelegt mit <code>role=user</code>. Ein zufälliges Temp-Passwort wird generiert und nur einmalig angezeigt — im Backend wird ausschließlich der bcrypt-Hash gespeichert.
+              Der Kunde erhält automatisch eine E-Mail mit seinen Zugangsdaten und einem vorläufigen Passwort. Bei der ersten Anmeldung legt er ein eigenes Passwort fest.
             </p>
             <form onSubmit={handleCreateUser} className="mt-4 flex flex-col gap-2" data-testid="admin-users-create-form">
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -320,6 +332,11 @@ const AdminUsers = () => {
                       <Button size="sm" variant="outline-ink" onClick={() => navigate(`/admin/users/${u.id}`)} data-testid={`admin-users-open-btn-${u.id}`}>
                         <Eye size={12} strokeWidth={1.5} /> Öffnen
                       </Button>
+                      {u.role !== 'admin' && (
+                        <Button size="sm" variant="outline" className="ml-2 border-red-300 text-red-700 hover:bg-red-50" onClick={() => handleDeleteUser(u)} data-testid={`admin-users-delete-btn-${u.id}`}>
+                          <Trash2 size={12} strokeWidth={1.5} /> Löschen
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}

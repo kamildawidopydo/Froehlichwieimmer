@@ -34,7 +34,7 @@ class OnboardingPatch(BaseModel):
     first_name: Optional[str] = Field(default=None, max_length=80)
     last_name: Optional[str] = Field(default=None, max_length=80)
     phone: Optional[str] = Field(default=None, max_length=40)
-    country: Optional[str] = Field(default=None, max_length=8)
+    country: Optional[str] = Field(default=None, max_length=80)
     street: Optional[str] = Field(default=None, max_length=120)
     house_number: Optional[str] = Field(default=None, max_length=20)
     address_addition: Optional[str] = Field(default=None, max_length=120)

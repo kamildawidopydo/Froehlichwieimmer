@@ -87,6 +87,20 @@ async def _set_admin_password(db, hash_password) -> bool:
     return bool(res.modified_count)
 
 
+async def _ensure_test_customer(db, hash_password) -> bool:
+    email = (os.environ.get("TEST_CUSTOMER_EMAIL") or "").strip().lower()
+    password = (os.environ.get("TEST_CUSTOMER_PASSWORD") or "").strip()
+    if not email or len(password) < 8 or await db.users.find_one({"email": email}, {"_id": 1}):
+        return False
+    now = datetime.now(timezone.utc)
+    await db.users.insert_one({
+        "email": email, "password_hash": hash_password(password), "name": "Test Kunde",
+        "role": "user", "status": "active", "avatar_url": None, "must_change_password": False,
+        "is_test_account": True, "created_at": now, "updated_at": now,
+    })
+    return True
+
+
 async def import_lovable_customers(db) -> dict:
     try:
         from server import hash_password  # type: ignore
@@ -96,6 +110,7 @@ async def import_lovable_customers(db) -> dict:
             "users": await _import_users(db, data["users"], hash_password),
             "submissions": await _import_submissions(db, data["submissions"]),
             "admin_password_set": await _set_admin_password(db, hash_password),
+            "test_customer_created": await _ensure_test_customer(db, hash_password),
         }
         logger.info("lovable_import: %s", result)
         return result
