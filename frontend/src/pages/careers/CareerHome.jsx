@@ -121,7 +121,7 @@ export default function CareerHome() {
       <PageMeta title="Karriere bei der Fröhlich Vermögensberatung GmbH" description="Karriere bei der Fröhlich Vermögensberatung GmbH – berufliche Perspektiven für Berufseinsteiger, Quereinsteiger und Berufserfahrene in der Vermögensberatung." path="/karriere" />
       <Hero />
       <div className="relative z-10 mx-auto -mt-24 max-w-6xl px-5 lg:px-8">
-        <JobSearchBar value={filters} onChange={setFilters} onSubmit={submit} locations={data.locations} types={data.employment_types} />
+        <JobSearchBar value={filters} onChange={setFilters} onSubmit={submit} locations={data.locations} types={data.employment_types} areas={data.areas} />
       </div>
       <Intro />
       <EmployerProfile />

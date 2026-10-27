@@ -1,18 +1,35 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, Briefcase, CalendarDays, ArrowRight, ChevronRight } from 'lucide-react';
-import { LEVEL_LABEL, formatDate } from '@/lib/careersContent';
+import { MapPin, Briefcase, ArrowRight } from 'lucide-react';
+import { LEVEL_LABEL } from '@/lib/careersContent';
 
-const Meta = ({ icon: Icon, children }) => (
-  <span className="inline-flex items-center gap-1.5 text-[13px] text-[#555]"><Icon size={14} className="text-[#36A852]" />{children}</span>
+const Meta = ({ icon: Icon, children, missing }) => (
+  <span className={`inline-flex items-center gap-1.5 text-[13px] ${missing ? 'font-medium text-amber-700' : 'text-[#555]'}`}>
+    <Icon size={14} className={missing ? 'text-amber-600' : 'text-[#36A852]'} />{children}
+  </span>
 );
 
 const Badges = ({ job }) => (
   <div className="flex flex-wrap items-center gap-2">
+    {job.area && <span className="rounded-full bg-[#1E222C]/5 px-3 py-1 text-[11.5px] font-semibold text-[#1E222C]">{job.area}</span>}
     <span className="rounded-full bg-[#36A852]/10 px-3 py-1 text-[11.5px] font-semibold text-[#2E8B45]">{LEVEL_LABEL[job.level]}</span>
     {job.status === 'draft' && <span className="rounded-full bg-amber-100 px-3 py-1 text-[11.5px] font-semibold text-amber-800" data-testid="job-card-draft-badge">Entwurf</span>}
   </div>
+);
+
+const Facts = ({ job }) => (
+  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+    <Meta icon={MapPin} missing={!job.location}>{job.location || 'Arbeitsort fehlt'}</Meta>
+    <Meta icon={Briefcase} missing={!job.employment_type}>{job.employment_type || 'Beschäftigungsart fehlt'}</Meta>
+  </div>
+);
+
+const ViewBtn = ({ job, className = '' }) => (
+  <Link to={`/karriere/stellen/${job.slug}`} data-testid={`job-card-view-${job.slug}`}
+    className={`relative z-10 inline-flex items-center justify-center gap-1.5 rounded-full bg-[#36A852] px-5 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#2E9446] ${className}`}>
+    Stelle ansehen <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+  </Link>
 );
 
 export function JobRow({ job, index = 0 }) {
@@ -28,22 +45,10 @@ export function JobRow({ job, index = 0 }) {
           <h3 className="mt-2.5 font-display text-[21px] leading-snug text-[#1E222C] sm:text-[23px]">
             <Link to={`/karriere/stellen/${job.slug}`} className="after:absolute after:inset-0 group-hover:text-[#36A852]" data-testid={`job-card-more-${job.slug}`}>{job.title}</Link>
           </h3>
-          <p className="mt-1.5 line-clamp-2 max-w-2xl text-[14.5px] leading-relaxed text-[#555]">{job.summary}</p>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-            <Meta icon={MapPin}>{job.location || '[Standort folgt]'}</Meta>
-            <Meta icon={Briefcase}>{job.employment_type || '[Beschäftigungsart folgt]'}</Meta>
-            <Meta icon={CalendarDays}>{job.published_at ? `Veröffentlicht am ${formatDate(job.published_at)}` : 'Noch nicht veröffentlicht'}</Meta>
-          </div>
+          <Facts job={job} />
+          <p className="mt-2.5 line-clamp-2 max-w-2xl text-[14.5px] leading-relaxed text-[#555]">{job.summary}</p>
         </div>
-        <div className="relative z-10 flex shrink-0 gap-2">
-          <Link to={`/karriere/stellen/${job.slug}`} className="inline-flex items-center gap-1 rounded-full border border-[#1E222C]/15 px-4 py-2.5 text-[13px] font-semibold transition-colors hover:border-[#36A852] hover:text-[#36A852]">
-            Mehr erfahren <ChevronRight size={14} />
-          </Link>
-          <Link to={`/karriere/bewerben?stelle=${job.slug}`} data-testid={`job-card-apply-${job.slug}`}
-            className="inline-flex items-center gap-1 rounded-full bg-[#36A852] px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#2E9446]">
-            Jetzt bewerben
-          </Link>
-        </div>
+        <ViewBtn job={job} className="w-full shrink-0 md:w-auto" />
       </div>
     </motion.article>
   );
@@ -61,18 +66,9 @@ export default function JobCard({ job, index = 0 }) {
       <h3 className="mt-4 font-display text-[22px] leading-snug text-[#1E222C]">
         <Link to={`/karriere/stellen/${job.slug}`} className="hover:text-[#36A852]" data-testid={`job-card-more-${job.slug}`}>{job.title}</Link>
       </h3>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-        <Meta icon={MapPin}>{job.location || '[Standort folgt]'}</Meta>
-        <Meta icon={Briefcase}>{job.employment_type || '[Beschäftigungsart folgt]'}</Meta>
-      </div>
+      <Facts job={job} />
       <p className="mt-4 line-clamp-3 flex-1 text-[14.5px] leading-relaxed text-[#555]">{job.summary}</p>
-      <div className="mt-5 flex items-center justify-between gap-3 border-t border-black/5 pt-4">
-        <Meta icon={CalendarDays}>{job.published_at ? formatDate(job.published_at) : 'Entwurf'}</Meta>
-        <Link to={`/karriere/bewerben?stelle=${job.slug}`} data-testid={`job-card-apply-${job.slug}`}
-          className="inline-flex items-center gap-1 rounded-full bg-[#36A852] px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#2E9446]">
-          Jetzt bewerben <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      </div>
+      <div className="mt-5 border-t border-black/5 pt-4"><ViewBtn job={job} className="w-full" /></div>
     </motion.article>
   );
 }

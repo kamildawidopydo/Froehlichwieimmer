@@ -1,6 +1,5 @@
 import React from 'react';
-import { Search, MapPin, Briefcase, BarChart3 } from 'lucide-react';
-import { LEVEL_LABEL } from '@/lib/careersContent';
+import { Search, MapPin, Briefcase, Layers } from 'lucide-react';
 
 const Field = ({ icon: Icon, label, children }) => (
   <label className="flex min-w-0 flex-1 flex-col gap-1 rounded-xl bg-[#F7F5F0] px-4 py-2.5 focus-within:ring-2 focus-within:ring-[#36A852]/40">
@@ -11,7 +10,7 @@ const Field = ({ icon: Icon, label, children }) => (
 
 const selCls = 'w-full bg-transparent text-[15px] text-[#1E222C] outline-none';
 
-export default function JobSearchBar({ value, onChange, onSubmit, locations = [], types = [], compact = false }) {
+export default function JobSearchBar({ value, onChange, onSubmit, locations = [], types = [], areas = [], compact = false }) {
   const set = (k) => (e) => onChange({ ...value, [k]: e.target.value });
   return (
     <form
@@ -22,9 +21,9 @@ export default function JobSearchBar({ value, onChange, onSubmit, locations = []
       <Field icon={Search} label="Jobtitel oder Stichwort">
         <input className={selCls} placeholder="z. B. Finanzberater" value={value.q} onChange={set('q')} data-testid="job-search-q" />
       </Field>
-      <Field icon={MapPin} label="Standort">
+      <Field icon={MapPin} label="Arbeitsort">
         <select className={selCls} value={value.location} onChange={set('location')} data-testid="job-search-location">
-          <option value="">Alle Standorte</option>
+          <option value="">Alle Arbeitsorte</option>
           {locations.map((l) => <option key={l} value={l}>{l}</option>)}
         </select>
       </Field>
@@ -34,10 +33,10 @@ export default function JobSearchBar({ value, onChange, onSubmit, locations = []
           {types.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
       </Field>
-      <Field icon={BarChart3} label="Karrierelevel">
-        <select className={selCls} value={value.level} onChange={set('level')} data-testid="job-search-level">
-          <option value="">Alle Level</option>
-          {Object.entries(LEVEL_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+      <Field icon={Layers} label="Tätigkeitsbereich">
+        <select className={selCls} value={value.area} onChange={set('area')} data-testid="job-search-area">
+          <option value="">Alle Bereiche</option>
+          {areas.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
       </Field>
       <button type="submit" data-testid="job-search-submit"

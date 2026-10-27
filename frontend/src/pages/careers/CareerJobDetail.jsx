@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, MapPin, Briefcase, BarChart3, CalendarClock, Loader2, Share2 } from 'lucide-react';
+import { ArrowLeft, Check, MapPin, Briefcase, BarChart3, CalendarClock, Loader2, Share2, Layers, Building2, Globe, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import PageMeta from '@/components/PageMeta';
 import { careersApi } from '@/lib/careersApi';
@@ -19,6 +19,21 @@ const Block = ({ title, items, text, testid }) => (
         ))}
       </ul>
     )}
+  </section>
+);
+
+const Missing = () => <span className="inline-flex items-center gap-1 text-amber-700" data-testid="job-missing-field"><AlertTriangle size={13} /> Angabe fehlt – bitte ergänzen</span>;
+
+const ProcessBlock = ({ enabled }) => (
+  <section className="rounded-2xl border border-black/5 bg-white p-7 lg:p-9" data-testid="job-detail-process">
+    <h2 className="font-display text-2xl text-[#1E222C]">Informationen zum Bewerbungsprozess</h2>
+    <ol className="mt-5 space-y-3 text-[15px] leading-relaxed text-[#333]">
+      {['Sie bewerben sich online über unser Bewerbungsformular – Lebenslauf als PDF, weitere Unterlagen optional.', 'Sie erhalten eine Eingangsbestätigung per E-Mail.', 'Wir sichten Ihre Unterlagen sorgfältig.', 'Bei passender Qualifikation melden wir uns für ein persönliches Kennenlernen.'].map((t, i) => (
+        <li key={t} className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#36A852]/12 text-xs font-semibold text-[#2E8B45]">{i + 1}</span>{t}</li>
+      ))}
+    </ol>
+    {!enabled && <p className="mt-5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900" data-testid="job-detail-apply-disabled">Online-Bewerbungen sind derzeit noch nicht freigeschaltet.</p>}
+    <p className="mt-4 text-sm text-[#686A64]">Informationen zur Verarbeitung Ihrer Daten finden Sie in den <Link to="/karriere/datenschutz" className="font-semibold text-[#36A852] underline">Datenschutzhinweisen für Bewerber</Link>.</p>
   </section>
 );
 
@@ -41,10 +56,17 @@ export default function CareerJobDetail() {
   );
 
   const facts = [
-    [MapPin, 'Standort', job.location || '[Standort folgt]'],
-    [Briefcase, 'Beschäftigungsart', job.employment_type || '[Beschäftigungsart folgt]'],
+    [MapPin, 'Arbeitsort', job.location || <Missing />],
+    [Briefcase, 'Beschäftigungsart', job.employment_type || <Missing />],
+    [Layers, 'Tätigkeitsbereich', job.area || <Missing />],
     [BarChart3, 'Karrierelevel', LEVEL_LABEL[job.level]],
     [CalendarClock, 'Bewerbungsfrist', job.deadline ? formatDate(job.deadline) : 'Keine Frist'],
+  ];
+  const workFacts = [
+    [Building2, 'Arbeitgeber', 'Fröhlich Vermögensberatung GmbH'],
+    [MapPin, 'Arbeitsort', job.location || <Missing />],
+    [Briefcase, 'Beschäftigungsmodell', job.employment_type || <Missing />],
+    [Globe, 'Internetauftritt', 'www.essenceinvest.com'],
   ];
   const applyLink = `/karriere/bewerben?stelle=${job.slug}`;
   const heroImg = CAREER_PATHS.find((p) => p.level === job.level)?.image || '/assets/careers/hero.jpg';
@@ -70,7 +92,7 @@ export default function CareerJobDetail() {
             <Link to={applyLink} className="inline-block rounded-full bg-[#36A852] px-7 py-3.5 font-semibold transition-transform hover:-translate-y-0.5" data-testid="job-detail-apply-top">Jetzt bewerben</Link>
             <button type="button" onClick={share} className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3.5 font-semibold hover:bg-white/10" data-testid="job-detail-share"><Share2 size={16} /> Teilen</button>
           </div>
-          <div className="mt-10 grid grid-cols-2 gap-4 border-t border-white/15 pt-6 sm:grid-cols-4" data-testid="job-detail-facts">
+          <div className="mt-10 grid grid-cols-2 gap-4 border-t border-white/15 pt-6 sm:grid-cols-3 lg:grid-cols-5" data-testid="job-detail-facts">
             {facts.map(([Icon, k, v]) => (
               <div key={k}><p className="flex items-center gap-1.5 text-xs text-white/60"><Icon size={13} />{k}</p><p className="mt-1 font-medium">{v}</p></div>
             ))}
@@ -79,10 +101,19 @@ export default function CareerJobDetail() {
       </section>
       <div className="mx-auto grid max-w-5xl gap-6 px-5 pb-28 pt-12 lg:grid-cols-[1fr_300px] lg:px-8 lg:pb-16">
         <div className="space-y-6">
-          <Block title="Ihre Aufgaben" items={job.tasks} testid="job-detail-tasks" />
+          <Block title="Ihr Aufgabenbereich" items={job.tasks} testid="job-detail-tasks" />
           <Block title="Das bringen Sie mit" items={job.requirements} testid="job-detail-requirements" />
           <Block title="Das erwartet Sie bei uns" items={job.offer} testid="job-detail-offer" />
-          <Block title="Ihr Karriereweg" text={job.career_path} testid="job-detail-career-path" />
+          <section className="rounded-2xl border border-black/5 bg-white p-7 lg:p-9" data-testid="job-detail-work">
+            <h2 className="font-display text-2xl text-[#1E222C]">Arbeitsort und Beschäftigungsmodell</h2>
+            <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+              {workFacts.map(([Icon, k, v]) => (
+                <div key={k} className="flex gap-3 rounded-xl bg-[#F7F5F0] p-4"><Icon size={18} className="mt-0.5 shrink-0 text-[#36A852]" /><div><dt className="text-xs text-[#686A64]">{k}</dt><dd className="font-medium">{v}</dd></div></div>
+              ))}
+            </dl>
+          </section>
+          {job.career_path && <Block title="Ihr Karriereweg" text={job.career_path} testid="job-detail-career-path" />}
+          <ProcessBlock enabled={status.applications_enabled} />
         </div>
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-2xl border border-black/5 bg-white p-6">

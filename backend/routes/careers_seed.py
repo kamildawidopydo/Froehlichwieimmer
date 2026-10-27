@@ -1,32 +1,31 @@
 """Entwurfs-Stellen für die Karriereplattform (werden nie automatisch veröffentlicht)."""
 
-SEED_VERSION = 5
+SEED_VERSION = 6
 
 _OFFER = [
-    "Eine offene, kollegiale Zusammenarbeit in einem engagierten Team",
-    "Eine strukturierte Einarbeitung mit festen Ansprechpartnern",
-    "Regelmäßige fachliche Weiterbildung rund um Finanzthemen",
-    "Raum für eigene Ideen und eigenverantwortliches Arbeiten",
-    "Ein seriöses Umfeld, in dem Vertrauen und Qualität an erster Stelle stehen",
+    "Eine Tätigkeit für die Fröhlich Vermögensberatung GmbH mit Sitz in Bad Kreuznach",
+    "Ein persönlicher Beratungsansatz, bei dem die individuellen Bedürfnisse und finanziellen Ziele der Kunden im Mittelpunkt stehen",
+    "Ein reguliertes Umfeld: vertraglich gebundener Vermittler gemäß § 3 Abs. 2 WpIG und Darlehensvermittler gemäß § 34c GewO",
 ]
 
-_PATH_TEXT = {
-    "einsteiger": "Nach einer fundierten Einarbeitung übernehmen Sie Schritt für Schritt mehr Verantwortung. Mit wachsender Erfahrung eröffnen sich Ihnen Perspektiven in der eigenständigen Beratung oder in spezialisierten Fachbereichen.",
-    "quereinsteiger": "Ihre bisherige Berufserfahrung ist ein Gewinn für uns. Wir begleiten Sie beim Einstieg in die Finanzbranche und unterstützen Sie beim Erwerb der notwendigen Qualifikationen sowie bei Ihrer langfristigen Weiterentwicklung.",
-    "erfahren": "Sie bringen Erfahrung mit und gestalten aktiv mit. Je nach Entwicklung sind weiterführende Aufgaben mit fachlicher oder disziplinarischer Verantwortung möglich.",
+_AREA = {
+    "junior-finanzberater": "Finanzberatung", "quereinsteiger-finanzberatung": "Finanzberatung",
+    "investmentberater": "Finanzberatung", "vertriebsmitarbeiter-finanzdienstleistungen": "Vertrieb",
+    "kundenbetreuer-vermoegensberatung": "Kundenbetreuung", "recruiting-manager": "Personal & Recruiting",
+    "social-media-marketing-manager": "Marketing & Kommunikation", "teamleiter-finanzberatung": "Finanzberatung",
+    "assistenz-der-geschaeftsfuehrung": "Geschäftsführung & Verwaltung", "business-development-manager": "Unternehmensentwicklung",
 }
-
 
 def _job(slug, title, level, summary, tasks, reqs):
     return {
-        "slug": slug, "title": title, "level": level, "summary": summary,
+        "slug": slug, "title": title, "level": level, "area": _AREA[slug], "summary": summary,
         "tasks": tasks, "requirements": reqs, "offer": list(_OFFER),
-        "career_path": _PATH_TEXT[level],
+        "career_path": "",
         "location": "", "employment_type": "", "deadline": None,
     }
 
 
-CONTENT_FIELDS = ("title", "level", "summary", "tasks", "requirements", "offer", "career_path")
+CONTENT_FIELDS = ("title", "level", "area", "summary", "tasks", "requirements", "offer", "career_path")
 
 SEED_JOBS = [
     _job("junior-finanzberater", "Junior Finanzberater (m/w/d)", "einsteiger",

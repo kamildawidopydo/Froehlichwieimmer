@@ -7,9 +7,9 @@ import JobsEmptyState from '@/components/careers/JobsEmptyState';
 import { LEVEL_LABEL } from '@/lib/careersContent';
 import useJobs from './useJobs';
 
-const EMPTY = { q: '', location: '', employment_type: '', level: '', sort: 'newest' };
+const EMPTY = { q: '', location: '', employment_type: '', level: '', area: '', sort: 'newest' };
 
-const Group = ({ title, options, value, onPick, testid }) => (
+const Group = ({ title, options, value, onPick, testid }) => options.length === 0 ? null : (
   <fieldset className="border-b border-black/5 py-5 last:border-0" data-testid={testid}>
     <legend className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-[#686A64]">{title}</legend>
     <div className="space-y-1">
@@ -38,14 +38,15 @@ export default function CareerJobs() {
     search(f);
   };
   const pick = (k) => (v) => apply({ ...filters, [k]: v });
-  const activeCount = ['location', 'employment_type', 'level'].filter((k) => filters[k]).length;
+  const activeCount = ['location', 'employment_type', 'level', 'area'].filter((k) => filters[k]).length;
   const noJobs = !loading && data.items.length === 0 && activeCount === 0 && !filters.q;
 
   const filterPanel = (
     <>
-      <Group title="Karrierelevel" options={Object.entries(LEVEL_LABEL)} value={filters.level} onPick={pick('level')} testid="filter-level" />
+      <Group title="Arbeitsort" options={data.locations.map((l) => [l, l])} value={filters.location} onPick={pick('location')} testid="filter-location" />
+      <Group title="Tätigkeitsbereich" options={data.areas.map((a) => [a, a])} value={filters.area} onPick={pick('area')} testid="filter-area" />
       <Group title="Beschäftigungsart" options={data.employment_types.map((t) => [t, t])} value={filters.employment_type} onPick={pick('employment_type')} testid="filter-type" />
-      <Group title="Standort" options={data.locations.map((l) => [l, l])} value={filters.location} onPick={pick('location')} testid="filter-location" />
+      <Group title="Karrierelevel" options={Object.entries(LEVEL_LABEL)} value={filters.level} onPick={pick('level')} testid="filter-level" />
     </>
   );
 

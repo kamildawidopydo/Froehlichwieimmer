@@ -22,6 +22,8 @@ router = APIRouter(prefix="/api/careers", tags=["careers"])
 
 STAFF_ROLES = {"admin", "recruiting"}
 LEVELS = {"einsteiger", "quereinsteiger", "erfahren"}
+AREAS = ("Finanzberatung", "Vertrieb", "Kundenbetreuung", "Personal & Recruiting", "Marketing & Kommunikation",
+         "Geschäftsführung & Verwaltung", "Unternehmensentwicklung")
 JOB_STATUSES = {"draft", "published", "inactive"}
 APP_STATUSES = {"neu": "Neu eingegangen", "in_pruefung": "In Prüfung", "interview": "Vorstellungsgespräch",
                 "zusage": "Zusage", "absage": "Absage"}
@@ -72,7 +74,7 @@ async def _settings() -> dict:
 
 def _job_out(d: dict, staff: bool = False) -> dict:
     out = {
-        "id": str(d["_id"]), "slug": d["slug"], "title": d["title"], "level": d.get("level"),
+        "id": str(d["_id"]), "slug": d["slug"], "title": d["title"], "level": d.get("level"), "area": d.get("area") or "",
         "location": d.get("location") or "", "employment_type": d.get("employment_type") or "",
         "summary": d.get("summary") or "", "tasks": d.get("tasks") or [],
         "requirements": d.get("requirements") or [], "offer": d.get("offer") or [],
@@ -104,11 +106,11 @@ async def public_status(request: Request):
 
 @router.get("/jobs")
 async def public_jobs(request: Request, q: str = "", location: str = "", employment_type: str = "",
-                      level: str = "", sort: Literal["newest", "title"] = "newest", preview: bool = False):
+                      level: str = "", area: str = "", sort: Literal["newest", "title"] = "newest", preview: bool = False):
     s = await _settings()
     staff = await _optional_staff(request)
     if not s["site_public"] and not staff:
-        return {"items": [], "locations": [], "employment_types": []}
+        return {"items": [], "locations": [], "employment_types": [], "areas": []}
     filt: dict = {"status": "published"}
     if preview and staff:
         filt = {"status": {"$in": ["published", "draft"]}}
@@ -122,11 +124,14 @@ async def public_jobs(request: Request, q: str = "", location: str = "", employm
         filt["employment_type"] = employment_type[:80]
     if level in LEVELS:
         filt["level"] = level
+    if area in AREAS:
+        filt["area"] = area
     order = [("title", 1)] if sort == "title" else [("published_at", -1), ("created_at", -1)]
     items = [_job_out(d) async for d in db.career_jobs.find(filt).sort(order).limit(200)]
     locs = sorted({x for x in await db.career_jobs.distinct("location", base) if x})
     types = sorted({x for x in await db.career_jobs.distinct("employment_type", base) if x})
-    return {"items": items, "locations": locs, "employment_types": types}
+    areas = sorted({x for x in await db.career_jobs.distinct("area", base) if x})
+    return {"items": items, "locations": locs, "employment_types": types, "areas": areas}
 
 
 @router.get("/jobs/{slug}")
@@ -257,6 +262,7 @@ async def submit_application(
 class JobIn(BaseModel):
     title: str = Field(..., min_length=3, max_length=160)
     level: Literal["einsteiger", "quereinsteiger", "erfahren"]
+    area: Literal[AREAS + ("",)] = ""
     location: str = Field(default="", max_length=80)
     employment_type: str = Field(default="", max_length=80)
     summary: str = Field(default="", max_length=600)

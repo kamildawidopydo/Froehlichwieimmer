@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { careersApi, errMsg } from '@/lib/careersApi';
-import { EMPLOYMENT_TYPES, LEVEL_LABEL } from '@/lib/careersContent';
+import { AREAS, EMPLOYMENT_TYPES, LEVEL_LABEL } from '@/lib/careersContent';
 
 const inp = 'w-full rounded-lg border border-black/10 px-3 py-2.5 text-sm outline-none focus:border-[#36A852]';
-const EMPTY = { title: '', level: 'einsteiger', location: '', employment_type: '', summary: '', tasks: '', requirements: '', offer: '', career_path: '', deadline: '' };
+const EMPTY = { title: '', level: 'einsteiger', area: '', location: '', employment_type: '', summary: '', tasks: '', requirements: '', offer: '', career_path: '', deadline: '' };
 const toText = (j) => ({ ...EMPTY, ...j, tasks: (j.tasks || []).join('\n'), requirements: (j.requirements || []).join('\n'), offer: (j.offer || []).join('\n'), deadline: j.deadline || '' });
 const lines = (t) => t.split('\n').map((x) => x.trim()).filter(Boolean);
 
@@ -22,7 +22,7 @@ export default function JobEditorDialog({ job, open, onClose, onSaved }) {
   const save = async (e) => {
     e.preventDefault();
     setBusy(true);
-    const body = { title: f.title, level: f.level, location: f.location, employment_type: f.employment_type, summary: f.summary,
+    const body = { title: f.title, level: f.level, area: f.area, location: f.location, employment_type: f.employment_type, summary: f.summary,
       tasks: lines(f.tasks), requirements: lines(f.requirements), offer: lines(f.offer), career_path: f.career_path, deadline: f.deadline || null };
     try {
       const r = job ? await careersApi.put(`/admin/jobs/${job.id}`, body) : await careersApi.post('/admin/jobs', body);
@@ -48,12 +48,15 @@ export default function JobEditorDialog({ job, open, onClose, onSaved }) {
               <select className={inp} value={f.employment_type} onChange={set('employment_type')} data-testid="job-editor-type"><option value="">Bitte wählen</option>{EMPLOYMENT_TYPES.map((t) => <option key={t}>{t}</option>)}</select>
             </L>
           </div>
-          <L label="Bewerbungsfrist"><input type="date" className={inp} value={f.deadline} onChange={set('deadline')} data-testid="job-editor-deadline" /></L>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <L label="Tätigkeitsbereich"><select className={inp} value={f.area} onChange={set('area')} data-testid="job-editor-area"><option value="">Bitte wählen</option>{AREAS.map((a) => <option key={a}>{a}</option>)}</select></L>
+            <L label="Bewerbungsfrist"><input type="date" className={inp} value={f.deadline} onChange={set('deadline')} data-testid="job-editor-deadline" /></L>
+          </div>
           <L label="Kurzbeschreibung"><textarea rows={2} className={inp} value={f.summary} onChange={set('summary')} data-testid="job-editor-summary" /></L>
-          <L label="Deine Aufgaben" hint="Ein Punkt pro Zeile"><textarea rows={4} className={inp} value={f.tasks} onChange={set('tasks')} data-testid="job-editor-tasks" /></L>
-          <L label="Das bringst du mit" hint="Ein Punkt pro Zeile"><textarea rows={4} className={inp} value={f.requirements} onChange={set('requirements')} data-testid="job-editor-requirements" /></L>
-          <L label="Das erwartet dich bei uns" hint="Ein Punkt pro Zeile · bitte nur bestätigte Angaben"><textarea rows={4} className={inp} value={f.offer} onChange={set('offer')} data-testid="job-editor-offer" /></L>
-          <L label="Dein Karriereweg"><textarea rows={3} className={inp} value={f.career_path} onChange={set('career_path')} data-testid="job-editor-career-path" /></L>
+          <L label="Ihr Aufgabenbereich" hint="Ein Punkt pro Zeile"><textarea rows={4} className={inp} value={f.tasks} onChange={set('tasks')} data-testid="job-editor-tasks" /></L>
+          <L label="Das bringen Sie mit" hint="Ein Punkt pro Zeile"><textarea rows={4} className={inp} value={f.requirements} onChange={set('requirements')} data-testid="job-editor-requirements" /></L>
+          <L label="Das erwartet Sie bei uns" hint="Ein Punkt pro Zeile · nur bestätigte Angaben (keine erfundenen Gehälter, Leistungen oder Homeoffice-Regeln)"><textarea rows={4} className={inp} value={f.offer} onChange={set('offer')} data-testid="job-editor-offer" /></L>
+          <L label="Ihr Karriereweg (optional)" hint="Wird nur angezeigt, wenn ausgefüllt"><textarea rows={3} className={inp} value={f.career_path} onChange={set('career_path')} data-testid="job-editor-career-path" /></L>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="rounded-full border border-black/10 px-5 py-2.5 text-sm">Abbrechen</button>
             <button type="submit" disabled={busy} className="rounded-full bg-[#36A852] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50" data-testid="job-editor-save">Speichern</button>
