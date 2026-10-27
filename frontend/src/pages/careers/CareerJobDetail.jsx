@@ -69,6 +69,10 @@ export default function CareerJobDetail() {
     [Globe, 'Internetauftritt', 'www.essenceinvest.com'],
   ];
   const applyLink = `/karriere/bewerben?stelle=${job.slug}`;
+  const enabled = status.applications_enabled;
+  const ApplyBtn = ({ className, testid }) => (enabled
+    ? <Link to={applyLink} className={`${className} bg-[#36A852] text-white`} data-testid={testid}>Jetzt bewerben</Link>
+    : <span aria-disabled="true" className={`${className} cursor-not-allowed bg-[#36A852]/40 text-white/90`} data-testid={testid}>Bewerbung in Kürze möglich</span>);
   const heroImg = CAREER_PATHS.find((p) => p.level === job.level)?.image || '/assets/careers/hero.jpg';
   const share = async () => {
     const url = window.location.href;
@@ -89,12 +93,12 @@ export default function CareerJobDetail() {
           <h1 className="mt-6 font-display text-4xl leading-tight sm:text-5xl" data-testid="job-detail-title">{job.title}</h1>
           <p className="mt-4 max-w-3xl text-lg text-white/75">{job.summary}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link to={applyLink} className="inline-block rounded-full bg-[#36A852] px-7 py-3.5 font-semibold transition-transform hover:-translate-y-0.5" data-testid="job-detail-apply-top">Jetzt bewerben</Link>
+            <ApplyBtn className="inline-block rounded-full px-7 py-3.5 font-semibold" testid="job-detail-apply-top" />
             <button type="button" onClick={share} className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3.5 font-semibold hover:bg-white/10" data-testid="job-detail-share"><Share2 size={16} /> Teilen</button>
           </div>
           <div className="mt-10 grid grid-cols-2 gap-4 border-t border-white/15 pt-6 sm:grid-cols-3 lg:grid-cols-5" data-testid="job-detail-facts">
             {facts.map(([Icon, k, v]) => (
-              <div key={k}><p className="flex items-center gap-1.5 text-xs text-white/60"><Icon size={13} />{k}</p><p className="mt-1 font-medium">{v}</p></div>
+              <div key={k}><p className="flex items-center gap-1.5 text-xs text-white/60"><Icon size={13} />{k}</p><p className="mt-1 font-medium [&_[data-testid=job-missing-field]]:text-amber-300">{v}</p></div>
             ))}
           </div>
         </div>
@@ -122,12 +126,12 @@ export default function CareerJobDetail() {
                 <div key={k} className="flex gap-3"><Icon size={18} className="mt-0.5 text-[#36A852]" /><div><dt className="text-xs text-[#686A64]">{k}</dt><dd className="font-medium">{v}</dd></div></div>
               ))}
             </dl>
-            <Link to={applyLink} className="mt-6 block rounded-full bg-[#36A852] py-3.5 text-center font-semibold text-white" data-testid="job-detail-apply-side">Jetzt bewerben</Link>
+            <ApplyBtn className="mt-6 block rounded-full py-3.5 text-center font-semibold" testid="job-detail-apply-side" />
           </div>
         </aside>
       </div>
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-black/5 bg-white/95 p-3 backdrop-blur lg:hidden">
-        <Link to={applyLink} className="block rounded-full bg-[#36A852] py-3.5 text-center font-semibold text-white" data-testid="job-detail-apply-mobile">Jetzt bewerben</Link>
+        <ApplyBtn className="block rounded-full py-3.5 text-center font-semibold" testid="job-detail-apply-mobile" />
       </div>
     </>
   );

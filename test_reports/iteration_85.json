@@ -1,0 +1,35 @@
+{
+  "summary": "Tested the 10 career job drafts on PREVIEW, backend and frontend, read-only. No publishing, no saving, no settings changes and no applications. Backend: 15/15 pytest checks passed. Anonymous: /jobs returns items=[] and areas=[], also with preview=1; the detail returns 404, also with preview=1; POST /applications returns 403 with the exact German message; /admin/jobs requires auth. Admin: with preview=1, /jobs returns the 10 drafts. Each has an area, an empty location and an empty employment_type, so locations=[] and employment_types=[]. area=Finanzberatung returns 4, an invalid area is ignored (10), and without preview the list is empty. The junior-finanzberater detail has 3 offer items, no salary or homeoffice terms and an empty career_path. None of the 10 jobs contain 'Essence Invest' or du/dein/dich/dir. /admin/jobs returns 10 drafts without _id. applications_enabled=false. Frontend: anonymous /karriere/stellen shows jobs-perspective-empty with 0 cards, and the detail shows not-found. Admin /karriere/stellen shows 10 rows. Each row has an area badge, a level badge, 'Entwurf', amber 'Arbeitsort fehlt' and 'Beschäftigungsart fehlt', and a 'Stelle ansehen' button; no 'bewerben' on cards. The sidebar shows only the Tätigkeitsbereich group (7 areas) and Karrierelevel; Arbeitsort and Beschäftigungsart are hidden. Filter counts: Finanzberatung 4, Vertrieb 1, Alle 10; the URL updates to ?area=. Clicking 'Stelle ansehen' opens the detail. The detail shows all 5 sections with the correct headings. The offer section has 3 items. The work section shows Arbeitgeber 'Fröhlich Vermögensberatung GmbH', Internetauftritt 'www.essenceinvest.com' and 2 job-missing-field markers. The process section shows job-detail-apply-disabled. There is no career-path block, 0 'Essence Invest' and no informal address. /recruiting/stellen shows 10 rows, all 'Entwurf'. The editor opens with job-editor-area = 'Finanzberatung' (7 area options) and was closed with Escape; no POST/PUT/PATCH/DELETE requests to careers were sent. Mobile 390px: no horizontal overflow on the list or the detail; 'Stelle ansehen' is full width (308px of 308px inner card width); the filter sheet works (Finanzberatung -> '4 Stellen anzeigen').",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Job detail CTAs while applications are disabled", "issue": "The detail page still shows 3 active 'Jetzt bewerben' CTAs: hero, sidebar and the sticky mobile bar. They link to /karriere/bewerben?stelle=..., even though status.applications_enabled=false. The bewerben page shows a 'nicht freigeschaltet' notice, but the form and submit button are still rendered, and the backend correctly returns 403. Users can still try to apply. Consider hiding or disabling these CTAs when applications_enabled is false.", "affected_selectors": ["[data-testid='job-detail-apply-top']", "[data-testid='job-detail-apply-side']", "[data-testid='job-detail-apply-mobile']"]}
+    ],
+    "design_issues": [
+      {"screen": "Job detail hero facts (dark #1E222C background)", "issues": ["The text-amber-700 'Angabe fehlt – bitte ergänzen' marker has low contrast on the dark hero. Use amber-300/amber-200 in the hero."]},
+      {"screen": "Recruiting JobEditorDialog", "issues": ["The 'Standort' label (and '[Standort fehlt]' in the admin list) does not match the public term 'Arbeitsort'.", "Bewerbungsfrist uses the native <input type=date>, which shows mm/dd/yyyy in a US locale, instead of a shadcn Calendar/German date format."]},
+      {"screen": "Header (desktop + mobile, logged in as admin)", "issues": ["Two bell/notification icons are rendered next to each other."]},
+      {"screen": "/karriere/stellen mobile toolbar", "issues": ["The 'Filter (1)' pill wraps onto 2 lines at 390px."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_careers_drafts_iter85.py", "/app/test_reports/pytest/pytest_iter85.xml"],
+  "action_items": [
+    "Optional: hide or disable the 'Jetzt bewerben' CTAs on the job detail while applications_enabled=false",
+    "Improve the contrast of the missing-field markers in the dark hero",
+    "Rename the 'Standort' label to 'Arbeitsort' in the editor and admin list for consistency",
+    "Remove the duplicate bell icon in the header"
+  ],
+  "critical_code_review_comments": [
+    "CareerJobDetail renders apply links unconditionally; only ProcessBlock reads status.applications_enabled.",
+    "The Karrierelevel filter group is always shown because its options are static (LEVEL_LABEL), not taken from the data. This is acceptable because the level data exists, but it is not data-driven like the other groups.",
+    "The seed upsert only overwrites drafts with is_seed_draft and a mismatched seed_version. This is good: manual edits survive until the next SEED_VERSION bump, but a version bump would overwrite edits to draft content fields."
+  ],
+  "updated_files": ["/app/backend/tests/test_careers_drafts_iter85.py"],
+  "success_rate": {"backend": "100%", "frontend": "100% of requested checks (minor UX/design notes only)"},
+  "test_credentials": "admin@kapitalmitte.com / admin123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None. Read-only testing; no DB mutations.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login: go to /login; the welcome gate (visitor-role select index 1 + visitor-accept-btn) appears about 2-3s after load, so wait before filling the login fields. Jobs page cards are article[data-testid^='job-card-']; note that job-card-view-* and job-card-more-* share the prefix. Admin editor page: /recruiting/stellen, admin-job-edit-<slug>. Do not click admin-job-publish-* or job-editor-save."
+}

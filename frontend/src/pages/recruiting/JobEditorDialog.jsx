@@ -43,7 +43,7 @@ export default function JobEditorDialog({ job, open, onClose, onSaved }) {
           <L label="Stellenbezeichnung *"><input className={inp} required minLength={3} value={f.title} onChange={set('title')} data-testid="job-editor-title" /></L>
           <div className="grid gap-4 sm:grid-cols-3">
             <L label="Karrierelevel"><select className={inp} value={f.level} onChange={set('level')} data-testid="job-editor-level">{Object.entries(LEVEL_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></L>
-            <L label="Standort" hint="Pflicht zum Veröffentlichen"><input className={inp} value={f.location} onChange={set('location')} data-testid="job-editor-location" /></L>
+            <L label="Arbeitsort" hint="Pflicht zum Veröffentlichen"><input className={inp} value={f.location} onChange={set('location')} data-testid="job-editor-location" /></L>
             <L label="Beschäftigungsart" hint="Pflicht zum Veröffentlichen">
               <select className={inp} value={f.employment_type} onChange={set('employment_type')} data-testid="job-editor-type"><option value="">Bitte wählen</option>{EMPLOYMENT_TYPES.map((t) => <option key={t}>{t}</option>)}</select>
             </L>

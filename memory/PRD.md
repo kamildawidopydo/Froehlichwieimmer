@@ -224,6 +224,12 @@ Siehe `/app/memory/test_credentials.md`
 - Neue Abschnitte: Hero/Intro nach Kundentext, EmployerProfile „Ihr möglicher zukünftiger Arbeitgeber“, ValuesSection (4 Karten, ersetzt Kultur-Karten mit unbestätigten Leistungen), WebsiteSection, Karrierewege-Texte neutral (keine Zusagen).
 - Test iteration_84: 100 %. Nicht veröffentlicht.
 
+## 22. Changelog 2026-10-27 (10 Stellen für Veröffentlichung vorbereitet – nur Vorschau)
+- Neues Feld `area` (Tätigkeitsbereich, AREAS in careers.py/careersContent.js) + Filter (API `area`, Sidebar, Suchleiste). Filtergruppen ohne Daten werden ausgeblendet.
+- SEED_VERSION=6: Tätigkeitsbereich je Stelle, „Das erwartet Sie bei uns“ nur bestätigte Fakten (Sitz, Beratungsansatz, Regulierung), Karriereweg-Texte (unbestätigte Zusagen) entfernt. Arbeitsort/Beschäftigungsart fehlen bei allen 10 → markiert, Veröffentlichung serverseitig blockiert bis ergänzt.
+- Stellenkarten: Titel, Arbeitsort, Beschäftigungsart, Bereich, Button „Stelle ansehen“. Detailseite: Aufgabenbereich / Das bringen Sie mit / Das erwartet Sie / Arbeitsort und Beschäftigungsmodell / Bewerbungsprozess; Bewerben-Buttons bei deaktivierten Bewerbungen „Bewerbung in Kürze möglich“ (inaktiv). Bewerbungs-API liefert 403 solange deaktiviert.
+- Test iteration_85: Backend 15/15, Frontend 100 %. Alle 10 Entwurf, Bewerbungen aus, nicht deployt.
+
 
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)
 - Startseite: `HomeCareerCta` (oben im BankingHero, über den News) mit „Jetzt bewerben“ → /karriere/stellen. Hauptmenü (Desktop + Mobil): „Karriere“ → /karriere.

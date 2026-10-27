@@ -52,7 +52,7 @@ export default function RecruitingJobs() {
                   {j.deadline && <span className="text-xs text-[#686A64]">· Frist {formatDate(j.deadline)}</span>}
                 </div>
                 <p className="mt-1.5 font-semibold">{j.title}</p>
-                <p className="text-xs text-[#686A64]">{j.location || '[Standort fehlt]'} · {j.employment_type || '[Beschäftigungsart fehlt]'} · {j.applications} Bewerbungen</p>
+                <p className="text-xs text-[#686A64]">{j.area || '[Tätigkeitsbereich fehlt]'} · {j.location || '[Arbeitsort fehlt]'} · {j.employment_type || '[Beschäftigungsart fehlt]'} · {j.applications} Bewerbungen</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link to={`/karriere/stellen/${j.slug}`} target="_blank" className="inline-flex items-center gap-1 rounded-full border border-black/10 px-3 py-1.5 text-xs font-medium hover:bg-black/5" data-testid={`admin-job-preview-${j.slug}`}><Eye size={13} /> Vorschau</Link>

@@ -85,7 +85,7 @@ export default function CareerJobs() {
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <p className="text-[15px] font-medium" data-testid="job-results-count">{loading ? 'Suche läuft…' : `${data.items.length} ${data.items.length === 1 ? 'Stelle' : 'Stellen'} gefunden`}</p>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setShowFilters(true)} className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-4 py-2 text-sm lg:hidden" data-testid="job-filter-open">
+              <button type="button" onClick={() => setShowFilters(true)} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-black/10 bg-white px-4 py-2 text-sm lg:hidden" data-testid="job-filter-open">
                 <SlidersHorizontal size={15} /> Filter{activeCount > 0 && ` (${activeCount})`}
               </button>
               {(activeCount > 0 || filters.q) && <button type="button" onClick={() => apply(EMPTY)} className="text-sm font-medium text-[#36A852]" data-testid="job-filter-reset">Zurücksetzen</button>}
