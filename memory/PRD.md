@@ -219,6 +219,11 @@ Siehe `/app/memory/test_credentials.md`
 - NICHT veröffentlicht – Produktion wartet auf Freigabe. Test: iteration_83 (100%).
 - Abschluss-Bereich Karriere-Startseite abhängig von `applications_enabled`: aus → „Entdecken Sie Ihre beruflichen Perspektiven“ + „Mehr über uns erfahren“ (/karriere/ueber-uns); an → „Nicht die passende Stelle dabei?“ + „Initiativ bewerben“.
 
+## 21. Changelog 2026-10-27 (Unternehmensbezeichnung – nur Vorschau)
+- Karrierebereich: Arbeitgeber = Fröhlich Vermögensberatung GmbH, www.essenceinvest.com = Internetauftritt; „Essence Invest“ als Name aus allen Karriereseiten, Home-Karrierebalken, Bewerber-Mails (careers.py) und 3 Stellenentwürfen entfernt (SEED_VERSION=5).
+- Neue Abschnitte: Hero/Intro nach Kundentext, EmployerProfile „Ihr möglicher zukünftiger Arbeitgeber“, ValuesSection (4 Karten, ersetzt Kultur-Karten mit unbestätigten Leistungen), WebsiteSection, Karrierewege-Texte neutral (keine Zusagen).
+- Test iteration_84: 100 %. Nicht veröffentlicht.
+
 
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)
 - Startseite: `HomeCareerCta` (oben im BankingHero, über den News) mit „Jetzt bewerben“ → /karriere/stellen. Hauptmenü (Desktop + Mobil): „Karriere“ → /karriere.

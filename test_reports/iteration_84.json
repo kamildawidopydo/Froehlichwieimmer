@@ -1,0 +1,20 @@
+{
+  "summary": "Frontend-only anonymous test of the revised career area on PREVIEW. Every requested check passed. /karriere: the hero H1 and subtitle are exact. The intro has 4 paragraphs and mentions www.essenceinvest.com. The employer heading is correct and opens with 'Finanzielle Entscheidungen sind Vertrauenssache.' value-card-0..3 have the correct titles, and the paths heading is 'Finden Sie Ihren beruflichen Weg'. All 3 career-path-more links work (clicked through to /karriere/quereinsteiger). The website section shows its title, and career-website-btn has href '/'. The jobs empty state shows the new title. career-cta-perspectives and career-cta-about (-> /karriere/ueber-uns) are shown; career-cta-initiative and the old texts are absent. /karriere/stellen: shows the empty state and no job-results-count. The company button goes to /karriere/ueber-uns. The paths button goes to /karriere#karrierewege and scrolls the section into view (top at about 96px). /karriere/ueber-uns: H1 'Die Fröhlich Vermögensberatung GmbH'. No employer-profile-more button, 4 value cards, website section present, no '[Platzhalter'. 'Essence Invest' appears 0 times on all 8 career pages. No informal du/dein/dich/dir on those pages. The home-career-cta text is correct. API: status site_public=true, applications_enabled=false; jobs items=[]. Mobile 390px: no horizontal overflow on 9 pages; the hamburger (mobile-menu-toggle) opens the menu drawer.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home career banner (home-career-cta)", "issues": ["The button says 'Jetzt bewerben' and links to /karriere/stellen. Applications are disabled and there are no public jobs, so this label is misleading. Consider 'Karriere entdecken' while applications_enabled=false. Outside this request's scope; optional."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": ["Optional: change the home-career-apply-btn label while applications are disabled"],
+  "critical_code_review_comments": ["The code matches the spec. The ClosingCta and JobsEmptyState logic is clean. EmployerProfile showMore=false is handled correctly on CareerAbout."],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Anonymous-only testing on the preview URL. The welcome gate (visitor-role select + visitor-accept-btn) and the Hamburg dialog close are handled. No DB changes and no login."
+}
