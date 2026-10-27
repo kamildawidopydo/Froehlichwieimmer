@@ -1,5 +1,6 @@
 import React from 'react';
 import HomeHeroNewsPreview from '@/components/home/HomeHeroNewsPreview';
+import HomeCareerCta from '@/components/home/HomeCareerCta';
 
 const BankingHero = () => (
   <section
@@ -7,6 +8,7 @@ const BankingHero = () => (
     className="relative isolate overflow-x-clip border-b border-bank-border bg-bank-bg"
   >
     <div className="mx-auto w-full min-w-0 max-w-[1440px] px-5 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12 xl:px-16">
+      <HomeCareerCta />
       <HomeHeroNewsPreview />
     </div>
   </section>

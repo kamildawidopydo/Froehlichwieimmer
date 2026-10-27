@@ -188,6 +188,12 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)
+- Startseite: `HomeCareerCta` (oben im BankingHero, über den News) mit „Jetzt bewerben“ → /karriere/stellen. Hauptmenü (Desktop + Mobil): „Karriere“ → /karriere.
+- Beides nur sichtbar, wenn Karriereseite öffentlich ist ODER Admin/Recruiting angemeldet ist (`lib/useCareerVisible.js`, /api/careers/status) — Besucher sehen bis zur Freigabe nichts.
+- Stellen unverändert (10 Entwürfe); jede Stelle hat bereits „Jetzt bewerben“ → /karriere/bewerben?stelle=slug.
+
+
 ## 18. Changelog 2026-10-27 (Stellen 4–7 nach Kundenvorgabe)
 - SEED_VERSION=3: Aufgaben/Anforderungen für Vertriebsmitarbeiter, Kundenbetreuer, Recruiting Manager, Social Media & Marketing Manager wortgetreu übernommen; nur unbearbeitete Seed-Entwürfe werden aktualisiert; weiterhin 10 Stellen, alle Entwurf.
 

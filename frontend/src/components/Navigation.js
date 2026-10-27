@@ -11,6 +11,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import BrandLogo from '@/components/BrandLogo';
 import siteCopy from '@/data/siteCopy';
 import { CustomerServiceTopBar } from '@/components/NavCustomerServiceContact';
+import useCareerVisible from '@/lib/useCareerVisible';
 
 const { nav: navCopy } = siteCopy;
 const navGroups = navCopy.groups;
@@ -25,6 +26,7 @@ const Navigation = () => {
   const [scrolled, setScrolled] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const { user, logout } = useAuth();
+  const careerVisible = useCareerVisible();
   const navigate = useNavigate();
   const location = useLocation();
   const headerRef = useRef(null);
@@ -247,6 +249,18 @@ const Navigation = () => {
               >
                 {newsLink.name}
               </Link>
+              {careerVisible && (
+                <Link
+                  to="/karriere"
+                  data-testid="nav-karriere"
+                  className={cn(
+                    'shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200',
+                    location.pathname.startsWith('/karriere') ? linkActive : linkMuted,
+                  )}
+                >
+                  Karriere
+                </Link>
+              )}
             </div>
           </div>
 
@@ -462,6 +476,14 @@ const Navigation = () => {
                         <span className="text-[12px] text-bank-text-muted">{newsLink.desc}</span>
                       </Link>
                     </li>
+                    {careerVisible && (
+                      <li>
+                        <Link to="/karriere" data-testid="nav-karriere-mobile" className="flex flex-col gap-0.5 py-3.5 text-bank-text transition-colors hover:text-bank-primary">
+                          <span className="text-[15px] font-medium leading-tight">Karriere</span>
+                          <span className="text-[12px] text-bank-text-muted">Stellenangebote bei Essence Invest</span>
+                        </Link>
+                      </li>
+                    )}
                   </ul>
                 </div>
 
