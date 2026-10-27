@@ -188,6 +188,11 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 24. Changelog 2026-10-27 (Arbeitgebervorstellung + Mobil-Check)
+- Neu `components/careers/EmployerProfile.jsx` („Dein Arbeitgeber: Fröhlich Vermögensberatung GmbH“) auf Karriere-Startseite (kompakt) und Über uns (vollständig). Nur bestätigte Angaben aus dem Impressum (Name, Sitz, GF Manfred Franz Fröhlich, AG Bad Kreuznach HRB 23436, § 3 Abs. 2 WpIG, § 34c GewO). Hero-Zeile nennt beide Namen; Über-uns-Überschrift auf Fröhlich umgestellt.
+- Mobil geprüft: Begrüßungsfenster + Hamburg-Popup geschlossen → grüner „Jetzt bewerben“ (308×48 px) → /karriere/stellen.
+
+
 ## 23. Changelog 2026-10-27 (Karriere in Hauptwebsite integriert – Vorschau, nicht veröffentlicht)
 - /karriere/* jetzt innerhalb des Haupt-`Layout` (gleiche Navigation, Kopfzeile, Footer). Eigene Karriere-Kopfleiste/Footer entfernt; stattdessen Brotkrumen (Startseite › Karriere › …) und Link-Leiste „Karriere bei Essence Invest“ am Seitenende (alle Unterseiten erreichbar).
 - Hauptmenü: neuer Punkt „Startseite“ (Desktop + Mobil) neben „News & Märkte“ und „Karriere“.

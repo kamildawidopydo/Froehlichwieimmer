@@ -7,6 +7,7 @@ import JobSearchBar from '@/components/careers/JobSearchBar';
 import JobCard from '@/components/careers/JobCard';
 import { CultureSection, PathsSection, SectionHead } from '@/components/careers/CareerSections';
 import useJobs from './useJobs';
+import EmployerProfile from '@/components/careers/EmployerProfile';
 import { CAREER_PATHS } from '@/lib/careersContent';
 
 const Hero = () => (
@@ -14,7 +15,7 @@ const Hero = () => (
     <img src="/assets/careers/hero.jpg" alt="" className="absolute inset-0 -z-10 h-full w-full scale-105 object-cover opacity-60" fetchpriority="high" />
     <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#1E222C] via-[#1E222C]/70 to-[#1E222C]/0" />
     <div className="mx-auto max-w-7xl px-5 pb-40 pt-20 lg:px-8 lg:pb-48 lg:pt-28">
-      <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-xs font-semibold uppercase tracking-[0.22em] text-[#7BD58F]">Karriere bei Essence Invest</motion.p>
+      <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-xs font-semibold uppercase tracking-[0.22em] text-[#7BD58F]">Karriere bei Essence Invest · Fröhlich Vermögensberatung GmbH</motion.p>
       <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
         className="mt-5 max-w-3xl font-display text-4xl leading-[1.08] text-white sm:text-5xl lg:text-6xl" data-testid="career-hero-title">
         Deine Zukunft beginnt bei Essence Invest.
@@ -67,6 +68,7 @@ export default function CareerHome() {
           </div>
         )}
       </section>
+      <EmployerProfile compact />
       <CultureSection isStaff={status.is_staff} />
       <PathsSection />
       <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
