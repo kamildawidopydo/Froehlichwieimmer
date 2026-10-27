@@ -240,6 +240,16 @@ const Navigation = () => {
                 );
               })}
               <Link
+                to="/"
+                data-testid="nav-home"
+                className={cn(
+                  'shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-[13px] font-medium transition-colors duration-200',
+                  location.pathname === '/' ? linkActive : linkMuted,
+                )}
+              >
+                Startseite
+              </Link>
+              <Link
                 to={newsLink.path}
                 data-testid="nav-news"
                 className={cn(
@@ -461,6 +471,12 @@ const Navigation = () => {
                     {newsLink.name}
                   </p>
                   <ul className="divide-y divide-bank-border border-t border-bank-border">
+                    <li>
+                      <Link to="/" data-testid="nav-home-mobile" className="flex flex-col gap-0.5 py-3.5 text-bank-text transition-colors hover:text-bank-primary">
+                        <span className="text-[15px] font-medium leading-tight">Startseite</span>
+                        <span className="text-[12px] text-bank-text-muted">Zurück zur Hauptseite</span>
+                      </Link>
+                    </li>
                     <li>
                       <Link
                         to={newsLink.path}

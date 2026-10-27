@@ -188,6 +188,12 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 23. Changelog 2026-10-27 (Karriere in Hauptwebsite integriert – Vorschau, nicht veröffentlicht)
+- /karriere/* jetzt innerhalb des Haupt-`Layout` (gleiche Navigation, Kopfzeile, Footer). Eigene Karriere-Kopfleiste/Footer entfernt; stattdessen Brotkrumen (Startseite › Karriere › …) und Link-Leiste „Karriere bei Essence Invest“ am Seitenende (alle Unterseiten erreichbar).
+- Hauptmenü: neuer Punkt „Startseite“ (Desktop + Mobil) neben „News & Märkte“ und „Karriere“.
+- Navigation getestet (Desktop + Mobil, Vorschau): Startseite → Jetzt bewerben → Stellen → Karriere → Startseite. Alle Links relativ (keine Preview-Domain). Wartet auf Freigabe zum Veröffentlichen.
+
+
 ## 22. Changelog 2026-10-27 (Original-Logo auf Karriereseiten)
 - CareerLayout + RecruitingLayout nutzen BrandLogo (/assets/logo/frohlich-logo-clear.png, identisch zur Hauptseite) statt Text-Wortmarke. Live auf essenceinvest.com/karriere geprüft (Desktop + Mobil); Startseite-Karrierebalken öffentlich sichtbar.
 

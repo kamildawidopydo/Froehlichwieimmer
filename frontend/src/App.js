@@ -266,15 +266,6 @@ function App() {
             >
               <Routes>
                 <Route path="/dokumente/vorschau/:docId" element={<DokumentePreview />} />
-                <Route path="/karriere" element={<CareerLayout />}>
-                  <Route index element={<CareerHome />} />
-                  <Route path="stellen" element={<CareerJobs />} />
-                  <Route path="stellen/:slug" element={<CareerJobDetail />} />
-                  <Route path="ueber-uns" element={<CareerAbout />} />
-                  <Route path="bewerben" element={<CareerApply />} />
-                  <Route path="datenschutz" element={<CareerPrivacy />} />
-                  <Route path=":pathSlug" element={<CareerPathPage />} />
-                </Route>
                 <Route path="/recruiting" element={<RecruitingLayout />}>
                   <Route index element={<RecruitingOverview />} />
                   <Route path="stellen" element={<RecruitingJobs />} />
@@ -284,6 +275,15 @@ function App() {
                 </Route>
                 {/* Marketing layout (top nav + footer) */}
                 <Route element={<Layout />}>
+                  <Route path="/karriere" element={<CareerLayout />}>
+                    <Route index element={<CareerHome />} />
+                    <Route path="stellen" element={<CareerJobs />} />
+                    <Route path="stellen/:slug" element={<CareerJobDetail />} />
+                    <Route path="ueber-uns" element={<CareerAbout />} />
+                    <Route path="bewerben" element={<CareerApply />} />
+                    <Route path="datenschutz" element={<CareerPrivacy />} />
+                    <Route path=":pathSlug" element={<CareerPathPage />} />
+                  </Route>
                   {/* Public */}
                   <Route path="/" element={<Home />} />
                   <Route path="/comparison" element={<SavingsComparison />} />
