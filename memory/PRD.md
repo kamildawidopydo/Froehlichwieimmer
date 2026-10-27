@@ -217,6 +217,7 @@ Siehe `/app/memory/test_credentials.md`
 - `JobsEmptyState`: „Ihre Karriere beginnt mit einer Perspektive.“ ersetzt „0 Stellen gefunden“, wenn keine veröffentlichten Stellen und keine Filter; mit Stellen normale Liste.
 - Gesamter Karrierebereich + Home-Karrierebalken auf „Sie“; SEED_VERSION=4 (10 Entwürfe auf Sie, bleiben Entwurf). Platzhalter auf „Über uns“ nur für Staff sichtbar.
 - NICHT veröffentlicht – Produktion wartet auf Freigabe. Test: iteration_83 (100%).
+- Abschluss-Bereich Karriere-Startseite abhängig von `applications_enabled`: aus → „Entdecken Sie Ihre beruflichen Perspektiven“ + „Mehr über uns erfahren“ (/karriere/ueber-uns); an → „Nicht die passende Stelle dabei?“ + „Initiativ bewerben“.
 
 
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)

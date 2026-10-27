@@ -104,11 +104,23 @@ export default function CareerHome() {
       <CultureSection isStaff={status.is_staff} />
       <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
         <div className="flex flex-col items-start justify-between gap-6 rounded-3xl bg-[#36A852] p-10 text-white md:flex-row md:items-center lg:p-14">
-          <div>
-            <h2 className="font-display text-3xl sm:text-4xl">Nicht die passende Stelle dabei?</h2>
-            <p className="mt-3 max-w-xl text-white/85">Wir freuen uns auch über Ihre Initiativbewerbung.</p>
-          </div>
-          <Link to="/karriere/bewerben?initiativ=1" className="rounded-full bg-white px-7 py-3.5 font-semibold text-[#1E222C] transition-transform hover:-translate-y-0.5" data-testid="career-cta-initiative">Initiativ bewerben</Link>
+          {status.applications_enabled ? (
+            <>
+              <div>
+                <h2 className="font-display text-3xl sm:text-4xl">Nicht die passende Stelle dabei?</h2>
+                <p className="mt-3 max-w-xl text-white/85">Wir freuen uns auch über Ihre Initiativbewerbung.</p>
+              </div>
+              <Link to="/karriere/bewerben?initiativ=1" className="rounded-full bg-white px-7 py-3.5 font-semibold text-[#1E222C] transition-transform hover:-translate-y-0.5" data-testid="career-cta-initiative">Initiativ bewerben</Link>
+            </>
+          ) : (
+            <>
+              <div data-testid="career-cta-perspectives">
+                <h2 className="font-display text-3xl sm:text-4xl">Entdecken Sie Ihre beruflichen Perspektiven</h2>
+                <p className="mt-3 max-w-2xl leading-relaxed text-white/85">Wir bereiten derzeit unsere aktuellen Karrieremöglichkeiten vor. Lernen Sie die Fröhlich Vermögensberatung GmbH und Essence Invest kennen und entdecken Sie, welche beruflichen Perspektiven unser Unternehmen bietet.</p>
+              </div>
+              <Link to="/karriere/ueber-uns" className="shrink-0 rounded-full bg-white px-7 py-3.5 font-semibold text-[#1E222C] transition-transform hover:-translate-y-0.5" data-testid="career-cta-about">Mehr über uns erfahren</Link>
+            </>
+          )}
         </div>
       </section>
     </>
