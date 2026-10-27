@@ -8,7 +8,7 @@ export const LEVEL_LABEL = {
 
 export const AREAS = ['Finanzberatung', 'Vertrieb', 'Kundenbetreuung', 'Personal & Recruiting', 'Marketing & Kommunikation', 'Geschäftsführung & Verwaltung', 'Unternehmensentwicklung'];
 
-export const EMPLOYMENT_TYPES = ['Vollzeit', 'Teilzeit', 'Vollzeit oder Teilzeit', 'Freie Mitarbeit', 'Werkstudium', 'Praktikum'];
+export const EMPLOYMENT_TYPES = ['Festanstellung', 'Selbstständige Tätigkeit', 'Festanstellung oder selbstständige Tätigkeit', 'Vollzeit', 'Teilzeit', 'Vollzeit oder Teilzeit', 'Freie Mitarbeit', 'Werkstudium', 'Praktikum'];
 
 export const EXPERIENCE_OPTIONS = ['Keine Berufserfahrung', 'Unter 2 Jahre', '2–5 Jahre', '5–10 Jahre', 'Über 10 Jahre'];
 

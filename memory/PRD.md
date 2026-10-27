@@ -229,7 +229,7 @@ Siehe `/app/memory/test_credentials.md`
 - SEED_VERSION=6: Tätigkeitsbereich je Stelle, „Das erwartet Sie bei uns“ nur bestätigte Fakten (Sitz, Beratungsansatz, Regulierung), Karriereweg-Texte (unbestätigte Zusagen) entfernt. Arbeitsort/Beschäftigungsart fehlen bei allen 10 → markiert, Veröffentlichung serverseitig blockiert bis ergänzt.
 - Stellenkarten: Titel, Arbeitsort, Beschäftigungsart, Bereich, Button „Stelle ansehen“. Detailseite: Aufgabenbereich / Das bringen Sie mit / Das erwartet Sie / Arbeitsort und Beschäftigungsmodell / Bewerbungsprozess; Bewerben-Buttons bei deaktivierten Bewerbungen „Bewerbung in Kürze möglich“ (inaktiv). Bewerbungs-API liefert 403 solange deaktiviert.
 - Test iteration_85: Backend 15/15, Frontend 100 %. Alle 10 Entwurf, Bewerbungen aus, nicht deployt.
-- 2026-10-27: SEED_VERSION=7 – Arbeitsort aller 10 Stellen vorläufig „Bad Kreuznach“; Beschäftigungsart bewusst leer (Kunde ergänzt). Weiterhin Entwurf, Bewerbungen aus.
+- 2026-10-27: SEED_VERSION=8 – Beschäftigungsart nach Kundenfreigabe: Nr. 2+3 „Festanstellung oder selbstständige Tätigkeit“, Nr. 4 „Selbstständige Tätigkeit“, übrige „Festanstellung“; Auswahl im Editor ergänzt. Alle 10 vollständig, weiterhin Entwurf, Bewerbungen aus, nicht deployt.
 
 
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)

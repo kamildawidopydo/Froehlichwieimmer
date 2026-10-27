@@ -1,12 +1,19 @@
 """Entwurfs-Stellen für die Karriereplattform (werden nie automatisch veröffentlicht)."""
 
-SEED_VERSION = 7
+SEED_VERSION = 8
 
 _OFFER = [
     "Eine Tätigkeit für die Fröhlich Vermögensberatung GmbH mit Sitz in Bad Kreuznach",
     "Ein persönlicher Beratungsansatz, bei dem die individuellen Bedürfnisse und finanziellen Ziele der Kunden im Mittelpunkt stehen",
     "Ein reguliertes Umfeld: vertraglich gebundener Vermittler gemäß § 3 Abs. 2 WpIG und Darlehensvermittler gemäß § 34c GewO",
 ]
+
+_FEST = "Festanstellung"
+_TYPE = {
+    "quereinsteiger-finanzberatung": "Festanstellung oder selbstständige Tätigkeit",
+    "investmentberater": "Festanstellung oder selbstständige Tätigkeit",
+    "vertriebsmitarbeiter-finanzdienstleistungen": "Selbstständige Tätigkeit",
+}
 
 _AREA = {
     "junior-finanzberater": "Finanzberatung", "quereinsteiger-finanzberatung": "Finanzberatung",
@@ -21,11 +28,11 @@ def _job(slug, title, level, summary, tasks, reqs):
         "slug": slug, "title": title, "level": level, "area": _AREA[slug], "summary": summary,
         "tasks": tasks, "requirements": reqs, "offer": list(_OFFER),
         "career_path": "",
-        "location": "Bad Kreuznach", "employment_type": "", "deadline": None,
+        "location": "Bad Kreuznach", "employment_type": _TYPE.get(slug, _FEST), "deadline": None,
     }
 
 
-CONTENT_FIELDS = ("title", "level", "area", "location", "summary", "tasks", "requirements", "offer", "career_path")
+CONTENT_FIELDS = ("title", "level", "area", "location", "employment_type", "summary", "tasks", "requirements", "offer", "career_path")
 
 SEED_JOBS = [
     _job("junior-finanzberater", "Junior Finanzberater (m/w/d)", "einsteiger",
