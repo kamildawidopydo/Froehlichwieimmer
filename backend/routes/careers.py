@@ -64,7 +64,7 @@ async def _settings() -> dict:
     s = await db.career_settings.find_one({"_id": "careers"}) or {}
     return {
         "applications_enabled": bool(s.get("applications_enabled", False)),
-        "site_public": bool(s.get("site_public", False)),
+        "site_public": True,
         "retention_days": int(s.get("retention_days", 180)),
         "notify_email": s.get("notify_email") or "",
     }

@@ -70,8 +70,10 @@ export default function RecruitingSettings() {
     <div className="max-w-3xl space-y-6" data-testid="recruiting-settings">
       <h1 className="text-2xl font-semibold">Einstellungen</h1>
       <Card title="Freigabe">
-        <Toggle label="Karriereseite öffentlich sichtbar" desc="Aus: Besucher sehen „in Vorbereitung“. Sie selbst sehen weiterhin die Vorschau." checked={s.site_public}
-          onChange={(v) => save({ ...s, site_public: v }, v ? 'Karriereseite ist jetzt öffentlich' : 'Karriereseite verborgen')} testid="settings-site-public" />
+        <div className="flex items-start justify-between gap-4 border-b border-black/5 py-4" data-testid="settings-site-public-info">
+          <div><p className="font-medium">Karriereseite öffentlich sichtbar</p><p className="text-sm text-[#686A64]">Dauerhaft freigeschaltet – alle Besucher sehen Karriereseite, Startseiten-Balken und Menüpunkt „Karriere“. Entwürfe bleiben unsichtbar.</p></div>
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Aktiv</span>
+        </div>
         <Toggle label="Online-Bewerbungen annehmen" desc="Aus: Das Formular ist sichtbar, kann aber nicht abgeschickt werden." checked={s.applications_enabled}
           onChange={(v) => save({ ...s, applications_enabled: v }, v ? 'Bewerbungen aktiviert' : 'Bewerbungen deaktiviert')} testid="settings-applications-enabled" />
       </Card>
