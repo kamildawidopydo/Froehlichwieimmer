@@ -151,7 +151,11 @@ const AdminCashBalances = () => {
         `${API}/api/admin/portfolio/cash/summary?user_id=${encodeURIComponent(user.id)}`,
         { withCredentials: true },
       );
-      setHistoryRows(Array.isArray(data?.history) ? data.history : []);
+      setHistoryRows(
+        (Array.isArray(data?.history) ? data.history : [])
+          .filter((r) => r.status !== 'cancelled')
+          .map((r) => ({ ...r, amount: (r.direction === 'debit' ? -1 : 1) * Math.abs(Number(r.amount || 0)) })),
+      );
     } catch (err) {
       toast.error('Fehler beim Laden: ' + (err?.response?.data?.detail || err.message));
     } finally {
@@ -402,7 +406,7 @@ const AdminCashBalances = () => {
                 <ul className="divide-y divide-bank-border/70">
                   {historyRows.map((r) => {
                     const meta = TX_META[r.type] || TX_META.adjustment;
-                    const positive = Number(r.amount) >= 0;
+                    const positive = r.direction ? r.direction !== 'debit' : Number(r.amount) >= 0;
                     const Icon = positive ? ArrowUpRight : ArrowDownRight;
                     return (
                       <li key={r.id} className="px-5 py-3 flex items-start gap-3">

@@ -113,12 +113,14 @@ const NotificationCenter = ({ chrome = 'light' }) => {
 
       cashHistory.forEach((t) => {
         if (!t.created_by) return;   // Nur Admin-getriggerte Cash-Bewegungen als Nachricht
-        const isCredit = Number(t.amount) >= 0;
+        if (t.status === 'cancelled') return;
+        const isCredit = t.direction ? t.direction !== 'debit' : Number(t.amount) >= 0;
+        const abs = Math.abs(Number(t.amount || 0));
         aggregated.push({
           id: `cash-${t.id}`,
           type: isCredit ? 'cash_in' : 'cash_out',
           time: t.created_at,
-          title: isCredit ? `Gutschrift: ${formatEUR(t.amount)}` : `Belastung: ${formatEUR(Math.abs(t.amount))}`,
+          title: isCredit ? `Gutschrift: ${formatEUR(abs)}` : `Belastung: ${formatEUR(abs)}`,
           description: t.description || t.type,
           path: '/dashboard/uebersicht',
         });

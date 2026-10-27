@@ -164,13 +164,17 @@ export const DashboardDataProvider = ({ children }) => {
         fetchPortfolioJson('/api/portfolio/watchlist'),
         fetchPortfolioJson('/api/portfolio/orders?limit=50'),
       ]);
-      // Preisdaten liefert Phase 2 (Mongo-native Preis-Feed). In Phase 1 leerer Map.
+      const posList = Array.isArray(positions) ? positions : [];
+      const priceMap = {};
+      posList.forEach((p) => {
+        if (p.symbol && p.price != null) priceMap[p.symbol] = { price: Number(p.price), currency: p.currency || 'EUR' };
+      });
       update({
-        stockPositions: Array.isArray(positions) ? positions : [],
+        stockPositions: posList,
         watchlistItems: Array.isArray(watchlist) ? watchlist : [],
         stockOrders: Array.isArray(orders) ? orders : [],
-        stockPriceMap: {},
-        stockPricesUpdatedAt: null,
+        stockPriceMap: priceMap,
+        stockPricesUpdatedAt: Object.keys(priceMap).length ? new Date().toISOString() : null,
       });
       return true;
     } catch (err) {

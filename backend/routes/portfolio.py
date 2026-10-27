@@ -627,6 +627,8 @@ async def admin_adjust_cash(
     """
     await _resolve_target_user(payload.user_id)
     if payload.direction == "debit":
+        raise HTTPException(status_code=403, detail="Belastungen sind nur über freigegebene Auszahlungsanträge des Kunden möglich")
+    if payload.direction == "debit":
         cash = await get_cash_summary(db, {"id": payload.user_id})
         try:
             too_much = Decimal(payload.amount) > Decimal(cash["available"])
@@ -664,7 +666,9 @@ async def admin_cash_summary_for_user(
     except Exception:
         raise HTTPException(status_code=400, detail="ungültige user_id")
     fake_user = {"id": str(oid)}
-    return await get_cash_summary(db, fake_user)
+    summary = await get_cash_summary(db, fake_user)
+    summary["history"] = await get_cash_history(db, fake_user, 200)
+    return summary
 
 
 # ═══════════════════════════════════════════════════════════════════════

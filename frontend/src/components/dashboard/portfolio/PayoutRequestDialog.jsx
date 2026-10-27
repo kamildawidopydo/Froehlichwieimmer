@@ -47,7 +47,7 @@ const RequestList = ({ items }) => {
 };
 
 export const PayoutRequestDialog = ({ onClose }) => {
-  const { cashSummary, refreshCashBalance, refreshCashHistory } = useDashboardData();
+  const { cashAvailable, refreshCashBalance, refreshCashHistory } = useDashboardData();
   const [items, setItems] = useState([]);
   const [available, setAvailable] = useState(null);
   const [f, setF] = useState({ amount: '', account_holder: '', iban: '', note: '' });
@@ -89,7 +89,7 @@ export const PayoutRequestDialog = ({ onClose }) => {
           <div>
             <h2 className="text-lg font-semibold text-bank-text">Auszahlung beantragen</h2>
             <p className="text-[12.5px] text-bank-text-muted">
-              Verfügbar: <strong data-testid="payout-available">{formatEUR(available ?? cashSummary?.available ?? 0)}</strong> · Die Auszahlung erfolgt erst nach unserer Freigabe.
+              Verfügbar: <strong data-testid="payout-available">{formatEUR(available ?? cashAvailable ?? 0)}</strong> · Die Auszahlung erfolgt erst nach unserer Freigabe.
             </p>
           </div>
           <button type="button" onClick={onClose} aria-label="Schließen" data-testid="payout-close"><X size={18} /></button>

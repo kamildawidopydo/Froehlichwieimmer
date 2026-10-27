@@ -318,10 +318,10 @@ const Statement = ({ embedded = false }) => {
               <tbody>
                 {contracts.map((c) => (
                   <tr key={c.id} className="border-b border-bank-border/60">
-                    <td className="py-1.5">{c.product_type || '–'}</td>
+                    <td className="py-1.5">{{ festgeld: 'Festgeld', tagesgeld: 'Tagesgeld', flexgeld: 'Flexgeld' }[c.product_type] || c.product_type || '–'}</td>
                     <td className="py-1.5 tabular-nums">{c.vertragsnummer || '–'}</td>
-                    <td className="py-1.5">{c.bank_name || '–'}</td>
-                    <td className="py-1.5 text-right tabular-nums">{c.zinssatz ? `${Number(c.zinssatz).toFixed(2)}%` : '–'}</td>
+                    <td className="py-1.5">{c.banks?.name || c.bank_name || '–'}</td>
+                    <td className="py-1.5 text-right tabular-nums">{c.zinssatz ? `${Number(c.zinssatz).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : '–'}</td>
                     <td className="py-1.5 tabular-nums">{formatDate(c.active_from)}</td>
                     <td className="py-1.5 text-right tabular-nums font-medium">{formatEUR(c.amount_eur)}</td>
                   </tr>

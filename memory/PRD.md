@@ -188,3 +188,10 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 9. Changelog 2026-10-27
+- Auszahlungen NUR per Kundenantrag (POST /api/portfolio/payout-requests, IBAN mod-97, Betrag reserviert als pending withdrawal) → Admin-Freigabe /admin/payout-requests (approve settles / reject cancels). Admin-Belastungen gesperrt (403), Kontoguthaben-Seite nur Gutschriften.
+- Alle 75 Banken mit echtem Logo (frontend/public/assets/bank-logos, Mapping backend/data/seed_production/bank_logos.json, Prod-Sync im production_seed_loader). Logos in Admin-Angeboten, Kundendetail, Depotverträge, Mein Depot.
+- Admin-Angebotslisten zeigen alle ~298 (limit=500).
+- Audit (iteration_69/70) behoben: Admin-Orderliste GET /api/admin/portfolio/orders, Anleihe-Felder (kaufkurs/kupon_rate/faelligkeitsdatum), Kontoauszug (Verträge, Vorzeichen, Saldo, deutsche Typen), Aktien-Livekurse im Kundendepot, Festgeld-Enddatum aus Laufzeit, Admin-Verlauf mit Historie.
+- Bekannt/offen: Gesamtvermögen-Definition (mit/ohne aufgelaufene Zinsen) unterscheidet sich leicht zwischen Kontoauszug und Übersicht; Prozentangaben teils mit Punkt statt Komma; Payout-Lock nur pro Prozess.
+

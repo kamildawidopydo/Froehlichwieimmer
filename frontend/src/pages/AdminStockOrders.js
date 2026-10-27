@@ -106,7 +106,7 @@ const AdminStockOrders = () => {
       // Session 82.90d — Admin-List über bestehende FastAPI-Endpoints.
       const [ordersRes, usersRes] = await Promise.all([
         api.get('/admin/portfolio/orders?limit=500').catch(() => ({ data: [] })),
-        api.get('/admin/users?include_balances=true').catch(() => ({ data: [] })),
+        api.get('/admin/users?include_balances=true&limit=500').catch(() => ({ data: [] })),
       ]);
       const orderData = Array.isArray(ordersRes.data) ? ordersRes.data : (ordersRes.data?.items || []);
       setOrders(orderData);
