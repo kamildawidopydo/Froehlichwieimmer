@@ -59,7 +59,7 @@ export default function CareerJobDetail() {
     [MapPin, 'Arbeitsort', job.location || <Missing />],
     [Briefcase, 'Beschäftigungsart', job.employment_type || <Missing />],
     [Layers, 'Tätigkeitsbereich', job.area || <Missing />],
-    [BarChart3, 'Karrierelevel', LEVEL_LABEL[job.level]],
+    [BarChart3, 'Karrierelevel', (job.levels?.length ? job.levels : [job.level]).map((l) => LEVEL_LABEL[l]).join(' · ')],
     [CalendarClock, 'Bewerbungsfrist', job.deadline ? formatDate(job.deadline) : 'Keine Frist'],
   ];
   const workFacts = [
@@ -115,6 +115,7 @@ export default function CareerJobDetail() {
                 <div key={k} className="flex gap-3 rounded-xl bg-[#F7F5F0] p-4"><Icon size={18} className="mt-0.5 shrink-0 text-[#36A852]" /><div><dt className="text-xs text-[#686A64]">{k}</dt><dd className="font-medium">{v}</dd></div></div>
               ))}
             </dl>
+            {job.employment_type?.includes(' oder ') && <p className="mt-4 text-sm text-[#686A64]" data-testid="job-detail-contract-note">Die endgültige Vertragsform wird im Rahmen des Bewerbungsprozesses individuell festgelegt.</p>}
           </section>
           {job.career_path && <Block title="Ihr Karriereweg" text={job.career_path} testid="job-detail-career-path" />}
           <ProcessBlock enabled={status.applications_enabled} />

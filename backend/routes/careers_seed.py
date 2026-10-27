@@ -1,6 +1,6 @@
 """Entwurfs-Stellen für die Karriereplattform (werden nie automatisch veröffentlicht)."""
 
-SEED_VERSION = 9
+SEED_VERSION = 10
 
 _OFFER = [
     "Eine Tätigkeit für die Fröhlich Vermögensberatung GmbH mit Sitz in Bad Kreuznach",
@@ -23,9 +23,9 @@ _AREA = {
     "assistenz-der-geschaeftsfuehrung": "Geschäftsführung & Verwaltung", "business-development-manager": "Unternehmensentwicklung",
 }
 
-def _job(slug, title, level, summary, tasks, reqs, location="Bad Kreuznach", etype=None, area=None):
+def _job(slug, title, level, summary, tasks, reqs, location="Bad Kreuznach", etype=None, area=None, levels=None):
     return {
-        "slug": slug, "title": title, "level": level, "area": area or _AREA[slug], "summary": summary,
+        "slug": slug, "title": title, "level": level, "levels": levels or [level], "area": area or _AREA[slug], "summary": summary,
         "tasks": tasks, "requirements": reqs, "offer": list(_OFFER),
         "career_path": "",
         "location": location, "employment_type": _TYPE.get(slug, _FEST) if etype is None else etype, "deadline": None,
@@ -35,8 +35,8 @@ def _job(slug, title, level, summary, tasks, reqs, location="Bad Kreuznach", ety
 _BERATER_TASKS = [
     "Persönliche Beratung von Kundinnen und Kunden",
     "Analyse individueller finanzieller Situationen und Ziele",
-    "Vorstellung geeigneter Spar-, Festgeld- und Investmentlösungen",
-    "Vorbereitung und Dokumentation von Beratungsgesprächen",
+    "Vorstellung geeigneter Spar-, Festgeld- und Anlagelösungen unserer Partnerbanken",
+    "Beachtung regulatorischer Vorgaben und Dokumentation der Beratungsgespräche",
     "Aufbau und Pflege langfristiger Kundenbeziehungen",
 ]
 _BERATER_REQS = [
@@ -54,27 +54,31 @@ _FB_TASKS = [
     "Dokumentation von Beratungsgesprächen gemäß regulatorischen Vorgaben",
 ]
 _FB_REQS = [
-    "Erfahrung in der Finanz- oder Anlageberatung",
-    "Fundierte Kenntnisse relevanter Finanzprodukte",
+    "Erfahrung in der Finanz- oder Anlageberatung oder vergleichbare Erfahrung in der Kundenbetreuung",
+    "Kenntnisse relevanter Finanzprodukte oder die Bereitschaft, sich diese anzueignen",
     "Analytisches Denken und Kundenorientierung",
     "Verantwortungsbewusstsein und Diskretion",
-    "Erforderliche fachliche Qualifikationen und regulatorische Berechtigungen",
+    "Erforderliche fachliche Qualifikationen und regulatorische Berechtigungen oder die Bereitschaft, diese zu erwerben",
 ]
+
+
+_BOTH = "Festanstellung oder selbstständige Tätigkeit"
+_QE = ["quereinsteiger", "erfahren"]
 
 
 def _berater(city, slug):
     return _job(f"berater-{slug}", "Berater (m/w/d)", "quereinsteiger",
-                f"Sie beraten Kundinnen und Kunden persönlich zu Spar-, Festgeld- und Investmentlösungen und begleiten sie bei wichtigen finanziellen Entscheidungen – am Standort {city}.",
-                list(_BERATER_TASKS), list(_BERATER_REQS), location=city, etype="", area="Finanzberatung")
+                f"Sie beraten Kundinnen und Kunden persönlich zu Spar-, Festgeld- und Anlagelösungen und begleiten sie bei wichtigen finanziellen Entscheidungen – am Standort {city}.",
+                list(_BERATER_TASKS), list(_BERATER_REQS), location=city, etype=_BOTH, area="Finanzberatung", levels=_QE)
 
 
 def _finanzberater(city, slug):
-    return _job(f"finanzberater-{slug}", "Finanzberater (m/w/d)", "erfahren",
-                f"Sie betreuen Kundinnen und Kunden umfassend in Finanz- und Vermögensfragen und entwickeln gemeinsam mit ihnen passende Lösungen – am Standort {city}.",
-                list(_FB_TASKS), list(_FB_REQS), location=city, etype="", area="Finanzberatung")
+    return _job(f"finanzberater-{slug}", "Finanzberater (m/w/d)", "quereinsteiger",
+                f"Sie betreuen Kundinnen und Kunden in Finanz- und Vermögensfragen und erarbeiten gemeinsam mit ihnen passende Anlagelösungen – am Standort {city}.",
+                list(_FB_TASKS), list(_FB_REQS), location=city, etype=_BOTH, area="Finanzberatung", levels=_QE)
 
 
-CONTENT_FIELDS = ("title", "level", "area", "location", "employment_type", "summary", "tasks", "requirements", "offer", "career_path")
+CONTENT_FIELDS = ("title", "level", "levels", "area", "location", "employment_type", "summary", "tasks", "requirements", "offer", "career_path")
 
 SEED_JOBS = [
     _job("junior-finanzberater", "Junior Finanzberater (m/w/d)", "einsteiger",

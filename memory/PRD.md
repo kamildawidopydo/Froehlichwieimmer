@@ -231,6 +231,7 @@ Siehe `/app/memory/test_credentials.md`
 - Test iteration_85: Backend 15/15, Frontend 100 %. Alle 10 Entwurf, Bewerbungen aus, nicht deployt.
 - 2026-10-27: SEED_VERSION=8 – Beschäftigungsart nach Kundenfreigabe: Nr. 2+3 „Festanstellung oder selbstständige Tätigkeit“, Nr. 4 „Selbstständige Tätigkeit“, übrige „Festanstellung“; Auswahl im Editor ergänzt. Alle 10 vollständig, weiterhin Entwurf, Bewerbungen aus, nicht deployt.
 - 2026-10-27 (nach Deploy): SEED_VERSION=9 – 6 neue Entwürfe (Berater: Hamburg, Berlin, Frankfurt am Main, Bad Kreuznach; Finanzberater: Frankfurt am Main, Bad Kreuznach), Bereich Finanzberatung, Beschäftigungsart leer (unbestätigt → Veröffentlichung blockiert). Level vorläufig: Berater=Quereinsteiger, Finanzberater=Berufserfahrene. Insgesamt 16 Entwürfe; Arbeitsort-Filter: Bad Kreuznach, Berlin, Frankfurt am Main, Hamburg. Nur Vorschau.
+- 2026-10-27: SEED_VERSION=10 – Mehrfach-Karrierelevel (`levels`-Liste, API-Filter level matcht level oder levels; Editor mit Checkboxen). 6 neue Stellen: Quereinsteiger + Berufserfahrene, „Festanstellung oder selbstständige Tätigkeit“ mit Hinweis „endgültige Vertragsform wird im Bewerbungsprozess festgelegt“. Texte fachlich geschärft (Partnerbanken, regulatorische Dokumentation, Anforderungen auch für Quereinsteiger passend). 16 Entwürfe, Bewerbungen aus, nicht deployt.
 
 
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)

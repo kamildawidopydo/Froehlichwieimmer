@@ -13,7 +13,7 @@ const Meta = ({ icon: Icon, children, missing }) => (
 const Badges = ({ job }) => (
   <div className="flex flex-wrap items-center gap-2">
     {job.area && <span className="rounded-full bg-[#1E222C]/5 px-3 py-1 text-[11.5px] font-semibold text-[#1E222C]">{job.area}</span>}
-    <span className="rounded-full bg-[#36A852]/10 px-3 py-1 text-[11.5px] font-semibold text-[#2E8B45]">{LEVEL_LABEL[job.level]}</span>
+    {(job.levels?.length ? job.levels : [job.level]).map((l) => <span key={l} className="rounded-full bg-[#36A852]/10 px-3 py-1 text-[11.5px] font-semibold text-[#2E8B45]">{LEVEL_LABEL[l]}</span>)}
     {job.status === 'draft' && <span className="rounded-full bg-amber-100 px-3 py-1 text-[11.5px] font-semibold text-amber-800" data-testid="job-card-draft-badge">Entwurf</span>}
   </div>
 );

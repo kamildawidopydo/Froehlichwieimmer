@@ -74,7 +74,7 @@ async def _settings() -> dict:
 
 def _job_out(d: dict, staff: bool = False) -> dict:
     out = {
-        "id": str(d["_id"]), "slug": d["slug"], "title": d["title"], "level": d.get("level"), "area": d.get("area") or "",
+        "id": str(d["_id"]), "slug": d["slug"], "title": d["title"], "level": d.get("level"), "levels": d.get("levels") or [d.get("level")], "area": d.get("area") or "",
         "location": d.get("location") or "", "employment_type": d.get("employment_type") or "",
         "summary": d.get("summary") or "", "tasks": d.get("tasks") or [],
         "requirements": d.get("requirements") or [], "offer": d.get("offer") or [],
@@ -123,7 +123,7 @@ async def public_jobs(request: Request, q: str = "", location: str = "", employm
     if employment_type:
         filt["employment_type"] = employment_type[:80]
     if level in LEVELS:
-        filt["level"] = level
+        filt["$and"] = [{"$or": [{"level": level}, {"levels": level}]}]
     if area in AREAS:
         filt["area"] = area
     order = [("title", 1)] if sort == "title" else [("published_at", -1), ("created_at", -1)]
@@ -262,6 +262,7 @@ async def submit_application(
 class JobIn(BaseModel):
     title: str = Field(..., min_length=3, max_length=160)
     level: Literal["einsteiger", "quereinsteiger", "erfahren"]
+    levels: List[Literal["einsteiger", "quereinsteiger", "erfahren"]] = Field(default_factory=list, max_length=3)
     area: Literal[AREAS + ("",)] = ""
     location: str = Field(default="", max_length=80)
     employment_type: str = Field(default="", max_length=80)

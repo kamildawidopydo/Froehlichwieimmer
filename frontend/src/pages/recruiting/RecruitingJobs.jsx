@@ -48,7 +48,7 @@ export default function RecruitingJobs() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${cls}`} data-testid={`admin-job-status-${j.slug}`}>{label}</span>
-                  <span className="text-xs text-[#686A64]">{LEVEL_LABEL[j.level]}</span>
+                  <span className="text-xs text-[#686A64]">{(j.levels?.length ? j.levels : [j.level]).map((l) => LEVEL_LABEL[l]).join(' · ')}</span>
                   {j.deadline && <span className="text-xs text-[#686A64]">· Frist {formatDate(j.deadline)}</span>}
                 </div>
                 <p className="mt-1.5 font-semibold">{j.title}</p>

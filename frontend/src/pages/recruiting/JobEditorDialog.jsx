@@ -6,7 +6,7 @@ import { AREAS, EMPLOYMENT_TYPES, LEVEL_LABEL } from '@/lib/careersContent';
 
 const inp = 'w-full rounded-lg border border-black/10 px-3 py-2.5 text-sm outline-none focus:border-[#36A852]';
 const EMPTY = { title: '', level: 'einsteiger', area: '', location: '', employment_type: '', summary: '', tasks: '', requirements: '', offer: '', career_path: '', deadline: '' };
-const toText = (j) => ({ ...EMPTY, ...j, tasks: (j.tasks || []).join('\n'), requirements: (j.requirements || []).join('\n'), offer: (j.offer || []).join('\n'), deadline: j.deadline || '' });
+const toText = (j) => ({ ...EMPTY, ...j, levels: j.levels?.length ? j.levels : [j.level], tasks: (j.tasks || []).join('\n'), requirements: (j.requirements || []).join('\n'), offer: (j.offer || []).join('\n'), deadline: j.deadline || '' });
 const lines = (t) => t.split('\n').map((x) => x.trim()).filter(Boolean);
 
 const L = ({ label, children, hint }) => (
@@ -22,7 +22,7 @@ export default function JobEditorDialog({ job, open, onClose, onSaved }) {
   const save = async (e) => {
     e.preventDefault();
     setBusy(true);
-    const body = { title: f.title, level: f.level, area: f.area, location: f.location, employment_type: f.employment_type, summary: f.summary,
+    const body = { title: f.title, level: (f.levels?.[0]) || f.level, levels: f.levels?.length ? f.levels : [f.level], area: f.area, location: f.location, employment_type: f.employment_type, summary: f.summary,
       tasks: lines(f.tasks), requirements: lines(f.requirements), offer: lines(f.offer), career_path: f.career_path, deadline: f.deadline || null };
     try {
       const r = job ? await careersApi.put(`/admin/jobs/${job.id}`, body) : await careersApi.post('/admin/jobs', body);
@@ -42,7 +42,16 @@ export default function JobEditorDialog({ job, open, onClose, onSaved }) {
         <form onSubmit={save} className="space-y-4">
           <L label="Stellenbezeichnung *"><input className={inp} required minLength={3} value={f.title} onChange={set('title')} data-testid="job-editor-title" /></L>
           <div className="grid gap-4 sm:grid-cols-3">
-            <L label="Karrierelevel"><select className={inp} value={f.level} onChange={set('level')} data-testid="job-editor-level">{Object.entries(LEVEL_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></L>
+            <L label="Karrierelevel" hint="Mehrfachauswahl möglich">
+              <div className="space-y-1 rounded-lg border border-black/10 px-3 py-2" data-testid="job-editor-levels">
+                {Object.entries(LEVEL_LABEL).map(([k, v]) => {
+                  const cur = f.levels?.length ? f.levels : [f.level];
+                  const on = cur.includes(k);
+                  const toggle = () => { const next = on ? cur.filter((x) => x !== k) : [...cur, k]; if (next.length) setF({ ...f, levels: next, level: next[0] }); };
+                  return <label key={k} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={on} onChange={toggle} className="accent-[#36A852]" data-testid={`job-editor-level-${k}`} />{v}</label>;
+                })}
+              </div>
+            </L>
             <L label="Arbeitsort" hint="Pflicht zum Veröffentlichen"><input className={inp} value={f.location} onChange={set('location')} data-testid="job-editor-location" /></L>
             <L label="Beschäftigungsart" hint="Pflicht zum Veröffentlichen">
               <select className={inp} value={f.employment_type} onChange={set('employment_type')} data-testid="job-editor-type"><option value="">Bitte wählen</option>{EMPLOYMENT_TYPES.map((t) => <option key={t}>{t}</option>)}</select>
