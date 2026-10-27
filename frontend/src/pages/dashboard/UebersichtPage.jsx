@@ -430,7 +430,7 @@ export default function UebersichtPage() {
                       <li key={r.id} className="flex items-start gap-3 px-6 py-3">
                         <Icon size={16} className={positive ? 'text-emerald-600' : 'text-rose-600'} />
                         <div className="flex-1">
-                          <p className="text-[13px] font-medium">{meta.label}</p>
+                          <p className="text-[13px] font-medium">{meta.label}{r.status === 'pending' ? ' · vorgemerkt' : ''}</p>
                           {r.description && <p className="text-[12px] text-bank-text-muted">{r.description}</p>}
                         </div>
                         <p className={cn('font-semibold tabular-nums', positive ? 'text-emerald-700' : 'text-rose-600')}>

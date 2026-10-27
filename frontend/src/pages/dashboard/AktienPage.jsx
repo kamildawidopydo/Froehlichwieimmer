@@ -367,7 +367,7 @@ const AktienPage = () => {
               {stockMetrics.map((m) => {
                 const up = m.gv >= 0;
                 const p = stockPriceMap[m.symbol];
-                const currency = p?.currency || 'USD';
+                const currency = p?.currency || m?.currency || 'EUR';
                 const dayPct = p?.change_pct != null ? Number(p.change_pct) : null;
                 return (
                   <div
@@ -469,7 +469,7 @@ const AktienPage = () => {
                     {stockMetrics.map((m) => {
                       const up = m.gv >= 0;
                       const p = stockPriceMap[m.symbol];
-                      const currency = p?.currency || 'USD';
+                      const currency = p?.currency || m?.currency || 'EUR';
                       const dayPct = p?.change_pct != null ? Number(p.change_pct) : null;
                       return (
                         <tr
@@ -554,7 +554,7 @@ const AktienPage = () => {
             const p = stockPriceMap[w.symbol];
             const chg = p?.change_pct != null ? Number(p.change_pct) : null;
             const up = (chg ?? 0) >= 0;
-            const currency = p?.currency || 'USD';
+            const currency = p?.currency || m?.currency || 'EUR';
             return (
               <div
                 key={w.id}

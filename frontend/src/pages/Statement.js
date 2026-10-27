@@ -13,6 +13,12 @@ const formatEUR = (v) =>
 const formatDate = (iso) =>
   iso ? new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '–';
 
+const TX_LABEL = {
+  deposit: 'Einzahlung', withdrawal: 'Auszahlung', adjustment: 'Korrektur', reserve: 'Reservierung',
+  release: 'Freigabe', stock_purchase: 'Aktienkauf', stock_sale: 'Aktienverkauf', ipo_purchase: 'IPO-Zeichnung',
+  bond_purchase: 'Anleihekauf', interest: 'Zinsgutschrift', payout: 'Festgeld-Auszahlung', fee: 'Gebühr',
+};
+
 const Statement = ({ embedded = false }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -54,11 +60,12 @@ const Statement = ({ embedded = false }) => {
       return resp.json();
     };
     try {
-      const [cash, positions, bondsData, ordersData] = await Promise.all([
+      const [cash, positions, bondsData, ordersData, contractsData] = await Promise.all([
         fetchJson('/api/portfolio/cash?history_limit=50'),
         fetchJson('/api/portfolio/stock-positions'),
         fetchJson('/api/portfolio/bond-positions'),
         fetchJson('/api/portfolio/orders?limit=50'),
+        fetchJson('/api/portfolio/depot-contracts').catch(() => []),
       ]);
       // Profil aus /api/auth/me (bereits verfügbar via user-Prop; Empty-State ok)
       setProfile(user || null);
@@ -67,8 +74,15 @@ const Statement = ({ embedded = false }) => {
       // Preisdaten kommen in Phase 2 — hier leere Preistabelle.
       setPriceMap({});
       setBonds(Array.isArray(bondsData) ? bondsData : []);
-      setContracts([]);
-      setTransactions(cash?.history || []);
+      setContracts((Array.isArray(contractsData) ? contractsData : []).filter((c) => c.is_active !== false));
+      const settled = (cash?.history || []).filter((t) => t.status !== 'cancelled');
+      let running = Number(cash?.cash_balance || 0);
+      setTransactions(settled.map((t) => {
+        const signed = (t.direction === 'debit' ? -1 : 1) * Math.abs(Number(t.amount || 0));
+        const row = { ...t, signed, balance_after: t.status === 'pending' ? null : running };
+        if (t.status !== 'pending') running -= signed;
+        return row;
+      }));
       setOrders(Array.isArray(ordersData) ? ordersData : []);
     } catch (err) {
       console.error('Statement fetch failed', err);
@@ -344,7 +358,7 @@ const Statement = ({ embedded = false }) => {
                   const mw = (Number(b.nominal_betrag || 0) * Number(b.aktueller_kurs || 100)) / 100;
                   return (
                     <tr key={b.id} className="border-b border-bank-border/60">
-                      <td className="py-1.5">{b.issuer || b.bond_name || '–'}</td>
+                      <td className="py-1.5">{b.bond_name || b.name || b.issuer || '–'}</td>
                       <td className="py-1.5 tabular-nums">{b.isin || '–'}</td>
                       <td className="py-1.5 text-right tabular-nums">{formatEUR(b.nominal_betrag)}</td>
                       <td className="py-1.5 text-right tabular-nums">{b.kaufkurs ? `${Number(b.kaufkurs).toFixed(2)}%` : '–'}</td>
@@ -425,12 +439,12 @@ const Statement = ({ embedded = false }) => {
                 {transactions.map((t) => (
                   <tr key={t.id} className="border-b border-bank-border/60">
                     <td className="py-1.5 tabular-nums">{formatDate(t.created_at)}</td>
-                    <td className="py-1.5">{t.type}</td>
+                    <td className="py-1.5">{TX_LABEL[t.type] || t.type}{t.status === 'pending' ? ' (vorgemerkt)' : ''}</td>
                     <td className="py-1.5 max-w-[200px] truncate">{t.description || '–'}</td>
-                    <td className={`py-1.5 text-right tabular-nums font-medium ${Number(t.amount) >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      {Number(t.amount) >= 0 ? '+' : ''}{formatEUR(t.amount)}
+                    <td className={`py-1.5 text-right tabular-nums font-medium ${t.signed >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      {t.signed >= 0 ? '+' : ''}{formatEUR(t.signed)}
                     </td>
-                    <td className="py-1.5 text-right tabular-nums">{formatEUR(t.balance_after)}</td>
+                    <td className="py-1.5 text-right tabular-nums">{t.balance_after == null ? '–' : formatEUR(t.balance_after)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -65,10 +65,12 @@ const AdminDashboardLayout = () => {
     const onFocus = () => fetchCounts();
     const onVis = () => { if (document.visibilityState === 'visible') fetchCounts(); };
     window.addEventListener('focus', onFocus);
+    window.addEventListener('admin-counts-refresh', onFocus);
     document.addEventListener('visibilitychange', onVis);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      window.removeEventListener('admin-counts-refresh', onFocus);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVis);
     };

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import BankLogoSquare from '@/components/bank/BankLogo';
 import { useNavigate, useParams } from 'react-router-dom';
 // Session 82.100 · Supabase-Import entfernt.
 import { Button } from '@/components/ui/button';
@@ -756,6 +757,8 @@ const AdminUserDetail = () => {
                             className="px-4 py-3 transition-colors hover:bg-white"
                           >
                             <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2.5">
+                                <BankLogoSquare bank={contract.banks || {}} size={32} />
                               <div>
                                 <p className="text-[13px] font-medium text-bank-text">
                                   {contract.banks?.name || 'Vertrag'}
@@ -770,6 +773,7 @@ const AdminUserDetail = () => {
                                     {fmtDate(contract.active_from)} – {fmtDate(contract.active_until)}
                                   </p>
                                 )}
+                              </div>
                               </div>
                               <span className="shrink-0 rate-figure text-[13.5px] tabular-nums text-bank-text">
                                 {fmtMoney(contract.amount_eur)}

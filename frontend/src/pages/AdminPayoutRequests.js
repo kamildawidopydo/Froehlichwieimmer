@@ -74,6 +74,7 @@ export default function AdminPayoutRequests() {
     try {
       await axios.post(apiUrl(`/api/admin/payout-requests/${r.id}/${approve ? 'approve' : 'reject'}`), { reason }, opts);
       toast.success(approve ? 'Auszahlung freigegeben' : 'Antrag abgelehnt');
+      window.dispatchEvent(new Event('admin-counts-refresh'));
       load();
     } catch (err) {
       toast.error(err?.response?.data?.detail || 'Aktion fehlgeschlagen');

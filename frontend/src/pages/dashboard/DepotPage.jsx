@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import BankLogoSquare from '@/components/bank/BankLogo';
 import { Link } from 'react-router-dom';
 import {
   Briefcase,
@@ -501,11 +502,14 @@ const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true, show
                     to={contractRoute(c.product_type)}
                     className="flex items-center justify-between gap-3 py-3 text-sm transition-colors hover:bg-bank-bg/60 -mx-2 px-2 rounded-md"
                   >
-                    <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <BankLogoSquare bank={c.banks || {}} size={32} />
+                      <div className="min-w-0">
                       <p className="text-[13px] font-medium text-bank-text">{c.banks?.name || 'Vertrag'}</p>
                       <p className="mt-0.5 text-[11px] text-bank-text-muted">
                         {c.product_type} · {c.zinssatz != null ? `${c.zinssatz}% p.a.` : '–'}
                       </p>
+                      </div>
                     </div>
                     <p className="shrink-0 text-[13.5px] font-semibold tabular-nums text-bank-text">{formatEUR(c.amount_eur)}</p>
                   </Link>

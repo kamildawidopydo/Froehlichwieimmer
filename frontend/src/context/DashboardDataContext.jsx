@@ -110,7 +110,11 @@ export const DashboardDataProvider = ({ children }) => {
     update({ cashHistoryLoading: true });
     try {
       const cash = await fetchPortfolioJson('/api/portfolio/cash?history_limit=100');
-      update({ cashHistory: cash?.history || [] });
+      update({
+        cashHistory: (cash?.history || [])
+          .filter((t) => t.status !== 'cancelled')
+          .map((t) => ({ ...t, amount: (t.direction === 'debit' ? -1 : 1) * Math.abs(Number(t.amount || 0)) })),
+      });
     } catch (err) {
       Sentry.captureException(err);
       console.error('cash history fetch failed', err);

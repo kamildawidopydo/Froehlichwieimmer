@@ -150,7 +150,7 @@ async def admin_depot_contracts_list(
     total = await _db[coll].count_documents({})
     docs = await _db[coll].find({}).sort([("created_at", -1)]).skip(offset).limit(limit).to_list(limit)
     return {
-        "items": [{**{k: v for k, v in d.items() if k != "_id"}, "id": str(d["_id"])} for d in docs],
+        "items": [{**{k: (str(v) if isinstance(v, ObjectId) else v) for k, v in d.items() if k != "_id"}, "id": str(d["_id"])} for d in docs],
         "count": total,
     }
 

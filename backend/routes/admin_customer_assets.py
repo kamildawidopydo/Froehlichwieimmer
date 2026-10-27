@@ -1,8 +1,11 @@
 """Admin: Kundenbestand pflegen (Festgeld/Tagesgeld, Aktien, Anleihen, Dokumente, Profil, Angebote)."""
 from __future__ import annotations
 
+import asyncio
+import calendar
 import re
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Dict, Literal, Optional
 
@@ -162,14 +165,21 @@ class ContractIn(BaseModel):
 async def add_contract(user_id: str, body: ContractIn, admin: dict = Depends(require_admin)):
     oid = await _require_user(user_id)
     bank = await _find_bank(body.bank_id)
-    if body.active_until and body.active_until < body.active_from:
+    active_until = body.active_until
+    if not active_until and body.product_type == "festgeld" and body.laufzeit_monate:
+        y, m, d = (int(x) for x in body.active_from.split("-"))
+        m += body.laufzeit_monate
+        y, m = y + (m - 1) // 12, (m - 1) % 12 + 1
+        d = min(d, calendar.monthrange(y, m)[1])
+        active_until = f"{y:04d}-{m:02d}-{d:02d}"
+    if active_until and active_until < body.active_from:
         raise HTTPException(status_code=422, detail="Enddatum liegt vor dem Startdatum")
     now = datetime.now(timezone.utc)
     doc = {
-        **body.model_dump(), "user_id": oid, "bank_id": str(bank["_id"]),
+        **body.model_dump(), "active_until": active_until, "user_id": oid, "bank_id": str(bank["_id"]),
         "bank_slug": bank.get("slug"), "bank_name": bank.get("name"),
         "bank_country": bank.get("country"), "bank_logo_url": bank.get("logo_url"),
-        "lock_until": body.active_until if body.product_type == "festgeld" else None,
+        "lock_until": active_until if body.product_type == "festgeld" else None,
         "is_active": True, "created_by": admin.get("id"), "created_at": now, "updated_at": now,
     }
     res = await db.depot_contracts.insert_one(doc)
@@ -444,15 +454,34 @@ def _payout_out(d: dict) -> dict:
     }
 
 
+_PAYOUT_LOCKS: dict = defaultdict(asyncio.Lock)
+
+
+def _iban_ok(iban: str) -> bool:
+    if not re.fullmatch(r"[A-Z]{2}\d{2}[A-Z0-9]{11,30}", iban):
+        return False
+    digits = "".join(str(int(c, 36)) for c in iban[4:] + iban[:4])
+    return int(digits) % 97 == 1
+
+
+def _eur_de(v: float) -> str:
+    return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " €"
+
+
 @customer_router.post("/payout-requests", status_code=201)
 async def request_payout(body: PayoutIn, user: dict = Depends(get_current_user)):
     iban = re.sub(r"\s+", "", body.iban).upper()
-    if not re.fullmatch(r"[A-Z]{2}\d{2}[A-Z0-9]{11,30}", iban):
+    if not _iban_ok(iban):
         raise HTTPException(status_code=422, detail="Bitte eine gültige IBAN angeben")
+    async with _PAYOUT_LOCKS[str(user["id"])]:
+        return await _create_payout(body, user, iban)
+
+
+async def _create_payout(body: PayoutIn, user: dict, iban: str) -> dict:
     amount = round(body.amount, 2)
     cash = await get_cash_summary(db, user)
     if amount > float(cash["available"]):
-        raise HTTPException(status_code=400, detail=f"Der Betrag übersteigt Ihr verfügbares Guthaben ({cash['available']} €)")
+        raise HTTPException(status_code=400, detail=f"Der Betrag übersteigt Ihr verfügbares Guthaben ({_eur_de(float(cash['available']))})")
     now = datetime.now(timezone.utc)
     rid = ObjectId()
     ev = await create_cash_event(

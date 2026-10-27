@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import BankLogoSquare from '@/components/bank/BankLogo';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -525,7 +526,10 @@ const AdminDashboard = () => {
                         data-testid={`offer-row-${offer.id}`}
                       >
                         <td className="px-4 py-3 text-[13.5px] font-medium text-bank-text">
-                          {bankName}
+                          <div className="flex items-center gap-2">
+                            <BankLogoSquare bank={{ ...bankMeta, name: bankName }} size={28} />
+                            <span>{bankName}</span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 font-mono text-[11.5px] uppercase tracking-[0.14em] text-bank-text-muted">
                           {country}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import BankLogoSquare from '@/components/bank/BankLogo';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -255,15 +256,15 @@ const AdminOffers = () => {
                   <tr key={offer.id} className={`border-b border-bank-border/80 ${adminRowHover}`} data-testid={`offer-row-${offer.id}`}>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <Building2 size={15} className="text-bank-text-muted/70 shrink-0" />
+                        <BankLogoSquare bank={offer.banks || { name: offer.bank_slug }} size={28} />
                         <span className="font-medium text-bank-text text-sm">{offer.banks?.name || '–'}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-bank-text-muted">{offer.banks?.country || '–'}</td>
-                    <td className="py-3 px-4 text-sm font-semibold text-bank-success">{offer.interest_rate}%</td>
-                    <td className="py-3 px-4 text-sm text-bank-text-muted">{offer.deposit_term} M</td>
+                    <td className="py-3 px-4 text-sm font-semibold text-bank-success">{Number(offer.interest_rate || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</td>
+                    <td className="py-3 px-4 text-sm text-bank-text-muted">{offer.deposit_term ? `${offer.deposit_term} M` : 'täglich'}</td>
                     <td className="py-3 px-4 text-sm text-bank-text-muted">
-                      €{offer.min_deposit.toLocaleString('de-DE')}
+                      €{Number(offer.min_deposit || 0).toLocaleString('de-DE')}
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-xs bg-bank-border/15 text-bank-text-muted px-2 py-0.5 rounded-full">

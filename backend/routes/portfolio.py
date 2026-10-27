@@ -171,6 +171,10 @@ def _serialize_position(doc: dict, kind: str) -> dict:
         "issuer": doc.get("issuer") if kind == "bond" else None,
         "cost_basis": _num(doc.get("cost_basis")) if kind == "bond" else None,
         "maturity_date": doc.get("maturity_date") if kind == "bond" else None,
+        "kaufkurs": (_num(doc.get("kaufkurs")) or _num(doc.get("avg_cost")) or _num(doc.get("average_purchase_price_pct"))) if kind == "bond" else None,
+        "kupon_rate": (doc.get("kupon_rate") if doc.get("kupon_rate") is not None else doc.get("coupon_rate")) if kind == "bond" else None,
+        "faelligkeitsdatum": (doc.get("faelligkeitsdatum") or doc.get("maturity_date")) if kind == "bond" else None,
+        "kaufdatum": (doc.get("kaufdatum") or _iso(doc.get("created_at"))) if kind == "bond" else None,
         "currency": doc.get("currency") or "EUR",
         "is_active": bool(doc.get("is_active", True)),
         "created_at": _iso(doc.get("created_at")),
@@ -201,6 +205,8 @@ def _serialize_order(doc: dict, realized_pnl: Optional[str] = None) -> dict:
         # Nur für Sell-Executions gesetzt; sonst `null`. Wird batched vom Endpoint
         # geliefert (siehe `list_orders`), niemals frontendseitig berechnet.
         "realized_pnl": realized_pnl,
+        "user_id": str(doc["user_id"]) if doc.get("user_id") is not None else None,
+        "name": doc.get("name"),
         "status": doc.get("status", "pending"),
         "currency": doc.get("currency") or "EUR",
         "created_at": _iso(doc.get("created_at")),
@@ -566,6 +572,19 @@ async def _resolve_target_user(target_user_id: str) -> ObjectId:
     if not exists:
         raise HTTPException(status_code=404, detail="Zieluser existiert nicht")
     return oid
+
+
+@admin_router.get("/orders")
+async def admin_list_orders(
+    limit: int = 200,
+    status: Optional[str] = None,
+    _admin: dict = Depends(require_admin),
+):
+    """Admin-Liste aller Kundenorders (optional nach Status gefiltert)."""
+    limit = max(1, min(int(limit or 200), 500))
+    q = {"status": status} if status else {}
+    docs = await db.stock_orders.find(q).sort("created_at", -1).limit(limit).to_list(length=limit)
+    return [_serialize_order(d) for d in docs]
 
 
 @admin_router.post("/cash/deposit")

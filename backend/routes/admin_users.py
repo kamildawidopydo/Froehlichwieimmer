@@ -112,8 +112,9 @@ def _gen_temp_password() -> str:
 async def list_users(
     _admin: dict = Depends(require_admin),
     q: Optional[str] = Query(default=None, max_length=100),
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    include_balances: bool = False,
 ):
     """Paginiertes Listing + Search (email + name substring, case-insensitive)."""
     filt: dict = {}
@@ -133,6 +134,12 @@ async def list_users(
         .limit(limit)
     )
     items = [_serialize(d) async for d in cursor]
+    if include_balances:
+        from services.cash_service import get_cash_summary
+        for it in items:
+            cash = await get_cash_summary(db, {"id": it["id"]})
+            it["cash_balance"] = float(cash["balance"])
+            it["cash_available"] = float(cash["available"])
     return {"total": total, "limit": limit, "offset": offset, "items": items}
 
 

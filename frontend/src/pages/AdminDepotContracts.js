@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import BankLogoSquare from '@/components/bank/BankLogo';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -115,8 +116,14 @@ const AdminDepotContracts = () => {
   };
 
   const fetchUsers = async () => {
-    // Session 82.103c · Legacy `profiles`-Read deaktiviert (kein Admin-User-List-Endpoint gebunden).
-    setUsers([]);
+    try {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const { data } = await _axios.get(`${_api}/api/admin/users?limit=500`, { withCredentials: true });
+      setUsers(data?.items || []);
+    } catch {
+      setUsers([]);
+    }
   };
 
   const fetchContracts = async () => {
@@ -132,6 +139,8 @@ const AdminDepotContracts = () => {
     }
     setLoading(false);
   };
+
+  const bankLogoById = useMemo(() => Object.fromEntries(banks.map((b) => [b.id, b.logo_url])), [banks]);
 
   const userMap = useMemo(() => {
     const m = {};
@@ -421,12 +430,15 @@ const AdminDepotContracts = () => {
                     <tr key={c.id} className={`border-b border-bank-border/80 ${adminRowHover}`}>
                       <td className="py-3 px-4 text-sm">
                         <div className="font-medium text-bank-text">
-                          {u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || '–' : '–'}
+                          {u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.name || '–' : '–'}
                         </div>
                         <div className="text-xs text-bank-text-muted">{u?.email || c.user_id}</div>
                       </td>
                       <td className="py-3 px-4 text-sm text-bank-text-muted">
-                        {c.banks?.name || '–'}
+                        <div className="flex items-center gap-2">
+                          <BankLogoSquare bank={{ name: c.banks?.name || c.bank_name, logo_url: c.banks?.logo_url || bankLogoById[c.bank_id] || c.bank_logo_url, slug: c.bank_slug }} size={28} />
+                          <span>{c.banks?.name || c.bank_name || '–'}</span>
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-sm text-bank-text-muted">
                         {c.vertragsnummer || '–'}

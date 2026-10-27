@@ -27,9 +27,7 @@ import {
 const TX_TYPES = [
   { value: 'deposit', label: 'Einzahlung', sign: 'positive' },
   { value: 'interest', label: 'Zinsgutschrift', sign: 'positive' },
-  { value: 'payout', label: 'Auszahlung (Festgeld)', sign: 'positive' },
-  { value: 'fee', label: 'Gebühr', sign: 'negative' },
-  { value: 'adjustment', label: 'Korrektur', sign: 'any' },
+  { value: 'payout', label: 'Auszahlung (Festgeld) – Gutschrift', sign: 'positive' },
 ];
 
 const TX_META = {
@@ -85,7 +83,7 @@ const AdminCashBalances = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(`${API}/api/admin/users?include_balances=true`, {
+      const { data } = await axios.get(`${API}/api/admin/users?include_balances=true&limit=500`, {
         withCredentials: true,
       });
       const list = (Array.isArray(data) ? data : data?.items || []).filter(
@@ -124,33 +122,22 @@ const AdminCashBalances = () => {
     }
 
     const typeMeta = TX_TYPES.find((t) => t.value === txForm.type);
-    let signedAmount = raw;
-    if (typeMeta?.sign === 'negative') signedAmount = -raw;
-    // 'any' (adjustment) — pozitif gir, istersen eksi ile yaz:
-    if (typeMeta?.sign === 'any' && txForm.amount.startsWith('-')) {
-      signedAmount = -Math.abs(raw);
-    }
-
     setSaving(true);
     try {
-      // Session 82.90c — Ledger-basiert: deposit für Einzahlungen/Zinsen,
-      // adjustment für Withdrawal/Fee/Adjustment. Kein direkter Balance-Write.
-      const endpoint = signedAmount >= 0 && txForm.type === 'deposit'
-        ? '/api/admin/portfolio/cash/deposit'
-        : '/api/admin/portfolio/cash/adjustment';
+      // Nur Gutschriften. Auszahlungen beantragt der Kunde selbst (Auszahlungsanträge).
       const payload = {
         user_id: txModal.id,
-        amount: String(Math.abs(signedAmount)),
-        direction: signedAmount >= 0 ? 'credit' : 'debit',
-        event_type: txForm.type,
-        description: txForm.description.trim() || null,
+        amount: raw.toFixed(2),
+        description: txForm.description.trim() || typeMeta?.label || 'Einzahlung',
+        idempotency_key: `admin-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
       };
-      await axios.post(`${API}${endpoint}`, payload, { withCredentials: true });
+      await axios.post(`${API}/api/admin/portfolio/cash/deposit`, payload, { withCredentials: true });
       toast.success('Buchung gespeichert.');
       closeTxModal();
       fetchUsers();
     } catch (err) {
-      toast.error('Fehler: ' + (err?.response?.data?.detail || err.message));
+      const d = err?.response?.data?.detail;
+      toast.error('Fehler: ' + (Array.isArray(d) ? d.map((x) => x.msg).join(', ') : d || err.message));
     } finally {
       setSaving(false);
     }
@@ -209,7 +196,7 @@ const AdminCashBalances = () => {
           eyebrow="Admin · Zahlungsverkehr"
           title="Kontoguthaben"
           titleIcon={CreditCard}
-          description="Kundengelder buchen — Einzahlungen, Auszahlungen, Gebühren und Korrekturen."
+          description="Gutschriften auf Kundenkonten buchen. Auszahlungen beantragt der Kunde – Freigabe unter „Auszahlungsanträge“."
           actions={
             <Button variant="outline" onClick={fetchUsers} className="gap-2 rounded-xl">
               <RefreshCw size={15} /> Neu laden
@@ -357,11 +344,6 @@ const AdminCashBalances = () => {
                   placeholder="z.B. 500.00"
                   required
                 />
-                {txForm.type === 'adjustment' && (
-                  <p className="text-xs text-bank-text-muted mt-1">
-                    Tipp: Für negative Korrektur den Betrag mit Minus (–) davor eingeben.
-                  </p>
-                )}
               </div>
 
               <div>
