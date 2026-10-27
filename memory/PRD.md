@@ -234,6 +234,7 @@ Siehe `/app/memory/test_credentials.md`
 - 2026-10-27: SEED_VERSION=10 – Mehrfach-Karrierelevel (`levels`-Liste, API-Filter level matcht level oder levels; Editor mit Checkboxen). 6 neue Stellen: Quereinsteiger + Berufserfahrene, „Festanstellung oder selbstständige Tätigkeit“ mit Hinweis „endgültige Vertragsform wird im Bewerbungsprozess festgelegt“. Texte fachlich geschärft (Partnerbanken, regulatorische Dokumentation, Anforderungen auch für Quereinsteiger passend). 16 Entwürfe, Bewerbungen aus, nicht deployt.
 - 2026-10-27: Arbeitsort-Filter-Fix – Ursache: Standorte wurden nur aus veröffentlichten Stellen geladen (alle Entwürfe → leere Liste). Jetzt `locations`/`areas` aus Entwürfen + veröffentlichten Stellen (Stellen selbst bleiben privat). Stellenübersicht hat jetzt ein immer sichtbares Arbeitsort-Dropdown neben der Suche. In Vorschau getestet (PC + Smartphone), nicht veröffentlicht.
 - 2026-10-27 ~14:50: Filter-Fix auf essenceinvest.com veröffentlicht (Bundle main.9e5793b6.js). Live geprüft ohne Anmeldung: Dropdown mit Bad Kreuznach, Berlin, Frankfurt am Main, Hamburg auf /karriere/stellen und /karriere, PC + Smartphone. 16 Entwürfe privat, Bewerbungen aus.
+- 2026-10-27: Stellenbörse ohne veröffentlichte Stellen → `JobsPerspectives` („Entdecken Sie Ihre beruflichen Perspektiven“, 4 Karten, Standort-Chips „zur Orientierung“, mit Dropdown synchronisiert). API liefert `published_total`; bei 0 erscheint der Bereich auch mit Filtern, sonst reguläre Liste. Nur Vorschau.
 
 
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)

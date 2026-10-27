@@ -3,7 +3,7 @@ import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import { Loader2, MapPin, Search, SearchX, SlidersHorizontal, X } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import { JobRow } from '@/components/careers/JobCard';
-import JobsEmptyState from '@/components/careers/JobsEmptyState';
+import JobsPerspectives from '@/components/careers/JobsPerspectives';
 import { LEVEL_LABEL } from '@/lib/careersContent';
 import useJobs from './useJobs';
 
@@ -39,7 +39,7 @@ export default function CareerJobs() {
   };
   const pick = (k) => (v) => apply({ ...filters, [k]: v });
   const activeCount = ['location', 'employment_type', 'level', 'area'].filter((k) => filters[k]).length;
-  const noJobs = !loading && data.items.length === 0 && activeCount === 0 && !filters.q;
+  const noJobs = !loading && data.items.length === 0 && (data.published_total === 0 || (activeCount === 0 && !filters.q));
 
   const filterPanel = (
     <>
@@ -83,7 +83,7 @@ export default function CareerJobs() {
         </form>
       </div>
       {noJobs ? (
-        <section className="mx-auto max-w-7xl px-5 py-12 lg:px-8 lg:py-16"><JobsEmptyState /></section>
+        <JobsPerspectives locations={data.locations} selected={filters.location} onPickLocation={(l) => apply({ ...filters, location: l })} />
       ) : (
       <section className="mx-auto grid max-w-7xl gap-8 px-5 py-10 lg:grid-cols-[260px_1fr] lg:px-8">
         <aside className="hidden lg:block">

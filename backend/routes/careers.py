@@ -110,7 +110,7 @@ async def public_jobs(request: Request, q: str = "", location: str = "", employm
     s = await _settings()
     staff = await _optional_staff(request)
     if not s["site_public"] and not staff:
-        return {"items": [], "locations": [], "employment_types": [], "areas": []}
+        return {"items": [], "locations": [], "employment_types": [], "areas": [], "published_total": 0}
     filt: dict = {"status": "published"}
     if preview and staff:
         filt = {"status": {"$in": ["published", "draft"]}}
@@ -132,7 +132,8 @@ async def public_jobs(request: Request, q: str = "", location: str = "", employm
     locs = sorted({x for x in await db.career_jobs.distinct("location", locs_base) if x})
     types = sorted({x for x in await db.career_jobs.distinct("employment_type", base) if x})
     areas = sorted({x for x in await db.career_jobs.distinct("area", locs_base) if x})
-    return {"items": items, "locations": locs, "employment_types": types, "areas": areas}
+    published_total = await db.career_jobs.count_documents({"status": "published"})
+    return {"items": items, "locations": locs, "employment_types": types, "areas": areas, "published_total": published_total}
 
 
 @router.get("/jobs/{slug}")
