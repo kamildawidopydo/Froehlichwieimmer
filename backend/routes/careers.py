@@ -131,7 +131,7 @@ async def public_jobs(request: Request, q: str = "", location: str = "", employm
     locs_base = {"status": {"$in": ["published", "draft"]}}
     locs = sorted({x for x in await db.career_jobs.distinct("location", locs_base) if x})
     types = sorted({x for x in await db.career_jobs.distinct("employment_type", base) if x})
-    areas = sorted({x for x in await db.career_jobs.distinct("area", locs_base) if x})
+    areas = sorted({x for x in await db.career_jobs.distinct("area", base) if x})
     published_total = await db.career_jobs.count_documents({"status": "published"})
     return {"items": items, "locations": locs, "employment_types": types, "areas": areas, "published_total": published_total}
 

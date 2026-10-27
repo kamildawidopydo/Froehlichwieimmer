@@ -1,0 +1,33 @@
+{
+  "summary": "READ-ONLY test of the PREVIEW job board with 6 published jobs. No statuses or settings were changed and no applications were created. The only POST was to /applications, which returned 403 as expected. Backend: 18/18 checks passed in test_careers_published_iter87.py. GET /jobs (anonymous) returns published_total 6 with exactly the 6 expected slugs and locations; preview=1 for anonymous still returns 6. Location filters: Hamburg returns 1, Berlin 1, Frankfurt 2 (finanzberater, sekretaer) and Bad Kreuznach 2. q=Sekret returns 1. All 6 detail endpoints return 200 with tasks, requirements and offer, and contain no salary or benefit terms. The Sekretär job has the required tasks and employment type Festanstellung. The drafts berater-frankfurt-am-main and junior-finanzberater return 404. POST /applications returns 403 'nicht freigeschaltet'. Admin read-only: /admin/jobs has 17 jobs (6 published, 11 draft). Frontend at 1920px: /karriere/stellen shows the regular list (no jobs-perspectives) with 6 cards and '6 Stellen gefunden'. No drafts are shown. Each card has its badges, title, Arbeitsort, Beschäftigungsart, summary, 'Stelle ansehen' and a green 'Jetzt bewerben' (rgb 54,168,82) linking to /karriere/bewerben?stelle=<slug>&ort=<city>. The dropdown and the sidebar location filters give the correct results and update the URL. Search 'Sekret' shows '1 Stelle gefunden'. All 6 detail pages show the tasks, requirements, offer, work and process sections, have no missing-field markers and no salary terms, and every apply link includes the slug and city. Clicking job-card-apply for each of the 6 jobs preselects the correct position and location. The disabled notice is visible, submit is disabled, all fields are present and the Datenschutz link points to /karriere/datenschutz. The apply button on the detail page also preselects correctly. /karriere career-latest-jobs shows 6 cards. Mobile at 390px: no horizontal overflow; buttons are full width (308 of 350px). The filter sheet works for all 4 cities and the button then shows 'Filter (1)'. The q search, the apply preselection and the detail page all work. There were no page errors. The welcome gate did not appear in these sessions, so it was not exercised.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/careers/jobs", "issue": "'areas' is built from published AND draft jobs (locs_base), so anonymous users get 7 areas: Kundenbetreuung, Marketing & Kommunikation, Personal & Recruiting, Unternehmensentwicklung and Vertrieb, as well as Finanzberatung and Geschäftsführung & Verwaltung. Only Finanzberatung and Geschäftsführung & Verwaltung have published jobs. Picking any other area (e.g. area=Kundenbetreuung) returns 0 results and reveals the draft categories. Fix: for non-staff, compute areas from the published 'base' filter, as employment_types already is (careers.py line 134)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CareerJobs mobile filter sheet", "issue": "The button shows '1 Stellen anzeigen'; it should be the singular 'Stelle' when the count is 1 (job-results-count already handles this)", "selector": "[data-testid=job-filter-apply]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Filter sidebar and sheet", "issues": ["The Karrierelevel and Tätigkeitsbereich lists offer options with no published jobs, which leads to 'Keine passenden Stellen gefunden'"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_careers_published_iter87.py", "/app/test_reports/pytest/pytest_iter87.xml"],
+  "action_items": [
+    "LOW: in public_jobs, for non-staff users derive 'areas' (and optionally levels) from published jobs only",
+    "LOW: singular/plural for the job-filter-apply button text"
+  ],
+  "critical_code_review_comments": [
+    "careers.py public_jobs: 'locations' and 'areas' both use published+draft for anonymous users. Locations is intentional (all 4 cities), but areas exposes draft categories.",
+    "The Sekretär offer list contains 'Ein persönlicher Beratungsansatz...' (copy shared with the advisor roles). It is a little off-topic for an office role; please do a content review. It makes no salary claims."
+  ],
+  "updated_files": ["/app/backend/tests/test_careers_published_iter87.py"],
+  "success_rate": {"backend": "100%", "frontend": "100% of requested flows (2 low-severity issues)"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "PREVIEW has 6 published jobs (berater-hamburg, berater-berlin, finanzberater-frankfurt-am-main, sekretaer-frankfurt-am-main, finanzberater-bad-kreuznach, berater-bad-kreuznach) and 11 drafts, with applications_enabled=false. Admin auth uses cookies (curl -c/-b); the response has no bearer token. The welcome gate did not appear for /karriere/stellen in fresh sessions. Use test_careers_published_iter87.py for regression; iter86 tests now fail by design, because they assumed 0 published jobs."
+}

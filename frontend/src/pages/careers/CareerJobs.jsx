@@ -119,7 +119,7 @@ export default function CareerJobs() {
           <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl bg-white px-5 pb-6 pt-4" onClick={(e) => e.stopPropagation()} data-testid="job-filter-sheet">
             <div className="flex items-center justify-between"><p className="text-lg font-semibold">Filter</p><button type="button" onClick={() => setShowFilters(false)} aria-label="Schließen"><X /></button></div>
             {filterPanel}
-            <button type="button" onClick={() => setShowFilters(false)} className="mt-2 w-full rounded-full bg-[#36A852] py-3.5 font-semibold text-white" data-testid="job-filter-apply">{data.items.length} Stellen anzeigen</button>
+            <button type="button" onClick={() => setShowFilters(false)} className="mt-2 w-full rounded-full bg-[#36A852] py-3.5 font-semibold text-white" data-testid="job-filter-apply">{data.items.length} {data.items.length === 1 ? 'Stelle' : 'Stellen'} anzeigen</button>
           </div>
         </div>
       )}
