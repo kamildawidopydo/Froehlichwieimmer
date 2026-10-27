@@ -113,6 +113,7 @@ const AdminDashboardLayout = () => {
       label: t('shell.admin.assets', { defaultValue: 'Vermögen & Depot' }),
       items: [
         { to: '/admin/cash-balances', label: t('shell.admin.cashBalances', { defaultValue: 'Kontoguthaben' }), icon: CreditCard },
+        { to: '/admin/payout-requests', label: 'Auszahlungsanträge', icon: Wallet, badge: b('pending_payout_requests') },
         { to: '/admin/depot-contracts', label: t('shell.admin.depotContracts', { defaultValue: 'Depotverträge' }), icon: Wallet },
         { to: '/admin/depot-statement-analysis', label: t('shell.admin.depotStatementAnalysis', { defaultValue: 'Depotauszug-Analyse' }), icon: FileText },
         { to: '/admin/bond-positions', label: t('shell.admin.bondPositions', { defaultValue: 'Kunden-Anleihen' }), icon: PRODUCT_ICONS.anleihen },

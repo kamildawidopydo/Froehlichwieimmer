@@ -607,6 +607,14 @@ async def admin_adjust_cash(
     Erzeugt genau EIN Ledger-Event mit type=adjustment.
     """
     await _resolve_target_user(payload.user_id)
+    if payload.direction == "debit":
+        cash = await get_cash_summary(db, {"id": payload.user_id})
+        try:
+            too_much = Decimal(payload.amount) > Decimal(cash["available"])
+        except Exception:
+            raise HTTPException(status_code=400, detail="ungültiger Betrag")
+        if too_much:
+            raise HTTPException(status_code=400, detail=f"Belastung übersteigt das verfügbare Guthaben ({cash['available']} €)")
     try:
         result = await create_cash_event(
             db,

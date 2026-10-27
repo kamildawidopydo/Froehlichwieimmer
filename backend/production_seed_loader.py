@@ -166,5 +166,14 @@ async def seed_production_core(db) -> dict:
             match_builders=[_c_by_source, _c_by_composite],
         )
 
+    logo_file = _SEED_DIR / "bank_logos.json"
+    logos = json.loads(logo_file.read_text(encoding="utf-8")) if logo_file.exists() else {}
+    if isinstance(logos, dict):
+        updated = 0
+        for slug, url in logos.items():
+            res = await db.banks.update_one({"slug": slug, "logo_url": {"$ne": url}}, {"$set": {"logo_url": url}})
+            updated += res.modified_count
+        result["snapshots"]["bank_logos"] = {"updated": updated}
+
     logger.info("production_seed: done — %s", result["snapshots"])
     return result

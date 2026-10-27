@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, Upl
 from pydantic import BaseModel, Field
 
 from server import db, get_current_user, require_admin
-from services.cash_service import get_cash_summary
+from services.cash_service import create_cash_event, get_cash_summary
 from services.emergent_storage import APP_PREFIX, get_object, put_object
 
 admin_router = APIRouter(prefix="/api/admin", tags=["admin-customer-assets"])
@@ -80,6 +80,20 @@ def _contract_out(d: dict) -> dict:
     }
 
 
+async def _with_bank_logos(contracts: list) -> list:
+    ids = list({c.get("bank_id") for c in contracts if c.get("bank_id")})
+    banks = {str(b["_id"]): b async for b in db.banks.find(
+        {"_id": {"$in": [ObjectId(i) for i in ids if ObjectId.is_valid(i)]}}, {"name": 1, "logo_url": 1, "country": 1})}
+    out = []
+    for c in contracts:
+        row = _contract_out(c)
+        b = banks.get(c.get("bank_id"))
+        if b:
+            row["banks"] = {"name": b.get("name"), "logo_url": b.get("logo_url"), "country": b.get("country")}
+        out.append(row)
+    return out
+
+
 def _stock_out(d: dict) -> dict:
     return {
         "id": str(d["_id"]), "symbol": d.get("symbol"), "name": d.get("name"),
@@ -123,7 +137,7 @@ async def customer_assets(user_id: str, _admin: dict = Depends(require_admin)):
     ).sort("created_at", -1).to_list(500)
     cash = await get_cash_summary(db, {"id": user_id})
     return {
-        "depot_contracts": [_contract_out(d) for d in contracts],
+        "depot_contracts": await _with_bank_logos(contracts),
         "stock_positions": [_stock_out(d) for d in stocks if (_num(d.get("quantity")) or 0) > 0],
         "bond_positions": [_bond_out(d) for d in bonds],
         "documents": [_doc_out(d) for d in docs],
@@ -403,7 +417,105 @@ async def delete_offer(offer_id: str, _admin: dict = Depends(require_admin)):
 @customer_router.get("/depot-contracts")
 async def my_contracts(user: dict = Depends(get_current_user)):
     docs = await db.depot_contracts.find({"user_id": ObjectId(user["id"])}).sort("created_at", -1).to_list(500)
-    return [_contract_out(d) for d in docs]
+    return await _with_bank_logos(docs)
+
+
+# ─── Auszahlungsanträge (Kunde beantragt, Admin bestätigt) ───────────────
+class PayoutIn(BaseModel):
+    amount: float = Field(..., gt=0, le=10_000_000)
+    account_holder: str = Field(..., min_length=2, max_length=120)
+    iban: str = Field(..., min_length=15, max_length=40)
+    note: Optional[str] = Field(default=None, max_length=500)
+    model_config = {"extra": "forbid"}
+
+
+class PayoutDecisionIn(BaseModel):
+    reason: Optional[str] = Field(default=None, max_length=500)
+    model_config = {"extra": "forbid"}
+
+
+def _payout_out(d: dict) -> dict:
+    return {
+        "id": str(d["_id"]), "user_id": str(d["user_id"]), "amount": d.get("amount"),
+        "account_holder": d.get("account_holder"), "iban": d.get("iban"), "note": d.get("note"),
+        "status": d.get("status"), "reason": d.get("reason"),
+        "customer_name": d.get("customer_name"), "customer_email": d.get("customer_email"),
+        "created_at": _iso(d.get("created_at")), "decided_at": _iso(d.get("decided_at")),
+    }
+
+
+@customer_router.post("/payout-requests", status_code=201)
+async def request_payout(body: PayoutIn, user: dict = Depends(get_current_user)):
+    iban = re.sub(r"\s+", "", body.iban).upper()
+    if not re.fullmatch(r"[A-Z]{2}\d{2}[A-Z0-9]{11,30}", iban):
+        raise HTTPException(status_code=422, detail="Bitte eine gültige IBAN angeben")
+    amount = round(body.amount, 2)
+    cash = await get_cash_summary(db, user)
+    if amount > float(cash["available"]):
+        raise HTTPException(status_code=400, detail=f"Der Betrag übersteigt Ihr verfügbares Guthaben ({cash['available']} €)")
+    now = datetime.now(timezone.utc)
+    rid = ObjectId()
+    ev = await create_cash_event(
+        db, user_id=str(user["id"]), event_type="withdrawal", direction="debit", amount=f"{amount:.2f}",
+        currency="EUR", status="pending", idempotency_key=f"payout-{rid}",
+        description="Auszahlung beantragt – wartet auf Freigabe", source="customer",
+        source_reference_id=str(rid), created_by=str(user["id"]),
+    )
+    doc = {
+        "_id": rid, "user_id": ObjectId(user["id"]), "amount": amount, "account_holder": body.account_holder.strip(),
+        "iban": iban, "note": body.note, "status": "pending", "ledger_event_id": ev["event"]["id"],
+        "customer_name": user.get("name"), "customer_email": user.get("email"), "created_at": now,
+    }
+    await db.payout_requests.insert_one(doc)
+    return _payout_out(doc)
+
+
+@customer_router.get("/payout-requests")
+async def my_payout_requests(user: dict = Depends(get_current_user)):
+    docs = await db.payout_requests.find({"user_id": ObjectId(user["id"])}).sort("created_at", -1).to_list(100)
+    return [_payout_out(d) for d in docs]
+
+
+@admin_router.get("/payout-requests")
+async def list_payout_requests(status: Optional[str] = None, _admin: dict = Depends(require_admin)):
+    q = {"status": status} if status in {"pending", "approved", "rejected"} else {}
+    docs = await db.payout_requests.find(q).sort("created_at", -1).to_list(500)
+    return [_payout_out(d) for d in docs]
+
+
+async def _decide_payout(request_id: str, approve: bool, reason: Optional[str], admin: dict) -> dict:
+    doc = await db.payout_requests.find_one({"_id": _oid(request_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Antrag nicht gefunden")
+    if doc.get("status") != "pending":
+        raise HTTPException(status_code=409, detail="Antrag wurde bereits bearbeitet")
+    now = datetime.now(timezone.utc)
+    new_status = "approved" if approve else "rejected"
+    res = await db.payout_requests.update_one(
+        {"_id": doc["_id"], "status": "pending"},
+        {"$set": {"status": new_status, "reason": reason, "decided_at": now, "decided_by": admin.get("id")}},
+    )
+    if not res.modified_count:
+        raise HTTPException(status_code=409, detail="Antrag wurde bereits bearbeitet")
+    await db.cash_ledger.update_one(
+        {"_id": ObjectId(doc["ledger_event_id"])},
+        {"$set": {
+            "status": "settled" if approve else "cancelled", "effective_at": now,
+            "description": "Auszahlung auf " + doc["iban"][-4:].rjust(8, "•") if approve else f"Auszahlung abgelehnt{': ' + reason if reason else ''}",
+        }},
+    )
+    doc.update({"status": new_status, "reason": reason, "decided_at": now})
+    return _payout_out(doc)
+
+
+@admin_router.post("/payout-requests/{request_id}/approve")
+async def approve_payout(request_id: str, body: PayoutDecisionIn, admin: dict = Depends(require_admin)):
+    return await _decide_payout(request_id, True, body.reason, admin)
+
+
+@admin_router.post("/payout-requests/{request_id}/reject")
+async def reject_payout(request_id: str, body: PayoutDecisionIn, admin: dict = Depends(require_admin)):
+    return await _decide_payout(request_id, False, body.reason, admin)
 
 
 @customer_router.get("/documents")

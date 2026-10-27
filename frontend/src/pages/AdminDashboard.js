@@ -101,7 +101,7 @@ const AdminDashboard = () => {
     try {
       const _axios = (await import('axios')).default;
       const _api = (await import('@/lib/apiBase')).getApiBase();
-      const { data } = await _axios.get(`${_api}/api/admin/offers/list`, { withCredentials: true });
+      const { data } = await _axios.get(`${_api}/api/admin/offers/list?limit=500`, { withCredentials: true });
       setOffers(data?.items || []);
     } catch {
       toast.error('Fehler beim Laden der Angebote');

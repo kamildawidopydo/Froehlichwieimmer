@@ -20,7 +20,7 @@ const TABS = [
   ['contract', 'Festgeld / Tagesgeld'],
   ['stock', 'Aktie'],
   ['bond', 'Anleihe'],
-  ['cash', 'Guthaben'],
+  ['cash', 'Guthaben gutschreiben'],
   ['document', 'Dokument'],
 ];
 
@@ -115,19 +115,14 @@ const BondForm = ({ userId, onDone }) => {
 };
 
 const CashForm = ({ userId, onDone }) => {
-  const [f, setF] = useState({ direction: 'credit', amount: '', text: '' });
+  const [f, setF] = useState({ amount: '', text: '' });
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
-  const submit = () => (f.direction === 'credit'
-    ? axios.post(apiUrl('/api/admin/portfolio/cash/deposit'), { user_id: userId, amount: String(f.amount), description: f.text || 'Einzahlung', idempotency_key: idem() }, opts)
-    : axios.post(apiUrl('/api/admin/portfolio/cash/adjustment'), { user_id: userId, direction: 'debit', amount: String(f.amount), reason: f.text || 'Auszahlung', idempotency_key: idem() }, opts));
+  const submit = () => axios.post(apiUrl('/api/admin/portfolio/cash/deposit'), { user_id: userId, amount: String(f.amount), description: f.text || 'Einzahlung', idempotency_key: idem() }, opts);
   return (
     <FormShell onSubmit={submit} onDone={onDone} testid="asset-form-cash">
-      <Field label="Art *">
-        <select className={selectCls} value={f.direction} onChange={set('direction')} data-testid="asset-cash-direction">
-          <option value="credit">Gutschrift (Einzahlung)</option>
-          <option value="debit">Belastung (Auszahlung)</option>
-        </select>
-      </Field>
+      <p className="text-[12.5px] text-bank-text-muted sm:col-span-2">
+        Gutschrift auf das Kundenkonto. Auszahlungen beantragt der Kunde selbst – Sie geben sie unter „Auszahlungsanträge“ frei.
+      </p>
       <Field label="Betrag (€) *"><Input type="number" min="0.01" step="0.01" required value={f.amount} onChange={set('amount')} data-testid="asset-cash-amount" /></Field>
       <Field label="Buchungstext"><Input placeholder="z. B. Einzahlung per Überweisung" value={f.text} onChange={set('text')} data-testid="asset-cash-text" /></Field>
     </FormShell>

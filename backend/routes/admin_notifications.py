@@ -83,6 +83,7 @@ async def admin_notification_counts(
     counts["pending_contract_submissions"] = await _count_or_none("contract_form_submissions", {"status": "new"})
     counts["failed_contract_admin_email"] = await _count_or_none("contract_form_submissions", {"admin_email_sent": False})
     counts["pending_document_uploads"] = await _count_or_none("document_upload_submissions", {"status": "new"})
+    counts["pending_payout_requests"] = await _count_or_none("payout_requests", {"status": "pending"})
 
     # Nicht migriert (siehe 82.95-Audit)
     counts["pending_users"] = None                       # `profiles.status=pending` — Legacy

@@ -17,7 +17,6 @@ import {
   RefreshCw,
   CreditCard,
   Plus,
-  Minus,
   X,
   Save,
   History,
@@ -27,7 +26,6 @@ import {
 
 const TX_TYPES = [
   { value: 'deposit', label: 'Einzahlung', sign: 'positive' },
-  { value: 'withdrawal', label: 'Auszahlung', sign: 'negative' },
   { value: 'interest', label: 'Zinsgutschrift', sign: 'positive' },
   { value: 'payout', label: 'Auszahlung (Festgeld)', sign: 'positive' },
   { value: 'fee', label: 'Gebühr', sign: 'negative' },
@@ -292,13 +290,6 @@ const AdminCashBalances = () => {
                             title="Gutschrift"
                           >
                             <Plus size={12} /> Einzahlung
-                          </button>
-                          <button
-                            onClick={() => openTxModal(u, 'withdrawal')}
-                            className="inline-flex items-center gap-1 px-2.5 h-8 rounded-md bg-bank-error/10 text-bank-error border border-bank-error/25 text-xs font-medium hover:bg-bank-error/15 transition-colors"
-                            title="Belastung"
-                          >
-                            <Minus size={12} /> Auszahlung
                           </button>
                           <button
                             onClick={() => openHistory(u)}
