@@ -69,7 +69,7 @@ const ContractRow = ({ contract }) => {
         />
         <Row label="Startdatum" value={c.active_from ? formatDate(c.active_from) : '—'} />
         <Row
-          label={isTagesgeld ? 'Verfügbarkeit' : (isFlexgeld ? 'Lock-Ende' : 'Fälligkeit')}
+          label={isTagesgeld ? 'Verfügbarkeit' : (isFlexgeld ? 'Festbindung bis' : 'Fälligkeit')}
           value={
             isTagesgeld
               ? (m.isLocked ? 'Gebunden' : 'Frei verfügbar')

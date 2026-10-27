@@ -77,6 +77,25 @@ async def _notify_new_item(user_id: str, label: str, kind: str) -> None:
         "Dokument öffnen" if kind == "Dokument" else "Vertrag ansehen", path))
 
 
+FLEXGELD_LOCK_MONTHS = 3
+
+
+def _add_months(iso: str, months: int) -> str:
+    y, m, d = (int(x) for x in iso[:10].split("-"))
+    m += months
+    y, m = y + (m - 1) // 12, (m - 1) % 12 + 1
+    d = min(d, calendar.monthrange(y, m)[1])
+    return f"{y:04d}-{m:02d}-{d:02d}"
+
+
+def _lock_until(d: dict) -> Optional[str]:
+    if d.get("lock_until"):
+        return d["lock_until"]
+    if d.get("product_type") == "flexgeld" and d.get("active_from"):
+        return _add_months(d["active_from"], FLEXGELD_LOCK_MONTHS)
+    return None
+
+
 def _contract_out(d: dict) -> dict:
     return {
         "id": str(d["_id"]),
@@ -87,7 +106,7 @@ def _contract_out(d: dict) -> dict:
         "laufzeit_monate": d.get("laufzeit_monate"),
         "active_from": d.get("active_from"),
         "active_until": d.get("active_until"),
-        "lock_until": d.get("lock_until"),
+        "lock_until": _lock_until(d),
         "is_active": bool(d.get("is_active", True)),
         "note": d.get("note"),
         "banks": {"name": d.get("bank_name"), "logo_url": d.get("bank_logo_url"), "country": d.get("bank_country")},
@@ -178,12 +197,8 @@ async def add_contract(user_id: str, body: ContractIn, admin: dict = Depends(req
     oid = await _require_user(user_id)
     bank = await _find_bank(body.bank_id)
     active_until = body.active_until
-    if not active_until and body.product_type == "festgeld" and body.laufzeit_monate:
-        y, m, d = (int(x) for x in body.active_from.split("-"))
-        m += body.laufzeit_monate
-        y, m = y + (m - 1) // 12, (m - 1) % 12 + 1
-        d = min(d, calendar.monthrange(y, m)[1])
-        active_until = f"{y:04d}-{m:02d}-{d:02d}"
+    if not active_until and body.product_type in ("festgeld", "flexgeld") and body.laufzeit_monate:
+        active_until = _add_months(body.active_from, body.laufzeit_monate)
     if active_until and active_until < body.active_from:
         raise HTTPException(status_code=422, detail="Enddatum liegt vor dem Startdatum")
     now = datetime.now(timezone.utc)
@@ -191,7 +206,8 @@ async def add_contract(user_id: str, body: ContractIn, admin: dict = Depends(req
         **body.model_dump(), "active_until": active_until, "user_id": oid, "bank_id": str(bank["_id"]),
         "bank_slug": bank.get("slug"), "bank_name": bank.get("name"),
         "bank_country": bank.get("country"), "bank_logo_url": bank.get("logo_url"),
-        "lock_until": active_until if body.product_type == "festgeld" else None,
+        "lock_until": active_until if body.product_type == "festgeld" else (
+            _add_months(body.active_from, FLEXGELD_LOCK_MONTHS) if body.product_type == "flexgeld" else None),
         "is_active": True, "created_by": admin.get("id"), "created_at": now, "updated_at": now,
     }
     res = await db.depot_contracts.insert_one(doc)

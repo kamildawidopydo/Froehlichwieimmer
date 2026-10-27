@@ -13,6 +13,7 @@ import {
 import BankLogo from '@/components/BankLogo';
 import CountryFlagIcon from '@/components/CountryFlagIcon';
 import LockProgressBar from '@/components/dashboard/LockProgressBar';
+import FlexgeldMonthTimeline from '@/components/dashboard/FlexgeldMonthTimeline';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import {
   formatEUR,
@@ -169,11 +170,16 @@ const ContractCard = ({ contract, accent = 'amber', detailed = true, onClick }) 
             </div>
             <div>
               <p className="text-xs text-bank-text-muted mb-1">
-                {isFlexgeld && m.isLocked ? 'Verfügbar (nach Lock)' : 'Aktuell verfügbar'}
+                Aktuell verfügbar
               </p>
-              <p className="font-semibold text-bank-text">
-                {formatEUR(m.amount + m.aufgelaufeneZinsen)}
+              <p className="font-semibold text-bank-text" data-testid="contract-available-amount">
+                {formatEUR(isFlexgeld && m.isLocked ? 0 : m.amount + m.aufgelaufeneZinsen)}
               </p>
+              {isFlexgeld && m.isLocked && (
+                <p className="text-[11px] text-bank-text-muted mt-0.5">
+                  Frei ab {formatDate(m.lockUntil)}
+                </p>
+              )}
               {m.dailyInterestGross > 0 && (
                 <p className="text-[11px] text-bank-text-muted mt-0.5">
                   Heute: {formatEURSigned(m.dailyInterestNet)} netto
@@ -204,7 +210,7 @@ const ContractCard = ({ contract, accent = 'amber', detailed = true, onClick }) 
         )}
         {isFlexgeld && (
           <div>
-            <p className="text-xs text-bank-text-muted mb-1">Lock-Ende</p>
+            <p className="text-xs text-bank-text-muted mb-1">Festbindung bis</p>
             <p
               className={`font-semibold ${m.isLocked ? 'text-bank-primary' : 'text-emerald-600'}`}
             >
@@ -265,7 +271,7 @@ const ContractCard = ({ contract, accent = 'amber', detailed = true, onClick }) 
                     {m.isLocked ? 'Festbindung läuft' : 'Frei verfügbar'}
                   </p>
                   <p className="font-semibold text-bank-text">
-                    Lock-Ende: {formatDate(m.lockUntil)}
+                    Festbindung bis: {formatDate(m.lockUntil)}
                   </p>
                 </div>
                 <LockProgressBar
@@ -312,6 +318,14 @@ const ContractCard = ({ contract, accent = 'amber', detailed = true, onClick }) 
           )}
         </div>
       ) : null}
+
+      {isFlexgeld && c.active_from && (
+        <FlexgeldMonthTimeline
+          activeFrom={c.active_from}
+          activeUntil={c.active_until}
+          laufzeitMonate={c.laufzeit_monate}
+        />
+      )}
 
       {m.totalDays > 0 && (
         <div className="px-5 py-4">

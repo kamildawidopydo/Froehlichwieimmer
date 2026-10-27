@@ -126,7 +126,7 @@ const FlexgeldPage = () => {
       },
       {
         key: 'lockEnd',
-        header: 'Lock-Ende',
+        header: 'Festbindung bis',
         value: (r) => r.lockUntil,
         render: (_, v) => (v ? formatDate(v) : '—'),
         sortValue: (r) => (r.lockUntil ? new Date(r.lockUntil).getTime() : 0),
@@ -217,7 +217,7 @@ const FlexgeldPage = () => {
     () => [
       { header: 'Bank', value: 'bankName' },
       { header: 'Beginn', value: (r) => formatDate(r.beginn) },
-      { header: 'Lock-Ende', value: (r) => (r.lockUntil ? formatDate(r.lockUntil) : '') },
+      { header: 'Festbindung bis', value: (r) => (r.lockUntil ? formatDate(r.lockUntil) : '') },
       {
         header: 'Restbindung',
         value: (r) => (r.isLocked ? `${r.lockDaysRemaining} Tage` : 'Frei'),
@@ -256,7 +256,7 @@ const FlexgeldPage = () => {
       {
         label: 'Aktuell verfügbar',
         value: formatEUR(totalWithdrawableNow),
-        hint: 'Lock-Stand berücksichtigt',
+        hint: 'Festbindung berücksichtigt',
       },
     ],
     [flexgeldTotal, agg, totalWithdrawableNow],
@@ -287,7 +287,7 @@ const FlexgeldPage = () => {
         <DashboardStaggerItem><StatTile icon={PRODUCT_ICONS.flexgeld} label="Gesamtwert" value={formatEUR(flexgeldTotal)} sub={`inkl. ${formatEUR(agg.accruedGrossTotal || 0)} aufgelaufener Zinsen`} tone="pos" /></DashboardStaggerItem>
         <DashboardStaggerItem><StatTile icon={Percent} label="Ø Zinssatz (gewichtet)" value={`${(agg.weightedAvgRate || 0).toFixed(2)} %`} sub="nach Anlagebetrag gewichtet" /></DashboardStaggerItem>
         <DashboardStaggerItem><StatTile icon={TrendingUp} label="Tageszins (heute, netto)" value={formatEUR(agg.dailyInterestNetTotal || 0)} sub={`Brutto: ${formatEUR(agg.dailyInterestGrossTotal || 0)}`} /></DashboardStaggerItem>
-        <DashboardStaggerItem><StatTile icon={Wallet} label="Aktuell verfügbar" value={formatEUR(totalWithdrawableNow)} sub="Lock-Stand berücksichtigt" /></DashboardStaggerItem>
+        <DashboardStaggerItem><StatTile icon={Wallet} label="Aktuell verfügbar" value={formatEUR(totalWithdrawableNow)} sub="Festbindung berücksichtigt" /></DashboardStaggerItem>
       </DashboardStagger>
 
       <DashboardContentReveal
@@ -372,7 +372,7 @@ const FlexgeldPage = () => {
                   <div className="min-w-0">
                     <p className="truncate text-[13px] font-medium text-bank-text">{row.bankName}</p>
                     <p className="mt-0.5 text-[10.5px] text-bank-text-muted">
-                      Lock-Ende: {formatDate(row.lockUntil)} · noch {row.daysRemaining} Tage
+                      Festbindung bis: {formatDate(row.lockUntil)} · noch {row.daysRemaining} Tage
                     </p>
                   </div>
                   <span className="shrink-0 text-[13px] font-semibold tabular-nums text-bank-primary">

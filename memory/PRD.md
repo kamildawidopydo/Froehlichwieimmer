@@ -188,6 +188,11 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 14. Changelog 2026-10-27 (Flexgeld-Festbindung)
+- Flexgeld: Festbindung 3 Monate ab Start (backend `lock_until` = active_from + 3 Monate, auch für Altverträge berechnet; active_until aus Laufzeit).
+- Neue Monats-Zeitachse `FlexgeldMonthTimeline` (Monat 1–3 gebunden grau, ab Monat 4 flexibel grün); „Aktuell verfügbar“ = 0 € während Bindung; „Lock-Ende“ → „Festbindung bis“/„Frei ab“.
+
+
 ## 13. Changelog 2026-10-27 (/apply Dokument-Upload)
 - /apply lud Dateien über Cloudinary ohne Konfiguration → Fehler. Neu: POST /api/applications/documents (eigener Storage, PDF/JPG/PNG, 10 MB, 5/min/IP); Admin-Download über bestehende Admin-Route.
 - /api/applications akzeptiert documents jetzt als Liste (vorher Dict → 422); Antrags-Mails nutzten nicht existierendes `_send_email` → auf `_send_email_via_emergent` umgestellt.

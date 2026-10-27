@@ -25,7 +25,7 @@ const LockProgressBar = ({
       <div className="flex items-center justify-between text-[10px] text-bank-text-muted mb-1">
         <span>Beginn {formatDate(activeFrom)}</span>
         <span className={isLocked ? 'text-bank-primary font-semibold' : 'text-emerald-700 font-semibold'}>
-          Lock-Ende {formatDate(lockUntil)}
+          Frei ab {formatDate(lockUntil)}
         </span>
       </div>
       <div className="relative h-2 w-full bg-bank-border/30 rounded-full overflow-hidden">
