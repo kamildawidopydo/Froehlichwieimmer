@@ -188,6 +188,12 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 12. Changelog 2026-10-27 (Kunden-Mails Stil B)
+- services/customer_mails.py (render Stil B „Modern hell“, send_later im Hintergrund mit 429-Retry). Trigger: Registrierung (Willkommen), Dokument-Upload mit E-Mail, Auszahlung beantragt/freigegeben/abgelehnt, Admin legt Dokument/Vertrag an, Order ausgeführt (order_execution_service.execute_order).
+- Festgeld-Zusammenfassung vollständig (aus formSummaryHtml geparst), abgelaufene Formular-Sitzung → Weiterleitung /formular?abgelaufen=1, Chat-Knopf mobil im Kundenbereich über der Navigationsleiste.
+- iteration_75: 100 %. Test-Mails an Owner: 1. kam an, weitere vom Mail-Dienst als „undeliverable recipient“ blockiert (Outlook-Adresse). Testskript: memory/scripts/send_test_mails.py <adresse>.
+- Offen: Zoho-MX-Einträge (essenceinvest.com-Postfächer empfangen nichts).
+
 ## 11. Changelog 2026-10-27 (Regression + Mail-Entwürfe)
 - Register speichert Vorname/Nachname/Land/Telefon. Dokument-Upload: nur Upload-Codes gültig, neues E-Mail-Feld (validiert, im Admin sichtbar + in Admin-Mail). IBAN-Prüfsumme in allen 12 Vertragsformularen (lib/iban.js).
 - Sanitizer Admin-Mail (Whitelist + Escape von Resten), Kunden löschen entfernt alle Kundendaten, Rate-Limit-IP = XFF[-3] (echter Client hinter Cloudflare+Ingress; geprüft: Spoofing → 429 nach 10), Besucher-Gate nicht im /admin.

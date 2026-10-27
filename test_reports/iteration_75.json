@@ -1,0 +1,39 @@
+{
+  "summary": "Iter75 focused test of the 3 open items and the 6 new style-B customer emails. Backend: 9/9 pytest pass (new file test_iter75_customer_mails_festgeld.py, run with -n0). All 6 mail triggers fire in the background, and the API responses are not affected. Backend log shows exactly one 'customer mail ... failed' WARNING per trigger (example.com blocked by provider, 422): welcome on register, contract added by admin, document added by admin, payout requested, payout approved, payout rejected, document upload confirmation, and buy order executed ('Ihr Kaufauftrag wurde ausgeführt', after an admin limit-buy execute returned 200). render() output contains the #36A852 CTA button and step badges, German content, eur formatting (1.234,50 €), masked IBAN (DE89 •••• •••• 3000), footer HRB, and HTML escaping. Festgeld summary: the stored contract_form_submissions.summary includes Anleger/Anlagebetrag/Zinssatz p.a./Laufzeit parsed from formSummaryHtml, and '—' values are skipped. It is shown in the admin detail dialog (section 'Formulardaten'). All 6 Festgeld forms send these rows. Session: no / bogus / expired (expires_at set in the past) X-Formular-Session each return 401 'Ihre Formular-Sitzung ist abgelaufen...'. In the browser, the fetch response.url matches the /\\/api\\/send-/ regex that apiErrorMessage uses, and /formular?abgelaufen=1 shows the info toast. Mobile 390px /dashboard/uebersicht: launcher at y 692-748, bottom nav starts at y 787. There is no overlap, and elementFromPoint on 3 points of the 'Übersicht' tab hits the tab, which is clickable. The assistant panel opens. Desktop launcher stays at bottom-8. Tester cash 300,00 € intact. All test data cleaned up (verified in Mongo: 0 leftovers).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "services/order_execution_service._mail_order_executed", "issue": "stock_orders has no 'name' field (keys: symbol, side, quantity, ...), so the mail title is 'Auftrag ausgeführt: Kauf AAPL' and the Wertpapier row is 'AAPL (AAPL)'. Look up the instrument name (e.g. from the position or quote) or drop the duplicated '(symbol)'."},
+      {"endpoint": "contract_submissions._merged_summary", "issue": "All 6 Festgeld forms send the HTML row 'IBAN' and formSummary.iban. The merged summary keeps both keys, and the admin dialog maps iban to the label 'IBAN', so IBAN is shown twice. Skip formSummary keys whose label (case-insensitive) already came from the HTML, or remove iban from formSummary in the forms."},
+      {"endpoint": "services/customer_mails.send_later", "issue": "The provider returned 429 during bursts in testing (several mails within ~1s, e.g. payout requested then approved, or contract + document). The retry only waits 1.5s + 3s, so some customer mails can be dropped and only a warning is logged. Consider a longer backoff or a small queue. The contract-submission mails also hit 429 here (adminEmailSent false), but that is caused by the test burst, not a code bug."},
+      {"endpoint": "routes/admin_customer_assets._notify_new_item", "issue": "Contracts of type tagesgeld or flexgeld are also labelled 'Kundenbereich → Festgeld' and link to /dashboard/festgeld. Minor wording issue."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PasswordPage (?abgelaufen=1)", "issue": "The info toast 'Ihre Sitzung ist abgelaufen...' is shown twice in preview because the useEffect runs twice under React.StrictMode. Give the toast an id (toast.info(msg, {id:'formular-expired'})) to avoid duplicates. Production builds are likely unaffected.", "selector": "[data-sonner-toast]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Contract forms after a 401", "issues": ["The error toast reads 'Fehler: Ihre Formular-Sitzung ist abgelaufen. Sie werden ... weitergeleitet …'. The 'Fehler:' prefix comes from contractFormSubmitErrorMessage; this is acceptable, just noting it.", "apiErrorMessage removes only formular_session_id. 'formular_auth' stays in sessionStorage (FormularProtectedRoute removes both). Minor."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter75_customer_mails_festgeld.py", "/app/backend/tests/iter75_formular_helper.py", "/app/test_reports/pytest/iter75.xml"],
+  "action_items": [
+    "Optional: use the real instrument name in the order-executed mail instead of 'AAPL (AAPL)'",
+    "Optional: remove the duplicate IBAN entry in the Festgeld submission summary",
+    "Optional: dedupe the abgelaufen toast with a toast id; consider a longer 429 backoff in customer_mails.send_later"
+  ],
+  "critical_code_review_comments": [
+    "customer_mails.greet() is unused (dead code); auth.register builds its own greeting.",
+    "Doc-upload mail 'Eingegangen am' uses now.astimezone(), i.e. the server-local timezone (likely UTC), not Europe/Berlin. The order mail has the same issue. Use ZoneInfo('Europe/Berlin').",
+    "Opening the admin contract-submission Details dialog automatically marks the submission as 'erledigt' (toast 'Als erledigt markiert'). Check that this is intended."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter75_customer_mails_festgeld.py", "/app/backend/tests/iter75_formular_helper.py"],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% of tested flows (abgelaufen toast, 401 fetch, mobile launcher, admin Formulardaten)"},
+  "test_credentials": "Admin petrowski616@outlook.com / HHHKKK222; Customer tester@mester.de / HHHKKK222 (cash 300 € unchanged)",
+  "seed_data_creation": "Temporary audit+it75*@example.com users (deleted via DELETE /api/admin/users), formular/doc codes, submissions, payouts, contracts, docs and an order (all removed; verified 0 leftovers).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run the iter75 pytest with -n0, because pytest.ini enables xdist and the module fixture would register 2 users. Admin portfolio routes are under /api/admin/portfolio/... (cash/deposit, orders/{id}/execute). The full Festgeld form UI submit (many fields + signature canvas) was NOT automated. The 401 redirect was verified via backend 401, a browser fetch URL regex check, code review of apiErrorMessage, and the /formular?abgelaufen=1 toast. The welcome gate on mobile must be dismissed: select role 'privatperson' in [data-testid=visitor-welcome-gate] select:nth(1), then click 'Akzeptieren'."
+}

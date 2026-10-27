@@ -20,7 +20,7 @@ const PasswordPage = () => {
 
   React.useEffect(() => {
     if (new URLSearchParams(window.location.search).get('abgelaufen')) {
-      toast.info('Ihre Sitzung ist abgelaufen. Bitte geben Sie Ihren Zugangscode erneut ein.');
+      toast.info('Ihre Sitzung ist abgelaufen. Bitte geben Sie Ihren Zugangscode erneut ein.', { id: 'formular-abgelaufen' });
     }
   }, []);
 

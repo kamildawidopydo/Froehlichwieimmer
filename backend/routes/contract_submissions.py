@@ -202,7 +202,8 @@ def _merged_summary(body: "ContractSubmitPayload") -> Dict[str, Any]:
         if k and v and v not in ("—", "-"):
             out[k[:80]] = v[:300]
     if isinstance(body.formSummary, dict):
-        out.update({k: v for k, v in body.formSummary.items() if v not in (None, "")})
+        have = {k.lower() for k in out}
+        out.update({k: v for k, v in body.formSummary.items() if v not in (None, "") and k.lower() not in have})
     return out
 
 
