@@ -89,6 +89,7 @@ const Register = () => {
       });
       setRegisteredEmail(form.email);
       setRegistered(true);
+      window.scrollTo(0, 0);
     } catch (error) {
       const message =
         error.message?.includes('bereits registriert') || error.message?.includes('already registered')
@@ -169,7 +170,7 @@ const Register = () => {
           <span className="block italic text-bank-gold-soft">erstellen.</span>
         </>
       }
-      subtitle="Einmal registrieren — Zugang zum Vergleich, Favoriten und Anträgen. Freischaltung in 1–2 Werktagen."
+      subtitle="Einmal registrieren — Zugang zum Vergleich, Favoriten und Anträgen. Ihr Zugang ist sofort aktiv."
       formTitle={
         <>
           Ihre Daten — <em className="italic text-bank-text-muted">in einem Schritt.</em>
@@ -182,7 +183,7 @@ const Register = () => {
       <ol className="mb-9 flex w-full items-start justify-between gap-1 border-b border-bank-border pb-7 sm:gap-2">
         {[
           { n: '01', t: 'Daten', d: 'eingeben' },
-          { n: '02', t: 'Prüfung', d: '1–2 Werktage' },
+          { n: '02', t: 'Anmelden', d: 'sofort aktiv' },
           { n: '03', t: 'Loslegen', d: 'Vergleich starten' },
         ].map((s, i) => (
           <li key={s.n} className="flex min-w-0 flex-1 items-start">

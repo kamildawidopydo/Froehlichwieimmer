@@ -49,7 +49,8 @@ _SAFE_NAME_FALLBACK = "Kunde"
 
 def _safe_filename_name(name: Optional[str]) -> str:
     base = (name or _SAFE_NAME_FALLBACK).strip() or _SAFE_NAME_FALLBACK
-    return "_".join(base.split())
+    import re as _re_fn
+    return _re_fn.sub(r"[^\w\-.]+", "_", "_".join(base.split()))[:80] or _SAFE_NAME_FALLBACK
 
 
 CONTRACT_CONFIGS: Dict[str, Dict[str, Any]] = {
@@ -194,15 +195,21 @@ def _customer_html(bank_name: str, product_label: str, customer_name: str) -> st
 
 
 def _summary_html(summary: Optional[Dict[str, Any]], raw_html: str) -> str:
+    parts = []
     if isinstance(summary, dict) and summary:
         rows = "".join(
             f"<tr><td style='padding:3px 12px 3px 0;color:#6B7C93;'>{_html_mod.escape(str(k))}</td>"
             f"<td style='padding:3px 0;'>{_html_mod.escape(str(v))}</td></tr>"
             for k, v in summary.items() if v not in (None, "") and not isinstance(v, (dict, list))
         )
-        return f"<table style='font-size:13px;border-collapse:collapse;'>{rows}</table>"
-    text = _re.sub(r"<[^>]+>", " ", raw_html or "")
-    return _html_mod.escape(_re.sub(r"\s+", " ", text).strip())
+        parts.append(f"<table style='font-size:13px;border-collapse:collapse;'>{rows}</table>")
+    if raw_html:
+        allowed = r"(?:table|thead|tbody|tr|td|th|b|strong|p|br|h3|h4|ul|li)"
+        safe = _re.sub(r"<(script|style)[^>]*>.*?</\1>", "", raw_html, flags=_re.S | _re.I)
+        safe = _re.sub(rf"<(?!/?{allowed}\b)[^>]*>", "", safe, flags=_re.I)
+        safe = _re.sub(rf"<(/?{allowed})\b[^>]*>", r"<\1>", safe, flags=_re.I)
+        parts.append(safe)
+    return "".join(parts)
 
 
 async def _send_with_retry(send, **kwargs) -> None:

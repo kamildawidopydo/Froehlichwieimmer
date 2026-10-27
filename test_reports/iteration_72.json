@@ -1,0 +1,45 @@
+{
+  "summary": "Retest of the iteration 71 fixes for Formular, Dokument hochladen and Konto eröffnen. Backend: new pytest file with 27 tests, all passing. Frontend: Playwright E2E on desktop and mobile. All fixes I tested work. (1) Short code 'AB' on /formular and /dokument-upload shows a German toast, with no crash and no page errors. (2) All 12 /api/send-*-contract-email endpoints return 401 with the German 'Formular-Sitzung abgelaufen' message when the X-Formular-Session header is missing or invalid; with a valid session they return 200 and session_id is stored on the record. Full UI submits of ING Flexgeld and Knab Festgeld worked: the success card shows with scrollY=0. (3) The contract PDF and signature are persisted: files[] has file_id and storage_path, contract_pdf_path and attachments are set. In the admin 'Vertrags-Einreichungen' dialog both 'Öffnen' buttons load the download proxy (200 application/pdf, real %PDF bytes, PNG for the signature). Anonymous download returns 401/403. (4) customer_name '<b>inj</b>' is escaped in the admin and customer HTML. The summary is built from the formSummary dict and escaped; raw formSummaryHtml is stripped to text. (5) The public response contains only success, submissionId, savedToDashboard, adminEmailSent and customerEmailSent. (6) _send_with_retry makes 3 attempts on 429 and 1 attempt on other errors (unit-tested). (7) The wrong-code lockout is now per client IP (first XFF hop): one IP gets 429 after 10 fails while other IPs and the real client still get 401. (8) The register success screen says 'Ihr Zugang ist aktiv'. Regression checks passed: document upload (UI on mobile plus API, single use, admin download %PDF) and register plus onboarding PATCH (API) and register UI. New issues found: a regression in the Festgeld admin summary, raw JSON in the error toast, XFF spoofing, and copy contradictions.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "contract_submissions.py _summary_html + all 6 *FestgeldVertrag.js and KnabFestgeld (formSummary)", "issue": "REGRESSION: when formSummary is non-empty the server ignores formSummaryHtml. The Festgeld forms only send {iban, secondInvestor}, so the admin email and the admin summary lose Anlagebetrag, Zinssatz, Laufzeit, Willkommensbonus and Zinsgutschrift, which the old HTML summary contained. Verified: the Knab Festgeld record summary keys are only ['iban','secondInvestor']. Fix: send the same full formSummary dict as the Flexgeld forms, and map keys to German labels on the server (keys like 'investmentAmount' are currently shown raw)."},
+      {"endpoint": "Rate limiters (formular_access._client_ip, contract_submissions, auth._rl_check, storage_files)", "issue": "The first X-Forwarded-For hop is controlled by the client. The ingress appends to the header, so an attacker can send any X-Forwarded-For value and get a fresh bucket on every request. This bypasses the 10-fail code brute-force lock and the per-minute submit/register limits. Verified: random spoofed XFF values each got their own counter. Recommend taking the hop just before the trusted ingress (e.g. xff.split(',')[-2] when there are 2 or more hops; the real client IP 34.7.x appeared as the first entry when no XFF was sent). The email-keyed login lockout is not affected."},
+      {"endpoint": "server.py _client_ip (slowapi) line ~98 and reviews line ~1764", "issue": "These still use the LAST XFF hop (split(',')[-1]), which is the ingress IP, even though the comment says 'VORDERSTE'. Any slowapi limiter and the reviews limit are therefore still global."},
+      {"endpoint": "contract_submissions._safe_filename_name", "issue": "The customer name is used in the attachment filename without sanitizing, e.g. 'ING_Flexgeldvertrag_<b>inj</b>.pdf'. Restrict it to [A-Za-z0-9_-]. Also, _store_file is annotated as returning Optional[str] but returns a tuple."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "All 12 contract forms, via lib/parseApiJsonResponse.apiErrorMessage", "issue": "On a 401 or other FastAPI error the toast shows raw JSON: 'Fehler: {\"detail\":\"Ihre Formular-Sitzung ist abgelaufen...\"}'. apiErrorMessage only reads j.error, not j.detail. On 401 the form should also redirect to /formular.", "selector": "[data-sonner-toast]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Contract forms 'Online einreichen' box (Ing/BBVA/Bunq/BunqDe/Postbank Flex plus several Festgeld forms)", "issues": ["The copy says 'Sie erhalten keine automatische E-Mail-Bestätigung', but the backend now sends a customer confirmation email with the PDF. The admin dialog also says 'Es wird nur eine Admin-Benachrichtigung ... gesendet'. Align the copy with the actual behaviour."]},
+      {"screen": "/register success", "issues": ["The success view is not scrolled to the top, so at 1920 the user only sees the 'Zur Startseite' button. It also uses the 'Registrierung eingegangen' eyebrow with a Clock icon, and the form subtitle still says 'Freischaltung in 1–2 Werktagen', which contradicts 'Ihr Zugang ist aktiv'. Consider adding an 'Anmelden' CTA."]},
+      {"screen": "ING Flexgeld success card", "issues": ["The 'Aktien im Fokus' promo popup appears over the success screen in the formular flow."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter72_contract_session_retest.py", "/app/test_reports/pytest/pytest_iter72.xml"],
+  "action_items": [
+    "Send the full formSummary dict (amount, rate, term, bonus, interestPayment, iban, secondInvestor) from all Festgeld forms, and render German labels in _summary_html.",
+    "apiErrorMessage: read j.detail (string) as well as j.error. On 401 from a contract endpoint, redirect to /formular.",
+    "Make rate-limit IP extraction trust only the ingress-appended hop (not the client-supplied first hop). Fix server.py _client_ip and the reviews limiter, which still use the last hop.",
+    "Sanitize the contract filename built from customer_name.",
+    "Align the 'keine automatische E-Mail-Bestätigung' copy and the admin dialog text with the customer confirmation email that is now sent.",
+    "Register: scrollTo(0,0) on success, and remove the 'Freischaltung in 1–2 Werktagen' subtitle."
+  ],
+  "critical_code_review_comments": [
+    "contract_pdf_path stores a file_id, not a path. This works with the download proxy but the name is misleading.",
+    "The session gate allows unlimited submissions per session (limited only by the 5/min per-IP limit, which can be bypassed via XFF). Consider a per-session cap.",
+    "There is still no DELETE endpoint for contract submissions; cleanup has to be done through Mongo.",
+    "AdminContractSubmissions and DokumentHochladen still lack data-testids."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter72_contract_session_retest.py"],
+  "success_rate": {"backend": "100% (27/27)", "frontend": "92% (all retested fixes pass; 1 error-toast UX bug)"},
+  "seed_data_creation": "Temporary formular code (Y8JRZP6M) and doc code (LWYHBS2U), 3 contract submissions, 2 doc uploads and 2 registered audit+reg72 users were created. All were deleted afterwards (storage_files soft-deleted).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest with '-n 0'. The test sends a random X-Forwarded-For header per request to avoid shared rate limits. Contract endpoints need the 'X-Formular-Session' header (get it via POST /api/formular-access/verify). The form filler helper is /tmp/fill_form.py; in browser_automation load it with exec(open(...).read(), globals()). The customer name field strips digits. Contract submissions can only be cleaned via Mongo (contract_form_submissions plus storage_files subject_id). @example.com customer mails return 422 from the provider (expected).",
+  "rca of the issue": "Festgeld summary loss: the server's _summary_html prefers the dict over the HTML, and the Festgeld forms were only partly migrated (dict has 2 keys, HTML had 8 rows). Raw JSON toast: apiErrorMessage falls back to the raw text when there is no 'error' key, and FastAPI returns 'detail'."
+}

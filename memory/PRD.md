@@ -188,7 +188,11 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
-## 9. Changelog 2026-10-27
+## 10. Changelog 2026-10-27 (Einstiegs-Flows)
+- Audit Formular / Dokument hochladen / Konto eröffnen (iteration_71/72). Behoben: Absturz bei kurzem Code, Vertrags-PDF + Unterschriften werden gespeichert (storage_files scope contract_submission, Admin-Download), Vertrags-Endpoints nur mit gültiger Formular-Sitzung (Header X-Formular-Session), HTML-Escaping/Whitelist für Admin-Mail, 429-Retry, Rate-Limit pro Client-IP, Scroll nach oben nach Absenden, Register-Texte korrigiert.
+- Offen (bekannt): IBAN-Prüfung in Vertragsformularen, Land/Telefon aus Registrierung nicht gespeichert, Formular-Codes auch für Upload gültig, keine MIME-Prüfung per Dateiinhalt.
+- Nächster Schritt mit Kunde: E-Mail-Bereiche festlegen, je Bereich Template-Entwürfe zur Auswahl, dann gemeinsame Testläufe.
+
 - Auszahlungen NUR per Kundenantrag (POST /api/portfolio/payout-requests, IBAN mod-97, Betrag reserviert als pending withdrawal) → Admin-Freigabe /admin/payout-requests (approve settles / reject cancels). Admin-Belastungen gesperrt (403), Kontoguthaben-Seite nur Gutschriften.
 - Alle 75 Banken mit echtem Logo (frontend/public/assets/bank-logos, Mapping backend/data/seed_production/bank_logos.json, Prod-Sync im production_seed_loader). Logos in Admin-Angeboten, Kundendetail, Depotverträge, Mein Depot.
 - Admin-Angebotslisten zeigen alle ~298 (limit=500).

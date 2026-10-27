@@ -22,6 +22,9 @@ export function apiErrorMessage(response, rawText, fallback = 'Fehler beim Sende
     try {
       const j = JSON.parse(t);
       if (j.error) return j.error;
+      if (typeof j.detail === 'string') return j.detail;
+      if (Array.isArray(j.detail)) return 'Bitte prüfen Sie Ihre Eingaben.';
+      return fallback;
     } catch {
       /* ignore */
     }

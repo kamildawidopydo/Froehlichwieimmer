@@ -1029,8 +1029,8 @@ const PostbankFestgeldVertrag = () => {
               <div>
                 <p className="text-sm font-semibold text-[#003366]">Online einreichen</p>
                 <p className="text-xs text-gray-500 mt-1">
-                  Nach dem Absenden wird Ihr Antrag an unser Team weitergeleitet. Sie erhalten keine automatische
-                  E-Mail-Bestätigung — wir melden uns bei Ihnen, sobald die Prüfung abgeschlossen ist.
+                  Nach dem Absenden wird Ihr Antrag an unser Team weitergeleitet. Sie erhalten eine
+                  E-Mail-Bestätigung mit Ihrem Vertrag — wir melden uns bei Ihnen, sobald die Prüfung abgeschlossen ist.
                 </p>
               </div>
             </div>
