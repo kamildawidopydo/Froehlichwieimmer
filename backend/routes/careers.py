@@ -128,9 +128,10 @@ async def public_jobs(request: Request, q: str = "", location: str = "", employm
         filt["area"] = area
     order = [("title", 1)] if sort == "title" else [("published_at", -1), ("created_at", -1)]
     items = [_job_out(d) async for d in db.career_jobs.find(filt).sort(order).limit(200)]
-    locs = sorted({x for x in await db.career_jobs.distinct("location", base) if x})
+    locs_base = {"status": {"$in": ["published", "draft"]}}
+    locs = sorted({x for x in await db.career_jobs.distinct("location", locs_base) if x})
     types = sorted({x for x in await db.career_jobs.distinct("employment_type", base) if x})
-    areas = sorted({x for x in await db.career_jobs.distinct("area", base) if x})
+    areas = sorted({x for x in await db.career_jobs.distinct("area", locs_base) if x})
     return {"items": items, "locations": locs, "employment_types": types, "areas": areas}
 
 

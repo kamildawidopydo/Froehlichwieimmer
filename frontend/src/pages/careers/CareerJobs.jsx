@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
-import { Loader2, Search, SearchX, SlidersHorizontal, X } from 'lucide-react';
+import { Loader2, MapPin, Search, SearchX, SlidersHorizontal, X } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import { JobRow } from '@/components/careers/JobCard';
 import JobsEmptyState from '@/components/careers/JobsEmptyState';
@@ -63,11 +63,19 @@ export default function CareerJobs() {
       </section>
       <div className="relative z-10 mx-auto -mt-12 max-w-7xl px-5 lg:px-8">
         <form onSubmit={(e) => { e.preventDefault(); apply(filters); }} role="search"
-          className="flex gap-2 rounded-2xl bg-white p-2.5 shadow-[0_30px_60px_-30px_rgba(30,34,44,0.5)]" data-testid="job-search-form">
-          <label className="flex flex-1 items-center gap-3 rounded-xl bg-[#F7F5F0] px-4">
+          className="flex flex-wrap gap-2 rounded-2xl bg-white p-2.5 shadow-[0_30px_60px_-30px_rgba(30,34,44,0.5)] sm:flex-nowrap" data-testid="job-search-form">
+          <label className="flex basis-full items-center gap-3 rounded-xl bg-[#F7F5F0] px-4 sm:flex-1 sm:basis-auto">
             <Search size={18} className="shrink-0 text-[#36A852]" />
             <input className="w-full bg-transparent py-3.5 text-[15px] outline-none" placeholder="Jobtitel oder Stichwort" aria-label="Jobtitel oder Stichwort"
               value={filters.q} onChange={(e) => setFilters({ ...filters, q: e.target.value })} data-testid="job-search-q" />
+          </label>
+          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-[#F7F5F0] px-4 sm:w-60 sm:flex-none">
+            <MapPin size={18} className="shrink-0 text-[#36A852]" />
+            <select className="w-full cursor-pointer bg-transparent py-3.5 text-[15px] outline-none" aria-label="Arbeitsort" value={filters.location}
+              onChange={(e) => apply({ ...filters, location: e.target.value })} data-testid="job-search-location">
+              <option value="">Alle Arbeitsorte</option>
+              {data.locations.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
           </label>
           <button type="submit" className="rounded-xl bg-[#36A852] px-5 text-[15px] font-semibold text-white hover:bg-[#2E9446] sm:px-7" data-testid="job-search-submit">
             <span className="hidden sm:inline">Stellenangebote finden</span><Search size={18} className="sm:hidden" />
