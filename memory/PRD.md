@@ -188,6 +188,10 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 22. Changelog 2026-10-27 (Original-Logo auf Karriereseiten)
+- CareerLayout + RecruitingLayout nutzen BrandLogo (/assets/logo/frohlich-logo-clear.png, identisch zur Hauptseite) statt Text-Wortmarke. Live auf essenceinvest.com/karriere geprüft (Desktop + Mobil); Startseite-Karrierebalken öffentlich sichtbar.
+
+
 ## 21. Changelog 2026-10-27 (Karriere dauerhaft öffentlich)
 - Auf Kundenwunsch: `_settings()` liefert site_public immer True (Einschränkung entfernt), Schalter im Dashboard durch Info „Aktiv“ ersetzt. Entwürfe bleiben unsichtbar, Bewerbungen aus. Deploy angestoßen; Prod-Check (https://essenceinvest.com/api/careers/status) nach ~10 Min noch site_public=false → Deploy noch nicht live.
 

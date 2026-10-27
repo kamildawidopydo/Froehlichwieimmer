@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Menu, X, Eye, Loader2 } from 'lucide-react';
+import BrandLogo from '@/components/BrandLogo';
 import { careersApi } from '@/lib/careersApi';
 
 const NAV = [
@@ -21,7 +22,7 @@ const Header = ({ open, setOpen, search }) => (
   <header className="sticky top-0 z-40 border-b border-black/5 bg-white/90 backdrop-blur-lg">
     <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-4 px-5 lg:px-8">
       <Link to="/karriere" className="flex items-center gap-3" data-testid="career-logo-link">
-        <span className="font-display text-[22px] font-medium tracking-tight text-[#1E222C]">Essence<span className="text-[#36A852]"> Invest</span></span>
+        <BrandLogo alt="Essence Invest" imgClassName="h-[42px] w-auto max-w-[min(55vw,15rem)] object-contain object-left sm:h-[46px] sm:max-w-[16rem] lg:h-[52px] lg:max-w-[17rem]" />
         <span className="hidden border-l border-black/10 pl-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#36A852] sm:inline">Karriere</span>
       </Link>
       <nav className="hidden items-center xl:flex" aria-label="Karriere-Navigation">

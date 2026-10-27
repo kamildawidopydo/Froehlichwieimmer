@@ -3,6 +3,7 @@ import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { BarChart3, Briefcase, Users, Settings, LogOut, ExternalLink, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import BrandLogo from '@/components/BrandLogo';
 
 const NAV = [
   { to: '/recruiting', label: 'Übersicht', icon: BarChart3, end: true },
@@ -25,7 +26,7 @@ export default function RecruitingLayout() {
       <header className="sticky top-0 z-30 border-b border-black/5 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 lg:px-8">
           <div className="flex items-center gap-3">
-            <span className="font-display text-xl font-medium text-[#1E222C]">Essence<span className="text-[#36A852]"> Invest</span></span>
+            <BrandLogo alt="Essence Invest" imgClassName="h-[36px] w-auto max-w-[50vw] object-contain object-left sm:h-[40px]" />
             <span className="hidden text-xs font-semibold uppercase tracking-[0.16em] text-[#36A852] sm:inline">Recruiting</span>
           </div>
           <div className="flex items-center gap-2 text-sm">
