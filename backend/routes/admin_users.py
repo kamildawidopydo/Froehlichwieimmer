@@ -230,4 +230,10 @@ async def admin_delete_user(user_id: str, admin: dict = Depends(require_admin)):
         raise HTTPException(status_code=400, detail="Administratoren können nicht gelöscht werden")
     await db.users.delete_one({"_id": oid})
     await db.password_reset_tokens.delete_many({"user_id": oid})
+    uq = {"user_id": {"$in": [oid, user_id]}}
+    for coll in ("cash_ledger", "stock_positions", "bond_positions", "depot_contracts", "payout_requests",
+                 "stock_orders", "watchlist_items", "user_sessions"):
+        await db[coll].delete_many(uq)
+    await db.storage_files.update_many(
+        {"scope": "customer_document", "subject_id": user_id}, {"$set": {"is_deleted": True}})
     return {"deleted": True, "id": user_id}

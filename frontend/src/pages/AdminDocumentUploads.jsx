@@ -259,7 +259,7 @@ const AdminDocumentUploads = () => {
                   return (
                     <tr key={s.id} className={`border-b border-bank-border last:border-b-0 ${adminRowHover}`}>
                       <td className="px-4 py-2.5 font-mono text-[11px] text-bank-text-muted">{formatDate(s.created_at)}</td>
-                      <td className="px-4 py-2.5 text-[13px] font-medium text-bank-text">{s.used_by_name}</td>
+                      <td className="px-4 py-2.5 text-[13px] font-medium text-bank-text">{s.used_by_name}{s.email && <div className="text-[11.5px] font-normal text-bank-text-muted" data-testid={`du-sub-email-${s.id}`}>{s.email}</div>}</td>
                       <td className="px-4 py-2.5 font-mono text-[12px] text-bank-text">{codeById[s.code_id] || '–'}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex flex-col gap-1">

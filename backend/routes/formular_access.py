@@ -85,6 +85,9 @@ async def _ensure_indexes() -> None:
 
 
 def _client_ip(request: Request) -> str:
+    cf = (request.headers.get("cf-connecting-ip") or request.headers.get("x-real-ip") or "").strip()
+    if cf:
+        return cf
     xff = request.headers.get("x-forwarded-for", "")
     return (xff.split(",")[0].strip() if xff else (request.client.host if request.client else "")) or "unknown"
 

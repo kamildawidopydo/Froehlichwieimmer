@@ -208,6 +208,11 @@ def _summary_html(summary: Optional[Dict[str, Any]], raw_html: str) -> str:
         safe = _re.sub(r"<(script|style)[^>]*>.*?</\1>", "", raw_html, flags=_re.S | _re.I)
         safe = _re.sub(rf"<(?!/?{allowed}\b)[^>]*>", "", safe, flags=_re.I)
         safe = _re.sub(rf"<(/?{allowed})\b[^>]*>", r"<\1>", safe, flags=_re.I)
+        tag_re = rf"(</?{allowed}>)"
+        safe = "".join(
+            p if _re.fullmatch(tag_re, p, flags=_re.I) else p.replace("<", "&lt;").replace(">", "&gt;")
+            for p in _re.split(tag_re, safe, flags=_re.I)
+        )
         parts.append(safe)
     return "".join(parts)
 

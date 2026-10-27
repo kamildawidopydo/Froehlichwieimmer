@@ -351,7 +351,8 @@ const AdminContractSubmissions = () => {
                   </p>
                 )}
                 <p className="text-xs text-bank-text-muted">
-                  Es wird nur eine Admin-Benachrichtigung an kundenservice@essenceinvest.com gesendet (Betreff: „Neuer …antrag“).
+                  Der Kunde erhält eine Bestätigung mit dem Vertrag als PDF; zusätzlich geht eine Admin-Benachrichtigung an kundenservice@essenceinvest.com.
+                  {selected?.customer_email_sent === false && <span className="block text-red-700">Achtung: Die Kunden-E-Mail konnte nicht zugestellt werden.</span>}
                 </p>
               </div>
 

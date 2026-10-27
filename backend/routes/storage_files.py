@@ -249,8 +249,7 @@ async def admin_list_doc_submissions(
             "id": str(d["_id"]),
             "code_id": str(d.get("code_id")) if d.get("code_id") else None,
             "used_by_name": d.get("used_by_name"),
-            "message": d.get("message"),
-            "files": d.get("files") or [],
+            "email": d.get("email"),
             "user_agent": d.get("user_agent"),
             "ip": d.get("ip"),
             "status": d.get("status", "new"),
@@ -354,6 +353,9 @@ async def public_submit_document_upload(
     if not (4 <= len(code_val) <= 32):
         raise HTTPException(status_code=422, detail="Code ungültig")
     code_hash = _hashlib.sha256(code_val.encode()).hexdigest()
+    clean_email = (email or "").strip().lower()[:200] or None
+    if clean_email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[a-z]{2,}", clean_email):
+        raise HTTPException(status_code=422, detail="Bitte eine gültige E-Mail-Adresse angeben")
     code_coll = _db.document_access_codes
     is_doc_code = True
     code_doc = await code_coll.find_one({"code_hash": code_hash})
@@ -428,7 +430,7 @@ async def public_submit_document_upload(
             "_id": sub_id,
             "code_id": code_doc["_id"],
             "used_by_name": name,
-            "email": (email or "").strip().lower()[:200] or None,
+            "email": clean_email,
             "message": (message or "").strip()[:2000] or None,
             "files": stored,
             "user_agent": (user_agent or "")[:500] or None,
@@ -475,7 +477,7 @@ async def public_submit_document_upload(
             to=_admin_target(),
             subject=f"Neuer Dokument-Upload: {name}",
             html=(f"<p>Neue Dokumente wurden über das Upload-Portal eingereicht.</p>"
-                  f"<p><b>Name:</b> {_html.escape(name)}<br><b>Nachricht:</b> {_html.escape((message or '').strip() or '–')}</p>"
+                  f"<p><b>Name:</b> {_html.escape(name)}<br><b>E-Mail:</b> {_html.escape(clean_email or '–')}<br><b>Nachricht:</b> {_html.escape((message or '').strip() or '–')}</p>"
                   f"<p><b>Dateien ({len(stored)}):</b></p><ul>{names}</ul>"
                   f"<p>Die Dateien finden Sie im Adminbereich unter „Dokument-Uploads“.</p>"),
         )

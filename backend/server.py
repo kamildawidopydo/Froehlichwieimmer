@@ -98,9 +98,12 @@ except ImportError:
 def _client_ip(request: Request) -> str:
     """Proxy-sichere IP-Ermittlung: nur der VORDERSTE Wert aus X-Forwarded-For,
     Fallback auf Remote-Address. Verhindert Spoofing per zweiter XFF-Zeile."""
+    cf = (request.headers.get("cf-connecting-ip") or request.headers.get("x-real-ip") or "").strip()
+    if cf:
+        return cf
     xff = request.headers.get("x-forwarded-for", "")
     if xff:
-        first = xff.split(",")[-1].strip()
+        first = xff.split(",")[0].strip()
         if first:
             return first
     return get_remote_address(request) if _SLOWAPI_AVAILABLE else (request.client.host if request.client else "unknown")
