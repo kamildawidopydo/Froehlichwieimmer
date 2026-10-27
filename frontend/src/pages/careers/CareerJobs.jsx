@@ -93,7 +93,7 @@ export default function CareerJobs() {
             : data.items.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-black/10 bg-white p-12 text-center" data-testid="job-results-empty">
                 <SearchX className="mx-auto text-[#36A852]" />
-                <p className="mt-3 text-[#555]">Keine passenden Stellen gefunden.</p>
+                <p className="mt-3 text-[#555]">{activeCount > 0 || filters.q ? 'Keine passenden Stellen gefunden.' : 'Unsere Stellenangebote erscheinen in Kürze.'}</p>
                 <Link to="/karriere/bewerben?initiativ=1" className="mt-5 inline-block rounded-full bg-[#36A852] px-6 py-3 text-sm font-semibold text-white">Initiativ bewerben</Link>
               </div>
             ) : <div className="space-y-3">{data.items.map((j, i) => <JobRow key={j.id} job={j} index={i} />)}</div>}

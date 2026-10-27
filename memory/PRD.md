@@ -188,6 +188,11 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 20. Changelog 2026-10-27 (Karriere öffentlich – Vorbereitung)
+- Balken-Text „Karriere bei Essence Invest – Wir suchen Verstärkung“; leere Jobbörse zeigt „Unsere Stellenangebote erscheinen in Kürze“.
+- Vorschau: site_public=true gesetzt (applications_enabled=false, 10 Entwürfe). Produktion: Schalter muss in der Produktions-DB über essenceinvest.com/recruiting/einstellungen aktiviert werden (Agent hat keinen Schreibzugriff auf Prod-DB). Deploy angestoßen.
+
+
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)
 - Startseite: `HomeCareerCta` (oben im BankingHero, über den News) mit „Jetzt bewerben“ → /karriere/stellen. Hauptmenü (Desktop + Mobil): „Karriere“ → /karriere.
 - Beides nur sichtbar, wenn Karriereseite öffentlich ist ODER Admin/Recruiting angemeldet ist (`lib/useCareerVisible.js`, /api/careers/status) — Besucher sehen bis zur Freigabe nichts.

@@ -59,7 +59,7 @@ export default function CareerHome() {
         </div>
         {data.items.length === 0 ? (
           <p className="mt-10 rounded-2xl border border-dashed border-black/10 bg-white p-10 text-center text-[#555]" data-testid="career-no-jobs">
-            Aktuell sind keine Stellen ausgeschrieben. Überzeuge uns gerne mit einer <Link to="/karriere/bewerben?initiativ=1" className="font-semibold text-[#36A852]">Initiativbewerbung</Link>.
+            Unsere Stellenangebote erscheinen in Kürze. Überzeuge uns gerne schon jetzt mit einer <Link to="/karriere/bewerben?initiativ=1" className="font-semibold text-[#36A852]">Initiativbewerbung</Link>.
           </p>
         ) : (
           <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
