@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, Body, HTTPException, Request
@@ -51,7 +51,7 @@ def _check_app_rl(request: Request) -> None:
 class ApplicationPayload(BaseModel):
     personal_data: Dict[str, Any] = Field(...)
     investment_data: Dict[str, Any] = Field(...)
-    documents: Optional[Dict[str, Any]] = None
+    documents: Optional[List[Dict[str, Any]]] = Field(default=None, max_length=20)
     terms_accepted: bool = Field(...)
     privacy_accepted: bool = Field(...)
     idempotency_key: Optional[str] = Field(default=None, max_length=128)
@@ -74,7 +74,7 @@ async def submit_application(request: Request, body: ApplicationPayload = Body(.
     doc = {
         "personal_data": body.personal_data,
         "investment_data": body.investment_data,
-        "documents": body.documents or {},
+        "documents": body.documents or [],
         "terms_accepted": body.terms_accepted,
         "privacy_accepted": body.privacy_accepted,
         "idempotency_key": body.idempotency_key,
@@ -95,7 +95,7 @@ async def submit_application(request: Request, body: ApplicationPayload = Body(.
     email_status = "pending"
     email_error: Optional[str] = None
     try:
-        from server import _send_email, EMAIL_REPLY_TO  # type: ignore
+        from server import _send_email_via_emergent, EMAIL_REPLY_TO  # type: ignore
         pd = body.personal_data or {}
         first = str(pd.get("first_name") or "").strip()
         last = str(pd.get("last_name") or "").strip()
@@ -107,11 +107,12 @@ async def submit_application(request: Request, body: ApplicationPayload = Body(.
             f'<ul><li>ID: {app_id}</li>'
             f'<li>Name: {first} {last}</li>'
             f'<li>E-Mail: {cust_email}</li>'
-            f'<li>Bank: {(body.investment_data or {}).get("selectedBank", "–")}</li>'
-            f'<li>Betrag: {(body.investment_data or {}).get("amount", "–")}</li></ul>'
+            f'<li>Bank: {(body.investment_data or {}).get("bank_name", "–")}</li>'
+            f'<li>Betrag: {(body.investment_data or {}).get("investment_amount", "–")}</li>'
+            f'<li>Dokumente: {len(body.documents or [])}</li></ul>'
         )
         if admin_to:
-            await _send_email(admin_to, subject, html_admin)
+            await _send_email_via_emergent(to=admin_to, subject=subject, html=html_admin)
         if cust_email:
             html_cust = (
                 f'<p>Guten Tag {first},</p>'
@@ -119,7 +120,7 @@ async def submit_application(request: Request, body: ApplicationPayload = Body(.
                 f'Wir haben Ihre Unterlagen erhalten und melden uns in Kürze.</p>'
                 f'<p>Ihre Referenz: <strong>{app_id}</strong></p>'
             )
-            await _send_email(cust_email, "Antragsbestätigung — Fröhlich Vermögensberatung", html_cust)
+            await _send_email_via_emergent(to=cust_email, subject="Antragsbestätigung — Fröhlich Vermögensberatung", html=html_cust)
         email_status = "sent"
         await _db.applications.update_one(
             {"_id": ObjectId(app_id)},

@@ -305,6 +305,55 @@ async def admin_download_doc(file_id: str, _admin: dict = Depends(require_admin)
     )
 
 
+APP_DOC_ALLOWED = {"application/pdf", "image/jpeg", "image/png"}
+APP_DOC_TYPES = {"id_document", "address_proof", "income_proof", "other"}
+
+
+@router.post("/applications/documents", response_model=None)
+async def public_upload_application_document(
+    request: Request,
+    doc_type: str = Form(...),
+    file: UploadFile = File(...),
+):
+    _check_public_upload_rl(request)
+    if doc_type not in APP_DOC_TYPES:
+        raise HTTPException(status_code=422, detail="Ungültiger Dokumenttyp")
+    ct = (file.content_type or "").lower()
+    if ct == "image/jpg":
+        ct = "image/jpeg"
+    if ct not in APP_DOC_ALLOWED:
+        raise HTTPException(status_code=415, detail="Ungültiger Dateityp. Erlaubt: PDF, JPG, PNG")
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=422, detail="Leere Datei")
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Datei zu groß. Maximal 10 MB erlaubt.")
+    path = f"{APP_PREFIX}/application-documents/{uuid.uuid4().hex}.{_ext_from_content_type(ct)}"
+    try:
+        result = put_object(path, data, ct)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Speichern fehlgeschlagen: {e}")
+    file_id = uuid.uuid4().hex
+    name = _sanitize_filename(file.filename or "upload")
+    await _db.storage_files.insert_one({
+        "_id": file_id,
+        "scope": "application_document",
+        "subject_id": doc_type,
+        "storage_path": result["path"],
+        "content_type": ct,
+        "size": int(result.get("size") or len(data)),
+        "original_filename": name,
+        "is_deleted": False,
+        "uploaded_by": None,
+        "created_at": datetime.now(timezone.utc),
+    })
+    return {
+        "file_id": file_id,
+        "name": name,
+        "url": f"/api/admin/document-uploads/files/{file_id}/download",
+    }
+
+
 # ─── PUBLIC DOCUMENT SUBMIT (Session 82.101b) ────────────────────────────
 import hashlib as _hashlib
 

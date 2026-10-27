@@ -10,7 +10,6 @@ import {
   User, Building2, FileText, CheckCircle,
   ArrowLeft, ArrowRight, Loader2, Upload, Trash2, AlertCircle, Sparkles, X
 } from 'lucide-react';
-import { uploadDocumentToCloudinary } from '@/lib/cloudinary';
 import { logEvent, EVENTS } from '@/lib/activityLogger';
 import { logVisitorConversion } from '@/lib/logVisitorConversion';
 // Session 82.101 · Legacy-Backend entfernt · Applications Persistenz + Mail-Dispatch
@@ -168,16 +167,22 @@ const ApplicationForm = () => {
 
     setUploadingDoc(true);
     try {
-      const result = await uploadDocumentToCloudinary(file, docType);
-      setDocuments(prev => [...prev, {
+      const _axios = (await import('axios')).default;
+      const _api = (await import('@/lib/apiBase')).getApiBase();
+      const fd = new FormData();
+      fd.append('doc_type', docType);
+      fd.append('file', file);
+      const { data: result } = await _axios.post(`${_api}/api/applications/documents`, fd);
+      setDocuments(prev => [...prev.filter(d => d.type !== docType), {
         type: docType,
+        file_id: result.file_id,
         url: result.url,
         name: result.name,
         uploaded_at: new Date().toISOString(),
       }]);
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Fehler beim Hochladen der Datei. Bitte versuchen Sie es erneut.');
+      alert(error?.response?.data?.detail || 'Fehler beim Hochladen der Datei. Bitte versuchen Sie es erneut.');
     } finally {
       setUploadingDoc(false);
     }
