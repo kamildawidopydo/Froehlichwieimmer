@@ -7,7 +7,7 @@
 // 'user'. Both the React layer (AuthContext / ProtectedRoute) and the
 // database trigger in `profiles_role_user_admin_only` rely on this contract.
 
-export const ALLOWED_APP_ROLES = Object.freeze(['user', 'admin']);
+export const ALLOWED_APP_ROLES = Object.freeze(['user', 'admin', 'recruiting']);
 
 export function isAllowedAppRole(role) {
   return ALLOWED_APP_ROLES.includes(role);

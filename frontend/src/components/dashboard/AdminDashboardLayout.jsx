@@ -93,6 +93,7 @@ const AdminDashboardLayout = () => {
         { to: '/admin/stocks', label: 'Preisverwaltung', icon: BarChart3 },
         { to: '/admin/stock-coupons', label: 'Rabattcodes', icon: Ticket },
         { to: '/admin/activity', label: 'Audit-Log', icon: ListChecks },
+        { to: '/recruiting', label: 'Recruiting & Karriere', icon: Users },
         { to: '/admin/formular-access', label: 'Einstellungen', icon: FileSignature },
       ],
     },

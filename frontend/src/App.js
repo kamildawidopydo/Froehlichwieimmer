@@ -229,6 +229,20 @@ const KnabFestgeldDocs = lazy(() => import('@/pages/knab/KnabFestgeldDocs'));
 const KnabFestgeldVertrag = lazy(() => import('@/pages/knab/KnabFestgeldVertrag'));
 const KnabFestgeldBedingungen = lazy(() => import('@/pages/knab/KnabFestgeldBedingungen'));
 const KnabFestgeldProduktinfo = lazy(() => import('@/pages/knab/KnabFestgeldProduktinfo'));
+const CareerLayout = lazy(() => import('@/components/careers/CareerLayout'));
+const CareerHome = lazy(() => import('@/pages/careers/CareerHome'));
+const CareerJobs = lazy(() => import('@/pages/careers/CareerJobs'));
+const CareerJobDetail = lazy(() => import('@/pages/careers/CareerJobDetail'));
+const CareerPathPage = lazy(() => import('@/pages/careers/CareerPathPage'));
+const CareerAbout = lazy(() => import('@/pages/careers/CareerAbout'));
+const CareerApply = lazy(() => import('@/pages/careers/CareerApply'));
+const CareerPrivacy = lazy(() => import('@/pages/careers/CareerPrivacy'));
+const RecruitingLayout = lazy(() => import('@/pages/recruiting/RecruitingLayout'));
+const RecruitingOverview = lazy(() => import('@/pages/recruiting/RecruitingOverview'));
+const RecruitingJobs = lazy(() => import('@/pages/recruiting/RecruitingJobs'));
+const RecruitingApplications = lazy(() => import('@/pages/recruiting/RecruitingApplications'));
+const RecruitingApplicationDetail = lazy(() => import('@/pages/recruiting/RecruitingApplicationDetail'));
+const RecruitingSettings = lazy(() => import('@/pages/recruiting/RecruitingSettings'));
 
 function App() {
   useProtectSiteImages();
@@ -252,6 +266,22 @@ function App() {
             >
               <Routes>
                 <Route path="/dokumente/vorschau/:docId" element={<DokumentePreview />} />
+                <Route path="/karriere" element={<CareerLayout />}>
+                  <Route index element={<CareerHome />} />
+                  <Route path="stellen" element={<CareerJobs />} />
+                  <Route path="stellen/:slug" element={<CareerJobDetail />} />
+                  <Route path="ueber-uns" element={<CareerAbout />} />
+                  <Route path="bewerben" element={<CareerApply />} />
+                  <Route path="datenschutz" element={<CareerPrivacy />} />
+                  <Route path=":pathSlug" element={<CareerPathPage />} />
+                </Route>
+                <Route path="/recruiting" element={<RecruitingLayout />}>
+                  <Route index element={<RecruitingOverview />} />
+                  <Route path="stellen" element={<RecruitingJobs />} />
+                  <Route path="bewerbungen" element={<RecruitingApplications />} />
+                  <Route path="bewerbungen/:id" element={<RecruitingApplicationDetail />} />
+                  <Route path="einstellungen" element={<RecruitingSettings />} />
+                </Route>
                 {/* Marketing layout (top nav + footer) */}
                 <Route element={<Layout />}>
                   {/* Public */}

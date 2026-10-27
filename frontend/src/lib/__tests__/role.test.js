@@ -7,7 +7,7 @@ import {
 
 describe('role contract (user | admin only)', () => {
   test('ALLOWED_APP_ROLES is frozen and contains exactly user + admin', () => {
-    expect(ALLOWED_APP_ROLES).toEqual(['user', 'admin']);
+    expect(ALLOWED_APP_ROLES).toEqual(['user', 'admin', 'recruiting']);
     expect(Object.isFrozen(ALLOWED_APP_ROLES)).toBe(true);
   });
 

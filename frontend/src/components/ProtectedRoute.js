@@ -33,6 +33,10 @@ const ProtectedRoute = ({ children, requireAdmin = false, adminOnly = false }) =
     return <Navigate to="/reset-password?mode=force" replace />;
   }
 
+  if (user.role === 'recruiting' && !pathname.startsWith('/reset-password')) {
+    return <Navigate to="/recruiting" replace />;
+  }
+
   if (!isAdmin && !user.onboarding_completed) {
     if (!pathname.startsWith('/onboarding')) {
       return <Navigate to="/onboarding" replace />;

@@ -176,7 +176,7 @@ const HandoffForm = ({ onSuccess, onCancel, historyRef, currentRoute }) => {
   );
 };
 
-const HIDDEN_PATH_PREFIXES = ['/admin', '/login', '/register', '/reset-password'];
+const HIDDEN_PATH_PREFIXES = ['/admin', '/login', '/register', '/reset-password', '/karriere', '/recruiting'];
 
 const FloatingAssistant = () => {
   const location = useLocation();

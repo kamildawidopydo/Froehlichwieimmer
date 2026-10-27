@@ -32,7 +32,8 @@ def mask_iban(iban: str) -> str:
 
 
 def render(title: str, lead: str, rows: Sequence[Tuple[str, str]], cta: str, path: str,
-           steps: Iterable[str] = (), note: Optional[str] = None) -> str:
+           steps: Iterable[str] = (), note: Optional[str] = None,
+           brand: str = "Fröhlich Vermögensberatung", salutation: str = "Ihr Team der Fröhlich Vermögensberatung") -> str:
     row_html = "".join(
         f"<tr><td style='padding:9px 0;color:#686A64;font-size:13px;border-bottom:1px solid #E8E4DA;'>{escape(k)}</td>"
         f"<td style='padding:9px 0;text-align:right;font-size:13px;font-weight:600;border-bottom:1px solid #E8E4DA;'>{escape(str(v))}</td></tr>"
@@ -52,13 +53,13 @@ def render(title: str, lead: str, rows: Sequence[Tuple[str, str]], cta: str, pat
     note_html = f"<p style='font-size:13px;line-height:1.6;color:#555;margin:18px 0 0;'>{escape(note)}</p>" if note else ""
     return f"""<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:560px;margin:0 auto;background:#F7F5F0;padding:26px;color:#252722;">
 <div style="border-top:4px solid #36A852;background:#fff;padding:30px;border-radius:14px;">
-<p style="margin:0;font-size:12px;font-weight:700;color:#36A852;">Fröhlich Vermögensberatung</p>
+<p style="margin:0;font-size:12px;font-weight:700;color:#36A852;">{escape(brand)}</p>
 <h1 style="margin:14px 0 8px;font-size:24px;line-height:1.25;color:#252722;">{escape(title)}</h1>
 <p style="font-size:14.5px;line-height:1.6;color:#555;margin:0 0 20px;">{escape(lead)}</p>
 <div style="background:#F7F5F0;border-radius:10px;padding:6px 16px;"><table style="width:100%;border-collapse:collapse;">{row_html}</table></div>
 {step_html}{note_html}
 <p style="margin:26px 0 0;"><a href="{_site()}{path}" style="display:inline-block;background:#36A852;color:#fff;padding:13px 28px;text-decoration:none;font-size:14px;font-weight:600;border-radius:999px;">{escape(cta)} →</a></p>
-<p style="font-size:13px;margin:24px 0 0;color:#252722;">Mit freundlichen Grüßen<br>Ihr Team der Fröhlich Vermögensberatung</p></div>
+<p style="font-size:13px;margin:24px 0 0;color:#252722;">Mit freundlichen Grüßen<br>{escape(salutation)}</p></div>
 <p style="font-size:10.5px;color:#9B9A93;text-align:center;line-height:1.6;margin:18px 0 0;">{FIRM}<br>{LEGAL}</p></div>"""
 
 

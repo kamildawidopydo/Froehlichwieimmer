@@ -5558,6 +5558,16 @@ from routes import contract_submissions as _contract_subs_routes  # noqa: E402
 app.include_router(_contract_subs_routes.router)
 from routes import career as _career_routes  # noqa: E402
 app.include_router(_career_routes.router)
+from routes import careers as _careers_routes  # noqa: E402
+app.include_router(_careers_routes.router)
+
+
+@app.on_event("startup")
+async def _seed_career_jobs() -> None:
+    try:
+        await _careers_routes.seed_career_jobs()
+    except Exception as exc:
+        logger.warning("career seed failed: %s", exc)
 from routes import admin_depot_analysis as _depot_analysis_routes  # noqa: E402
 app.include_router(_depot_analysis_routes.router)
 

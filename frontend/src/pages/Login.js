@@ -34,6 +34,7 @@ const Login = () => {
     if (nextParam && isSafeNextPath(nextParam)) return nextParam;
     if (profileUser?.role === 'admin') return '/admin';
     if (profileUser?.must_change_password) return '/reset-password?mode=force';
+    if (profileUser?.role === 'recruiting') return '/recruiting';
     if (!profileUser?.onboarding_completed) return '/onboarding';
     return '/dashboard';
   };

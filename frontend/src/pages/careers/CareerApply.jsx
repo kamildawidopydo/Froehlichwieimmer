@@ -1,0 +1,166 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
+import { CheckCircle2, FileUp, Loader2, Lock, X } from 'lucide-react';
+import PageMeta from '@/components/PageMeta';
+import { careersApi, errMsg } from '@/lib/careersApi';
+import { EXPERIENCE_OPTIONS } from '@/lib/careersContent';
+
+const inputCls = 'w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-[15px] outline-none transition-shadow focus:border-[#36A852] focus:ring-2 focus:ring-[#36A852]/25 disabled:bg-black/[0.03]';
+const MAX = 10 * 1024 * 1024;
+
+const F = ({ label, required, children, hint }) => (
+  <label className="block">
+    <span className="mb-1.5 block text-sm font-medium text-[#1E222C]">{label}{required && <span className="text-[#36A852]"> *</span>}</span>
+    {children}
+    {hint && <span className="mt-1 block text-xs text-[#686A64]">{hint}</span>}
+  </label>
+);
+
+const FilePick = ({ label, accept, multiple, files, setFiles, testid, disabled }) => {
+  const ref = useRef();
+  const add = (list) => {
+    const arr = Array.from(list || []);
+    const bad = arr.find((f) => f.size > MAX);
+    if (bad) { alert(`${bad.name} ist größer als 10 MB.`); return; }
+    setFiles(multiple ? [...files, ...arr].slice(0, 5) : arr.slice(0, 1));
+    ref.current.value = '';
+  };
+  return (
+    <div>
+      <button type="button" disabled={disabled} onClick={() => ref.current.click()} data-testid={`${testid}-btn`}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-black/10 bg-white px-4 py-5 text-sm font-medium text-[#555] transition-colors hover:border-[#36A852] hover:text-[#36A852] disabled:opacity-50">
+        <FileUp size={18} /> {label}
+      </button>
+      <input ref={ref} type="file" accept={accept} multiple={multiple} className="hidden" onChange={(e) => add(e.target.files)} data-testid={`${testid}-input`} />
+      {files.map((f, i) => (
+        <div key={f.name + i} className="mt-2 flex items-center justify-between rounded-lg bg-[#36A852]/8 px-3 py-2 text-sm">
+          <span className="truncate">{f.name}</span>
+          <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label="Entfernen"><X size={15} /></button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const Success = () => (
+  <div className="mx-auto max-w-xl px-5 py-28 text-center" data-testid="apply-success">
+    <CheckCircle2 size={56} className="mx-auto text-[#36A852]" strokeWidth={1.5} />
+    <h1 className="mt-6 font-display text-3xl sm:text-4xl">Vielen Dank für deine Bewerbung!</h1>
+    <p className="mt-4 text-lg text-[#555]">Wir haben deine Unterlagen erhalten und melden uns schnellstmöglich bei dir.</p>
+    <Link to="/karriere" className="mt-8 inline-block rounded-full bg-[#36A852] px-7 py-3.5 font-semibold text-white">Zur Karriereseite</Link>
+  </div>
+);
+
+export default function CareerApply() {
+  const { status } = useOutletContext();
+  const [params] = useSearchParams();
+  const [jobs, setJobs] = useState([]);
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', job: params.get('stelle') || (params.get('initiativ') ? 'initiativ' : ''), position: '', experience: '', start_date: '', message: '', website: '' });
+  const [consent, setConsent] = useState(false);
+  const [cv, setCv] = useState([]);
+  const [docs, setDocs] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+  const startedAt = useRef(Date.now());
+  const enabled = status.applications_enabled;
+
+  useEffect(() => {
+    careersApi.get('/jobs', { params: { preview: status.is_staff ? 1 : undefined } }).then((r) => setJobs(r.data.items)).catch(() => {});
+  }, [status.is_staff]);
+
+  const selected = useMemo(() => jobs.find((j) => j.slug === form.job), [jobs, form.job]);
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!form.job) { setError('Bitte wähle die gewünschte Position.'); return; }
+    if (form.job === 'initiativ' && form.position.trim().length < 2) { setError('Bitte gib an, für welche Position du dich initiativ bewirbst.'); return; }
+    if (!consent) { setError('Bitte bestätige die Datenschutzhinweise.'); return; }
+    const fd = new FormData();
+    ['first_name', 'last_name', 'email', 'phone', 'experience', 'start_date', 'message', 'website'].forEach((k) => fd.append(k, form[k]));
+    fd.append('position', selected ? selected.title : form.position);
+    fd.append('job_id', selected ? selected.id : '');
+    fd.append('privacy_consent', 'true');
+    fd.append('form_started_at', String(startedAt.current));
+    cv.forEach((f) => fd.append('cv', f));
+    docs.forEach((f) => fd.append('attachments', f));
+    setBusy(true);
+    try {
+      await careersApi.post('/applications', fd);
+      setDone(true);
+      window.scrollTo(0, 0);
+    } catch (err) {
+      setError(errMsg(err, 'Deine Bewerbung konnte nicht gesendet werden. Bitte versuche es erneut.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) return <Success />;
+  return (
+    <div className="mx-auto max-w-3xl px-5 py-12 lg:py-16">
+      <PageMeta title="Online bewerben | Karriere bei Essence Invest" description="Bewirb dich online bei Essence Invest." path="/karriere/bewerben" />
+      <h1 className="font-display text-4xl sm:text-5xl">Online bewerben</h1>
+      <p className="mt-3 text-[#555]">In wenigen Minuten erledigt – auch bequem per Smartphone.</p>
+      {!enabled && (
+        <div className="mt-6 flex gap-3 rounded-xl bg-amber-100 p-4 text-sm text-amber-900" data-testid="apply-disabled-notice">
+          <Lock size={18} className="shrink-0" /> Online-Bewerbungen sind derzeit noch nicht freigeschaltet. Bitte schau bald wieder vorbei.
+        </div>
+      )}
+      <form onSubmit={submit} className="mt-8 space-y-8" data-testid="apply-form" noValidate={false}>
+        <fieldset disabled={!enabled || busy} className="space-y-5 rounded-2xl border border-black/5 bg-white p-6 sm:p-8">
+          <legend className="sr-only">Persönliche Angaben</legend>
+          <p className="text-lg font-semibold">Persönliche Angaben</p>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <F label="Vorname" required><input className={inputCls} required autoComplete="given-name" value={form.first_name} onChange={set('first_name')} data-testid="apply-first-name" /></F>
+            <F label="Nachname" required><input className={inputCls} required autoComplete="family-name" value={form.last_name} onChange={set('last_name')} data-testid="apply-last-name" /></F>
+            <F label="E-Mail-Adresse" required><input type="email" className={inputCls} required autoComplete="email" value={form.email} onChange={set('email')} data-testid="apply-email" /></F>
+            <F label="Telefonnummer" required><input type="tel" className={inputCls} required autoComplete="tel" value={form.phone} onChange={set('phone')} data-testid="apply-phone" /></F>
+          </div>
+          <input type="text" tabIndex={-1} autoComplete="off" className="hidden" value={form.website} onChange={set('website')} aria-hidden="true" />
+        </fieldset>
+        <fieldset disabled={!enabled || busy} className="space-y-5 rounded-2xl border border-black/5 bg-white p-6 sm:p-8">
+          <p className="text-lg font-semibold">Deine Bewerbung</p>
+          <F label="Gewünschte Position" required>
+            <select className={inputCls} required value={form.job} onChange={set('job')} data-testid="apply-position-select">
+              <option value="">Bitte wählen</option>
+              {jobs.map((j) => <option key={j.id} value={j.slug}>{j.title}{j.status === 'draft' ? ' (Entwurf)' : ''}</option>)}
+              <option value="initiativ">Initiativbewerbung</option>
+            </select>
+          </F>
+          {form.job === 'initiativ' && (
+            <F label="Für welche Position bewirbst du dich?" required><input className={inputCls} value={form.position} onChange={set('position')} placeholder="z. B. Finanzberatung" data-testid="apply-initiative-position" /></F>
+          )}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <F label="Berufserfahrung">
+              <select className={inputCls} value={form.experience} onChange={set('experience')} data-testid="apply-experience">
+                <option value="">Bitte wählen</option>
+                {EXPERIENCE_OPTIONS.map((o) => <option key={o}>{o}</option>)}
+              </select>
+            </F>
+            <F label="Frühester Eintrittstermin"><input type="date" className={inputCls} value={form.start_date} onChange={set('start_date')} data-testid="apply-start-date" /></F>
+          </div>
+          <F label="Persönliche Nachricht"><textarea rows={5} maxLength={4000} className={inputCls} value={form.message} onChange={set('message')} data-testid="apply-message" /></F>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <F label="Lebenslauf (PDF)" hint="Max. 10 MB"><FilePick label="Lebenslauf hochladen" accept="application/pdf,.pdf" files={cv} setFiles={setCv} testid="apply-cv" disabled={!enabled || busy} /></F>
+            <F label="Weitere Dokumente" hint="PDF, JPG, PNG · bis zu 5 Dateien à 10 MB"><FilePick label="Dokumente hinzufügen" accept=".pdf,.jpg,.jpeg,.png" multiple files={docs} setFiles={setDocs} testid="apply-docs" disabled={!enabled || busy} /></F>
+          </div>
+        </fieldset>
+        <div className="rounded-2xl border border-black/5 bg-white p-6 sm:p-8">
+          <label className="flex items-start gap-3 text-sm leading-relaxed text-[#444]">
+            <input type="checkbox" className="mt-1 h-5 w-5 accent-[#36A852]" checked={consent} onChange={(e) => setConsent(e.target.checked)} disabled={!enabled} data-testid="apply-consent" />
+            <span>Ich habe die <Link to="/karriere/datenschutz" target="_blank" className="font-semibold text-[#36A852] underline">Datenschutzhinweise für Bewerber</Link> gelesen und bin mit der Verarbeitung meiner Daten zum Zweck des Bewerbungsverfahrens einverstanden. <span className="text-[#36A852]">*</span></span>
+          </label>
+          {error && <p className="mt-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert" data-testid="apply-error">{error}</p>}
+          <button type="submit" disabled={!enabled || busy} data-testid="apply-submit"
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#36A852] py-4 text-base font-semibold text-white transition-colors hover:bg-[#2E9446] disabled:cursor-not-allowed disabled:opacity-50">
+            {busy && <Loader2 size={18} className="animate-spin" />} Bewerbung absenden
+          </button>
+          <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-[#686A64]"><Lock size={12} /> Verschlüsselte Übertragung · Zugriff nur für unser Recruiting-Team</p>
+        </div>
+      </form>
+    </div>
+  );
+}

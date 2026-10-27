@@ -24,7 +24,8 @@ const linkClass =
   'font-medium text-[rgb(var(--bank-primary))] underline underline-offset-2 hover:text-[rgb(var(--bank-primary-hover))]';
 
 export default function VisitorWelcomeGate() {
-  const isAdminPath = useLocation().pathname.startsWith('/admin');
+  const _p = useLocation().pathname;
+  const isAdminPath = ['/admin', '/karriere', '/recruiting'].some((p) => _p.startsWith(p));
   const [isVisible, setIsVisible] = useState(false);
   const [residence, setResidence] = useState('DE');
   const [role, setRole] = useState('');
