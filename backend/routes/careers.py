@@ -183,7 +183,7 @@ async def submit_application(
     email: EmailStr = Form(...),
     phone: str = Form(default="", max_length=40),
     position: str = Form(..., min_length=2, max_length=160),
-    preferred_location: str = Form(default="", max_length=80),
+    preferred_location: str = Form(..., min_length=2, max_length=80),
     job_id: str = Form(default=""),
     experience: str = Form(default="", max_length=80),
     start_date: str = Form(default="", max_length=40),

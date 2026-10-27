@@ -1,0 +1,35 @@
+{
+  "summary": "Read-only test on PREVIEW of the careers job board, the application form and the recruiting dashboard. No jobs were published or edited, no applications were created, settings were not touched, and no non-GET /api/careers requests were sent. Backend: 16/16 pytest checks passed. Anonymous: /jobs returns items [] (also with preview=1), published_total 0 and locations [Bad Kreuznach, Berlin, Frankfurt am Main, Hamburg]. POST /applications returns 403 'Online-Bewerbungen sind derzeit noch nicht freigeschaltet.' for anonymous users and for the admin. Admin preview: 16 drafts, each with a title, location, employment_type and summary. Location filters return Berlin 1 (berater-berlin), Frankfurt am Main 2 (finanzberater-frankfurt-am-main, berater-frankfurt-am-main), Hamburg 1 (berater-hamburg) and Bad Kreuznach 12. q=Finanzberater returns 4. /admin/jobs returns 16 drafts and requires auth. Frontend, anonymous at 1920px and 390px: jobs-perspectives shows the title 'Entdecken Sie Ihre beruflichen Perspektiven', 4 perspectives-card-* and 4 location chips. No '0 Stellen gefunden', no 'Keine passenden' and 0 job cards. The location dropdown lists the 4 cities. Selecting Berlin sets ?location=Berlin, highlights the chip (aria-pressed) and shows the note 'Für Berlin sind derzeit keine Stellenangebote veröffentlicht.'. Clicking a chip updates both the URL and the dropdown. No horizontal overflow. Admin: 16 rows ('16 Stellen gefunden'). Every row has 'Stelle ansehen' (a link to the detail page) and 'Jetzt bewerben' as a SPAN with aria-disabled=true and no href. Clicking the disabled span does not navigate. UI filters match the API counts. The q search returns 4 and the URL becomes ?q=. Mobile 390px: both buttons are 308px wide in a 350px card (full inner width) and there is no overflow. The filter sheet works: Berlin shows '1 Stellen anzeigen' and the button then reads 'Filter (1)'. Apply form (?stelle=berater-hamburg): the disabled notice is visible. All fields are present and disabled: apply-first-name, -last-name, -email, -phone labelled 'Telefonnummer (optional)', -location-select (4 cities, preselected Hamburg), -position-select (preselected 'Berater (m/w/d) – Hamburg (Entwurf)'), -message labelled 'Kurze Nachricht', -cv-btn under 'Lebenslauf (PDF)', -consent with a link to /karriere/datenschutz, and -submit. There are no 'Berufserfahrung' or 'Frühester Eintrittstermin' fields. Without ?stelle both selects are empty. Mobile apply form: single column and no overflow. /recruiting loads: 0 Aktive, 16 Entwürfe, 0 Deaktiviert, 0 Bewerbungen.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/careers/applications", "issue": "preferred_location defaults to '' on the backend, but the frontend requires it. Once applications are enabled, a direct API call can submit without a location. Consider Form(..., min_length=1), or validating it against the list of known locations."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Header (logged in, desktop + mobile)", "issues": ["Two bell/notification icons render side by side. They look like duplicates."]},
+      {"screen": "/karriere/stellen job cards", "issues": ["The disabled 'Jetzt bewerben' has white text on a 35%-opacity green, which is very low contrast. This is acceptable for a disabled state, but a slightly darker text would read better."]},
+      {"screen": "/karriere/stellen mobile 390px", "issues": ["In the results toolbar the sort select wraps and ends about 6px from the screen edge, past the 20px content padding. There is no actual overflow."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_careers_jobboard_iter86.py", "/app/test_reports/pytest/pytest_iter86.xml"],
+  "action_items": [
+    "Optional: make preferred_location required server-side in submit_application to match the frontend validation",
+    "Optional: check for the duplicate bell icons in the logged-in header"
+  ],
+  "critical_code_review_comments": [
+    "public_jobs computes the locations and areas lists from published + draft jobs even for anonymous users. This is intended (it drives the perspectives chips), but it exposes draft locations publicly.",
+    "The CareerApply form also has a 'Weitere Dokumente' upload. It was not in the requested field list; it is harmless, but confirm it should stay.",
+    "The job_id of a draft is sent with the form. The backend only accepts published job_ids, so once applications are enabled a draft-preselected admin test would return 404. This is expected."
+  ],
+  "updated_files": ["/app/backend/tests/test_careers_jobboard_iter86.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin@kapitalmitte.com / admin123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "There are 16 draft jobs: 12 in Bad Kreuznach, 2 in Frankfurt am Main, 1 in Berlin and 1 in Hamburg. applications_enabled=false. The welcome gate is not always shown; wrap it in try/except. Login at /login sends the admin to /admin. Job cards are article[data-testid^='job-card-']. Do not click publish or save buttons."
+}

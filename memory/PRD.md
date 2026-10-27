@@ -236,6 +236,7 @@ Siehe `/app/memory/test_credentials.md`
 - 2026-10-27 ~14:50: Filter-Fix auf essenceinvest.com veröffentlicht (Bundle main.9e5793b6.js). Live geprüft ohne Anmeldung: Dropdown mit Bad Kreuznach, Berlin, Frankfurt am Main, Hamburg auf /karriere/stellen und /karriere, PC + Smartphone. 16 Entwürfe privat, Bewerbungen aus.
 - 2026-10-27: Stellenbörse ohne veröffentlichte Stellen → `JobsPerspectives` („Entdecken Sie Ihre beruflichen Perspektiven“, 4 Karten, Standort-Chips „zur Orientierung“, mit Dropdown synchronisiert). API liefert `published_total`; bei 0 erscheint der Bereich auch mit Filtern, sonst reguläre Liste. Nur Vorschau.
 - 2026-10-27 ~15:10: Stellenbörse (JobsPerspectives) auf essenceinvest.com veröffentlicht (main.4de9ddc0.js). Live geprüft PC + Smartphone ohne Anmeldung. 16 Entwürfe privat, Bewerbungen aus.
+- 2026-10-27: Stellenkarten mit „Stelle ansehen“ + grünem „Jetzt bewerben“ (inaktiv solange applications_enabled=false). Bewerbungsformular: Telefon optional, neues Pflichtfeld „Gewünschter Arbeitsort“ (preferred_location, aus Stelle vorausgewählt), Stelle per ?stelle= vorausgewählt, Berufserfahrung/Eintritt aus Formular entfernt. Backend + Recruiting-Detail zeigen Arbeitsort. Test iteration_86: 100 %. Nur Vorschau.
 
 
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)

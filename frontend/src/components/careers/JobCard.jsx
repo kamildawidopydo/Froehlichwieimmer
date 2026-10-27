@@ -37,7 +37,7 @@ const ApplyBtn = ({ job, className = '' }) => {
   const base = `relative z-10 inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-[13.5px] font-semibold ${className}`;
   return enabled
     ? <Link to={`/karriere/bewerben?stelle=${job.slug}`} className={`${base} border-[#36A852] bg-[#36A852] text-white transition-colors hover:bg-[#2E9446]`} data-testid={`job-card-apply-${job.slug}`}>Jetzt bewerben</Link>
-    : <span aria-disabled="true" title="Online-Bewerbungen sind derzeit noch nicht freigeschaltet." className={`${base} cursor-not-allowed border-[#36A852]/30 bg-[#36A852]/35 text-white`} data-testid={`job-card-apply-${job.slug}`}>Jetzt bewerben</span>;
+    : <span aria-disabled="true" title="Online-Bewerbungen sind derzeit noch nicht freigeschaltet." className={`${base} cursor-not-allowed border-[#36A852]/40 bg-[#36A852]/15 text-[#2E6B3C]`} data-testid={`job-card-apply-${job.slug}`}>Jetzt bewerben</span>;
 };
 
 export function JobRow({ job, index = 0 }) {
