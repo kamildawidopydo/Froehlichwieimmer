@@ -43,6 +43,7 @@ export default function RecruitingApplicationDetail() {
             <dl>
               <Row k="E-Mail" v={<a href={`mailto:${a.email}`} className="text-[#36A852]">{a.email}</a>} />
               <Row k="Telefon" v={a.phone} />
+              <Row k="Gewünschter Arbeitsort" v={a.preferred_location} />
               <Row k="Berufserfahrung" v={a.experience} />
               <Row k="Frühester Eintritt" v={a.start_date ? formatDate(a.start_date) : ''} />
             </dl>

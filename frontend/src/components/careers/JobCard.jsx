@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MapPin, Briefcase, ArrowRight } from 'lucide-react';
 import { LEVEL_LABEL } from '@/lib/careersContent';
@@ -27,10 +27,18 @@ const Facts = ({ job }) => (
 
 const ViewBtn = ({ job, className = '' }) => (
   <Link to={`/karriere/stellen/${job.slug}`} data-testid={`job-card-view-${job.slug}`}
-    className={`relative z-10 inline-flex items-center justify-center gap-1.5 rounded-full bg-[#36A852] px-5 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#2E9446] ${className}`}>
+    className={`relative z-10 inline-flex items-center justify-center gap-1.5 rounded-full border border-black/10 bg-white px-5 py-2.5 text-[13.5px] font-semibold text-[#1E222C] transition-colors hover:border-[#36A852] hover:text-[#2E8B45] ${className}`}>
     Stelle ansehen <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
   </Link>
 );
+
+const ApplyBtn = ({ job, className = '' }) => {
+  const enabled = !!useOutletContext()?.status?.applications_enabled;
+  const base = `relative z-10 inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-[13.5px] font-semibold ${className}`;
+  return enabled
+    ? <Link to={`/karriere/bewerben?stelle=${job.slug}`} className={`${base} border-[#36A852] bg-[#36A852] text-white transition-colors hover:bg-[#2E9446]`} data-testid={`job-card-apply-${job.slug}`}>Jetzt bewerben</Link>
+    : <span aria-disabled="true" title="Online-Bewerbungen sind derzeit noch nicht freigeschaltet." className={`${base} cursor-not-allowed border-[#36A852]/30 bg-[#36A852]/35 text-white`} data-testid={`job-card-apply-${job.slug}`}>Jetzt bewerben</span>;
+};
 
 export function JobRow({ job, index = 0 }) {
   return (
@@ -48,7 +56,10 @@ export function JobRow({ job, index = 0 }) {
           <Facts job={job} />
           <p className="mt-2.5 line-clamp-2 max-w-2xl text-[14.5px] leading-relaxed text-[#555]">{job.summary}</p>
         </div>
-        <ViewBtn job={job} className="w-full shrink-0 md:w-auto" />
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row md:flex-col lg:flex-row">
+          <ViewBtn job={job} className="w-full md:w-auto" />
+          <ApplyBtn job={job} className="w-full md:w-auto" />
+        </div>
       </div>
     </motion.article>
   );
@@ -68,7 +79,7 @@ export default function JobCard({ job, index = 0 }) {
       </h3>
       <Facts job={job} />
       <p className="mt-4 line-clamp-3 flex-1 text-[14.5px] leading-relaxed text-[#555]">{job.summary}</p>
-      <div className="mt-5 border-t border-black/5 pt-4"><ViewBtn job={job} className="w-full" /></div>
+      <div className="mt-5 grid gap-2 border-t border-black/5 pt-4"><ViewBtn job={job} className="w-full" /><ApplyBtn job={job} className="w-full" /></div>
     </motion.article>
   );
 }

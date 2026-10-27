@@ -3,7 +3,6 @@ import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, FileUp, Loader2, Lock, X } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import { careersApi, errMsg } from '@/lib/careersApi';
-import { EXPERIENCE_OPTIONS } from '@/lib/careersContent';
 
 const inputCls = 'w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-[15px] outline-none transition-shadow focus:border-[#36A852] focus:ring-2 focus:ring-[#36A852]/25 disabled:bg-black/[0.03]';
 const MAX = 10 * 1024 * 1024;
@@ -26,8 +25,8 @@ const validate = (form) => {
   if (!form.last_name.trim()) e.last_name = 'Bitte geben Sie Ihren Nachnamen ein.';
   if (!form.email.trim()) e.email = 'Bitte geben Sie Ihre E-Mail-Adresse ein.';
   else if (!EMAIL_RE.test(form.email.trim())) e.email = 'Bitte geben Sie eine gültige E-Mail-Adresse ein (z. B. name@beispiel.de).';
-  if (!form.phone.trim()) e.phone = 'Bitte geben Sie Ihre Telefonnummer ein.';
-  else if (!PHONE_RE.test(form.phone.trim())) e.phone = 'Bitte nur Ziffern, Leerzeichen und + ( ) / - verwenden.';
+  if (form.phone.trim() && !PHONE_RE.test(form.phone.trim())) e.phone = 'Bitte nur Ziffern, Leerzeichen und + ( ) / - verwenden.';
+  if (!form.preferred_location) e.preferred_location = 'Bitte wählen Sie Ihren gewünschten Arbeitsort.';
   if (!form.job) e.job = 'Bitte wählen Sie die gewünschte Position.';
   else if (form.job === 'initiativ' && form.position.trim().length < 2) e.position = 'Bitte geben Sie an, für welche Position Sie sich bewerben.';
   return e;
@@ -75,7 +74,8 @@ export default function CareerApply() {
   const { status } = useOutletContext();
   const [params] = useSearchParams();
   const [jobs, setJobs] = useState([]);
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', job: params.get('stelle') || (params.get('initiativ') ? 'initiativ' : ''), position: '', experience: '', start_date: '', message: '', website: '' });
+  const [locations, setLocations] = useState([]);
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', preferred_location: params.get('ort') || '', job: params.get('stelle') || (params.get('initiativ') ? 'initiativ' : ''), position: '', message: '', website: '' });
   const [consent, setConsent] = useState(false);
   const [cv, setCv] = useState([]);
   const [docs, setDocs] = useState([]);
@@ -87,10 +87,13 @@ export default function CareerApply() {
   const enabled = status.applications_enabled;
 
   useEffect(() => {
-    careersApi.get('/jobs', { params: { preview: status.is_staff ? 1 : undefined } }).then((r) => setJobs(r.data.items)).catch(() => {});
+    careersApi.get('/jobs', { params: { preview: status.is_staff ? 1 : undefined } }).then((r) => { setJobs(r.data.items); setLocations(r.data.locations || []); }).catch(() => {});
   }, [status.is_staff]);
 
   const selected = useMemo(() => jobs.find((j) => j.slug === form.job), [jobs, form.job]);
+  useEffect(() => {
+    if (selected?.location) setForm((f) => (f.preferred_location ? f : { ...f, preferred_location: selected.location }));
+  }, [selected]);
   const set = (k) => (e) => { setForm({ ...form, [k]: e.target.value }); if (errors[k]) setErrors({ ...errors, [k]: undefined }); };
 
   const submit = async (e) => {
@@ -105,7 +108,7 @@ export default function CareerApply() {
       return;
     }
     const fd = new FormData();
-    ['first_name', 'last_name', 'email', 'phone', 'experience', 'start_date', 'message', 'website'].forEach((k) => fd.append(k, form[k]));
+    ['first_name', 'last_name', 'email', 'phone', 'preferred_location', 'message', 'website'].forEach((k) => fd.append(k, form[k]));
     fd.append('position', selected ? selected.title : form.position);
     fd.append('job_id', selected ? selected.id : '');
     fd.append('privacy_consent', 'true');
@@ -143,32 +146,29 @@ export default function CareerApply() {
             <F label="Vorname" required error={errors.first_name} testid="apply-first-name"><input data-field="first_name" aria-invalid={!!errors.first_name} className={inputCls} autoComplete="given-name" value={form.first_name} onChange={set('first_name')} data-testid="apply-first-name" /></F>
             <F label="Nachname" required error={errors.last_name} testid="apply-last-name"><input data-field="last_name" aria-invalid={!!errors.last_name} className={inputCls} autoComplete="family-name" value={form.last_name} onChange={set('last_name')} data-testid="apply-last-name" /></F>
             <F label="E-Mail-Adresse" required error={errors.email} testid="apply-email"><input data-field="email" aria-invalid={!!errors.email} type="email" inputMode="email" className={inputCls} autoComplete="email" value={form.email} onChange={set('email')} data-testid="apply-email" /></F>
-            <F label="Telefonnummer" required error={errors.phone} testid="apply-phone"><input data-field="phone" aria-invalid={!!errors.phone} type="tel" inputMode="tel" className={inputCls} autoComplete="tel" value={form.phone} onChange={set('phone')} data-testid="apply-phone" /></F>
+            <F label="Telefonnummer (optional)" error={errors.phone} testid="apply-phone"><input data-field="phone" aria-invalid={!!errors.phone} type="tel" inputMode="tel" className={inputCls} autoComplete="tel" value={form.phone} onChange={set('phone')} data-testid="apply-phone" /></F>
           </div>
           <input type="text" tabIndex={-1} autoComplete="off" className="hidden" value={form.website} onChange={set('website')} aria-hidden="true" />
         </fieldset>
         <fieldset disabled={!enabled || busy} className="space-y-5 rounded-2xl border border-black/5 bg-white p-6 sm:p-8">
           <p className="text-lg font-semibold">Ihre Bewerbung</p>
-          <F label="Gewünschte Position" required error={errors.job} testid="apply-position">
+          <F label="Gewünschter Arbeitsort" required error={errors.preferred_location} testid="apply-location">
+            <select data-field="preferred_location" aria-invalid={!!errors.preferred_location} className={inputCls} value={form.preferred_location} onChange={set('preferred_location')} data-testid="apply-location-select">
+              <option value="">Bitte wählen</option>
+              {locations.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </F>
+          <F label="Gewünschte Stelle" required error={errors.job} testid="apply-position">
             <select data-field="job" aria-invalid={!!errors.job} className={inputCls} value={form.job} onChange={set('job')} data-testid="apply-position-select">
               <option value="">Bitte wählen</option>
-              {jobs.map((j) => <option key={j.id} value={j.slug}>{j.title}{j.status === 'draft' ? ' (Entwurf)' : ''}</option>)}
+              {jobs.map((j) => <option key={j.id} value={j.slug}>{j.title} – {j.location}{j.status === 'draft' ? ' (Entwurf)' : ''}</option>)}
               <option value="initiativ">Initiativbewerbung</option>
             </select>
           </F>
           {form.job === 'initiativ' && (
             <F label="Für welche Position bewerben Sie sich?" required error={errors.position} testid="apply-initiative-position"><input data-field="position" className={inputCls} value={form.position} onChange={set('position')} placeholder="z. B. Finanzberatung" data-testid="apply-initiative-position" /></F>
           )}
-          <div className="grid gap-5 sm:grid-cols-2">
-            <F label="Berufserfahrung">
-              <select className={inputCls} value={form.experience} onChange={set('experience')} data-testid="apply-experience">
-                <option value="">Bitte wählen</option>
-                {EXPERIENCE_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-              </select>
-            </F>
-            <F label="Frühester Eintrittstermin"><input type="date" className={inputCls} value={form.start_date} onChange={set('start_date')} data-testid="apply-start-date" /></F>
-          </div>
-          <F label="Persönliche Nachricht"><textarea rows={5} maxLength={4000} className={inputCls} value={form.message} onChange={set('message')} data-testid="apply-message" /></F>
+          <F label="Kurze Nachricht"><textarea rows={5} maxLength={4000} className={inputCls} value={form.message} onChange={set('message')} data-testid="apply-message" /></F>
           <div className="grid gap-5 sm:grid-cols-2">
             <F label="Lebenslauf (PDF)" hint="Max. 10 MB"><FilePick label="Lebenslauf hochladen" accept="application/pdf,.pdf" types={['application/pdf']} files={cv} setFiles={setCv} testid="apply-cv" disabled={!enabled || busy} /></F>
             <F label="Weitere Dokumente" hint="PDF, JPG, PNG · bis zu 5 Dateien à 10 MB"><FilePick label="Dokumente hinzufügen" accept=".pdf,.jpg,.jpeg,.png" types={['application/pdf', 'image/jpeg', 'image/png']} multiple files={docs} setFiles={setDocs} testid="apply-docs" disabled={!enabled || busy} /></F>

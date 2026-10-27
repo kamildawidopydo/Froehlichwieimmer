@@ -181,8 +181,9 @@ async def submit_application(
     first_name: str = Form(..., min_length=1, max_length=80),
     last_name: str = Form(..., min_length=1, max_length=80),
     email: EmailStr = Form(...),
-    phone: str = Form(..., min_length=5, max_length=40),
+    phone: str = Form(default="", max_length=40),
     position: str = Form(..., min_length=2, max_length=160),
+    preferred_location: str = Form(default="", max_length=80),
     job_id: str = Form(default=""),
     experience: str = Form(default="", max_length=80),
     start_date: str = Form(default="", max_length=40),
@@ -200,7 +201,7 @@ async def submit_application(
         raise HTTPException(status_code=422, detail="Bewerbung konnte nicht verarbeitet werden.")
     if not privacy_consent:
         raise HTTPException(status_code=422, detail="Bitte bestätigen Sie die Datenschutzhinweise.")
-    if not re.fullmatch(r"[0-9+()/\- ]{5,40}", phone.strip()):
+    if phone.strip() and not re.fullmatch(r"[0-9+()/\- ]{5,40}", phone.strip()):
         raise HTTPException(status_code=422, detail="Bitte eine gültige Telefonnummer angeben.")
     _check_rl(request)
 
@@ -230,13 +231,14 @@ async def submit_application(
             stored.append({"file_id": fid, "name": f["name"], "kind": f["kind"], "size": len(f["data"]), "content_type": f["ct"]})
     except Exception:
         await career_files.purge_application(db, str(app_id))
-        raise HTTPException(status_code=502, detail="Unterlagen konnten nicht gespeichert werden. Bitte versuche es erneut.")
+        raise HTTPException(status_code=502, detail="Unterlagen konnten nicht gespeichert werden. Bitte versuchen Sie es erneut.")
 
     doc = {
         "_id": app_id, "first_name": first_name.strip(), "last_name": last_name.strip(),
         "email": str(email).lower(), "phone": phone.strip(), "position": position.strip(),
         "job_id": str(job["_id"]) if job else None, "job_title": job["title"] if job else None,
         "is_initiative": job is None, "experience": experience.strip(), "start_date": start_date.strip(),
+        "preferred_location": preferred_location.strip(),
         "message": message.strip(), "files": stored, "status": "neu", "notes": [],
         "privacy_consent_at": _now(), "created_at": _now(), "updated_at": _now(),
     }
@@ -254,7 +256,7 @@ async def submit_application(
     send_later(s["notify_email"] or _admin_target(), f"Neue Bewerbung: {pos}", render(
         "Neue Bewerbung eingegangen",
         "Über die Karriereseite ist eine neue Bewerbung eingegangen.",
-        [("Position", pos), ("Name", f"{doc['first_name']} {doc['last_name']}"), ("Dokumente", str(len(stored)))],
+        [("Position", pos), ("Name", f"{doc['first_name']} {doc['last_name']}"), ("Gewünschter Arbeitsort", doc["preferred_location"] or "–"), ("Dokumente", str(len(stored)))],
         "Bewerbung ansehen", f"/recruiting/bewerbungen/{app_id}",
         brand="Fröhlich Vermögensberatung GmbH · Recruiting", salutation="Ihre Karriereplattform"))
     return {"id": str(app_id), "status": "neu"}
@@ -358,7 +360,7 @@ def _app_out(d: dict, full: bool = False) -> dict:
         "status": d.get("status"), "created_at": _iso(d.get("created_at")), "files_count": len(d.get("files") or []),
     }
     if full:
-        out.update(experience=d.get("experience"), start_date=d.get("start_date"), message=d.get("message"),
+        out.update(experience=d.get("experience"), start_date=d.get("start_date"), preferred_location=d.get("preferred_location"), message=d.get("message"),
                    files=d.get("files") or [], updated_at=_iso(d.get("updated_at")),
                    notes=[{**n, "at": _iso(n.get("at"))} for n in d.get("notes") or []])
     return out
