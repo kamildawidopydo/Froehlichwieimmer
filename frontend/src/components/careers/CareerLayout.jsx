@@ -17,7 +17,7 @@ const NAV = [
 const navCls = ({ isActive }) =>
   `whitespace-nowrap px-2.5 py-2 text-[13.5px] font-medium transition-colors ${isActive ? 'text-[#36A852]' : 'text-[#1E222C]/80 hover:text-[#36A852]'}`;
 
-const Header = ({ open, setOpen }) => (
+const Header = ({ open, setOpen, search }) => (
   <header className="sticky top-0 z-40 border-b border-black/5 bg-white/90 backdrop-blur-lg">
     <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-4 px-5 lg:px-8">
       <Link to="/karriere" className="flex items-center gap-3" data-testid="career-logo-link">
@@ -26,7 +26,7 @@ const Header = ({ open, setOpen }) => (
       </Link>
       <nav className="hidden items-center xl:flex" aria-label="Karriere-Navigation">
         {NAV.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.end} className={navCls} data-testid={`career-nav-${n.label.toLowerCase().replace(/[^a-z]/g, '')}`}>{n.label}</NavLink>
+          <NavLink key={n.to} to={n.to} end={n.end} className={(s) => navCls({ isActive: s.isActive && (n.to.includes('initiativ') ? search.includes('initiativ') : !search.includes('initiativ')) })} data-testid={`career-nav-${n.label.toLowerCase().replace(/[^a-z]/g, '')}`}>{n.label}</NavLink>
         ))}
       </nav>
       <div className="flex items-center gap-2">
@@ -102,7 +102,7 @@ export default function CareerLayout() {
           <Link to="/recruiting" className="font-semibold underline">Zum Recruiting-Dashboard</Link>
         </div>
       )}
-      <Header open={open} setOpen={setOpen} />
+      <Header open={open} setOpen={setOpen} search={search} />
       <main>
         {!status && <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="animate-spin text-[#36A852]" /></div>}
         {status && !visible && <Closed />}

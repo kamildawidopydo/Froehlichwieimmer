@@ -184,6 +184,8 @@ async def me(user: dict = Depends(get_current_user)):
                   "onboarding_completed_steps", "onboarding_completed"):
             if k in doc:
                 enriched[k] = doc[k]
+        if doc.get("role") == "recruiting" and doc.get("must_change_password"):
+            enriched["must_change_password"] = True
     return enriched
 
 

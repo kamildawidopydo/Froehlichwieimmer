@@ -188,6 +188,16 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 15. Changelog 2026-10-27 (Karriereplattform Essence Invest)
+- Auftrag (Kunde): Karriere- & Recruiting-Plattform unter /karriere, Aufbau angelehnt an Sparkassen-Jobbörse, Essence Invest als Hauptmarke, Fröhlich Vermögensberatung in Rechtlichem; Bewerbungsformular fertig aber AUS (Admin-Schalter); Rolle „Recruiting“ ohne Kundendaten; Mails an Bewerber + Admin; 10 Stellen nur als Entwürfe; Veröffentlichung erst nach Freigabe.
+- Backend `routes/careers.py` (+ `careers_seed.py`): /api/careers/* (status, jobs, jobs/{slug}, applications multipart mit PDF-CV & Anhängen, Honeypot, Zeitcheck, 3/10min Rate-Limit, Frist-Check); Admin: jobs CRUD/Status, applications Filter/Status/Notizen/Löschen/Download, stats, settings (site_public, applications_enabled, retention_days, notify_email), retention run, team (nur Admin).
+- Frontend: `components/careers/*`, `pages/careers/*` (Home, Stellen, Detail, 3 Karrierewege, Über uns, Bewerben, Datenschutz-Entwurf), `pages/recruiting/*` (Übersicht, Stellen, Bewerbungen, Detail, Einstellungen). Admin-Nav „Recruiting & Karriere“.
+- Schalter standardmäßig AUS: Besucher sehen „in Vorbereitung“, Staff Vorschau inkl. Entwürfe.
+- Getestet: iteration_82_108 (29/29 Backend, UI desktop+mobil). Danach behoben: erzwungener Passwortwechsel für Recruiting, Unicode-Dateinamen beim Download, form_started_at Pflicht, Nav-Aktivzustand.
+- Bekannt: Dateispeicher hat kein Lösch-API → Dateien werden beim Löschen gesperrt (soft-delete), nicht physisch entfernt.
+- Offen/Platzhalter: Standorte, Beschäftigungsarten, Über-uns-Fakten, Datenschutz-Kontakt & Aufbewahrungsfrist.
+
+
 ## 14. Changelog 2026-10-27 (Flexgeld-Festbindung)
 - Flexgeld: Festbindung 3 Monate ab Start (backend `lock_until` = active_from + 3 Monate, auch für Altverträge berechnet; active_until aus Laufzeit).
 - Neue Monats-Zeitachse `FlexgeldMonthTimeline` (Monat 1–3 gebunden grau, ab Monat 4 flexibel grün); „Aktuell verfügbar“ = 0 € während Bindung; „Lock-Ende“ → „Festbindung bis“/„Frei ab“.

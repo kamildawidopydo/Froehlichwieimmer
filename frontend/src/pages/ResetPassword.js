@@ -68,7 +68,9 @@ const ResetPassword = () => {
         await refreshUser();
         const nextPath = user?.role === 'admin'
           ? '/admin'
-          : user?.onboarding_completed
+          : user?.role === 'recruiting'
+            ? '/recruiting'
+            : user?.onboarding_completed
             ? '/dashboard'
             : '/onboarding';
         navigate(nextPath, { replace: true });

@@ -177,14 +177,14 @@ async def submit_application(
     message: str = Form(default="", max_length=4000),
     privacy_consent: bool = Form(...),
     website: str = Form(default=""),
-    form_started_at: int = Form(default=0),
+    form_started_at: int = Form(..., gt=0),
     cv: Optional[UploadFile] = File(default=None),
     attachments: List[UploadFile] = File(default=[]),
 ):
     s = await _settings()
     if not s["applications_enabled"] or not s["site_public"] and not await _optional_staff(request):
         raise HTTPException(status_code=403, detail="Online-Bewerbungen sind derzeit noch nicht freigeschaltet.")
-    if website or (form_started_at and time.time() * 1000 - form_started_at < 3000):
+    if website or time.time() * 1000 - form_started_at < 3000:
         raise HTTPException(status_code=422, detail="Bewerbung konnte nicht verarbeitet werden.")
     if not privacy_consent:
         raise HTTPException(status_code=422, detail="Bitte bestätigen Sie die Datenschutzhinweise.")
@@ -428,8 +428,11 @@ async def admin_file(file_id: str, _u: dict = Depends(require_recruiting)):
         raise HTTPException(status_code=404, detail="Datei nicht gefunden")
     data, ct = get_object(f["storage_path"])
     name = f.get("original_filename") or "dokument"
+    from urllib.parse import quote
+    ascii_name = name.encode("ascii", "ignore").decode() or "dokument"
     return Response(content=data, media_type=f.get("content_type") or ct,
-                    headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})
+                    headers={"Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name)}",
+                             "Cache-Control": "no-store"})
 
 
 @router.get("/admin/stats")

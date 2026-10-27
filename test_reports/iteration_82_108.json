@@ -1,0 +1,53 @@
+{
+  "summary": "Ran a full end-to-end test of the Essence Invest careers platform at /karriere and /recruiting, covering both backend and UI. Backend: 29 of 29 pytest cases pass. They cover public gating, recruiting job CRUD and the job lifecycle, settings, the apply flow (consent, honeypot, timing, phone, non-PDF 415, draft job 404, deadline 422, rate limit 429, initiative application), application management (filters, detail, status, notes, file download, delete, stats, retention) and role isolation (recruiting vs. admin vs. customer vs. anonymous). UI: verified at desktop and at mobile 390px. Anonymous visitors see the 'in Vorbereitung' page. The admin sees the preview banner, hero, search bar, 10 draft cards with 'Entwurf' badges, job detail with all 4 sections, the 3 career path pages, Über uns and Datenschutz. Search, level filter and sort work. In the recruiting dashboard, these all work: job create (as draft), edit, publish blocked with the German error, publish, deactivate, back to draft. Settings toggles, team account creation with temporary password, applications list with filters and search, detail with status change, notes, file download and delete also work. The anonymous apply flow with PDF CV and attachment shows the exact success text. There is no horizontal overflow at 390px and the sticky mobile apply button is visible. Found 2 real bugs: (1) forced password change for new recruiting accounts never triggers, (2) file download returns 500 for filenames with non-latin-1 characters. Cleanup is done and verified in the DB: settings are back to site_public=false and applications_enabled=false, all 10 seeded jobs are draft, and there are 0 applications, 0 test jobs and 0 recruiting users.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/auth/me", "issue": "must_change_password is never returned (it is not in the 'enriched' key list in routes/auth.py me()). As a result, AuthContext, Login.js, ProtectedRoute and RecruitingLayout always see false, so a new recruiting account logged in with its temporary password went straight to /recruiting and was never sent to /reset-password?mode=force. Reproduced via the UI and via curl (DB has must_change_password: true, /auth/me does not return it). The same applies to accounts created through admin_users.py.", "priority": "HIGH"},
+      {"endpoint": "GET /api/careers/admin/files/{file_id}", "issue": "Returns 500 (UnicodeEncodeError latin-1) when the original filename contains non-latin-1 characters, for example 'Lebenslauf_Łukasz_简历.pdf'. _read_file keeps unicode \\w characters and the Content-Disposition header is written raw. Fix: use filename=\"<ascii fallback>\"; filename*=UTF-8''<urllib.parse.quote(name)>.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/careers/applications", "issue": "The timing anti-spam check can be skipped: form_started_at defaults to 0, and 0 bypasses the '<3s' check. Make the field required, or reject 0 and missing values."},
+      {"endpoint": "POST /api/careers/applications", "issue": "The rate limit (_RL) is stored in process memory: it is lost on restart, not shared across workers, and _RL.clear() wipes every IP's history once there are more than 2000 IPs. For production, store it in Mongo with a TTL index."},
+      {"endpoint": "DELETE /api/careers/admin/applications/{id} and retention run", "issue": "GDPR: only storage_files.is_deleted is set to true. The actual CV/document objects stay in object storage and are never purged. There is also no scheduled retention job; deletion only happens when someone clicks the manual button."},
+      {"endpoint": "Application emails", "issue": "The email provider returned 429 during burst tests. send_later retries 3 times, but after that the mail is dropped and only logged. Not an app bug under normal load. The applicant mail uses 'Sie' while the site uses 'du', which is inconsistent."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CareerLayout nav", "issue": "'Initiativbewerbung' is highlighted as the active nav item on /karriere/bewerben?stelle=<slug>, even when applying for a specific job. The active-state check ignores the query string.", "selector": "[data-testid='career-nav-initiativbewerbung']", "priority": "LOW"},
+      {"component": "CareerHome latest jobs", "issue": "While jobs are loading, the 'Aktuell sind keine Stellen ausgeschrieben' empty state flashes before the cards appear. There is no loading state.", "selector": "[data-testid='career-latest-jobs']", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Recruiting account first login", "issue": "No forced password reset after logging in with the temporary password (root cause is on the backend: /auth/me does not return must_change_password).", "affected_selectors": ["[data-testid='login-submit-btn']", "[data-testid='reset-password-form']"]}
+    ],
+    "design_issues": [
+      {"screen": "Apply form / Job editor", "issues": ["The start_date and deadline fields use the browser's native date picker instead of the shadcn Calendar."]},
+      {"screen": "Recruiting settings", "issues": ["Saving a retention value below 30 only shows the generic toast 'Bitte prüfen Sie Ihre Eingaben.' and does not mention the 30–3650 range."]},
+      {"screen": "Recruiting dashboard mobile 390px", "issues": ["The tab bar cuts off 'Einstellungen' and there is no visible scroll hint. The 'Karriereseite' and 'Admin' header links are hidden on mobile."]},
+      {"screen": "/karriere/berufserfahrene hero", "issues": ["The hero image is cropped to the back of a person's head, which looks odd."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_careers_platform.py", "/app/test_reports/pytest/careers_results.xml"],
+  "action_items": [
+    "HIGH: Add 'must_change_password' (and ideally 'last_password_reset_at') to the enriched fields of GET /api/auth/me in routes/auth.py. Note: 6 existing customer users in the preview DB have must_change_password=true and will be forced to reset once this is fixed. Decide whether that is intended.",
+    "HIGH: Make the Content-Disposition header in admin_file (routes/careers.py) RFC 5987-safe (filename*=UTF-8''...) so unicode filenames do not cause a 500.",
+    "Require a non-zero form_started_at in submit_application.",
+    "GDPR: physically delete the object-storage files (or schedule a purge job) on application delete and retention, and consider an automatic daily retention run.",
+    "Fix the active-state of 'Initiativbewerbung' in the career nav, and add a loading state to the home latest-jobs section."
+  ],
+  "critical_code_review_comments": [
+    "routes/auth.py me(): must_change_password is missing from the enriched keys, which breaks every forced-reset redirect in the frontend.",
+    "careers.py admin_file: raw unicode filename in a header causes a latin-1 encode crash.",
+    "careers.py submit_application: files are uploaded to storage before the DB insert, so a failed insert leaves orphan objects. The honeypot timing check is skipped when form_started_at=0.",
+    "_RL in-memory rate limiter is not multi-worker safe. _client_ip trusts cf-connecting-ip and x-real-ip; this is fine behind Cloudflare, which blocks spoofed cf-connecting-ip with error 1000.",
+    "Role isolation verified as correct: require_recruiting = {admin, recruiting}, and team endpoints use require_admin. A deleted recruiting user's token immediately returns 401 because users are looked up per request."
+  ],
+  "updated_files": ["/app/backend/tests/test_careers_platform.py"],
+  "success_rate": {"backend": "29/29 pytest pass (100%); 2 bugs found outside the test plan (auth/me must_change_password, unicode download 500)", "frontend": "~93% (all requested flows work; the forced-reset flow fails because of the backend bug)"},
+  "test_credentials": "admin@kapitalmitte.com/admin123, tester@mester.de/HHHKKK222 from /app/memory/test_credentials.md. Admin bcrypt hash starts with $2b$.",
+  "seed_data_creation": "None left. All test jobs, applications and recruiting users were deleted, and settings were reset to site_public=false and applications_enabled=false (verified in Mongo: 0 apps, 10 drafts, 0 recruiting users).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run with: pytest /app/backend/tests/test_careers_platform.py -n 0 -p no:randomly. Order matters because state is shared across the module, and the default xdist breaks it. Calls that count against the rate limit go to localhost:8001 with a fake x-real-ip, because the public URL behind Cloudflare rejects a spoofed cf-connecting-ip. Over localhost, cookies are secure-only, so use a Bearer token. The public rate limit is 3 per 10 min per IP; the UI apply test used 1 slot. The module teardown restores settings. /login shows a visitor-welcome-gate overlay; bypass it by setting localStorage keys kapitalmitte_cookie_consent and kapitalmitte_visitor_profile, or log in via page.request.post('/api/auth/login').",
+  "rca of the issue": "Forced reset: users.must_change_password=true is set by POST /api/careers/admin/team, but GET /api/auth/me only copies a whitelist of keys from the DB document, and must_change_password is not on it. AuthContext maps fastMe.must_change_password || false, so the value is always false and the redirects to /reset-password?mode=force never fire. Repro: create a team user, log in with the temporary password, and you land on /recruiting. Fix: add the key to the whitelist. Unicode download: Starlette encodes response headers as latin-1, and filename=\"Lebenslauf_Łukasz_简历.pdf\" raises UnicodeEncodeError, giving a 500. Fix: use the RFC 5987 encoding."
+}
