@@ -188,6 +188,14 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 16. Changelog 2026-10-27 (Karriere: echte Löschung, Design, Bewerbung)
+- Bewerbungsdateien: Fernet-verschlüsselt je Datei (Schlüssel mit CAREER_FILES_KEY in backend/.env umhüllt), GridFS-Bucket `career_files`, Schlüssel in `career_file_keys`; Löschung entfernt Datensatz, Chunks und Schlüssel physisch; Löschprotokoll `career_deletion_log` (ohne Personendaten) wird beim Serverstart erneut angewendet (Backup-Wiederherstellung). Automatische Fristlöschung bei Nutzung (max. alle 6 h) — Cron nicht möglich, da bereits 8 Crons (Limit 5). Dokumentation: /app/memory/LOESCHKONZEPT_BEWERBER.md.
+- Portal-Bewerbungen in eigener Collection `career_portal_applications` (alte Popup-Route /api/career/apply nutzt weiter `career_applications`, unverändert).
+- Design: Hero mit Schnellzugriff-Chips, Jobbörse mit Filter-Seitenleiste (mobil Bottom-Sheet), Listen-Karten, Detailseite mit Bildkopf, Faktenleiste, Teilen-Knopf.
+- Bewerbung: Inline-Fehlermeldungen je Pflichtfeld, Datei-Fehler inline, Scroll zum ersten Fehler.
+- Getestet: iteration_82_109 (Backend 29/29 + 5/5 Löschung, UI komplett); danach Suchfeld-Überlagerung und Collection-Kollision behoben.
+
+
 ## 15. Changelog 2026-10-27 (Karriereplattform Essence Invest)
 - Auftrag (Kunde): Karriere- & Recruiting-Plattform unter /karriere, Aufbau angelehnt an Sparkassen-Jobbörse, Essence Invest als Hauptmarke, Fröhlich Vermögensberatung in Rechtlichem; Bewerbungsformular fertig aber AUS (Admin-Schalter); Rolle „Recruiting“ ohne Kundendaten; Mails an Bewerber + Admin; 10 Stellen nur als Entwürfe; Veröffentlichung erst nach Freigabe.
 - Backend `routes/careers.py` (+ `careers_seed.py`): /api/careers/* (status, jobs, jobs/{slug}, applications multipart mit PDF-CV & Anhängen, Honeypot, Zeitcheck, 3/10min Rate-Limit, Frist-Check); Admin: jobs CRUD/Status, applications Filter/Status/Notizen/Löschen/Download, stats, settings (site_public, applications_enabled, retention_days, notify_email), retention run, team (nur Admin).

@@ -58,7 +58,7 @@ export default function CareerJobs() {
           <p className="mt-3 max-w-xl text-white/75">Finde die Position, die zu dir passt – vom Einstieg bis zur Führungsaufgabe.</p>
         </div>
       </section>
-      <div className="mx-auto -mt-12 max-w-7xl px-5 lg:px-8">
+      <div className="relative z-10 mx-auto -mt-12 max-w-7xl px-5 lg:px-8">
         <form onSubmit={(e) => { e.preventDefault(); apply(filters); }} role="search"
           className="flex gap-2 rounded-2xl bg-white p-2.5 shadow-[0_30px_60px_-30px_rgba(30,34,44,0.5)]" data-testid="job-search-form">
           <label className="flex flex-1 items-center gap-3 rounded-xl bg-[#F7F5F0] px-4">

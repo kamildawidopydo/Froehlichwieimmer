@@ -1,7 +1,7 @@
 # Löschkonzept Bewerberdaten – Karriereplattform Essence Invest (Stand 2026-10-27, Entwurf)
 
 ## Was gespeichert wird
-- Bewerbungsdatensatz (`career_applications`): Name, Kontakt, Position, Angaben, Nachricht, Status, interne Notizen.
+- Bewerbungsdatensatz (`career_portal_applications`): Name, Kontakt, Position, Angaben, Nachricht, Status, interne Notizen.
 - Dateien (Lebenslauf, Anhänge): AES-verschlüsselt (Fernet) mit **eigenem Schlüssel je Datei**, abgelegt in MongoDB GridFS (`career_files.files/.chunks`).
 - Datei-Schlüssel (`career_file_keys`): mit Hauptschlüssel `CAREER_FILES_KEY` (Server-Umgebung) verschlüsselt.
 

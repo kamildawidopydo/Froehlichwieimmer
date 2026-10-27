@@ -233,7 +233,7 @@ async def submit_application(
         "message": message.strip(), "files": stored, "status": "neu", "notes": [],
         "privacy_consent_at": _now(), "created_at": _now(), "updated_at": _now(),
     }
-    await db.career_applications.insert_one(doc)
+    await db.career_portal_applications.insert_one(doc)
 
     pos = doc["job_title"] or f"Initiativbewerbung · {doc['position']}"
     send_later(doc["email"], "Ihre Bewerbung bei Essence Invest", render(
@@ -282,7 +282,7 @@ def _clean_list(v: List[str]) -> List[str]:
 
 @router.get("/admin/jobs")
 async def admin_jobs(_u: dict = Depends(require_recruiting)):
-    counts = {r["_id"]: r["n"] async for r in db.career_applications.aggregate(
+    counts = {r["_id"]: r["n"] async for r in db.career_portal_applications.aggregate(
         [{"$group": {"_id": "$job_id", "n": {"$sum": 1}}}])}
     items = []
     async for d in db.career_jobs.find({}).sort("created_at", 1):
@@ -368,13 +368,13 @@ async def admin_applications(job_id: str = "", status: str = "", q: str = "",
     if q.strip():
         rx = {"$regex": re.escape(q.strip()[:80]), "$options": "i"}
         filt["$or"] = [{"first_name": rx}, {"last_name": rx}, {"email": rx}, {"position": rx}]
-    items = [_app_out(d) async for d in db.career_applications.find(filt).sort("created_at", -1).limit(500)]
+    items = [_app_out(d) async for d in db.career_portal_applications.find(filt).sort("created_at", -1).limit(500)]
     return {"items": items}
 
 
 @router.get("/admin/applications/{app_id}")
 async def admin_application(app_id: str, _u: dict = Depends(require_recruiting)):
-    d = await db.career_applications.find_one({"_id": _oid(app_id)})
+    d = await db.career_portal_applications.find_one({"_id": _oid(app_id)})
     if not d:
         raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden")
     return _app_out(d, full=True)
@@ -388,7 +388,7 @@ class AppPatch(BaseModel):
 
 @router.patch("/admin/applications/{app_id}")
 async def admin_patch_application(app_id: str, body: AppPatch, u: dict = Depends(require_recruiting)):
-    d = await db.career_applications.find_one({"_id": _oid(app_id)})
+    d = await db.career_portal_applications.find_one({"_id": _oid(app_id)})
     if not d:
         raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden")
     author = u.get("name") or u.get("email")
@@ -403,15 +403,15 @@ async def admin_patch_application(app_id: str, body: AppPatch, u: dict = Depends
     ops: dict = {"$set": upd}
     if notes:
         ops["$push"] = {"notes": {"$each": notes}}
-    d = await db.career_applications.find_one_and_update({"_id": d["_id"]}, ops, return_document=True)
+    d = await db.career_portal_applications.find_one_and_update({"_id": d["_id"]}, ops, return_document=True)
     return _app_out(d, full=True)
 
 
 async def _delete_applications(filt: dict, reason: str, by: Optional[str]) -> int:
-    ids = [str(d["_id"]) async for d in db.career_applications.find(filt, {"_id": 1})]
+    ids = [str(d["_id"]) async for d in db.career_portal_applications.find(filt, {"_id": 1})]
     for i in ids:
         n_files = await career_files.purge_application(db, i)
-        await db.career_applications.delete_one({"_id": ObjectId(i)})
+        await db.career_portal_applications.delete_one({"_id": ObjectId(i)})
         await db.career_deletion_log.insert_one(
             {"application_id": i, "deleted_at": _now(), "reason": reason, "by": by, "files_deleted": n_files})
     return len(ids)
@@ -422,10 +422,10 @@ async def reapply_deletion_log() -> int:
     n = 0
     async for log in db.career_deletion_log.find({}, {"application_id": 1}):
         aid = log["application_id"]
-        if await db.career_applications.find_one({"_id": ObjectId(aid)}, {"_id": 1}) or \
+        if await db.career_portal_applications.find_one({"_id": ObjectId(aid)}, {"_id": 1}) or \
                 await db.career_file_keys.find_one({"application_id": aid}, {"_id": 1}):
             await career_files.purge_application(db, aid)
-            await db.career_applications.delete_one({"_id": ObjectId(aid)})
+            await db.career_portal_applications.delete_one({"_id": ObjectId(aid)})
             n += 1
     return n
 
@@ -455,7 +455,7 @@ async def admin_delete_application(app_id: str, u: dict = Depends(require_recrui
 
 @router.get("/admin/files/{file_id}")
 async def admin_file(file_id: str, _u: dict = Depends(require_recruiting)):
-    app = await db.career_applications.find_one({"files.file_id": file_id[:40]}, {"files": 1})
+    app = await db.career_portal_applications.find_one({"files.file_id": file_id[:40]}, {"files": 1})
     meta = next((f for f in (app or {}).get("files", []) if f["file_id"] == file_id), None)
     if not meta:
         raise HTTPException(status_code=404, detail="Datei nicht gefunden")
@@ -474,9 +474,9 @@ async def admin_file(file_id: str, _u: dict = Depends(require_recruiting)):
 @router.get("/admin/stats")
 async def admin_stats(_u: dict = Depends(require_recruiting)):
     jobs = {r["_id"]: r["n"] async for r in db.career_jobs.aggregate([{"$group": {"_id": "$status", "n": {"$sum": 1}}}])}
-    by_status = {r["_id"]: r["n"] async for r in db.career_applications.aggregate(
+    by_status = {r["_id"]: r["n"] async for r in db.career_portal_applications.aggregate(
         [{"$group": {"_id": "$status", "n": {"$sum": 1}}}])}
-    per_job = [{"job": r["_id"] or "Initiativbewerbung", "count": r["n"]} async for r in db.career_applications.aggregate(
+    per_job = [{"job": r["_id"] or "Initiativbewerbung", "count": r["n"]} async for r in db.career_portal_applications.aggregate(
         [{"$group": {"_id": "$job_title", "n": {"$sum": 1}}}, {"$sort": {"n": -1}}])]
     return {
         "active_jobs": jobs.get("published", 0), "draft_jobs": jobs.get("draft", 0),
@@ -498,7 +498,7 @@ class SettingsIn(BaseModel):
 @router.get("/admin/settings")
 async def admin_get_settings(_u: dict = Depends(require_recruiting)):
     s = await _settings()
-    s["expired_count"] = await db.career_applications.count_documents(_expired_filter(s["retention_days"]))
+    s["expired_count"] = await db.career_portal_applications.count_documents(_expired_filter(s["retention_days"]))
     s["deletion_log"] = [{"deleted_at": _iso(d["deleted_at"]), "reason": d["reason"], "by": d.get("by"), "files_deleted": d.get("files_deleted", 0)}
                          async for d in db.career_deletion_log.find({}).sort("deleted_at", -1).limit(20)]
     return s
@@ -557,7 +557,7 @@ async def seed_career_jobs() -> None:
     from routes.careers_seed import SEED_JOBS
     await reapply_deletion_log()
     await db.career_jobs.create_index("slug", unique=True)
-    await db.career_applications.create_index([("created_at", -1)])
+    await db.career_portal_applications.create_index([("created_at", -1)])
     for j in SEED_JOBS:
         await db.career_jobs.update_one(
             {"slug": j["slug"]},
