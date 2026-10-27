@@ -230,6 +230,7 @@ Siehe `/app/memory/test_credentials.md`
 - Stellenkarten: Titel, Arbeitsort, Beschäftigungsart, Bereich, Button „Stelle ansehen“. Detailseite: Aufgabenbereich / Das bringen Sie mit / Das erwartet Sie / Arbeitsort und Beschäftigungsmodell / Bewerbungsprozess; Bewerben-Buttons bei deaktivierten Bewerbungen „Bewerbung in Kürze möglich“ (inaktiv). Bewerbungs-API liefert 403 solange deaktiviert.
 - Test iteration_85: Backend 15/15, Frontend 100 %. Alle 10 Entwurf, Bewerbungen aus, nicht deployt.
 - 2026-10-27: SEED_VERSION=8 – Beschäftigungsart nach Kundenfreigabe: Nr. 2+3 „Festanstellung oder selbstständige Tätigkeit“, Nr. 4 „Selbstständige Tätigkeit“, übrige „Festanstellung“; Auswahl im Editor ergänzt. Alle 10 vollständig, weiterhin Entwurf, Bewerbungen aus, nicht deployt.
+- 2026-10-27 (nach Deploy): SEED_VERSION=9 – 6 neue Entwürfe (Berater: Hamburg, Berlin, Frankfurt am Main, Bad Kreuznach; Finanzberater: Frankfurt am Main, Bad Kreuznach), Bereich Finanzberatung, Beschäftigungsart leer (unbestätigt → Veröffentlichung blockiert). Level vorläufig: Berater=Quereinsteiger, Finanzberater=Berufserfahrene. Insgesamt 16 Entwürfe; Arbeitsort-Filter: Bad Kreuznach, Berlin, Frankfurt am Main, Hamburg. Nur Vorschau.
 
 
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)

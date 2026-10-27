@@ -1,6 +1,6 @@
 """Entwurfs-Stellen für die Karriereplattform (werden nie automatisch veröffentlicht)."""
 
-SEED_VERSION = 8
+SEED_VERSION = 9
 
 _OFFER = [
     "Eine Tätigkeit für die Fröhlich Vermögensberatung GmbH mit Sitz in Bad Kreuznach",
@@ -23,13 +23,55 @@ _AREA = {
     "assistenz-der-geschaeftsfuehrung": "Geschäftsführung & Verwaltung", "business-development-manager": "Unternehmensentwicklung",
 }
 
-def _job(slug, title, level, summary, tasks, reqs):
+def _job(slug, title, level, summary, tasks, reqs, location="Bad Kreuznach", etype=None, area=None):
     return {
-        "slug": slug, "title": title, "level": level, "area": _AREA[slug], "summary": summary,
+        "slug": slug, "title": title, "level": level, "area": area or _AREA[slug], "summary": summary,
         "tasks": tasks, "requirements": reqs, "offer": list(_OFFER),
         "career_path": "",
-        "location": "Bad Kreuznach", "employment_type": _TYPE.get(slug, _FEST), "deadline": None,
+        "location": location, "employment_type": _TYPE.get(slug, _FEST) if etype is None else etype, "deadline": None,
     }
+
+
+_BERATER_TASKS = [
+    "Persönliche Beratung von Kundinnen und Kunden",
+    "Analyse individueller finanzieller Situationen und Ziele",
+    "Vorstellung geeigneter Spar-, Festgeld- und Investmentlösungen",
+    "Vorbereitung und Dokumentation von Beratungsgesprächen",
+    "Aufbau und Pflege langfristiger Kundenbeziehungen",
+]
+_BERATER_REQS = [
+    "Interesse an Finanzthemen und wirtschaftlichen Zusammenhängen",
+    "Kommunikationsstärke und Freude am Umgang mit Menschen",
+    "Sorgfältige und verantwortungsbewusste Arbeitsweise",
+    "Zuverlässigkeit und Eigeninitiative",
+    "Erforderliche fachliche Qualifikationen oder die Bereitschaft, diese zu erwerben",
+]
+_FB_TASKS = [
+    "Ganzheitliche Beratung zu Vermögensaufbau und Geldanlage",
+    "Analyse von Anlagezielen, Risikobereitschaft und Zeithorizont",
+    "Entwicklung individueller Finanz- und Anlagekonzepte",
+    "Beobachtung der Finanzmärkte und Einordnung aktueller Entwicklungen",
+    "Dokumentation von Beratungsgesprächen gemäß regulatorischen Vorgaben",
+]
+_FB_REQS = [
+    "Erfahrung in der Finanz- oder Anlageberatung",
+    "Fundierte Kenntnisse relevanter Finanzprodukte",
+    "Analytisches Denken und Kundenorientierung",
+    "Verantwortungsbewusstsein und Diskretion",
+    "Erforderliche fachliche Qualifikationen und regulatorische Berechtigungen",
+]
+
+
+def _berater(city, slug):
+    return _job(f"berater-{slug}", "Berater (m/w/d)", "quereinsteiger",
+                f"Sie beraten Kundinnen und Kunden persönlich zu Spar-, Festgeld- und Investmentlösungen und begleiten sie bei wichtigen finanziellen Entscheidungen – am Standort {city}.",
+                list(_BERATER_TASKS), list(_BERATER_REQS), location=city, etype="", area="Finanzberatung")
+
+
+def _finanzberater(city, slug):
+    return _job(f"finanzberater-{slug}", "Finanzberater (m/w/d)", "erfahren",
+                f"Sie betreuen Kundinnen und Kunden umfassend in Finanz- und Vermögensfragen und entwickeln gemeinsam mit ihnen passende Lösungen – am Standort {city}.",
+                list(_FB_TASKS), list(_FB_REQS), location=city, etype="", area="Finanzberatung")
 
 
 CONTENT_FIELDS = ("title", "level", "area", "location", "employment_type", "summary", "tasks", "requirements", "offer", "career_path")
@@ -155,4 +197,10 @@ SEED_JOBS = [
           "Analytische Stärke und Verhandlungsgeschick",
           "Eigeninitiative und Gestaltungswille",
           "Überzeugendes Auftreten"]),
+    _berater("Hamburg", "hamburg"),
+    _berater("Berlin", "berlin"),
+    _berater("Frankfurt am Main", "frankfurt-am-main"),
+    _finanzberater("Frankfurt am Main", "frankfurt-am-main"),
+    _berater("Bad Kreuznach", "bad-kreuznach"),
+    _finanzberater("Bad Kreuznach", "bad-kreuznach"),
 ]
