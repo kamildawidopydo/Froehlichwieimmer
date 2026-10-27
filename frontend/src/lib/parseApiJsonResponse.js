@@ -14,6 +14,11 @@ export async function parseApiJsonResponse(response) {
 }
 
 export function apiErrorMessage(response, rawText, fallback = 'Fehler beim Senden') {
+  if (response?.status === 401 && /\/api\/send-/.test(response?.url || '')) {
+    sessionStorage.removeItem('formular_session_id');
+    window.setTimeout(() => window.location.assign('/formular?abgelaufen=1'), 1800);
+    return 'Ihre Formular-Sitzung ist abgelaufen. Sie werden zur Code-Eingabe weitergeleitet …';
+  }
   const t = (rawText || '').trim();
   if (response?.status === 413 || /request entity too large/i.test(t)) {
     return 'Die Anfrage ist zu groß. Bitte versuchen Sie es erneut oder kontaktieren Sie kundenservice@essenceinvest.com.';

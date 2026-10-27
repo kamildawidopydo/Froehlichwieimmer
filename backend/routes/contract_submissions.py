@@ -194,6 +194,18 @@ def _customer_html(bank_name: str, product_label: str, customer_name: str) -> st
     """
 
 
+def _merged_summary(body: "ContractSubmitPayload") -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    for m in _re.finditer(r"<tr[^>]*>\s*<td[^>]*>(.*?)</td>\s*<td[^>]*>(.*?)</td>", body.formSummaryHtml or "", _re.S | _re.I):
+        k = _html_mod.unescape(_re.sub(r"<[^>]+>", "", m.group(1))).strip()
+        v = _html_mod.unescape(_re.sub(r"<[^>]+>", "", m.group(2))).strip()
+        if k and v and v not in ("—", "-"):
+            out[k[:80]] = v[:300]
+    if isinstance(body.formSummary, dict):
+        out.update({k: v for k, v in body.formSummary.items() if v not in (None, "")})
+    return out
+
+
 def _summary_html(summary: Optional[Dict[str, Any]], raw_html: str) -> str:
     parts = []
     if isinstance(summary, dict) and summary:
@@ -287,7 +299,7 @@ async def _handle_contract_submission(request: Request, slug: str, body: Contrac
         "bank_name": bank_name,
         "customer_name": customer_name or None,
         "customer_email": customer_email,
-        "summary": body.formSummary if isinstance(body.formSummary, dict) else {},
+        "summary": _merged_summary(body),
         "files": [{"filename": contract_filename, "kind": "contract"}],
         "status": "new",
         "admin_email_sent": False,

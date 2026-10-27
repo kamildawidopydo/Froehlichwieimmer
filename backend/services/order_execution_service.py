@@ -185,7 +185,31 @@ async def execute_order(
 
     lock = _exec_locks[str(order_id)]
     async with lock:
-        return await _execute_order_locked(db, order_id, admin_id=admin_id, fail_after=fail_after)
+        result = await _execute_order_locked(db, order_id, admin_id=admin_id, fail_after=fail_after)
+    try:
+        if not result.get("resumed") and (result.get("order") or {}).get("status") == "executed":
+            await _mail_order_executed(db, order_id, result.get("execution") or {})
+    except Exception as exc:  # Mailfehler darf Ausführung nie beeinflussen
+        logger.warning("order mail failed: %s", exc)
+    return result
+
+
+async def _mail_order_executed(db, order_id: ObjectId, ex: dict) -> None:
+    from services.customer_mails import eur, render, send_later
+    order = await db.stock_orders.find_one({"_id": order_id}) or {}
+    uid = order.get("user_id")
+    user = await db.users.find_one({"_id": uid if isinstance(uid, ObjectId) else ObjectId(str(uid))}, {"email": 1}) if uid else None
+    side = "Kauf" if (order.get("side") or ex.get("side") or "").lower() == "buy" else "Verkauf"
+    qty = order.get("quantity") or ex.get("quantity")
+    price = ex.get("execution_price")
+    total = ex.get("gross_amount") or (float(price) * float(qty) if price and qty else None)
+    name = order.get("name") or order.get("symbol")
+    send_later((user or {}).get("email"), f"Ihr {side}auftrag wurde ausgeführt", render(
+        f"Auftrag ausgeführt: {side} {name}", "Ihr Auftrag wurde erfolgreich ausgeführt und in Ihrem Depot gebucht.",
+        [("Wertpapier", f"{name} ({order.get('symbol')})"), ("Art", side), ("Stückzahl", str(qty)),
+         ("Ausführungskurs", eur(price)), ("Gesamtbetrag", eur(total)),
+         ("Ausgeführt am", datetime.now(timezone.utc).astimezone().strftime("%d.%m.%Y, %H:%M Uhr"))],
+        "Zum Depot", "/dashboard/depot"))
 
 
 async def _execute_order_locked(

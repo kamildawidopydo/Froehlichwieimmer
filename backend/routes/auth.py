@@ -133,6 +133,15 @@ async def register(request: Request, payload: RegisterInput, response: Response)
     access = create_access_token(str(result.inserted_id), email)
     refresh = create_refresh_token(str(result.inserted_id))
     set_auth_cookies(response, access, refresh)
+    from services.customer_mails import render, send_later
+    full = " ".join(x for x in [doc.get("first_name"), doc.get("last_name")] if x) or doc.get("name") or ""
+    send_later(email, "Willkommen bei der Fröhlich Vermögensberatung", render(
+        f"Herzlich willkommen{', ' + full if full else ''}",
+        "Ihr Kundenkonto ist eingerichtet und ab sofort aktiv.",
+        [("E-Mail", email), ("Eröffnet am", datetime.now(timezone.utc).strftime("%d.%m.%Y"))],
+        "Zum Kundenbereich", "/login",
+        steps=["Persönliche Angaben vervollständigen", "Sparangebote vergleichen", "Anlage beantragen"],
+    ))
     return public_user(doc)
 
 

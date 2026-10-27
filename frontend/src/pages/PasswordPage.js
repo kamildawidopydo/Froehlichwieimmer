@@ -18,6 +18,12 @@ const PasswordPage = () => {
   const [shaking, setShaking] = useState(false);
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('abgelaufen')) {
+      toast.info('Ihre Sitzung ist abgelaufen. Bitte geben Sie Ihren Zugangscode erneut ein.');
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const name = usedByName.trim();

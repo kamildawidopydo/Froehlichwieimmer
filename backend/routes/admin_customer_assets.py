@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from server import db, get_current_user, require_admin
 from services.cash_service import create_cash_event, get_cash_summary
 from services.emergent_storage import APP_PREFIX, get_object, put_object
+from services.customer_mails import eur, mask_iban, render, send_later
 
 admin_router = APIRouter(prefix="/api/admin", tags=["admin-customer-assets"])
 customer_router = APIRouter(prefix="/api/portfolio", tags=["customer-assets"])
@@ -63,6 +64,17 @@ async def _find_bank(bank_id: str) -> dict:
     if not bank:
         raise HTTPException(status_code=404, detail="Bank nicht gefunden")
     return bank
+
+
+async def _notify_new_item(user_id: str, label: str, kind: str) -> None:
+    cust = await db.users.find_one({"_id": ObjectId(user_id)}, {"email": 1})
+    path = "/dashboard/dokumente" if kind == "Dokument" else "/dashboard/festgeld"
+    send_later((cust or {}).get("email"), f"Neues {kind} in Ihrem Kundenbereich" if kind == "Dokument" else "Neuer Vertrag in Ihrem Kundenbereich", render(
+        "Ein neues Dokument liegt für Sie bereit" if kind == "Dokument" else "Ein neuer Vertrag ist in Ihrem Depot",
+        f"Wir haben {'ein Dokument' if kind == 'Dokument' else 'einen Vertrag'} in Ihrem Kundenbereich hinterlegt.",
+        [(kind, label), ("Bereitgestellt am", datetime.now(timezone.utc).strftime("%d.%m.%Y")),
+         ("Ablage", "Kundenbereich → Dokumente" if kind == "Dokument" else "Kundenbereich → Festgeld")],
+        "Dokument öffnen" if kind == "Dokument" else "Vertrag ansehen", path))
 
 
 def _contract_out(d: dict) -> dict:
@@ -184,6 +196,7 @@ async def add_contract(user_id: str, body: ContractIn, admin: dict = Depends(req
     }
     res = await db.depot_contracts.insert_one(doc)
     doc["_id"] = res.inserted_id
+    await _notify_new_item(user_id, f"{body.product_type.capitalize()} {bank.get('name')} · {eur(body.amount_eur)}", "Vertrag")
     return _contract_out(doc)
 
 
@@ -297,6 +310,7 @@ async def upload_document(
         "is_deleted": False, "uploaded_by": admin.get("id"), "created_at": datetime.now(timezone.utc),
     }
     await db.storage_files.insert_one(doc)
+    await _notify_new_item(user_id, title.strip(), "Dokument")
     return _doc_out(doc)
 
 
@@ -496,6 +510,13 @@ async def _create_payout(body: PayoutIn, user: dict, iban: str) -> dict:
         "customer_name": user.get("name"), "customer_email": user.get("email"), "created_at": now,
     }
     await db.payout_requests.insert_one(doc)
+    send_later(user.get("email"), "Ihr Auszahlungsantrag ist eingegangen", render(
+        "Auszahlungsantrag erhalten", "Ihr Antrag wird geprüft. Der Betrag ist bis zur Freigabe für Sie reserviert.",
+        [("Betrag", eur(amount)), ("Empfängerkonto", mask_iban(iban)), ("Kontoinhaber", doc["account_holder"]),
+         ("Beantragt am", now.strftime("%d.%m.%Y"))],
+        "Antrag ansehen", "/dashboard/uebersicht",
+        steps=["Prüfung durch unser Team", "Überweisung auf Ihr Referenzkonto"],
+    ))
     return _payout_out(doc)
 
 
@@ -534,6 +555,20 @@ async def _decide_payout(request_id: str, approve: bool, reason: Optional[str], 
         }},
     )
     doc.update({"status": new_status, "reason": reason, "decided_at": now})
+    cust = await db.users.find_one({"_id": doc["user_id"]}, {"email": 1})
+    rows = [("Betrag", eur(doc["amount"])), ("Empfängerkonto", mask_iban(doc["iban"])),
+            ("Status", "Freigegeben" if approve else "Abgelehnt")]
+    if approve:
+        send_later((cust or {}).get("email"), "Ihre Auszahlung wurde freigegeben", render(
+            "Ihre Auszahlung ist freigegeben",
+            "Wir haben die Überweisung auf Ihr Referenzkonto veranlasst. Der Betrag wurde von Ihrem Guthaben abgebucht.",
+            rows, "Kontoverlauf ansehen", "/dashboard/uebersicht"))
+    else:
+        send_later((cust or {}).get("email"), "Ihr Auszahlungsantrag wurde abgelehnt", render(
+            "Ihr Auszahlungsantrag wurde abgelehnt",
+            "Der Betrag steht Ihnen wieder in voller Höhe zur Verfügung.",
+            rows + ([("Grund", reason)] if reason else []), "Kontoverlauf ansehen", "/dashboard/uebersicht",
+            note="Bei Fragen erreichen Sie uns unter kundenservice@essenceinvest.com."))
     return _payout_out(doc)
 
 

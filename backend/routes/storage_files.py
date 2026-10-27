@@ -439,6 +439,16 @@ async def public_submit_document_upload(
             "admin_email_error": None,
             "created_at": now,
         })
+        if clean_email:
+            from services.customer_mails import render, send_later
+            send_later(clean_email, "Ihre Unterlagen sind bei uns eingegangen", render(
+                f"Vielen Dank, {name}", "Wir haben Ihre Unterlagen sicher erhalten und prüfen sie in Kürze.",
+                [("Dateien", ", ".join(s.get("original_filename") or s.get("filename") or "Datei" for s in stored)),
+                 ("Eingegangen am", now.astimezone().strftime("%d.%m.%Y, %H:%M Uhr")),
+                 ("Vorgangsnummer", f"DU-{str(sub_id)[-6:].upper()}")],
+                "Zur Website", "/",
+                steps=["Prüfung durch unser Team", "Rückmeldung per E-Mail oder Telefon"],
+            ))
     except Exception as e:
         # Mongo-Fail → orphaned storage rollback
         await _db.storage_files.update_many(

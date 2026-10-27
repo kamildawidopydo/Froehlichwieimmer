@@ -254,7 +254,7 @@ const FloatingAssistant = () => {
           onClick={() => setOpen(true)}
           data-testid="assistant-launcher"
           aria-label="Fröhlich Assistent öffnen"
-          className="fixed bottom-6 left-6 z-[95] flex h-14 w-14 items-center justify-center rounded-full bg-bank-petrol-strong text-white shadow-lg transition-all hover:scale-105 sm:bottom-8 sm:left-8"
+          className={`fixed ${location.pathname.startsWith('/dashboard') ? 'bottom-24 lg:bottom-8' : 'bottom-6 sm:bottom-8'} left-6 z-[95] flex h-14 w-14 items-center justify-center rounded-full bg-bank-petrol-strong text-white shadow-lg transition-all hover:scale-105 sm:left-8`}
         >
           <MessageCircle className="h-6 w-6" strokeWidth={1.7} />
         </button>
