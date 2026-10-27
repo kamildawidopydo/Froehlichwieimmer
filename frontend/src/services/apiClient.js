@@ -43,8 +43,8 @@ export function extractErrorMessage(err) {
 // --- Auth --------------------------------------------------------------
 
 export const authApi = {
-  async register({ email, password, name }) {
-    const { data } = await client.post('/auth/register', { email, password, name });
+  async register({ email, password, name, first_name, last_name, country, phone }) {
+    const { data } = await client.post('/auth/register', { email, password, name, first_name, last_name, country, phone });
     return data;
   },
   async login({ email, password }) {

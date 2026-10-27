@@ -53,6 +53,7 @@ function readFileAsBase64(file) {
 const DokumentHochladen = () => {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState([]);
@@ -144,6 +145,7 @@ const DokumentHochladen = () => {
       const form = new FormData();
       form.append('code', code.trim());
       form.append('used_by_name', name.trim());
+      if (email.trim()) form.append('email', email.trim());
       if (message.trim()) form.append('message', message.trim());
       form.append('user_agent', typeof navigator !== 'undefined' ? navigator.userAgent : '');
       for (const f of files) form.append('files', f, f.name);
@@ -243,6 +245,20 @@ const DokumentHochladen = () => {
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Vor- und Nachname"
                       autoComplete="name"
+                      className="block w-full border border-[#D8D3C9] bg-white px-5 py-4 text-center text-[15px] text-[#252722] placeholder-[#9B9A93] focus:border-[#36A852] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#36A852]/30"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-center font-mono text-[10px] uppercase tracking-[0.24em] text-[#686A64]">
+                      Ihre E-Mail (für die Eingangsbestätigung)
+                    </span>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@beispiel.de"
+                      autoComplete="email"
+                      data-testid="doc-upload-email"
                       className="block w-full border border-[#D8D3C9] bg-white px-5 py-4 text-center text-[15px] text-[#252722] placeholder-[#9B9A93] focus:border-[#36A852] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#36A852]/30"
                     />
                   </label>

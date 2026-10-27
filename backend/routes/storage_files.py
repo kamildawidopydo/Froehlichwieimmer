@@ -325,6 +325,7 @@ async def public_submit_document_upload(
     request: Request,
     code: str = Form(...),
     used_by_name: str = Form(...),
+    email: Optional[str] = Form(default=None),
     message: Optional[str] = Form(default=None),
     user_agent: Optional[str] = Form(default=None),
     files: List[UploadFile] = File(...),
@@ -356,10 +357,6 @@ async def public_submit_document_upload(
     code_coll = _db.document_access_codes
     is_doc_code = True
     code_doc = await code_coll.find_one({"code_hash": code_hash})
-    if not code_doc:
-        is_doc_code = False
-        code_coll = _db.formular_access_codes
-        code_doc = await code_coll.find_one({"code_hash": code_hash})
     if not code_doc or code_doc.get("status") != "active":
         raise HTTPException(status_code=401, detail="Ungültiger oder bereits verwendeter Zugangscode")
 
@@ -431,6 +428,7 @@ async def public_submit_document_upload(
             "_id": sub_id,
             "code_id": code_doc["_id"],
             "used_by_name": name,
+            "email": (email or "").strip().lower()[:200] or None,
             "message": (message or "").strip()[:2000] or None,
             "files": stored,
             "user_agent": (user_agent or "")[:500] or None,

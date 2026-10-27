@@ -282,6 +282,10 @@ class RegisterInput(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
     name: Optional[str] = ""
+    first_name: Optional[str] = Field(default=None, max_length=80)
+    last_name: Optional[str] = Field(default=None, max_length=80)
+    country: Optional[str] = Field(default=None, max_length=80)
+    phone: Optional[str] = Field(default=None, max_length=40)
 
 
 class LoginInput(BaseModel):

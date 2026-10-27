@@ -1,3 +1,4 @@
+import { isValidIban } from '@/lib/iban';
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -128,6 +129,7 @@ const IngFestgeldVertrag = () => {
       if (!formData[field]) return false;
     }
     if (!isAtLeast18(formData.birthDate)) return false;
+    if (!isValidIban(formData.iban)) return false;
     if (!validateEuropeanTaxId(formData.taxId, getCountryForNationality(formData.nationality)).ok) return false;
     if (formData.s_fullName) {
       if (!formData.s_email) return false;
@@ -171,6 +173,8 @@ const IngFestgeldVertrag = () => {
         toast.error(validateEuropeanTaxId(formData.taxId, getCountryForNationality(formData.nationality)).message);
       } else if (formData.s_taxId && !validateEuropeanTaxId(formData.s_taxId, getCountryForNationality(formData.s_nationality || formData.nationality)).ok) {
         toast.error(validateEuropeanTaxId(formData.s_taxId, getCountryForNationality(formData.s_nationality || formData.nationality)).message);
+      } else if (formData.iban && !isValidIban(formData.iban)) {
+        toast.error('Die IBAN ist ungültig. Bitte prüfen Sie Ihre Eingabe.');
       } else {
         toast.error('Bitte füllen Sie alle Pflichtfelder aus.');
       }

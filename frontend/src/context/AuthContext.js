@@ -152,10 +152,10 @@ export const AuthProvider = ({ children }) => {
     return { user: merged, nextPath: getPostLoginPath(merged) };
   };
 
-  const register = async ({ email, password, first_name, last_name }) => {
+  const register = async ({ email, password, first_name, last_name, country, phone }) => {
     const name = [first_name, last_name].filter(Boolean).join(' ').trim() || email.split('@')[0];
     try {
-      await authApi.register({ email, password, name });
+      await authApi.register({ email, password, name, first_name, last_name, country, phone });
     } catch (err) {
       const msg = extractErrorMessage(err) || 'Registrierung fehlgeschlagen.';
       throw new Error(msg);
