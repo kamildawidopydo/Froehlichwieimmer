@@ -1,6 +1,6 @@
 """Entwurfs-Stellen für die Karriereplattform (werden nie automatisch veröffentlicht)."""
 
-SEED_VERSION = 10
+SEED_VERSION = 11
 
 _OFFER = [
     "Eine Tätigkeit für die Fröhlich Vermögensberatung GmbH mit Sitz in Bad Kreuznach",
@@ -207,4 +207,19 @@ SEED_JOBS = [
     _finanzberater("Frankfurt am Main", "frankfurt-am-main"),
     _berater("Bad Kreuznach", "bad-kreuznach"),
     _finanzberater("Bad Kreuznach", "bad-kreuznach"),
+    _job("sekretaer-frankfurt-am-main", "Sekretärin / Sekretär (m/w/d)", "erfahren",
+         "Sie sorgen für einen reibungslosen Büroalltag und unterstützen die Geschäftsführung der Fröhlich Vermögensberatung GmbH – am Standort Frankfurt am Main.",
+         ["Büroorganisation und Sicherstellung reibungsloser Abläufe im Sekretariat",
+          "Terminplanung und Kalenderverwaltung",
+          "Bearbeitung der Korrespondenz per E-Mail, Post und Telefon",
+          "Unterstützung der Geschäftsführung bei administrativen Aufgaben",
+          "Vorbereitung von Besprechungen und Kundenterminen",
+          "Dokumentenverwaltung und Ablage unter Beachtung des Datenschutzes"],
+         ["Abgeschlossene kaufmännische Ausbildung oder vergleichbare Qualifikation",
+          "Berufserfahrung im Sekretariat oder in der Assistenz von Vorteil",
+          "Sicherer Umgang mit gängigen Office-Anwendungen",
+          "Sehr gute Deutschkenntnisse in Wort und Schrift",
+          "Organisationstalent, Zuverlässigkeit und Diskretion",
+          "Freundliches und professionelles Auftreten"],
+         location="Frankfurt am Main", etype=_FEST, area="Geschäftsführung & Verwaltung"),
 ]

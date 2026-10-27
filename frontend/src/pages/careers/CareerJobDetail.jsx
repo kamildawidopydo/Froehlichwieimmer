@@ -68,11 +68,8 @@ export default function CareerJobDetail() {
     [Briefcase, 'Beschäftigungsmodell', job.employment_type || <Missing />],
     [Globe, 'Internetauftritt', 'www.essenceinvest.com'],
   ];
-  const applyLink = `/karriere/bewerben?stelle=${job.slug}`;
-  const enabled = status.applications_enabled;
-  const ApplyBtn = ({ className, testid }) => (enabled
-    ? <Link to={applyLink} className={`${className} bg-[#36A852] text-white`} data-testid={testid}>Jetzt bewerben</Link>
-    : <span aria-disabled="true" className={`${className} cursor-not-allowed bg-[#36A852]/40 text-white/90`} data-testid={testid}>Bewerbung in Kürze möglich</span>);
+  const applyLink = `/karriere/bewerben?stelle=${job.slug}&ort=${encodeURIComponent(job.location || '')}`;
+  const ApplyBtn = ({ className, testid }) => <Link to={applyLink} className={`${className} bg-[#36A852] text-white`} data-testid={testid}>Jetzt bewerben</Link>;
   const heroImg = CAREER_PATHS.find((p) => p.level === job.level)?.image || '/assets/careers/hero.jpg';
   const share = async () => {
     const url = window.location.href;

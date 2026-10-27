@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MapPin, Briefcase, ArrowRight } from 'lucide-react';
 import { LEVEL_LABEL } from '@/lib/careersContent';
@@ -32,13 +32,10 @@ const ViewBtn = ({ job, className = '' }) => (
   </Link>
 );
 
-const ApplyBtn = ({ job, className = '' }) => {
-  const enabled = !!useOutletContext()?.status?.applications_enabled;
-  const base = `relative z-10 inline-flex items-center justify-center rounded-full border px-5 py-2.5 text-[13.5px] font-semibold ${className}`;
-  return enabled
-    ? <Link to={`/karriere/bewerben?stelle=${job.slug}`} className={`${base} border-[#36A852] bg-[#36A852] text-white transition-colors hover:bg-[#2E9446]`} data-testid={`job-card-apply-${job.slug}`}>Jetzt bewerben</Link>
-    : <span aria-disabled="true" title="Online-Bewerbungen sind derzeit noch nicht freigeschaltet." className={`${base} cursor-not-allowed border-[#36A852]/40 bg-[#36A852]/15 text-[#2E6B3C]`} data-testid={`job-card-apply-${job.slug}`}>Jetzt bewerben</span>;
-};
+const ApplyBtn = ({ job, className = '' }) => (
+  <Link to={`/karriere/bewerben?stelle=${job.slug}&ort=${encodeURIComponent(job.location || '')}`} data-testid={`job-card-apply-${job.slug}`}
+    className={`relative z-10 inline-flex items-center justify-center rounded-full border border-[#36A852] bg-[#36A852] px-5 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[#2E9446] ${className}`}>Jetzt bewerben</Link>
+);
 
 export function JobRow({ job, index = 0 }) {
   return (
