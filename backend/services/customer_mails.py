@@ -70,15 +70,15 @@ def send_later(to: Optional[str], subject: str, html: str) -> None:
     from server import _send_email_via_emergent
 
     async def _run() -> None:
-        for attempt in range(3):
+        for attempt in range(5):
             try:
                 await _send_email_via_emergent(to=to, subject=subject, html=html)
                 return
             except Exception as exc:
-                if attempt == 2 or "429" not in str(exc):
+                if attempt == 4 or "429" not in str(exc):
                     logger.warning("customer mail '%s' to %s failed: %s", subject, to, exc)
                     return
-                await asyncio.sleep(1.5 * (attempt + 1))
+                await asyncio.sleep(2 ** (attempt + 1))
 
     task = asyncio.create_task(_run())
     _BG.add(task)
