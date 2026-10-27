@@ -188,6 +188,12 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 13. Changelog 2026-10-27 (/apply Dokument-Upload)
+- /apply lud Dateien über Cloudinary ohne Konfiguration → Fehler. Neu: POST /api/applications/documents (eigener Storage, PDF/JPG/PNG, 10 MB, 5/min/IP); Admin-Download über bestehende Admin-Route.
+- /api/applications akzeptiert documents jetzt als Liste (vorher Dict → 422); Antrags-Mails nutzten nicht existierendes `_send_email` → auf `_send_email_via_emergent` umgestellt.
+- Getestet: iteration_76 (Upload UI + Backend ok; finaler UI-Submit wegen Kamera-Identifizierung nur per Backend geprüft).
+
+
 ## 12. Changelog 2026-10-27 (Kunden-Mails Stil B)
 - services/customer_mails.py (render Stil B „Modern hell“, send_later im Hintergrund mit 429-Retry). Trigger: Registrierung (Willkommen), Dokument-Upload mit E-Mail, Auszahlung beantragt/freigegeben/abgelehnt, Admin legt Dokument/Vertrag an, Order ausgeführt (order_execution_service.execute_order).
 - Festgeld-Zusammenfassung vollständig (aus formSummaryHtml geparst), abgelaufene Formular-Sitzung → Weiterleitung /formular?abgelaufen=1, Chat-Knopf mobil im Kundenbereich über der Navigationsleiste.

@@ -1,0 +1,25 @@
+{
+  "summary": "Verified fix for /apply document upload error. Backend: POST /api/applications/documents PDF 200 (file_id/name/url), text/plain 415 German msg, admin download 200 with matching bytes, anon 401, POST /api/applications with documents List[Dict] 201 and persisted. Frontend (Playwright, desktop): welcome gate accepted (Deutschland + role), step1 + step2 filled (tax id 12345678995 accepted), step3 PDF into Personalausweis -> 200, filename shown, Weiter enabled; PNG into Adressnachweis -> 200, filename shown; no 'Fehler beim Hochladen' alert, no stuck 'Wird hochgeladen...'. text/plain rejected client-side with German alert. Step4 summary shows '2 Datei(en)'. Final UI submit not executed: requires camera-based AI identity/liveness flow (not automatable headless); submit path covered by backend test.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ApplicationForm step3", "issue": "uploadingDoc is a single global flag, so all remaining slots show 'Wird hochgeladen...' while one file uploads (cosmetic).", "selector": "input[type=file]", "priority": "LOW"},
+      {"component": "ApplicationForm handleDocumentUpload", "issue": "e.target.value is not reset after upload/error, so re-selecting the same file after a failed upload doesn't fire onChange.", "selector": "input[type=file]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter76_application_doc_upload.py", "/app/test_reports/pytest/iter76.xml"],
+  "action_items": [
+    "Optional: reset e.target.value='' in finally of handleDocumentUpload",
+    "Optional: track uploading state per docType",
+    "Note: public upload RL 5/min/IP - a user retrying several docs could hit 429 (message shown via alert detail, acceptable)"
+  ],
+  "critical_code_review_comments": ["Fix is correct: frontend posts multipart to /api/applications/documents via getApiBase(); backend validates type/size/doc_type and stores in storage_files; documents schema now List[Dict] with max_length=20. No issues blocking."],
+  "updated_files": ["/app/backend/tests/test_iter76_application_doc_upload.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Created 1 TEST_Upload application + 3 TEST_ storage_files; cleaned up (application deleted, files soft-deleted).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Public upload rate limit 5/min per IP is shared between pytest and Playwright - wait 60s between runs. Step4 submit requires AI identity flow with camera."
+}

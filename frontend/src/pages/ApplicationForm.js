@@ -185,6 +185,7 @@ const ApplicationForm = () => {
       alert(error?.response?.data?.detail || 'Fehler beim Hochladen der Datei. Bitte versuchen Sie es erneut.');
     } finally {
       setUploadingDoc(false);
+      e.target.value = '';
     }
   }, []);
 
