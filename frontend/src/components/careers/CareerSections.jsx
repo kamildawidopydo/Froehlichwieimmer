@@ -17,8 +17,8 @@ export const SectionHead = ({ eyebrow, title, children }) => (
 
 export const CultureSection = ({ isStaff }) => (
   <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28" data-testid="career-culture-section">
-    <SectionHead eyebrow="Karriere bei uns" title={<>Mehr als ein Job. Deine Zukunft bei Essence Invest.<DraftNote show={isStaff} /></>}>
-      <p className="mt-4 text-[#555]">Bei uns arbeitest du in einem Umfeld, das Vertrauen, Weiterentwicklung und Zusammenhalt in den Mittelpunkt stellt.</p>
+    <SectionHead eyebrow="Karriere bei uns" title={<>Mehr als ein Job. Ihre Zukunft bei uns.<DraftNote show={isStaff} /></>}>
+      <p className="mt-4 text-[#555]">Bei uns arbeiten Sie in einem Umfeld, das Vertrauen, Weiterentwicklung und Zusammenhalt in den Mittelpunkt stellt.</p>
     </SectionHead>
     <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {CULTURE_CARDS.map(({ icon: Icon, title, text }, i) => (
@@ -34,9 +34,9 @@ export const CultureSection = ({ isStaff }) => (
 );
 
 export const PathsSection = () => (
-  <section className="bg-white py-20 lg:py-28" data-testid="career-paths-section">
+  <section id="karrierewege" className="scroll-mt-24 bg-white py-20 lg:py-28" data-testid="career-paths-section">
     <div className="mx-auto max-w-7xl px-5 lg:px-8">
-      <SectionHead eyebrow="Karrierewege" title="Finde den Einstieg, der zu dir passt." />
+      <SectionHead eyebrow="Karrierewege" title="Finden Sie den Einstieg, der zu Ihnen passt." />
       <div className="mt-12 grid gap-6 lg:grid-cols-3">
         {CAREER_PATHS.map((p) => (
           <Link key={p.slug} to={`/karriere/${p.slug}`} className="group relative block h-[420px] overflow-hidden rounded-3xl" data-testid={`career-path-card-${p.slug}`}>
@@ -45,8 +45,8 @@ export const PathsSection = () => (
             <div className="absolute inset-x-0 bottom-0 p-7 text-white">
               <p.icon size={22} className="text-[#7BD58F]" />
               <h3 className="mt-3 font-display text-3xl">{p.title}</h3>
-              <p className="mt-2 text-white/85">{p.claim}</p>
-              <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold">Mehr erfahren <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" /></span>
+              <p className="mt-2 leading-relaxed text-white/85">{p.claim}</p>
+              <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#1E222C] transition-colors group-hover:bg-[#36A852] group-hover:text-white" data-testid={`career-path-more-${p.slug}`}>Mehr erfahren <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" /></span>
             </div>
           </Link>
         ))}

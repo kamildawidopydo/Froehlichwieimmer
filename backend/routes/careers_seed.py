@@ -1,6 +1,6 @@
 """Entwurfs-Stellen für die Karriereplattform (werden nie automatisch veröffentlicht)."""
 
-SEED_VERSION = 3
+SEED_VERSION = 4
 
 _OFFER = [
     "Eine offene, kollegiale Zusammenarbeit in einem engagierten Team",
@@ -11,9 +11,9 @@ _OFFER = [
 ]
 
 _PATH_TEXT = {
-    "einsteiger": "Nach einer fundierten Einarbeitung übernimmst du Schritt für Schritt mehr Verantwortung. Mit wachsender Erfahrung eröffnen sich dir Perspektiven in der eigenständigen Beratung oder in spezialisierten Fachbereichen.",
-    "quereinsteiger": "Deine bisherige Berufserfahrung ist ein Gewinn für uns. Wir begleiten dich beim Einstieg in die Finanzbranche, unterstützen dich beim Erwerb der notwendigen Qualifikationen und bei deiner langfristigen Weiterentwicklung.",
-    "erfahren": "Du bringst Erfahrung mit und gestaltest aktiv mit. Je nach Entwicklung sind weiterführende Aufgaben mit fachlicher oder disziplinarischer Verantwortung möglich.",
+    "einsteiger": "Nach einer fundierten Einarbeitung übernehmen Sie Schritt für Schritt mehr Verantwortung. Mit wachsender Erfahrung eröffnen sich Ihnen Perspektiven in der eigenständigen Beratung oder in spezialisierten Fachbereichen.",
+    "quereinsteiger": "Ihre bisherige Berufserfahrung ist ein Gewinn für uns. Wir begleiten Sie beim Einstieg in die Finanzbranche und unterstützen Sie beim Erwerb der notwendigen Qualifikationen sowie bei Ihrer langfristigen Weiterentwicklung.",
+    "erfahren": "Sie bringen Erfahrung mit und gestalten aktiv mit. Je nach Entwicklung sind weiterführende Aufgaben mit fachlicher oder disziplinarischer Verantwortung möglich.",
 }
 
 
@@ -30,7 +30,7 @@ CONTENT_FIELDS = ("title", "level", "summary", "tasks", "requirements", "offer",
 
 SEED_JOBS = [
     _job("junior-finanzberater", "Junior Finanzberater (m/w/d)", "einsteiger",
-         "Starte deine Karriere in der Finanzwelt und begleite Menschen auf ihrem Weg zu einer strukturierten finanziellen Zukunft.",
+         "Starten Sie Ihre Karriere in der Finanzwelt und begleiten Sie Menschen auf ihrem Weg zu einer strukturierten finanziellen Zukunft.",
          ["Unterstützung bei der Betreuung von Kunden",
           "Vorbereitung und Begleitung von Beratungsgesprächen",
           "Mitarbeit an individuellen Finanzkonzepten",
@@ -42,7 +42,7 @@ SEED_JOBS = [
           "Verantwortungsbewusstsein",
           "Freude am Umgang mit Menschen"]),
     _job("quereinsteiger-finanzberatung", "Quereinsteiger Finanzberatung (m/w/d)", "quereinsteiger",
-         "Du möchtest dich beruflich neu orientieren und interessierst dich für Finanzen? Entdecke neue Perspektiven in der Finanzberatung.",
+         "Sie möchten sich beruflich neu orientieren und interessieren sich für Finanzen? Entdecken Sie neue Perspektiven in der Finanzberatung.",
          ["Einarbeitung in die Finanzdienstleistungsbranche",
           "Kennenlernen verschiedener Finanzprodukte",
           "Unterstützung bei Kundengesprächen",
@@ -54,7 +54,7 @@ SEED_JOBS = [
           "Zuverlässigkeit",
           "Eigenverantwortliche Arbeitsweise"]),
     _job("investmentberater", "Investmentberater (m/w/d)", "erfahren",
-         "Du verfügst über Erfahrung in der Anlageberatung und möchtest Kundinnen und Kunden mit fundierten Investmentstrategien langfristig begleiten.",
+         "Sie verfügen über Erfahrung in der Anlageberatung und möchten Kundinnen und Kunden mit fundierten Investmentstrategien langfristig begleiten.",
          ["Analyse individueller Anlageziele",
           "Entwicklung geeigneter Investmentstrategien",
           "Betreuung bestehender Kunden",
@@ -66,7 +66,7 @@ SEED_JOBS = [
           "Kundenorientierung",
           "Erforderliche fachliche Qualifikationen und regulatorische Berechtigungen"]),
     _job("vertriebsmitarbeiter-finanzdienstleistungen", "Vertriebsmitarbeiter Finanzdienstleistungen (m/w/d)", "quereinsteiger",
-         "Du begeisterst Menschen gerne und möchtest im Vertrieb von Finanzdienstleistungen durchstarten? Gewinne neue Kunden und baue nachhaltige Beziehungen auf.",
+         "Sie begeistern Menschen gerne und möchten im Vertrieb von Finanzdienstleistungen durchstarten? Gewinnen Sie neue Kunden und bauen Sie nachhaltige Beziehungen auf.",
          ["Gewinnung neuer Interessenten",
           "Aufbau von Geschäftskontakten",
           "Vereinbarung von Beratungsterminen",
@@ -78,7 +78,7 @@ SEED_JOBS = [
           "Zielorientierung",
           "Interesse an Finanzdienstleistungen"]),
     _job("kundenbetreuer-vermoegensberatung", "Kundenbetreuer Vermögensberatung (m/w/d)", "einsteiger",
-         "Als erste Ansprechperson sorgst du dafür, dass sich unsere Kundinnen und Kunden jederzeit gut betreut und verstanden fühlen.",
+         "Als erste Ansprechperson sorgen Sie dafür, dass sich unsere Kundinnen und Kunden jederzeit gut betreut und verstanden fühlen.",
          ["Betreuung bestehender Kunden",
           "Bearbeitung von Kundenanfragen",
           "Koordination von Beratungsterminen",
@@ -90,7 +90,7 @@ SEED_JOBS = [
           "Zuverlässigkeit",
           "Sorgfältige Arbeitsweise"]),
     _job("recruiting-manager", "Recruiting Manager (m/w/d)", "erfahren",
-         "Du hast ein Gespür für Menschen und Potenziale? Gestalte unser Recruiting und hilf uns, die richtigen Talente für Essence Invest zu gewinnen.",
+         "Sie haben ein Gespür für Menschen und Potenziale? Gestalten Sie unser Recruiting und helfen Sie uns, die richtigen Talente für Essence Invest zu gewinnen.",
          ["Gewinnung neuer Mitarbeiter",
           "Erstellung von Stellenanzeigen",
           "Organisation von Bewerbungsgesprächen",
@@ -102,7 +102,7 @@ SEED_JOBS = [
           "Eigenverantwortliche Arbeitsweise",
           "Erfahrung im Recruiting von Vorteil"]),
     _job("social-media-marketing-manager", "Social Media & Marketing Manager (m/w/d)", "erfahren",
-         "Du bist kreativ, digital zu Hause und möchtest einer Finanzmarke eine starke Stimme geben? Mach Essence Invest sichtbar.",
+         "Sie sind kreativ, digital zu Hause und möchten einer Finanzmarke eine starke Stimme geben? Machen Sie Essence Invest sichtbar.",
          ["Betreuung unserer Social-Media-Kanäle",
           "Entwicklung von Marketingkampagnen",
           "Erstellung von Content",
@@ -114,7 +114,7 @@ SEED_JOBS = [
           "Selbstständige Arbeitsweise",
           "Gespür für digitale Trends"]),
     _job("teamleiter-finanzberatung", "Teamleiter Finanzberatung (m/w/d)", "erfahren",
-         "Du möchtest Verantwortung übernehmen und ein Team von Beraterinnen und Beratern erfolgreich führen? Gestalte mit uns die Qualität unserer Beratung.",
+         "Sie möchten Verantwortung übernehmen und ein Team von Beraterinnen und Beratern erfolgreich führen? Gestalten Sie mit uns die Qualität unserer Beratung.",
          ["Fachliche und disziplinarische Führung eines Beratungsteams",
           "Coaching und Weiterentwicklung der Teammitglieder",
           "Sicherstellung einer hohen Beratungsqualität",
@@ -126,7 +126,7 @@ SEED_JOBS = [
           "Unternehmerisches Denken",
           "Erforderliche fachliche Qualifikationen und regulatorische Berechtigungen"]),
     _job("assistenz-der-geschaeftsfuehrung", "Assistenz der Geschäftsführung (m/w/d)", "erfahren",
-         "Du behältst auch in turbulenten Zeiten den Überblick? Unterstütze unsere Geschäftsführung als rechte Hand in Organisation und Kommunikation.",
+         "Sie behalten auch in turbulenten Zeiten den Überblick? Unterstützen Sie unsere Geschäftsführung als rechte Hand in Organisation und Kommunikation.",
          ["Organisation von Terminen, Reisen und Besprechungen",
           "Vorbereitung von Präsentationen, Berichten und Unterlagen",
           "Koordination interner und externer Kommunikation",
@@ -138,7 +138,7 @@ SEED_JOBS = [
           "Organisationstalent und strukturierte Arbeitsweise",
           "Sehr gute Deutschkenntnisse in Wort und Schrift"]),
     _job("business-development-manager", "Business Development Manager (m/w/d)", "erfahren",
-         "Du denkst unternehmerisch und erkennst Chancen, bevor andere sie sehen? Treibe das Wachstum von Essence Invest mit neuen Partnerschaften und Geschäftsfeldern voran.",
+         "Sie denken unternehmerisch und erkennen Chancen, bevor andere sie sehen? Treiben Sie das Wachstum von Essence Invest mit neuen Partnerschaften und Geschäftsfeldern voran.",
          ["Identifikation und Bewertung neuer Geschäftsmöglichkeiten",
           "Aufbau und Pflege strategischer Partnerschaften",
           "Erstellung von Business Cases und Entscheidungsvorlagen",

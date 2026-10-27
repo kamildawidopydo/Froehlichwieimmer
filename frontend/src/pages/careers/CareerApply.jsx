@@ -22,14 +22,14 @@ const PHONE_RE = /^[0-9+()/\- ]{5,40}$/;
 
 const validate = (form) => {
   const e = {};
-  if (!form.first_name.trim()) e.first_name = 'Bitte gib deinen Vornamen ein.';
-  if (!form.last_name.trim()) e.last_name = 'Bitte gib deinen Nachnamen ein.';
-  if (!form.email.trim()) e.email = 'Bitte gib deine E-Mail-Adresse ein.';
-  else if (!EMAIL_RE.test(form.email.trim())) e.email = 'Bitte gib eine gültige E-Mail-Adresse ein (z. B. name@beispiel.de).';
-  if (!form.phone.trim()) e.phone = 'Bitte gib deine Telefonnummer ein.';
+  if (!form.first_name.trim()) e.first_name = 'Bitte geben Sie Ihren Vornamen ein.';
+  if (!form.last_name.trim()) e.last_name = 'Bitte geben Sie Ihren Nachnamen ein.';
+  if (!form.email.trim()) e.email = 'Bitte geben Sie Ihre E-Mail-Adresse ein.';
+  else if (!EMAIL_RE.test(form.email.trim())) e.email = 'Bitte geben Sie eine gültige E-Mail-Adresse ein (z. B. name@beispiel.de).';
+  if (!form.phone.trim()) e.phone = 'Bitte geben Sie Ihre Telefonnummer ein.';
   else if (!PHONE_RE.test(form.phone.trim())) e.phone = 'Bitte nur Ziffern, Leerzeichen und + ( ) / - verwenden.';
-  if (!form.job) e.job = 'Bitte wähle die gewünschte Position.';
-  else if (form.job === 'initiativ' && form.position.trim().length < 2) e.position = 'Bitte gib an, für welche Position du dich bewirbst.';
+  if (!form.job) e.job = 'Bitte wählen Sie die gewünschte Position.';
+  else if (form.job === 'initiativ' && form.position.trim().length < 2) e.position = 'Bitte geben Sie an, für welche Position Sie sich bewerben.';
   return e;
 };
 
@@ -65,8 +65,8 @@ const FilePick = ({ label, accept, multiple, files, setFiles, testid, disabled, 
 const Success = () => (
   <div className="mx-auto max-w-xl px-5 py-28 text-center" data-testid="apply-success">
     <CheckCircle2 size={56} className="mx-auto text-[#36A852]" strokeWidth={1.5} />
-    <h1 className="mt-6 font-display text-3xl sm:text-4xl">Vielen Dank für deine Bewerbung!</h1>
-    <p className="mt-4 text-lg text-[#555]">Wir haben deine Unterlagen erhalten und melden uns schnellstmöglich bei dir.</p>
+    <h1 className="mt-6 font-display text-3xl sm:text-4xl">Vielen Dank für Ihre Bewerbung!</h1>
+    <p className="mt-4 text-lg text-[#555]">Wir haben Ihre Unterlagen erhalten und melden uns schnellstmöglich bei Ihnen.</p>
     <Link to="/karriere" className="mt-8 inline-block rounded-full bg-[#36A852] px-7 py-3.5 font-semibold text-white">Zur Karriereseite</Link>
   </div>
 );
@@ -97,10 +97,10 @@ export default function CareerApply() {
     e.preventDefault();
     setError('');
     const v = validate(form);
-    if (!consent) v.consent = 'Bitte bestätige die Datenschutzhinweise.';
+    if (!consent) v.consent = 'Bitte bestätigen Sie die Datenschutzhinweise.';
     setErrors(v);
     if (Object.keys(v).length) {
-      setError('Bitte prüfe die markierten Felder.');
+      setError('Bitte prüfen Sie die markierten Felder.');
       document.querySelector(`[data-field="${Object.keys(v)[0]}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
@@ -118,7 +118,7 @@ export default function CareerApply() {
       setDone(true);
       window.scrollTo(0, 0);
     } catch (err) {
-      setError(errMsg(err, 'Deine Bewerbung konnte nicht gesendet werden. Bitte versuche es erneut.'));
+      setError(errMsg(err, 'Ihre Bewerbung konnte nicht gesendet werden. Bitte versuchen Sie es erneut.'));
     } finally {
       setBusy(false);
     }
@@ -127,12 +127,12 @@ export default function CareerApply() {
   if (done) return <Success />;
   return (
     <div className="mx-auto max-w-3xl px-5 py-12 lg:py-16">
-      <PageMeta title="Online bewerben | Karriere bei Essence Invest" description="Bewirb dich online bei Essence Invest." path="/karriere/bewerben" />
+      <PageMeta title="Online bewerben | Karriere bei der Fröhlich Vermögensberatung GmbH" description="Bewerben Sie sich online bei der Fröhlich Vermögensberatung GmbH und Essence Invest." path="/karriere/bewerben" />
       <h1 className="font-display text-4xl sm:text-5xl">Online bewerben</h1>
-      <p className="mt-3 text-[#555]">In wenigen Minuten erledigt – auch bequem per Smartphone. Pflichtfelder sind mit <span className="text-[#36A852]">*</span> markiert, Unterlagen kannst du optional anhängen.</p>
+      <p className="mt-3 text-[#555]">In wenigen Minuten erledigt – auch bequem per Smartphone. Pflichtfelder sind mit <span className="text-[#36A852]">*</span> markiert, Unterlagen können Sie optional anhängen.</p>
       {!enabled && (
         <div className="mt-6 flex gap-3 rounded-xl bg-amber-100 p-4 text-sm text-amber-900" data-testid="apply-disabled-notice">
-          <Lock size={18} className="shrink-0" /> Online-Bewerbungen sind derzeit noch nicht freigeschaltet. Bitte schau bald wieder vorbei.
+          <Lock size={18} className="shrink-0" /> Online-Bewerbungen sind derzeit noch nicht freigeschaltet. Bitte schauen Sie bald wieder vorbei.
         </div>
       )}
       <form onSubmit={submit} className="mt-8 space-y-8" data-testid="apply-form" noValidate>
@@ -148,7 +148,7 @@ export default function CareerApply() {
           <input type="text" tabIndex={-1} autoComplete="off" className="hidden" value={form.website} onChange={set('website')} aria-hidden="true" />
         </fieldset>
         <fieldset disabled={!enabled || busy} className="space-y-5 rounded-2xl border border-black/5 bg-white p-6 sm:p-8">
-          <p className="text-lg font-semibold">Deine Bewerbung</p>
+          <p className="text-lg font-semibold">Ihre Bewerbung</p>
           <F label="Gewünschte Position" required error={errors.job} testid="apply-position">
             <select data-field="job" aria-invalid={!!errors.job} className={inputCls} value={form.job} onChange={set('job')} data-testid="apply-position-select">
               <option value="">Bitte wählen</option>
@@ -157,7 +157,7 @@ export default function CareerApply() {
             </select>
           </F>
           {form.job === 'initiativ' && (
-            <F label="Für welche Position bewirbst du dich?" required error={errors.position} testid="apply-initiative-position"><input data-field="position" className={inputCls} value={form.position} onChange={set('position')} placeholder="z. B. Finanzberatung" data-testid="apply-initiative-position" /></F>
+            <F label="Für welche Position bewerben Sie sich?" required error={errors.position} testid="apply-initiative-position"><input data-field="position" className={inputCls} value={form.position} onChange={set('position')} placeholder="z. B. Finanzberatung" data-testid="apply-initiative-position" /></F>
           )}
           <div className="grid gap-5 sm:grid-cols-2">
             <F label="Berufserfahrung">

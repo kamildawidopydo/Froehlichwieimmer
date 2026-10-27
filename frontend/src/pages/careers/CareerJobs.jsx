@@ -3,6 +3,7 @@ import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import { Loader2, Search, SearchX, SlidersHorizontal, X } from 'lucide-react';
 import PageMeta from '@/components/PageMeta';
 import { JobRow } from '@/components/careers/JobCard';
+import JobsEmptyState from '@/components/careers/JobsEmptyState';
 import { LEVEL_LABEL } from '@/lib/careersContent';
 import useJobs from './useJobs';
 
@@ -38,6 +39,7 @@ export default function CareerJobs() {
   };
   const pick = (k) => (v) => apply({ ...filters, [k]: v });
   const activeCount = ['location', 'employment_type', 'level'].filter((k) => filters[k]).length;
+  const noJobs = !loading && data.items.length === 0 && activeCount === 0 && !filters.q;
 
   const filterPanel = (
     <>
@@ -49,13 +51,13 @@ export default function CareerJobs() {
 
   return (
     <>
-      <PageMeta title="Stellenangebote | Karriere bei Essence Invest" description="Alle offenen Stellen bei Essence Invest – filtern nach Karrierelevel, Beschäftigungsart und Standort." path="/karriere/stellen" />
+      <PageMeta title="Stellenangebote | Karriere bei Essence Invest" description="Alle offenen Stellen der Fröhlich Vermögensberatung GmbH und Essence Invest – filtern nach Karrierelevel, Beschäftigungsart und Standort." path="/karriere/stellen" />
       <section className="relative isolate overflow-hidden bg-[#1E222C] pb-28 pt-14">
         <img src="/assets/careers/office.jpg" alt="" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-30" />
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#7BD58F]">Jobbörse</p>
           <h1 className="mt-3 font-display text-4xl text-white sm:text-5xl">Stellenangebote</h1>
-          <p className="mt-3 max-w-xl text-white/75">Finde die Position, die zu dir passt – vom Einstieg bis zur Führungsaufgabe.</p>
+          <p className="mt-3 max-w-xl text-white/75">Finden Sie die Position, die zu Ihnen passt – vom Einstieg bis zur Führungsaufgabe.</p>
         </div>
       </section>
       <div className="relative z-10 mx-auto -mt-12 max-w-7xl px-5 lg:px-8">
@@ -71,6 +73,9 @@ export default function CareerJobs() {
           </button>
         </form>
       </div>
+      {noJobs ? (
+        <section className="mx-auto max-w-7xl px-5 py-12 lg:px-8 lg:py-16"><JobsEmptyState /></section>
+      ) : (
       <section className="mx-auto grid max-w-7xl gap-8 px-5 py-10 lg:grid-cols-[260px_1fr] lg:px-8">
         <aside className="hidden lg:block">
           <div className="sticky top-24 rounded-2xl border border-black/5 bg-white px-4" data-testid="job-filter-sidebar">{filterPanel}</div>
@@ -93,12 +98,13 @@ export default function CareerJobs() {
             : data.items.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-black/10 bg-white p-12 text-center" data-testid="job-results-empty">
                 <SearchX className="mx-auto text-[#36A852]" />
-                <p className="mt-3 text-[#555]">{activeCount > 0 || filters.q ? 'Keine passenden Stellen gefunden.' : 'Unsere Stellenangebote erscheinen in Kürze.'}</p>
-                <Link to="/karriere/bewerben?initiativ=1" className="mt-5 inline-block rounded-full bg-[#36A852] px-6 py-3 text-sm font-semibold text-white">Initiativ bewerben</Link>
+                <p className="mt-3 text-[#555]">Keine passenden Stellen gefunden.</p>
+                <button type="button" onClick={() => apply(EMPTY)} className="mt-5 inline-block rounded-full bg-[#36A852] px-6 py-3 text-sm font-semibold text-white" data-testid="job-empty-reset">Filter zurücksetzen</button>
               </div>
             ) : <div className="space-y-3">{data.items.map((j, i) => <JobRow key={j.id} job={j} index={i} />)}</div>}
         </div>
       </section>
+      )}
       {showFilters && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 lg:hidden" onClick={() => setShowFilters(false)}>
           <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl bg-white px-5 pb-6 pt-4" onClick={(e) => e.stopPropagation()} data-testid="job-filter-sheet">

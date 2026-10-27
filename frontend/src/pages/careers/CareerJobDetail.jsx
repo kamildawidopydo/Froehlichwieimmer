@@ -79,10 +79,10 @@ export default function CareerJobDetail() {
       </section>
       <div className="mx-auto grid max-w-5xl gap-6 px-5 pb-28 pt-12 lg:grid-cols-[1fr_300px] lg:px-8 lg:pb-16">
         <div className="space-y-6">
-          <Block title="Deine Aufgaben" items={job.tasks} testid="job-detail-tasks" />
-          <Block title="Das bringst du mit" items={job.requirements} testid="job-detail-requirements" />
-          <Block title="Das erwartet dich bei uns" items={job.offer} testid="job-detail-offer" />
-          <Block title="Dein Karriereweg" text={job.career_path} testid="job-detail-career-path" />
+          <Block title="Ihre Aufgaben" items={job.tasks} testid="job-detail-tasks" />
+          <Block title="Das bringen Sie mit" items={job.requirements} testid="job-detail-requirements" />
+          <Block title="Das erwartet Sie bei uns" items={job.offer} testid="job-detail-offer" />
+          <Block title="Ihr Karriereweg" text={job.career_path} testid="job-detail-career-path" />
         </div>
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-2xl border border-black/5 bg-white p-6">
