@@ -7,11 +7,12 @@ import JobSearchBar from '@/components/careers/JobSearchBar';
 import JobCard from '@/components/careers/JobCard';
 import { CultureSection, PathsSection, SectionHead } from '@/components/careers/CareerSections';
 import useJobs from './useJobs';
+import { CAREER_PATHS } from '@/lib/careersContent';
 
 const Hero = () => (
   <section className="relative isolate overflow-hidden bg-[#1E222C]" data-testid="career-hero">
-    <img src="/assets/careers/hero.jpg" alt="" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-70" fetchpriority="high" />
-    <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#1E222C] via-[#1E222C]/75 to-[#1E222C]/10" />
+    <img src="/assets/careers/hero.jpg" alt="" className="absolute inset-0 -z-10 h-full w-full scale-105 object-cover opacity-60" fetchpriority="high" />
+    <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#1E222C] via-[#1E222C]/70 to-[#1E222C]/0" />
     <div className="mx-auto max-w-7xl px-5 pb-40 pt-20 lg:px-8 lg:pb-48 lg:pt-28">
       <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-xs font-semibold uppercase tracking-[0.22em] text-[#7BD58F]">Karriere bei Essence Invest</motion.p>
       <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
@@ -24,6 +25,13 @@ const Hero = () => (
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} className="mt-9 flex flex-wrap gap-3">
         <Link to="/karriere/stellen" data-testid="career-hero-jobs-btn" className="rounded-full bg-[#36A852] px-7 py-3.5 text-[15px] font-semibold text-white transition-transform hover:-translate-y-0.5">Jetzt Jobs entdecken</Link>
         <Link to="/karriere/bewerben?initiativ=1" data-testid="career-hero-initiative-btn" className="rounded-full border border-white/40 px-7 py-3.5 text-[15px] font-semibold text-white backdrop-blur transition-colors hover:bg-white/10">Initiativ bewerben</Link>
+      </motion.div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.36 }} className="mt-8 flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[13px] text-white/60">Direkt zu:</span>
+        {CAREER_PATHS.map((p) => (
+          <Link key={p.slug} to={`/karriere/stellen?level=${p.level}`} data-testid={`career-hero-chip-${p.slug}`}
+            className="rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[13px] font-medium text-white backdrop-blur transition-colors hover:bg-white hover:text-[#1E222C]">{p.title}</Link>
+        ))}
       </motion.div>
     </div>
   </section>

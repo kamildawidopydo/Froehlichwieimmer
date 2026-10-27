@@ -21,10 +21,11 @@ export default function CareerPrivacy() {
         <p>Name, Kontaktdaten, gewünschte Position, Angaben zu Berufserfahrung und Eintrittstermin, Ihre Nachricht sowie hochgeladene Dokumente (z. B. Lebenslauf).</p>
       </S>
       <S title="4. Übertragung und Speicherung">
-        <p>Die Übertragung erfolgt verschlüsselt (TLS). Unterlagen werden in einem geschützten Speicher abgelegt und sind ausschließlich für berechtigte Personen aus dem Recruiting und der Geschäftsführung zugänglich. Eine öffentliche Einsicht ist ausgeschlossen.</p>
+        <p>Die Übertragung erfolgt verschlüsselt (TLS). Hochgeladene Unterlagen werden vor dem Speichern mit einem eigenen Schlüssel je Datei verschlüsselt und in einer geschützten Datenbank abgelegt. Zugriff haben ausschließlich berechtigte Personen aus dem Recruiting und der Geschäftsführung. Eine öffentliche Einsicht ist ausgeschlossen.</p>
       </S>
-      <S title="5. Speicherdauer">
-        <p>Nach Abschluss des Verfahrens werden Ihre Daten nach [Platzhalter: Aufbewahrungsfrist, z. B. 6 Monate] gelöscht, sofern Sie keiner längeren Speicherung zugestimmt haben oder gesetzliche Pflichten entgegenstehen.</p>
+      <S title="5. Speicherdauer und Löschung">
+        <p>Ihre Bewerbung wird [Platzhalter: Aufbewahrungsfrist, Voreinstellung 180 Tage] nach der letzten Bearbeitung automatisch gelöscht, sofern Sie keiner längeren Speicherung zugestimmt haben oder gesetzliche Pflichten entgegenstehen. Auf Wunsch löschen wir Ihre Daten jederzeit vorher.</p>
+        <p>Bei der Löschung werden Ihre Angaben, interne Notizen, die verschlüsselten Dateien und deren Schlüssel endgültig entfernt. Technische Datensicherungen des Hosting-Anbieters werden nach [Platzhalter: Aufbewahrungsdauer der Sicherungen beim Hosting-Anbieter] überschrieben. Wird eine Sicherung wiederhergestellt, werden bereits gelöschte Bewerbungen anhand eines Löschprotokolls ohne personenbezogene Daten automatisch erneut gelöscht.</p>
       </S>
       <S title="6. Ihre Rechte">
         <p>Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit sowie Widerspruch und Widerruf einer Einwilligung. Zudem können Sie sich bei einer Datenschutz-Aufsichtsbehörde beschweren.</p>

@@ -62,7 +62,8 @@ export default function RecruitingSettings() {
     if (!window.confirm(`${s.expired_count} Bewerbung(en) älter als ${s.retention_days} Tage endgültig löschen?`)) return;
     const r = await careersApi.post('/admin/retention/run');
     toast.success(`${r.data.deleted} Bewerbung(en) gelöscht`);
-    setS({ ...s, expired_count: 0 });
+    const fresh = await careersApi.get('/admin/settings');
+    setS(fresh.data);
   };
   if (!s) return null;
   return (
@@ -86,7 +87,21 @@ export default function RecruitingSettings() {
           <span data-testid="settings-expired-count">{s.expired_count} Bewerbung(en) überschreiten die Aufbewahrungsfrist.</span>
           <button type="button" disabled={!s.expired_count} onClick={runRetention} className="rounded-full border border-rose-200 px-4 py-2 text-rose-700 disabled:opacity-40" data-testid="settings-run-retention">Jetzt löschen</button>
         </div>
-        <p className="mt-3 text-xs text-[#686A64]">Hinweis: Aufbewahrungsfrist und Datenschutzhinweise bitte vor Veröffentlichung rechtlich prüfen.</p>
+        <p className="mt-3 text-xs text-[#686A64]">Die Frist zählt ab der letzten Bearbeitung einer Bewerbung. Abgelaufene Bewerbungen werden zusätzlich automatisch (höchstens alle 6 Stunden geprüft) gelöscht. Gelöscht werden Bewerberdaten, Notizen sowie die verschlüsselten Dateien samt Schlüssel – endgültig.</p>
+        <p className="mt-1 text-xs text-[#686A64]">Hinweis: Aufbewahrungsfrist und Datenschutzhinweise bitte vor Veröffentlichung rechtlich prüfen.</p>
+      </Card>
+      <Card title="Löschprotokoll" testid="settings-deletion-log">
+        <p className="text-sm text-[#686A64]">Enthält keine personenbezogenen Daten. Nach einer Wiederherstellung aus einer Sicherung werden die hier protokollierten Bewerbungen automatisch erneut gelöscht.</p>
+        {s.deletion_log.length === 0 ? <p className="mt-3 text-sm">Noch keine Löschungen.</p> : (
+          <ul className="mt-3 divide-y divide-black/5 text-sm">
+            {s.deletion_log.map((d, i) => (
+              <li key={i} className="flex flex-wrap justify-between gap-2 py-2" data-testid="deletion-log-row">
+                <span>{new Date(d.deleted_at).toLocaleString('de-DE')} · {d.reason}</span>
+                <span className="text-[#686A64]">{d.files_deleted} Datei(en){d.by ? ` · ${d.by}` : ''}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
       {user.role === 'admin' && <Team />}
     </div>

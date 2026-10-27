@@ -16,7 +16,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 from server import db, get_current_user, hash_password, require_admin
 from services.customer_mails import render, send_later
-from services.emergent_storage import APP_PREFIX, get_object, put_object
+from services import career_files
 
 router = APIRouter(prefix="/api/careers", tags=["careers"])
 
@@ -93,6 +93,11 @@ def _deadline_passed(job: dict) -> bool:
 @router.get("/status")
 async def public_status(request: Request):
     s = await _settings()
+    try:
+        await _maybe_auto_retention()
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("career auto retention failed: %s", exc)
     return {"site_public": s["site_public"], "applications_enabled": s["applications_enabled"],
             "is_staff": await _optional_staff(request)}
 
@@ -211,15 +216,14 @@ async def submit_application(
 
     app_id = ObjectId()
     stored = []
-    for f in files:
-        ext = {"application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png"}[f["ct"]]
-        res = put_object(f"{APP_PREFIX}/career-applications/{app_id}/{uuid.uuid4().hex}.{ext}", f["data"], f["ct"])
-        fid = uuid.uuid4().hex
-        await db.storage_files.insert_one({
-            "_id": fid, "scope": "career_application", "subject_id": str(app_id), "storage_path": res["path"],
-            "content_type": f["ct"], "size": len(f["data"]), "original_filename": f["name"],
-            "is_deleted": False, "uploaded_by": None, "created_at": _now()})
-        stored.append({"file_id": fid, "name": f["name"], "kind": f["kind"], "size": len(f["data"])})
+    try:
+        for f in files:
+            fid = uuid.uuid4().hex
+            await career_files.store(db, fid, str(app_id), f["data"], f["ct"], f["name"])
+            stored.append({"file_id": fid, "name": f["name"], "kind": f["kind"], "size": len(f["data"]), "content_type": f["ct"]})
+    except Exception:
+        await career_files.purge_application(db, str(app_id))
+        raise HTTPException(status_code=502, detail="Unterlagen konnten nicht gespeichert werden. Bitte versuche es erneut.")
 
     doc = {
         "_id": app_id, "first_name": first_name.strip(), "last_name": last_name.strip(),
@@ -403,19 +407,47 @@ async def admin_patch_application(app_id: str, body: AppPatch, u: dict = Depends
     return _app_out(d, full=True)
 
 
-async def _delete_applications(filt: dict) -> int:
+async def _delete_applications(filt: dict, reason: str, by: Optional[str]) -> int:
     ids = [str(d["_id"]) async for d in db.career_applications.find(filt, {"_id": 1})]
-    if not ids:
-        return 0
-    await db.storage_files.update_many({"scope": "career_application", "subject_id": {"$in": ids}},
-                                       {"$set": {"is_deleted": True, "deleted_at": _now()}})
-    res = await db.career_applications.delete_many({"_id": {"$in": [ObjectId(i) for i in ids]}})
-    return res.deleted_count
+    for i in ids:
+        n_files = await career_files.purge_application(db, i)
+        await db.career_applications.delete_one({"_id": ObjectId(i)})
+        await db.career_deletion_log.insert_one(
+            {"application_id": i, "deleted_at": _now(), "reason": reason, "by": by, "files_deleted": n_files})
+    return len(ids)
+
+
+async def reapply_deletion_log() -> int:
+    """Nach einer Wiederherstellung aus einer Sicherung: bereits gelöschte Bewerbungen erneut entfernen."""
+    n = 0
+    async for log in db.career_deletion_log.find({}, {"application_id": 1}):
+        aid = log["application_id"]
+        if await db.career_applications.find_one({"_id": ObjectId(aid)}, {"_id": 1}) or \
+                await db.career_file_keys.find_one({"application_id": aid}, {"_id": 1}):
+            await career_files.purge_application(db, aid)
+            await db.career_applications.delete_one({"_id": ObjectId(aid)})
+            n += 1
+    return n
+
+
+def _expired_filter(days: int) -> dict:
+    return {"updated_at": {"$lt": _now() - timedelta(days=days)}}
+
+
+_AUTO_RET = {"at": 0.0}
+
+
+async def _maybe_auto_retention() -> None:
+    if time.time() - _AUTO_RET["at"] < 6 * 3600:
+        return
+    _AUTO_RET["at"] = time.time()
+    s = await _settings()
+    await _delete_applications(_expired_filter(s["retention_days"]), "automatische Frist", None)
 
 
 @router.delete("/admin/applications/{app_id}")
-async def admin_delete_application(app_id: str, _u: dict = Depends(require_recruiting)):
-    n = await _delete_applications({"_id": _oid(app_id)})
+async def admin_delete_application(app_id: str, u: dict = Depends(require_recruiting)):
+    n = await _delete_applications({"_id": _oid(app_id)}, "manuell", u.get("email"))
     if not n:
         raise HTTPException(status_code=404, detail="Bewerbung nicht gefunden")
     return {"deleted": True}
@@ -423,14 +455,18 @@ async def admin_delete_application(app_id: str, _u: dict = Depends(require_recru
 
 @router.get("/admin/files/{file_id}")
 async def admin_file(file_id: str, _u: dict = Depends(require_recruiting)):
-    f = await db.storage_files.find_one({"_id": file_id[:40], "scope": "career_application", "is_deleted": False})
-    if not f:
+    app = await db.career_applications.find_one({"files.file_id": file_id[:40]}, {"files": 1})
+    meta = next((f for f in (app or {}).get("files", []) if f["file_id"] == file_id), None)
+    if not meta:
         raise HTTPException(status_code=404, detail="Datei nicht gefunden")
-    data, ct = get_object(f["storage_path"])
-    name = f.get("original_filename") or "dokument"
+    try:
+        data, ct = await career_files.load(db, file_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Datei nicht gefunden")
+    name = meta.get("name") or "dokument"
     from urllib.parse import quote
     ascii_name = name.encode("ascii", "ignore").decode() or "dokument"
-    return Response(content=data, media_type=f.get("content_type") or ct,
+    return Response(content=data, media_type=ct,
                     headers={"Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(name)}",
                              "Cache-Control": "no-store"})
 
@@ -462,8 +498,9 @@ class SettingsIn(BaseModel):
 @router.get("/admin/settings")
 async def admin_get_settings(_u: dict = Depends(require_recruiting)):
     s = await _settings()
-    cutoff = _now() - timedelta(days=s["retention_days"])
-    s["expired_count"] = await db.career_applications.count_documents({"created_at": {"$lt": cutoff}})
+    s["expired_count"] = await db.career_applications.count_documents(_expired_filter(s["retention_days"]))
+    s["deletion_log"] = [{"deleted_at": _iso(d["deleted_at"]), "reason": d["reason"], "by": d.get("by"), "files_deleted": d.get("files_deleted", 0)}
+                         async for d in db.career_deletion_log.find({}).sort("deleted_at", -1).limit(20)]
     return s
 
 
@@ -476,9 +513,9 @@ async def admin_put_settings(body: SettingsIn, u: dict = Depends(require_recruit
 
 
 @router.post("/admin/retention/run")
-async def admin_run_retention(_u: dict = Depends(require_recruiting)):
+async def admin_run_retention(u: dict = Depends(require_recruiting)):
     s = await _settings()
-    n = await _delete_applications({"created_at": {"$lt": _now() - timedelta(days=s["retention_days"])}})
+    n = await _delete_applications(_expired_filter(s["retention_days"]), "Frist (manuell ausgelöst)", u.get("email"))
     return {"deleted": n}
 
 
@@ -518,6 +555,7 @@ async def admin_team_delete(user_id: str, _a: dict = Depends(require_admin)):
 
 async def seed_career_jobs() -> None:
     from routes.careers_seed import SEED_JOBS
+    await reapply_deletion_log()
     await db.career_jobs.create_index("slug", unique=True)
     await db.career_applications.create_index([("created_at", -1)])
     for j in SEED_JOBS:
