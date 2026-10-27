@@ -207,7 +207,7 @@ async def submit_application(
 
     job = None
     if job_id:
-        job = await db.career_jobs.find_one({"_id": _oid(job_id), "status": "published"})
+        job = await db.career_jobs.find_one({"_id": _oid(job_id), "status": {"$in": ["published", "draft"] if await _optional_staff(request) else ["published"]}})
         if not job:
             raise HTTPException(status_code=404, detail="Diese Stelle ist nicht mehr verfügbar.")
         if _deadline_passed(job):
