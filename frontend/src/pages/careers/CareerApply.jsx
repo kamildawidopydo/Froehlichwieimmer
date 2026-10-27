@@ -127,7 +127,7 @@ export default function CareerApply() {
   if (done) return <Success />;
   return (
     <div className="mx-auto max-w-3xl px-5 py-12 lg:py-16">
-      <PageMeta title="Online bewerben | Karriere bei der Fröhlich Vermögensberatung GmbH" description="Bewerben Sie sich online bei der Fröhlich Vermögensberatung GmbH und Essence Invest." path="/karriere/bewerben" />
+      <PageMeta title="Online bewerben | Karriere bei der Fröhlich Vermögensberatung GmbH" description="Bewerben Sie sich online bei der Fröhlich Vermögensberatung GmbH." path="/karriere/bewerben" />
       <h1 className="font-display text-4xl sm:text-5xl">Online bewerben</h1>
       <p className="mt-3 text-[#555]">In wenigen Minuten erledigt – auch bequem per Smartphone. Pflichtfelder sind mit <span className="text-[#36A852]">*</span> markiert, Unterlagen können Sie optional anhängen.</p>
       {!enabled && (

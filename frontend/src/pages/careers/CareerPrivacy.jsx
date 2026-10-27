@@ -8,11 +8,11 @@ const S = ({ title, children }) => (
 export default function CareerPrivacy() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-16 lg:px-8" data-testid="career-privacy">
-      <PageMeta title="Datenschutzhinweise für Bewerber | Essence Invest" description="Informationen zur Verarbeitung personenbezogener Daten im Bewerbungsverfahren." path="/karriere/datenschutz" />
+      <PageMeta title="Datenschutzhinweise für Bewerber | Fröhlich Vermögensberatung GmbH" description="Informationen zur Verarbeitung personenbezogener Daten im Bewerbungsverfahren." path="/karriere/datenschutz" />
       <p className="rounded-xl bg-amber-100 px-4 py-3 text-sm text-amber-900">Entwurf – diese Hinweise müssen vor Veröffentlichung rechtlich geprüft und freigegeben werden.</p>
       <h1 className="mt-8 font-display text-4xl">Datenschutzhinweise für Bewerberinnen und Bewerber</h1>
       <S title="1. Verantwortliche Stelle">
-        <p>Fröhlich Vermögensberatung GmbH (Marke: Essence Invest), Bösgrunder Weg 62, 55543 Bad Kreuznach. Kontakt Datenschutz: [Platzhalter: E-Mail-Adresse des Datenschutzbeauftragten]</p>
+        <p>Fröhlich Vermögensberatung GmbH (Internetauftritt: www.essenceinvest.com), Bösgrunder Weg 62, 55543 Bad Kreuznach. Kontakt Datenschutz: [Platzhalter: E-Mail-Adresse des Datenschutzbeauftragten]</p>
       </S>
       <S title="2. Zweck und Rechtsgrundlage">
         <p>Wir verarbeiten Ihre Angaben und Unterlagen ausschließlich zur Durchführung des Bewerbungsverfahrens (Art. 6 Abs. 1 lit. b DSGVO i. V. m. § 26 BDSG). Freiwillige Angaben verarbeiten wir auf Grundlage Ihrer Einwilligung (Art. 6 Abs. 1 lit. a DSGVO).</p>

@@ -11,7 +11,7 @@ export default function HomeCareerCta() {
       <div className="flex items-center gap-3.5">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bank-primary text-white"><Briefcase size={18} /></span>
         <div>
-          <p className="font-serif text-lg leading-tight text-bank-text sm:text-xl">Karriere bei Essence Invest – Wir suchen Verstärkung</p>
+          <p className="font-serif text-lg leading-tight text-bank-text sm:text-xl">Karriere bei der Fröhlich Vermögensberatung GmbH – Wir suchen Verstärkung</p>
           <p className="text-sm text-bank-text-muted">Entdecken Sie unsere Karrieremöglichkeiten und werden Sie Teil unseres Teams.</p>
         </div>
       </div>

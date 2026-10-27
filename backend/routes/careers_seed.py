@@ -1,6 +1,6 @@
 """Entwurfs-Stellen für die Karriereplattform (werden nie automatisch veröffentlicht)."""
 
-SEED_VERSION = 4
+SEED_VERSION = 5
 
 _OFFER = [
     "Eine offene, kollegiale Zusammenarbeit in einem engagierten Team",
@@ -90,7 +90,7 @@ SEED_JOBS = [
           "Zuverlässigkeit",
           "Sorgfältige Arbeitsweise"]),
     _job("recruiting-manager", "Recruiting Manager (m/w/d)", "erfahren",
-         "Sie haben ein Gespür für Menschen und Potenziale? Gestalten Sie unser Recruiting und helfen Sie uns, die richtigen Talente für Essence Invest zu gewinnen.",
+         "Sie haben ein Gespür für Menschen und Potenziale? Gestalten Sie unser Recruiting und helfen Sie uns, die richtigen Talente für die Fröhlich Vermögensberatung GmbH zu gewinnen.",
          ["Gewinnung neuer Mitarbeiter",
           "Erstellung von Stellenanzeigen",
           "Organisation von Bewerbungsgesprächen",
@@ -102,7 +102,7 @@ SEED_JOBS = [
           "Eigenverantwortliche Arbeitsweise",
           "Erfahrung im Recruiting von Vorteil"]),
     _job("social-media-marketing-manager", "Social Media & Marketing Manager (m/w/d)", "erfahren",
-         "Sie sind kreativ, digital zu Hause und möchten einer Finanzmarke eine starke Stimme geben? Machen Sie Essence Invest sichtbar.",
+         "Sie sind kreativ, digital zu Hause und möchten einer Finanzmarke eine starke Stimme geben? Machen Sie die Fröhlich Vermögensberatung GmbH und www.essenceinvest.com sichtbar.",
          ["Betreuung unserer Social-Media-Kanäle",
           "Entwicklung von Marketingkampagnen",
           "Erstellung von Content",
@@ -138,7 +138,7 @@ SEED_JOBS = [
           "Organisationstalent und strukturierte Arbeitsweise",
           "Sehr gute Deutschkenntnisse in Wort und Schrift"]),
     _job("business-development-manager", "Business Development Manager (m/w/d)", "erfahren",
-         "Sie denken unternehmerisch und erkennen Chancen, bevor andere sie sehen? Treiben Sie das Wachstum von Essence Invest mit neuen Partnerschaften und Geschäftsfeldern voran.",
+         "Sie denken unternehmerisch und erkennen Chancen, bevor andere sie sehen? Treiben Sie das Wachstum der Fröhlich Vermögensberatung GmbH mit neuen Partnerschaften und Geschäftsfeldern voran.",
          ["Identifikation und Bewertung neuer Geschäftsmöglichkeiten",
           "Aufbau und Pflege strategischer Partnerschaften",
           "Erstellung von Business Cases und Entscheidungsvorlagen",

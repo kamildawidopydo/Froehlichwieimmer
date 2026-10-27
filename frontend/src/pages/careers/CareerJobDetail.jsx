@@ -57,7 +57,7 @@ export default function CareerJobDetail() {
   };
   return (
     <>
-      <PageMeta title={`${job.title} | Karriere bei Essence Invest`} description={job.summary} path={`/karriere/stellen/${job.slug}`} />
+      <PageMeta title={`${job.title} | Karriere bei der Fröhlich Vermögensberatung GmbH`} description={job.summary} path={`/karriere/stellen/${job.slug}`} />
       <section className="relative isolate overflow-hidden bg-[#1E222C] pb-16 pt-10 text-white">
         <img src={heroImg} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover object-top opacity-30" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#1E222C] via-[#1E222C]/85 to-[#1E222C]/40" />

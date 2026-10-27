@@ -42,14 +42,14 @@ const Breadcrumb = ({ pathname }) => {
 const CareerLinks = () => (
   <section className="border-t border-black/5 bg-white" data-testid="career-links">
     <div className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#36A852]">Karriere bei Essence Invest</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#36A852]">Karriere bei der Fröhlich Vermögensberatung GmbH</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {LINKS.map((l) => (
           <Link key={l.to} to={l.to} className="rounded-full border border-black/10 px-4 py-2 text-sm text-[#1E222C] transition-colors hover:border-[#36A852] hover:text-[#36A852]"
             data-testid={`career-link-${l.label.toLowerCase().replace(/[^a-z]/g, '')}`}>{l.label}</Link>
         ))}
       </div>
-      <p className="mt-6 text-xs text-[#686A64]">Essence Invest ist eine Marke der Fröhlich Vermögensberatung GmbH.</p>
+      <p className="mt-6 text-xs text-[#686A64]">www.essenceinvest.com ist der Internetauftritt der Fröhlich Vermögensberatung GmbH.</p>
     </div>
   </section>
 );

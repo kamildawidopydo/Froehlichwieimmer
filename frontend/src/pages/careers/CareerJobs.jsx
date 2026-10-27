@@ -51,7 +51,7 @@ export default function CareerJobs() {
 
   return (
     <>
-      <PageMeta title="Stellenangebote | Karriere bei Essence Invest" description="Alle offenen Stellen der Fröhlich Vermögensberatung GmbH und Essence Invest – filtern nach Karrierelevel, Beschäftigungsart und Standort." path="/karriere/stellen" />
+      <PageMeta title="Stellenangebote | Karriere bei der Fröhlich Vermögensberatung GmbH" description="Alle offenen Stellen der Fröhlich Vermögensberatung GmbH – filtern nach Karrierelevel, Beschäftigungsart und Standort." path="/karriere/stellen" />
       <section className="relative isolate overflow-hidden bg-[#1E222C] pb-28 pt-14">
         <img src="/assets/careers/office.jpg" alt="" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-30" />
         <div className="mx-auto max-w-7xl px-5 lg:px-8">

@@ -236,20 +236,20 @@ async def submit_application(
     await db.career_portal_applications.insert_one(doc)
 
     pos = doc["job_title"] or f"Initiativbewerbung · {doc['position']}"
-    send_later(doc["email"], "Ihre Bewerbung bei Essence Invest", render(
+    send_later(doc["email"], "Ihre Bewerbung bei der Fröhlich Vermögensberatung GmbH", render(
         "Vielen Dank für Ihre Bewerbung",
         f"Guten Tag {doc['first_name']} {doc['last_name']}, wir haben Ihre Unterlagen erhalten und melden uns schnellstmöglich bei Ihnen.",
         [("Position", pos), ("Eingegangen am", _now().strftime("%d.%m.%Y")), ("Dokumente", str(len(stored)))],
         "Zur Karriereseite", "/karriere",
         steps=["Wir sichten Ihre Unterlagen sorgfältig.", "Bei passender Qualifikation melden wir uns für ein Kennenlernen."],
-        brand="Essence Invest · Karriere", salutation="Ihr Recruiting-Team von Essence Invest"))
+        brand="Fröhlich Vermögensberatung GmbH · Karriere", salutation="Ihr Recruiting-Team der Fröhlich Vermögensberatung GmbH"))
     from routes.contract_submissions import _admin_target
     send_later(s["notify_email"] or _admin_target(), f"Neue Bewerbung: {pos}", render(
         "Neue Bewerbung eingegangen",
         "Über die Karriereseite ist eine neue Bewerbung eingegangen.",
         [("Position", pos), ("Name", f"{doc['first_name']} {doc['last_name']}"), ("Dokumente", str(len(stored)))],
         "Bewerbung ansehen", f"/recruiting/bewerbungen/{app_id}",
-        brand="Essence Invest · Recruiting", salutation="Ihre Karriereplattform"))
+        brand="Fröhlich Vermögensberatung GmbH · Recruiting", salutation="Ihre Karriereplattform"))
     return {"id": str(app_id), "status": "neu"}
 
 
