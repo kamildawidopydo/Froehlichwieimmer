@@ -188,6 +188,10 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 18. Changelog 2026-10-27 (Stellen 4–7 nach Kundenvorgabe)
+- SEED_VERSION=3: Aufgaben/Anforderungen für Vertriebsmitarbeiter, Kundenbetreuer, Recruiting Manager, Social Media & Marketing Manager wortgetreu übernommen; nur unbearbeitete Seed-Entwürfe werden aktualisiert; weiterhin 10 Stellen, alle Entwurf.
+
+
 ## 17. Changelog 2026-10-27 (Stellentexte überarbeitet)
 - careers_seed.py SEED_VERSION=2: Stellen 1–3 wortgetreu nach Kundenvorgabe, 4–10 im gleichen Stil formuliert (Kundennachricht brach bei Stelle 4 ab). Seed aktualisiert Inhalte nur bei unbearbeiteten Seed-Entwürfen (is_seed_draft & status draft); manuelles Bearbeiten setzt is_seed_draft=False. Alle weiterhin Entwurf.
 
