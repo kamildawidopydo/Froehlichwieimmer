@@ -101,9 +101,9 @@ def _client_ip(request: Request) -> str:
     cf = (request.headers.get("cf-connecting-ip") or request.headers.get("x-real-ip") or "").strip()
     if cf:
         return cf
-    xff = request.headers.get("x-forwarded-for", "")
-    if xff:
-        first = xff.split(",")[0].strip()
+    xff_parts = [p.strip() for p in request.headers.get("x-forwarded-for", "").split(",") if p.strip()]
+    if xff_parts:
+        first = xff_parts[-3] if len(xff_parts) >= 3 else xff_parts[0]
         if first:
             return first
     return get_remote_address(request) if _SLOWAPI_AVAILABLE else (request.client.host if request.client else "unknown")

@@ -356,13 +356,13 @@ const AdminContractSubmissions = () => {
                 </p>
               </div>
 
-              {selected.form_summary && Object.keys(selected.form_summary).length > 0 && (
+              {(() => { const fs = selected.form_summary || selected.summary || {}; return Object.keys(fs).length > 0; })() && (
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-bank-text-muted mb-2">
                     Formulardaten
                   </p>
                   <dl className="grid gap-2 sm:grid-cols-2">
-                    {Object.entries(selected.form_summary).map(([key, val]) => (
+                    {Object.entries(selected.form_summary || selected.summary || {}).map(([key, val]) => (
                       <div key={key} className="rounded border border-bank-border/60 px-3 py-2">
                         <dt className="text-xs text-bank-text-muted">
                           {SUMMARY_LABELS[key] || key}

@@ -188,7 +188,12 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
-## 10. Changelog 2026-10-27 (Einstiegs-Flows)
+## 11. Changelog 2026-10-27 (Regression + Mail-Entwürfe)
+- Register speichert Vorname/Nachname/Land/Telefon. Dokument-Upload: nur Upload-Codes gültig, neues E-Mail-Feld (validiert, im Admin sichtbar + in Admin-Mail). IBAN-Prüfsumme in allen 12 Vertragsformularen (lib/iban.js).
+- Sanitizer Admin-Mail (Whitelist + Escape von Resten), Kunden löschen entfernt alle Kundendaten, Rate-Limit-IP = XFF[-3] (echter Client hinter Cloudflare+Ingress; geprüft: Spoofing → 429 nach 10), Besucher-Gate nicht im /admin.
+- Mail-Entwürfe 10–15 (je A Klassisch / B Modern hell / C Premium dunkel): /mail-entwuerfe/*.jpg, Generator memory/scripts/mail_drafts.py. Wartet auf Auswahl des Kunden.
+- Offen: Festgeld-Formulare senden unvollständige Zusammenfassung; 401-Weiterleitung in Vertragsformularen; Chat-Button überdeckt mobil Tab „Übersicht“.
+
 - Audit Formular / Dokument hochladen / Konto eröffnen (iteration_71/72). Behoben: Absturz bei kurzem Code, Vertrags-PDF + Unterschriften werden gespeichert (storage_files scope contract_submission, Admin-Download), Vertrags-Endpoints nur mit gültiger Formular-Sitzung (Header X-Formular-Session), HTML-Escaping/Whitelist für Admin-Mail, 429-Retry, Rate-Limit pro Client-IP, Scroll nach oben nach Absenden, Register-Texte korrigiert.
 - Offen (bekannt): IBAN-Prüfung in Vertragsformularen, Land/Telefon aus Registrierung nicht gespeichert, Formular-Codes auch für Upload gültig, keine MIME-Prüfung per Dateiinhalt.
 - Nächster Schritt mit Kunde: E-Mail-Bereiche festlegen, je Bereich Template-Entwürfe zur Auswahl, dann gemeinsame Testläufe.

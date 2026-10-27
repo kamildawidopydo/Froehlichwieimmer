@@ -36,8 +36,8 @@ from collections import defaultdict as _defaultdict
 _APP_RL: dict = _defaultdict(list)
 
 def _check_app_rl(request: Request) -> None:
-    xff = request.headers.get("x-forwarded-for", "")
-    ip = xff.split(",")[-1].strip() if xff else (request.client.host if request.client else "unknown")
+    from routes.formular_access import _client_ip
+    ip = _client_ip(request)
     now = _time_mod.time()
     hist = [t for t in _APP_RL[ip] if t > now - 60]
     if len(hist) >= 5:

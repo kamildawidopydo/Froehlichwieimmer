@@ -1,0 +1,40 @@
+{
+  "summary": "Focused retest of iter73 fixes. PASS: sanitizer (unclosed <img onerror> escaped to &lt;img, 10 bypass variants neutralised), upload email validation (422 'Bitte eine gültige E-Mail-Adresse angeben'), valid email stored lowercased + returned in admin submissions + visible in UI (du-sub-email-<id>), admin_email_sent true, admin contract dialog new copy + red warning when customer_email_sent false, smoke of /, /formular, /dokument-upload, /register, /admin, /dashboard/uebersicht (tester, 300 EUR intact) without page errors. FAIL: (1) user delete cascade leaves watchlist rows (code deletes 'watchlist_items' but collection is 'watchlists'); (2) IP rate limit still spoofable live: 12 failed /api/formular-access/verify with random X-Forwarded-For -> all 401, never 429; fail_log stored the spoofed 198.51.100.x values. No CF-Connecting-IP/X-Real-IP reaches the backend in preview (client-sent CF-Connecting-IP is blocked with 403 by Cloudflare; client X-Real-IP is ignored), so the code falls back to the client-controlled first XFF entry.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/formular-access/verify (+ any limiter keyed on routes.formular_access._client_ip / server._client_ip)", "issue": "Brute-force limit can be bypassed: a random first X-Forwarded-For entry per request gives a new bucket. Live: 12/12 -> 401, no 429. CF-Connecting-IP/X-Real-IP are not present behind the preview ingress, so the code always falls back to xff.split(',')[0], which the client controls. Fix: use the right-most XFF entry (the one the ingress appends, as server.py:1771 already does) or the right-most entry that is not a trusted proxy. Only trust CF-Connecting-IP when the request really came through Cloudflare.", "priority": "HIGH"},
+      {"endpoint": "DELETE /api/admin/users/{id}", "issue": "Watchlist rows are left behind: admin_users.py:235 deletes 'watchlist_items', but the app uses db.watchlists (server.py:3897, portfolio.py:738). Live: before {watchlists:1}, after {watchlists:1}. cash_ledger, depot_contracts, stock_positions, bond_positions and payout_requests were correctly removed. 'user_sessions' is also not used anywhere.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "DELETE /api/admin/users/{id}", "issue": "Other per-user collections are not cleaned up: stock_alerts, stock_alert_notifications, order_executions, position_adjustments, order_notifications."},
+      {"endpoint": "contract_submissions._rate_limit, storage_files._check_public_upload_rl, auth.py:100, applications.py:39, assistant.py:519", "issue": "These still each have their own XFF-first IP logic and do not use the shared _client_ip, so the same spoofing works on submission, upload, login and application rate limits."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminContractSubmissions detail dialog", "issue": "The form summary block never renders: the code reads selected.form_summary, but GET /api/admin/contract-form-submissions returns 'summary'. A seeded summary {Betrag, Laufzeit} did not appear. selected.admin_resend_id is also never returned.", "selector": "dialog 'Vertrags-Einreichung'", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/admin/*", "issues": ["The visitor welcome / cookie gate (data-testid=visitor-welcome-gate) also covers admin pages for logged-in admins without consent stored in localStorage, and blocks clicks."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter74_fixes.py", "/app/backend/tests/seed_iter74_ui.py", "/app/test_reports/pytest/iter74.xml"],
+  "action_items": [
+    "admin_users.admin_delete_user: replace 'watchlist_items' with 'watchlists'; drop 'user_sessions'; also delete stock_alerts, stock_alert_notifications, order_executions, position_adjustments, order_notifications",
+    "_client_ip (formular_access + server): do not trust the left-most XFF entry; use the right-most one the ingress appends (or the right-most untrusted hop). Make the upload/contract/auth/applications/assistant rate limiters use this one shared helper",
+    "AdminContractSubmissions.js: read selected.summary (or map summary -> form_summary)",
+    "Do not show the visitor gate on /admin routes"
+  ],
+  "critical_code_review_comments": [
+    "Sanitizer in _summary_html is now OK (allow-list, attributes stripped, everything else escaped). Still regex-based; consider bleach/nh3 for robustness",
+    "IP logic is copied in about 7 places (DRY); keep a single helper"
+  ],
+  "updated_files": ["/app/backend/tests/test_iter74_fixes.py", "/app/backend/tests/seed_iter74_ui.py"],
+  "success_rate": {"backend": "88% (15/17; failures: watchlist cascade, XFF spoof)", "frontend": "90% (copy, warning, email column and smoke OK; summary block missing)"},
+  "seed_data_creation": "Temporary TEST_ contract submission and doc-upload submission (fixed ids, via seed_iter74_ui.py), an audit+<rand>@example.com user with assets, and a TEST_iter74 upload code. All removed; formular_access_fail_log test entries deleted. tester@mester.de cash 300 EUR untouched.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: REACT_APP_BACKEND_URL=... pytest -n0 /app/backend/tests/test_iter74_fixes.py. Unit tests need dotenv and must import server before routes.formular_access (circular import). TestLiveIpRateLimit::test_random_cf_connecting_ip_bypass always gets 403 from Cloudflare, so treat it as informational (not a real failure); delete formular_access_fail_log rows for 198.51.100.*/203.0.113.*/34.7.135.173 afterwards. To get past the visitor gate in Playwright, set localStorage kapitalmitte_cookie_consent + kapitalmitte_visitor_profile.",
+  "rca of the issue": "XFF: the preview ingress appends the real IP to the client-supplied XFF and sets no CF-Connecting-IP/X-Real-IP, so xff[0] is attacker-controlled. Orphan watchlist: wrong collection name in the cascade list."
+}

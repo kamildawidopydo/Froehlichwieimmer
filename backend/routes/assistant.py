@@ -516,12 +516,10 @@ def _real_ip(request: Request) -> str:
     Wichtig für Rate-Limits — ohne diesen Fix wird die Proxy-IP gebucht und
     ein einzelner Angreifer würde legitime Nutzer aussperren.
     """
-    xff = request.headers.get("x-forwarded-for") or ""
-    if xff:
-        # Linkester Wert = ursprünglicher Client. Whitespace + IPv6 handhaben.
-        left = xff.split(",")[0].strip()
-        if left:
-            return left
+    from routes.formular_access import _client_ip as _shared_client_ip
+    ip = _shared_client_ip(request)
+    if ip and ip != "unknown":
+        return ip
     real = request.headers.get("x-real-ip") or ""
     if real:
         return real.strip()

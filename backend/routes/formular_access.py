@@ -88,8 +88,10 @@ def _client_ip(request: Request) -> str:
     cf = (request.headers.get("cf-connecting-ip") or request.headers.get("x-real-ip") or "").strip()
     if cf:
         return cf
-    xff = request.headers.get("x-forwarded-for", "")
-    return (xff.split(",")[0].strip() if xff else (request.client.host if request.client else "")) or "unknown"
+    xff = [p.strip() for p in request.headers.get("x-forwarded-for", "").split(",") if p.strip()]
+    if xff:
+        return xff[-3] if len(xff) >= 3 else xff[0]
+    return (request.client.host if request.client else "") or "unknown"
 
 
 async def _rate_limit_check(request: Request) -> None:
@@ -109,7 +111,8 @@ async def _rate_limit_check(request: Request) -> None:
 async def _log_fail(request: Request) -> None:
     ip = _client_ip(request)
     await _db.formular_access_fail_log.insert_one({
-        "ip": ip, "created_at": datetime.now(timezone.utc)
+        "ip": ip, "created_at": datetime.now(timezone.utc),
+        "xff": (request.headers.get("x-forwarded-for") or "")[:300],
     })
 
 

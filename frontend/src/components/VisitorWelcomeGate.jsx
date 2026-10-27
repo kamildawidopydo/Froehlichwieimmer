@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,6 +24,7 @@ const linkClass =
   'font-medium text-[rgb(var(--bank-primary))] underline underline-offset-2 hover:text-[rgb(var(--bank-primary-hover))]';
 
 export default function VisitorWelcomeGate() {
+  const isAdminPath = useLocation().pathname.startsWith('/admin');
   const [isVisible, setIsVisible] = useState(false);
   const [residence, setResidence] = useState('DE');
   const [role, setRole] = useState('');
@@ -74,7 +75,7 @@ export default function VisitorWelcomeGate() {
     setIsVisible(false);
   };
 
-  if (!isVisible) return null;
+  if (!isVisible || isAdminPath) return null;
 
   return (
     <div

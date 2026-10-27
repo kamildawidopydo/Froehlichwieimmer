@@ -99,8 +99,8 @@ _SUBMIT_RL: Dict[str, List[float]] = _dd(list)
 
 
 def _rate_limit(request: Request, bucket: str, limit_per_min: int = 5) -> None:
-    xff = request.headers.get("x-forwarded-for", "")
-    ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
+    from routes.formular_access import _client_ip
+    ip = _client_ip(request)
     key = f"{bucket}:{ip}"
     now = _time.time()
     hist = [t for t in _SUBMIT_RL[key] if t > now - 60]
