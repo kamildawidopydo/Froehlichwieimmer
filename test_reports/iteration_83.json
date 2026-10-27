@@ -1,0 +1,26 @@
+{
+  "summary": "Frontend-only anonymous-visitor test of the revised career area on the PREVIEW URL. Desktop at 1920px: 35/35 checks passed. Mobile at 390px: all 7 pages have no horizontal overflow and the hamburger menu works. API sanity check (2 curls): /api/careers/status returns site_public=true, applications_enabled=false, is_staff=false; /api/careers/jobs as an anonymous visitor returns items=[]. Nothing was changed in the DB, no admin login, no settings changed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/karriere career path cards (desktop)", "issues": ["Berufserfahrene card has a 3-line claim, so its icon and title sit higher than on the other two cards. Purely cosmetic (could use a fixed claim height or line-clamp)."]},
+      {"screen": "/karriere bottom CTA", "issues": ["'Nicht die passende Stelle dabei?' reads a bit oddly while 0 jobs are public (and the apply page shows the disabled notice). Optional copy tweak."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "No blocking issues. Optional: line up the career-path card content heights; optionally adjust the bottom CTA copy while no jobs are public."
+  ],
+  "critical_code_review_comments": [
+    "CareerHome hash scroll uses a 150ms timeout; it works (#karrierewege top at about 95px after navigation) but could race if the sections render later on slow devices.",
+    "Informal-address grep (du/dein/dich/dir/euch) over src/pages/careers and src/components/careers found no matches."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend only; 2 API sanity curls OK)", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Verified: hero title/subtitle, intro, employer-profile title, 3 path cards plus Mehr erfahren navigation, /karriere/stellen empty state with job-results-count absent, jobs-empty-company-btn goes to /karriere/ueber-uns, jobs-empty-paths-btn goes to /karriere#karrierewege and scrolls into view, no '[Platzhalter' text, no du/dein/dich/dir on the 7 public career pages, apply-disabled-notice shown on /karriere/bewerben?initiativ=1, mobile has no overflow and the hamburger (data-testid mobile-menu-toggle) opens the shared menu. The visitor-role welcome gate and the Hamburg popup did not appear in these headless sessions, so they were not exercised."
+}

@@ -212,6 +212,13 @@ Siehe `/app/memory/test_credentials.md`
 - Vorschau: site_public=true gesetzt (applications_enabled=false, 10 Entwürfe). Produktion: Schalter muss in der Produktions-DB über essenceinvest.com/recruiting/einstellungen aktiviert werden (Agent hat keinen Schreibzugriff auf Prod-DB). Deploy angestoßen.
 
 
+## 20. Changelog 2026-10-27 (Karriere: Sie-Ansprache, Arbeitgeber, Leerzustand – nur Vorschau)
+- Karriere-Startseite: neue H1/Unterzeile/Einleitung („Unser Anspruch“), EmployerProfile „Fröhlich Vermögensberatung GmbH – Lernen Sie uns kennen“ (nur Impressum-Fakten + Marke Essence Invest), Karrierewege mit „Mehr erfahren“ (#karrierewege).
+- `JobsEmptyState`: „Ihre Karriere beginnt mit einer Perspektive.“ ersetzt „0 Stellen gefunden“, wenn keine veröffentlichten Stellen und keine Filter; mit Stellen normale Liste.
+- Gesamter Karrierebereich + Home-Karrierebalken auf „Sie“; SEED_VERSION=4 (10 Entwürfe auf Sie, bleiben Entwurf). Platzhalter auf „Über uns“ nur für Staff sichtbar.
+- NICHT veröffentlicht – Produktion wartet auf Freigabe. Test: iteration_83 (100%).
+
+
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)
 - Startseite: `HomeCareerCta` (oben im BankingHero, über den News) mit „Jetzt bewerben“ → /karriere/stellen. Hauptmenü (Desktop + Mobil): „Karriere“ → /karriere.
 - Beides nur sichtbar, wenn Karriereseite öffentlich ist ODER Admin/Recruiting angemeldet ist (`lib/useCareerVisible.js`, /api/careers/status) — Besucher sehen bis zur Freigabe nichts.

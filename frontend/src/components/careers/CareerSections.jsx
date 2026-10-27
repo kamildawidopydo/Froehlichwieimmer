@@ -45,7 +45,7 @@ export const PathsSection = () => (
             <div className="absolute inset-x-0 bottom-0 p-7 text-white">
               <p.icon size={22} className="text-[#7BD58F]" />
               <h3 className="mt-3 font-display text-3xl">{p.title}</h3>
-              <p className="mt-2 leading-relaxed text-white/85">{p.claim}</p>
+              <p className="mt-2 leading-relaxed text-white/85 lg:min-h-[4.875rem]">{p.claim}</p>
               <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#1E222C] transition-colors group-hover:bg-[#36A852] group-hover:text-white" data-testid={`career-path-more-${p.slug}`}>Mehr erfahren <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" /></span>
             </div>
           </Link>
