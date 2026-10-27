@@ -238,6 +238,7 @@ Siehe `/app/memory/test_credentials.md`
 - 2026-10-27 ~15:10: Stellenbörse (JobsPerspectives) auf essenceinvest.com veröffentlicht (main.4de9ddc0.js). Live geprüft PC + Smartphone ohne Anmeldung. 16 Entwürfe privat, Bewerbungen aus.
 - 2026-10-27: Stellenkarten mit „Stelle ansehen“ + grünem „Jetzt bewerben“ (inaktiv solange applications_enabled=false). Bewerbungsformular: Telefon optional, neues Pflichtfeld „Gewünschter Arbeitsort“ (preferred_location, aus Stelle vorausgewählt), Stelle per ?stelle= vorausgewählt, Berufserfahrung/Eintritt aus Formular entfernt. Backend + Recruiting-Detail zeigen Arbeitsort. Test iteration_86: 100 %. Nur Vorschau.
 - 2026-10-27: Mitarbeiter (Staff) dürfen in der Vorschau Testbewerbungen auch für Entwurfsstellen absenden (Bewerbungen müssen trotzdem aktiviert sein). E2E-Test Vorschau: Bewerbungen kurz aktiviert → Testbewerbung (Berater Hamburg, PDF) 201, im Dashboard sichtbar, Stelle/Arbeitsort korrekt, PDF-Download ok (anonym 401), Mails ohne Fehler versendet → wieder deaktiviert, Testbewerbung endgültig gelöscht (0 Bewerbungen, 0 Datei-Chunks), Löschprotokoll-Eintrag.
+- 2026-10-27 ~15:35: Stellenbörse + Bewerbungsformular auf essenceinvest.com veröffentlicht (main.3adb90e9.js). Live geprüft PC + Smartphone: 4 Standorte wählbar, keine Stellen öffentlich, Formular gesperrt, API-Bewerbung 403. 16 Entwürfe, Bewerbungen aus.
 
 
 ## 19. Changelog 2026-10-27 (Karriere-Einstieg auf der Hauptseite)
