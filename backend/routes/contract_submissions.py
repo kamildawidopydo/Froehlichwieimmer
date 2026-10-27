@@ -19,8 +19,12 @@ bleibt `new`, der Admin kann aus der UI nachsenden.
 from __future__ import annotations
 
 import base64
+import html as _html_mod
+import asyncio
 import logging
 import os
+import re as _re
+import uuid as _uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -95,7 +99,7 @@ _SUBMIT_RL: Dict[str, List[float]] = _dd(list)
 
 def _rate_limit(request: Request, bucket: str, limit_per_min: int = 5) -> None:
     xff = request.headers.get("x-forwarded-for", "")
-    ip = xff.split(",")[-1].strip() if xff else (request.client.host if request.client else "unknown")
+    ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
     key = f"{bucket}:{ip}"
     now = _time.time()
     hist = [t for t in _SUBMIT_RL[key] if t > now - 60]
@@ -149,8 +153,8 @@ def _admin_html(bank_name: str, product_label: str, customer_name: str, customer
         <h1 style="color:#fff;font-size:18px;margin:0;">Neuer {product_label} eingegangen</h1>
       </div>
       <div style="padding:24px;background:#fff;">
-        <p style="font-size:14px;"><strong>Kunde:</strong> {customer_name or '—'}</p>
-        <p style="font-size:14px;"><strong>E-Mail:</strong> {customer_email}</p>
+        <p style="font-size:14px;"><strong>Kunde:</strong> {_html_mod.escape(customer_name) or '—'}</p>
+        <p style="font-size:14px;"><strong>E-Mail:</strong> {_html_mod.escape(customer_email)}</p>
         <p style="font-size:14px;"><strong>Produkt:</strong> {bank_name} — {product_label}</p>
         <p style="font-size:14px;"><strong>Datum:</strong> {today_de}</p>
         {extra}
@@ -164,7 +168,7 @@ def _admin_html(bank_name: str, product_label: str, customer_name: str, customer
 
 
 def _customer_html(bank_name: str, product_label: str, customer_name: str) -> str:
-    greet = f"Guten Tag {customer_name}," if customer_name else "Guten Tag,"
+    greet = f"Guten Tag {_html_mod.escape(customer_name)}," if customer_name else "Guten Tag,"
     return f"""
     <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:600px;margin:0 auto;color:#0B1F33;">
       <div style="background:#0A2540;padding:24px;">
@@ -189,8 +193,64 @@ def _customer_html(bank_name: str, product_label: str, customer_name: str) -> st
     """
 
 
+def _summary_html(summary: Optional[Dict[str, Any]], raw_html: str) -> str:
+    if isinstance(summary, dict) and summary:
+        rows = "".join(
+            f"<tr><td style='padding:3px 12px 3px 0;color:#6B7C93;'>{_html_mod.escape(str(k))}</td>"
+            f"<td style='padding:3px 0;'>{_html_mod.escape(str(v))}</td></tr>"
+            for k, v in summary.items() if v not in (None, "") and not isinstance(v, (dict, list))
+        )
+        return f"<table style='font-size:13px;border-collapse:collapse;'>{rows}</table>"
+    text = _re.sub(r"<[^>]+>", " ", raw_html or "")
+    return _html_mod.escape(_re.sub(r"\s+", " ", text).strip())
+
+
+async def _send_with_retry(send, **kwargs) -> None:
+    for attempt in range(3):
+        try:
+            await send(**kwargs)
+            return
+        except Exception as exc:
+            if attempt == 2 or "429" not in str(exc):
+                raise
+            await asyncio.sleep(1.5 * (attempt + 1))
+
+
+def _store_file(path_prefix: str, filename: str, b64: str, content_type: str, submission_id: str) -> Optional[str]:
+    from services.emergent_storage import APP_PREFIX, put_object
+    data = base64.b64decode(b64.split(",", 1)[-1])
+    ext = filename.rsplit(".", 1)[-1][:5] if "." in filename else "bin"
+    result = put_object(f"{APP_PREFIX}/{path_prefix}/{submission_id}/{_uuid.uuid4().hex}.{ext}", data, content_type)
+    return result["path"], len(data)
+
+
+async def _persist_files(submission_id: str, contract_filename: str, pdf_b64: str, signatures: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    files = []
+    items = [(contract_filename, pdf_b64, "application/pdf", "contract")] + [
+        (s["filename"], s["content"], s["content_type"], "signature") for s in signatures
+    ]
+    for fn, b64, ct, kind in items:
+        try:
+            path, size = await asyncio.to_thread(_store_file, "contract-submissions", fn, b64, ct, submission_id)
+            fid = _uuid.uuid4().hex
+            await _db.storage_files.insert_one({
+                "_id": fid, "scope": "contract_submission", "subject_id": submission_id,
+                "storage_path": path, "content_type": ct, "size": size, "original_filename": fn,
+                "is_deleted": False, "created_at": datetime.now(timezone.utc),
+            })
+            files.append({"filename": fn, "kind": kind, "file_id": fid, "storage_path": path})
+        except Exception as exc:
+            logger.error("contract-submission file store failed (%s): %s", fn, exc)
+            files.append({"filename": fn, "kind": kind, "store_error": str(exc)[:200]})
+    return files
+
+
 async def _handle_contract_submission(request: Request, slug: str, body: ContractSubmitPayload) -> Dict[str, Any]:
     _rate_limit(request, bucket=slug, limit_per_min=5)
+    from routes.formular_access import _load_valid_session
+    session_id = (request.headers.get("x-formular-session") or "").strip()
+    if len(session_id) < 8 or not await _load_valid_session(session_id):
+        raise HTTPException(status_code=401, detail="Ihre Formular-Sitzung ist abgelaufen. Bitte geben Sie Ihren Zugangscode erneut ein.")
 
     config = CONTRACT_CONFIGS[slug]
     product_key = config["product_key"]
@@ -233,6 +293,13 @@ async def _handle_contract_submission(request: Request, slug: str, body: Contrac
         logger.exception("contract-submission persist failed")
         raise HTTPException(status_code=500, detail=f"Persistenz fehlgeschlagen: {exc}")
 
+    stored_files = await _persist_files(submission_id, contract_filename, body.pdfBase64, signature_attachments)
+    contract_fid = next((f.get("file_id") for f in stored_files if f["kind"] == "contract"), None)
+    await _db.contract_form_submissions.update_one({"_id": res.inserted_id}, {"$set": {
+        "files": stored_files, "session_id": session_id, "contract_pdf_path": contract_fid,
+        "attachments": [{"filename": f["filename"], "storage_path": f.get("file_id")} for f in stored_files if f["kind"] == "signature" and f.get("file_id")],
+    }})
+
     # 2) Admin-Mail (fire-and-forget-ish — Fehler kein Rollback)
     admin_email_sent = False
     admin_email_error: Optional[str] = None
@@ -257,10 +324,11 @@ async def _handle_contract_submission(request: Request, slug: str, body: Contrac
             admin_subject = f"Neuer {product_label}: {customer_name or '—'} — {today_de}"
             admin_html = _admin_html(
                 bank_name, product_label, customer_name, customer_email,
-                today_de, body.formSummaryHtml or "", bool(signature_attachments),
+                today_de, _summary_html(body.formSummary, body.formSummaryHtml or ""), bool(signature_attachments),
             )
             admin_attachments = [pdf_attachment] + signature_attachments
-            await _send_email_via_emergent(
+            await _send_with_retry(
+                _send_email_via_emergent,
                 to=_admin_target(),
                 subject=admin_subject,
                 html=admin_html,
@@ -275,7 +343,8 @@ async def _handle_contract_submission(request: Request, slug: str, body: Contrac
         try:
             customer_subject = f"Ihre Antragsbestätigung — {bank_name} {product_label}"
             customer_html = _customer_html(bank_name, product_label, customer_name)
-            await _send_email_via_emergent(
+            await _send_with_retry(
+                _send_email_via_emergent,
                 to=customer_email,
                 subject=customer_subject,
                 html=customer_html,
@@ -308,10 +377,7 @@ async def _handle_contract_submission(request: Request, slug: str, body: Contrac
         "submissionId": submission_id,
         "savedToDashboard": True,
         "adminEmailSent": admin_email_sent,
-        "adminEmailError": admin_email_error,
         "customerEmailSent": customer_email_sent,
-        "customerEmailError": customer_email_error,
-        "adminNotifyEmail": _admin_target(),
     }
 
 

@@ -222,7 +222,7 @@ const BunqDeContractForm = () => {
 
       const response = await fetch('/api/send-bunq-de-contract-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Formular-Session': sessionStorage.getItem('formular_session_id') || '' },
         body: JSON.stringify({
           customerEmail: formData.email,
           customerName: formData.fullName,
@@ -245,6 +245,7 @@ const BunqDeContractForm = () => {
       if (!response.ok) throw new Error(apiErrorMessage(response, raw, data?.error));
 
       setSubmitted(true);
+      window.scrollTo(0, 0);
       toast.success('Ihr Flexgeldvertrag wurde erfolgreich versendet!');
     } catch (err) {
       console.error('Submit error:', err);

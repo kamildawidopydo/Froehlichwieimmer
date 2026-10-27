@@ -126,13 +126,12 @@ const Register = () => {
                 <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-bank-primary" strokeWidth={1.5} />
                 <div>
                   <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">
-                    Prüfung durch unser Team
+                    Ihr Zugang ist aktiv
                   </p>
                   <p className="mt-2 text-[13.5px] leading-[1.7] text-bank-text-muted">
-                    In der Regel <strong className="font-semibold text-bank-text">1–2 Werktage</strong>. Eine E-Mail
-                    erreicht Sie unter{' '}
-                    <strong className="font-semibold text-bank-text">{registeredEmail}</strong>, sobald Ihr Konto
-                    freigeschaltet ist.
+                    Sie können sich ab sofort mit{' '}
+                    <strong className="font-semibold text-bank-text">{registeredEmail}</strong> anmelden und Ihre
+                    persönlichen Angaben vervollständigen.
                   </p>
                 </div>
               </div>

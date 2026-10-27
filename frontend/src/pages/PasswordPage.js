@@ -43,7 +43,7 @@ const PasswordPage = () => {
     } catch (err) {
       setShaking(true);
       const detail = err?.response?.data?.detail;
-      toast.error(detail || 'Zugang verweigert');
+      toast.error(typeof detail === 'string' ? detail : 'Ungültiger Zugangscode. Bitte prüfen Sie Ihre Eingabe.');
       setTimeout(() => setShaking(false), 500);
     } finally {
       setSubmitting(false);

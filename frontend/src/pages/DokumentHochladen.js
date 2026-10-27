@@ -124,7 +124,7 @@ const DokumentHochladen = () => {
     } catch (err) {
       setShaking(true);
       const detail = err?.response?.data?.detail;
-      toast.error(detail || 'Ungültiger oder bereits verwendeter Zugangscode');
+      toast.error(typeof detail === 'string' ? detail : 'Ungültiger oder bereits verwendeter Zugangscode');
       setTimeout(() => setShaking(false), 500);
     } finally {
       setVerifying(false);
@@ -161,7 +161,8 @@ const DokumentHochladen = () => {
       setDone(true);
     } catch (err) {
       const status = err?.response?.status;
-      const detail = err?.response?.data?.detail;
+      const raw = err?.response?.data?.detail;
+      const detail = typeof raw === 'string' ? raw : null;
       if (status === 401) {
         toast.error('Sitzung abgelaufen. Bitte Zugangscode erneut eingeben.');
         setStep(1);

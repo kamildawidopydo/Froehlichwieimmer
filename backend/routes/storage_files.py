@@ -50,7 +50,7 @@ _UPLOAD_RL: dict = _defaultdict(list)
 def _check_public_upload_rl(request: Request) -> None:
     """5 uploads / minute per IP. Raises 429 if exceeded."""
     xff = request.headers.get("x-forwarded-for", "")
-    ip = xff.split(",")[-1].strip() if xff else (request.client.host if request.client else "unknown")
+    ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
     now = _time_mod.time()
     window = 60
     hist = [t for t in _UPLOAD_RL[ip] if t > now - window]
