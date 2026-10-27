@@ -306,7 +306,7 @@ async def admin_create_job(body: JobIn, _u: dict = Depends(require_recruiting)):
 @router.put("/admin/jobs/{job_id}")
 async def admin_update_job(job_id: str, body: JobIn, _u: dict = Depends(require_recruiting)):
     upd = {**body.model_dump(), "tasks": _clean_list(body.tasks), "requirements": _clean_list(body.requirements),
-           "offer": _clean_list(body.offer), "updated_at": _now()}
+           "offer": _clean_list(body.offer), "updated_at": _now(), "is_seed_draft": False}
     d = await db.career_jobs.find_one_and_update({"_id": _oid(job_id)}, {"$set": upd}, return_document=True)
     if not d:
         raise HTTPException(status_code=404, detail="Stelle nicht gefunden")
@@ -554,7 +554,7 @@ async def admin_team_delete(user_id: str, _a: dict = Depends(require_admin)):
 
 
 async def seed_career_jobs() -> None:
-    from routes.careers_seed import SEED_JOBS
+    from routes.careers_seed import CONTENT_FIELDS, SEED_JOBS, SEED_VERSION
     await reapply_deletion_log()
     await db.career_jobs.create_index("slug", unique=True)
     await db.career_portal_applications.create_index([("created_at", -1)])
@@ -562,5 +562,8 @@ async def seed_career_jobs() -> None:
         await db.career_jobs.update_one(
             {"slug": j["slug"]},
             {"$setOnInsert": {**j, "status": "draft", "published_at": None, "is_seed_draft": True,
-                              "created_at": _now(), "updated_at": _now()}},
+                              "seed_version": SEED_VERSION, "created_at": _now(), "updated_at": _now()}},
             upsert=True)
+        await db.career_jobs.update_one(
+            {"slug": j["slug"], "is_seed_draft": True, "status": "draft", "seed_version": {"$ne": SEED_VERSION}},
+            {"$set": {**{k: j[k] for k in CONTENT_FIELDS}, "seed_version": SEED_VERSION, "updated_at": _now()}})

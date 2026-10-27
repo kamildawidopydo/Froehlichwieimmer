@@ -188,6 +188,10 @@ Siehe `/app/memory/test_credentials.md`
 - Frontend: AdminCustomerAssetsPanel auf /admin/users/:id; Kunden-Dokumente-Seite zeigt persönliche Dokumente; Angebot-Modal speichert wirklich.
 - Offen: Zoho-MX-Einträge (wartet auf „Ja“ vom Kunden); KI-Guthaben (Universal Key) leer.
 
+## 17. Changelog 2026-10-27 (Stellentexte überarbeitet)
+- careers_seed.py SEED_VERSION=2: Stellen 1–3 wortgetreu nach Kundenvorgabe, 4–10 im gleichen Stil formuliert (Kundennachricht brach bei Stelle 4 ab). Seed aktualisiert Inhalte nur bei unbearbeiteten Seed-Entwürfen (is_seed_draft & status draft); manuelles Bearbeiten setzt is_seed_draft=False. Alle weiterhin Entwurf.
+
+
 ## 16. Changelog 2026-10-27 (Karriere: echte Löschung, Design, Bewerbung)
 - Bewerbungsdateien: Fernet-verschlüsselt je Datei (Schlüssel mit CAREER_FILES_KEY in backend/.env umhüllt), GridFS-Bucket `career_files`, Schlüssel in `career_file_keys`; Löschung entfernt Datensatz, Chunks und Schlüssel physisch; Löschprotokoll `career_deletion_log` (ohne Personendaten) wird beim Serverstart erneut angewendet (Backup-Wiederherstellung). Automatische Fristlöschung bei Nutzung (max. alle 6 h) — Cron nicht möglich, da bereits 8 Crons (Limit 5). Dokumentation: /app/memory/LOESCHKONZEPT_BEWERBER.md.
 - Portal-Bewerbungen in eigener Collection `career_portal_applications` (alte Popup-Route /api/career/apply nutzt weiter `career_applications`, unverändert).
