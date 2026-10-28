@@ -1,9 +1,3 @@
-import os
-from datetime import datetime, timezone
-from pymongo import MongoClient
-
-db = MongoClient(os.environ["MONGO_URL"])[os.environ["DB_NAME"]]
-now = datetime.now(timezone.utc)
 BASE = {"isin": None, "subscription_start": None, "subscription_end": None, "valuation_last_private": None,
         "min_investment_eur": None, "lot_size": 1, "prospectus_url": None, "is_visible": True,
         "is_manual_override": True, "display_order": None, "source": "manual",
@@ -37,10 +31,3 @@ ITEMS = [
     {"company_name": "OpenAI", "sector": "Künstliche Intelligenz", "status": "unavailable",
      "description": "KI-Unternehmen und Entwickler von ChatGPT. Ein Börsengang ist offiziell nicht angekündigt."},
 ]
-
-for it in ITEMS:
-    key = "manual:" + it["company_name"].lower().replace(" ", "-")
-    doc = {**BASE, **it, "external_key": key, "updated_at": now}
-    r = db.ipo_catalog.update_one({"external_key": key}, {"$set": doc, "$setOnInsert": {"created_at": now}}, upsert=True)
-    print(it["company_name"], "inserted" if r.upserted_id else "updated")
-print("total", db.ipo_catalog.count_documents({}), "visible", db.ipo_catalog.count_documents({"is_visible": True, "status": {"$nin": ["listed", "cancelled"]}}))
