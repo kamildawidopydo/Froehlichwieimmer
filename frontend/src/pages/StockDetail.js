@@ -620,7 +620,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
         const dj = dres.ok ? await dres.json() : null;
         const dd = dj?.stats;
         if (active && dd) {
-          setDayStats({ high: dd.day_high, low: dd.day_low, volume: dd.day_volume, open: dd.open_of_day, prevClose: dd.prev_close, date: dd.day_date, currency: dj.currency || null });
+          setDayStats({ high: dd.day_high, low: dd.day_low, volume: dd.day_volume, open: dd.open_of_day, prevClose: dd.prev_close, lastClose: dd.last_close, date: dd.day_date, currency: dj.currency || null });
         }
       } catch {
         if (active) setStats(null);
@@ -863,7 +863,12 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   }
 
   const currency = price?.currency || stock.currency || 'USD';
-  const chg = price?.change_pct != null ? Number(price.change_pct) : null;
+  const sameCcy = !!dayStats?.currency && dayStats.currency === currency;
+  const dayBase = dayStats?.prevClose != null ? Number(dayStats.prevClose) : null;
+  const dayCur = sameCcy ? (price?.price != null ? Number(price.price) : null) : (dayStats?.lastClose != null ? Number(dayStats.lastClose) : null);
+  const dayAbs = dayBase && dayCur != null ? dayCur - dayBase : null;
+  const dayCcy = sameCcy ? currency : dayStats?.currency;
+  const chg = dayAbs != null ? (dayAbs / dayBase) * 100 : price?.change_pct != null ? Number(price.change_pct) : null;
   const up = (chg ?? 0) >= 0;
   const refPx =
     orderType === 'limit' && limitPrice
@@ -993,8 +998,17 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                   {chg != null && (
                     <p className={`text-sm font-medium mt-1 inline-flex items-center gap-0.5 ${up ? 'text-emerald-600' : 'text-bank-error'}`}>
                       {up ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                      {price?.change_abs != null ? `${up ? '+' : ''}${Number(price.change_abs).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ` : ''}
+                      {dayAbs != null
+                        ? `${up ? '+' : '−'}${formatCurrency(Math.abs(dayAbs), dayCcy)} `
+                        : price?.change_abs != null ? `${up ? '+' : ''}${Number(price.change_abs).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ` : ''}
                       ({formatPct(chg)})
+                    </p>
+                  )}
+                  {dayAbs != null && (
+                    <p className="text-[11px] text-bank-text-muted mt-0.5" data-testid="day-change-basis">
+                      {sameCcy
+                        ? 'Tagesveränderung gegenüber Vortagsschluss'
+                        : `Tagesveränderung in ${dayCcy} (Handelswährung) gegenüber Vortagsschluss`}
                     </p>
                   )}
                   {(price?.bid != null || price?.ask != null) && (

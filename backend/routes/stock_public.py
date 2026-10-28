@@ -254,6 +254,7 @@ def _compute_history_stats(points: List[dict], interval: str = "1d") -> Dict[str
         prev = [p["close"] for p in points if str(p.get("timestamp", ""))[:10] < last_day and p.get("close") is not None]
         day = {
             "prev_close": round(prev[-1], 4) if prev else None,
+            "last_close": round(dp[-1]["close"], 4) if dp and dp[-1].get("close") is not None else None,
             "open_of_day": round(dp[0]["open"], 4) if dp and dp[0].get("open") is not None else None,
             "day_high": round(max(dh), 4) if dh else None,
             "day_low": round(min(dl), 4) if dl else None,
@@ -313,7 +314,8 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
     else:
         currency = "EUR" if yf_sym.endswith(".DE") else "USD"
 
-    expires_at = _now() + timedelta(seconds=cfg["ttl"])
+    # Empty results (provider hiccup) are cached for 60s only, so charts recover quickly.
+    expires_at = _now() + timedelta(seconds=cfg["ttl"] if points else 60)
     await _db.stock_public_history_cache.update_one(
         {"_id": cache_key},
         {"$set": {
