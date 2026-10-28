@@ -1,0 +1,41 @@
+{
+  "summary": "Preview-only test of P1-P4. P1 admin security PASS: admin@kapitalmitte.com/admin123 and patron/500Euro! get 401, QA admin logs in (200, httpOnly cookies, bcrypt $2b$, /admin console loads), change-password with admin1234/changeme/short gets 400 '...mindestens 12 Zeichen...' and the QA password was not changed, 5 wrong logins then the 6th returns 429. P2 contact PASS: one real send returned 200 {accepted:true, status:handed_to_provider} and showed the success toast; the form was cleared. A mocked 502 shows the error toast with the backend detail, no success toast, and the form keeps its values. A mocked 200 {accepted:false} shows an error. An invalid email is blocked by native validation and sends no request. P3 PASS: /dashboard/ipo has 15 cards and exactly 1 OpenAI card, and the IPO detail dialog opens. P4 stock PASS: DBK tiles Eröffnung 29,86 / Hoch 30,41 / Tief 29,48 / Vortag 28,95 / Volumen 4.273.102 are all filled. DBK 1T axis 10:00-15:00, with the first point at 08:00 UTC = 09:00 CET. AAPL 1T axis starts 14:30 Berlin, which is correct this week: EU is already on CET (since Oct 25) and US is still on EDT until Nov 1, so 13:30 UTC = 14:30 Berlin. All 7 ranges render. No horizontal overflow on mobile at 390px. P4 Aufträge PARTIAL: the tester account has no orders, so the timeline was checked with mocked API responses. cancelled -> Storniert, pending -> Ausstehend and executed -> Ausgeführt work. But real DB values 'completed' (stock_orders) and cash ledger types 'stock_purchase', 'stock_sale', 'bond_purchase', 'ipo_purchase' show as raw English/snake_case words. Regression: home, login, admin console OK.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/auth/login (lockout)", "issue": "Lockout is keyed by email only. Anyone can lock any account (including admins) for 15 min by sending 5 wrong passwords. After locked_until expires the count stays >=5, so one more failure locks again right away (count is only reset by a successful login). Consider a combined IP+email key or resetting the count when the lock expires."},
+      {"endpoint": "server.disable_weak_privileged_passwords", "issue": "Only checks 7 hard-coded passwords. Other entries in WEAK_PASSWORDS (test1234, 12345678, qwerty123...) and existing admin passwords shorter than 12 chars are not disabled. The comment in the ADMIN_EXTRAS block still says it 'aktualisiert Passwort-Hash', but the code no longer does."},
+      {"endpoint": "POST /api/contact-message", "issue": "If the provider answers 2xx without an 'id', this is treated as send_failed and returns 502, even though the mail may have been delivered. Edge case only; the current provider does return an id."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "OrdersPage 'Letzte Aktivität' (SUB_LABELS)", "issue": "Missing German labels. stock_orders status 'completed' (exists in DB) shows as 'completed'. cash_ledger types stock_purchase, stock_sale, bond_purchase, ipo_purchase show raw (seen in UI with mocked /api/portfolio/cash). Add e.g. completed:'Abgeschlossen', stock_purchase:'Aktienkauf', stock_sale:'Aktienverkauf', bond_purchase:'Anleihekauf', ipo_purchase:'IPO-Kauf'. Also the Aktien-Aufträge table shows a 'completed' order as 'AUSSTEHEND', which does not match the timeline.", "selector": "section:has-text('Letzte Aktivität') li p.text-[11px]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "StockDetail DBK", "issues": ["Header change shows +3,25%, but price 29,82 vs Vortag 28,95 is only +3,0%. The quote's prev_close comes from a different source than the intraday prior-day last 5-min close. Small inconsistency, informational only."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter93_security_contact.py", "/app/test_reports/pytest/iter93.xml"],
+  "action_items": [
+    "Add the missing SUB_LABELS in OrdersPage.jsx: completed, stock_purchase, stock_sale, bond_purchase, ipo_purchase. Optionally fall back to a generic German label instead of the raw key.",
+    "Optional: harden lockout against email-only DoS and reset the count after the lock expires.",
+    "Optional: extend disable_weak_privileged_passwords to the full WEAK_PASSWORDS set and fix the stale ADMIN_EXTRAS comment.",
+    "Update /app/memory/test_credentials.md: demo.kunde@essenceinvest.com / KundeDemo2026! now returns 401 (stale). The 'Admin Account admin123' and ADMIN_EXTRAS password-sync sections are outdated."
+  ],
+  "critical_code_review_comments": [
+    "routes/auth.py: _reject_weak_privileged is applied to reset, force-reset and change-password. Good.",
+    "seed_admin no longer syncs passwords of existing admins (verified in code). Good.",
+    "Contact.js checks both res.ok and data.accepted before showing success. Good.",
+    "toBerlinChartTime uses Intl formatToParts with Europe/Berlin and handles the '24' hour value. DST verified with the EU/US gap week.",
+    "/api/send-email (legacy) still accepts arbitrary HTML and sends it to the admin inbox (rate-limited only). Consider removing it if unused."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter93_security_contact.py"],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "92% (Aufträge labels partial)"},
+  "test_credentials": "QA admin qa.admin@kapital-direkt24.de works. tester@mester.de works. demo.kunde@essenceinvest.com/KundeDemo2026! returns 401 (stale).",
+  "seed_data_creation": "One real contact message (TEST_Kontakt) was sent to the provider. All contact_messages with names starting TEST_ were deleted (2 docs: mine plus one earlier TEST_ doc). login_attempts for test emails, admin@kapitalmitte.com, patron and demo.kunde were cleaned. No customer data was changed and no orders were placed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "To bypass the welcome gate, preset localStorage keys kapitalmitte_cookie_consent and kapitalmitte_visitor_profile. A 'Finanzberater gesucht' career popup appears after a few seconds; dismiss it via 'Später'. Tester has no orders: use page.route on **/api/portfolio/orders?limit=50 and **/api/portfolio/cash** to inject timeline data. Stock 'Vortag' comes from /api/stocks/{sym}/history?range=5d stats.prev_close (the 1d range has prev_close null by design)."
+}

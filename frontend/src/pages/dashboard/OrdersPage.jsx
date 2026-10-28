@@ -28,7 +28,9 @@ import useAutoAnimateRef from '@/hooks/useAutoAnimateRef';
 const SUB_LABELS = {
   pending: 'Ausstehend', executed: 'Ausgeführt', rejected: 'Abgelehnt', cancelled: 'Storniert',
   approved: 'Genehmigt', allocated: 'Zugeteilt', requested: 'Angefragt', submitted: 'Eingereicht',
-  deposit: 'Einzahlung', withdrawal: 'Auszahlung', adjustment: 'Korrektur',
+  completed: 'Abgeschlossen', deposit: 'Einzahlung', withdrawal: 'Auszahlung', adjustment: 'Korrektur',
+  stock_purchase: 'Aktienkauf (intern)', stock_sale: 'Aktienverkauf (intern)', bond_purchase: 'Anleihekauf',
+  ipo_purchase: 'IPO-Zuteilung',
 };
 
 const STATUS_META = {
@@ -415,7 +417,7 @@ const OrdersPage = () => {
               <li key={a.id} className="flex items-center justify-between gap-3 py-2.5 text-[13px]">
                 <div className="min-w-0">
                   <p className="truncate font-medium text-bank-text">{a.label}</p>
-                  <p className="text-[11px] text-bank-text-muted">{SUB_LABELS[a.sub] || a.sub}</p>
+                  <p className="text-[11px] text-bank-text-muted">{SUB_LABELS[a.sub] || 'Sonstiges'}</p>
                 </div>
                 <div className="text-right shrink-0">
                   {a.amount != null && (

@@ -252,6 +252,8 @@ async def check_lockout(identifier: str) -> None:
             status_code=429,
             detail="Zu viele Fehlversuche. Bitte in 15 Minuten erneut versuchen.",
         )
+    # Lock expired: start a fresh counter instead of re-locking on the next miss.
+    await db.login_attempts.delete_one({"identifier": identifier})
 
 
 async def record_failed_login(identifier: str) -> None:
@@ -2525,7 +2527,8 @@ async def disable_weak_privileged_passwords() -> int:
     n = 0
     async for u in db.users.find({"role": {"$in": ["admin", "recruiting"]}}, {"password_hash": 1, "email": 1}):
         h = u.get("password_hash") or ""
-        if any(verify_password(p, h) for p in ("admin123", "admin", "password", "changeme", "test", "admin1234", "500Euro!")):
+        if any(verify_password(p, h) for p in ("admin123", "admin", "password", "changeme", "test", "admin1234",
+                                               "500Euro!", "passwort", "test1234", "12345678", "123456789")):
             await db.users.update_one({"_id": u["_id"]}, {"$set": {
                 "password_hash": hash_password(_secrets.token_urlsafe(48)),
                 "must_change_password": True,
@@ -2564,7 +2567,8 @@ async def seed_admin():
     # Session 80.49c — Zusätzliche Admins aus ENV `ADMIN_EXTRAS`.
     # Format: "email1:passwort1:Name1,email2:passwort2:Name2"
     # Name ist optional (Fallback: local-part der E-Mail).
-    # Idempotent: legt an bei Bedarf, aktualisiert Passwort-Hash + Rolle sonst.
+    # Idempotent: legt fehlende Admins an (nur mit sicherem Passwort), hebt Rolle an;
+    # bestehende Passwörter werden nie überschrieben.
     extras_raw = (os.environ.get("ADMIN_EXTRAS") or "").strip()
     if not extras_raw:
         return
