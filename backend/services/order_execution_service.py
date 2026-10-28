@@ -180,6 +180,11 @@ async def execute_order(
       }
     Wirft `ExecutionError` bei sanften Fehlern (Quote/Cash/Limit).
     """
+    raise ExecutionError(
+        "EXECUTION_DISABLED",
+        "Aktienausführungen sind gesperrt, solange keine Broker-Anbindung besteht.",
+        423,
+    )
     if fail_after and fail_after not in ("cash", "position", "settle"):
         raise ExecutionError("BAD_FAIL_AFTER", "fail_after muss cash|position|settle sein", 422)
 

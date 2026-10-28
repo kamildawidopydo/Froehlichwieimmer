@@ -426,6 +426,9 @@ const AdminStockOrders = () => {
                               <Button
                                 size="sm"
                                 variant="primary"
+                                disabled
+                                title="Gesperrt: keine Broker-Anbindung"
+                                data-testid="admin-order-execute-disabled"
                                 onClick={() => openExecute(o)}
                               >
                                 <Check size={12} strokeWidth={1.5} /> Ausführen
