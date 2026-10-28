@@ -498,6 +498,9 @@ const IpoPage = () => {
                         Investitionsanfrage stellen
                       </Button>
                     )}
+                    <p className="mt-2 text-[11px] text-bank-text-muted" data-testid="ipo-card-disclaimer">
+                      Eine Investitionsanfrage ist keine Aktienzeichnung und keine Kauforder.
+                    </p>
                   </div>
                 </div>
                     </SurfaceCard>
@@ -591,7 +594,7 @@ const IpoPage = () => {
 
                 {!canInvest(selected.status) && (
                   <p className="text-[12px] text-bank-text-muted">
-                    Für dieses IPO ist derzeit keine Investition möglich.
+                    Für dieses IPO ist derzeit keine Investitionsanfrage möglich. Eine Investitionsanfrage ist keine Aktienzeichnung und keine Kauforder.
                   </p>
                 )}
               </div>
