@@ -64,6 +64,9 @@ class IpoCatalogBase(BaseModel):
     valuation_last_private: Optional[float] = None
     min_investment_eur: Optional[float] = Field(default=None, ge=0)
     lot_size: int = Field(default=1, ge=1)
+    entry_price_eur: Optional[float] = None
+    estimated_value_eur: Optional[float] = None
+    value_updated_at: Optional[str] = None
     prospectus_url: Optional[str] = Field(default=None, max_length=1000)
     description: Optional[str] = Field(default=None, max_length=8000)
     is_visible: bool = True
@@ -79,6 +82,8 @@ class IpoCatalogBase(BaseModel):
         "price_range_high",
         "valuation_last_private",
         "min_investment_eur",
+        "entry_price_eur",
+        "estimated_value_eur",
     )
     @classmethod
     def _finite(cls, v):
@@ -90,7 +95,7 @@ class IpoCatalogBase(BaseModel):
             raise ValueError("Wert darf nicht negativ sein")
         return float(v)
 
-    @field_validator("ipo_date", "subscription_start", "subscription_end")
+    @field_validator("ipo_date", "subscription_start", "subscription_end", "value_updated_at")
     @classmethod
     def _iso_date(cls, v):
         if v in (None, ""):
@@ -152,6 +157,9 @@ class IpoCatalogUpdate(BaseModel):
     valuation_last_private: Optional[float] = None
     min_investment_eur: Optional[float] = Field(default=None, ge=0)
     lot_size: Optional[int] = Field(default=None, ge=1)
+    entry_price_eur: Optional[float] = None
+    estimated_value_eur: Optional[float] = None
+    value_updated_at: Optional[str] = None
     prospectus_url: Optional[str] = Field(default=None, max_length=1000)
     description: Optional[str] = Field(default=None, max_length=8000)
     is_visible: Optional[bool] = None
@@ -165,6 +173,8 @@ class IpoCatalogUpdate(BaseModel):
         "price_range_high",
         "valuation_last_private",
         "min_investment_eur",
+        "entry_price_eur",
+        "estimated_value_eur",
     )
     @classmethod
     def _finite(cls, v):
@@ -176,7 +186,7 @@ class IpoCatalogUpdate(BaseModel):
             raise ValueError("Wert darf nicht negativ sein")
         return float(v)
 
-    @field_validator("ipo_date", "subscription_start", "subscription_end")
+    @field_validator("ipo_date", "subscription_start", "subscription_end", "value_updated_at")
     @classmethod
     def _iso_date(cls, v):
         if v in (None, ""):
@@ -198,10 +208,23 @@ class IpoCatalogUpdate(BaseModel):
         return v
 
 
+def _value_change(entry, estimate):
+    if entry is None or estimate is None or entry <= 0:
+        return None, None
+    diff = round(estimate - entry, 2)
+    return diff, round(diff / entry * 100, 2)
+
+
 def _serialize(doc: dict) -> dict:
     ca = doc.get("created_at")
     ua = doc.get("updated_at")
+    change_eur, change_pct = _value_change(doc.get("entry_price_eur"), doc.get("estimated_value_eur"))
     return {
+        "entry_price_eur": doc.get("entry_price_eur"),
+        "estimated_value_eur": doc.get("estimated_value_eur"),
+        "value_updated_at": doc.get("value_updated_at"),
+        "value_change_eur": change_eur,
+        "value_change_pct": change_pct,
         "id": str(doc["_id"]),
         "company_name": doc.get("company_name"),
         "ticker_proposed": doc.get("ticker_proposed"),

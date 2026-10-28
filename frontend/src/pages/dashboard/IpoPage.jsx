@@ -22,6 +22,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import { cn } from '@/lib/utils';
 import IpoContactBlock from '@/components/dashboard/IpoContactBlock';
+import { IpoValuationBlock } from '@/components/dashboard/IpoValuationBlock';
 import IpoLogo from '@/components/IpoLogo';
 import { DashboardStagger, DashboardStaggerItem } from '@/components/dashboard/motion/DashboardStagger';
 import DashboardContentReveal from '@/components/dashboard/motion/DashboardContentReveal';
@@ -580,6 +581,8 @@ const IpoPage = () => {
                     </div>
                   )}
                 </div>
+
+                <IpoValuationBlock ipo={selected} />
 
                 {selected.description && (
                   <p className="text-bank-text-muted leading-relaxed">{selected.description}</p>

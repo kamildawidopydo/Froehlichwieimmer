@@ -4,6 +4,7 @@ import { PRODUCT_ICONS } from '@/lib/productIcons';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { IpoValuationFields } from '@/components/admin/IpoValuationFields';
 import { normalizeIpoCatalogRow } from '@/lib/decodeHtmlEntities';
 import {
   AdminSubpageLayout,
@@ -40,6 +41,9 @@ const EMPTY = {
   price_currency: 'EUR',
   valuation_last_private: '',
   min_investment_eur: '',
+  entry_price_eur: '',
+  estimated_value_eur: '',
+  value_updated_at: '',
   lot_size: '1',
   prospectus_url: '',
   description: '',
@@ -51,6 +55,8 @@ const parseNum = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const fetchJson = async (path, options = {}) => {
   const resp = await fetch(path, {
@@ -148,7 +154,7 @@ const AdminIpoCatalog = () => {
 
   const openAdd = () => {
     setEditing(null);
-    setForm(EMPTY);
+    setForm({ ...EMPTY, value_updated_at: todayIso() });
     setShowModal(true);
   };
 
@@ -172,6 +178,9 @@ const AdminIpoCatalog = () => {
       valuation_last_private:
         row.valuation_last_private != null ? String(row.valuation_last_private) : '',
       min_investment_eur: row.min_investment_eur != null ? String(row.min_investment_eur) : '',
+      entry_price_eur: row.entry_price_eur != null ? String(row.entry_price_eur) : '',
+      estimated_value_eur: row.estimated_value_eur != null ? String(row.estimated_value_eur) : '',
+      value_updated_at: row.value_updated_at || todayIso(),
       lot_size: String(row.lot_size ?? 1),
       prospectus_url: row.prospectus_url || '',
       description: row.description || '',
@@ -220,6 +229,12 @@ const AdminIpoCatalog = () => {
       price_currency: form.price_currency || 'EUR',
       valuation_last_private: parseNum(form.valuation_last_private),
       min_investment_eur: parseNum(form.min_investment_eur),
+      entry_price_eur: parseNum(form.entry_price_eur),
+      estimated_value_eur: parseNum(form.estimated_value_eur),
+      value_updated_at:
+        parseNum(form.entry_price_eur) != null || parseNum(form.estimated_value_eur) != null
+          ? form.value_updated_at || todayIso()
+          : null,
       lot_size: Math.max(1, parseInt(form.lot_size, 10) || 1),
       prospectus_url: form.prospectus_url || null,
       description: form.description || null,
@@ -629,6 +644,7 @@ const AdminIpoCatalog = () => {
                   onChange={(e) => setForm((f) => ({ ...f, lot_size: e.target.value }))}
                 />
               </div>
+              <IpoValuationFields form={form} setForm={setForm} />
               <Input
                 placeholder="Prospekt-URL"
                 value={form.prospectus_url}
