@@ -202,7 +202,10 @@ def _yf_history_sync(yf_sym: str, period: str, interval: str) -> Optional[List[d
         return None
 
 
-def _compute_history_stats(points: List[dict]) -> Dict[str, Any]:
+_PERIODS_PER_YEAR = {"1d": 252, "1wk": 52, "1mo": 12}
+
+
+def _compute_history_stats(points: List[dict], interval: str = "1d") -> Dict[str, Any]:
     """Session 82.58a — Aggregat-Statistiken NUR aus echten Provider-Bars.
     Kein synthetischer Punkt, keine Interpolation. Bei zu wenig Daten: null.
     """
@@ -238,9 +241,24 @@ def _compute_history_stats(points: List[dict]) -> Dict[str, Any]:
         if len(rets) >= 2:
             mean = sum(rets) / len(rets)
             var = sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)  # sample variance
-            ann_vol = round(math.sqrt(var) * math.sqrt(252) * 100, 4)
+            periods = _PERIODS_PER_YEAR.get(interval)
+            ann_vol = round(math.sqrt(var) * math.sqrt(periods) * 100, 4) if periods else None
     avg_vol = int(sum(vols) / len(vols)) if vols else None
+    day = {}
+    if interval.endswith("m") and not interval.endswith("mo"):
+        last_day = str(points[-1].get("timestamp", ""))[:10]
+        dp = [p for p in points if str(p.get("timestamp", ""))[:10] == last_day]
+        dh = [p["high"] for p in dp if p.get("high") is not None]
+        dl = [p["low"] for p in dp if p.get("low") is not None]
+        dv = [p["volume"] for p in dp if p.get("volume")]
+        day = {
+            "day_high": round(max(dh), 4) if dh else None,
+            "day_low": round(min(dl), 4) if dl else None,
+            "day_volume": int(sum(dv)) if dv else None,
+            "day_date": last_day or None,
+        }
     return {
+        **day,
         "fifty_two_week_high": round(fifty_two_high, 4) if fifty_two_high is not None else None,
         "fifty_two_week_low": round(fifty_two_low, 4) if fifty_two_low is not None else None,
         "open_of_day": round(open_of_day, 4) if open_of_day is not None else None,
@@ -268,7 +286,7 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
             "data_source": cached.get("data_source", "cache"),
             "data_status": "fresh" if cached.get("data_source") == "yfinance" else "unavailable",
             "points": cached.get("points", []),
-            "stats": cached.get("stats") or _compute_history_stats(cached.get("points", [])),
+            "stats": _compute_history_stats(cached.get("points", []), cfg["interval"]),
             "cached_until": cached["expires_at"].isoformat(),
         }
 
@@ -284,7 +302,7 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
         "low": p.get("l"),
         "volume": p.get("v"),
     } for p in (pts or [])]
-    stats = _compute_history_stats(points) if points else _compute_history_stats([])
+    stats = _compute_history_stats(points, cfg["interval"])
 
     # currency heuristic from ticker suffix
     if yf_sym.startswith("^"):

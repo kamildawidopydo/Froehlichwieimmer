@@ -204,11 +204,13 @@ async def _mail_order_executed(db, order_id: ObjectId, ex: dict) -> None:
     price = ex.get("execution_price")
     total = ex.get("gross_amount") or (float(price) * float(qty) if price and qty else None)
     name = order.get("name") or order.get("symbol")
-    send_later((user or {}).get("email"), f"Ihr {side}auftrag wurde ausgeführt", render(
-        f"Auftrag ausgeführt: {side} {name}", "Ihr Auftrag wurde erfolgreich ausgeführt und in Ihrem Depot gebucht.",
+    send_later((user or {}).get("email"), f"Interne Depotbuchung zu Ihrem {side}auftrag", render(
+        f"Interne Depotbuchung: {side} {name}",
+        "Ihr Auftrag wurde intern in Ihrem Depot verbucht. Es handelt sich nicht um ein an einer Börse "
+        "oder über einen Broker ausgeführtes Wertpapiergeschäft.",
         [("Wertpapier", f"{name} ({order.get('symbol')})"), ("Art", side), ("Stückzahl", str(qty)),
-         ("Ausführungskurs", eur(price)), ("Gesamtbetrag", eur(total)),
-         ("Ausgeführt am", datetime.now(timezone.utc).astimezone().strftime("%d.%m.%Y, %H:%M Uhr"))],
+         ("Buchungskurs", eur(price)), ("Gesamtbetrag", eur(total)),
+         ("Gebucht am", datetime.now(timezone.utc).astimezone().strftime("%d.%m.%Y, %H:%M Uhr"))],
         "Zum Depot", "/dashboard/depot"))
 
 
@@ -702,14 +704,15 @@ async def _execute_order_locked(
             qty = fresh_order.get("executed_quantity") or 0
             price = _decimal_from_bson(fresh_order.get("executed_price"))
             side = (fresh_order.get("side") or "buy").lower()
-            action = "gekauft" if side == "buy" else "verkauft"
-            msg = f"{qty} {symbol} wurden zu {format_eur_de(price)} {action}." if price is not None else f"{qty} {symbol} wurden ausgeführt."
+            action = "Kauf" if side == "buy" else "Verkauf"
+            msg = (f"{action} {qty} {symbol} zu {format_eur_de(price)} intern im Depot verbucht (keine Börsenausführung)."
+                   if price is not None else f"{action} {qty} {symbol} intern im Depot verbucht (keine Börsenausführung).")
             await insert_financial_notification(
                 db,
                 user_id=str(fresh_order.get("user_id") or fresh.get("user_id")),
                 event_type="order_executed",
                 event_key=f"order-executed:{str(order_id)}",
-                title="Order ausgeführt",
+                title="Interne Depotbuchung",
                 message=msg,
                 route="/dashboard/orders",
                 symbol=symbol or None,

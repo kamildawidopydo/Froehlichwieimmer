@@ -51,6 +51,15 @@ async def run_pending_limit_buy_matching(
     Läuft einmal durch alle pending Limit-Buy-Orders und ruft für jede
     ausführungsfähige Order die bestehende Saga auf.
     """
+    # Ohne Broker-Anbindung keine automatische interne Ausführung.
+    logger.info("order matching disabled (no broker connection) trigger=%s", trigger)
+    return {
+        "disabled": True, "trigger": trigger,
+        "message": "Automatische Ausführung deaktiviert – keine Broker-Anbindung.",
+        "orders_seen": 0, "orders_executed": 0, "orders_limit_not_reached": 0,
+        "orders_quote_stale": 0, "orders_quote_unavailable": 0,
+        "orders_cancelled_during_run": 0, "insufficient_cash": 0, "orders_failed": 0, "duration_ms": 0,
+    }
     started_at = datetime.now(timezone.utc)
 
     # ── 1. Pending Buy+Sell-Limit-Orders (ältere zuerst) ─────────────

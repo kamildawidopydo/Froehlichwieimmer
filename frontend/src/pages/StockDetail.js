@@ -283,6 +283,8 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   const [stock, setStock] = useState(null);
   const [price, setPrice] = useState(null);
   const [ohlc, setOhlc] = useState([]);
+  const [historyCurrency, setHistoryCurrency] = useState(null);
+  const [dayStats, setDayStats] = useState(null);
   const [range, setRange] = useState('1mo');
   const [chartType, setChartType] = useState('area'); // 'area' | 'candle'
   const [detailTab, setDetailTab] = useState('chart'); // chart | fundamentals | news
@@ -561,8 +563,9 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
       if (!res.ok) throw new Error(`history status ${res.status}`);
       const data = await res.json();
       // UI erwartete früher `ohlc[]` mit {t,o,h,l,c,v}. Aus `points[]` ableiten.
+      setHistoryCurrency(data?.currency || null);
       const ohlcMapped = (data?.points || []).map((p) => ({
-        t: p.timestamp,
+        t: Math.floor(Date.parse(p.timestamp) / 1000),
         o: p.open, h: p.high, l: p.low, c: p.close, v: p.volume,
       }));
       setOhlc(ohlcMapped);
@@ -599,7 +602,14 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
           return1y: s.one_year_return_pct,
           avgVolume: s.average_volume,
           open: s.open_of_day,
+          currency: data?.currency || null,
         });
+        const dres = await fetch(`${getApiBase()}/api/stocks/${encodeURIComponent(symbol)}/history?range=1d`);
+        const dj = dres.ok ? await dres.json() : null;
+        const dd = dj?.stats;
+        if (active && dd) {
+          setDayStats({ high: dd.day_high, low: dd.day_low, volume: dd.day_volume, open: dd.open_of_day, date: dd.day_date, currency: dj.currency || null });
+        }
       } catch {
         if (active) setStats(null);
       }
@@ -949,8 +959,8 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                         }`}
                         title={
                           price.source === 'twelvedata'
-                            ? 'Twelve Data · US-Aktien realtime · EU-Aktien 15 Min delayed (Xetra-Lizenz)'
-                            : 'yfinance · US-Aktien realtime · EU-Aktien 15 Min delayed (Xetra-Lizenz)'
+                            ? 'Quelle: Twelve Data · Kurse können verzögert sein (EU-Aktien i. d. R. 15 Min.)'
+                            : 'Quelle: Yahoo Finance · Kurse können verzögert sein (EU-Aktien i. d. R. 15 Min.)'
                         }
                       >
                         <span className={`inline-block h-1.5 w-1.5 rounded-full ${
@@ -1061,7 +1071,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     <TradingChart
                       mode={chartType}
                       data={ohlc}
-                      currency={currency}
+                      currency={historyCurrency || currency}
                       height={288}
                       showSma={showSma}
                       up={chartUp}
@@ -1075,15 +1085,15 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <div className="bg-white border border-bank-border rounded-lg p-4">
                 <p className="text-xs text-bank-text-muted mb-1">Eröffnung</p>
-                <p className="font-semibold text-bank-text">{stats?.open != null ? formatCurrency(stats.open, currency) : '–'}</p>
+                <p className="font-semibold text-bank-text">{dayStats?.open != null ? formatCurrency(dayStats.open, dayStats.currency || currency) : '–'}</p>
               </div>
               <div className="bg-white border border-bank-border rounded-lg p-4">
                 <p className="text-xs text-bank-text-muted mb-1">Tages-Hoch</p>
-                <p className="font-semibold text-bank-text">{price?.day_high != null ? formatCurrency(price.day_high, currency) : '–'}</p>
+                <p className="font-semibold text-bank-text">{dayStats?.high != null ? formatCurrency(dayStats.high, dayStats.currency || currency) : '–'}</p>
               </div>
               <div className="bg-white border border-bank-border rounded-lg p-4">
                 <p className="text-xs text-bank-text-muted mb-1">Tages-Tief</p>
-                <p className="font-semibold text-bank-text">{price?.day_low != null ? formatCurrency(price.day_low, currency) : '–'}</p>
+                <p className="font-semibold text-bank-text">{dayStats?.low != null ? formatCurrency(dayStats.low, dayStats.currency || currency) : '–'}</p>
               </div>
               <div className="bg-white border border-bank-border rounded-lg p-4">
                 <p className="text-xs text-bank-text-muted mb-1">Vortag</p>
@@ -1091,7 +1101,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
               </div>
               <div className="bg-white border border-bank-border rounded-lg p-4">
                 <p className="text-xs text-bank-text-muted mb-1">Volumen</p>
-                <p className="font-semibold text-bank-text">{price?.volume != null ? Number(price.volume).toLocaleString('de-DE') : '–'}</p>
+                <p className="font-semibold text-bank-text">{dayStats?.volume != null ? Number(dayStats.volume).toLocaleString('de-DE') : '–'}</p>
               </div>
               <div className="bg-white border border-bank-border rounded-lg p-4">
                 <p className="text-xs text-bank-text-muted mb-1">Ø Volumen</p>
@@ -1105,11 +1115,11 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-xs text-bank-text-muted mb-1">52-Wochen Hoch</p>
-                    <p className="font-semibold text-bank-text">{formatCurrency(stats.week52High, currency)}</p>
+                    <p className="font-semibold text-bank-text">{formatCurrency(stats.week52High, stats.currency || currency)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-bank-text-muted mb-1">52-Wochen Tief</p>
-                    <p className="font-semibold text-bank-text">{formatCurrency(stats.week52Low, currency)}</p>
+                    <p className="font-semibold text-bank-text">{formatCurrency(stats.week52Low, stats.currency || currency)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-bank-text-muted mb-1">Volatilität (1J)</p>
@@ -1134,8 +1144,8 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                       />
                     </div>
                     <div className="mt-1.5 flex justify-between text-[10.5px] text-bank-text-muted">
-                      <span>{formatCurrency(stats.week52Low, currency)}</span>
-                      <span>{formatCurrency(stats.week52High, currency)}</span>
+                      <span>{formatCurrency(stats.week52Low, stats.currency || currency)}</span>
+                      <span>{formatCurrency(stats.week52High, stats.currency || currency)}</span>
                     </div>
                   </div>
                 )}
@@ -1524,8 +1534,9 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
               </Button>
 
               <p className="text-[11px] text-bank-text-muted mt-3 leading-relaxed">
-                Hinweis: Aufträge werden von unserem Team manuell geprüft und ausgeführt.
-                {orderType === 'limit' && ' Limit-Orders werden zum angegebenen Kurs zur Freigabe vorgelegt.'}
+                Hinweis: Es besteht keine Anbindung an eine Börse oder einen Broker. Ihr Auftrag wird als Anfrage gespeichert
+                und von unserem Team manuell geprüft; eine automatische Ausführung findet nicht statt.
+                {orderType === 'limit' && ' Limit-Orders werden zum angegebenen Kurs zur Prüfung vorgelegt.'}
                 {' '}Verkaufserlöse werden T+2 (2 Werktage) valutiert.
               </p>
             </form>
