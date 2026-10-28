@@ -283,12 +283,14 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
     cache_key = f"{sym}:{rk}"
     cached = await _db.stock_public_history_cache.find_one({"_id": cache_key})
     if cached and cached.get("expires_at") and cached["expires_at"] > _now():
+        stale = bool(cached.get("stale")) and bool(cached.get("points"))
         return {
             "symbol": sym,
             "range": rk,
             "currency": cached.get("currency"),
             "data_source": cached.get("data_source", "cache"),
-            "data_status": "fresh" if cached.get("data_source") == "yfinance" else "unavailable",
+            "data_status": "stale" if stale else ("fresh" if cached.get("data_source") == "yfinance" else "unavailable"),
+            "data_as_of": cached["cached_at"].isoformat() if cached.get("cached_at") else None,
             "points": cached.get("points", []),
             "stats": _compute_history_stats(cached.get("points", []), cfg["interval"]),
             "cached_until": cached["expires_at"].isoformat(),
@@ -306,6 +308,19 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
         "low": p.get("l"),
         "volume": p.get("v"),
     } for p in (pts or [])]
+    if not points and cached and cached.get("points"):
+        # Provider hiccup: keep last valid data (marked stale), retry in 60s.
+        retry_at = _now() + timedelta(seconds=60)
+        await _db.stock_public_history_cache.update_one(
+            {"_id": cache_key}, {"$set": {"expires_at": retry_at, "stale": True, "last_error_at": _now()}})
+        return {
+            "symbol": sym, "range": rk, "currency": cached.get("currency"),
+            "data_source": cached.get("data_source"), "data_status": "stale",
+            "data_as_of": cached["cached_at"].isoformat() if cached.get("cached_at") else None,
+            "points": cached["points"],
+            "stats": _compute_history_stats(cached["points"], cfg["interval"]),
+            "cached_until": retry_at.isoformat(),
+        }
     stats = _compute_history_stats(points, cfg["interval"])
 
     # currency heuristic from ticker suffix
@@ -329,6 +344,7 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
             "data_source": source,
             "points": points,
             "stats": stats,
+            "stale": False,
             "cached_at": _now(),
             "expires_at": expires_at,
         }},
@@ -340,6 +356,7 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
         "currency": currency,
         "data_source": source,
         "data_status": "fresh" if source == "yfinance" else "unavailable",
+        "data_as_of": _now().isoformat() if points else None,
         "points": points,
         "stats": stats,
         "cached_until": expires_at.isoformat(),

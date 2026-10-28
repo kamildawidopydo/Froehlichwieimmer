@@ -296,6 +296,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   const [price, setPrice] = useState(null);
   const [ohlc, setOhlc] = useState([]);
   const [historyCurrency, setHistoryCurrency] = useState(null);
+  const [historyStatus, setHistoryStatus] = useState(null);
   const [dayStats, setDayStats] = useState(null);
   const [range, setRange] = useState('1mo');
   const [chartType, setChartType] = useState('area'); // 'area' | 'candle'
@@ -576,6 +577,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
       const data = await res.json();
       // UI erwartete früher `ohlc[]` mit {t,o,h,l,c,v}. Aus `points[]` ableiten.
       setHistoryCurrency(data?.currency || null);
+      setHistoryStatus({ status: data?.data_status || null, asOf: data?.data_as_of || null });
       const ohlcMapped = (data?.points || []).map((p) => ({
         t: toBerlinChartTime(Math.floor(Date.parse(p.timestamp) / 1000)),
         o: p.open, h: p.high, l: p.low, c: p.close, v: p.volume,
@@ -584,6 +586,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
     } catch (err) {
       console.error('History failed:', err);
       setOhlc([]);
+      setHistoryStatus({ status: 'unavailable', asOf: null });
     } finally {
       setLoadingHistory(false);
     }
@@ -1102,12 +1105,21 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     <TradingChart
                       mode={chartType}
                       data={ohlc}
+                      emptyHint={historyStatus?.status === 'unavailable'
+                        ? 'Die Kursquelle ist vorübergehend nicht erreichbar. Bitte versuchen Sie es in einer Minute erneut.'
+                        : undefined}
                       currency={historyCurrency || currency}
                       height={288}
                       showSma={showSma}
                       up={chartUp}
                     />
                   </Suspense>
+                )}
+                {historyStatus?.status === 'stale' && ohlc.length > 0 && (
+                  <p className="mt-2 text-[11px] text-bank-text-muted" data-testid="history-stale-note">
+                    Die Kursquelle ist vorübergehend nicht erreichbar. Angezeigt werden die zuletzt verfügbaren Daten
+                    {historyStatus.asOf ? ` (Stand ${new Date(historyStatus.asOf).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} Uhr)` : ''}.
+                  </p>
                 )}
               </div>
             </div>

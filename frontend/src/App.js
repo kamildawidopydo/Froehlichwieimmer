@@ -321,6 +321,7 @@ function App() {
                   <Route path="/finanzwissen/:slug" element={<FinanzwissenArtikel />} />
                   <Route path="/bausteine" element={<Navigate to="/leistungen#bausteine" replace />} />
                   <Route path="/contact" element={<Contact />} />
+                  <Route path="/kontakt" element={<Navigate to="/contact" replace />} />
                   <Route path="/themen" element={<InvestmentTopicsOverviewPage />} />
                   {/* Session 80.35 — explizite Routen vor der Catch-all `:slug`. */}
                   <Route path="/themen/zinsen-sparen" element={<ZinsenSparenPage />} />
