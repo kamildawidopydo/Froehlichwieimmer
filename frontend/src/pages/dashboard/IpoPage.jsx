@@ -433,11 +433,20 @@ const IpoPage = () => {
               <DashboardStagger className="space-y-3">
                 {filtered.map((ipo) => (
                   <DashboardStaggerItem key={ipo.id}>
-                    <SurfaceCard
-                      className="cursor-pointer p-5 transition-shadow hover:shadow-md"
-                      onClick={() => openDetail(ipo)}
-                    >
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <SurfaceCard className="cursor-pointer p-5 transition-shadow hover:shadow-md">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  data-testid={`ipo-card-${ipo.id}`}
+                  onClick={() => openDetail(ipo)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openDetail(ipo);
+                    }
+                  }}
+                  className="flex flex-wrap items-start justify-between gap-3 outline-none"
+                >
                   <div className="flex min-w-0 flex-1 gap-3">
                     <IpoLogo ipo={ipo} size="md" className="mt-0.5" />
                     <div className="min-w-0 flex-1">

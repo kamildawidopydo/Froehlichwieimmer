@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only test of /dashboard/ipo as customer tester@mester.de (desktop 1920 + mobile 390). The text on all 19 cards is correct. On every card the 'Investitionsanfrage stellen' button opens the detail dialog, and the dialog content is correct for Aspen, Bambusa and Anthropic (SEC prospectus links and the disclaimer). Confirmed bug: clicking the card body does nothing, because SurfaceCard drops the onClick prop. As a result, the 5 'Noch nicht verfügbar' cards (no button) cannot open a dialog at all, and their dialog text can never be seen. No inquiries were submitted.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SurfaceCard (/app/frontend/src/components/dashboard/PageHeader.jsx line 48)", "issue": "ROOT CAUSE: the component's signature is ({ children, className, padded, accent }). It does not pass any extra props (onClick, data-testid, role, etc.) on to the motion.div, so the onClick={() => openDetail(ipo)} on the card at IpoPage.jsx:438 is silently thrown away. The Dialog (line 515), openDetail (line 176) and components/ui/dialog.jsx all work correctly: when the inner button calls openDetail, the Radix dialog opens. Fix: make it ({ children, className, padded = true, accent = false, ...props }) and spread {...props} onto the motion.div. Alternatively, wrap only the IPO card in its own clickable div with role=button, tabIndex=0 and onKeyDown, which leaves other SurfaceCard users untouched.", "selector": "[data-testid=ipo-content] div.cursor-pointer", "priority": "HIGH"},
+      {"component": "IpoPage unavailable cards (OpenAI, Syngenta, Oura, OPay, Dangote Refinery)", "issue": "These cards have no button, and the card click is broken, so the dialog text 'Für dieses IPO ist derzeit keine Investitionsanfrage möglich. Eine Investitionsanfrage ist keine Aktienzeichnung und keine Kauforder.' (line 597) can never be reached. The card disclaimer itself is shown correctly. The SurfaceCard fix above solves this.", "selector": "[data-testid=ipo-card-disclaimer]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/dashboard/ipo", "issues": ["Test/QA entries are visible to customers: 'No-Ticker AG', 'Preview Test1 AG', 'Preview Test2 AG', 'Preview Test3 AG' (ipo_catalog, status upcoming, created 2026-09-07). Each has a working inquiry button. Deactivate or remove them before publishing.", "The cards have cursor-pointer but clicking them does nothing (misleading until the onClick is fixed). The card is also not keyboard-accessible (no role/tabIndex).", "The visitor-welcome-gate itself has role=dialog. Automated checks that use a generic [role=dialog] selector will find it on first visit. This may have confused the earlier automated check."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Pass ...props through in SurfaceCard (PageHeader.jsx:48), or give the IPO card its own clickable wrapper, so that clicking the card body opens the detail dialog. Do this for all cards, including the 'Noch nicht verfügbar' ones.",
+    "Optional: add data-testid to the IPO card, the card inquiry button, the dialog submit button and the 'not available' dialog text.",
+    "Hide or remove the test IPO entries (No-Ticker AG, Preview Test1/2/3 AG) from the customer catalog."
+  ],
+  "critical_code_review_comments": [
+    "Because SurfaceCard swallows unknown props, every page that passes onClick or data-testid to SurfaceCard is affected. Grep for '<SurfaceCard' with onClick or data-testid: for example, ipo-error-state and ipo-empty-state data-testids at IpoPage.jsx:409/421 are never rendered into the DOM either.",
+    "IpoPage.jsx renders the not-available text only inside the dialog. Consider also showing it on the unavailable cards."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested", "frontend": "85% (all content, disclaimer, button-dialog and mobile checks passed; card-body click fails)"},
+  "test_credentials": "tester@mester.de / HHHKKK222 (works). To skip the gate, set localStorage keys kapitalmitte_cookie_consent and kapitalmitte_visitor_profile before login.",
+  "seed_data_creation": "None. No ipo_requests were submitted.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Verified: there are 19 cards and all 19 show the ipo-card-disclaimer. Aspen card: ASPE, Bevorstehend, Nasdaq Global Select Market, $15 – $17, 'Termin offiziell noch nicht festgelegt', has button; the button opens a dialog with 'Prospekt ansehen' (sec.gov .../2124080/000119312526431023/na-20261026.htm), the exact unverbindlich disclaimer and the submit button. Bambusa card: BBTX, $15 – $17, prospectus at sec.gov .../2044950/...bambusa-sx1a1.htm. Anthropic card: ANT, 'Bei SEC eingereicht', 'Offizielle Preisspanne noch nicht veröffentlicht', prospectus at sec.gov .../2130357/...anthropicpbc-sx1.htm. The 5 unavailable cards have no button. Mobile 390: scrollWidth 390, no overflow. After the fix, retest that clicking the card body opens the dialog for Aspen and for OpenAI, and that the OpenAI dialog shows the not-available text.",
+  "rca of the issue": "Reproduction: log in, go to /dashboard/ipo and click a card's title or body. Result: the dialog count stays 0. Clicking 'Investitionsanfrage stellen' instead opens the dialog (count 1). Cause: SurfaceCard (components/dashboard/PageHeader.jsx:48-64) only accepts children/className/padded/accent and does not forward onClick to the motion.div. Fix: add ...props and spread it onto the motion.div."
+}
