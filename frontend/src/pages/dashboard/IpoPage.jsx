@@ -269,6 +269,9 @@ const IpoPage = () => {
         <TrendingUp size={16} />
         {selected.status === 'open' ? 'Zeichnungsanfrage' : 'Investitionsanfrage'}
       </p>
+      <p className="text-[12px] text-emerald-900/80 leading-relaxed" data-testid="ipo-request-disclaimer-top">
+        Ihre Anfrage ist unverbindlich und stellt weder einen Aktienkauf noch eine IPO-Zeichnung dar. Die Verfügbarkeit wird individuell geprüft.
+      </p>
       {selected.status === 'filed' && (
         <p className="text-[12px] text-amber-800">
           Offizieller IPO-Preis noch nicht veröffentlicht — Ihre Anfrage ist unverbindlich.
@@ -316,15 +319,12 @@ const IpoPage = () => {
         />
       </div>
       <Button variant="primary" size="sm" disabled={submitting || !user?.id} onClick={submitInvest}>
-        {selected.status === 'open' ? 'Zeichnungsanfrage senden' : 'Investieren'}
+        {selected.status === 'open' ? 'Zeichnungsanfrage senden' : 'Investitionsanfrage stellen'}
       </Button>
       {!user?.id && (
         <p className="text-[12px] text-amber-700">Bitte melden Sie sich an, um zu investieren.</p>
       )}
       <IpoContactBlock compact />
-      <p className="text-[11px] text-bank-text-muted leading-relaxed">
-        Anfragen sind unverbindlich bis zur Bestätigung durch unser Team.
-      </p>
     </div>
   ) : null;
 
@@ -394,7 +394,7 @@ const IpoPage = () => {
           <SurfaceCard padded={false} className="p-4">
             <p className="flex items-start gap-2 text-[12px] text-bank-text-muted">
               <Info size={14} className="mt-0.5 shrink-0 text-bank-primary" />
-              Investitionsanfragen sind unverbindlich bis zur Bestätigung durch unser Team.
+              Ihre Anfrage ist unverbindlich und stellt weder einen Aktienkauf noch eine IPO-Zeichnung dar. Die Verfügbarkeit wird individuell geprüft.
             </p>
           </SurfaceCard>
         </aside>
@@ -495,7 +495,7 @@ const IpoPage = () => {
                         }}
                       >
                         <TrendingUp size={14} className="mr-1" />
-                        Investieren
+                        Investitionsanfrage stellen
                       </Button>
                     )}
                   </div>
