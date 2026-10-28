@@ -25,4 +25,10 @@ async def seed_ipo_additions(db):
         inserted += 1 if r.upserted_id else 0
     await db.ipo_catalog.update_many(
         {"company_name": {"$in": HIDDEN_TEST_ENTRIES}, "is_visible": True}, {"$set": {"is_visible": False}})
+    # Legacy entry without official source; duplicates the verified "OpenAI" entry.
+    await db.ipo_catalog.update_many(
+        {"company_name": "OpenAI Group PBC", "is_visible": True},
+        {"$set": {"is_visible": False, "status": "unavailable", "price_range_low": None,
+                  "price_range_high": None, "ipo_date": None, "is_manual_override": True,
+                  "updated_at": now}})
     return inserted

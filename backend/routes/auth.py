@@ -286,6 +286,7 @@ async def reset_password(request: Request, payload: ResetInput):
         raise HTTPException(status_code=400, detail="Token bereits verwendet.")
     if _as_aware(rec["expires_at"]) < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Token abgelaufen.")
+    await _reject_weak_privileged(rec["user_id"], payload.password)
     new_hash = hash_password(payload.password)
     now = datetime.now(timezone.utc)
     await db.users.update_one(
@@ -322,6 +323,7 @@ async def force_reset_password(payload: ForceResetInput, user: dict = Depends(ge
     doc = await db.users.find_one({"_id": ObjectId(user["id"])})
     if not doc:
         raise HTTPException(status_code=404, detail="Benutzer nicht gefunden.")
+    await _reject_weak_privileged(doc["_id"], payload.new_password)
     new_hash = hash_password(payload.new_password)
     now = datetime.now(timezone.utc)
     await db.users.update_one(
@@ -355,9 +357,17 @@ async def change_password(payload: ChangePasswordInput, user: dict = Depends(get
         raise HTTPException(status_code=400, detail="Aktuelles Passwort ist falsch.")
     if payload.current_password == payload.new_password:
         raise HTTPException(status_code=400, detail="Neues Passwort muss sich vom aktuellen unterscheiden.")
+    await _reject_weak_privileged(doc["_id"], payload.new_password)
     new_hash = hash_password(payload.new_password)
     await db.users.update_one(
         {"_id": doc["_id"]},
-        {"$set": {"password_hash": new_hash, "last_password_reset_at": datetime.now(timezone.utc)}},
+        {"$set": {"password_hash": new_hash, "last_password_reset_at": datetime.now(timezone.utc), "must_change_password": False}},
     )
     return {"status": "ok"}
+
+
+async def _reject_weak_privileged(user_id, password: str) -> None:
+    from server import is_weak_password
+    u = await db.users.find_one({"_id": user_id}, {"role": 1})
+    if u and u.get("role") in ("admin", "recruiting") and is_weak_password(password):
+        raise HTTPException(status_code=400, detail="Für Administratoren mindestens 12 Zeichen und kein bekanntes Standardpasswort.")

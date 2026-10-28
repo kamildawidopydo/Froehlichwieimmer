@@ -24,30 +24,20 @@ const Contact = () => {
     setLoading(true);
 
     try {
-      const { error } = Promise.resolve({data: null, error: null}); // 82.92 neutralized (DATA_SOURCE_MISSING)
-      if (error) throw error;
-
-      try {
-        await fetch('/api/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subject: `Neue Kontaktanfrage: ${form.subject}`,
-            html: `<h2>Neue Kontaktanfrage eingegangen</h2>
-                   <p><strong>Name:</strong> ${form.name}</p>
-                   <p><strong>E-Mail:</strong> ${form.email}</p>
-                   <p><strong>Betreff:</strong> ${form.subject}</p>
-                   <p><strong>Nachricht:</strong><br/>${form.message.replace(/\n/g, '<br/>')}</p>`,
-          }),
-        });
-      } catch (emailError) {
-        console.error('Email send failed:', emailError);
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/contact-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.accepted) {
+        const d = data?.detail;
+        throw new Error(typeof d === 'string' ? d : 'Bitte prüfen Sie Ihre Angaben und versuchen Sie es erneut.');
       }
-
-      toast.success('Nachricht erfolgreich gesendet! Wir melden uns in Kürze.');
+      toast.success('Vielen Dank! Ihre Nachricht wurde an unser Team übermittelt. Wir melden uns in Kürze.');
       setForm({ name: '', email: '', subject: '', message: '' });
-    } catch {
-      toast.error('Fehler beim Senden der Nachricht. Bitte versuchen Sie es erneut.');
+    } catch (err) {
+      toast.error(err?.message || 'Ihre Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es erneut.');
     } finally {
       setLoading(false);
     }

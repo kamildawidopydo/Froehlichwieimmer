@@ -425,6 +425,45 @@ for _slug in CONTRACT_CONFIGS.keys():
 # ---------------------------------------------------------------------------
 # Contact-Form Endpoint
 # ---------------------------------------------------------------------------
+class ContactFormPayload(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    email: EmailStr
+    subject: str = Field(..., min_length=1, max_length=200)
+    message: str = Field(..., min_length=1, max_length=5000)
+    model_config = {"extra": "forbid"}
+
+
+@router.post("/contact-message")
+async def submit_contact_message(request: Request, body: ContactFormPayload = Body(...)) -> Dict[str, Any]:
+    _rate_limit(request, bucket="contact", limit_per_min=5)
+    from server import _send_email_via_emergent  # type: ignore
+    esc = _html_mod.escape
+    now = datetime.now(timezone.utc)
+    rec = await _db.contact_messages.insert_one({
+        "name": body.name.strip(), "email": str(body.email).lower(), "subject": body.subject.strip(),
+        "message": body.message.strip(), "status": "received", "created_at": now,
+    })
+    html = (
+        "<h2>Neue Kontaktanfrage</h2>"
+        f"<p><strong>Name:</strong> {esc(body.name)}</p>"
+        f"<p><strong>E-Mail:</strong> {esc(str(body.email))}</p>"
+        f"<p><strong>Betreff:</strong> {esc(body.subject)}</p>"
+        f"<p><strong>Nachricht:</strong><br/>{esc(body.message).replace(chr(10), '<br/>')}</p>"
+    )
+    provider_id = None
+    try:
+        provider_id = await _send_email_via_emergent(
+            to=_admin_target(), subject=f"Neue Kontaktanfrage: {body.subject.strip()}"[:200], html=html)
+    except Exception as exc:
+        logger.warning("contact-message send failed: %s", exc)
+    status = "handed_to_provider" if provider_id else "send_failed"
+    await _db.contact_messages.update_one({"_id": rec.inserted_id}, {"$set": {
+        "status": status, "provider_message_id": provider_id, "updated_at": datetime.now(timezone.utc)}})
+    if not provider_id:
+        raise HTTPException(status_code=502, detail="Ihre Nachricht konnte derzeit nicht versendet werden. Bitte versuchen Sie es später erneut oder schreiben Sie uns direkt per E-Mail.")
+    return {"accepted": True, "status": status}
+
+
 @router.post("/send-email")
 async def send_contact_email(request: Request, body: ContactMessagePayload = Body(...)) -> Dict[str, Any]:
     _rate_limit(request, bucket="contact", limit_per_min=5)

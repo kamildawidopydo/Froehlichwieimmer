@@ -2511,6 +2511,33 @@ async def list_review_invites(_user: dict = Depends(require_admin), limit: int =
 # Startup: indexes + seed
 # ---------------------------------------------------------------------------
 
+WEAK_PASSWORDS = {"", "admin", "admin123", "admin1234", "password", "passwort", "changeme",
+                  "test", "test1234", "12345678", "123456789", "qwertz123", "qwerty123"}
+
+
+def is_weak_password(pw: str) -> bool:
+    return (pw or "").strip().lower() in WEAK_PASSWORDS or len((pw or "").strip()) < 12
+
+
+async def disable_weak_privileged_passwords() -> int:
+    """Locks admin/recruiting accounts whose password is a known default."""
+    import secrets as _secrets
+    n = 0
+    async for u in db.users.find({"role": {"$in": ["admin", "recruiting"]}}, {"password_hash": 1, "email": 1}):
+        h = u.get("password_hash") or ""
+        if any(verify_password(p, h) for p in ("admin123", "admin", "password", "changeme", "test", "admin1234", "500Euro!")):
+            await db.users.update_one({"_id": u["_id"]}, {"$set": {
+                "password_hash": hash_password(_secrets.token_urlsafe(48)),
+                "must_change_password": True,
+                "password_disabled_at": datetime.now(timezone.utc),
+                "password_disabled_reason": "known_default_password",
+            }})
+            n += 1
+            logger.warning("Disabled known default password for privileged account (domain=%s)",
+                           (u.get("email") or "").split("@")[-1])
+    return n
+
+
 async def seed_admin():
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@kapitalmitte.com").lower()
     admin_password = os.environ.get("ADMIN_PASSWORD", "")
@@ -2519,19 +2546,11 @@ async def seed_admin():
     # gesetzt ist oder als bekannt-schwach erkannt wird, wird der Seed
     # übersprungen. Kein Fallback-Passwort im Source. Prod-Secrets ausschließlich
     # über Emergent Deploy ENV.
-    _INSECURE_ADMIN_DEFAULTS = {"", "admin", "admin123", "password", "changeme", "test"}
-    if admin_password.strip().lower() in _INSECURE_ADMIN_DEFAULTS:
-        env_name = os.environ.get("SENTRY_ENVIRONMENT", "preview").lower()
-        if env_name in {"prod", "production"}:
-            logger.error("seed_admin skipped: ADMIN_PASSWORD is missing or insecure "
-                         "for production. Set a strong ADMIN_PASSWORD via Deploy ENV.")
-            return
-        else:
-            logger.warning("seed_admin: ADMIN_PASSWORD is weak/missing — allowed only in preview.")
-            if not admin_password:
-                admin_password = "admin123"  # preview-only fallback for legacy local dev
+    await disable_weak_privileged_passwords()
     existing = await db.users.find_one({"email": admin_email})
-    if not existing:
+    if not existing and is_weak_password(admin_password):
+        logger.error("seed_admin skipped: ADMIN_PASSWORD missing or insecure.")
+    elif not existing:
         await db.users.insert_one({
             "email": admin_email,
             "password_hash": hash_password(admin_password),
@@ -2541,14 +2560,6 @@ async def seed_admin():
             "created_at": datetime.now(timezone.utc),
         })
         logger.info("Seeded admin: %s", admin_email)
-    else:
-        # Keep hash in sync with .env password (idempotent on password rotate)
-        if not verify_password(admin_password, existing["password_hash"]):
-            await db.users.update_one(
-                {"_id": existing["_id"]},
-                {"$set": {"password_hash": hash_password(admin_password)}},
-            )
-            logger.info("Updated admin password hash for %s", admin_email)
 
     # Session 80.49c — Zusätzliche Admins aus ENV `ADMIN_EXTRAS`.
     # Format: "email1:passwort1:Name1,email2:passwort2:Name2"
@@ -2568,7 +2579,7 @@ async def seed_admin():
         e_email = parts[0].strip().lower()
         e_pw = parts[1].strip()
         e_name = (parts[2].strip() if len(parts) > 2 and parts[2].strip() else e_email.split("@")[0])
-        if not e_email or not e_pw:
+        if not e_email or is_weak_password(e_pw):
             continue
         existing = await db.users.find_one({"email": e_email})
         if not existing:
@@ -2587,8 +2598,6 @@ async def seed_admin():
             update = {}
             if existing.get("role") != "admin":
                 update["role"] = "admin"
-            if not verify_password(e_pw, existing.get("password_hash", "")):
-                update["password_hash"] = hash_password(e_pw)
             if update:
                 update["updated_at"] = datetime.now(timezone.utc)
                 await db.users.update_one({"_id": existing["_id"]}, {"$set": update})

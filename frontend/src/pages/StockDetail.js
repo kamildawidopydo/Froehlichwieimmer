@@ -50,6 +50,18 @@ const RANGES = [
   { key: '5y', label: '5J' },
 ];
 
+const BERLIN_FMT = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Europe/Berlin', hour12: false, year: 'numeric', month: '2-digit',
+  day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+});
+
+// Charts render in UTC; shift so the axis shows Europe/Berlin wall time (incl. DST).
+const toBerlinChartTime = (sec) => {
+  const p = Object.fromEntries(BERLIN_FMT.formatToParts(new Date(sec * 1000)).map((x) => [x.type, x.value]));
+  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+  return Math.floor(asUtc / 1000);
+};
+
 const formatCurrency = (v, currency = 'USD') =>
   v == null ? '–' : Number(v).toLocaleString('de-DE', { style: 'currency', currency: currency || 'USD' });
 
@@ -565,7 +577,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
       // UI erwartete früher `ohlc[]` mit {t,o,h,l,c,v}. Aus `points[]` ableiten.
       setHistoryCurrency(data?.currency || null);
       const ohlcMapped = (data?.points || []).map((p) => ({
-        t: Math.floor(Date.parse(p.timestamp) / 1000),
+        t: toBerlinChartTime(Math.floor(Date.parse(p.timestamp) / 1000)),
         o: p.open, h: p.high, l: p.low, c: p.close, v: p.volume,
       }));
       setOhlc(ohlcMapped);
@@ -604,11 +616,11 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
           open: s.open_of_day,
           currency: data?.currency || null,
         });
-        const dres = await fetch(`${getApiBase()}/api/stocks/${encodeURIComponent(symbol)}/history?range=1d`);
+        const dres = await fetch(`${getApiBase()}/api/stocks/${encodeURIComponent(symbol)}/history?range=5d`);
         const dj = dres.ok ? await dres.json() : null;
         const dd = dj?.stats;
         if (active && dd) {
-          setDayStats({ high: dd.day_high, low: dd.day_low, volume: dd.day_volume, open: dd.open_of_day, date: dd.day_date, currency: dj.currency || null });
+          setDayStats({ high: dd.day_high, low: dd.day_low, volume: dd.day_volume, open: dd.open_of_day, prevClose: dd.prev_close, date: dd.day_date, currency: dj.currency || null });
         }
       } catch {
         if (active) setStats(null);
@@ -1102,7 +1114,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
               </div>
               <div className="bg-white border border-bank-border rounded-lg p-4">
                 <p className="text-xs text-bank-text-muted mb-1">Vortag</p>
-                <p className="font-semibold text-bank-text">{price?.prev_close != null ? formatCurrency(price.prev_close, currency) : '–'}</p>
+                <p className="font-semibold text-bank-text">{dayStats?.prevClose != null ? formatCurrency(dayStats.prevClose, dayStats.currency || currency) : price?.prev_close != null ? formatCurrency(price.prev_close, currency) : '–'}</p>
               </div>
               <div className="bg-white border border-bank-border rounded-lg p-4">
                 <p className="text-xs text-bank-text-muted mb-1">Volumen</p>

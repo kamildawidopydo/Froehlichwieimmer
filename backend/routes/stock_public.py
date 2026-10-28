@@ -251,7 +251,9 @@ def _compute_history_stats(points: List[dict], interval: str = "1d") -> Dict[str
         dh = [p["high"] for p in dp if p.get("high") is not None]
         dl = [p["low"] for p in dp if p.get("low") is not None]
         dv = [p["volume"] for p in dp if p.get("volume")]
+        prev = [p["close"] for p in points if str(p.get("timestamp", ""))[:10] < last_day and p.get("close") is not None]
         day = {
+            "prev_close": round(prev[-1], 4) if prev else None,
             "open_of_day": round(dp[0]["open"], 4) if dp and dp[0].get("open") is not None else None,
             "day_high": round(max(dh), 4) if dh else None,
             "day_low": round(min(dl), 4) if dl else None,
