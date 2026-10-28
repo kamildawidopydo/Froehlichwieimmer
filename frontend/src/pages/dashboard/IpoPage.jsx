@@ -43,6 +43,8 @@ const STATUS_LABELS = {
   listed: 'Börsennotiert',
   postponed: 'Verschoben',
   cancelled: 'Abgesagt',
+  planned: 'Börsengang geplant',
+  unavailable: 'Noch nicht verfügbar',
 };
 
 const STATUS_BADGE = {
@@ -53,6 +55,8 @@ const STATUS_BADGE = {
   listed: 'bg-slate-100 text-slate-600 border-slate-200',
   postponed: 'bg-orange-50 text-orange-700 border-orange-200',
   cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
+  planned: 'bg-slate-50 text-slate-700 border-slate-200',
+  unavailable: 'bg-slate-100 text-slate-500 border-slate-200',
 };
 
 const formatDate = (d) =>
@@ -380,6 +384,8 @@ const IpoPage = () => {
                   <option value="upcoming">Bevorstehend</option>
                   <option value="open">Zeichnung offen</option>
                   <option value="priced">Kurs festgelegt</option>
+                  <option value="planned">Börsengang geplant</option>
+                  <option value="unavailable">Noch nicht verfügbar</option>
                 </select>
               </div>
             </div>

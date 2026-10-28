@@ -172,7 +172,7 @@ async def create_request(
     ipo = await _fetch_ipo_from_catalog(payload.ipo_id)
     if not ipo.get("is_visible"):
         raise HTTPException(status_code=400, detail="IPO nicht sichtbar")
-    if ipo.get("status") in ("listed", "cancelled"):
+    if ipo.get("status") in ("listed", "cancelled", "planned", "unavailable"):
         raise HTTPException(
             status_code=400,
             detail=f"IPO-Status '{ipo.get('status')}' nicht zeichenbar",

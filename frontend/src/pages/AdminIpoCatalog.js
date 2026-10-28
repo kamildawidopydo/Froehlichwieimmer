@@ -21,7 +21,7 @@ import {
  * eigener Schritt geplant.
  */
 
-const STATUS_OPTIONS = ['upcoming', 'open', 'priced', 'filed', 'listed', 'postponed', 'cancelled'];
+const STATUS_OPTIONS = ['upcoming', 'open', 'priced', 'filed', 'listed', 'postponed', 'cancelled', 'planned', 'unavailable'];
 
 const EMPTY = {
   company_name: '',
@@ -280,6 +280,8 @@ const AdminIpoCatalog = () => {
       filed: 'bg-amber-50 text-amber-800 border-amber-200',
       listed: 'bg-slate-100 text-slate-600 border-slate-200',
       cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
+      planned: 'bg-slate-50 text-slate-700 border-slate-200',
+      unavailable: 'bg-slate-100 text-slate-500 border-slate-200',
     };
     return map[status] || map.upcoming;
   };

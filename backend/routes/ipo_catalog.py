@@ -39,9 +39,9 @@ admin_router = APIRouter(prefix="/api/admin/ipo", tags=["admin-ipo-catalog"])
 
 
 IpoStatus = Literal[
-    "upcoming", "open", "priced", "filed", "listed", "postponed", "cancelled"
+    "upcoming", "open", "priced", "filed", "listed", "postponed", "cancelled", "planned", "unavailable"
 ]
-VISIBLE_STATUSES = ("upcoming", "open", "priced", "filed", "postponed")
+VISIBLE_STATUSES = ("upcoming", "open", "priced", "filed", "postponed", "planned", "unavailable")
 INVESTABLE_STATUSES = ("upcoming", "open", "priced", "filed")
 
 
