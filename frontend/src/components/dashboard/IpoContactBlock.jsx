@@ -18,7 +18,7 @@ const IpoContactBlock = ({ className, compact = false }) => (
       Persönliche Beratung
     </p>
     <p className="leading-relaxed">
-      Für Fragen zu IPO-Zeichnungen oder Investitionsvolumen erreichen Sie unser Team:
+      Sie interessieren sich für einen Börsengang oder möchten eine unverbindliche Investitionsanfrage stellen? Unser Team steht Ihnen gerne für Fragen zur Verfügung.
     </p>
     <div className="flex flex-col gap-2">
       <a
