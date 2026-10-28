@@ -960,19 +960,24 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                         title={
                           price.source === 'twelvedata'
                             ? 'Quelle: Twelve Data · Kurse können verzögert sein (EU-Aktien i. d. R. 15 Min.)'
-                            : 'Quelle: Yahoo Finance · Kurse können verzögert sein (EU-Aktien i. d. R. 15 Min.)'
+                            : 'Quelle: Yahoo Finance (ggf. zwischengespeichert) · Kurse können verzögert sein (EU-Aktien i. d. R. 15 Min.)'
                         }
                       >
                         <span className={`inline-block h-1.5 w-1.5 rounded-full ${
                           price.source === 'twelvedata' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
                         }`} />
-                        {price.source}
+                        {price.source === 'cache' ? 'zwischengespeichert' : price.source}
                       </span>
                     )}
                   </p>
                   <p className="text-3xl sm:text-4xl font-bold text-bank-text">
                     {price?.price != null ? formatCurrency(price.price, currency) : '–'}
                   </p>
+                  {historyCurrency && currency && historyCurrency !== currency && (
+                    <p className="text-[11px] text-bank-text-muted mt-0.5" data-testid="price-fx-note">
+                      Umgerechnet in {currency}; Chart und Kennzahlen in {historyCurrency} (Handelswährung)
+                    </p>
+                  )}
                   {chg != null && (
                     <p className={`text-sm font-medium mt-1 inline-flex items-center gap-0.5 ${up ? 'text-emerald-600' : 'text-bank-error'}`}>
                       {up ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}

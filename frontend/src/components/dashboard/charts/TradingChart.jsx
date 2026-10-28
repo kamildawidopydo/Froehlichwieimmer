@@ -83,6 +83,8 @@ const TradingChart = ({
     const volumeSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: 'volume' },
       priceScaleId: 'volume',
+      lastValueVisible: false,
+      priceLineVisible: false,
     });
     chart.priceScale('volume').applyOptions(volumeScaleOptions());
 

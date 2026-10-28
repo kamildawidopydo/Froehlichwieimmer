@@ -1,0 +1,47 @@
+{
+  "summary": "Iteration 92: tested the stock chart fix, key figures, currency handling, the no-auto-execution order flow, search, watchlist, alerts and mobile layout, plus a regression check (preview only). Backend: 51/51 pytest checks passed. They cover all 7 ranges x 6 symbols (DBK, SAP, RHM, AAPL, NVDA, MSFT), each returning more than 2 points with ISO timestamps and the correct EUR/USD currency. Day stats are present. DBK volatility is 31.65 % (inside the expected 15-50 % band). Admin match returns disabled:true with orders_executed=0. A TEST 1x DBK limit buy at 5.00 stayed pending after a match call, was cancelled (200), and cash stayed at 300/300. UI: every range button 1T-5J renders a canvas with no 'Keine Chartdaten' message for all 6 symbols. Key-figure tiles are filled, US tiles, chart and 52W range show $, the badge tooltip text is correct, and the order hint about no broker connection is visible. Watchlist add/remove works, the price alert at 55.55 was created and then deleted via the UI, search finds AAPL (Apple) and SAP (Enter opens /aktien/SAP), and the Kennzahlen and News tabs load (News shows an honest 'Keine Meldungen zu DBK' fallback). At 390px there is no horizontal overflow (scrollWidth 390). Regression: Übersicht, Mein Vermögen, Aufträge, IPO, Alarme and Favoriten all load. Remaining issues: the 'Eröffnung' tile shows the wrong value, the volume axis is labelled as a currency, the US headline price is in EUR while the rest of the page is in USD, the 1T axis uses UTC times, and the Vortag tile is always empty.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/stocks/{sym}/history?range=1d (stats.open_of_day)", "issue": "_compute_history_stats sets open_of_day = points[-1].open, which is the open of the LAST 5-minute bar, not the day's opening price. Verified examples: DBK 30.085 vs day open 29.855, SAP 210.5 vs 212.9, AAPL 346.54 vs 343.165. The 'Eröffnung' tile therefore changes every 5 min (seen 30,09 € then 30,02 €). Fix: for intraday intervals use the open of the first bar of day_date (dp[0]['open'])."},
+      {"endpoint": "POST /api/portfolio/orders", "issue": "The order always has currency 'EUR' and reserved_cash = limit*qty, even for US symbols. This is consistent only because the UI headline and limit field are in EUR (FX-converted), while chart and tiles are in USD. Please document or confirm this."},
+      {"endpoint": "POST /api/admin/portfolio/orders/{id}/execute", "issue": "Admins can still execute orders manually through the internal execution saga. Only auto-matching (cron and admin match) is disabled. This is acceptable if intended, since the wording says 'intern verbucht, keine Börsenausführung'."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "TradingChart volume series", "issue": "The volume last-value label on the right axis is formatted as currency, e.g. '97.727.735,00 €' (DBK 5J) and '770.677.647,00 $' (AAPL). The global localization.priceFormatter in lightweightChartTheme.js overrides priceFormat:{type:'volume'}. Fix: add lastValueVisible:false or a per-series volume formatter.", "selector": "canvas (TradingChart)", "priority": "MEDIUM"},
+      {"component": "StockDetail header price (US stocks)", "issue": "AAPL headline shows '311,62 €' (FX-converted) while the chart, Eröffnung/Hoch/Tief tiles and 52W range show '347,10 $'. On mobile the € headline sits directly above the $ chart, which looks inconsistent. Show the USD price (EUR as a secondary value) or label the headline 'umgerechnet in EUR'.", "selector": "Aktueller Kurs block", "priority": "MEDIUM"},
+      {"component": "TradingChart 1T/5T time axis", "issue": "Intraday times are rendered in UTC, which is lightweight-charts' default. The DBK 1T axis runs 08:00-12:45 while German local time is 09:00-13:45 (CET). Also, the first axis label is clipped ('3:00'). Fix: shift timestamps by the local offset or use localization.timeFormatter.", "selector": "canvas (1T)", "priority": "LOW"},
+      {"component": "Key figures 'Vortag'", "issue": "The 'Vortag' (previous close) tile always shows '–' for every symbol, even though the data could come from the 5d/1mo history.", "selector": "Vortag tile", "priority": "LOW"},
+      {"component": "Tages-Hoch/Tief for US stocks before the US market opens", "issue": "The tiles show the previous US session (day_date 2026-10-27) without a date label.", "selector": "Tages-Hoch tile", "priority": "LOW"},
+      {"component": "Price source badge", "issue": "The visible badge text is 'CACHE' (technical jargon) and the tooltip says 'Quelle: Yahoo Finance' for source=cache. The text 'Kurse können verzögert sein (EU-Aktien i. d. R. 15 Min.)' is correct.", "selector": "[data-testid=price-source-badge]", "priority": "LOW"},
+      {"component": "Aufträge timeline", "issue": "The status shows the English 'Cancelled' while the table shows 'STORNIERT'.", "selector": "Letzte Aktivität timeline", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Public /aktien/DBK", "issues": ["This page has no price chart (it is a research page), so the chart fix does not apply there.", "The 'Finanzberater gesucht' career modal pops up over the stock page."]},
+      {"screen": "Mobile stock detail 390px", "issues": ["The chat FAB overlaps the lower-left part of the chart and volume bars."]},
+      {"screen": "Kursalarm panel", "issues": ["The direction selector 'Über/Unter' is a native <select> rather than the shadcn Select."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter92_stock_charts_no_exec.py", "/app/backend/tests/iter92_cleanup.py", "/app/test_reports/pytest/iter92.xml"],
+  "action_items": [
+    "Fix open_of_day for intraday ranges in routes/stock_public.py::_compute_history_stats: use the first bar of day_date, not points[-1].",
+    "Hide or format the volume last-value label in TradingChart.jsx (no currency suffix).",
+    "Make the US stock headline price consistent with the chart and tiles currency, or label it clearly as EUR-converted.",
+    "Optional: show intraday axis times in Europe/Berlin, fill the Vortag tile, show the German status 'Storniert' in the Aufträge timeline."
+  ],
+  "critical_code_review_comments": [
+    "order_matching_service.run_pending_limit_buy_matching returns early with disabled:true. The code after the return is dead and should be removed or guarded by an env flag for clarity.",
+    "StockDetail.js is 1572 lines and should be split (chart card, key figures, order form).",
+    "The StockDetail chart, tiles and order form have very few data-testids (range buttons, key-figure tiles, watchlist button, alert input/delete have none)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter92_stock_charts_no_exec.py", "/app/backend/tests/iter92_cleanup.py"],
+  "success_rate": {"backend": "100% (51/51); 1 logic bug found (open_of_day)", "frontend": "~88%: core flows pass; open price, volume label and currency consistency issues"},
+  "seed_data_creation": "One TEST limit buy (1 DBK @ 5.00 EUR) for tester@mester.de, now status=cancelled (order id 6ae1f202e5bea6ddade60a60; remains as a cancelled record). A watchlist star on DBK was added and removed, and a price alert DBK > 55.55 was created and deleted. Final state: watchlist [], alerts [], positions [], cash 300/300 EUR, unchanged.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login: set localStorage kapitalmitte_cookie_consent and kapitalmitte_visitor_profile before login to skip the gates. Price alerts use /api/alerts (not /api/portfolio/alerts). The order quantity must be a string. pytest.ini uses xdist, so run with -n0 to see prints. Search is opened with Ctrl+K.",
+  "rca of the issue": "Eröffnung: stock_public._compute_history_stats sets open_of_day = latest.get('open') where latest = points[-1]. For range=1d (5-minute bars) that is the last bar's open, so the 'Eröffnung' tile shows a near-current price instead of the day's opening price. Fix: when the interval is intraday, use dp[0]['open'] (the first bar with timestamp[:10]==last_day)."
+}

@@ -252,19 +252,20 @@ def _compute_history_stats(points: List[dict], interval: str = "1d") -> Dict[str
         dl = [p["low"] for p in dp if p.get("low") is not None]
         dv = [p["volume"] for p in dp if p.get("volume")]
         day = {
+            "open_of_day": round(dp[0]["open"], 4) if dp and dp[0].get("open") is not None else None,
             "day_high": round(max(dh), 4) if dh else None,
             "day_low": round(min(dl), 4) if dl else None,
             "day_volume": int(sum(dv)) if dv else None,
             "day_date": last_day or None,
         }
     return {
-        **day,
         "fifty_two_week_high": round(fifty_two_high, 4) if fifty_two_high is not None else None,
         "fifty_two_week_low": round(fifty_two_low, 4) if fifty_two_low is not None else None,
         "open_of_day": round(open_of_day, 4) if open_of_day is not None else None,
         "one_year_return_pct": one_year_return_pct,
         "annualized_volatility_pct": ann_vol,
         "average_volume": avg_vol,
+        **day,
     }
 
 
