@@ -6,7 +6,12 @@ const num = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null 
 export const IpoValuationFields = ({ form, setForm }) => {
   const change = computeValueChange(num(form.entry_price_eur), num(form.estimated_value_eur));
   const l = change && changeLabel(change);
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k) => (e) =>
+    setForm((f) => ({
+      ...f,
+      [k]: e.target.value,
+      ...(k !== 'value_updated_at' ? { value_updated_at: new Date().toISOString().slice(0, 10) } : {}),
+    }));
   return (
     <div className="space-y-2 rounded-md border border-bank-border p-3" data-testid="admin-ipo-valuation-fields">
       <p className="text-[12px] font-medium">Preis- und Wertangaben (manuell)</p>

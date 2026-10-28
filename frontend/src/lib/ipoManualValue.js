@@ -15,5 +15,5 @@ const sign = (n) => (n > 0 ? '+' : n < 0 ? '\u2212' : '');
 export const changeLabel = ({ diff, pct }) => ({
   eur: `${sign(diff)}${eurFmt.format(abs(diff))} pro Aktie`,
   pct: `${sign(pct)}${pctFmt.format(abs(pct))} %`,
-  tone: diff > 0 ? 'text-emerald-700' : diff < 0 ? 'text-red-600' : 'text-bank-text-muted',
+  tone: diff > 0 ? 'text-emerald-700 keep-raw' : diff < 0 ? 'text-red-600' : 'text-bank-text-muted',
 });

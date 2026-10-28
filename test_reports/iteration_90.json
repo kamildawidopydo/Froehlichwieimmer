@@ -1,0 +1,28 @@
+{
+  "summary": "IPO manual valuation (entry price / estimated value) tested end-to-end. Backend: 22/22 pytest pass (new 13 + iteration-89 regression 9): computed value_change_eur/pct correct (80/16, -50/-10, 0/0, -2/-66.67), customer PATCH 403, negative/bad date/non-numeric 422, entry=0 -> null change, Bambusa all-null fields. UI: admin edit modal shows the valuation section, the date is prefilled, the live preview is correct, and saving works. After each save the customer dialog showed the correct values, labels and note with the date. Text and sign are correct (U+2212 for negative). Cards do not show the values. Bambusa has no block. Search and filter work. The inquiry disclaimer is present. /dashboard/uebersicht, /vermoegen and /auftraege load. On mobile (390px) the dialog does not overflow. One design bug: the positive change does NOT render green. Cleanup done: Aspen fields are reset to null.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "IpoValuationBlock / IpoValuationFields (positive tone)", "issue": "Class text-emerald-700 is applied, but the global theme override in src/index.css (line 583 light, line 507 dark) remaps .text-emerald-700 to --bank-petrol-strong. Computed color is rgb(0,55,129), which is navy blue, not green. The requirement says positive = green. Negative text-red-600 is remapped to coral, which still looks red, so that is OK.", "selector": "[data-testid=ipo-value-change], [data-testid=admin-ipo-value-preview]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin IPO edit modal", "issues": ["value_updated_at prefill uses the stored date if one exists (row.value_updated_at || today). When an admin re-edits values, the old date is kept unless changed by hand. Consider defaulting to today when the price values change."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_ipo_manual_valuation_90.py", "/app/backend/tests/test_ipo_customer_final_89.py", "/app/test_reports/pytest/pytest_results_90.xml"],
+  "action_items": [
+    "Make positive change truly green: add the 'keep-raw keep-light' classes to the emerald tone in lib/ipoManualValue.js changeLabel (e.g. 'text-emerald-700 keep-raw keep-light'), or use a non-remapped green token. Verify the computed color is green in light and dark mode.",
+    "Optional: refresh value_updated_at to today when the entry or estimated value is changed in the admin form."
+  ],
+  "critical_code_review_comments": [
+    "IpoCatalogUpdate/IpoCatalogBase duplicate the validators _finite/_iso_date/_isin_upper (DRY). Extract them into a mixin.",
+    "AdminIpoCatalog.js is 687 lines, close to the 700-line limit."
+  ],
+  "updated_files": ["/app/backend/tests/test_ipo_manual_valuation_90.py"],
+  "success_rate": {"backend": "100%", "frontend": "95% (color tone issue only)"},
+  "seed_data_creation": "None persisted. Aspen Neuroscience values were set temporarily and reset to null at the end (verified).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Aspen id 6ae1afb57e5d3e0426d721da. Admin edit button: ipo-admin-edit-{id}; save: ipo-admin-save-btn. Euro strings use NBSP before the € sign (Intl), so compare with replace('\\u00a0',' '). Check the green tone via getComputedStyle, not the class name, because index.css remaps emerald and red. pytest.ini uses xdist --dist loadscope."
+}
