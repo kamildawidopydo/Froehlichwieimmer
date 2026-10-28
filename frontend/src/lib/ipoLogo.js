@@ -4,6 +4,8 @@ import { normalizeStockSymbolForLogo } from '@/lib/logoShared';
 export const CURATED_IPO_LOGO_ASSETS = {
   'sec_filed:openai': '/assets/ipo-logos/openai.svg',
   'sec_filed:anthropic': '/assets/ipo-logos/anthropic.svg',
+  'manual:anthropic': '/assets/ipo-logos/anthropic.svg',
+  'manual:openai': '/assets/ipo-logos/openai.svg',
   'sec_filed:discord': '/assets/ipo-logos/discord.svg',
   'sec_filed:kraken': '/assets/ipo-logos/kraken.png',
   'manual:stripe': '/assets/ipo-logos/stripe.svg',
@@ -139,7 +141,7 @@ function domainLogoCandidates(domain) {
 function resolveDomains(ipo) {
   const domains = [];
   const fromUrl = extractDomainFromUrl(ipo?.prospectus_url);
-  if (fromUrl) domains.push(fromUrl);
+  if (fromUrl && !/(^|\.)sec\.gov$/i.test(fromUrl)) domains.push(fromUrl);
 
   const ticker = String(ipo?.ticker_proposed || '').toLowerCase();
   if (ticker && COMPANY_DOMAIN_OVERRIDES[ticker]) {

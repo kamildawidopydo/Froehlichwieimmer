@@ -1,0 +1,31 @@
+{
+  "summary": "FINAL test of the customer IPO area (/dashboard/ipo), done as tester@mester.de on desktop 1920 and mobile 390. Nothing was deployed and no production code was changed. Backend: 10/10 pytest pass. These cover the content of the 8 new entries, the hidden test entries being absent, the server rejecting inquiries for 'unavailable' IPOs (OpenAI), extra fields such as status being rejected (422), the unauthenticated POST being rejected, and /requests/me. Frontend: there are 15 cards in total, with no test entries and no 'Investieren', 'Kaufen' or 'Zeichnen' wording. Clicking the card body (h3) works on ALL 15 cards: each opened the dialog of the right company (title matched, 0 mismatches). The Enter key on a focused card opens the correct dialog. Anthropic, Aspen and Bambusa show the right data, prospectus links, registration numbers, '9.375.000 Aktien zu 15–17 USD', the exact form disclaimer and the 'Investitionsanfrage stellen' submit button. The 5 unavailable IPOs have no button on the card or in the dialog and show the 'Für dieses IPO ist derzeit keine Investitionsanfrage möglich' text. All cards show the card disclaimer. Search: 'Aspen' returns only Aspen. Searching 'Preview', 'No-Ticker' or 'Test1' returns nothing. The filter 'Noch nicht verfügbar' shows exactly the 5 unavailable entries, 'filed' shows Anthropic, and resetting shows 15 again. I submitted ONE Aspen inquiry: the success toast appeared and the dialog closed. Submitting again gives the 409 duplicate toast. The created doc 6ae1b70957d4df961a695d49 was DELETED by the tester (ipo_requests is back to 11). Mobile: no horizontal overflow (scrollWidth 390), and the dialogs fit on screen and are usable. Regression: /dashboard/uebersicht (300,00 €), /dashboard/vermoegen and /dashboard/auftraege load. The bottom nav works and there were no page errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/dashboard/ipo cards + dialog", "issues": [
+        "Anthropic, Aspen Neuroscience and Bambusa Therapeutics show the SEC seal as their company logo. RCA: IpoLogo/getIpoLogoCandidates (lib/ipoLogo.js) falls back to the prospectus_url domain (sec.gov). The curated Anthropic asset is keyed 'sec_filed:anthropic', but the new seed uses external_key 'manual:anthropic', so it is never picked. Dangote shows a generic globe. Fix: add 'manual:anthropic' to CURATED_IPO_LOGO_ASSETS (and 'manual:openai' if needed), and skip sec.gov as a logo domain so it falls back to initials or the company domain.",
+        "The duplicate-inquiry error toast says '...bereits eine offene Zeichnungsanfrage', which uses subscription ('Zeichnung') wording for a non-subscription inquiry. Consider 'Investitionsanfrage' (backend detail text in ipo_requests.py).",
+        "Mobile 390: the page title 'IPO — Bevorstehende Börs…' is cut off with an ellipsis. The tall Aspen dialog (bottom ~798px) slightly overlaps the bottom nav area. It is still usable. Cosmetic only, likely already present before."
+      ]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_ipo_customer_final_89.py", "/app/test_reports/pytest/pytest_results_89.xml"],
+  "action_items": [
+    "Optional/cosmetic: fix the IPO logos for Anthropic, Aspen and Bambusa (currently the SEC seal from the prospectus_url domain).",
+    "Optional: reword the 409 duplicate toast from 'Zeichnungsanfrage' to 'Investitionsanfrage' for non-open IPOs."
+  ],
+  "critical_code_review_comments": [
+    "SurfaceCard (PageHeader.jsx:48) still drops all extra props, so data-testid='ipo-error-state', 'ipo-empty-state' and 'ipo-search-empty-state' (IpoPage.jsx 409/421/427) never reach the DOM. Confirmed: the search-empty testid count is 0 while the empty state text renders. Wrap these in a div that carries the testid, or (if allowed later) spread ...props.",
+    "The card has role=button on the inner div and also contains a nested <Button>, which means nested interactive elements (minor a11y issue). Pressing Enter on the inner button bubbles up and calls openDetail twice (harmless).",
+    "The cursor-pointer and hover classes are on the outer SurfaceCard, but the click target is only the inner div. The card padding (p-5) area is not clickable. Minor."
+  ],
+  "updated_files": ["/app/backend/tests/test_ipo_customer_final_89.py"],
+  "success_rate": {"backend": "100%", "frontend": "100% of requested checks (only cosmetic findings)"},
+  "seed_data_creation": "One ipo_requests doc 6ae1b70957d4df961a695d49 (Aspen, tester@mester.de) was created via the UI and then deleted via mongo. Count is back to 11.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Visitor gate: select [data-testid=visitor-role] option index 1, then click visitor-accept-btn. IPO cards: [data-testid^=ipo-card-][role=button]. To scope the detail dialog, use [role=dialog]:not([data-testid=visitor-welcome-gate]). The search input has placeholder 'Unternehmen, Ticker…' and the status filter is 'aside select'."
+}

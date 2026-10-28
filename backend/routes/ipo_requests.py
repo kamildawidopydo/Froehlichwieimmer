@@ -229,7 +229,7 @@ async def create_request(
     if existing:
         raise HTTPException(
             status_code=409,
-            detail="Für diesen Börsengang besteht bereits eine offene Zeichnungsanfrage.",
+            detail="Für diesen Börsengang besteht bereits eine offene Investitionsanfrage.",
         )
 
     # 4) Insert — user_id/status/source serverseitig
@@ -253,7 +253,7 @@ async def create_request(
     except DuplicateKeyError:
         raise HTTPException(
             status_code=409,
-            detail="Für diesen Börsengang besteht bereits eine offene Zeichnungsanfrage.",
+            detail="Für diesen Börsengang besteht bereits eine offene Investitionsanfrage.",
         )
     doc["_id"] = result.inserted_id
     return _serialize(doc)
