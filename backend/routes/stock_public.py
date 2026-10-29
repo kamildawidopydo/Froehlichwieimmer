@@ -205,9 +205,25 @@ def _yf_history_sync(yf_sym: str, period: str, interval: str) -> Optional[List[d
 _PERIODS_PER_YEAR = {"1d": 252, "1wk": 52, "1mo": 12}
 
 
+_SUFFIX_CCY = {
+    "DE": "EUR", "F": "EUR", "PA": "EUR", "MI": "EUR", "AS": "EUR", "MC": "EUR", "BR": "EUR",
+    "VI": "EUR", "HE": "EUR", "LS": "EUR", "IR": "EUR", "ST": "SEK", "L": "GBp", "SW": "CHF",
+    "CO": "DKK", "OL": "NOK", "TO": "CAD", "HK": "HKD", "T": "JPY",
+}
+
+
+def _native_currency(yf_sym: str) -> str:
+    if yf_sym.startswith("^"):
+        return "USD" if yf_sym in {"^NDX", "^GSPC", "^DJI", "^IXIC"} else "EUR"
+    suffix = yf_sym.rsplit(".", 1)[1].upper() if "." in yf_sym else ""
+    return _SUFFIX_CCY.get(suffix, "USD")
+
+
 async def _convert_points_to_eur(points: List[dict], ccy: str, cfg: Dict[str, Any]):
     """Converts each bar with the FX bar valid at that time (Yahoo EUR{ccy}=X)."""
     import bisect
+    factor = 100.0 if ccy in ("GBp", "GBX") else 1.0
+    ccy = "GBP" if factor == 100.0 else ccy
     pair = f"EUR{ccy}=X"
     fx = await asyncio.to_thread(_yf_history_sync, pair, cfg["period"], cfg["interval"])
     if not fx:
@@ -223,7 +239,7 @@ async def _convert_points_to_eur(points: List[dict], ccy: str, cfg: Dict[str, An
             i = 0
         if (ts - fx_ts[i]) > timedelta(days=4):
             continue
-        rate = fx[i]["c"]
+        rate = fx[i]["c"] * factor
         conv = lambda v: round(v / rate, 4) if v is not None else None  # noqa: E731
         out.append({**p, "close": conv(p["close"]), "open": conv(p.get("open")),
                     "high": conv(p.get("high")), "low": conv(p.get("low")),
@@ -311,7 +327,7 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
         raise HTTPException(400, detail=f"Ungültiger Zeitraum: {range}")
 
     cfg = RANGE_MAP[rk]
-    cache_key = f"{sym}:{rk}"
+    cache_key = f"eur2:{sym}:{rk}"
     cached = await _db.stock_public_history_cache.find_one({"_id": cache_key})
     if cached and cached.get("expires_at") and cached["expires_at"] > _now():
         stale = bool(cached.get("stale")) and bool(cached.get("points"))
@@ -348,6 +364,7 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
             {"_id": cache_key}, {"$set": {"expires_at": retry_at, "stale": True, "last_error_at": _now()}})
         return {
             "symbol": sym, "range": rk, "currency": cached.get("currency"),
+            "native_currency": cached.get("native_currency"), "fx": cached.get("fx"),
             "data_source": cached.get("data_source"), "data_status": "stale",
             "data_as_of": cached["cached_at"].isoformat() if cached.get("cached_at") else None,
             "points": cached["points"],
@@ -356,12 +373,9 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
         }
     stats = _compute_history_stats(points, cfg["interval"])
 
-    # currency heuristic from ticker suffix
-    if yf_sym.startswith("^"):
-        currency = "USD" if yf_sym in {"^NDX", "^GSPC", "^DJI", "^IXIC"} else "EUR"
-    else:
-        currency = "EUR" if yf_sym.endswith(".DE") else "USD"
-    native_currency = currency
+    # currency from ticker suffix (see _native_currency)
+    native_currency = _native_currency(yf_sym)
+    currency = native_currency
     fx_meta = None
     fx_failed = False
     if points and currency != "EUR" and not yf_sym.startswith("^"):

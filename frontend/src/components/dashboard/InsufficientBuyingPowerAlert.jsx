@@ -2,8 +2,8 @@ import React from 'react';
 import { AlertCircle } from 'lucide-react';
 import { siteContact } from '@/data/siteContact';
 
-const formatAmount = (v, currency = 'USD') =>
-  Number(v).toLocaleString('de-DE', { style: 'currency', currency: currency || 'USD' });
+const formatAmount = (v) =>
+  Number(v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
 /**
  * Inline alert when a buy order exceeds available buying power.

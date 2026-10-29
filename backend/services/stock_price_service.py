@@ -256,7 +256,54 @@ async def get_quotes(db, symbols: list[str]) -> dict[str, dict]:
                         "source": None,
                         "price_status": "unavailable",
                     }
+    for sym, q in result.items():
+        await _quote_to_eur(q)
     return result
+
+
+_FX_CACHE: dict = {}
+
+
+async def _eur_rate(ccy: str):
+    """Spot EUR/{ccy} (units of ccy per 1 EUR) from Yahoo Finance, cached 5 min."""
+    import asyncio as _asyncio
+    import time as _time
+    hit = _FX_CACHE.get(ccy)
+    if hit and _time.time() - hit[2] < 300:
+        return hit[0], hit[1]
+
+    def _get():
+        try:
+            import yfinance as yf  # type: ignore
+            fi = yf.Ticker(f"EUR{ccy}=X").fast_info
+            v = getattr(fi, "last_price", None)
+            return float(v) if v and v > 0 else None
+        except Exception:
+            return None
+    rate = await _asyncio.to_thread(_get)
+    if rate:
+        _FX_CACHE[ccy] = (rate, datetime.now(timezone.utc).isoformat(), _time.time())
+        return rate, _FX_CACHE[ccy][1]
+    return None, None
+
+
+async def _quote_to_eur(q: dict) -> None:
+    ccy = q.get("currency")
+    if not ccy or ccy == "EUR" or q.get("price") is None:
+        return
+    factor = 100.0 if ccy in ("GBp", "GBX") else 1.0
+    base = "GBP" if factor == 100.0 else ccy.upper()
+    rate, as_of = await _eur_rate(base)
+    q["native_price"], q["native_currency"] = q["price"], ccy
+    if not rate:
+        # No FX data: never show a wrong EUR amount.
+        q.update({"price": None, "change": None, "currency": None, "price_status": "fx_unavailable"})
+        return
+    q["price"] = round(q["price"] / factor / rate, 4)
+    if q.get("change") is not None:
+        q["change"] = round(q["change"] / factor / rate, 4)
+    q.update({"currency": "EUR", "fx_rate": rate, "fx_pair": f"EUR/{base}", "fx_as_of": as_of,
+              "fx_source": f"Yahoo Finance EUR{base}=X"})
 
 
 async def ensure_indexes(db) -> None:

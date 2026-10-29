@@ -874,6 +874,13 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   const dayAbs = dayBase && dayCur != null ? dayCur - dayBase : null;
   const dayCcy = sameCcy ? currency : dayStats?.currency;
   const chg = dayAbs != null ? (dayAbs / dayBase) * 100 : price?.change_pct != null ? Number(price.change_pct) : null;
+  // Fundamentals come in the native trading currency; convert with the latest FX rate of the history feed.
+  const fmtFundEur = (v) => {
+    const nat = historyFx?.native_currency;
+    if (!nat || nat === 'EUR') return formatCurrency(v, 'EUR');
+    const r = historyFx?.latest_rate ? Number(historyFx.latest_rate) * (nat === 'GBp' ? 100 : 1) : null;
+    return r ? formatCurrency(Number(v) / r, 'EUR') : null;
+  };
   const up = (chg ?? 0) >= 0;
   const refPx =
     orderType === 'limit' && limitPrice
@@ -1015,7 +1022,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     <p className="text-[11px] text-bank-text-muted mt-0.5" data-testid="day-change-basis">
                       {sameCcy
                         ? 'Tagesveränderung gegenüber Vortagsschluss'
-                        : `Tagesveränderung in ${dayCcy} (Handelswährung) gegenüber Vortagsschluss`}
+                        : `Tagesveränderung in ${dayCcy} gegenüber Vortagsschluss`}
                     </p>
                   )}
                   {(price?.bid != null || price?.ask != null) && (
@@ -1235,10 +1242,10 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                       ['Forward-KGV', fundamentals?.forwardPE != null ? Number(fundamentals.forwardPE).toFixed(2) : null],
                       ['Dividendenrendite', fundamentals?.dividendYield != null ? `${fundamentals.dividendYield.toFixed(2)}%` : null],
                       ['Beta', fundamentals?.beta != null ? Number(fundamentals.beta).toFixed(2) : null],
-                      ['EPS', fundamentals?.eps != null ? formatCurrency(fundamentals.eps, currency) : null],
-                      ['Buchwert', fundamentals?.bookValue != null ? formatCurrency(fundamentals.bookValue, currency) : null],
-                      ['52W Hoch', fundamentals?.fiftyTwoWeekHigh != null ? formatCurrency(fundamentals.fiftyTwoWeekHigh, currency) : null],
-                      ['52W Tief', fundamentals?.fiftyTwoWeekLow != null ? formatCurrency(fundamentals.fiftyTwoWeekLow, currency) : null],
+                      ['EPS', fundamentals?.eps != null ? fmtFundEur(fundamentals.eps) : null],
+                      ['Buchwert', fundamentals?.bookValue != null ? fmtFundEur(fundamentals.bookValue) : null],
+                      ['52W Hoch', stats?.week52High != null ? formatCurrency(stats.week52High, stats.currency || 'EUR') : null],
+                      ['52W Tief', stats?.week52Low != null ? formatCurrency(stats.week52Low, stats.currency || 'EUR') : null],
                     ].filter(([, val]) => val != null);
                     if (rows.length === 0) {
                       return (
@@ -1535,11 +1542,11 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                   <>
                     <div className="flex justify-between text-xs">
                       <span className="text-bank-text-muted">Kaufkraft</span>
-                      <span className="font-medium text-bank-text">{formatCurrency(buyingPower, currency)}</span>
+                      <span className="font-medium text-bank-text">{formatCurrency(buyingPower, 'EUR')}</span>
                     </div>
                     <div className="flex justify-between text-xs mt-0.5">
                       <span className="text-bank-text-muted">Verfügbar</span>
-                      <span className="text-bank-text-muted">{formatCurrency(cashAvailable, currency)}</span>
+                      <span className="text-bank-text-muted">{formatCurrency(cashAvailable, 'EUR')}</span>
                     </div>
                   </>
                 ) : (

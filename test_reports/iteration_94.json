@@ -1,0 +1,59 @@
+{
+  "summary": "Preview-only test of the EUR-only depot. No deploy, no file changes, no orders. BACKEND: new pytest test_eur_conversion_iter94.py, 57/57 PASS. /api/stocks/{SYM}/history for AAPL, NVDA, MSFT, AMZN and TSLA in all 7 ranges returns currency EUR, native_currency USD and fx.source 'Yahoo Finance EURUSD=X'. Every point has native_close and fx_rate, with close == native_close/fx_rate within 0.01. fx_rate varies over 1y/5y (more than 10 distinct values, stdev > 0.005). The stats (52W, prev_close, day high/low) are EUR values. DBK and SAP stay EUR. /api/portfolio/quotes returns EUR for the 5 core symbols, within 3% of the last EUR history close. UI as tester@mester.de: for AAPL, NVDA, MSFT, DBK and SAP the header price, Vortag, Eröffnung, Tages-Hoch, Tages-Tief, 52W and chart axis/crosshair are all in €. The Tagesveränderung % matches (Kurs−Vortag)/Vortag: AAPL −0.95, NVDA −1.19, MSFT −0.00, DBK +0.45, SAP −1.37. All 7 ranges render for AAPL and NVDA. price-fx-note is present for US stocks only. Mobile 390: no overflow. Übersicht, Mein Depot, Vermögen, Aktien, Markt, Aufträge, Favoriten, Kursalarme, Kontoauszug, Anleihen and the price-alert panel show no $/USD. Note: the tester has an empty depot, so positions, orders and alarms were only seen as empty states. IPO: Aspen and Bambusa show €13,47–€15,26 (15–17 USD / 1,1138). The 7 USD IPO shows €6,28. The dialog shows ipo-fx-note with rate and time. REMAINING $/USD/foreign-currency places FOUND (details below): (1) Kennzahlen tab shows EPS, 52W Hoch and 52W Tief in $, and the Marktkapitalisierung is the raw USD number. (2) Symbols outside the core universe (ICOP, GDL = twelvedata USD; VOLV-B.ST, BOL.ST, ATCO-A.ST = SEK) show the header price, Limitkurs, Kaufkraft/Verfügbar and Kursalarm in $ or SEK. (3) The history currency rule treats every non-.DE ticker as USD, so SEK stocks are divided by EUR/USD and the chart shows a wrong value (Volvo 309,90 SEK becomes '278,44 €'; correct is about 27 €). (4) The Aspen and Bambusa IPO descriptions contain '15–17 USD je Aktie'.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/stocks/{SYM}/history (stock_public.py ~L360-368)", "issue": "The currency rule is `EUR if yf_sym.endswith('.DE') else USD`. Non-USD foreign tickers (.ST = SEK, also .L, .PA, .MI, .SW) are labelled USD and converted with EURUSD=X. Example: VOLV-B.ST native_close 309.9 SEK becomes close 278.44 'EUR' (wrong by about 10x; the correct pair is EURSEK=X). .PA and .MI are EUR and must not be converted at all. Fix: get the real currency from yfinance fast_info.currency (or a suffix map) and use the EUR{ccy}=X pair.", "priority": "HIGH"},
+      {"endpoint": "services/stock_price_service.get_quotes (via /api/portfolio/quotes)", "issue": "Only the server.market_quotes universe is converted to EUR. The Twelve Data and yfinance fallbacks keep the native currency (ICOP and GDL USD, VOLV-B.ST, BOL.ST and ATCO-A.ST SEK in stock_prices_cache). The stock detail then shows header, Limitkurs and Kursalarm in $/SEK while the chart is in €. Order matching and execution also use these quotes: a EUR limit is compared against a USD/SEK price.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "GET /api/stocks/{SYM}/history stale branch (L349-356)", "issue": "The stale fallback response leaves out native_currency and fx. When stale, the price-fx-note disappears, and with old cached points the currency may still be USD."},
+      {"endpoint": "stock_public_history_cache", "issue": "Cache entries written before this change (TTL up to 24h for 5y/max) hold unconverted USD points with currency USD. On deploy these are served until they expire. Version the cache key (e.g. 'v2:{sym}:{rk}') or drop the collection on deploy."},
+      {"endpoint": "GET /api/stocks/{SYM}/fundamentals", "issue": "currency is USD and eps, fifty_two_week_high/low and market_cap are native USD. The UI shows them unconverted (see the frontend Kennzahlen issue)."},
+      {"endpoint": "stock_alerts collection", "issue": "6 existing alerts (e.g. NVDA price_below 150) have no currency field. If they were created when US quotes were USD, they are now evaluated against EUR quotes, which changes when they fire. Customer data was not changed, so this is only flagged."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "StockDetail Kennzahlen tab (StockDetail.js L1231-1241)", "issue": "AAPL shows EPS 8,72 $, 52W Hoch 351,73 $ and 52W Tief 243,42 $. These contradict the Kurs tab (52W 313,96 € / 205,82 €). The Marktkapitalisierung 5.017.916.932.096 is raw USD with no unit.", "selector": "detailTab=kennzahlen grid", "priority": "HIGH"},
+      {"component": "StockDetail order panel (Kaufkraft/Verfügbar) + InsufficientBuyingPowerAlert", "issue": "The customer's EUR cash is formatted with the stock's quote currency: for ICOP 'Kaufkraft 300,00 $', for VOLV-B.ST '300,00 SEK'. Cash must always be formatted in EUR, independent of the quote currency.", "selector": "order panel Kaufkraft rows", "priority": "HIGH"},
+      {"component": "StockDetail header for non-core symbols", "issue": "For ICOP the header shows 49,98 $ while the fx note says 'Alle Werte in EUR' and the chart shows 44,9 €. The text 'Tagesveränderung in EUR (Handelswährung)' mislabels EUR as the trading currency. VOLV-B.ST shows 309,90 SEK, but the fx note claims a conversion from USD.", "selector": "[data-testid=price-fx-note]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Markt list vs stock detail day change", "issue": "Markt shows DBK +5.16% while the stock detail shows +0.45%. The Markt list uses the quote's change_pct (prev close about 28.88), the detail uses the history 5d prev_close of 30.02. One of the two prev_close sources is wrong or stale.", "affected_selectors": ["/dashboard/handeln table % column"]}
+    ],
+    "design_issues": [
+      {"screen": "StockDetail", "issues": ["The % values use an English decimal point ('(-0.95%)', '+32.42%', Markt '+5.16%') while € values use a German comma. This is inconsistent with de-DE formatting.", "For US stocks the fx note pushes the range buttons onto a new line below the header (layout differs from DE stocks). Acceptable."]},
+      {"screen": "IPO dialog", "issues": ["The Aspen and Bambusa descriptions still say '9.375.000 Aktien zu 15–17 USD je Aktie', a USD money value shown to customers next to the € range."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_eur_conversion_iter94.py", "/app/test_reports/pytest/pytest_iter94.xml"],
+  "action_items": [
+    "HIGH: In stock_public.stock_history, detect the real native currency (yfinance fast_info.currency or a suffix map: .ST SEK, .L GBp/GBP, .SW CHF, .PA/.MI/.AS EUR) and convert with EUR{ccy}=X. Never assume USD. Handle GBp pence (/100).",
+    "HIGH: In stock_price_service.get_quotes, convert the Twelve Data and yfinance fallback quotes (and the cached USD/SEK rows for ICOP, GDL, .ST) to EUR with the spot EUR{ccy} rate. Keep native_price/native_currency so the order engine compares like with like.",
+    "HIGH: In the StockDetail order panel and InsufficientBuyingPowerAlert, always format Kaufkraft/Verfügbar (cash) in EUR, not in the quote currency.",
+    "HIGH: Convert the Kennzahlen tab values to EUR (EPS, Buchwert, 52W, Marktkapitalisierung with a € unit), or use the EUR 52W values from history stats.",
+    "MEDIUM: Fix the header text 'Tagesveränderung in EUR (Handelswährung)'. Show the fx note only when the header is really in EUR.",
+    "MEDIUM: Rewrite the Aspen and Bambusa IPO descriptions to EUR or remove the '15–17 USD' wording.",
+    "MEDIUM: Version or invalidate stock_public_history_cache on deploy so no old USD points are served.",
+    "LOW: Add native_currency and fx to the stale branch of the history response.",
+    "LOW: Align the quote change_pct with the history prev_close (DBK Markt +5.16% vs detail +0.45%).",
+    "LOW: Format % values in de-DE (comma).",
+    "INFO: demo.kunde@essenceinvest.com / KundeDemo2026! still gets 401, so test_credentials.md is stale and no account with real positions or orders could be checked."
+  ],
+  "critical_code_review_comments": [
+    "stock_public.py L360-363: the binary EUR/USD rule is the root cause of the SEK conversion error. Indices are excluded via '^', but any foreign ticker is assumed USD.",
+    "_convert_points_to_eur uses the FX bar with the same or an earlier timestamp and a 4-day gap tolerance. This is fine for daily/weekly bars. For 1d/5m bars the US session runs after the FX session timestamps, so it may fall back to the previous FX bar. Acceptable.",
+    "IpoPage formatValuation defaults price_currency to 'USD' when it is missing, so an EUR valuation without a currency field would be converted wrongly. formatPriceRange defaults to 'EUR'. The two defaults are inconsistent.",
+    "IpoPage uses the spot rate for every IPO. If /api/forex/quotes fails, the text 'Euro-Umrechnung derzeit nicht verfügbar' is shown. Good, no $ fallback.",
+    "StockDetail.formatCurrency defaults to 'USD', and many '|| \"USD\"' fallbacks remain (L407, 469-514, 742, 870). Any missing currency renders $. The default should be 'EUR'.",
+    "StockDividendCard is defined but not rendered. dividendService/IpoPositionsTable still default to USD formatting (formatLotPrice currency='USD')."
+  ],
+  "updated_files": ["/app/backend/tests/test_eur_conversion_iter94.py"],
+  "success_rate": {"backend": "100% of the requested core checks (57/57); 2 HIGH issues outside the core universe", "frontend": "about 80% (core 5 symbols, overview pages, IPO and mobile pass; Kennzahlen $, Kaufkraft $ and non-core symbols fail)"},
+  "test_credentials": "tester@mester.de / HHHKKK222 works (empty depot). demo.kunde@essenceinvest.com / KundeDemo2026! gets 401 (stale).",
+  "seed_data_creation": "None. No orders, alerts or watchlist entries were created.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run pytest /app/backend/tests/test_eur_conversion_iter94.py (57 tests, about 20s). Bugs reproduce on /dashboard/aktien/ICOP (header $, Kaufkraft $), /dashboard/aktien/VOLV-B.ST (SEK and wrong chart €) and the AAPL Kennzahlen tab ($). Welcome gate: select visitor-role index 1 and click visitor-accept-btn. Career popup: career-popup-later-btn. The tester has no positions or orders.",
+  "rca of the issue": "SEK chart error: stock_history sets currency by suffix (.DE gives EUR, otherwise USD), so SEK prices are divided by EURUSD. Header/Kaufkraft in $: get_quotes only converts symbols in the server.market_quotes config universe. The Twelve Data/yfinance fallback rows keep native USD/SEK, and StockDetail formats price and buying power with that currency. Kennzahlen $: fundamentals endpoint returns native USD and the UI formats with fundamentals.currency."
+}
