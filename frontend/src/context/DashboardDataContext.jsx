@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useAuth } from '@/context/AuthContext';
@@ -81,6 +82,18 @@ export const DashboardDataProvider = ({ children }) => {
     setState((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  // Background refresh: only touch keys whose content actually changed (no re-render otherwise).
+  const updateIfChanged = useCallback((patch) => {
+    setState((prev) => {
+      const changed = Object.keys(patch).filter((k) => JSON.stringify(prev[k]) !== JSON.stringify(patch[k]));
+      if (!changed.length) return prev;
+      const next = { ...prev };
+      changed.forEach((k) => { next[k] = patch[k]; });
+      return next;
+    });
+  }, []);
+  const stockSymbolsRef = useRef([]);
+
   // Session 82.17 · Depot Phase 1 — alle Portfolio-Reads Mongo-native via
   // /api/portfolio/*. Session 82.25 — Helper in `services/portfolioApi.js` extrahiert.
   // (fetchPortfolioJson wird direkt aus dem Service-Import verwendet.)
@@ -155,9 +168,29 @@ export const DashboardDataProvider = ({ children }) => {
     }
   }, [user?.id, update]);
 
-  const fetchStockData = useCallback(async () => {
+  const buildPriceMap = (quotes, posList) => {
+    const priceMap = {};
+    // EUR quote fields from the backend (same source as stock detail / market overview).
+    Object.entries(quotes || {}).forEach(([sym, q]) => {
+      if (q && q.price != null && q.currency === 'EUR') {
+        priceMap[sym] = {
+          price: Number(q.price),
+          currency: 'EUR',
+          change_abs: q.change_abs != null ? Number(q.change_abs) : null,
+          change_pct: q.change_pct != null ? Number(q.change_pct) : null,
+          prev_close: q.prev_close != null ? Number(q.prev_close) : null,
+        };
+      }
+    });
+    posList.forEach((p) => {
+      if (p.symbol && p.price != null && !priceMap[p.symbol]) priceMap[p.symbol] = { price: Number(p.price), currency: 'EUR' };
+    });
+    return priceMap;
+  };
+
+  const fetchStockData = useCallback(async ({ silent = false } = {}) => {
     if (!user?.id) return true;
-    update({ stocksLoading: true });
+    if (!silent) update({ stocksLoading: true });
     try {
       const [positions, watchlist, orders] = await Promise.all([
         fetchPortfolioJson('/api/portfolio/stock-positions'),
@@ -167,41 +200,41 @@ export const DashboardDataProvider = ({ children }) => {
       const posList = Array.isArray(positions) ? positions : [];
       const wlList = Array.isArray(watchlist) ? watchlist : [];
       const syms = [...new Set([...posList, ...wlList].map((x) => String(x.symbol || '').toUpperCase()).filter(Boolean))];
+      stockSymbolsRef.current = syms;
       const quotes = syms.length
         ? await fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(syms.join(','))}`).catch(() => ({}))
         : {};
-      const priceMap = {};
-      // EUR quote fields from the backend (same source as stock detail / market overview).
-      Object.entries(quotes || {}).forEach(([sym, q]) => {
-        if (q && q.price != null && q.currency === 'EUR') {
-          priceMap[sym] = {
-            price: Number(q.price),
-            currency: 'EUR',
-            change_abs: q.change_abs != null ? Number(q.change_abs) : null,
-            change_pct: q.change_pct != null ? Number(q.change_pct) : null,
-            prev_close: q.prev_close != null ? Number(q.prev_close) : null,
-          };
-        }
-      });
-      posList.forEach((p) => {
-        if (p.symbol && p.price != null && !priceMap[p.symbol]) priceMap[p.symbol] = { price: Number(p.price), currency: 'EUR' };
-      });
-      update({
+      const priceMap = buildPriceMap(quotes, posList);
+      updateIfChanged({
         stockPositions: posList,
-        watchlistItems: Array.isArray(watchlist) ? watchlist : [],
+        watchlistItems: wlList,
         stockOrders: Array.isArray(orders) ? orders : [],
         stockPriceMap: priceMap,
-        stockPricesUpdatedAt: Object.keys(priceMap).length ? new Date().toISOString() : null,
       });
+      if (Object.keys(priceMap).length) update({ stockPricesUpdatedAt: new Date().toISOString() });
       return true;
     } catch (err) {
       Sentry.captureException(err);
       console.error('stock data fetch failed', err);
       return false;
     } finally {
-      update({ stocksLoading: false });
+      if (!silent) update({ stocksLoading: false });
     }
-  }, [user?.id, update]);
+  }, [user?.id, update, updateIfChanged]);
+
+  // Lightweight background tick: quotes only, merged without loading state.
+  const refreshQuotesSilently = useCallback(async () => {
+    const syms = stockSymbolsRef.current;
+    if (!user?.id || !syms.length) return;
+    try {
+      const quotes = await fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(syms.join(','))}`);
+      setState((prev) => {
+        const priceMap = { ...prev.stockPriceMap, ...buildPriceMap(quotes, []) };
+        if (JSON.stringify(priceMap) === JSON.stringify(prev.stockPriceMap)) return prev;
+        return { ...prev, stockPriceMap: priceMap, stockPricesUpdatedAt: new Date().toISOString() };
+      });
+    } catch { /* keep last values */ }
+  }, [user?.id]);
 
   const fetchStockCatalog = useCallback(async () => {
     // Session 82.64 — Aktien-Vitrine dekorativ. Legacy Supabase `stocks`-Tabelle
@@ -449,16 +482,17 @@ export const DashboardDataProvider = ({ children }) => {
     return () => window.clearInterval(id);
   }, []);
 
-  // Session 82.83c — 5s aktiv, 30s idle-Backoff nach 2 Min ohne Interaktion.
-  // Schützt Twelve-Data-Free-Quota (800 Calls/Tag).
+  // Background refresh: quotes every 5 s (30 s when idle), positions/orders every ~30 s.
+  // Silent — no loading flags, state only changes when data changed.
   useEffect(() => {
     if (!user?.id) return undefined;
 
     const ACTIVE_MS = 5 * 1000;
     const IDLE_MS = 30 * 1000;
     const IDLE_AFTER_MS = 2 * 60 * 1000;
+    const FULL_EVERY_MS = 30 * 1000;
     let lastActive = Date.now();
-    let currentDelay = ACTIVE_MS;
+    let lastFull = Date.now();
     let timerId = null;
 
     const markActive = () => { lastActive = Date.now(); };
@@ -468,18 +502,24 @@ export const DashboardDataProvider = ({ children }) => {
 
     const schedule = () => {
       const idle = Date.now() - lastActive > IDLE_AFTER_MS;
-      currentDelay = idle ? IDLE_MS : ACTIVE_MS;
       timerId = window.setTimeout(async () => {
         if (typeof document === 'undefined' || !document.hidden) {
-          try { await fetchStockData(); } catch { /* noop */ }
+          try {
+            if (Date.now() - lastFull >= FULL_EVERY_MS) {
+              lastFull = Date.now();
+              await fetchStockData({ silent: true });
+            } else {
+              await refreshQuotesSilently();
+            }
+          } catch { /* noop */ }
         }
         schedule();
-      }, currentDelay);
+      }, idle ? IDLE_MS : ACTIVE_MS);
     };
     schedule();
 
     const onVisibility = () => {
-      if (!document.hidden) fetchStockData();
+      if (!document.hidden) fetchStockData({ silent: true });
     };
     document.addEventListener('visibilitychange', onVisibility);
 
@@ -490,7 +530,7 @@ export const DashboardDataProvider = ({ children }) => {
       );
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [user?.id, fetchStockData]);
+  }, [user?.id, fetchStockData, refreshQuotesSilently]);
 
   const cancelOrder = useCallback(
     async (orderId) => {

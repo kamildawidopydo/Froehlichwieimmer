@@ -411,7 +411,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
         if (cancelled) return;
         const q = (quotes || {})[sym];
         if (q && q.price != null) {
-          setPrice({
+          const next = {
             price: Number(q.price),
             change_abs: q.change_abs != null ? Number(q.change_abs) : null,
             change_pct: q.change_pct != null ? Number(q.change_pct) : null,
@@ -423,6 +423,11 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
             source: q.source || null,
             as_of: q.as_of || null,
             price_status: q.price_status || null,
+          };
+          // Skip re-render when nothing but the fetch timestamp changed.
+          setPrice((prev) => {
+            const same = prev && Object.keys(next).every((k) => k === 'as_of' || prev[k] === next[k]);
+            return same ? prev : next;
           });
         }
       } catch { /* silent */ }
