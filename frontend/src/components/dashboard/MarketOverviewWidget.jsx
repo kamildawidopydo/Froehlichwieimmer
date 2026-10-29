@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { fetchMarketIndices } from '@/services/marketService';
 import { cn } from '@/lib/utils';
+import { pnlTone } from '@/lib/dashboardFormatters';
 
 /** Curated market briefing derived from live index data. */
 const MarketOverviewWidget = () => {
@@ -82,7 +83,7 @@ const MarketOverviewWidget = () => {
               <span
                 className={cn(
                   'font-semibold tabular-nums',
-                  (idx.changePct ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-600',
+                  pnlTone(idx.changePct),
                 )}
               >
                 {(idx.changePct ?? 0) >= 0 ? '+' : ''}

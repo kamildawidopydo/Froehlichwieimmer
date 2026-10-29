@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import StockLogo from '@/components/StockLogo';
-import { formatDate } from '@/lib/dashboardFormatters';
+import { formatDate, pnlTone } from '@/lib/dashboardFormatters';
 import { cn } from '@/lib/utils';
 
 const money = (value, currency) => value == null || !Number.isFinite(Number(value))
@@ -47,7 +47,7 @@ export default function SecurityPositionCard({ metric: m, quote = {}, portfolioT
         {fields.map(([label, value, isGain]) => (
           <div key={label} className="min-w-0">
             <dt className="text-xs leading-relaxed text-bank-text-muted">{label}</dt>
-            <dd className={cn('mt-1 break-words text-sm font-semibold tabular-nums', isGain && gain != null ? positive ? 'text-bank-success' : 'text-bank-error' : 'text-bank-text')}>{value}</dd>
+            <dd className={cn('mt-1 break-words text-sm font-semibold tabular-nums', isGain && gain != null ? pnlTone(gain) : 'text-bank-text')}>{value}</dd>
           </div>
         ))}
       </dl>

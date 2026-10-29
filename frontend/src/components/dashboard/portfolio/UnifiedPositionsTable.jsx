@@ -6,7 +6,7 @@ import { useDashboardData } from '@/context/DashboardDataContext';
 import StockLogo from '@/components/StockLogo';
 import BondLogo from '@/components/BondLogo';
 import Sparkline from '@/components/dashboard/charts/Sparkline';
-import { formatEUR } from '@/lib/dashboardFormatters';
+import { formatEUR, pnlTone, pnlBadgeTone } from '@/lib/dashboardFormatters';
 import { cn } from '@/lib/utils';
 import SecurityPositionCard from '@/components/dashboard/portfolio/SecurityPositionCard';
 
@@ -17,7 +17,7 @@ const PctBadge = ({ value }) => {
     <span
       className={cn(
         'inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[12px] font-semibold tabular-nums',
-        up ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700',
+        pnlBadgeTone(value),
       )}
     >
       {up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
@@ -152,7 +152,7 @@ const UnifiedPositionsTable = ({ sparklines = {} }) => {
                   </td>
                   <td className="px-4 py-3 text-right">
                     {r.gvPct != null ? (
-                      <span className={cn('text-[13px] font-medium tabular-nums', up ? 'text-emerald-600' : 'text-rose-600')}>
+                      <span className={cn('text-[13px] font-medium tabular-nums', pnlTone(r.gvPct))}>
                         {up ? '+' : ''}
                         {Number(r.gvPct).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %
                       </span>

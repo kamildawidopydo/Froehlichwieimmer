@@ -28,6 +28,7 @@ import {
   formatEUR,
   formatEURSigned,
   formatDate,
+  pnlTone,
 } from '@/lib/dashboardFormatters';
 import BondMaturityBarChart from '@/components/dashboard/charts/BondMaturityBarChart';
 import BondLogo from '@/components/BondLogo';
@@ -320,13 +321,13 @@ const AnleihenPage = () => {
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className={cn('text-[20px] font-semibold tabular-nums', gvPositive ? 'text-emerald-600' : 'text-rose-600')}>
+                      <p className={cn('text-[20px] font-semibold tabular-nums', pnlTone(m.kursgv))}>
                         {formatEURSigned(m.kursgv)}
                       </p>
                       <p
                         className={cn(
                           'mt-0.5 inline-flex items-center justify-end gap-0.5 text-[12px] font-medium tabular-nums',
-                          gvPositive ? 'text-emerald-600' : 'text-rose-600',
+                          pnlTone(m.kursgv),
                         )}
                       >
                         {gvPositive ? <ArrowUpRight size={12} strokeWidth={1.8} /> : <ArrowDownRight size={12} strokeWidth={1.8} />}
@@ -450,7 +451,7 @@ const AnleihenPage = () => {
                           <p
                             className={cn(
                               'mt-0.5 inline-flex items-center justify-end gap-0.5 text-[11px] font-medium tabular-nums',
-                              up ? 'text-emerald-600' : 'text-rose-600',
+                              pnlTone(m.gv),
                             )}
                           >
                             {up ? <ArrowUpRight size={11} strokeWidth={1.8} /> : <ArrowDownRight size={11} strokeWidth={1.8} />}

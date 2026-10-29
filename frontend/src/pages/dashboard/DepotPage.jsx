@@ -16,7 +16,7 @@ import {
   PageHeader,
   SectionTitle,
 } from '@/components/dashboard/PageHeader';
-import { formatEUR, formatEURSigned } from '@/lib/dashboardFormatters';
+import { formatEUR, formatEURSigned, pnlTone } from '@/lib/dashboardFormatters';
 import { cn } from '@/lib/utils';
 import StockLogo from '@/components/StockLogo';
 import PortfolioPageLayout from '@/components/dashboard/PortfolioPageLayout';
@@ -302,7 +302,7 @@ const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true, show
             label="Gesamtvermögen"
             value={<AnimatedNumber value={gesamtvermoegen} format={formatEUR} />}
             sub={
-              <span className={cn('inline-flex items-center gap-0.5', dailyUp ? 'text-emerald-600' : 'text-rose-600')}>
+              <span className={cn('inline-flex items-center gap-0.5', pnlTone(dailyPnl))}>
                 {dailyUp ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
                 {formatEURSigned(dailyPnl)} heute
               </span>
@@ -373,6 +373,7 @@ const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true, show
               <ul ref={stocksListRef} className="divide-y divide-bank-border">
                 {topStocks.map((m) => {
                   const up = m.gv >= 0;
+                  const tone = pnlTone(m.gv);
                   return (
                     <li key={m.id}>
                       <Link
@@ -394,7 +395,7 @@ const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true, show
                           <p
                             className={cn(
                               'mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-medium tabular-nums',
-                              up ? 'text-emerald-700' : 'text-rose-600',
+                              tone,
                             )}
                           >
                             {up ? <ArrowUpRight size={10} strokeWidth={1.5} /> : <ArrowDownRight size={10} strokeWidth={1.5} />}
@@ -438,6 +439,7 @@ const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true, show
               <ul ref={bondsListRef} className="divide-y divide-bank-border">
                 {topBondRows.map(({ b, m }) => {
                   const up = m.kursgv >= 0;
+                  const tone = pnlTone(m.kursgv);
                   const sub =
                     b.isin && b.kupon_rate != null
                       ? `${b.isin} · ${Number(b.kupon_rate).toLocaleString('de-DE')}% Kupon`
@@ -457,7 +459,7 @@ const DepotPage = ({ showTopSummary = true, showLegacyPositionCards = true, show
                           <p
                             className={cn(
                               'mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-medium tabular-nums',
-                              up ? 'text-emerald-700' : 'text-rose-600',
+                              tone,
                             )}
                           >
                             {up ? <ArrowUpRight size={10} strokeWidth={1.5} /> : <ArrowDownRight size={10} strokeWidth={1.5} />}

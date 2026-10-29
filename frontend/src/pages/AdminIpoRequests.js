@@ -34,8 +34,6 @@ import {
 import { formatEUR, formatEURSigned } from '@/lib/dashboardFormatters';
 import {
   computeIpoValuation,
-  deriveSubscriptionFromVolume,
-  fxRatesToRpcPayload,
 } from '@/lib/ipoValuation';
 import { fetchEurBasedRates } from '@/services/forexService';
 
@@ -82,9 +80,7 @@ const EMPTY_MANUAL_FORM = {
   amountEur: '',
   subscriptionPrice: '',
   listingPrice: '',
-  profitPct: '',
   decisionNote: '',
-  deductCash: false,
 };
 
 // Session 82.36 · Zuteilungs-Modal für Mongo-native (Kundenportal) IPO-Requests.
@@ -114,50 +110,6 @@ const humanAllocationError = (code, detail) => {
     REQUEST_REJECTED_RACE: 'Anfrage wurde parallel abgelehnt.',
   };
   return map[code] || detail || 'Zuteilung fehlgeschlagen.';
-};
-
-const ValuationPreview = ({ preview, currency }) => {
-  if (!preview) {
-    return (
-      <p className="text-[12px] text-bank-text-muted">
-        Listing-Preis oder Gewinn-% eingeben für Vorschau.
-      </p>
-    );
-  }
-  const up = (preview.profitAbsEur ?? preview.profitAbs) >= 0;
-  const profitEur = preview.profitAbsEur ?? preview.profitAbs;
-  return (
-    <div className="rounded-lg border border-bank-border bg-bank-bg/40 p-3 text-[12px]">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div>
-          <p className="text-bank-text-muted">Einstand</p>
-          <p className="font-medium tabular-nums">{formatMoney(preview.costBasis, currency)}</p>
-        </div>
-        <div>
-          <p className="text-bank-text-muted">Bewertung</p>
-          <p className="font-medium tabular-nums">{formatMoney(preview.marketValue, currency)}</p>
-        </div>
-        <div>
-          <p className="text-bank-text-muted">Gewinn (EUR)</p>
-          <p className={`font-medium tabular-nums ${up ? 'text-emerald-700' : 'text-rose-700'}`}>
-            {formatEURSigned(profitEur)}
-          </p>
-          {currency !== 'EUR' && preview.profitAbs != null && (
-            <p className="text-[10px] text-bank-text-muted tabular-nums">
-              {up ? '+' : ''}
-              {formatMoney(preview.profitAbs, currency)}
-            </p>
-          )}
-        </div>
-        <div>
-          <p className="text-bank-text-muted">Gewinn %</p>
-          <p className={`font-medium tabular-nums ${up ? 'text-emerald-700' : 'text-rose-700'}`}>
-            {formatPct(preview.profitPct)}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 const AdminIpoRequests = () => {
@@ -281,43 +233,10 @@ const AdminIpoRequests = () => {
       eurRates,
     });
 
-  const buildPreview = (form, shares, amountEur, ipoId) => {
-    const ipo = ipoById[ipoId];
-    const priceCurrency = ipo?.price_currency || 'EUR';
-    let sub = form.subscriptionPrice ? Number(String(form.subscriptionPrice).replace(',', '.')) : null;
-    if (!sub && amountEur && shares) {
-      sub = deriveSubscriptionFromVolume(amountEur, shares, priceCurrency, eurRates);
-    }
-    if (!sub && ipo) {
-      if (ipo.price_range_low != null && ipo.price_range_high != null) {
-        sub = (Number(ipo.price_range_low) + Number(ipo.price_range_high)) / 2;
-      } else if (ipo.price_range_high != null) sub = Number(ipo.price_range_high);
-      else if (ipo.price_range_low != null) sub = Number(ipo.price_range_low);
-    }
-    const listing = form.listingPrice ? Number(String(form.listingPrice).replace(',', '.')) : null;
-    const profit = form.profitPct ? Number(String(form.profitPct).replace(',', '.')) : null;
-    return computeIpoValuation({
-      shares,
-      subscriptionPrice: sub,
-      amountEur,
-      listingPrice: listing,
-      profitPct: profit,
-      priceCurrency,
-      eurRates,
-    });
-  };
-
   const parseOptionalNum = (v) => {
     if (v == null || String(v).trim() === '') return null;
     const n = Number(String(v).replace(',', '.'));
     return Number.isFinite(n) ? n : null;
-  };
-
-  const resolveSubscriptionForSubmit = (form, row, shares, amountEur, ipoId) => {
-    const manual = parseOptionalNum(form.subscriptionPrice);
-    if (manual != null && manual > 0) return manual;
-    const priceCurrency = ipoId ? ipoById[ipoId]?.price_currency || 'EUR' : resolveCurrency(row);
-    return deriveSubscriptionFromVolume(amountEur, shares, priceCurrency, eurRates);
   };
 
   const openApprove = (row) => {
@@ -419,40 +338,41 @@ const AdminIpoRequests = () => {
     }
   };
 
+  const patchValuation = async (id, sub, est) => {
+    const body = {};
+    if (sub != null) body.subscription_price_per_share = sub.toFixed(2);
+    if (est != null) body.listing_price_per_share = est.toFixed(2);
+    if (!Object.keys(body).length) return null;
+    const r = await fetch(`${getApiBase()}/api/admin/ipo/requests/${encodeURIComponent(id)}/valuation`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (r.ok) return null;
+    const j = await r.json().catch(() => ({ detail: `HTTP ${r.status}` }));
+    return { message: typeof j.detail === 'string' ? j.detail : 'Ungültige Bewertung' };
+  };
+
   const submitApprove = async () => {
     if (!approveRow) return;
-    const listing = parseOptionalNum(valuationForm.listingPrice);
-    const profit = parseOptionalNum(valuationForm.profitPct);
-    if (listing == null && profit == null) {
-      toast.error('Listing-Preis oder Gewinn-% ist erforderlich.');
-      return;
-    }
+    const sub = parseEurInput(valuationForm.subscriptionPrice);
+    const est = parseEurInput(valuationForm.listingPrice);
     setSubmitting(true);
-    const fxPayload = fxRatesToRpcPayload(eurRates);
-    const subPrice = resolveSubscriptionForSubmit(
-      valuationForm,
-      approveRow,
-      approveRow.shares_requested,
-      approveRow.amount_eur,
-      approveRow.ipo_id,
-    );
-    // Session 82.90d — Approve via bestehende FastAPI-Saga. Kein direktes
-    // RPC/Status-Update im Frontend.
+    // Session 82.90d — Approve via bestehende FastAPI-Saga; Bewertung danach per PATCH.
     let error = null;
     try {
       const r = await fetch(`${getApiBase()}/api/admin/ipo/requests/${encodeURIComponent(approveRow.id)}/approve`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          decision_note: valuationForm.decisionNote.trim() || null,
-          listing_price_per_share: listing != null ? String(listing) : null,
-          subscription_price_per_share: subPrice != null ? String(subPrice) : null,
-        }),
+        body: JSON.stringify({ decision_note: valuationForm.decisionNote.trim() || null }),
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({ detail: `HTTP ${r.status}` }));
         error = { message: typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail) };
+      } else {
+        error = await patchValuation(approveRow.id, sub, est);
       }
     } catch (e) {
       error = { message: e.message };
@@ -519,22 +439,26 @@ const AdminIpoRequests = () => {
       toast.error('Gültige Stückzahl erforderlich.');
       return;
     }
-    const listing = parseOptionalNum(manualForm.listingPrice);
-    const profit = parseOptionalNum(manualForm.profitPct);
-    if (listing == null && profit == null) {
-      toast.error('Listing-Preis oder Gewinn-% ist erforderlich.');
-      return;
-    }
+    const sub = parseEurInput(manualForm.subscriptionPrice);
+    const est = parseEurInput(manualForm.listingPrice);
     setSubmitting(true);
-    const fxPayload = fxRatesToRpcPayload(eurRates);
-    const subPrice = resolveSubscriptionForSubmit(
-      manualForm,
-      null,
-      Math.round(shares),
-      parseOptionalNum(manualForm.amountEur),
-      manualForm.ipoId,
-    );
-    let error = null; try { const r = await fetch(`${getApiBase()}/api/admin/ipo/requests/create-for-user`, { method:'POST', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ user_id: manualForm.userId, ipo_id: manualForm.ipoId, shares_requested: Math.round(shares) }) }); if(!r.ok) { const j = await r.json().catch(()=>({detail:'HTTP '+r.status})); error = { message: typeof j.detail==='string'?j.detail:JSON.stringify(j.detail) }; } } catch(e){ error = { message: e.message }; }
+    let error = null;
+    try {
+      const r = await fetch(`${getApiBase()}/api/admin/ipo/requests/create-for-user`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ user_id: manualForm.userId, ipo_id: manualForm.ipoId, shares_requested: Math.round(shares) }),
+      });
+      const j = await r.json().catch(() => ({ detail: `HTTP ${r.status}` }));
+      if (!r.ok) {
+        error = { message: typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail) };
+      } else {
+        error = await patchValuation(j.id, sub, est);
+      }
+    } catch (e) {
+      error = { message: e.message };
+    }
     setSubmitting(false);
     if (error) {
       toast.error('Zuweisung fehlgeschlagen: ' + error.message);
@@ -619,10 +543,6 @@ const AdminIpoRequests = () => {
     }
   };
 
-  const approvePreview = approveRow
-    ? buildPreview(valuationForm, approveRow.shares_requested, approveRow.amount_eur, approveRow.ipo_id)
-    : null;
-
   const editEstimate = editRow
     ? {
         ...computeIpoEstimate({
@@ -634,17 +554,6 @@ const AdminIpoRequests = () => {
         estimatedValue: parseEurInput(valuationForm.listingPrice),
       }
     : null;
-
-  const manualPreview = manualOpen
-    ? buildPreview(
-        manualForm,
-        parseOptionalNum(manualForm.shares),
-        parseOptionalNum(manualForm.amountEur),
-        manualForm.ipoId,
-      )
-    : null;
-
-  const manualCurrency = manualForm.ipoId ? ipoById[manualForm.ipoId]?.price_currency || 'EUR' : 'EUR';
 
   return (
     <AdminSubpageLayout>
@@ -962,40 +871,44 @@ const AdminIpoRequests = () => {
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="approve-listing">Listing-Preis / Lot</Label>
+                  <Label htmlFor="approve-listing">Geschätzter Wert pro Aktie (€)</Label>
                   <Input
                     id="approve-listing"
+                    data-testid="ipo-approve-estimated-value"
+                    inputMode="decimal"
                     value={valuationForm.listingPrice}
                     onChange={(e) =>
                       setValuationForm((f) => ({ ...f, listingPrice: e.target.value }))
                     }
-                    placeholder="z. B. 350"
+                    placeholder="z. B. 50,00"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="approve-profit">Gewinn %</Label>
+                  <Label htmlFor="approve-sub">IPO-Kaufpreis pro Aktie (€)</Label>
                   <Input
-                    id="approve-profit"
-                    value={valuationForm.profitPct}
+                    id="approve-sub"
+                    data-testid="ipo-approve-purchase-price"
+                    inputMode="decimal"
+                    value={valuationForm.subscriptionPrice}
                     onChange={(e) =>
-                      setValuationForm((f) => ({ ...f, profitPct: e.target.value }))
+                      setValuationForm((f) => ({ ...f, subscriptionPrice: e.target.value }))
                     }
-                    placeholder="z. B. 10"
+                    placeholder="z. B. 40,00"
                   />
                 </div>
               </div>
-              <div>
-                <Label htmlFor="approve-sub">Einstand/Lot (optional)</Label>
-                <Input
-                  id="approve-sub"
-                  value={valuationForm.subscriptionPrice}
-                  onChange={(e) =>
-                    setValuationForm((f) => ({ ...f, subscriptionPrice: e.target.value }))
-                  }
-                  placeholder="Leer = Volumen/Lots oder IPO-Spanne"
-                />
-              </div>
-              <ValuationPreview preview={approvePreview} currency={resolveCurrency(approveRow)} />
+              <IpoEstimateSummary
+                testIdPrefix="ipo-approve-est"
+                est={{
+                  ...computeIpoEstimate({
+                    shares: approveRow.shares_requested,
+                    purchasePrice: valuationForm.subscriptionPrice,
+                    estimatedValue: valuationForm.listingPrice,
+                  }),
+                  purchasePrice: parseEurInput(valuationForm.subscriptionPrice),
+                  estimatedValue: parseEurInput(valuationForm.listingPrice),
+                }}
+              />
               <div>
                 <Label htmlFor="approve-note">Admin-Kommentar</Label>
                 <Textarea
@@ -1314,49 +1227,49 @@ const AdminIpoRequests = () => {
                 />
               </div>
             </div>
-            <div>
-              <Label htmlFor="manual-sub">Einstand/Lot (optional)</Label>
-              <Input
-                id="manual-sub"
-                value={manualForm.subscriptionPrice}
-                onChange={(e) =>
-                  setManualForm((f) => ({ ...f, subscriptionPrice: e.target.value }))
-                }
-              />
-            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="manual-listing">Listing-Preis / Lot</Label>
+                <Label htmlFor="manual-sub">IPO-Kaufpreis pro Aktie (€)</Label>
+                <Input
+                  id="manual-sub"
+                  data-testid="ipo-manual-purchase-price"
+                  inputMode="decimal"
+                  placeholder="z. B. 40,00"
+                  value={manualForm.subscriptionPrice}
+                  onChange={(e) =>
+                    setManualForm((f) => ({ ...f, subscriptionPrice: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="manual-listing">Geschätzter Wert pro Aktie (€)</Label>
                 <Input
                   id="manual-listing"
+                  data-testid="ipo-manual-estimated-value"
+                  inputMode="decimal"
+                  placeholder="z. B. 50,00"
                   value={manualForm.listingPrice}
                   onChange={(e) =>
                     setManualForm((f) => ({ ...f, listingPrice: e.target.value }))
                   }
                 />
               </div>
-              <div>
-                <Label htmlFor="manual-profit">Gewinn %</Label>
-                <Input
-                  id="manual-profit"
-                  value={manualForm.profitPct}
-                  onChange={(e) =>
-                    setManualForm((f) => ({ ...f, profitPct: e.target.value }))
-                  }
-                />
-              </div>
             </div>
-            <ValuationPreview preview={manualPreview} currency={manualCurrency} />
-            <label className="flex items-center gap-2 text-[13px]">
-              <input
-                type="checkbox"
-                checked={manualForm.deductCash}
-                onChange={(e) =>
-                  setManualForm((f) => ({ ...f, deductCash: e.target.checked }))
-                }
-              />
-              Betrag vom Kundenkonto abbuchen
-            </label>
+            <IpoEstimateSummary
+              testIdPrefix="ipo-manual-est"
+              est={{
+                ...computeIpoEstimate({
+                  shares: manualForm.shares,
+                  purchasePrice: manualForm.subscriptionPrice,
+                  estimatedValue: manualForm.listingPrice,
+                }),
+                purchasePrice: parseEurInput(manualForm.subscriptionPrice),
+                estimatedValue: parseEurInput(manualForm.listingPrice),
+              }}
+            />
+            <p className="text-[11px] text-bank-text-muted">
+              Die Anfrage wird angelegt; Aktien und Abbuchung entstehen erst bei der Zuteilung.
+            </p>
             <div>
               <Label htmlFor="manual-note">Notiz</Label>
               <Textarea

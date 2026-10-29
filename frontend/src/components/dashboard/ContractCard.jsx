@@ -19,6 +19,7 @@ import {
   formatEUR,
   formatEURSigned,
   formatDate,
+  pnlTone,
 } from '@/lib/dashboardFormatters';
 import { PRODUCT_BADGE, PRODUCT_LABEL } from '@/lib/dashboardMetrics';
 
@@ -303,7 +304,7 @@ const ContractCard = ({ contract, accent = 'amber', detailed = true, onClick }) 
               <div>
                 <p className="text-bank-text-muted">Reale Rendite p.a. (nach Inflation)</p>
                 <p
-                  className={`font-semibold ${m.realReturnPct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                  className={`font-semibold ${pnlTone(m.realReturnPct)}`}
                 >
                   {m.realReturnPct >= 0 ? '+' : ''}
                   {m.realReturnPct.toFixed(2)} %

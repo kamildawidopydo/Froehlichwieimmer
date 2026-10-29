@@ -1,6 +1,7 @@
 import { getApiBase } from '@/lib/apiBase';
 
 import React, { useCallback, useEffect, useMemo, useState, useRef, Suspense, lazy } from 'react';
+import { pnlTone } from '@/lib/dashboardFormatters';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { watchlistApi } from '@/services/watchlistApi';
 import { portfolioOrderApi } from '@/services/portfolioOrderApi';
@@ -1017,7 +1018,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     </p>
                   )}
                   {chg != null && (
-                    <p className={`text-sm font-medium mt-1 inline-flex items-center gap-0.5 ${up ? 'text-emerald-600' : 'text-bank-error'}`}>
+                    <p className={`text-sm font-medium mt-1 inline-flex items-center gap-0.5 ${pnlTone(chg)}`}>
                       {up ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                       {dayAbs != null
                         ? `${up ? '+' : '−'}${formatCurrency(Math.abs(dayAbs), dayCcy)} `

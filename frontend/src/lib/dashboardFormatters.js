@@ -1,6 +1,17 @@
 export const formatEUR = (v) =>
   Number(v || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
+// Gain/loss colour: green > 0, red < 0, neutral at 0,00 (rounded to cents) or unknown.
+const pnlSign = (v) => {
+  if (v == null || !Number.isFinite(Number(v))) return 0;
+  return Math.sign(Math.round(Number(v) * 100));
+};
+export const pnlTone = (v) =>
+  ({ 1: 'text-bank-success', '-1': 'text-bank-error' }[pnlSign(v)] || 'text-bank-text');
+export const pnlBadgeTone = (v) =>
+  ({ 1: 'bg-bank-success/10 text-bank-success', '-1': 'bg-bank-error/10 text-bank-error' }[pnlSign(v)] ||
+    'bg-bank-bg text-bank-text');
+
 export const formatEURCompact = (v) =>
   Number(v || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 

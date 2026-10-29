@@ -4,6 +4,7 @@ import { Star, X } from 'lucide-react';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import Sparkline from '@/components/dashboard/charts/Sparkline';
 import { cn } from '@/lib/utils';
+import { pnlTone } from '@/lib/dashboardFormatters';
 
 const WatchlistWidget = ({ sparklines = {} }) => {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ const WatchlistWidget = ({ sparklines = {} }) => {
                     : '–'}
                 </p>
                 {chg != null && (
-                  <p className={cn('text-[10px] font-medium tabular-nums', up ? 'text-emerald-600' : 'text-rose-600')}>
+                <p className={cn('text-[10px] font-medium tabular-nums', pnlTone(chg))}>
                     {up ? '+' : ''}
                     {chg.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %
                   </p>

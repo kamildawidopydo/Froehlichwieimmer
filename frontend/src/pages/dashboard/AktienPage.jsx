@@ -21,7 +21,7 @@ import VermoegenBreadcrumb from '@/components/dashboard/VermoegenBreadcrumb';
 import VermoegenSubNav from '@/components/dashboard/VermoegenSubNav';
 import { cn } from '@/lib/utils';
 import { CardListSkeleton } from '@/components/Skeleton';
-import { formatEUR, formatEURSigned } from '@/lib/dashboardFormatters';
+import { formatEUR, formatEURSigned, pnlTone, pnlBadgeTone } from '@/lib/dashboardFormatters';
 import StockLogo from '@/components/StockLogo';
 import Sparkline from '@/components/dashboard/charts/Sparkline';
 import BondMarktwertPieChart from '@/components/dashboard/charts/BondMarktwertPieChart';
@@ -46,7 +46,7 @@ const PctBadge = ({ value }) => {
     <span
       className={cn(
         'inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[12px] font-semibold tabular-nums',
-        up ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700',
+        pnlBadgeTone(value),
       )}
     >
       {up ? <ArrowUpRight size={11} strokeWidth={2} /> : <ArrowDownRight size={11} strokeWidth={2} />}
@@ -400,7 +400,7 @@ const AktienPage = () => {
                         <p className="text-[15px] font-semibold tabular-nums text-bank-text">
                           {Number(m.marktwert).toLocaleString('de-DE', { style: 'currency', currency })}
                         </p>
-                        <p className={cn('text-[12px] font-medium tabular-nums', m.hasValuation === false ? 'text-bank-text-muted' : up ? 'text-emerald-600' : 'text-rose-600')}>
+                        <p className={cn('text-[12px] font-medium tabular-nums', m.hasValuation === false ? 'text-bank-text-muted' : pnlTone(m.gv))}>
                           {m.hasValuation === false ? '–' : (
                             <>
                               {up ? '+' : ''}
@@ -431,7 +431,7 @@ const AktienPage = () => {
                         </div>
                         <div className="text-right">
                           <p className="text-bank-text-muted">Gewinn</p>
-                          <p className={cn('font-medium tabular-nums', up ? 'text-emerald-700' : 'text-rose-700')}>
+                          <p className={cn('font-medium tabular-nums', pnlTone(m.gv))}>
                             {up ? '+' : ''}
                             {Number(m.gv).toLocaleString('de-DE', { style: 'currency', currency })}
                           </p>
@@ -522,7 +522,7 @@ const AktienPage = () => {
                           <td
                             className={cn(
                               'px-4 py-3 text-right text-[13px] font-medium tabular-nums',
-                              m.hasValuation === false ? 'text-bank-text-muted' : up ? 'text-emerald-600' : 'text-rose-600',
+                              m.hasValuation === false ? 'text-bank-text-muted' : pnlTone(m.gv),
                             )}
                           >
                             {m.hasValuation === false ? '–' : `${up ? '+' : ''}${fmtDe(m.pct)} %`}
@@ -592,7 +592,7 @@ const AktienPage = () => {
                       <p
                         className={cn(
                           'mt-1.5 inline-flex items-center gap-0.5 text-[12px] font-medium tabular-nums',
-                          up ? 'text-emerald-600' : 'text-rose-600',
+                          pnlTone(chg),
                         )}
                       >
                         {up ? <ArrowUpRight size={12} strokeWidth={1.8} /> : <ArrowDownRight size={12} strokeWidth={1.8} />}

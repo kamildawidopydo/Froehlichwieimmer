@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { pnlTone } from '@/lib/dashboardFormatters';
 import { PageContainer, PageHeader } from '@/components/dashboard/PageHeader';
 import PortfolioPageLayout from '@/components/dashboard/PortfolioPageLayout';
 import useAutoAnimateRef from '@/hooks/useAutoAnimateRef';
@@ -424,7 +425,7 @@ const Handeln = ({ embedded = false }) => {
                           <p
                             className={cn(
                               'mt-0.5 inline-flex items-center justify-end gap-0.5 font-mono text-[10.5px] tabular-nums tracking-[0.06em]',
-                              up ? 'text-emerald-700' : 'text-bank-error',
+                              pnlTone(r.change_pct),
                             )}
                           >
                             {up ? (
@@ -521,7 +522,7 @@ const Handeln = ({ embedded = false }) => {
                           <td
                             className={cn(
                               'px-4 py-3 text-right font-mono text-[13px] tabular-nums',
-                              up ? 'text-emerald-700' : 'text-bank-error',
+                              pnlTone(r.change_pct),
                             )}
                           >
                             {r.change_pct != null ? (

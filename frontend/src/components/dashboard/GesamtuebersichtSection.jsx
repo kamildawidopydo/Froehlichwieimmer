@@ -24,7 +24,7 @@ import AssetAllocationDonut from '@/components/AssetAllocationDonut';
 import Sparkline from '@/components/dashboard/charts/Sparkline';
 import PortfolioHeroChart from '@/components/dashboard/charts/PortfolioHeroChart';
 import { fetchSparkline } from '@/services/stockHistoryService';
-import { formatEUR, formatEURSigned } from '@/lib/dashboardFormatters';
+import { formatEUR, formatEURSigned, pnlTone } from '@/lib/dashboardFormatters';
 import { cn } from '@/lib/utils';
 import { positiveNegativeColor } from '@/components/dashboard/charts/chartTheme';
 import { DashboardStagger, DashboardStaggerItem } from '@/components/dashboard/motion/DashboardStagger';
@@ -213,7 +213,7 @@ const TopPositionsTable = ({ rows, sparklines }) => {
                 <p
                   className={cn(
                     'text-[11px] font-medium tabular-nums',
-                    r.gvPct >= 0 ? 'text-emerald-600' : 'text-rose-600',
+                    pnlTone(r.gvPct),
                   )}
                 >
                   G/V {formatPct(r.gvPct)}
@@ -678,7 +678,7 @@ export default function GesamtuebersichtSection({ loading, showcase = false }) {
             <p
               className={cn(
                 'mt-2 inline-flex items-center gap-1 text-[13px] font-medium tabular-nums',
-                dailyUp ? 'text-emerald-600' : 'text-rose-600',
+                pnlTone(dailyPnl),
               )}
             >
               {dailyUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
