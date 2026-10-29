@@ -1,0 +1,34 @@
+{
+  "summary": "Preview-only frontend retest of the iteration_98 colour fixes. ALL previously failing surfaces now PASS, with green rgb(16,185,129), red rgb(220,38,38) and neutral rgb(30,41,59). /dashboard/uebersicht: StatTile Heute +14,76 € and Unrealisierter G/V +320,43 € are green; 'Weitere Kennzahlen' Realisierter G/V 0,00 € is neutral. /dashboard/aktien: KPI Gewinn/Verlust +320,43 € and Tagesveränderung +14,76 € are green, and their sub-percent is muted as designed. /dashboard/aktien/AAPL: Tages-G/V -6,34 € is red; Unrealisierte G/V +86,77 €, Gesamtrendite +10,33 % and Rendite (1J) +32,49 % are green. /dashboard/anleihen (test customer has no bonds): Kurs-G/V '0,00 €' is neutral with no '+'; Marktwert/Einstand are neutral. Tagesgeld and Festgeld tiles are unchanged and neutral. PRVT3 neutral case: admin PATCH listing 40 gave 0.00/0.00. The customer IPO table (aktien and uebersicht) then showed '0,00 €' / '0,00 %' neutral with no '+', as did the main positions table and the mobile 390px view. Listing was restored to 50 (+100/+25 confirmed). Regression still passes: IPO tables, positions table, mobile cards, Top-Bewegungen badges, watchlist cards (red -0,69 %, green +0,47 %/+3,41 %) and Handeln/Markt list (green %). Manual IPO dialog (ipo-manual-assign-btn) has no 'Gewinn %' field and its live summary shows -15,00 € / -10,00 % in red. The submission created pending request 6ae344c0a682f003a0ccd48c (Oura, 3 shares) with notes='TEST_EUR_I99 Notiz manuell' and amount_eur=150.5, both persisted, with source=admin and no cash debit (customer cash stays 2000). tester@mester.de is unchanged: cash ledger hash and 45 entries are identical, and IPO requests are [].",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AnleihenPage StatTile 'Kuponertrag p.a.' and Metric 'Jährl. Kuponertrag'", "issue": "tone='pos' is hardcoded, so the value is green even when it is exactly 0. With no bonds, '0,00 €' renders green rgb(16,185,129). This conflicts with the 'exactly 0 = neutral' rule. Use pnlToneKey(aggregates.kuponPa) / pnlToneKey(m.jahresKupon).", "selector": "AnleihenPage.jsx:239,344", "priority": "LOW"},
+      {"component": "AnleihenPage Kurs-G/V sub text", "issue": "The sub text uses `${bondsGV >= 0 ? '+' : ''}${yieldPct.toFixed(2)} %`, which renders '+0.00 %'. That has a '+' at zero and an English decimal point instead of German '0,00 %'. Use the pnlToneKey check plus fmtDe, as in AktienPage.", "selector": "AnleihenPage.jsx:235", "priority": "LOW"},
+      {"component": "AdminIpoRequests row source badge", "issue": "Mongo rows are mapped with source:'mongo', which overwrites the backend source. An admin-created request (backend source='admin') is therefore shown with the 'KUNDENPORTAL' badge, and the 'Admin' badge branch (row.source==='admin') can never trigger.", "selector": "AdminIpoRequests.js:172,655,732", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/admin/ipo-requests at 1920px", "issues": ["The table still clips the 'Gesch. Gewinn' column (values cut off as '+20', '-15'), as reported in iteration_98."]}
+    ]
+  },
+  "test_report_links": ["/app/tests/iter99_probe.py", "/app/tests/iter99_val.py"],
+  "action_items": [
+    "Optional: AnleihenPage Kuponertrag tiles should use pnlToneKey so that 0 is neutral.",
+    "Optional: AnleihenPage Kurs-G/V sub should use fmtDe and drop the '+' at 0.",
+    "Optional: preserve the backend source (admin/customer) in AdminIpoRequests mongo mapping, so admin-created rows are not labelled 'Kundenportal'.",
+    "Optional: in parseOptionalNum, '1.500,50' gives NaN and the amount is silently dropped. Strip thousand dots before replacing the comma.",
+    "Cleanup: test request 6ae344c0a682f003a0ccd48c (Oura, pending, notes TEST_EUR_I99...) for test_eur_qa."
+  ],
+  "critical_code_review_comments": [
+    "formatEURSigned now uses pnlSign, so 0 shows no '+'. Verified.",
+    "AdminIpoRequests.submitManual still runs create and the valuation PATCH as two calls with no rollback. If the PATCH fails, a pending request without valuation remains.",
+    "AdminIpoRequests.js is well over 700 lines and should be split."
+  ],
+  "updated_files": ["/app/tests/iter99_probe.py", "/app/tests/iter99_val.py"],
+  "success_rate": {"backend": "skipped (frontend only)", "frontend": "100% of requested fixes (3 new LOW issues)"},
+  "seed_data_creation": "Created IPO request 6ae344c0a682f003a0ccd48c (Oura, pending, test_eur_qa). PRVT3 listing was temporarily set to 40 and restored to 50.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login via page.request.post('/api/auth/login') after add_init_script presets localStorage. Valuation PATCH expects string values (a float gives 422). PRVT3 request id 6ae3439bf000027daa675546. test_eur_qa user id 6ae3439af000027daa675535. Manual dialog uses native selects #manual-user/#manual-ipo; the submit button is named 'Zuweisen'. tester@mester.de baseline: /api/portfolio/cash md5 825b301b693d6eaa3c1219df66eac2fa, 45 history entries."
+}

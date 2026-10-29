@@ -232,11 +232,11 @@ const AnleihenPage = () => {
           icon={TrendingUp}
           label="Kurs-G/V"
           value={formatEURSigned(bondsGV)}
-          sub={`${bondsGV >= 0 ? '+' : ''}${yieldPct.toFixed(2)} %`}
+          sub={`${pnlToneKey(bondsGV) === 'pos' ? '+' : ''}${yieldPct.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`}
           tone={pnlToneKey(bondsGV)}
         />
         </DashboardStaggerItem>
-        <DashboardStaggerItem><StatTile icon={Coins} label="Kuponertrag p.a." value={formatEUR(aggregates.kuponPa)} sub="Jährlich" tone="pos" /></DashboardStaggerItem>
+        <DashboardStaggerItem><StatTile icon={Coins} label="Kuponertrag p.a." value={formatEUR(aggregates.kuponPa)} sub="Jährlich" tone={pnlToneKey(aggregates.kuponPa)} /></DashboardStaggerItem>
         <DashboardStaggerItem><StatTile icon={Percent} label="Ø Kupon" value={`${aggregates.avgKupon.toFixed(2).replace('.', ',')} %`} sub="Nominalgewichtet" /></DashboardStaggerItem>
         <DashboardStaggerItem><StatTile icon={Clock} label="Ø Restlaufzeit" value={`${aggregates.avgRestJahre.toFixed(1).replace('.', ',')} J.`} sub="Marktwertgewichtet" /></DashboardStaggerItem>
         <DashboardStaggerItem><StatTile icon={PRODUCT_ICONS.anleihen} label="Positionen" value={String(bondPositions.length)} sub="inkl. inaktive" /></DashboardStaggerItem>
@@ -341,7 +341,7 @@ const AnleihenPage = () => {
                   {/* Values */}
                   <div className="grid grid-cols-2 gap-4 border-b border-bank-border px-5 py-4 md:grid-cols-4">
                     <Metric label="Nominalbetrag" value={formatEUR(m.nominal)} />
-                    <Metric label="Jährl. Kuponertrag" value={formatEURSigned(m.jahresKupon)} tone="pos" />
+                    <Metric label="Jährl. Kuponertrag" value={formatEURSigned(m.jahresKupon)} tone={pnlToneKey(m.jahresKupon)} />
                     <Metric
                       label="Einstandswert"
                       value={formatEUR(m.einstand)}

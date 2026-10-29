@@ -1,3 +1,10 @@
+## Update 2026-10-29 – Einheitliche G/V-Farben + „Gewinn %“ entfernt (NUR Vorschau)
+- lib/dashboardFormatters.js: pnlTone/pnlToneKey/pnlBadgeTone (grün > 0, rot < 0, neutral bei 0,00); formatEURSigned ohne „+“ bei 0. Angewendet in Aktien-, Depot-, Anleihen-, Übersicht-, Handeln-, StockDetail-, Watchlist-, Markt-, Vertrags- und IPO-Ansichten. Gemeinsame StatTile hat neuen Ton 'gain' (Tagesgeld/Festgeld unverändert).
+- AdminIpoRequests: „Gewinn %“ aus Freigeben/Manuelle Zuweisung entfernt, wirkungslose Checkbox „Betrag abbuchen“ entfernt; manuelle Zuweisung speichert Kaufpreis/Wert per PATCH + Notiz/Volumen; Quelle-Badge korrekt (Admin/Kunde); Tabelle passt ohne Querscrollen.
+- Live-Prüfung: Letzter Deploy 2026-10-29 10:42 UTC (Euro-Umstellung live, IPO-Bewertung NICHT live). Keine Migration, Kundendaten unverändert (Deployer-Bericht).
+- Tests iteration_98/99 bestanden; Testdaten bereinigt.
+
+
 ## Update 2026-10-29 – IPO-Bewertung: Kaufpreis, geschätzter Wert, automatische Gewinnberechnung (NUR Vorschau)
 - Backend routes/ipo_requests.py: compute_ipo_valuation (Decimal, ROUND_HALF_UP) → `valuation` in allen Request-Antworten (admin + /requests/me). Anzahl = allocated_shares bei Status allocated, sonst shares_requested (als „angefragt“ markiert). Fehlende Werte → null, kein Gewinn.
 - PATCH /api/admin/ipo/requests/{id}/valuation: pending/approved: Kaufpreis + geschätzter Wert; allocated: nur geschätzter Wert (Kaufpreis gesperrt, 409); Werte > 0, Decimal128, valuation_set_at + valuation_history; keine Cash-/Positionsänderung. use_admin_valuation speicherbar.

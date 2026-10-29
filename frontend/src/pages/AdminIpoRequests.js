@@ -170,6 +170,7 @@ const AdminIpoRequests = () => {
             id: m.id,
             _rowKey: `mongo:${m.id}`,
             source: 'mongo',
+            origin: m.source,
             user_id: m.user_id,
             ipo_id: m.ipo_id,
             company_name: m.company_name,
@@ -235,7 +236,8 @@ const AdminIpoRequests = () => {
 
   const parseOptionalNum = (v) => {
     if (v == null || String(v).trim() === '') return null;
-    const n = Number(String(v).replace(',', '.'));
+    const s = String(v).trim();
+    const n = Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s);
     return Number.isFinite(n) ? n : null;
   };
 
@@ -593,32 +595,31 @@ const AdminIpoRequests = () => {
       ) : (
         <AdminSurfaceCard>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px]">
+            <table className="w-full">
               <thead className={adminTheadClass}>
                 <tr>
-                  <th className="px-4 py-3 text-left">Datum</th>
-                  <th className="px-4 py-3 text-left">Kunde</th>
-                  <th className="px-4 py-3 text-left">IPO</th>
-                  <th className="px-4 py-3 text-right">Volumen</th>
-                  <th className="px-4 py-3 text-right">Aktien</th>
-                  <th className="px-4 py-3 text-right">Kaufpreis/Aktie</th>
-                  <th className="px-4 py-3 text-right">Gesch. Wert/Aktie</th>
-                  <th className="px-4 py-3 text-right">Gesch. Gewinn</th>
-                  <th className="px-4 py-3 text-left">Quelle</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="sticky right-0 bg-bank-bg px-4 py-3 text-right shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.15)]">Aktionen</th>
+                  <th className="px-2.5 py-3 text-left">Datum</th>
+                  <th className="px-2.5 py-3 text-left">Kunde</th>
+                  <th className="px-2.5 py-3 text-left">IPO</th>
+                  <th className="px-2.5 py-3 text-right">Volumen</th>
+                  <th className="px-2.5 py-3 text-right">Aktien</th>
+                  <th className="px-2.5 py-3 text-right">Kaufpreis/Aktie</th>
+                  <th className="px-2.5 py-3 text-right">Gesch. Wert/Aktie</th>
+                  <th className="px-2.5 py-3 text-right">Gesch. Gewinn</th>
+                  <th className="px-3 py-3 text-left">Status</th>
+                  <th className="px-3 py-3 text-right">Aktionen</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center">
+                    <td colSpan={10} className="py-12 text-center">
                       <RefreshCw size={16} className="mx-auto animate-spin text-bank-gold" />
                     </td>
                   </tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-bank-text-muted">
+                    <td colSpan={10} className="py-12 text-center text-bank-text-muted">
                       Keine Anfragen
                     </td>
                   </tr>
@@ -644,15 +645,15 @@ const AdminIpoRequests = () => {
                     return (
                       <React.Fragment key={rowKey}>
                       <tr className={`border-b border-bank-border ${adminRowHover}`} data-testid={`ipo-request-row-${row.id}`}>
-                        <td className="px-4 py-3 font-mono text-[11px]">
+                        <td className="px-2.5 py-3 font-mono text-[11px]">
                           {row.created_at
                             ? new Date(row.created_at).toLocaleString('de-DE')
                             : '–'}
                         </td>
-                        <td className="px-4 py-3 text-[13px]">
-                          <div className="flex items-center gap-2">
+                        <td className="px-2.5 py-3 text-[13px]">
+                          <div className="flex flex-col items-start gap-1">
                             <span>{customerLabel(row.profiles)}</span>
-                            {row.source === 'mongo' && (
+                            {row.source === 'mongo' && row.origin !== 'admin' && (
                               <span
                                 className="inline-flex items-center rounded-full border border-sky-300 bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700"
                                 title="Neue Kundenportal-Anfrage (FastAPI/Mongo)"
@@ -662,7 +663,7 @@ const AdminIpoRequests = () => {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-[13px]">
+                        <td className="px-2.5 py-3 text-[13px]">
                           <div>{row.company_name || '–'}</div>
                           {row.ticker && (
                             <span className="font-mono text-[11px] text-bank-text-muted">
@@ -670,10 +671,10 @@ const AdminIpoRequests = () => {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-[13px]">
+                        <td className="px-2.5 py-3 text-right tabular-nums text-[13px]">
                           {row.amount_eur != null ? formatEUR(row.amount_eur) : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-[13px]" data-testid={`ipo-row-shares-${row.id}`}>
+                        <td className="px-2.5 py-3 text-right tabular-nums text-[13px]" data-testid={`ipo-row-shares-${row.id}`}>
                           {row.status === 'allocated' && row.allocated_shares != null ? (
                             <>
                               {row.allocated_shares}
@@ -686,14 +687,14 @@ const AdminIpoRequests = () => {
                             </>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-[12px]">
+                        <td className="px-2.5 py-3 text-right tabular-nums text-[12px]">
                           {est
                             ? fmtEurPlain(est.purchasePrice)
                             : row.subscription_price_per_share != null
                               ? formatMoney(row.subscription_price_per_share, currency)
                               : '–'}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-[12px]">
+                        <td className="px-2.5 py-3 text-right tabular-nums text-[12px]">
                           {est
                             ? fmtEurPlain(est.estimatedValue)
                             : row.listing_price_per_share != null
@@ -704,7 +705,7 @@ const AdminIpoRequests = () => {
                           )}
                         </td>
                         {est ? (
-                          <td className="px-4 py-3 text-right tabular-nums text-[12px]" data-testid={`ipo-row-profit-${row.id}`}>
+                          <td className="px-2.5 py-3 text-right tabular-nums text-[12px]" data-testid={`ipo-row-profit-${row.id}`}>
                             {est.profit == null ? '–' : (
                               <>
                                 <span className={toneClass(est.profit)}>{fmtEurSigned(est.profit)}</span>
@@ -714,7 +715,7 @@ const AdminIpoRequests = () => {
                             )}
                           </td>
                         ) : (
-                        <td className={`px-4 py-3 text-right tabular-nums text-[12px] ${up ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        <td className={`px-2.5 py-3 text-right tabular-nums text-[12px] ${up ? 'text-emerald-700' : 'text-rose-700'}`}>
                           {legacyVal ? (
                             <>
                               {formatEURSigned(legacyVal.profitAbsEur ?? legacyVal.profitAbs)}
@@ -726,25 +727,23 @@ const AdminIpoRequests = () => {
                           )}
                         </td>
                         )}
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase ${
-                              row.source === 'admin'
-                                ? 'border-violet-300 bg-violet-50 text-violet-700'
-                                : 'border-slate-200 bg-slate-50 text-slate-600'
-                            }`}
-                          >
-                            {row.source === 'admin' ? 'Admin' : 'Kunde'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-3">
                           <span
                             className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase ${statusCls}`}
                           >
                             {row.status}
                           </span>
+                          <span
+                            className={`mt-1 flex w-fit rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase ${
+                              row.origin === 'admin'
+                                ? 'border-violet-300 bg-violet-50 text-violet-700'
+                                : 'border-slate-200 bg-slate-50 text-slate-600'
+                            }`}
+                          >
+                            {row.origin === 'admin' ? 'Admin' : 'Kunde'}
+                          </span>
                         </td>
-                        <td className="sticky right-0 bg-white px-4 py-3 text-right shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.15)]">
+                        <td className="px-3 py-3 text-right">
                           <div className="flex justify-end gap-1">
                           {est && (
                             <Button
@@ -844,7 +843,7 @@ const AdminIpoRequests = () => {
                       </tr>
                       {expanded && est && (
                         <tr className="border-b border-bank-border bg-bank-bg/30" data-testid={`ipo-row-details-${row.id}`}>
-                          <td colSpan={11} className="px-4 py-3">
+                          <td colSpan={10} className="px-2.5 py-3">
                             <IpoEstimateSummary est={est} testIdPrefix={`ipo-row-est-${row.id}`} />
                             <p className="mt-2 text-[11px] text-bank-text-muted">
                               {est.sharesBasis === 'allocated'
