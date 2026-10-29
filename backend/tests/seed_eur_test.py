@@ -16,7 +16,7 @@ EMAIL = "test_eur_qa@example.com"
 PASSWORD = "TestEur-Qa-2026!"
 D = lambda v: Decimal128(Decimal(str(v)))  # noqa: E731
 COLLS = ["cash_ledger", "stock_positions", "stock_orders", "watchlists", "stock_alerts",
-         "ipo_requests", "portfolio_snapshots", "order_executions", "price_alerts"]
+         "ipo_requests", "portfolio_snapshots", "order_executions", "price_alerts", "ipo_allocations"]
 
 
 async def clean(db):
@@ -45,7 +45,8 @@ async def seed(db):
         "status": "settled", "idempotency_key": "test-eur-deposit", "source": "admin",
         "description": "TEST_EUR Einzahlung", "effective_at": now, "created_at": now,
     })
-    for sym, qty, avg in (("AAPL", 3, "280.00"), ("VOLV-B.ST", 10, "25.00"), ("DBK", 20, "27.00"), ("TESTIPO", 4, "20.00")):
+    for sym, qty, avg in (("AAPL", 3, "280.00"), ("VOLV-B.ST", 10, "25.00"), ("DBK", 20, "27.00"), ("TESTIPO", 4, "20.00"),
+                          ("PRVT3", 10, "40.00"), ("PRVNV", 5, "20.00")):
         await db.stock_positions.insert_one({
             "user_id": uid, "symbol": sym, "quantity": qty, "avg_cost": D(avg), "currency": "EUR",
             "is_active": True, "created_at": now, "updated_at": now,
@@ -75,6 +76,20 @@ async def seed(db):
         "allocated_shares": 4, "subscription_price_per_share": D("20.0000"),
         "listing_price_per_share": D("25.0000"), "allocation_gross_amount": D("80.00"), "allocation_date": now,
     })
+    base_req = {"user_id": uid, "ipo_id": "6a9e986f4ceb21981b2e5688", "source": "customer",
+                "notes": "TEST_EUR", "created_at": now, "updated_at": now}
+    await db.ipo_requests.insert_many([
+        {**base_req, "company_name": "Preview Test3 AG", "ticker": "PRVT3", "amount_eur": 400.0,
+         "shares_requested": 10, "status": "allocated", "allocated_shares": 10,
+         "subscription_price_per_share": D("40.0000"), "listing_price_per_share": D("50.0000"),
+         "allocation_gross_amount": D("400.00"), "allocation_date": now},
+        {**base_req, "company_name": "TEST_EUR Ohne Bewertung AG", "ticker": "PRVNV", "amount_eur": 100.0,
+         "shares_requested": 5, "status": "allocated", "allocated_shares": 5,
+         "subscription_price_per_share": D("20.0000"), "allocation_gross_amount": D("100.00"),
+         "allocation_date": now},
+        {**base_req, "company_name": "TEST_EUR Teilzuteilung AG", "ticker": "PRVPA", "amount_eur": 400.0,
+         "shares_requested": 10, "status": "approved", "handled_at": now},
+    ])
     print("seeded", uid)
 
 

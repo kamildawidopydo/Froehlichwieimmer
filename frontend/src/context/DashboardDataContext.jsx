@@ -294,9 +294,9 @@ export const DashboardDataProvider = ({ children }) => {
         // Bewertung wird bei Allocation gesetzt, daher fallen approved_at /
         // valuation_set_at auf allocation_date zurück).
         approved_at: r.allocation_date || null,
-        valuation_set_at: r.allocation_date || null,
+        valuation_set_at: r.valuation_set_at || r.allocation_date || null,
         position_symbol: null,
-        use_admin_valuation: true,
+        use_admin_valuation: r.use_admin_valuation !== false,
         profit_margin_pct: null,
         decision_note: null,
         rejected_at: null,

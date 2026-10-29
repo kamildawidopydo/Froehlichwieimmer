@@ -21,6 +21,8 @@ Kontext:
 from __future__ import annotations
 
 from datetime import datetime, timezone, date
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from bson.decimal128 import Decimal128
 from typing import Optional, Literal
 
 from bson import ObjectId
@@ -84,6 +86,52 @@ class IpoRequestOut(BaseModel):
     allocation_date: Optional[str] = None
     allocation_id: Optional[str] = None
     position_id: Optional[str] = None
+    use_admin_valuation: bool = True
+    valuation_set_at: Optional[str] = None
+    valuation: Optional[dict] = None
+
+
+_CENT = Decimal("0.01")
+
+
+def _dec_or_none(v) -> Optional[Decimal]:
+    if v is None:
+        return None
+    try:
+        d = v.to_decimal() if hasattr(v, "to_decimal") else Decimal(str(v))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+    return d if d.is_finite() and d > 0 else None
+
+
+def _money(d: Optional[Decimal]) -> Optional[str]:
+    return str(d.quantize(_CENT, rounding=ROUND_HALF_UP)) if d is not None else None
+
+
+def compute_ipo_valuation(doc: dict) -> dict:
+    """Estimated (unrealised) EUR valuation. Uses allocated shares once allocated.
+    Missing price/value/shares -> totals stay None (no fake profit)."""
+    allocated = doc.get("status") == "allocated"
+    shares = doc.get("allocated_shares") if allocated else doc.get("shares_requested")
+    shares = int(shares) if shares else None
+    price = _dec_or_none(doc.get("subscription_price_per_share"))
+    est = _dec_or_none(doc.get("listing_price_per_share"))
+    cost = price * shares if price is not None and shares else None
+    total = est * shares if est is not None and shares else None
+    profit = total - cost if cost is not None and total is not None else None
+    pct = (profit / cost * 100) if profit is not None and cost else None
+    return {
+        "currency": "EUR",
+        "shares": shares,
+        "shares_basis": "allocated" if allocated else "requested",
+        "purchase_price_per_share": _money(price),
+        "estimated_value_per_share": _money(est),
+        "total_cost": _money(cost),
+        "estimated_total": _money(total),
+        "estimated_profit": _money(profit),
+        "estimated_return_pct": _money(pct),
+        "is_estimate": True,
+    }
 
 
 def _serialize(doc: dict) -> dict:
@@ -123,6 +171,10 @@ def _serialize(doc: dict) -> dict:
         "allocation_date": alloc_at.isoformat() if isinstance(alloc_at, datetime) else alloc_at,
         "allocation_id": str(doc.get("allocation_id")) if doc.get("allocation_id") else None,
         "position_id": str(doc.get("position_id")) if doc.get("position_id") else None,
+        "use_admin_valuation": doc.get("use_admin_valuation") is not False,
+        "valuation_set_at": doc["valuation_set_at"].isoformat()
+        if isinstance(doc.get("valuation_set_at"), datetime) else doc.get("valuation_set_at"),
+        "valuation": compute_ipo_valuation(doc),
     }
 
 
@@ -408,7 +460,6 @@ async def admin_reject(
 # ═══════════════════════════════════════════════════════════════════════
 # Session 82.29 · IPO Allocation
 # ═══════════════════════════════════════════════════════════════════════
-from decimal import Decimal, InvalidOperation  # noqa: E402
 from services.ipo_allocation_service import (  # noqa: E402
     allocate_ipo_request, AllocationError, AllocationCrash,
     ensure_indexes as ensure_allocation_indexes,
@@ -473,12 +524,20 @@ async def admin_allocate(
 # Session 82.90b — Safe Admin-Financial Backend Enablement
 # ═══════════════════════════════════════════════════════════════════════
 class AdminIpoValuationUpdate(BaseModel):
-    """Whitelist der Bewertungs-/Listing-Metadaten. Marktpreise (aus Provider-
-    Stack) bleiben unangetastet. Nur pre-allocation zulässig."""
+    """Whitelist der Bewertungs-Metadaten (EUR). listing_price_per_share = aktuell
+    geschätzter Wert je Aktie. Keine Buchung, keine Positions-/Cash-Änderung."""
     subscription_price_per_share: Optional[str] = Field(default=None)
     listing_price_per_share: Optional[str] = Field(default=None)
+    use_admin_valuation: Optional[bool] = Field(default=None)
     decision_note: Optional[str] = Field(default=None, max_length=500)
     model_config = {"extra": "forbid"}
+
+
+def _positive_dec(v: str, field: str) -> Decimal:
+    d = _parse_dec(str(v).strip().replace(",", "."), field)
+    if not d.is_finite() or d <= 0:
+        raise HTTPException(status_code=422, detail=f"{field} muss größer als 0 sein")
+    return d.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
 
 
 @admin_router.patch("/requests/{request_id}/valuation")
@@ -487,43 +546,54 @@ async def admin_update_ipo_valuation(
     body: AdminIpoValuationUpdate,
     admin_user: dict = Depends(require_admin),
 ):
-    """PATCH auf Bewertungs-Metadaten einer IPO-Zeichnungsanfrage.
+    """PATCH auf Bewertungs-Metadaten (nur ipo_requests; keine Cash-/Positions-Buchung).
 
-    - Nur `status ∈ {pending, approved}` — nach `allocated` unwiderruflich.
-    - Whitelist via Pydantic `extra=forbid`; keine Status-Manipulation möglich.
-    - Server-authoritative user_id/handled_at/handled_by.
-    - Idempotent: PATCH mit identischen Werten ist no-op-safe.
+    - pending/approved: Kaufpreis + geschätzter Wert änderbar.
+    - allocated: nur geschätzter Wert (Kaufpreis ist durch die Zuteilung gebucht).
+    - rejected/cancelled: 409.
     """
     if not ObjectId.is_valid(request_id):
         raise HTTPException(status_code=400, detail="Invalid request id")
-    if all(v is None for v in (body.subscription_price_per_share,
-                                body.listing_price_per_share,
-                                body.decision_note)):
+    if all(v is None for v in (body.subscription_price_per_share, body.listing_price_per_share,
+                                body.use_admin_valuation, body.decision_note)):
         raise HTTPException(status_code=422, detail="Kein Feld zum Aktualisieren angegeben")
+    existing = await db.ipo_requests.find_one({"_id": ObjectId(request_id)})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+    status = existing.get("status")
+    if status not in ("pending", "approved", "allocated"):
+        raise HTTPException(status_code=409,
+                            detail=f"Bewertung in Status '{status}' nicht änderbar")
     now = datetime.now(timezone.utc)
-    updates: dict = {"updated_at": now, "handled_at": now,
-                     "handled_by": ObjectId(admin_user["id"])}
+    updates: dict = {"updated_at": now}
     if body.subscription_price_per_share is not None:
-        _parse_dec(body.subscription_price_per_share, "subscription_price_per_share")
-        updates["subscription_price_per_share"] = body.subscription_price_per_share
+        sub = _positive_dec(body.subscription_price_per_share, "subscription_price_per_share")
+        if status == "allocated":
+            if _dec_or_none(existing.get("subscription_price_per_share")) != sub:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Der IPO-Kaufpreis ist durch die Zuteilung gebucht und kann nicht mehr geändert werden.",
+                )
+        else:
+            updates["subscription_price_per_share"] = Decimal128(sub)
     if body.listing_price_per_share is not None:
-        _parse_dec(body.listing_price_per_share, "listing_price_per_share")
-        updates["listing_price_per_share"] = body.listing_price_per_share
+        updates["listing_price_per_share"] = Decimal128(
+            _positive_dec(body.listing_price_per_share, "listing_price_per_share"))
+        updates["valuation_set_at"] = now
+    if body.use_admin_valuation is not None:
+        updates["use_admin_valuation"] = body.use_admin_valuation
     if body.decision_note is not None:
         updates["decision_note"] = body.decision_note.strip() or None
+    history = {"at": now, "by": ObjectId(admin_user["id"]),
+               "subscription_price_per_share": updates.get("subscription_price_per_share"),
+               "listing_price_per_share": updates.get("listing_price_per_share")}
     result = await db.ipo_requests.find_one_and_update(
-        {"_id": ObjectId(request_id), "status": {"$in": ["pending", "approved"]}},
-        {"$set": updates},
+        {"_id": ObjectId(request_id), "status": status},
+        {"$set": updates, "$push": {"valuation_history": history}},
         return_document=True,
     )
     if not result:
-        existing = await db.ipo_requests.find_one({"_id": ObjectId(request_id)})
-        if not existing:
-            raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
-        raise HTTPException(
-            status_code=409,
-            detail=f"Valuation-Update in Status '{existing.get('status')}' nicht zulässig",
-        )
+        raise HTTPException(status_code=409, detail="Anfrage wurde parallel geändert")
     return await _serialize_with_customer(result)
 
 

@@ -1,7 +1,17 @@
 import { getApiBase } from '@/lib/apiBase';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Send, Check, RefreshCw, Trash2, Plus, Edit, X, Package } from 'lucide-react';
+import { Send, Check, RefreshCw, Trash2, Plus, Edit, X, Package, ChevronDown } from 'lucide-react';
+import IpoEstimateSummary from '@/components/admin/IpoEstimateSummary';
+import {
+  computeIpoEstimate,
+  fromBackendValuation,
+  parseEurInput,
+  fmtEurPlain,
+  fmtEurSigned,
+  fmtPctSigned,
+  toneClass,
+} from '@/lib/ipoEstimate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,6 +66,7 @@ const customerLabel = (profiles) =>
   '–';
 
 const EMPTY_VALUATION_FORM = {
+  shares: '',
   listingPrice: '',
   profitPct: '',
   subscriptionPrice: '',
@@ -165,6 +176,7 @@ const AdminIpoRequests = () => {
   const [allocateForm, setAllocateForm] = useState(EMPTY_ALLOCATE_FORM);
   const [allocateError, setAllocateError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [expandedKey, setExpandedKey] = useState(null);
   const [eurRates, setEurRates] = useState({ EUR: 1 });
 
   const ipoById = useMemo(() => {
@@ -179,7 +191,8 @@ const AdminIpoRequests = () => {
     setLoading(true);
     try {
       const [reqRes, ipoRes, profRes, ratesRes, mongoRes] = await Promise.all([
-        ({ then: (cb) => fetch(`${getApiBase()}/api/admin/ipo/requests`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: Array.isArray(d)?d:[], error: null })) }),
+        // Same endpoint as mongoRes below — loading it twice listed every request twice.
+        Promise.resolve({ data: [], error: null }),
         // Session 82.90d — ipo_catalog jetzt via FastAPI-Endpoint
         ({ then: (cb) => fetch(`${getApiBase()}/api/ipo/catalog`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: (Array.isArray(d)?d:(d?.items||[])).map(x=>({id:x.id,company_name:x.company_name,ticker_proposed:x.ticker_proposed,price_currency:x.price_currency,price_range_low:x.price_range_low,price_range_high:x.price_range_high})), error: null })).catch(() => cb({ data: [], error: null })) }),
         ({ then: (cb) => fetch(`${getApiBase()}/api/admin/users`, {credentials:'include'}).then(r=>r.json()).then(d => cb({ data: (Array.isArray(d)?d:(d?.items||[])).map(u=>({id:u.id,email:u.email,first_name:u.first_name,last_name:u.last_name})), error: null })) }),
@@ -213,6 +226,12 @@ const AdminIpoRequests = () => {
             status: m.status,
             notes: m.notes,
             decision_note: m.decision_note,
+            allocated_shares: m.allocated_shares,
+            subscription_price_per_share: m.subscription_price_per_share,
+            listing_price_per_share: m.listing_price_per_share,
+            use_admin_valuation: m.use_admin_valuation,
+            valuation_set_at: m.valuation_set_at,
+            valuation: m.valuation,
             approved_at: m.status === 'approved' ? m.handled_at : null,
             rejected_at: m.status === 'rejected' ? m.handled_at : null,
             created_at: m.created_at,
@@ -311,6 +330,9 @@ const AdminIpoRequests = () => {
   const openEdit = (row) => {
     setEditRow(row);
     setValuationForm({
+      shares: String(
+        row.status === 'allocated' ? row.allocated_shares ?? '' : row.shares_requested ?? '',
+      ),
       listingPrice: row.listing_price_per_share != null ? String(row.listing_price_per_share) : '',
       profitPct: row.profit_margin_pct != null ? String(row.profit_margin_pct) : '',
       subscriptionPrice:
@@ -447,14 +469,36 @@ const AdminIpoRequests = () => {
 
   const submitEdit = async () => {
     if (!editRow) return;
-    const listing = parseOptionalNum(valuationForm.listingPrice);
-    const profit = parseOptionalNum(valuationForm.profitPct);
-    if (listing == null && profit == null && valuationForm.useAdminValuation === editRow.use_admin_valuation) {
-      toast.error('Keine Änderung erkannt.');
+    const isAlloc = editRow.status === 'allocated';
+    const sub = parseEurInput(valuationForm.subscriptionPrice);
+    const est = parseEurInput(valuationForm.listingPrice);
+    if (String(valuationForm.subscriptionPrice).trim() && sub == null) {
+      toast.error('IPO-Kaufpreis pro Aktie muss ein Betrag größer 0 sein.');
       return;
     }
+    if (String(valuationForm.listingPrice).trim() && est == null) {
+      toast.error('Geschätzter Wert pro Aktie muss ein Betrag größer 0 sein.');
+      return;
+    }
+    const payload = { use_admin_valuation: valuationForm.useAdminValuation };
+    if (!isAlloc && sub != null) payload.subscription_price_per_share = sub.toFixed(2);
+    if (est != null) payload.listing_price_per_share = est.toFixed(2);
     setSubmitting(true);
-    const error = null; try { await fetch(`${getApiBase()}/api/admin/ipo/requests/${encodeURIComponent(editRow.id)}/valuation`, { method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json','Accept':'application/json'}, body: JSON.stringify({ decision_note: null }) }); } catch(e) { /* noop */ }
+    let error = null;
+    try {
+      const r = await fetch(`${getApiBase()}/api/admin/ipo/requests/${encodeURIComponent(editRow.id)}/valuation`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({ detail: `HTTP ${r.status}` }));
+        error = { message: typeof j.detail === 'string' ? j.detail : 'Ungültige Eingabe' };
+      }
+    } catch (e) {
+      error = { message: e.message };
+    }
     setSubmitting(false);
     if (error) {
       toast.error('Aktualisierung fehlgeschlagen: ' + error.message);
@@ -579,13 +623,16 @@ const AdminIpoRequests = () => {
     ? buildPreview(valuationForm, approveRow.shares_requested, approveRow.amount_eur, approveRow.ipo_id)
     : null;
 
-  const editPreview = editRow
-    ? buildPreview(
-        valuationForm,
-        editRow.shares_requested,
-        editRow.amount_eur,
-        editRow.ipo_id,
-      )
+  const editEstimate = editRow
+    ? {
+        ...computeIpoEstimate({
+          shares: valuationForm.shares,
+          purchasePrice: valuationForm.subscriptionPrice,
+          estimatedValue: valuationForm.listingPrice,
+        }),
+        purchasePrice: parseEurInput(valuationForm.subscriptionPrice),
+        estimatedValue: parseEurInput(valuationForm.listingPrice),
+      }
     : null;
 
   const manualPreview = manualOpen
@@ -637,10 +684,10 @@ const AdminIpoRequests = () => {
                   <th className="px-4 py-3 text-left">Kunde</th>
                   <th className="px-4 py-3 text-left">IPO</th>
                   <th className="px-4 py-3 text-right">Volumen</th>
-                  <th className="px-4 py-3 text-right">Lots</th>
-                  <th className="px-4 py-3 text-right">Einstand/Lot</th>
-                  <th className="px-4 py-3 text-right">Listing</th>
-                  <th className="px-4 py-3 text-right">Gewinn</th>
+                  <th className="px-4 py-3 text-right">Aktien</th>
+                  <th className="px-4 py-3 text-right">Kaufpreis/Aktie</th>
+                  <th className="px-4 py-3 text-right">Gesch. Wert/Aktie</th>
+                  <th className="px-4 py-3 text-right">Gesch. Gewinn</th>
                   <th className="px-4 py-3 text-left">Quelle</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-right">Aktionen</th>
@@ -665,7 +712,11 @@ const AdminIpoRequests = () => {
                     const isApproved = row.status === 'approved';
                     const isAllocated = row.status === 'allocated';
                     const currency = resolveCurrency(row);
-                    const val = rowValuation(row);
+                    const legacyVal = row.source === 'mongo' ? null : rowValuation(row);
+                    const est = row.source === 'mongo' ? fromBackendValuation(row.valuation) : null;
+                    const rowKey = row._rowKey || row.id;
+                    const expanded = expandedKey === rowKey;
+                    const canEdit = row.source === 'mongo' && ['pending', 'approved', 'allocated'].includes(row.status);
                     const statusCls = isApproved
                       ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
                       : isAllocated
@@ -673,9 +724,10 @@ const AdminIpoRequests = () => {
                         : row.status === 'rejected'
                           ? 'border-rose-300 bg-rose-50 text-rose-700'
                           : 'border-amber-300 bg-amber-50 text-amber-700';
-                    const up = (val?.profitAbsEur ?? val?.profitAbs ?? 0) >= 0;
+                    const up = (legacyVal?.profitAbsEur ?? legacyVal?.profitAbs ?? 0) >= 0;
                     return (
-                      <tr key={row._rowKey || row.id} className={`border-b border-bank-border ${adminRowHover}`}>
+                      <React.Fragment key={rowKey}>
+                      <tr className={`border-b border-bank-border ${adminRowHover}`} data-testid={`ipo-request-row-${row.id}`}>
                         <td className="px-4 py-3 font-mono text-[11px]">
                           {row.created_at
                             ? new Date(row.created_at).toLocaleString('de-DE')
@@ -705,33 +757,55 @@ const AdminIpoRequests = () => {
                         <td className="px-4 py-3 text-right tabular-nums text-[13px]">
                           {row.amount_eur != null ? formatEUR(row.amount_eur) : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-[13px]">
-                          {row.shares_requested}
+                        <td className="px-4 py-3 text-right tabular-nums text-[13px]" data-testid={`ipo-row-shares-${row.id}`}>
+                          {row.status === 'allocated' && row.allocated_shares != null ? (
+                            <>
+                              {row.allocated_shares}
+                              <span className="block text-[10px] text-bank-text-muted">zugeteilt von {row.shares_requested}</span>
+                            </>
+                          ) : (
+                            <>
+                              {row.shares_requested}
+                              <span className="block text-[10px] text-bank-text-muted">angefragt</span>
+                            </>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-[12px]">
-                          {row.subscription_price_per_share != null
-                            ? formatMoney(row.subscription_price_per_share, currency)
-                            : '–'}
+                          {est
+                            ? fmtEurPlain(est.purchasePrice)
+                            : row.subscription_price_per_share != null
+                              ? formatMoney(row.subscription_price_per_share, currency)
+                              : '–'}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-[12px]">
-                          {row.listing_price_per_share != null
-                            ? formatMoney(row.listing_price_per_share, currency)
-                            : '–'}
+                          {est
+                            ? fmtEurPlain(est.estimatedValue)
+                            : row.listing_price_per_share != null
+                              ? formatMoney(row.listing_price_per_share, currency)
+                              : '–'}
                           {row.use_admin_valuation === false && (
                             <span className="ml-1 text-[10px] text-bank-text-muted">(Markt)</span>
                           )}
                         </td>
+                        {est ? (
+                          <td className="px-4 py-3 text-right tabular-nums text-[12px]" data-testid={`ipo-row-profit-${row.id}`}>
+                            <span className={toneClass(est.profit)}>{fmtEurSigned(est.profit)}</span>
+                            <br />
+                            <span className={`text-[10px] ${toneClass(est.returnPct)}`}>{fmtPctSigned(est.returnPct)}</span>
+                          </td>
+                        ) : (
                         <td className={`px-4 py-3 text-right tabular-nums text-[12px] ${up ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          {val ? (
+                          {legacyVal ? (
                             <>
-                              {formatEURSigned(val.profitAbsEur ?? val.profitAbs)}
+                              {formatEURSigned(legacyVal.profitAbsEur ?? legacyVal.profitAbs)}
                               <br />
-                              <span className="text-[10px]">{formatPct(val.profitPct)}</span>
+                              <span className="text-[10px]">{formatPct(legacyVal.profitPct)}</span>
                             </>
                           ) : (
                             '–'
                           )}
                         </td>
+                        )}
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase ${
@@ -751,6 +825,30 @@ const AdminIpoRequests = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-1">
+                          {est && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setExpandedKey(expanded ? null : rowKey)}
+                              title="Bewertungsdetails"
+                              data-testid={`ipo-row-expand-${row.id}`}
+                            >
+                              <ChevronDown size={14} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                            </Button>
+                          )}
+                          {canEdit && !isPending && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={processingId === row.id}
+                              onClick={() => openEdit(row)}
+                              title="Bewertung bearbeiten"
+                              data-testid={`ipo-edit-valuation-btn-${row.id}`}
+                            >
+                              <Edit size={14} />
+                            </Button>
+                          )}
                           {isPending ? (
                             <div className="flex justify-end gap-1">
                               <Button
@@ -759,6 +857,7 @@ const AdminIpoRequests = () => {
                                 disabled={processingId === row.id}
                                 onClick={() => openEdit(row)}
                                 title="Bewertung bearbeiten"
+                                data-testid={`ipo-edit-valuation-btn-${row.id}`}
                               >
                                 <Edit size={14} />
                               </Button>
@@ -803,11 +902,12 @@ const AdminIpoRequests = () => {
                                   variant="outline"
                                   disabled={processingId === row.id}
                                   onClick={() => openEdit(row)}
-                                  title="Bewertung bearbeiten"
+                                  title="Bewertung bearbeiten (Legacy)"
                                 >
                                   <Edit size={14} />
                                 </Button>
                               )}
+                              {!isAllocated && (
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -816,10 +916,25 @@ const AdminIpoRequests = () => {
                               >
                                 <Trash2 size={14} />
                               </Button>
+                              )}
                             </div>
                           )}
+                          </div>
                         </td>
                       </tr>
+                      {expanded && est && (
+                        <tr className="border-b border-bank-border bg-bank-bg/30" data-testid={`ipo-row-details-${row.id}`}>
+                          <td colSpan={11} className="px-4 py-3">
+                            <IpoEstimateSummary est={est} testIdPrefix={`ipo-row-est-${row.id}`} />
+                            <p className="mt-2 text-[11px] text-bank-text-muted">
+                              {est.sharesBasis === 'allocated'
+                                ? 'Berechnet mit der tatsächlich zugeteilten Aktienanzahl.'
+                                : 'Vorläufig mit der angefragten Aktienanzahl berechnet – verbindlich ist die spätere Zuteilung.'}
+                            </p>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })
                 )}
@@ -903,53 +1018,81 @@ const AdminIpoRequests = () => {
 
       {/* Edit valuation modal */}
       <Dialog open={!!editRow} onOpenChange={(open) => !open && setEditRow(null)}>
-        <DialogContent className="max-w-lg bg-white">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto bg-white">
           <DialogHeader>
             <DialogTitle>Bewertung bearbeiten</DialogTitle>
           </DialogHeader>
           {editRow && (
-            <div className="space-y-4">
+            <div className="space-y-4" data-testid="ipo-edit-valuation-dialog">
               <p className="text-[13px] text-bank-text-muted">
                 {editRow.company_name} · {customerLabel(editRow.profiles)}
+                <span className="ml-1 uppercase text-[10px]">({editRow.status})</span>
               </p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
-                  <Label htmlFor="edit-listing">Listing-Preis / Lot</Label>
+                  <Label htmlFor="edit-sub">IPO-Kaufpreis pro Aktie (€)</Label>
+                  <Input
+                    id="edit-sub"
+                    data-testid="ipo-edit-purchase-price"
+                    inputMode="decimal"
+                    placeholder="z. B. 40,00"
+                    disabled={editRow.status === 'allocated'}
+                    value={valuationForm.subscriptionPrice}
+                    onChange={(e) =>
+                      setValuationForm((f) => ({ ...f, subscriptionPrice: e.target.value }))
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-shares">Anzahl der Aktien</Label>
+                  <Input
+                    id="edit-shares"
+                    data-testid="ipo-edit-shares"
+                    inputMode="numeric"
+                    disabled={editRow.status === 'allocated'}
+                    value={valuationForm.shares}
+                    onChange={(e) => setValuationForm((f) => ({ ...f, shares: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-listing">Aktuell geschätzter Wert pro Aktie (€)</Label>
                   <Input
                     id="edit-listing"
+                    data-testid="ipo-edit-estimated-value"
+                    inputMode="decimal"
+                    placeholder="z. B. 50,00"
                     value={valuationForm.listingPrice}
                     onChange={(e) =>
                       setValuationForm((f) => ({ ...f, listingPrice: e.target.value }))
                     }
                   />
                 </div>
-                <div>
-                  <Label htmlFor="edit-profit">Gewinn %</Label>
-                  <Input
-                    id="edit-profit"
-                    value={valuationForm.profitPct}
-                    onChange={(e) =>
-                      setValuationForm((f) => ({ ...f, profitPct: e.target.value }))
-                    }
-                  />
-                </div>
               </div>
+              <p className="text-[11px] text-bank-text-muted" data-testid="ipo-edit-shares-hint">
+                {editRow.status === 'allocated'
+                  ? 'Kaufpreis und Aktienanzahl stammen aus der gebuchten Zuteilung und sind gesperrt. Eine neue Bewertung löst keine Abbuchung aus.'
+                  : `Angefragt: ${editRow.shares_requested} Aktien. Die verbindliche Anzahl wird bei der Zuteilung festgelegt; hier dient sie nur der Vorschau.`}
+              </p>
+              <IpoEstimateSummary est={editEstimate} testIdPrefix="ipo-edit-est" />
               <label className="flex items-center gap-2 text-[13px]">
                 <input
                   type="checkbox"
+                  data-testid="ipo-edit-admin-valuation"
                   checked={valuationForm.useAdminValuation}
                   onChange={(e) =>
                     setValuationForm((f) => ({ ...f, useAdminValuation: e.target.checked }))
                   }
                 />
-                Admin-Devisierung aktiv
+                Admin-Devisierung aktiv (Bewertung im Kundendepot anzeigen)
               </label>
-              <ValuationPreview preview={editPreview} currency={resolveCurrency(editRow)} />
+              <p className="text-[11px] text-bank-text-muted">
+                Geschätzte Werte – nicht realisiert, keine Buchung auf dem Kundenkonto.
+              </p>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setEditRow(null)}>
                   Abbrechen
                 </Button>
-                <Button onClick={submitEdit} disabled={submitting}>
+                <Button onClick={submitEdit} disabled={submitting} data-testid="ipo-edit-save">
                   Speichern
                 </Button>
               </div>

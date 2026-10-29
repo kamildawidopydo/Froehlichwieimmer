@@ -1,18 +1,13 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import StockLogo from '@/components/StockLogo';
-import { formatDate, formatEURSigned } from '@/lib/dashboardFormatters';
+import { formatDate } from '@/lib/dashboardFormatters';
+import { fmtEurSigned, fmtPctSigned, IPO_ESTIMATE_DISCLAIMER } from '@/lib/ipoEstimate';
 
 // IPO allocations are booked in EUR (allocation contract + cash debit in EUR).
 const formatLotPrice = (value, currency) => {
   if (value == null || !Number.isFinite(Number(value)) || currency !== 'EUR') return '–';
   return Number(value).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 4 });
-};
-
-const formatPct = (v) => {
-  if (v == null || !Number.isFinite(Number(v))) return '–';
-  const n = Number(v);
-  return `${n >= 0 ? '+' : ''}${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
 };
 
 /**
@@ -37,7 +32,7 @@ const IpoPositionsTable = ({
         <table className="w-full min-w-[640px]">
           <thead className="border-b border-bank-border bg-bank-bg/50">
             <tr>
-              {['Position', 'Stückzahl', 'Kaufpreis je Stück', 'Kaufbetrag gesamt', 'Aktueller Stückpreis', 'Gewinn / Verlust', 'Aktueller Gesamtwert', 'Kaufdatum'].map((h, i) => (
+              {['Position', 'Aktienanzahl', 'IPO-Kaufpreis', 'Investierter Betrag', 'Geschätzter Aktienwert', 'Geschätzter Gesamtwert', 'Geschätzter Gewinn / Rendite', 'Kaufdatum'].map((h, i) => (
                 <th
                   key={h}
                   className={cn(
@@ -53,7 +48,8 @@ const IpoPositionsTable = ({
           <tbody className="divide-y divide-bank-border/70">
             {rows.map((m) => {
               const currency = m.currency;
-              const up = (m.gv ?? 0) >= 0;
+              const gv = m.gv == null ? null : Math.round(Number(m.gv) * 100) / 100;
+              const tone = gv == null || gv === 0 ? 'text-bank-text' : gv > 0 ? 'text-bank-success' : 'text-bank-error';
               const einstand = m.ipoEinstandPerLot ?? m.avg;
               const listing = m.ipoListingPerLot ?? m.price;
               return (
@@ -81,7 +77,7 @@ const IpoPositionsTable = ({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right text-[13px] tabular-nums text-bank-text">
-                    {Number(m.qty).toLocaleString('de-DE', { maximumFractionDigits: 4 })}
+                    {Number(m.qty).toLocaleString('de-DE', { maximumFractionDigits: 4 })} Stück
                   </td>
                   <td className="px-4 py-3 text-right text-[13px] tabular-nums text-bank-text-muted">
                     {formatLotPrice(einstand, currency)}
@@ -90,12 +86,12 @@ const IpoPositionsTable = ({
                   <td className="px-4 py-3 text-right text-[13px] tabular-nums font-medium text-bank-text">
                     {formatLotPrice(listing, currency)}
                   </td>
-                  <td className={cn('px-4 py-3 text-right text-[13px] tabular-nums font-medium', up ? 'text-bank-success' : 'text-bank-error')}>
-                    <div>{formatEURSigned(m.gv)}</div>
-                    <div className="text-[11px]">{formatPct(m.pct)}</div>
-                  </td>
                   <td className="px-4 py-3 text-right text-[13.5px] font-semibold tabular-nums text-bank-text" data-testid={`ipo-position-value-${m.symbol}`}>
                     {formatLotPrice(m.marktwert, currency)}
+                  </td>
+                  <td className={cn('px-4 py-3 text-right text-[13px] tabular-nums font-medium', tone)} data-testid={`ipo-position-profit-${m.symbol}`}>
+                    <div>{fmtEurSigned(gv)}</div>
+                    <div className="text-[11px]">{fmtPctSigned(m.pct == null ? null : Math.round(Number(m.pct) * 100) / 100)}</div>
                   </td>
                   <td className="px-4 py-3 text-right text-xs text-bank-text-muted">{formatDate(m.purchase_date)}</td>
                 </tr>
@@ -104,6 +100,9 @@ const IpoPositionsTable = ({
           </tbody>
         </table>
       </div>
+      <p className="border-t border-bank-border px-4 py-3 text-[11.5px] text-bank-text-muted" data-testid="ipo-estimate-disclaimer">
+        {IPO_ESTIMATE_DISCLAIMER}
+      </p>
     </div>
   );
 };

@@ -24,7 +24,7 @@ const fxHint = (o) =>
   o.original_currency && o.original_currency !== 'EUR' && o.fx_rate
     ? `Handelswährung ${o.original_currency} · ${o.fx_pair} ${Number(o.fx_rate).toLocaleString('de-DE', { maximumFractionDigits: 4 })}${o.native_limit_price ? ` · Limit ≈ ${Number(o.native_limit_price).toLocaleString('de-DE', { maximumFractionDigits: 2 })} ${o.original_currency}` : ''}`
     : undefined;
-import { computeIpoValuation } from '@/lib/ipoValuation';
+import { fromBackendValuation, fmtEurSigned, fmtPctSigned, toneClass } from '@/lib/ipoEstimate';
 import { fetchEurBasedRates } from '@/services/forexService';
 import { Button } from '@/components/ui/button';
 import { useDashboardData } from '@/context/DashboardDataContext';
@@ -733,27 +733,17 @@ const OrdersPage = () => {
                   { label: 'Ticker', align: 'left' },
                   { label: 'Volumen', align: 'right' },
                   { label: 'Stück', align: 'right' },
-                  { label: 'Einstand/Lot', align: 'right' },
-                  { label: 'Listing', align: 'right' },
-                  { label: 'Gewinn', align: 'right' },
+                  { label: 'IPO-Kaufpreis', align: 'right' },
+                  { label: 'Gesch. Wert/Aktie', align: 'right' },
+                  { label: 'Gesch. Gewinn', align: 'right' },
                   { label: 'Status', align: 'left' },
                   { label: 'Hinweis', align: 'left' },
                 ]}
               >
                 {(ipoSubscriptionRequests || []).map((r) => {
                   const meta = IPO_STATUS_META[r.status] || IPO_STATUS_META.pending;
-                  // Allocation prices are booked in EUR (allocation contract).
-                  const priceCurrency = 'EUR';
-                  const val = computeIpoValuation({
-                    shares: r.shares_requested,
-                    subscriptionPrice: r.subscription_price_per_share,
-                    amountEur: r.amount_eur,
-                    listingPrice: r.listing_price_per_share,
-                    profitPct: r.profit_margin_pct,
-                    priceCurrency,
-                    eurRates,
-                  });
-                  const up = (val?.profitAbsEur ?? val?.profitAbs ?? 0) >= 0;
+                  // Backend estimate (allocated shares once allocated; nothing when values are missing).
+                  const est = r.use_admin_valuation !== false ? fromBackendValuation(r.valuation) : null;
                   return (
                     <tr key={r.id} className="border-b border-bank-border last:border-b-0 transition-colors hover:bg-bank-bg/45">
                       <td className="whitespace-nowrap px-4 py-3 font-mono text-[11.5px] text-bank-text-muted">
@@ -762,7 +752,9 @@ const OrdersPage = () => {
                       <td className="px-4 py-3 text-[13.5px] font-medium">{r.company_name || '–'}</td>
                       <td className="px-4 py-3 font-mono text-[12.5px]">{r.ticker || '–'}</td>
                       <td className="px-4 py-3 text-right tabular-nums">{formatEUR(r.amount_eur)}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">{r.shares_requested}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {r.status === 'allocated' && r.allocated_shares != null ? r.allocated_shares : r.shares_requested}
+                      </td>
                       <td className="px-4 py-3 text-right tabular-nums text-[12px]">
                         {r.subscription_price_per_share != null
                           ? Number(r.subscription_price_per_share).toLocaleString('de-DE', {
@@ -779,15 +771,12 @@ const OrdersPage = () => {
                             })
                           : '–'}
                       </td>
-                      <td className={`px-4 py-3 text-right tabular-nums text-[12px] ${up ? 'text-emerald-700' : 'text-rose-700'}`}>
-                        {val ? (
+                      <td className="px-4 py-3 text-right tabular-nums text-[12px]" data-testid={`ipo-request-profit-${r.id}`}>
+                        {est && est.profit != null ? (
                           <>
-                            {formatEURSigned(val.profitAbsEur ?? val.profitAbs)}
+                            <span className={toneClass(est.profit)}>{fmtEurSigned(est.profit)}</span>
                             <br />
-                            <span className="text-[10px]">
-                              {up ? '+' : ''}
-                              {val.profitPct.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %
-                            </span>
+                            <span className={`text-[10px] ${toneClass(est.returnPct)}`}>{fmtPctSigned(est.returnPct)}</span>
                           </>
                         ) : (
                           '–'
