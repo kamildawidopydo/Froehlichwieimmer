@@ -1,3 +1,7 @@
+## Update 2026-10-29 – Automatisches Karriere-Popup entfernt (NUR Vorschau)
+- App.js: <CareerPopup /> entfernt; components/career/ (CareerPopup, CareerIntro, CareerForm – nur vom Popup genutzt) gelöscht. Karriere-Navigation, Karriere-Banner und /karriere (components/careers) unverändert.
+
+
 ## Update 2026-10-29 – Einheitliche G/V-Farben + „Gewinn %“ entfernt (NUR Vorschau)
 - lib/dashboardFormatters.js: pnlTone/pnlToneKey/pnlBadgeTone (grün > 0, rot < 0, neutral bei 0,00); formatEURSigned ohne „+“ bei 0. Angewendet in Aktien-, Depot-, Anleihen-, Übersicht-, Handeln-, StockDetail-, Watchlist-, Markt-, Vertrags- und IPO-Ansichten. Gemeinsame StatTile hat neuen Ton 'gain' (Tagesgeld/Festgeld unverändert).
 - AdminIpoRequests: „Gewinn %“ aus Freigeben/Manuelle Zuweisung entfernt, wirkungslose Checkbox „Betrag abbuchen“ entfernt; manuelle Zuweisung speichert Kaufpreis/Wert per PATCH + Notiz/Volumen; Quelle-Badge korrekt (Admin/Kunde); Tabelle passt ohne Querscrollen.

@@ -5,7 +5,6 @@ import { Toaster } from '@/components/ui/sonner';
 // Session 82.106 · Supabase-Config-Toast entfernt (Migration abgeschlossen in 82.103d).
 import CookieConsent from '@/components/CookieConsent';
 import VisitorWelcomeGate from '@/components/VisitorWelcomeGate';
-import CareerPopup from '@/components/career/CareerPopup';
 import VisitorTracker from '@/components/VisitorTracker';
 import ScrollToTop from '@/components/ScrollToTop';
 import Layout from '@/components/Layout';
@@ -930,7 +929,6 @@ function App() {
             <Toaster richColors position="top-right" />
             <VisitorTracker />
             <VisitorWelcomeGate />
-            <CareerPopup />
             <CookieConsent />
             <FloatingAssistant />
             <SocialPreviewModal />
