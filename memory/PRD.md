@@ -1,3 +1,8 @@
+## Update 2026-10-29 – ANT (Anthropic) Chart-Hinweis (NUR Vorschau)
+- Ursache: Anthropic ist nicht börsennotiert (Katalogstatus „filed“); „ANT“ hat bei Yahoo/Twelve Data keine Kurse → History unavailable, kein Kurs. Kein Zusammenhang mit StockDetail-Änderungen.
+- StockDetail.js: ipoPhase (IPO-Bewertung vorhanden, kein Marktkurs, keine Chartdaten) → Hinweis „Diese Aktie befindet sich noch in der IPO-Phase …“ + „IPO-Bewertung der Emissionsbank: x € je Aktie (kein Börsenkurs)“. Charts ALV/AAPL/MSFT/NVDA geprüft.
+
+
 ## Update 2026-10-29 – Depot-Unruhe behoben (NUR Vorschau)
 - Ursache: DashboardDataContext pollte alle 5 s fetchStockData (4 Requests) und setzte jedes Mal stocksLoading → KPI-Kacheln/Tabellen verschwanden kurz (Springen), alle Arrays neu.
 - Fix: Kurse still alle 5 s (idle 30 s) per refreshQuotesSilently, Positionen/Watchlist/Orders still alle 30 s, updateIfChanged (nur geänderte Werte), manueller Refresh ohne Ladezustand; StockDetail setPrice ignoriert reine as_of-Änderungen.

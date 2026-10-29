@@ -915,6 +915,8 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   const marketValue = position && (positionMetric?.price != null || price?.price != null)
     ? Number(position.quantity) * Number(positionMetric?.price ?? price?.price)
     : null;
+  // IPO position without any market listing: show issuer valuation, never a fake market price/chart.
+  const ipoPhase = !!positionMetric?.isIpoValuation && price?.price == null && !loadingHistory && ohlc.length === 0;
   const portfolioWeight =
     portfolioTotal && marketValue && portfolioTotal > 0
       ? (marketValue / portfolioTotal) * 100
@@ -1015,6 +1017,11 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                   <p className="text-3xl sm:text-4xl font-bold text-bank-text">
                     {price?.price != null ? formatCurrency(price.price, currency) : '–'}
                   </p>
+                  {ipoPhase && (
+                    <p className="mt-1 text-[12px] text-bank-text-muted" data-testid="ipo-phase-valuation">
+                      IPO-Bewertung der Emissionsbank: {formatCurrency(positionMetric.price, 'EUR')} je Aktie (kein Börsenkurs)
+                    </p>
+                  )}
                   {historyFx && (
                     <p className="text-[11px] text-bank-text-muted mt-0.5" data-testid="price-fx-note">
                       Alle Werte in EUR, umgerechnet aus {historyFx.native_currency} (Handelswährung) mit dem
@@ -1115,8 +1122,10 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     <RefreshCw size={20} className="animate-spin text-bank-text-muted/70" />
                   </div>
                 ) : ohlc.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-sm text-bank-text-muted">
-                    Keine Chartdaten verfügbar.
+                  <div className="h-full flex items-center justify-center px-6 text-center text-sm text-bank-text-muted" data-testid="chart-empty-state">
+                    {ipoPhase
+                      ? 'Diese Aktie befindet sich noch in der IPO-Phase. Reguläre Börsenkurse sind derzeit nicht verfügbar.'
+                      : 'Keine Chartdaten verfügbar.'}
                   </div>
                 ) : (
                   <Suspense
