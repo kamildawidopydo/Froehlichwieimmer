@@ -160,6 +160,8 @@ export const buildIpoValuationMap = (requests = []) => {
       profitMarginPct: toNumber(r.profit_margin_pct),
       requestId: r.id,
       valuationSetAt: r.valuation_set_at,
+      companyName: r.company_name || null,
+      allocationDate: r.allocation_date || null,
     };
     map[sym] = entry;
     // Allocation stores the position under the plain ticker.

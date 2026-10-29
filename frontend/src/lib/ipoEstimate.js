@@ -49,10 +49,14 @@ export const fromBackendValuation = (v) => {
 };
 
 export const toneClass = (n) =>
-  n == null || n === 0 ? 'text-bank-text' : n > 0 ? 'text-emerald-700' : 'text-rose-700';
+  n == null || n === 0 ? 'text-bank-text' : n > 0 ? 'text-bank-success' : 'text-bank-error';
 
 const eur = (n) => Number(n).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 export const fmtEurPlain = (n) => (n == null ? '–' : eur(n));
+export const toDeInput = (v) =>
+  v == null || v === '' || !Number.isFinite(Number(v))
+    ? ''
+    : Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 4, useGrouping: false });
 export const fmtEurSigned = (n) => (n == null ? '–' : `${n > 0 ? '+' : n < 0 ? '−' : ''}${eur(Math.abs(n))}`);
 export const fmtPctSigned = (n) =>
   n == null

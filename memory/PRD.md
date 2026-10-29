@@ -1,3 +1,11 @@
+## Update 2026-10-29 – IPO-Bewertung: Kaufpreis, geschätzter Wert, automatische Gewinnberechnung (NUR Vorschau)
+- Backend routes/ipo_requests.py: compute_ipo_valuation (Decimal, ROUND_HALF_UP) → `valuation` in allen Request-Antworten (admin + /requests/me). Anzahl = allocated_shares bei Status allocated, sonst shares_requested (als „angefragt“ markiert). Fehlende Werte → null, kein Gewinn.
+- PATCH /api/admin/ipo/requests/{id}/valuation: pending/approved: Kaufpreis + geschätzter Wert; allocated: nur geschätzter Wert (Kaufpreis gesperrt, 409); Werte > 0, Decimal128, valuation_set_at + valuation_history; keine Cash-/Positionsänderung. use_admin_valuation speicherbar.
+- „Bewertung bearbeiten“ war vorher wirkungslos (sendete nur decision_note) → jetzt echte Speicherung. Admin-Liste zeigte jede Anfrage doppelt (Endpoint 2× geladen) → behoben.
+- Frontend: lib/ipoEstimate.js (Cent-Arithmetik), components/admin/IpoEstimateSummary.jsx, AdminIpoRequests (neue Spalten, aufklappbare Details, Aktionen-Spalte sticky), IpoPositionsTable (Name, Kaufdatum, Hinweistext, grün/rot/neutral), OrdersPage IPO-Tabelle aus Backend-Werten, Depot zeigt „–“ statt +0 % ohne Bewertung.
+- Tests iteration_97 (Backend 13/13, Teilzuteilung 6/10 einmalige Abbuchung 240 €, Kundendepot +100/−100/0). Testdaten bereinigt.
+
+
 ## Update 2026-10-29 – Euro-Umstellung Kundendepot abgeschlossen (NUR Vorschau, nicht veröffentlicht)
 - Zentrale Umrechnung: backend/services/fx_service.py (Yahoo EUR{ccy}=X, Spot + Vortagesschluss, 5-min-Cache). stock_price_service._quote_to_eur: Preis, Vortag (mit Vortages-FX), Veränderung & % in EUR; Originalwerte native_* bleiben erhalten. Unbekannte Währung → kein Preis (price_status currency_unknown), kein EUR-Default mehr.
 - Behoben: Market-Quotes lieferten EUR-Preis aber USD-Veränderung (gemischt) → jetzt native Werte aus original_price, Umrechnung nur einmal.

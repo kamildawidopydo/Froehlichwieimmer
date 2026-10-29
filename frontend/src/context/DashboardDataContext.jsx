@@ -579,7 +579,10 @@ export const DashboardDataProvider = ({ children }) => {
       const meta = p.stocks || {};
       return {
         ...p,
-        stockName: meta.name || p.symbol,
+        stockName: meta.name || ipoVal?.companyName || p.symbol,
+        purchase_date: p.purchase_date || ipoVal?.allocationDate || null,
+        // No live price and no estimate: G/V is unknown (not 0).
+        hasValuation: price != null,
         logoUrl: meta.logo_url || null,
         exchange: meta.exchange || null,
         market: meta.market || null,

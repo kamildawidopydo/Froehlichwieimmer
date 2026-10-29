@@ -1807,7 +1807,7 @@ async def stocks_bundle(
     items: List[Dict[str, Any]] = []
     for sym in accepted:
         try:
-            fdata = await stock_fundamentals(sym)
+            fdata = await stock_fundamentals(sym, display=None)
         except HTTPException:
             continue
         price = fdata.get("previous_close")

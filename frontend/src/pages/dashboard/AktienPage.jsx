@@ -400,10 +400,14 @@ const AktienPage = () => {
                         <p className="text-[15px] font-semibold tabular-nums text-bank-text">
                           {Number(m.marktwert).toLocaleString('de-DE', { style: 'currency', currency })}
                         </p>
-                        <p className={cn('text-[12px] font-medium tabular-nums', up ? 'text-emerald-600' : 'text-rose-600')}>
-                          {up ? '+' : ''}
-                          {Number(m.gv).toLocaleString('de-DE', { style: 'currency', currency })} ({up ? '+' : ''}
-                          {fmtDe(m.pct)} %)
+                        <p className={cn('text-[12px] font-medium tabular-nums', m.hasValuation === false ? 'text-bank-text-muted' : up ? 'text-emerald-600' : 'text-rose-600')}>
+                          {m.hasValuation === false ? '–' : (
+                            <>
+                              {up ? '+' : ''}
+                              {Number(m.gv).toLocaleString('de-DE', { style: 'currency', currency })} ({up ? '+' : ''}
+                              {fmtDe(m.pct)} %)
+                            </>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -518,11 +522,10 @@ const AktienPage = () => {
                           <td
                             className={cn(
                               'px-4 py-3 text-right text-[13px] font-medium tabular-nums',
-                              up ? 'text-emerald-600' : 'text-rose-600',
+                              m.hasValuation === false ? 'text-bank-text-muted' : up ? 'text-emerald-600' : 'text-rose-600',
                             )}
                           >
-                            {up ? '+' : ''}
-                            {fmtDe(m.pct)} %
+                            {m.hasValuation === false ? '–' : `${up ? '+' : ''}${fmtDe(m.pct)} %`}
                           </td>
                         </tr>
                       );

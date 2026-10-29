@@ -1,0 +1,43 @@
+{
+  "summary": "Preview-only test of the IPO valuation feature, covering backend and frontend. BACKEND: 13/13 pytest pass (tests/test_ipo_valuation_iter97.py). PATCH /valuation on PRVT3 (10 shares @ 40) gives the expected results: 50 -> +100.00 / +25.00, 30 -> -100.00 / -25.00, 40 -> 0.00 / 0.00, and German input '50,00' is accepted. Changing the purchase price on an allocated request returns 409; resending the same price is accepted. 0, -5, abc, NaN, Infinity and '' return 422. An empty body or an extra field returns 422, a bad id 400, an unknown id 404, a customer session 401/403 and a rejected request 409. Cash was unchanged after all PATCHes. GET admin/ipo/requests and ipo/requests/me include the valuation object with Decimal strings. PRVNV has value/total/profit/pct = null. No duplicate ids. PARTIAL ALLOCATION via UI 'Zuteilen' on PRVPA (6 @ 40): cash went from 2000 to 1760, with exactly one ipo_purchase debit of 240. One stock_position was created (PRVPA 6 @ 40) and one ipo_allocation. The edit dialog showed Anzahl 6 (locked) and Kaufpreis 40 (locked). Value 45 gave live Kaufbetrag 240 €, Gesamtwert 270 €, +30,00 €, +12,50 %. Saving twice did not debit cash again. ADMIN UI: all new columns, the expand rows (7 values) and the edit buttons on pending, approved and allocated rows work. The live summary changes correctly for gain, loss and 0. The real pending 'Preview Test3 AG' (6a9ee1d3...) opened the dialog and was cancelled without saving; its Approve/Reject buttons are still present. CUSTOMER: /dashboard/aktien IPO-Positionen PRVT3 shows 10 Stück, 40,00 €, 400,00 €, 50,00 €, 500,00 €, +100,00 € / +25,00 % (green, text-bank-success). At 30 it shows −100 / −25 % in red; at 40 it shows 0,00 € neutral. The disclaimer is present. /dashboard/auftraege shows the same backend values. Mobile 390px has no page overflow on aktien, auftraege or the admin page. Final PRVT3 value is 50.00.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/stocks/bundle", "issue": "Returned 500 (AttributeError: 'Query' object has no attribute 'upper'). stocks_bundle called stock_fundamentals(sym) directly, so `display` defaulted to a FastAPI Query object. This was a regression from the iter94/95 ?display=EUR change. FIXED by the testing agent: now passes display=None. Verified 200."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "lib/ipoEstimate.js toneClass (used by the admin table, IpoEstimateSummary dialog/expand row and the OrdersPage IPO table)", "issue": "Gains are NOT green. toneClass returns text-emerald-700, but index.css:583 globally remaps .text-emerald-700 to --bank-petrol-strong in light mode. The computed color is rgb(0,55,129), dark blue. This violates the requirement 'Gewinn grün'. Losses (text-rose-700 -> coral) look acceptable. Fix: use text-bank-success / text-bank-error (as IpoPositionsTable does) or add the keep-raw class.", "selector": "[data-testid=ipo-edit-est-profit], [data-testid^=ipo-row-est-], [data-testid^=ipo-request-profit-]", "priority": "HIGH"},
+      {"component": "Customer depot main positions table (/dashboard/aktien)", "issue": "PRVNV (allocated, no valuation) shows G/V '+0,00 %' and Kurs '–'. Because there is no price, the metric falls back to marktwert = qty*avg, which yields a fake 0 % result instead of '–'. It is not shown in the IPO-Positionen table, which is correct.", "selector": "tr:has-text('PRVNV')", "priority": "MEDIUM"},
+      {"component": "IpoPositionsTable", "issue": "The Position column shows only the ticker ('PRVT3') instead of the company name 'Preview Test3 AG', because there is no stocks metadata for IPO tickers. The requirement asks for the name; ipo request company_name could be used. Kaufdatum shows '–' for IPO rows; allocation_date could be used.", "selector": "[data-testid=ipo-position-value-PRVT3]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin /admin/ipo-requests at 1920px", "issues": ["The table is 1449px wide in a 1214px container (11 columns). The AKTIONEN column (Approve/Reject/Zuteilen/Edit) is off-screen and needs horizontal scrolling. The expanded detail row (colSpan 11) is clipped when scrolled. Consider fewer or narrower columns, or a sticky actions column.", "Rows without values show a double dash '– –' in Gesch. Gewinn.", "The Edit dialog prefills raw backend strings '40.0000' / '50.0000' instead of German '40,00'.", "The long label 'Aktuell geschätzter Wert pro Aktie (€)' wraps to 2 lines, so the 3rd input sits lower than the other two.", "Approve/Reject buttons have no data-testid. The legacy approve dialog still says 'Lots'."]},
+      {"screen": "Customer /dashboard/auftraege", "issues": ["Requests without amount_eur show Volumen '0,00 €' instead of '–'."]},
+      {"screen": "Customer IPO-Positionen on mobile 390px", "issues": ["The table uses inner horizontal scroll, so the profit column is off-screen. Acceptable, but a card layout would be better on mobile."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_ipo_valuation_iter97.py", "/app/test_reports/pytest/iter97_ipo_valuation.xml"],
+  "action_items": [
+    "Make gains green: change toneClass in lib/ipoEstimate.js to text-bank-success / text-bank-error (or add keep-raw). The current emerald-700 renders petrol blue because of the index.css override.",
+    "Show '–' instead of '+0,00 %' G/V for positions without a price or valuation (PRVNV) in the depot main table.",
+    "Show the IPO company name (and allocation date) in IpoPositionsTable.",
+    "Fix the admin table overflow at 1920px so the actions column is visible without horizontal scrolling.",
+    "Format the edit dialog prefill as German money (40,00)."
+  ],
+  "critical_code_review_comments": [
+    "AdminIpoRequests.js is 1383 lines. Split it into the table, the dialogs and the allocate modal.",
+    "Edit dialog: the shares field of pending/approved rows is editable but only used for preview, never saved. This is OK as documented, but it may confuse admins.",
+    "Backend _positive_dec replaces ',' with '.', so '1.000,50' -> 422 (safe). The frontend toCents treats '1.000' (without a comma) as 1,00 €, a minor German-thousands ambiguity.",
+    "The depot metrics recompute the valuation from stock_positions (qty*avg) plus listing_price instead of using backend valuation.total_cost/estimated_profit. Today the two match, but this is duplicated logic.",
+    "/api/portfolio/positions returns 404, so the positions check in the pytest no-side-effect snapshot only compares cash. Positions were verified directly in Mongo."
+  ],
+  "updated_files": ["/app/backend/routes/stock_public.py (stocks_bundle: stock_fundamentals(sym, display=None))", "/app/backend/tests/test_ipo_valuation_iter97.py"],
+  "success_rate": {"backend": "100% (13/13) + 1 unrelated 500 fixed", "frontend": "~85% (functional flows all pass; gain color requirement fails in admin/orders)"},
+  "seed_data_creation": "Used the existing seed_eur_test.py data. The tests created a rejected IPO request 'Siyata PTT' (source admin, user test_eur_qa) for the 409 test. PRVPA is now allocated 6 @ 40 with value 45 (cash 1760). PRVT3 is left at 50.00. Clean with: python backend/tests/seed_eur_test.py clean",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Admin route /admin/ipo-requests. Log in via page.request.post('/api/auth/login') after add_init_script presets kapitalmitte_visitor_profile and kapitalmitte_cookie_consent. Testids: ipo-row-expand-{id}, ipo-row-details-{id} (inner ipo-row-est-{id}-profit etc.), ipo-edit-valuation-btn-{id}, ipo-edit-* inputs, ipo-edit-est-{total-cost|estimated-total|profit|return}, ipo-allocate-btn-{id}, ipo-allocate-shares/-sub-price/-submit. Customer: ipo-position-profit-{SYMBOL}, ipo-estimate-disclaimer, ipo-request-profit-{id}. Check computed color, not just the class: emerald classes are remapped to blue globally. Re-running the seed resets PRVPA to approved."
+}

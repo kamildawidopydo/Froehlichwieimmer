@@ -11,6 +11,7 @@ import {
   fmtEurSigned,
   fmtPctSigned,
   toneClass,
+  toDeInput,
 } from '@/lib/ipoEstimate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -333,10 +334,9 @@ const AdminIpoRequests = () => {
       shares: String(
         row.status === 'allocated' ? row.allocated_shares ?? '' : row.shares_requested ?? '',
       ),
-      listingPrice: row.listing_price_per_share != null ? String(row.listing_price_per_share) : '',
+      listingPrice: toDeInput(row.listing_price_per_share),
       profitPct: row.profit_margin_pct != null ? String(row.profit_margin_pct) : '',
-      subscriptionPrice:
-        row.subscription_price_per_share != null ? String(row.subscription_price_per_share) : '',
+      subscriptionPrice: toDeInput(row.subscription_price_per_share),
       decisionNote: row.decision_note || '',
       useAdminValuation: row.use_admin_valuation !== false,
     });
@@ -690,7 +690,7 @@ const AdminIpoRequests = () => {
                   <th className="px-4 py-3 text-right">Gesch. Gewinn</th>
                   <th className="px-4 py-3 text-left">Quelle</th>
                   <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-right">Aktionen</th>
+                  <th className="sticky right-0 bg-bank-bg px-4 py-3 text-right shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.15)]">Aktionen</th>
                 </tr>
               </thead>
               <tbody>
@@ -789,9 +789,13 @@ const AdminIpoRequests = () => {
                         </td>
                         {est ? (
                           <td className="px-4 py-3 text-right tabular-nums text-[12px]" data-testid={`ipo-row-profit-${row.id}`}>
-                            <span className={toneClass(est.profit)}>{fmtEurSigned(est.profit)}</span>
-                            <br />
-                            <span className={`text-[10px] ${toneClass(est.returnPct)}`}>{fmtPctSigned(est.returnPct)}</span>
+                            {est.profit == null ? '–' : (
+                              <>
+                                <span className={toneClass(est.profit)}>{fmtEurSigned(est.profit)}</span>
+                                <br />
+                                <span className={`text-[10px] ${toneClass(est.returnPct)}`}>{fmtPctSigned(est.returnPct)}</span>
+                              </>
+                            )}
                           </td>
                         ) : (
                         <td className={`px-4 py-3 text-right tabular-nums text-[12px] ${up ? 'text-emerald-700' : 'text-rose-700'}`}>
@@ -824,7 +828,7 @@ const AdminIpoRequests = () => {
                             {row.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="sticky right-0 bg-white px-4 py-3 text-right shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.15)]">
                           <div className="flex justify-end gap-1">
                           {est && (
                             <Button
