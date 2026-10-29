@@ -182,7 +182,7 @@ export default function AlarmePage() {
                             · Last{' '}
                             {Number(px.price).toLocaleString('de-DE', {
                               style: 'currency',
-                              currency: px.currency || 'USD',
+                              currency: px.currency || 'EUR',
                             })}
                           </span>
                         )}

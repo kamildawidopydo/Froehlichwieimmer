@@ -47,7 +47,7 @@ const WatchlistWidget = ({ sparklines = {} }) => {
           const p = stockPriceMap[w.symbol];
           const chg = p?.change_pct != null ? Number(p.change_pct) : null;
           const up = (chg ?? 0) >= 0;
-          const currency = p?.currency || 'USD';
+          const currency = p?.currency || 'EUR';
           return (
             <li key={w.id} className="flex items-center gap-2 py-2 first:pt-0 last:pb-0">
               <button

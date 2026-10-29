@@ -63,9 +63,29 @@ const STATUS_BADGE = {
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' }) : '–';
 
+// EUR/USD spot (Yahoo Finance via /api/forex/quotes), set once per page load.
+const FX = { rate: null, asOf: null };
+const toEur = (v, currency) => {
+  if (v == null) return null;
+  if (currency !== 'USD') return Number(v);
+  return FX.rate ? Number(v) / FX.rate : null;
+};
+const fmtEur = (v) => `€${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+export const fxNote = (currency) =>
+  currency === 'USD' && FX.rate
+    ? `Umgerechnet aus USD zum EUR/USD-Kurs ${FX.rate.toLocaleString('de-DE', { maximumFractionDigits: 4 })} (Yahoo Finance, Stand ${new Date(FX.asOf).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} Uhr)`
+    : null;
+
 const formatPriceRange = (low, high, currency = 'EUR') => {
   if (low == null && high == null) return null;
-  const sym = currency === 'USD' ? '$' : '€';
+  if (currency === 'USD') {
+    const l = toEur(low, currency);
+    const h = toEur(high, currency);
+    if (l == null && h == null) return 'Euro-Umrechnung derzeit nicht verfügbar';
+    return l != null && h != null && l !== h ? `${fmtEur(l)} – ${fmtEur(h)}` : fmtEur(l ?? h);
+  }
+  const sym = '€';
   if (low != null && high != null && low !== high) {
     return `${sym}${Number(low).toLocaleString('de-DE')} – ${sym}${Number(high).toLocaleString('de-DE')}`;
   }
@@ -88,8 +108,9 @@ const formatPriceLabel = (ipo) => {
 
 const formatValuation = (value, currency = 'USD') => {
   if (value == null) return null;
-  const sym = currency === 'USD' ? '$' : '€';
-  const n = Number(value);
+  const sym = '€';
+  const n = toEur(value, currency);
+  if (n == null) return 'Euro-Umrechnung derzeit nicht verfügbar';
   if (!Number.isFinite(n)) return null;
   if (n >= 1_000_000_000_000) {
     return `${sym}${(n / 1_000_000_000_000).toLocaleString('de-DE', { maximumFractionDigits: 2 })} Bio.`;
@@ -104,7 +125,25 @@ const INVESTABLE_STATUSES = new Set(['upcoming', 'filed', 'priced', 'open']);
 
 const canInvest = (status) => INVESTABLE_STATUSES.has(status);
 
+const useEurUsd = () => {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    fetch(`${process.env.REACT_APP_BACKEND_URL}/api/forex/quotes?pairs=EURUSD`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const it = d?.items?.[0];
+        if (it?.rate && it.data_status !== 'unavailable') {
+          FX.rate = Number(it.rate);
+          FX.asOf = it.as_of;
+          setTick((t) => t + 1);
+        }
+      })
+      .catch(() => {});
+  }, []);
+};
+
 const IpoPage = () => {
+  useEurUsd();
   const { user } = useAuth();
   const { refreshIpoRequests } = useDashboardData();
   const [ipos, setIpos] = useState([]);
@@ -554,6 +593,9 @@ const IpoPage = () => {
                   <div>
                     <p className="text-[10px] uppercase text-bank-text-muted">IPO-Preisspanne</p>
                     <p>{formatPriceLabel(selected)}</p>
+                    {fxNote(selected.price_currency) && (selected.price_range_low != null || selected.valuation_last_private != null) && (
+                      <p className="text-[11px] text-bank-text-muted" data-testid="ipo-fx-note">{fxNote(selected.price_currency)}</p>
+                    )}
                   </div>
                   {selected.valuation_last_private != null && (
                     <div className="col-span-2">

@@ -466,7 +466,7 @@ export default function GesamtuebersichtSection({ loading, showcase = false }) {
         logoUrl: s.logoUrl,
         value:
           p?.price != null
-            ? Number(p.price).toLocaleString('de-DE', { style: 'currency', currency: p?.currency || 'USD' })
+            ? Number(p.price).toLocaleString('de-DE', { style: 'currency', currency: p?.currency || 'EUR' })
             : '–',
         gvPct: null,
         dayPct: p?.change_pct != null ? Number(p.change_pct) : null,

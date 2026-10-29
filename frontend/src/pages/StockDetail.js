@@ -297,6 +297,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   const [ohlc, setOhlc] = useState([]);
   const [historyCurrency, setHistoryCurrency] = useState(null);
   const [historyStatus, setHistoryStatus] = useState(null);
+  const [historyFx, setHistoryFx] = useState(null);
   const [dayStats, setDayStats] = useState(null);
   const [range, setRange] = useState('1mo');
   const [chartType, setChartType] = useState('area'); // 'area' | 'candle'
@@ -578,6 +579,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
       // UI erwartete früher `ohlc[]` mit {t,o,h,l,c,v}. Aus `points[]` ableiten.
       setHistoryCurrency(data?.currency || null);
       setHistoryStatus({ status: data?.data_status || null, asOf: data?.data_as_of || null });
+      setHistoryFx(data?.fx || null);
       const ohlcMapped = (data?.points || []).map((p) => ({
         t: toBerlinChartTime(Math.floor(Date.parse(p.timestamp) / 1000)),
         o: p.open, h: p.high, l: p.low, c: p.close, v: p.volume,
@@ -993,9 +995,11 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                   <p className="text-3xl sm:text-4xl font-bold text-bank-text">
                     {price?.price != null ? formatCurrency(price.price, currency) : '–'}
                   </p>
-                  {historyCurrency && currency && historyCurrency !== currency && (
+                  {historyFx && (
                     <p className="text-[11px] text-bank-text-muted mt-0.5" data-testid="price-fx-note">
-                      Umgerechnet in {currency}; Chart und Kennzahlen in {historyCurrency} (Handelswährung)
+                      Alle Werte in EUR, umgerechnet aus {historyFx.native_currency} (Handelswährung) mit dem
+                      EUR/{historyFx.native_currency}-Kurs zum jeweiligen Zeitpunkt · Quelle: {historyFx.source}
+                      {historyFx.latest_rate ? ` · zuletzt ${Number(historyFx.latest_rate).toLocaleString('de-DE', { maximumFractionDigits: 4 })}` : ''}
                     </p>
                   )}
                   {chg != null && (
@@ -1105,7 +1109,9 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     <TradingChart
                       mode={chartType}
                       data={ohlc}
-                      emptyHint={historyStatus?.status === 'unavailable'
+                      emptyHint={historyStatus?.status === 'fx_unavailable'
+                        ? 'Wechselkursdaten sind vorübergehend nicht verfügbar – eine Euro-Darstellung ist derzeit nicht möglich.'
+                        : historyStatus?.status === 'unavailable'
                         ? 'Die Kursquelle ist vorübergehend nicht erreichbar. Bitte versuchen Sie es in einer Minute erneut.'
                         : undefined}
                       currency={historyCurrency || currency}

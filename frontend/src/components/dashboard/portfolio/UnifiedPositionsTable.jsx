@@ -45,7 +45,7 @@ const UnifiedPositionsTable = ({ sparklines = {} }) => {
         logoUrl: m.logoUrl,
         qty: Number(m.qty),
         price: m.price ?? p?.price,
-        currency: p?.currency || 'USD',
+        currency: p?.currency || 'EUR',
         marktwert: Number(m.marktwert || 0),
         dayPct: p?.change_pct != null ? Number(p.change_pct) : null,
         gvPct: m.pct,

@@ -10,7 +10,7 @@ import {
 } from '@/services/priceAlertService';
 import { cn } from '@/lib/utils';
 
-const PriceAlertPanel = ({ symbol, currentPrice, currency = 'USD' }) => {
+const PriceAlertPanel = ({ symbol, currentPrice, currency = 'EUR' }) => {
   const [alerts, setAlerts] = useState([]);
   const [target, setTarget] = useState('');
   const [direction, setDirection] = useState('above');

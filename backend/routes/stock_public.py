@@ -205,6 +205,37 @@ def _yf_history_sync(yf_sym: str, period: str, interval: str) -> Optional[List[d
 _PERIODS_PER_YEAR = {"1d": 252, "1wk": 52, "1mo": 12}
 
 
+async def _convert_points_to_eur(points: List[dict], ccy: str, cfg: Dict[str, Any]):
+    """Converts each bar with the FX bar valid at that time (Yahoo EUR{ccy}=X)."""
+    import bisect
+    pair = f"EUR{ccy}=X"
+    fx = await asyncio.to_thread(_yf_history_sync, pair, cfg["period"], cfg["interval"])
+    if not fx:
+        return [], None
+    fx_ts = [datetime.fromisoformat(f["t"]) for f in fx]
+    out = []
+    for p in points:
+        ts = datetime.fromisoformat(p["timestamp"])
+        i = bisect.bisect_right(fx_ts, ts) - 1
+        if i < 0:
+            if (fx_ts[0] - ts) > timedelta(days=4):
+                continue
+            i = 0
+        if (ts - fx_ts[i]) > timedelta(days=4):
+            continue
+        rate = fx[i]["c"]
+        conv = lambda v: round(v / rate, 4) if v is not None else None  # noqa: E731
+        out.append({**p, "close": conv(p["close"]), "open": conv(p.get("open")),
+                    "high": conv(p.get("high")), "low": conv(p.get("low")),
+                    "native_close": p["close"], "fx_rate": rate, "fx_time": fx[i]["t"]})
+    if len(out) < 2:
+        return [], None
+    meta = {"pair": f"EUR/{ccy}", "source": f"Yahoo Finance {pair}", "native_currency": ccy,
+            "latest_rate": fx[-1]["c"], "latest_rate_time": fx[-1]["t"],
+            "method": "Kurs je Zeitpunkt / EUR-Wechselkurs desselben oder vorherigen Zeitpunkts"}
+    return out, meta
+
+
 def _compute_history_stats(points: List[dict], interval: str = "1d") -> Dict[str, Any]:
     """Session 82.58a — Aggregat-Statistiken NUR aus echten Provider-Bars.
     Kein synthetischer Punkt, keine Interpolation. Bei zu wenig Daten: null.
@@ -288,6 +319,8 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
             "symbol": sym,
             "range": rk,
             "currency": cached.get("currency"),
+            "native_currency": cached.get("native_currency"),
+            "fx": cached.get("fx"),
             "data_source": cached.get("data_source", "cache"),
             "data_status": "stale" if stale else ("fresh" if cached.get("data_source") == "yfinance" else "unavailable"),
             "data_as_of": cached["cached_at"].isoformat() if cached.get("cached_at") else None,
@@ -328,6 +361,18 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
         currency = "USD" if yf_sym in {"^NDX", "^GSPC", "^DJI", "^IXIC"} else "EUR"
     else:
         currency = "EUR" if yf_sym.endswith(".DE") else "USD"
+    native_currency = currency
+    fx_meta = None
+    fx_failed = False
+    if points and currency != "EUR" and not yf_sym.startswith("^"):
+        points, fx_meta = await _convert_points_to_eur(points, currency, cfg)
+        if points:
+            currency = "EUR"
+            stats = _compute_history_stats(points, cfg["interval"])
+        else:
+            source = "unavailable"
+            fx_failed = True
+            stats = _compute_history_stats([], cfg["interval"])
 
     # Empty results (provider hiccup) are cached for 60s only, so charts recover quickly.
     expires_at = _now() + timedelta(seconds=cfg["ttl"] if points else 60)
@@ -341,6 +386,8 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
             "period": cfg["period"],
             "interval": cfg["interval"],
             "currency": currency,
+            "native_currency": native_currency,
+            "fx": fx_meta,
             "data_source": source,
             "points": points,
             "stats": stats,
@@ -354,8 +401,10 @@ async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[s
         "symbol": sym,
         "range": rk,
         "currency": currency,
+        "native_currency": native_currency,
+        "fx": fx_meta,
         "data_source": source,
-        "data_status": "fresh" if source == "yfinance" else "unavailable",
+        "data_status": "fresh" if source == "yfinance" else ("fx_unavailable" if fx_failed else "unavailable"),
         "data_as_of": _now().isoformat() if points else None,
         "points": points,
         "stats": stats,
