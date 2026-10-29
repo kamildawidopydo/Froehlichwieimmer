@@ -1191,7 +1191,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                   </div>
                   <div>
                     <p className="text-xs text-bank-text-muted mb-1">Rendite (1J)</p>
-                    <p className={`font-semibold ${stats.return1y >= 0 ? 'text-emerald-600' : 'text-bank-error'}`}>
+                    <p className={`font-semibold ${pnlTone(stats.return1y)}`}>
                       {formatPct(stats.return1y)}
                     </p>
                   </div>
@@ -1326,7 +1326,6 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
               const marketVal = displayPrice != null ? qty * Number(displayPrice) : null;
               const unrealized = marketVal != null ? marketVal - costBasis : null;
               const totalReturnPct = costBasis > 0 && unrealized != null ? (unrealized / costBasis) * 100 : null;
-              const posUp = (unrealized ?? 0) >= 0;
               const dailyPnl = price?.change_abs != null ? qty * Number(price.change_abs) : null;
               return (
                 <DashboardStaggerItem>
@@ -1357,23 +1356,23 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     {dailyPnl != null && (
                       <div>
                         <p className="text-bank-text-muted">Tages-G/V</p>
-                        <p className={`mt-0.5 font-semibold tabular-nums ${dailyPnl >= 0 ? 'text-emerald-600' : 'text-bank-error'}`}>
-                          {dailyPnl >= 0 ? '+' : ''}{formatCurrency(dailyPnl, currency)}
+                        <p className={`mt-0.5 font-semibold tabular-nums ${pnlTone(dailyPnl)}`}>
+                          {pnlTone(dailyPnl) === 'text-bank-success' ? '+' : ''}{formatCurrency(dailyPnl, currency)}
                         </p>
                       </div>
                     )}
                     {unrealized != null && (
                       <div>
                         <p className="text-bank-text-muted">Unrealisierte G/V</p>
-                        <p className={`mt-0.5 font-semibold tabular-nums ${posUp ? 'text-emerald-600' : 'text-bank-error'}`}>
-                          {posUp ? '+' : ''}{formatCurrency(unrealized, currency)}
+                        <p className={`mt-0.5 font-semibold tabular-nums ${pnlTone(unrealized)}`}>
+                          {pnlTone(unrealized) === 'text-bank-success' ? '+' : ''}{formatCurrency(unrealized, currency)}
                         </p>
                       </div>
                     )}
                     {totalReturnPct != null && (
                       <div>
                         <p className="text-bank-text-muted">Gesamtrendite</p>
-                        <p className={`mt-0.5 font-semibold tabular-nums ${posUp ? 'text-emerald-600' : 'text-bank-error'}`}>
+                        <p className={`mt-0.5 font-semibold tabular-nums ${pnlTone(totalReturnPct)}`}>
                           {formatPct(totalReturnPct)}
                         </p>
                       </div>
@@ -1381,8 +1380,8 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     {realizedPnl != null && (
                       <div>
                         <p className="text-bank-text-muted">Realisierte G/V</p>
-                        <p className={`mt-0.5 font-semibold tabular-nums ${realizedPnl >= 0 ? 'text-emerald-600' : 'text-bank-error'}`}>
-                          {realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl, currency)}
+                        <p className={`mt-0.5 font-semibold tabular-nums ${pnlTone(realizedPnl)}`}>
+                          {pnlTone(realizedPnl) === 'text-bank-success' ? '+' : ''}{formatCurrency(realizedPnl, currency)}
                         </p>
                       </div>
                     )}

@@ -1,0 +1,46 @@
+{
+  "summary": "Preview-only test of the colour unification, the removal of 'Gewinn %' and an IPO regression. BACKEND: 8/8 pytest pass (tests/test_ipo_colors_manual_iter98.py). PRVT3 valuation 40 -> 0.00/0.00, 30 -> -100/-25, 50 -> +100/+25. A different purchase price on an allocated request returns 409; the same price returns 200. PRVNV values are null. create-for-user makes a pending request with +100/+25 on the requested basis and no cash debit; reject and approve both work. The profit_percent field is rejected with 422. Partial allocation of PRVPA (6 of 10 @ 40) made exactly one 240 € debit (cash 2000 -> 1760). Re-saving the valuation and calling allocate a second time did not debit again. The tester@mester.de cash ledger and IPO requests are unchanged, and so are the demo.kunde/non-TEST_EUR requests. FRONTEND: the IPO tables (aktien, uebersicht widget, auftraege), the main positions table G/V %, the mobile cards, the Tag badges, Top-Bewegungen, Handeln and the admin live summaries all use the correct computed colours: positive green, negative red rgb(220,38,38), and 0 neutral rgb(30,41,59). The manual IPO dialog has no 'Gewinn %' field and no abbuchen checkbox. Its live summary is correct for gain, loss and zero. Submitting it made a pending request with no debit. The edit dialog has purchase price and shares locked on the allocated row, and its live calculation is correct. UI approve (Kundenportal) works. The disclaimer is present. FAILURES: several G/V displays still use text-emerald-600 or text-rose-600. Those classes are globally remapped to petrol blue and coral, so those positive values render blue rgb(0,55,129), not green. In other places positive G/V renders neutral.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/admin/ipo/requests/create-for-user (via AdminIpoRequests submitManual)", "issue": "The frontend sends only user_id, ipo_id and shares_requested. The 'Notiz' and 'Volumen (EUR, opt.)' inputs are silently dropped: request 6ae3428864168488ed854e0a has notes=None even though the note was typed. Create and the valuation PATCH are two calls with no rollback, so if the PATCH fails a pending request without valuation is left behind."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "GesamtuebersichtSection StatTile (/dashboard/uebersicht: Heute/Tagesveränderung +12,57 €, unrealisierter G/V +248,24 €)", "issue": "tone 'pos' maps to text-emerald-600, which computes to rgb(0,55,129), blue, not green. Also tone={dailyPnl >= 0 ? 'pos' : 'neg'} and unrealizedPL >= 0 treat 0 as positive (lines ~750 and ~760).", "selector": "GesamtuebersichtSection.jsx:155,750,760", "priority": "HIGH"},
+      {"component": "StockDetail /dashboard/aktien/AAPL position box and 1Y return", "issue": "dailyPnl, posUp and realizedPnl use text-emerald-600 (computes blue, e.g. +85,84 €, +10,22 %, +32,49 %). The >= 0 check makes 0 show as 'positive'. Use pnlTone.", "selector": "StockDetail.js:1194,1360,1368,1376,1384", "priority": "HIGH"},
+      {"component": "AnleihenPage local StatTile/Metric", "issue": "tone 'pos' maps to text-emerald-600 (blue) and 'neg' to text-rose-600 (coral, not bank-error red). bondsGV >= 0 and depotGV >= 0 make 0 show blue: '+0,00 €' and '0,00 €' render rgb(0,55,129). Lines 235, 396 and 435 use the same pattern.", "selector": "AnleihenPage.jsx:54,69,235,396,435", "priority": "HIGH"},
+      {"component": "AktienPage KPI 'Gewinn / Verlust' & 'Tagesveränderung' (shared components/dashboard/StatTile.jsx)", "issue": "The shared StatTile ignores tone='pos' and renders only neg red, else neutral. Positive +248,42 € / +12,76 € therefore show neutral text-bank-text, not green. The sub-percent is always muted. depotGV >= 0 ? 'pos' also marks 0 as positive. Note that Tagesgeld/Festgeld/Flexgeld pass tone='pos' for non-P&L totals, so add a dedicated P&L tone instead of a blanket change.", "selector": "components/dashboard/StatTile.jsx:18, AktienPage.jsx:244", "priority": "MEDIUM"},
+      {"component": "Zero formatting", "issue": "Zero values are coloured neutral but some still carry a '+' sign: main positions table PRVT3 shows '+0,00 %', the mobile card '+0,00 € (+0,00 %)', the KPI '+0,00 €'. The IPO table correctly shows '0,00 €'. formatEURSigned uses n >= 0. Negative signs are also mixed: the main table uses ASCII '-25,00 %', the IPO table uses '−25,00 %'.", "selector": "dashboardFormatters.formatEURSigned, AktienPage G/V column", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Manual IPO-Zuweisung", "issue": "The Notiz and Volumen fields are not persisted (see backend minor).", "affected_selectors": ["#manual-note", "#manual-amount"]}
+    ],
+    "design_issues": [
+      {"screen": "/admin/ipo-requests at 1920px", "issues": ["The table is horizontally scrollable (scrollWidth 1449 > 1214) and the 'Gesch. Gewinn' column is clipped next to the actions column ('+100 / +2…' truncated). Widen the container or compact the columns."]},
+      {"screen": "Customer /dashboard/auftraege", "issues": ["A rejected IPO request (6ae3410762a657de0a12deaa) still shows a green estimated profit (+100 € / +25 %). Consider showing '–' for rejected or cancelled requests."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_ipo_colors_manual_iter98.py", "/app/test_reports/pytest/pytest_iter98.xml"],
+  "action_items": [
+    "Replace the remaining text-emerald-*/text-rose-* G/V tones with pnlTone()/pnlBadgeTone(): GesamtuebersichtSection.jsx StatTile (lines 155-157, 750, 760), StockDetail.js (1194, 1360, 1368, 1376, 1384), AnleihenPage.jsx StatTile/Metric (54, 69) and their callers (235, 396, 435).",
+    "Make the AktienPage 'Gewinn / Verlust' and 'Tagesveränderung' KPI values green when positive, for example by passing className={pnlTone(depotGV)} or adding a pnl tone to the shared StatTile without affecting Tagesgeld/Festgeld tiles.",
+    "Remove '+' on exact zero (formatEURSigned and the '+'-prefix logic in the AktienPage G/V column, mobile card and KPI sub) and use one minus sign style.",
+    "Manual dialog: send the note (notes/decision_note) and amount_eur, or remove those inputs.",
+    "Optional: fix the admin IPO table clipping at desktop width; hide the profit estimate for rejected requests in the customer view; remove the dead profitPct state in openEdit; add data-testid to the 'Manuelle IPO-Zuweisung' button."
+  ],
+  "critical_code_review_comments": [
+    "index.css globally remaps emerald to petrol (blue) and rose to coral in light mode, so any G/V code that uses emerald/rose classes cannot be green or red. A grep for 'text-emerald-600' in dashboard P&L code is the fastest way to find the rest.",
+    "Many callers use `x >= 0 ? 'pos' : 'neg'`, which colours 0 as positive. pnlTone already handles rounding to cents and should be the only source.",
+    "AdminIpoRequests.js is about 1300 lines; split it into the dialogs plus the table.",
+    "submitManual is not atomic: the request is created and then the valuation is PATCHed. If the PATCH fails, an orphan pending request is left and the error toast says 'Zuweisung fehlgeschlagen' even though the request exists."
+  ],
+  "updated_files": ["/app/backend/tests/test_ipo_colors_manual_iter98.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "~75% (IPO surfaces, tables, badges, dialogs pass; uebersicht KPI, StockDetail position box, Anleihen tiles and Aktien KPI tiles fail the colour rule)"},
+  "seed_data_creation": "Created test requests for test_eur_qa@example.com on IPO Anthropic (6ae1afb57e5d3e0426d721d8): 6ae3410762a657de0a12deaa rejected (notes 'TEST_EUR manual98'), 6ae3410a62a657de0a12deab approved (notes 'TEST_EUR approve98'), and 6ae3428864168488ed854e0a created via UI and approved via UI. Its notes are None because the note is dropped, so identify it by id or company Anthropic. PRVPA is now allocated 6 @ 40 with value 45 (cash 1760). PRVT3 is restored to value 50.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Admin route /admin/ipo-requests. Log in via page.request.post('/api/auth/login') after an add_init_script presets kapitalmitte_visitor_profile and kapitalmitte_cookie_consent. The customer /dashboard/aktien needs a wait for [data-testid^=ipo-position-profit-] (about 10 s load). Check computed colours: green is rgb(16,185,129) on customer pages and rgb(33,135,57) in the admin summary; red is rgb(220,38,38); neutral is rgb(30,41,59); emerald-remapped blue is rgb(0,55,129), which is a FAIL. /dashboard/depot redirects to /dashboard/vermoegen. The Mongo approve button is title 'Freigeben (Kundenportal)' and approves directly without a dialog; the legacy approve dialog is unreachable for Mongo rows. Catalog GET /api/ipo/catalog requires auth.",
+  "test_credentials": "qa.admin@kapital-direkt24.de / Qa-ra46CVrWIW3wg6l5EI6IKqbx; test_eur_qa@example.com / TestEur-Qa-2026!; tester@mester.de / HHHKKK222 (read-only, verified unchanged)"
+}

@@ -29,6 +29,7 @@ import {
   formatEURSigned,
   formatDate,
   pnlTone,
+  pnlToneKey,
 } from '@/lib/dashboardFormatters';
 import BondMaturityBarChart from '@/components/dashboard/charts/BondMaturityBarChart';
 import BondLogo from '@/components/BondLogo';
@@ -51,7 +52,7 @@ const StatTile = ({ icon: Icon, label, value, sub, tone = 'neutral' }) => (
     <p
       className={cn(
         'mt-1.5 text-[18px] font-semibold tabular-nums',
-        tone === 'pos' ? 'text-emerald-600' : tone === 'neg' ? 'text-rose-600' : 'text-bank-text',
+        tone === 'pos' ? 'text-bank-success' : tone === 'neg' ? 'text-bank-error' : 'text-bank-text',
       )}
     >
       {value}
@@ -66,7 +67,7 @@ const Metric = ({ label, value, sub, tone = 'neutral' }) => (
     <p
       className={cn(
         'mt-1 text-[14px] font-semibold tabular-nums',
-        tone === 'pos' ? 'text-emerald-600' : tone === 'neg' ? 'text-rose-600' : 'text-bank-text',
+        tone === 'pos' ? 'text-bank-success' : tone === 'neg' ? 'text-bank-error' : 'text-bank-text',
       )}
     >
       {value}
@@ -232,7 +233,7 @@ const AnleihenPage = () => {
           label="Kurs-G/V"
           value={formatEURSigned(bondsGV)}
           sub={`${bondsGV >= 0 ? '+' : ''}${yieldPct.toFixed(2)} %`}
-          tone={bondsGV >= 0 ? 'pos' : 'neg'}
+          tone={pnlToneKey(bondsGV)}
         />
         </DashboardStaggerItem>
         <DashboardStaggerItem><StatTile icon={Coins} label="Kuponertrag p.a." value={formatEUR(aggregates.kuponPa)} sub="Jährlich" tone="pos" /></DashboardStaggerItem>
@@ -393,7 +394,7 @@ const AnleihenPage = () => {
                       label="Kursgewinn (%)"
                       value={`${gvPositive ? '+' : ''}${m.rendite.toFixed(2)}%`}
                       sub="Marktwert vs. Einstand"
-                      tone={gvPositive ? 'pos' : 'neg'}
+                      tone={pnlToneKey(m.rendite)}
                     />
                   </div>
                 </div>
@@ -432,7 +433,7 @@ const AnleihenPage = () => {
               <>
                 <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <Metric label="Marktwert" value={formatEUR(depotWert)} />
-                  <Metric label="Kurs-G/V" value={formatEURSigned(depotGV)} tone={depotGV >= 0 ? 'pos' : 'neg'} />
+                  <Metric label="Kurs-G/V" value={formatEURSigned(depotGV)} tone={pnlToneKey(depotGV)} />
                   <Metric label="Positionen" value={String(stockMetrics.length)} />
                 </div>
                 <div className="divide-y divide-bank-border/70 rounded-lg border border-bank-border">

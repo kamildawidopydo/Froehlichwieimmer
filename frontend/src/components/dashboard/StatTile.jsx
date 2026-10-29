@@ -15,7 +15,7 @@ const StatTile = ({ icon: Icon, label, value, sub, tone = 'neutral', className }
     <p
       className={cn(
         'mt-3 break-words text-xl font-semibold tabular-nums leading-tight',
-        tone === 'neg' ? 'text-bank-error' : 'text-bank-text',
+        tone === 'neg' ? 'text-bank-error' : tone === 'gain' ? 'text-bank-success' : 'text-bank-text',
       )}
     >
       {value}

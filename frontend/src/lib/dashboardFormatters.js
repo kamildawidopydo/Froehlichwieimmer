@@ -8,6 +8,7 @@ const pnlSign = (v) => {
 };
 export const pnlTone = (v) =>
   ({ 1: 'text-bank-success', '-1': 'text-bank-error' }[pnlSign(v)] || 'text-bank-text');
+export const pnlToneKey = (v) => ({ 1: 'pos', '-1': 'neg' }[pnlSign(v)] || 'neutral');
 export const pnlBadgeTone = (v) =>
   ({ 1: 'bg-bank-success/10 text-bank-success', '-1': 'bg-bank-error/10 text-bank-error' }[pnlSign(v)] ||
     'bg-bank-bg text-bank-text');
@@ -17,8 +18,8 @@ export const formatEURCompact = (v) =>
 
 export const formatEURSigned = (v) => {
   const n = Number(v || 0);
-  const sign = n >= 0 ? '+' : '';
-  return sign + n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+  const sign = pnlSign(n) > 0 ? '+' : '';
+  return sign + (pnlSign(n) === 0 ? 0 : n).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 };
 
 export const formatPctSigned = (v) => {

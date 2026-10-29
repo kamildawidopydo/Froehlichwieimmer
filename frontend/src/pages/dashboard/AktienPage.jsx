@@ -21,7 +21,7 @@ import VermoegenBreadcrumb from '@/components/dashboard/VermoegenBreadcrumb';
 import VermoegenSubNav from '@/components/dashboard/VermoegenSubNav';
 import { cn } from '@/lib/utils';
 import { CardListSkeleton } from '@/components/Skeleton';
-import { formatEUR, formatEURSigned, pnlTone, pnlBadgeTone } from '@/lib/dashboardFormatters';
+import { formatEUR, formatEURSigned, pnlTone, pnlBadgeTone, pnlToneKey } from '@/lib/dashboardFormatters';
 import StockLogo from '@/components/StockLogo';
 import Sparkline from '@/components/dashboard/charts/Sparkline';
 import BondMarktwertPieChart from '@/components/dashboard/charts/BondMarktwertPieChart';
@@ -240,8 +240,8 @@ const AktienPage = () => {
           icon={TrendingUp}
           label="Gewinn / Verlust"
           value={formatEURSigned(depotGV)}
-          sub={`${depotGV >= 0 ? '+' : ''}${fmtDe(yieldPct)} %`}
-          tone={depotGV >= 0 ? 'pos' : 'neg'}
+          sub={`${pnlToneKey(depotGV) === 'pos' ? '+' : ''}${fmtDe(yieldPct)} %`}
+          tone={{ pos: 'gain', neg: 'neg' }[pnlToneKey(depotGV)] || 'neutral'}
         />
         </DashboardStaggerItem>
         <DashboardStaggerItem>
@@ -249,8 +249,8 @@ const AktienPage = () => {
           icon={Activity}
           label="Tagesveränderung"
           value={formatEURSigned(dayChange)}
-          sub={`${dayChange >= 0 ? '+' : ''}${fmtDe(dayChangePct)} %`}
-          tone={dayChange > 0 ? 'pos' : dayChange < 0 ? 'neg' : 'neutral'}
+          sub={`${pnlToneKey(dayChange) === 'pos' ? '+' : ''}${fmtDe(dayChangePct)} %`}
+          tone={{ pos: 'gain', neg: 'neg' }[pnlToneKey(dayChange)] || 'neutral'}
         />
         </DashboardStaggerItem>
         <DashboardStaggerItem><StatTile icon={PRODUCT_ICONS.aktien} label="Positionen" value={String(stockMetrics.length)} /></DashboardStaggerItem>
@@ -367,7 +367,7 @@ const AktienPage = () => {
             {/* Mobile cards */}
             <div ref={positionsListRef} className="space-y-3 md:hidden">
               {stockMetrics.map((m) => {
-                const up = m.gv >= 0;
+                const up = pnlToneKey(m.gv) === 'pos';
                 const p = stockPriceMap[m.symbol];
                 const currency = p?.currency || m?.currency || 'EUR';
                 const dayPct = p?.change_pct != null ? Number(p.change_pct) : null;
@@ -473,7 +473,7 @@ const AktienPage = () => {
                   </thead>
                   <tbody className="divide-y divide-bank-border/70">
                     {stockMetrics.map((m) => {
-                      const up = m.gv >= 0;
+                      const up = pnlToneKey(m.gv) === 'pos';
                       const p = stockPriceMap[m.symbol];
                       const currency = p?.currency || m?.currency || 'EUR';
                       const dayPct = p?.change_pct != null ? Number(p.change_pct) : null;

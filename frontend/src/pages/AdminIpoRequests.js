@@ -448,7 +448,13 @@ const AdminIpoRequests = () => {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ user_id: manualForm.userId, ipo_id: manualForm.ipoId, shares_requested: Math.round(shares) }),
+        body: JSON.stringify({
+          user_id: manualForm.userId,
+          ipo_id: manualForm.ipoId,
+          shares_requested: Math.round(shares),
+          amount_eur: parseOptionalNum(manualForm.amountEur),
+          notes: manualForm.decisionNote.trim() || null,
+        }),
       });
       const j = await r.json().catch(() => ({ detail: `HTTP ${r.status}` }));
       if (!r.ok) {
@@ -570,6 +576,7 @@ const AdminIpoRequests = () => {
             </Button>
             <Button
               onClick={openManual}
+              data-testid="ipo-manual-assign-btn"
               className="gap-2 rounded-xl bg-bank-ink text-white hover:bg-bank-ink-elev"
             >
               <Plus size={16} />

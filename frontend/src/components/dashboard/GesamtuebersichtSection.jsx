@@ -24,7 +24,7 @@ import AssetAllocationDonut from '@/components/AssetAllocationDonut';
 import Sparkline from '@/components/dashboard/charts/Sparkline';
 import PortfolioHeroChart from '@/components/dashboard/charts/PortfolioHeroChart';
 import { fetchSparkline } from '@/services/stockHistoryService';
-import { formatEUR, formatEURSigned, pnlTone } from '@/lib/dashboardFormatters';
+import { formatEUR, formatEURSigned, pnlTone, pnlToneKey } from '@/lib/dashboardFormatters';
 import { cn } from '@/lib/utils';
 import { positiveNegativeColor } from '@/components/dashboard/charts/chartTheme';
 import { DashboardStagger, DashboardStaggerItem } from '@/components/dashboard/motion/DashboardStagger';
@@ -152,8 +152,8 @@ const StatTile = ({ icon: Icon, label, value, sub, tone = 'neutral', compact = f
       className={cn(
         'rate-figure font-semibold leading-none tabular-nums',
         compact ? 'mt-1.5 text-[1.05rem]' : 'mt-2 text-[1.3rem]',
-        tone === 'pos' && 'text-emerald-600',
-        tone === 'neg' && 'text-rose-600',
+        tone === 'pos' && 'text-bank-success',
+        tone === 'neg' && 'text-bank-error',
         tone === 'neutral' && 'text-bank-text',
       )}
     >
@@ -747,7 +747,7 @@ export default function GesamtuebersichtSection({ loading, showcase = false }) {
           label="Heute"
           value={formatEURSigned(dailyPnl)}
           sub="Tagesperformance"
-          tone={dailyPnl >= 0 ? 'pos' : 'neg'}
+          tone={pnlToneKey(dailyPnl)}
           compact={showcase}
         />
         </DashboardStaggerItem>
@@ -757,7 +757,7 @@ export default function GesamtuebersichtSection({ loading, showcase = false }) {
           label="Unrealisierter G/V"
           value={formatEURSigned(unrealizedPL)}
           sub={`${formatPct(unrealizedPct)} vom Einstand`}
-          tone={unrealizedPL >= 0 ? 'pos' : 'neg'}
+          tone={pnlToneKey(unrealizedPL)}
           compact={showcase}
         />
         </DashboardStaggerItem>
