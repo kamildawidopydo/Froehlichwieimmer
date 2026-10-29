@@ -108,7 +108,7 @@ async def stocks_catalog(
                 return round(e, 4) if e is not None else None
             pc = await _eur(data.get("previous_close"))
             item.update({
-                "currency": "EUR",
+            "currency": "EUR" if pc is not None else None,
                 "native_currency": native_ccy,
                 "price": pc,
                 "day_high": await _eur(data.get("day_high")),

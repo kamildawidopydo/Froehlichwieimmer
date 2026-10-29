@@ -165,9 +165,26 @@ export const DashboardDataProvider = ({ children }) => {
         fetchPortfolioJson('/api/portfolio/orders?limit=50'),
       ]);
       const posList = Array.isArray(positions) ? positions : [];
+      const wlList = Array.isArray(watchlist) ? watchlist : [];
+      const syms = [...new Set([...posList, ...wlList].map((x) => String(x.symbol || '').toUpperCase()).filter(Boolean))];
+      const quotes = syms.length
+        ? await fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(syms.join(','))}`).catch(() => ({}))
+        : {};
       const priceMap = {};
+      // EUR quote fields from the backend (same source as stock detail / market overview).
+      Object.entries(quotes || {}).forEach(([sym, q]) => {
+        if (q && q.price != null && q.currency === 'EUR') {
+          priceMap[sym] = {
+            price: Number(q.price),
+            currency: 'EUR',
+            change_abs: q.change_abs != null ? Number(q.change_abs) : null,
+            change_pct: q.change_pct != null ? Number(q.change_pct) : null,
+            prev_close: q.prev_close != null ? Number(q.prev_close) : null,
+          };
+        }
+      });
       posList.forEach((p) => {
-        if (p.symbol && p.price != null) priceMap[p.symbol] = { price: Number(p.price), currency: p.currency || 'EUR' };
+        if (p.symbol && p.price != null && !priceMap[p.symbol]) priceMap[p.symbol] = { price: Number(p.price), currency: 'EUR' };
       });
       update({
         stockPositions: posList,

@@ -12,7 +12,7 @@ const formatLotPrice = (value, currency) => {
 const formatPct = (v) => {
   if (v == null || !Number.isFinite(Number(v))) return '–';
   const n = Number(v);
-  return `${n >= 0 ? '+' : ''}${n.toFixed(2)} %`;
+  return `${n >= 0 ? '+' : ''}${n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
 };
 
 /**

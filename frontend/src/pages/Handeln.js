@@ -28,7 +28,7 @@ const formatCurrency = (v, currency) =>
   v == null || currency !== 'EUR' ? '–' : Number(v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
 const formatPct = (v) =>
-  v == null ? '–' : `${Number(v) >= 0 ? '+' : ''}${Number(v).toFixed(2)}%`;
+  v == null ? '–' : `${Number(v) >= 0 ? '+' : ''}${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
 
 const Handeln = ({ embedded = false }) => {
   const navigate = useNavigate();
@@ -185,7 +185,12 @@ const Handeln = ({ embedded = false }) => {
         day_low: p.day_low != null ? Number(p.day_low) : null,
         priceCurrency: p.currency || null,
       };
-    });
+    }).map((r) => (
+      // Cached day range older than the live price is hidden instead of shown inconsistently.
+      r.price != null && ((r.day_high != null && r.price > r.day_high) || (r.day_low != null && r.price < r.day_low))
+        ? { ...r, day_high: null, day_low: null }
+        : r
+    ));
 
     if (sectorFilter !== 'all') arr = arr.filter((r) => r.sector === sectorFilter);
     if (exchangeFilter !== 'all') arr = arr.filter((r) => r.exchange === exchangeFilter);

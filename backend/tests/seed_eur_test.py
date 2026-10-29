@@ -16,7 +16,7 @@ EMAIL = "test_eur_qa@example.com"
 PASSWORD = "TestEur-Qa-2026!"
 D = lambda v: Decimal128(Decimal(str(v)))  # noqa: E731
 COLLS = ["cash_ledger", "stock_positions", "stock_orders", "watchlists", "stock_alerts",
-         "ipo_requests", "portfolio_snapshots", "order_executions"]
+         "ipo_requests", "portfolio_snapshots", "order_executions", "price_alerts"]
 
 
 async def clean(db):
@@ -63,8 +63,10 @@ async def seed(db):
     for i, s in enumerate(("AAPL", "VOLV-B.ST", "DBK")):
         await db.watchlists.insert_one({"user_id": uid, "symbol": s, "asset_type": "stock", "display_name": s,
                                         "sort_order": i + 1, "created_at": now})
-    await db.stock_alerts.insert_one({"user_id": uid, "symbol": "AAPL", "alert_type": "price_above",
-                                      "threshold": D("400.00"), "channel": "app", "is_active": True,
+    await db.price_alerts.insert_one({"user_id": str(uid), "symbol": "AAPL", "direction": "above",
+                                      "target_price": 400.0, "currency": "EUR", "note": "TEST_EUR",
+                                      "is_active": True, "triggered_at": None, "triggered_price": None,
+                                      "triggered_count": 0, "cooldown_until": None,
                                       "created_at": now, "updated_at": now})
     await db.ipo_requests.insert_one({
         "user_id": uid, "ipo_id": "6a9e986f4ceb21981b2e5688", "company_name": "TEST_EUR IPO AG",

@@ -37,6 +37,8 @@ import PortfolioPageLayout from '@/components/dashboard/PortfolioPageLayout';
 import ExportActions from '@/components/dashboard/ExportActions';
 import IpoPositionsTable from '@/components/dashboard/IpoPositionsTable';
 
+const fmtDe = (v) => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 const PctBadge = ({ value }) => {
   if (value == null) return <span className="text-[12px] text-bank-text-muted">–</span>;
   const up = value >= 0;
@@ -49,7 +51,7 @@ const PctBadge = ({ value }) => {
     >
       {up ? <ArrowUpRight size={11} strokeWidth={2} /> : <ArrowDownRight size={11} strokeWidth={2} />}
       {up ? '+' : ''}
-      {Number(value).toFixed(2)}%
+      {fmtDe(value)} %
     </span>
   );
 };
@@ -238,7 +240,7 @@ const AktienPage = () => {
           icon={TrendingUp}
           label="Gewinn / Verlust"
           value={formatEURSigned(depotGV)}
-          sub={`${depotGV >= 0 ? '+' : ''}${yieldPct.toFixed(2)} %`}
+          sub={`${depotGV >= 0 ? '+' : ''}${fmtDe(yieldPct)} %`}
           tone={depotGV >= 0 ? 'pos' : 'neg'}
         />
         </DashboardStaggerItem>
@@ -247,7 +249,7 @@ const AktienPage = () => {
           icon={Activity}
           label="Tagesveränderung"
           value={formatEURSigned(dayChange)}
-          sub={`${dayChange >= 0 ? '+' : ''}${dayChangePct.toFixed(2)} %`}
+          sub={`${dayChange >= 0 ? '+' : ''}${fmtDe(dayChangePct)} %`}
           tone={dayChange > 0 ? 'pos' : dayChange < 0 ? 'neg' : 'neutral'}
         />
         </DashboardStaggerItem>
@@ -401,7 +403,7 @@ const AktienPage = () => {
                         <p className={cn('text-[12px] font-medium tabular-nums', up ? 'text-emerald-600' : 'text-rose-600')}>
                           {up ? '+' : ''}
                           {Number(m.gv).toLocaleString('de-DE', { style: 'currency', currency })} ({up ? '+' : ''}
-                          {m.pct.toFixed(2)}%)
+                          {fmtDe(m.pct)} %)
                         </p>
                       </div>
                     </div>
@@ -520,7 +522,7 @@ const AktienPage = () => {
                             )}
                           >
                             {up ? '+' : ''}
-                            {m.pct.toFixed(2)}%
+                            {fmtDe(m.pct)} %
                           </td>
                         </tr>
                       );
@@ -592,7 +594,7 @@ const AktienPage = () => {
                       >
                         {up ? <ArrowUpRight size={12} strokeWidth={1.8} /> : <ArrowDownRight size={12} strokeWidth={1.8} />}
                         {up ? '+' : ''}
-                        {chg.toFixed(2)}%
+                        {fmtDe(chg)} %
                       </p>
                     )}
                   </div>

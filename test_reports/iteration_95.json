@@ -1,0 +1,47 @@
+{
+  "summary": "EUR conversion of the customer depot (preview only). Backend: 14/14 pytest passed (tests/test_eur_depot_iter95.py). Quotes: price = native/fx with no double conversion (AAPL 343.86 USD / 1.11396 = 308.68 EUR; VOLV 310.9 SEK / 11.017 = 28.22 EUR). EUR stocks have fx_rate null. change = price - prev_close and change_pct = change/prev_close are both consistent. Fundamentals ?display=EUR gives a market cap of 4.50 Bio. EUR (native 5.02T USD). Without the param the native values are unchanged. Catalog returns EUR and native_currency. IPO catalog shows Aspen/Bambusa 15-17 USD -> 13.47-15.26 EUR and Siyata 7 USD -> 6.28 EUR, with full fx meta. Limit orders store original_currency, fx_rate, fx_pair, fx_source, fx_as_of, native_limit_price (=EUR*rate), reference_price_eur and reference_price_native, with currency EUR. Market orders are rejected and the buying-power 400 message is in EUR. No execute endpoint was called. Frontend (desktop and mobile): no '$' or 'USD' amounts on Handeln, StockDetail (AAPL/MSFT/DBK/VOLV-B.ST), Aktien, Übersicht, Vermögen, Aufträge or IPO. The only USD/SEK text is the FX-source note and the original-price note, both intended. The day-change % on StockDetail matches the Handeln row exactly (AAPL -0.76, MSFT +0.25, DBK +2.66). Vortag is EUR prev_close. Kennzahlen shows Marktkap 4,50 Bio. € and EPS 7,83 €. The InsufficientBuyingPowerAlert fires for AAPL 10x300: needed 3.000,00 €, available 1.250,00 € (= /api/portfolio/cash cash_available 1250). IPO-Positionen TESTIPO: 80 € / 25 € / +20 € (+25 %) / 100 €. Orders page: historic executions 280/25/26,50/27 € and the IPO row 20 €/25 €, all with €. IPO dialog shows ipo-fx-note, ipo-original-price-note ('Originalangabe laut offiziellem Dokument: 15–17 USD je Aktie') and ipo-description-eur-note. The disclaimer and the non-binding inquiry are unchanged. The chart renders on stock detail. tester@mester.de is untouched (cash 300 €, no positions or orders, last ledger entry 2026-10-27). Issues found: dashboard day change is always 0 / '–' (RCA below), Handeln day high/low are stale and inconsistent, the seeded AAPL 400 € alert is not visible on /dashboard/alarme, and decimal-point % formatting.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/portfolio/stock-positions", "issue": "Positions are enriched with price, market_value and P&L, but not with the quote's change / change_pct / prev_close. The frontend builds stockPriceMap only from this endpoint, so the whole dashboard day-change is lost (see frontend integration issue)."},
+      {"endpoint": "GET /api/stocks/catalog?with_quotes=true", "issue": "day_high/day_low come from stock_public_fundamentals_cache (TTL 6h) converted with the spot FX rate. They can be older than the live quote: Handeln DBK showed Kurs 30,82 € with Tages-Hoch 30,41 € (price above the day high), while the detail page showed Tages-Hoch 30,97 €. AAPL high is 311,66 € on Handeln vs 311,74 € on detail. Also, 'currency':'EUR' is set even when to_eur returns None (values null), and 'price' is actually the EUR previous_close, not the current price."},
+      {"endpoint": "GET /api/portfolio/alerts vs /api/alerts", "issue": "There are two alert systems. The seeded AAPL price_above 400 € alert lives in stock_alerts (/api/portfolio/alerts), and no customer UI reads that endpoint. /dashboard/alarme and the StockDetail PriceAlertPanel use /api/alerts (price_alerts), so the page shows 'Aktive Alarme (0)'. An alert created via /api/alerts for AAPL is stored with currency EUR and evaluated against the EUR market price, which is correct."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "DashboardDataContext.fetchStockData (stockPriceMap)", "issue": "The priceMap only stores {price, currency} taken from /api/portfolio/stock-positions. As a result: the Tag column on Aktien, Übersicht Top-Positionen and Watchlist cards always shows '–'; Tagesveränderung shows +0,00 € (+0.00 %); 'Heute +0,00 €' appears on Übersicht and Vermögen; Top-Bewegungen (heute) is all '–'. StockDetail shows Tages-G/V -7,06 € for AAPL at the same time. Watchlist symbols without a position get no price or change from this map.", "selector": "/dashboard/aktien Tag column, /dashboard/uebersicht 'heute'", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Kursalarm display", "issue": "The seeded AAPL 400 € alert (stock_alerts) is not shown on /dashboard/alarme, which reads /api/alerts (price_alerts). Because of this, the requirement 'price alert AAPL above 400 € in EUR' could not be verified in the UI. Either seed into price_alerts or surface stock_alerts.", "affected_selectors": ["/dashboard/alarme"]}
+    ],
+    "design_issues": [
+      {"screen": "Handeln / StockDetail / Aktien / IPO table", "issues": ["Percent values use a decimal point instead of a German comma: '+2.66%', '-0.76%', 'Gesamtrendite +10.24%', 'Rendite (1J) +32.49%', '+25.00 %', 'Forward-KGV 35.96'. The € amounts correctly use commas ('308,68 €')", "Handeln shows only the %, not the absolute day change in €, so only the % can be compared with the detail page"]},
+      {"screen": "StockDetail AAPL", "issues": ["Ø Volumen 227.773.300 vs Volumen 21.423.004 looks implausible (about 10x the daily volume; possibly a sum rather than an average). Not part of the EUR task"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_eur_depot_iter95.py", "/app/test_reports/pytest/pytest_iter95.xml"],
+  "action_items": [
+    "Add change, change_pct and prev_close (EUR, from _quote_to_eur) to /api/portfolio/stock-positions, and include them in the DashboardDataContext priceMap. Ideally also fetch /api/portfolio/quotes for watchlist symbols, so the dashboard Tag/heute/Tagesveränderung match StockDetail.",
+    "Handeln: take day_high/day_low from the same live quote source as Kurs, or label them as cached. Avoid a Kurs above Tages-Hoch, and make the values match the detail page.",
+    "Decide on a single alert source. Seed the TEST alert into price_alerts (/api/alerts), or show stock_alerts in the customer UI, so the AAPL 400 € alert is visible on /dashboard/alarme.",
+    "Use de-DE formatting (comma) for all percentages and ratios in the depot views.",
+    "Run `python tests/seed_eur_test.py clean` after review. Testing added 2 cancelled TEST orders (MSFT 1@10 €, SAP 1@5 €) for test_eur_qa@example.com."
+  ],
+  "critical_code_review_comments": [
+    "stock_price_service._quote_to_eur: the cache stores native values and conversion happens once per response, so there is no double conversion. Unknown currency leads to price None with status currency_unknown, and a missing FX rate leads to fx_unavailable. Good: no EUR is assumed.",
+    "fx_service: the cache is in-process only (_CACHE dict). With multiple workers, each fetches yfinance separately. Stale data up to 1h is served without a stale flag; consider adding fx_status='stale'.",
+    "_order_fx_snapshot: `rate = q.get('fx_rate') or 1.0` is only safe because EUR quotes leave fx_rate None. If a non-EUR quote ever lacks fx_rate but has a price, it would silently store rate 1.0. Better to assert native_currency=='EUR' before falling back to 1.0.",
+    "stock_catalog with_quotes: price = EUR previous_close converted with the spot rate. Quotes use prev_rate for prev_close, so the EUR prev close differs slightly between catalog and quotes (AAPL 311,59 vs 311,04).",
+    "portfolio.py is 1600 lines and StockDetail.js is 1634 lines; both should be split.",
+    "The 3 seeded pending orders were inserted directly and have no FX snapshot fields (original_currency null). The UI handles this fine, but they are not representative of API-created orders."
+  ],
+  "updated_files": ["/app/backend/tests/test_eur_depot_iter95.py"],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "85% (EUR display, IBP, IPO, orders and consistency pass; dashboard day-change and alert visibility fail)"},
+  "test_credentials": "test_eur_qa@example.com / TestEur-Qa-2026! (seeded); tester@mester.de / HHHKKK222 (read-only). Login needs the localStorage keys kapitalmitte_visitor_profile and kapitalmitte_cookie_consent preset, otherwise the visitor-welcome-gate blocks the login button.",
+  "seed_data_creation": "No new seed data. Created and then cancelled 2 TEST orders (MSFT, SAP) for test_eur_qa. Created and deleted 1 /api/alerts AAPL alert.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use add_init_script to set localStorage kapitalmitte_visitor_profile + kapitalmitte_cookie_consent before login. Prices are live, so compare EUR = native/fx_rate. Do not call admin execute. Retest after fix: /dashboard/aktien Tag column, Tagesveränderung and Übersicht 'heute' must be non-zero and equal to qty*quote.change; Handeln day high/low vs detail; /dashboard/alarme shows the AAPL 400 € alert.",
+  "rca of the issue": "Dashboard day change always 0/–: context/DashboardDataContext.jsx (lines 168-171) builds stockPriceMap from /api/portfolio/stock-positions with only {price, currency}. The backend list_stock_positions (routes/portfolio.py ~l.338) never copies q.change / q.change_pct / q.prev_close from get_stock_quotes. AktienPage, GesamtuebersichtSection and UnifiedPositionsTable therefore read p.change_pct as undefined, giving '–' and +0,00 €. Fix: add change_abs/change_pct/prev_close to the position enrichment and propagate them into the priceMap."
+}

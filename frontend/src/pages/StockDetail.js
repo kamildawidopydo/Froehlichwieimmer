@@ -76,7 +76,7 @@ const formatCompactEur = (v) => {
 };
 
 const formatPct = (v) =>
-  v == null ? '–' : `${Number(v) >= 0 ? '+' : ''}${Number(v).toFixed(2)}%`;
+  v == null ? '–' : `${Number(v) >= 0 ? '+' : ''}${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
 
 // Strip legal-entity suffixes so the news search matches the brand name.
 const newsQueryFromName = (name, symbol) => {
