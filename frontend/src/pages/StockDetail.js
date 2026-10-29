@@ -62,8 +62,18 @@ const toBerlinChartTime = (sec) => {
   return Math.floor(asUtc / 1000);
 };
 
-const formatCurrency = (v, currency = 'USD') =>
-  v == null ? '–' : Number(v).toLocaleString('de-DE', { style: 'currency', currency: currency || 'USD' });
+// Depot display is EUR-only; values arrive pre-converted from the backend.
+const formatCurrency = (v, currency = 'EUR') =>
+  v == null || currency !== 'EUR' ? '–' : Number(v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+const formatCompactEur = (v) => {
+  const n = Number(v);
+  if (v == null || !Number.isFinite(n)) return null;
+  const units = [[1e12, 'Bio.'], [1e9, 'Mrd.'], [1e6, 'Mio.']];
+  const u = units.find(([d]) => Math.abs(n) >= d);
+  return u
+    ? `${(n / u[0]).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${u[1]} €`
+    : formatCurrency(n, 'EUR');
+};
 
 const formatPct = (v) =>
   v == null ? '–' : `${Number(v) >= 0 ? '+' : ''}${Number(v).toFixed(2)}%`;
@@ -219,7 +229,7 @@ const TransactionHistoryPanel = ({ orders, currency }) => {
             </span>
             <span className="tabular-nums text-bank-text-muted">
               {o.executed_price != null
-                ? Number(o.executed_price).toLocaleString('de-DE', { style: 'currency', currency: currency || 'USD' })
+                ? formatCurrency(o.executed_price, o.currency || 'EUR')
                 : new Date(o.created_at).toLocaleDateString('de-DE')}
             </span>
           </li>
@@ -249,7 +259,7 @@ const StockDividendCard = ({ symbol, currency, shares }) => {
   }, [symbol]);
 
   if (info === undefined || info === null || info.ttmDividend <= 0) return null;
-  const cur = info.currency || currency || 'USD';
+  const cur = info.currency;
   const annual = shares > 0 ? info.ttmDividend * shares : null;
   return (
     <div className="bg-white border border-bank-border rounded-xl p-5 shadow-sm">
@@ -404,7 +414,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
             price: Number(q.price),
             change_abs: q.change_abs != null ? Number(q.change_abs) : null,
             change_pct: q.change_pct != null ? Number(q.change_pct) : null,
-            currency: q.currency || 'USD',
+            currency: q.currency, prev_close: q.prev_close != null ? Number(q.prev_close) : null,
             bid: q.bid != null ? Number(q.bid) : null,
             ask: q.ask != null ? Number(q.ask) : null,
             bid_size: q.bid_size != null ? Number(q.bid_size) : null,
@@ -466,20 +476,20 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
             price: Number(q.price),
             change_abs: q.change_abs != null ? Number(q.change_abs) : null,
             change_pct: q.change_pct != null ? Number(q.change_pct) : null,
-            currency: q.currency || 'USD',
+            currency: q.currency, prev_close: q.prev_close != null ? Number(q.prev_close) : null,
             bid: q.bid != null ? Number(q.bid) : null,
             ask: q.ask != null ? Number(q.ask) : null,
             bid_size: q.bid_size != null ? Number(q.bid_size) : null,
             ask_size: q.ask_size != null ? Number(q.ask_size) : null,
           });
-          setStock({ symbol: sym, name: sym, currency: q.currency || 'USD' });
+          setStock({ symbol: sym, name: sym, currency: 'EUR' });
         } else {
           setPrice(null);
-          setStock({ symbol: sym, name: sym, currency: 'USD' });
+          setStock({ symbol: sym, name: sym, currency: 'EUR' });
         }
       } catch {
         setPrice(null);
-        setStock({ symbol: sym, name: sym, currency: 'USD' });
+        setStock({ symbol: sym, name: sym, currency: 'EUR' });
       }
       setLoadingMeta(false);
       return;
@@ -501,7 +511,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
           price: Number(q.price),
           change_abs: q.change_abs != null ? Number(q.change_abs) : null,
           change_pct: q.change_pct != null ? Number(q.change_pct) : null,
-          currency: q.currency || 'USD',
+          currency: q.currency, prev_close: q.prev_close != null ? Number(q.prev_close) : null,
           bid: q.bid != null ? Number(q.bid) : null,
           ask: q.ask != null ? Number(q.ask) : null,
           bid_size: q.bid_size != null ? Number(q.bid_size) : null,
@@ -510,8 +520,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
       } else {
         setPrice(null);
       }
-      const currency = (q && q.currency) || 'USD';
-      setStock({ symbol: sym, name: sym, currency });
+      setStock({ symbol: sym, name: sym, currency: 'EUR' });
 
       // Position (aktuelles Symbol)
       const pos = (positions || []).find((p) => String(p.symbol || '').toUpperCase() === sym) || null;
@@ -648,7 +657,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
           price: Number(q.price),
           change_abs: q.change_abs != null ? Number(q.change_abs) : null,
           change_pct: q.change_pct != null ? Number(q.change_pct) : null,
-          currency: q.currency || 'USD',
+          currency: q.currency, prev_close: q.prev_close != null ? Number(q.prev_close) : null,
           bid: q.bid != null ? Number(q.bid) : null,
           ask: q.ask != null ? Number(q.ask) : null,
           bid_size: q.bid_size != null ? Number(q.bid_size) : null,
@@ -739,7 +748,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
         availableAmount: buyingPower,
         quantity: qty,
         orderType,
-        currency: price?.currency || stock?.currency || 'USD',
+        currency: 'EUR',
       });
     } catch { /* noop */ }
   };
@@ -867,20 +876,18 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
     );
   }
 
-  const currency = price?.currency || stock.currency || 'USD';
-  const sameCcy = !!dayStats?.currency && dayStats.currency === currency;
-  const dayBase = dayStats?.prevClose != null ? Number(dayStats.prevClose) : null;
-  const dayCur = sameCcy ? (price?.price != null ? Number(price.price) : null) : (dayStats?.lastClose != null ? Number(dayStats.lastClose) : null);
+  const currency = 'EUR';
+  // Same backend quote fields (EUR price vs. EUR previous close) as the market overview.
+  const quoteDay = price?.prev_close != null && price?.price != null;
+  const histDay = dayStats?.currency === 'EUR' && dayStats?.prevClose != null;
+  const dayBase = quoteDay ? Number(price.prev_close) : histDay ? Number(dayStats.prevClose) : null;
+  const dayCur = quoteDay ? Number(price.price) : histDay ? (price?.price != null ? Number(price.price) : Number(dayStats.lastClose)) : null;
   const dayAbs = dayBase && dayCur != null ? dayCur - dayBase : null;
-  const dayCcy = sameCcy ? currency : dayStats?.currency;
-  const chg = dayAbs != null ? (dayAbs / dayBase) * 100 : price?.change_pct != null ? Number(price.change_pct) : null;
-  // Fundamentals come in the native trading currency; convert with the latest FX rate of the history feed.
-  const fmtFundEur = (v) => {
-    const nat = historyFx?.native_currency;
-    if (!nat || nat === 'EUR') return formatCurrency(v, 'EUR');
-    const r = historyFx?.latest_rate ? Number(historyFx.latest_rate) * (nat === 'GBp' ? 100 : 1) : null;
-    return r ? formatCurrency(Number(v) / r, 'EUR') : null;
-  };
+  const sameCcy = true;
+  const dayCcy = 'EUR';
+  const chg = quoteDay && price?.change_pct != null ? Number(price.change_pct) : dayAbs != null ? (dayAbs / dayBase) * 100 : null;
+  // Fundamentals are converted to EUR by the backend (?display=EUR).
+  const fmtFundEur = (v) => (fundamentals?.currency === 'EUR' ? formatCurrency(v, 'EUR') : null);
   const up = (chg ?? 0) >= 0;
   const refPx =
     orderType === 'limit' && limitPrice
@@ -1153,7 +1160,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
               </div>
               <div className="bg-white border border-bank-border rounded-lg p-4">
                 <p className="text-xs text-bank-text-muted mb-1">Vortag</p>
-                <p className="font-semibold text-bank-text">{dayStats?.prevClose != null ? formatCurrency(dayStats.prevClose, dayStats.currency || currency) : price?.prev_close != null ? formatCurrency(price.prev_close, currency) : '–'}</p>
+                <p className="font-semibold text-bank-text">{dayBase != null ? formatCurrency(dayBase, 'EUR') : '–'}</p>
               </div>
               <div className="bg-white border border-bank-border rounded-lg p-4">
                 <p className="text-xs text-bank-text-muted mb-1">Volumen</p>
@@ -1237,7 +1244,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                   {(() => {
                     const currency = fundamentals?.currency;
                     const rows = [
-                      ['Marktkapitalisierung', fundamentals?.marketCap != null ? Number(fundamentals.marketCap).toLocaleString('de-DE') : null],
+                      ['Marktkapitalisierung', fundamentals?.marketCap != null && fundamentals?.currency === 'EUR' ? formatCompactEur(fundamentals.marketCap) : null],
                       ['KGV', fundamentals?.peRatio != null ? Number(fundamentals.peRatio).toFixed(2) : null],
                       ['Forward-KGV', fundamentals?.forwardPE != null ? Number(fundamentals.forwardPE).toFixed(2) : null],
                       ['Dividendenrendite', fundamentals?.dividendYield != null ? `${fundamentals.dividendYield.toFixed(2)}%` : null],
@@ -1567,7 +1574,6 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                   <InsufficientBuyingPowerAlert
                     requiredAmount={buyingPowerError.required}
                     availableAmount={buyingPowerError.available}
-                    currency={currency}
                   />
                 </div>
               )}

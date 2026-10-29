@@ -3,17 +3,10 @@ import { cn } from '@/lib/utils';
 import StockLogo from '@/components/StockLogo';
 import { formatDate, formatEURSigned } from '@/lib/dashboardFormatters';
 
-const formatLotPrice = (value, currency = 'USD') => {
-  if (value == null || !Number.isFinite(Number(value))) return '–';
-  try {
-    return Number(value).toLocaleString('de-DE', {
-      style: 'currency',
-      currency: currency === 'EUR' ? 'EUR' : currency === 'GBP' ? 'GBP' : 'USD',
-      maximumFractionDigits: 4,
-    });
-  } catch {
-    return String(value);
-  }
+// IPO allocations are booked in EUR (allocation contract + cash debit in EUR).
+const formatLotPrice = (value, currency) => {
+  if (value == null || !Number.isFinite(Number(value)) || currency !== 'EUR') return '–';
+  return Number(value).toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 4 });
 };
 
 const formatPct = (v) => {
@@ -59,7 +52,7 @@ const IpoPositionsTable = ({
           </thead>
           <tbody className="divide-y divide-bank-border/70">
             {rows.map((m) => {
-              const currency = m.currency || stockPriceMap[m.symbol]?.currency || 'EUR';
+              const currency = m.currency;
               const up = (m.gv ?? 0) >= 0;
               const einstand = m.ipoEinstandPerLot ?? m.avg;
               const listing = m.ipoListingPerLot ?? m.price;
@@ -101,11 +94,8 @@ const IpoPositionsTable = ({
                     <div>{formatEURSigned(m.gv)}</div>
                     <div className="text-[11px]">{formatPct(m.pct)}</div>
                   </td>
-                  <td className="px-4 py-3 text-right text-[13.5px] font-semibold tabular-nums text-bank-text">
-                    {Number(m.marktwert).toLocaleString('de-DE', {
-                      style: 'currency',
-                      currency: currency === 'EUR' ? 'EUR' : currency === 'GBP' ? 'GBP' : 'USD',
-                    })}
+                  <td className="px-4 py-3 text-right text-[13.5px] font-semibold tabular-nums text-bank-text" data-testid={`ipo-position-value-${m.symbol}`}>
+                    {formatLotPrice(m.marktwert, currency)}
                   </td>
                   <td className="px-4 py-3 text-right text-xs text-bank-text-muted">{formatDate(m.purchase_date)}</td>
                 </tr>

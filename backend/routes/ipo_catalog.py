@@ -283,7 +283,23 @@ async def list_visible_ipos(user: dict = Depends(get_current_user)):
             "status": {"$nin": ["listed", "cancelled"]},
         }
     ).sort([("display_order", -1), ("ipo_date", 1)])
-    return [_serialize(doc) async for doc in cursor]
+    return [await _with_eur(_serialize(doc)) async for doc in cursor]
+
+
+async def _with_eur(item: dict) -> dict:
+    """Adds EUR equivalents of original IPO price/valuation figures (originals kept)."""
+    from services.fx_service import eur_rate, fx_meta
+    ccy = item.get("price_currency")
+    keys = ("price_range_low", "price_range_high", "valuation_last_private")
+    if all(item.get(k) is None for k in keys):
+        return item
+    info = await eur_rate(ccy) if ccy else None
+    for k in keys:
+        v = item.get(k)
+        item[f"{k}_eur"] = round(float(v) / info["rate"], 2) if info and v is not None else None
+    item["fx"] = fx_meta(info, ccy)
+    item["fx_status"] = "ok" if info else "fx_unavailable"
+    return item
 
 
 # ─── Internal Helper: Katalog-Lookup für ipo_requests-Validation ────────

@@ -23,8 +23,9 @@ import { PageContainer, PageHeader } from '@/components/dashboard/PageHeader';
 import PortfolioPageLayout from '@/components/dashboard/PortfolioPageLayout';
 import useAutoAnimateRef from '@/hooks/useAutoAnimateRef';
 
-const formatCurrency = (v, currency = 'USD') =>
-  v == null ? '–' : Number(v).toLocaleString('de-DE', { style: 'currency', currency: currency || 'USD' });
+// EUR-only display; values arrive pre-converted from the backend.
+const formatCurrency = (v, currency) =>
+  v == null || currency !== 'EUR' ? '–' : Number(v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
 const formatPct = (v) =>
   v == null ? '–' : `${Number(v) >= 0 ? '+' : ''}${Number(v).toFixed(2)}%`;
@@ -182,7 +183,7 @@ const Handeln = ({ embedded = false }) => {
         volume: p.volume != null ? Number(p.volume) : null,
         day_high: p.day_high != null ? Number(p.day_high) : null,
         day_low: p.day_low != null ? Number(p.day_low) : null,
-        priceCurrency: p.currency || s.currency || 'USD',
+        priceCurrency: p.currency || null,
       };
     });
 

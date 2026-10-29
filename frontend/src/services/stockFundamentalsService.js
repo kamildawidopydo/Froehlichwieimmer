@@ -7,7 +7,9 @@ function mapRow(row) {
   if (!row) return null;
   return {
     symbol: row.symbol,
-    currency: row.currency ?? 'USD',
+    currency: row.currency ?? null,
+    originalCurrency: row.original_currency ?? null,
+    fx: row.fx ?? null,
     marketCap: row.market_cap ?? row.marketCap,
     peRatio: row.pe_ratio ?? row.peRatio,
     forwardPE: row.forward_pe ?? row.forwardPE,
@@ -37,7 +39,7 @@ function hasUsable(mapped) {
 
 export async function fetchStockFundamentals(symbol) {
   const sym = String(symbol).toUpperCase();
-  const res = await fetch(`${BASE}/api/stocks/${encodeURIComponent(sym)}/fundamentals`, {
+  const res = await fetch(`${BASE}/api/stocks/${encodeURIComponent(sym)}/fundamentals?display=EUR`, {
     credentials: 'include',
   });
   if (!res.ok) {

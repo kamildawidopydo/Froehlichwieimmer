@@ -154,13 +154,17 @@ export const buildIpoValuationMap = (requests = []) => {
     const sym = resolveIpoPositionSymbol(r);
     const listing = toNumber(r.listing_price_per_share);
     if (!sym || listing == null || listing <= 0) return;
-    map[sym] = {
+    const entry = {
       listingPrice: listing,
       subscriptionPrice: toNumber(r.subscription_price_per_share),
       profitMarginPct: toNumber(r.profit_margin_pct),
       requestId: r.id,
       valuationSetAt: r.valuation_set_at,
     };
+    map[sym] = entry;
+    // Allocation stores the position under the plain ticker.
+    const ticker = String(r.ticker || '').trim().toUpperCase();
+    if (ticker) map[ticker] = entry;
   });
 
   return map;

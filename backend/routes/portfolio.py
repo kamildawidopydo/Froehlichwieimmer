@@ -209,10 +209,51 @@ def _serialize_order(doc: dict, realized_pnl: Optional[str] = None) -> dict:
         "name": doc.get("name"),
         "status": doc.get("status", "pending"),
         "currency": doc.get("currency") or "EUR",
+        **_order_fx_fields(doc),
         "created_at": _iso(doc.get("created_at")),
         "updated_at": _iso(doc.get("updated_at")),
         "executed_at": _iso(doc.get("executed_at")),
         "cancelled_at": _iso(doc.get("cancelled_at")),
+    }
+
+
+def _order_fx_fields(doc: dict) -> dict:
+    def _f(v):
+        if v is None:
+            return None
+        return format(v.to_decimal(), "f") if isinstance(v, Decimal128) else str(v)
+    return {
+        "original_currency": doc.get("original_currency"),
+        "fx_rate": doc.get("fx_rate"),
+        "fx_pair": doc.get("fx_pair"),
+        "fx_source": doc.get("fx_source"),
+        "fx_as_of": doc.get("fx_as_of"),
+        "fx_status": doc.get("fx_status"),
+        "native_limit_price": _f(doc.get("native_limit_price")),
+        "reference_price_eur": _f(doc.get("reference_price_eur")),
+        "reference_price_native": _f(doc.get("reference_price_native")),
+    }
+
+
+async def _order_fx_snapshot(sym: str, limit_price_eur: Decimal) -> dict:
+    """Records trading currency + FX used at order time (EUR display does not alter execution data)."""
+    q = (await get_stock_quotes(db, [sym])).get(sym) or {}
+    ccy = q.get("native_currency")
+    if not ccy or q.get("price") is None:
+        return {"original_currency": ccy, "fx_status": q.get("price_status") or "unavailable"}
+    rate = q.get("fx_rate") or 1.0
+    factor = Decimal("100") if ccy in ("GBp", "GBX") else Decimal("1")
+    native_limit = (limit_price_eur * Decimal(str(rate)) * factor).quantize(Decimal("0.0001"))
+    return {
+        "original_currency": ccy,
+        "fx_rate": float(rate),
+        "fx_pair": q.get("fx_pair") or "EUR/EUR",
+        "fx_source": q.get("fx_source"),
+        "fx_as_of": q.get("fx_as_of") or q.get("as_of"),
+        "fx_status": "ok",
+        "native_limit_price": Decimal128(native_limit),
+        "reference_price_eur": Decimal128(Decimal(str(q["price"]))),
+        "reference_price_native": Decimal128(Decimal(str(q["native_price"]))),
     }
 
 
@@ -868,6 +909,7 @@ def _serialize_stock_order(doc: dict) -> dict:
         "limit_price": _amt(doc.get("limit_price")),
         "reserved_cash": _amt(doc.get("reserved_cash")),
         "currency": doc.get("currency") or "EUR",
+        **_order_fx_fields(doc),
         "status": doc.get("status", "pending"),
         "source": doc.get("source"),
         # Session 82.61a · Coupon-Felder (nur wenn Coupon gesetzt).
@@ -994,6 +1036,7 @@ async def create_order(
                 )
             reserved = Decimal("0.00")  # Sell reserviert kein Cash
 
+        fx_snapshot = await _order_fx_snapshot(sym, limit_price)
         now = datetime.now(timezone.utc)
         doc = {
             "user_id": uid,
@@ -1011,6 +1054,7 @@ async def create_order(
             "created_at": now,
             "updated_at": now,
             "cancelled_at": None,
+            **fx_snapshot,
         }
         # Session 82.61a — Coupon-Snapshot auf Order (BEFORE reserve).
         if coupon_code_norm and coupon_percent is not None:

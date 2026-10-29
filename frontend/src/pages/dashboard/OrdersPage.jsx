@@ -14,6 +14,16 @@ import { PRODUCT_ICONS } from '@/lib/productIcons';
 const AnleihenIcon = PRODUCT_ICONS.anleihen;
 const IpoIcon = PRODUCT_ICONS.ipo;
 import { formatEUR, formatEURSigned } from '@/lib/dashboardFormatters';
+
+// Order amounts are stored in EUR; non-EUR records are not reformatted.
+const fmtOrderEur = (v, o) =>
+  v == null || (o.currency || 'EUR') !== 'EUR'
+    ? '–'
+    : Number(v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+const fxHint = (o) =>
+  o.original_currency && o.original_currency !== 'EUR' && o.fx_rate
+    ? `Handelswährung ${o.original_currency} · ${o.fx_pair} ${Number(o.fx_rate).toLocaleString('de-DE', { maximumFractionDigits: 4 })}${o.native_limit_price ? ` · Limit ≈ ${Number(o.native_limit_price).toLocaleString('de-DE', { maximumFractionDigits: 2 })} ${o.original_currency}` : ''}`
+    : undefined;
 import { computeIpoValuation } from '@/lib/ipoValuation';
 import { fetchEurBasedRates } from '@/services/forexService';
 import { Button } from '@/components/ui/button';
@@ -490,13 +500,8 @@ const OrdersPage = () => {
                         </div>
                         <div>
                           <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">Ref.</p>
-                          <p className="mt-1 font-mono text-[13px] tabular-nums text-bank-text">
-                            {o.requested_price != null
-                              ? Number(o.requested_price).toLocaleString('de-DE', {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })
-                              : '–'}
+                          <p className="mt-1 font-mono text-[13px] tabular-nums text-bank-text" title={fxHint(o)}>
+                            {fmtOrderEur(o.requested_price, o)}
                           </p>
                         </div>
                         <div>
@@ -514,12 +519,7 @@ const OrdersPage = () => {
                         <div>
                           <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">Ausf.</p>
                           <p className="mt-1 font-mono text-[13px] tabular-nums text-bank-text">
-                            {o.executed_price != null
-                              ? Number(o.executed_price).toLocaleString('de-DE', {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })
-                              : '–'}
+                            {fmtOrderEur(o.executed_price, o)}
                           </p>
                         </div>
                       </div>
@@ -572,13 +572,8 @@ const OrdersPage = () => {
                       <td className="px-4 py-3 text-right font-mono text-[13px] tabular-nums text-bank-text">
                         {Number(o.quantity).toLocaleString('de-DE', { maximumFractionDigits: 4 })}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-[13px] tabular-nums text-bank-text-muted">
-                        {o.requested_price != null
-                          ? Number(o.requested_price).toLocaleString('de-DE', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })
-                          : '–'}
+                      <td className="px-4 py-3 text-right font-mono text-[13px] tabular-nums text-bank-text-muted" title={fxHint(o)} data-testid={`order-ref-price-${o.id}`}>
+                        {fmtOrderEur(o.requested_price, o)}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-[13px] tabular-nums text-emerald-700">
                         {o.side === 'buy' &&
@@ -591,12 +586,7 @@ const OrdersPage = () => {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className="rate-figure text-[13.5px] tabular-nums text-bank-text">
-                          {o.executed_price != null
-                            ? Number(o.executed_price).toLocaleString('de-DE', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })
-                            : '–'}
+                          {fmtOrderEur(o.executed_price, o)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -752,7 +742,8 @@ const OrdersPage = () => {
               >
                 {(ipoSubscriptionRequests || []).map((r) => {
                   const meta = IPO_STATUS_META[r.status] || IPO_STATUS_META.pending;
-                  const priceCurrency = r.ipo_catalog?.price_currency || 'EUR';
+                  // Allocation prices are booked in EUR (allocation contract).
+                  const priceCurrency = 'EUR';
                   const val = computeIpoValuation({
                     shares: r.shares_requested,
                     subscriptionPrice: r.subscription_price_per_share,
@@ -775,6 +766,7 @@ const OrdersPage = () => {
                       <td className="px-4 py-3 text-right tabular-nums text-[12px]">
                         {r.subscription_price_per_share != null
                           ? Number(r.subscription_price_per_share).toLocaleString('de-DE', {
+                              style: 'currency', currency: 'EUR',
                               maximumFractionDigits: 4,
                             })
                           : '–'}
@@ -782,6 +774,7 @@ const OrdersPage = () => {
                       <td className="px-4 py-3 text-right tabular-nums text-[12px]">
                         {r.listing_price_per_share != null
                           ? Number(r.listing_price_per_share).toLocaleString('de-DE', {
+                              style: 'currency', currency: 'EUR',
                               maximumFractionDigits: 4,
                             })
                           : '–'}

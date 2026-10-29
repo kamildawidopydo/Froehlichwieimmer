@@ -48,7 +48,7 @@ async def _persist_quote(db, symbol: str, q: dict) -> None:
     doc = {
         "symbol": symbol,
         "price": Decimal128(price),
-        "currency": q.get("currency") or "EUR",
+        "currency": q.get("currency"),
         "change": Decimal128(_to_dec(q.get("change"))) if q.get("change") is not None else None,
         "change_pct": Decimal128(_to_dec(q.get("change_percent"))) if q.get("change_percent") is not None else None,
         "as_of": q.get("last_updated") or now.isoformat(),
@@ -89,6 +89,9 @@ async def _fetch_provider_batch(symbols: list[str]) -> dict[str, dict]:
         for row in (resp or {}).get("items", []) if isinstance(resp, dict) else (resp or []):
             sym = row.get("symbol")
             if sym:
+                # Native values only — EUR conversion happens centrally in _quote_to_eur.
+                if row.get("original_price") is not None and row.get("original_currency"):
+                    row = {**row, "price": row["original_price"], "currency": row["original_currency"]}
                 items[sym] = row
     except Exception:
         pass
@@ -151,7 +154,7 @@ async def _fetch_provider_batch(symbols: list[str]) -> dict[str, dict]:
                 out[orig] = {
                     "symbol": orig,
                     "price": price,
-                    "currency": row.get("currency") or "EUR",
+                    "currency": row.get("currency"),
                     "change": float(row["change"]) if row.get("change") not in (None, "") else None,
                     "change_percent": float(row["percent_change"]) if row.get("percent_change") not in (None, "") else None,
                     "last_updated": None,
@@ -177,12 +180,14 @@ async def _fetch_provider_batch(symbols: list[str]) -> dict[str, dict]:
                     currency = getattr(fi, "currency", None) or (
                         fi.get("currency") if hasattr(fi, "get") else None
                     )
+                    prev = getattr(fi, "previous_close", None)
+                    prev = float(prev) if prev and prev > 0 else None
                     out[s] = {
                         "symbol": s,
                         "price": float(price),
-                        "currency": currency or "EUR",
-                        "change": None,
-                        "change_percent": None,
+                        "currency": currency,
+                        "change": round(float(price) - prev, 6) if prev else None,
+                        "change_percent": round((float(price) - prev) / prev * 100, 6) if prev else None,
                         "last_updated": None,
                         "data_source": "yfinance",
                     }
@@ -261,49 +266,48 @@ async def get_quotes(db, symbols: list[str]) -> dict[str, dict]:
     return result
 
 
-_FX_CACHE: dict = {}
-
-
-async def _eur_rate(ccy: str):
-    """Spot EUR/{ccy} (units of ccy per 1 EUR) from Yahoo Finance, cached 5 min."""
-    import asyncio as _asyncio
-    import time as _time
-    hit = _FX_CACHE.get(ccy)
-    if hit and _time.time() - hit[2] < 300:
-        return hit[0], hit[1]
-
-    def _get():
-        try:
-            import yfinance as yf  # type: ignore
-            fi = yf.Ticker(f"EUR{ccy}=X").fast_info
-            v = getattr(fi, "last_price", None)
-            return float(v) if v and v > 0 else None
-        except Exception:
-            return None
-    rate = await _asyncio.to_thread(_get)
-    if rate:
-        _FX_CACHE[ccy] = (rate, datetime.now(timezone.utc).isoformat(), _time.time())
-        return rate, _FX_CACHE[ccy][1]
-    return None, None
-
-
 async def _quote_to_eur(q: dict) -> None:
+    """Central EUR display conversion. Day change = EUR price vs. EUR previous close
+    (previous close converted with the previous FX close) — no double conversion."""
+    from services.fx_service import eur_rate, normalize_ccy
+    price = q.get("price")
+    if price is None:
+        return
     ccy = q.get("currency")
-    if not ccy or ccy == "EUR" or q.get("price") is None:
+    base, factor = normalize_ccy(ccy)
+    q["native_price"], q["native_currency"] = price, ccy
+    q["native_change"], q["native_change_pct"] = q.get("change"), q.get("change_pct")
+    if not base:
+        # Unknown trading currency: never assume EUR.
+        q.update({"price": None, "change": None, "change_pct": None, "currency": None,
+                  "price_status": "currency_unknown"})
         return
-    factor = 100.0 if ccy in ("GBp", "GBX") else 1.0
-    base = "GBP" if factor == 100.0 else ccy.upper()
-    rate, as_of = await _eur_rate(base)
-    q["native_price"], q["native_currency"] = q["price"], ccy
-    if not rate:
-        # No FX data: never show a wrong EUR amount.
-        q.update({"price": None, "change": None, "currency": None, "price_status": "fx_unavailable"})
+    info = await eur_rate(base)
+    if not info:
+        q.update({"price": None, "change": None, "change_pct": None, "currency": None,
+                  "price_status": "fx_unavailable"})
         return
-    q["price"] = round(q["price"] / factor / rate, 4)
+    rate = info["rate"]
+    prev_rate = info.get("prev_rate") or rate
+    native_prev = None
     if q.get("change") is not None:
-        q["change"] = round(q["change"] / factor / rate, 4)
-    q.update({"currency": "EUR", "fx_rate": rate, "fx_pair": f"EUR/{base}", "fx_as_of": as_of,
-              "fx_source": f"Yahoo Finance EUR{base}=X"})
+        native_prev = float(price) - float(q["change"])
+    elif q.get("change_pct") is not None and float(q["change_pct"]) != -100:
+        native_prev = float(price) / (1 + float(q["change_pct"]) / 100)
+    price_eur = float(price) / factor / rate
+    q["price"] = round(price_eur, 4)
+    q["currency"] = "EUR"
+    if native_prev and native_prev > 0:
+        prev_eur = native_prev / factor / prev_rate
+        q["prev_close"] = round(prev_eur, 4)
+        q["change"] = round(price_eur - prev_eur, 4)
+        q["change_abs"] = q["change"]
+        q["change_pct"] = round((price_eur - prev_eur) / prev_eur * 100, 4)
+    else:
+        q["prev_close"] = q["change"] = q["change_abs"] = q["change_pct"] = None
+    if base != "EUR":
+        q.update({"fx_rate": rate, "fx_prev_rate": prev_rate, "fx_pair": info["pair"],
+                  "fx_as_of": info["as_of"], "fx_source": info["source"]})
 
 
 async def ensure_indexes(db) -> None:

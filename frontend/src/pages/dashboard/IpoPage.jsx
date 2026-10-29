@@ -63,42 +63,38 @@ const STATUS_BADGE = {
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' }) : '–';
 
-// EUR/USD spot (Yahoo Finance via /api/forex/quotes), set once per page load.
-const FX = { rate: null, asOf: null };
-const toEur = (v, currency) => {
-  if (v == null) return null;
-  if (currency !== 'USD') return Number(v);
-  return FX.rate ? Number(v) / FX.rate : null;
-};
-const fmtEur = (v) => `€${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// EUR values come pre-converted from the backend (`*_eur` + `fx`); originals stay untouched.
+const isEur = (ipo) => (ipo?.price_currency || 'EUR').toUpperCase() === 'EUR';
+const eurOf = (ipo, key) => (isEur(ipo) ? ipo?.[key] : ipo?.[`${key}_eur`]);
+const fmtEur = (v) => Number(v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
-export const fxNote = (currency) =>
-  currency === 'USD' && FX.rate
-    ? `Umgerechnet aus USD zum EUR/USD-Kurs ${FX.rate.toLocaleString('de-DE', { maximumFractionDigits: 4 })} (Yahoo Finance, Stand ${new Date(FX.asOf).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} Uhr)`
+export const fxNote = (ipo) =>
+  !isEur(ipo) && ipo?.fx?.rate
+    ? `Umgerechnet aus ${ipo.price_currency} zum ${ipo.fx.pair}-Kurs ${Number(ipo.fx.rate).toLocaleString('de-DE', { maximumFractionDigits: 4 })} (${ipo.fx.source}, Stand ${new Date(ipo.fx.as_of).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })} Uhr)`
     : null;
 
-const formatPriceRange = (low, high, currency = 'EUR') => {
-  if (low == null && high == null) return null;
-  if (currency === 'USD') {
-    const l = toEur(low, currency);
-    const h = toEur(high, currency);
-    if (l == null && h == null) return 'Euro-Umrechnung derzeit nicht verfügbar';
-    return l != null && h != null && l !== h ? `${fmtEur(l)} – ${fmtEur(h)}` : fmtEur(l ?? h);
-  }
-  const sym = '€';
-  if (low != null && high != null && low !== high) {
-    return `${sym}${Number(low).toLocaleString('de-DE')} – ${sym}${Number(high).toLocaleString('de-DE')}`;
-  }
-  const v = low ?? high;
-  return `${sym}${Number(v).toLocaleString('de-DE')}`;
+const fmtNative = (v, ccy) => `${Number(v).toLocaleString('de-DE')} ${ccy}`;
+
+export const originalPriceNote = (ipo) => {
+  if (isEur(ipo) || (ipo?.price_range_low == null && ipo?.price_range_high == null)) return null;
+  const lo = ipo.price_range_low;
+  const hi = ipo.price_range_high;
+  const native = lo != null && hi != null && lo !== hi
+    ? `${Number(lo).toLocaleString('de-DE')}–${fmtNative(hi, ipo.price_currency)}`
+    : fmtNative(lo ?? hi, ipo.price_currency);
+  return `Originalangabe laut offiziellem Dokument: ${native} je Aktie`;
+};
+
+const formatPriceRange = (ipo) => {
+  if (ipo.price_range_low == null && ipo.price_range_high == null) return null;
+  const l = eurOf(ipo, 'price_range_low');
+  const h = eurOf(ipo, 'price_range_high');
+  if (l == null && h == null) return 'Euro-Umrechnung derzeit nicht verfügbar';
+  return l != null && h != null && l !== h ? `${fmtEur(l)} – ${fmtEur(h)}` : fmtEur(l ?? h);
 };
 
 const formatPriceLabel = (ipo) => {
-  const range = formatPriceRange(
-    ipo.price_range_low,
-    ipo.price_range_high,
-    ipo.price_currency || 'EUR',
-  );
+  const range = formatPriceRange(ipo);
   if (range) return range;
   if (ipo.status === 'filed') {
     return 'Offizielle Preisspanne noch nicht veröffentlicht';
@@ -106,11 +102,12 @@ const formatPriceLabel = (ipo) => {
   return '–';
 };
 
-const formatValuation = (value, currency = 'USD') => {
-  if (value == null) return null;
+const formatValuation = (ipo) => {
+  if (ipo?.valuation_last_private == null) return null;
   const sym = '€';
-  const n = toEur(value, currency);
-  if (n == null) return 'Euro-Umrechnung derzeit nicht verfügbar';
+  const raw = eurOf(ipo, 'valuation_last_private');
+  if (raw == null) return 'Euro-Umrechnung derzeit nicht verfügbar';
+  const n = Number(raw);
   if (!Number.isFinite(n)) return null;
   if (n >= 1_000_000_000_000) {
     return `${sym}${(n / 1_000_000_000_000).toLocaleString('de-DE', { maximumFractionDigits: 2 })} Bio.`;
@@ -125,25 +122,7 @@ const INVESTABLE_STATUSES = new Set(['upcoming', 'filed', 'priced', 'open']);
 
 const canInvest = (status) => INVESTABLE_STATUSES.has(status);
 
-const useEurUsd = () => {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    fetch(`${process.env.REACT_APP_BACKEND_URL}/api/forex/quotes?pairs=EURUSD`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        const it = d?.items?.[0];
-        if (it?.rate && it.data_status !== 'unavailable') {
-          FX.rate = Number(it.rate);
-          FX.asOf = it.as_of;
-          setTick((t) => t + 1);
-        }
-      })
-      .catch(() => {});
-  }, []);
-};
-
 const IpoPage = () => {
-  useEurUsd();
   const { user } = useAuth();
   const { refreshIpoRequests } = useDashboardData();
   const [ipos, setIpos] = useState([]);
@@ -530,7 +509,7 @@ const IpoPage = () => {
                     {ipo.valuation_last_private != null && (
                       <p className="mt-0.5 text-[11px] text-bank-text-muted">
                         Letzte Privatbewertung:{' '}
-                        {formatValuation(ipo.valuation_last_private, ipo.price_currency || 'USD')}
+                        {formatValuation(ipo)}
                       </p>
                     )}
                     {canInvest(ipo.status) && (
@@ -593,8 +572,11 @@ const IpoPage = () => {
                   <div>
                     <p className="text-[10px] uppercase text-bank-text-muted">IPO-Preisspanne</p>
                     <p>{formatPriceLabel(selected)}</p>
-                    {fxNote(selected.price_currency) && (selected.price_range_low != null || selected.valuation_last_private != null) && (
-                      <p className="text-[11px] text-bank-text-muted" data-testid="ipo-fx-note">{fxNote(selected.price_currency)}</p>
+                    {fxNote(selected) && (
+                      <p className="text-[11px] text-bank-text-muted" data-testid="ipo-fx-note">{fxNote(selected)}</p>
+                    )}
+                    {originalPriceNote(selected) && (
+                      <p className="text-[11px] text-bank-text-muted" data-testid="ipo-original-price-note">{originalPriceNote(selected)}</p>
                     )}
                   </div>
                   {selected.valuation_last_private != null && (
@@ -603,10 +585,7 @@ const IpoPage = () => {
                         Letzte Privatbewertung (kein IPO-Preis)
                       </p>
                       <p className="font-medium">
-                        {formatValuation(
-                          selected.valuation_last_private,
-                          selected.price_currency || 'USD',
-                        )}
+                        {formatValuation(selected)}
                       </p>
                     </div>
                   )}
@@ -628,6 +607,11 @@ const IpoPage = () => {
 
                 {selected.description && (
                   <p className="text-bank-text-muted leading-relaxed">{selected.description}</p>
+                )}
+                {selected.description && !isEur(selected) && eurOf(selected, 'price_range_low') != null && (
+                  <p className="text-[12px] text-bank-text-muted" data-testid="ipo-description-eur-note">
+                    {selected.price_currency}-Angaben in der Beschreibung sind Originalangaben aus offiziellen Dokumenten. Euro-Gegenwert der Preisspanne: {formatPriceLabel(selected)}.
+                  </p>
                 )}
 
                 {selected.prospectus_url && (

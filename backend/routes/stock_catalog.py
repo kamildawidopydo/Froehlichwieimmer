@@ -57,6 +57,9 @@ _META: Dict[str, Dict[str, Any]] = {
 }
 
 
+from services.fx_service import to_eur  # noqa: E402
+
+
 @router.get("/stocks/catalog")
 async def stocks_catalog(
     with_quotes: bool = Query(default=False, description="Include cached price/change data"),
@@ -95,16 +98,24 @@ async def stocks_catalog(
         }
         if with_quotes:
             q = quotes_by_sym.get(sym) or {}
-            pc = q.get("previous_close")
-            dh = q.get("day_high")
-            dl = q.get("day_low")
+            data = q.get("data") or q
+            native_ccy = data.get("currency") or meta["currency"]
+
+            async def _eur(v):
+                if not isinstance(v, (int, float)):
+                    return None
+                e = await to_eur(v, native_ccy)
+                return round(e, 4) if e is not None else None
+            pc = await _eur(data.get("previous_close"))
             item.update({
-                "price": float(pc) if isinstance(pc, (int, float)) else None,
-                "day_high": float(dh) if isinstance(dh, (int, float)) else None,
-                "day_low": float(dl) if isinstance(dl, (int, float)) else None,
+                "currency": "EUR",
+                "native_currency": native_ccy,
+                "price": pc,
+                "day_high": await _eur(data.get("day_high")),
+                "day_low": await _eur(data.get("day_low")),
                 "change_abs": None,
                 "change_pct": None,
-                "volume": q.get("volume"),
+                "volume": data.get("volume"),
                 "data_source": q.get("data_source"),
                 "data_status": "fresh" if pc is not None else "unavailable",
             })

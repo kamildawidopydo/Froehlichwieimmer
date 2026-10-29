@@ -902,8 +902,35 @@ async def stock_analyst(symbol: str) -> Dict[str, Any]:
     }
 
 
+_FUND_MONEY = ("market_cap", "eps", "book_value", "day_high", "day_low",
+               "fifty_two_week_high", "fifty_two_week_low", "previous_close")
+
+
+async def _fundamentals_to_eur(resp: Dict[str, Any]) -> Dict[str, Any]:
+    """Converts monetary fundamentals to EUR (native values preserved under `native`)."""
+    from services.fx_service import eur_rate, normalize_ccy, fx_meta
+    ccy = resp.get("currency")
+    base, factor = normalize_ccy(ccy)
+    info = await eur_rate(base) if base else None
+    native = {k: resp.get(k) for k in _FUND_MONEY if k in resp}
+    out = {**resp, "native": native, "original_currency": ccy,
+           "currency": "EUR" if info else None, "fx": fx_meta(info, ccy)}
+    for k, v in native.items():
+        out[k] = round(float(v) / factor / info["rate"], 4) if info and v is not None else None
+    if not info and any(v is not None for v in native.values()):
+        out["fx_status"] = "fx_unavailable" if base else "currency_unknown"
+    return out
+
+
 @router.get("/stocks/{symbol}/fundamentals")
-async def stock_fundamentals(symbol: str) -> Dict[str, Any]:
+async def stock_fundamentals(symbol: str, display: Optional[str] = Query(default=None)) -> Dict[str, Any]:
+    resp = await _stock_fundamentals_native(symbol)
+    if (display or "").upper() == "EUR":
+        return await _fundamentals_to_eur(resp)
+    return resp
+
+
+async def _stock_fundamentals_native(symbol: str) -> Dict[str, Any]:
     sym = _check(symbol)
 
     cached = await _db.stock_public_fundamentals_cache.find_one({"_id": sym})
