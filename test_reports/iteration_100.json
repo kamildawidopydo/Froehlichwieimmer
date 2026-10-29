@@ -1,0 +1,28 @@
+{
+  "summary": "Frontend-only retest of the depot auto-refresh fix (DashboardDataContext silent polling + StockDetail setPrice compare) as test_eur_qa@example.com, desktop 1920 and mobile 390. I watched the pages for 36-60 s each with a MutationObserver (counting added nodes and skeletons), sampled scrollHeight and scrollY every 500 ms, and logged requests. Results: no skeleton or loading flashes, 0 DOM nodes added during polling (prices change via text updates only), and document height and scroll position stayed the same on /dashboard/aktien, /uebersicht, /auftraege and /depot (which redirects to /vermoegen). The Watchlist tab stayed selected, and the Ctrl+K search dialog stayed open with its typed text on mobile. Network on /aktien over 60 s: quotes 8 times, stock-positions and watchlist 2 times, orders 3 times (the extra orders call comes from another component). Live prices still update: KPIs went from 2.545,92 to 2.546,01 € during the run, and the AAPL detail price 312,66 € matched GET /api/portfolio/quotes (312.6611 EUR). On /dashboard/aktien/AAPL the 7 chart canvases stayed the same nodes (none re-created), the 5T range stayed active, the quantity (2) and limit (199.5) inputs kept their values, and the Kennzahlen tab stayed selected for 16 s. The manual Aktualisieren button works (shows 'Aktualisiere…' and the toast 'Marktdaten aktualisiert.'). No horizontal overflow at 390 px. No orders were created and no data was changed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/dashboard/aktien manual Aktualisieren", "issues": ["Manual refresh still calls fetchStockData() non-silently, so stocksLoading=true briefly hides the KPI tiles and shows the table skeleton, which makes the layout jump. This is by design per the request, but it could use stocksRefreshing (spinner on the button only) for a smoother UX."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: make refreshStockPrices use fetchStockData({silent:true}) and rely on stocksRefreshing, so manual refresh does not cause a layout jump either",
+    "Optional: on /dashboard/aktien/:symbol both the context poller and the StockDetail poller request /api/portfolio/quotes every 5 s (11 quote calls in 35 s), so the requests are duplicated"
+  ],
+  "critical_code_review_comments": [
+    "fetchStockData({silent:true}) always calls update({stockPricesUpdatedAt}) when the priceMap is non-empty, so every 30 s the whole context re-renders even if nothing changed. It is harmless visually (no DOM changes were observed), but it defeats updateIfChanged. Only set the timestamp when stockPriceMap actually changed.",
+    "refreshQuotesSilently merges into prev.stockPriceMap, so symbols removed from the watchlist stay in the map until the next full refresh replaces it (minor).",
+    "updateIfChanged uses JSON.stringify on every key per tick. Fine for the current list sizes.",
+    "DashboardDataContext.jsx (821 lines) and StockDetail.js (1638 lines) exceed the 700-line guideline."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login via page.request.post('/api/auth/login') after add_init_script presets kapitalmitte_visitor_profile and kapitalmitte_cookie_consent. The tabs on /dashboard/aktien are plain buttons ('Meine Positionen 6', 'Watchlist 3'). StockDetail: range buttons are named '5T' etc., the limit toggle is data-testid=order-type-limit, and the quantity and limit fields are input[type=number] nth(0) and nth(1). /dashboard/depot redirects to /dashboard/vermoegen. Sonner toasts: use get_by_text, because the [data-sonner-toast] query returned nothing."
+}

@@ -1,3 +1,9 @@
+## Update 2026-10-29 – Depot-Unruhe behoben (NUR Vorschau)
+- Ursache: DashboardDataContext pollte alle 5 s fetchStockData (4 Requests) und setzte jedes Mal stocksLoading → KPI-Kacheln/Tabellen verschwanden kurz (Springen), alle Arrays neu.
+- Fix: Kurse still alle 5 s (idle 30 s) per refreshQuotesSilently, Positionen/Watchlist/Orders still alle 30 s, updateIfChanged (nur geänderte Werte), manueller Refresh ohne Ladezustand; StockDetail setPrice ignoriert reine as_of-Änderungen.
+- Test iteration_100: 100 %, 0 DOM-Neuaufbau, Scroll/Tabs/Eingaben/Chart stabil, Kurse aktualisieren weiter. Offen: Detailseite + Kontext fragen Kurse doppelt ab (geringe Last).
+
+
 ## Update 2026-10-29 – Automatisches Karriere-Popup entfernt (NUR Vorschau)
 - App.js: <CareerPopup /> entfernt; components/career/ (CareerPopup, CareerIntro, CareerForm – nur vom Popup genutzt) gelöscht. Karriere-Navigation, Karriere-Banner und /karriere (components/careers) unverändert.
 

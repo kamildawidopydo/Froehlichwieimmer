@@ -251,7 +251,7 @@ export const DashboardDataProvider = ({ children }) => {
       // Session 82.64 — `/api/portfolio/stock-positions` enrichted mit
       // Read-Through-Cache (Session 82.22). Ein Read triggert Refresh der
       // stale Quotes automatisch. Kein separater `stock-prices`-Invoke nötig.
-      const ok = await fetchStockData();
+      const ok = await fetchStockData({ silent: true });
       if (ok) {
         toast.success('Marktdaten aktualisiert.');
       } else {
