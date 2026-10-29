@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend-only retest of the iteration_95 fixes (preview only, test_eur_qa@example.com, desktop 1920 and mobile 390). ALL 4 FIXES VERIFIED. (1) Dashboard day change: /api/portfolio/quotes gave AAPL change_abs -2.422 / -0.7787 %, VOLV-B.ST -0.0412 / -0.1459 %, DBK +0.865 / +2.8814 %. /dashboard/aktien Tag column shows -0,78 % / -0,15 % / +2,88 % and TESTIPO '–'. Tagesveränderung is +9,62 € (+0,50 %), which equals 3*-2.422 + 10*-0.0412 + 20*0.865 = 9.622. Top-Bewegungen are sorted correctly. Übersicht 'Heute' and '+9,62 € heute' match. Watchlist cards show EUR price plus German % (308,61 € -0,78 %, DBK +2,88 %). StockDetail AAPL is −2,42 € (-0,78 %) and DBK +0,87 € (+2,88 %), matching the dashboard. VOLV only drifted with the live tick. (2) Handeln: no row has price outside high/low. AAPL is 308,61 within 308,32–311,59, and many XETRA rows show '–'. (3) /dashboard/alarme shows the AAPL alert '≥ 400,00 · Last 308,61 €'. (4) German commas on StockDetail, Handeln, AktienPage and the IPO-Positionen table. Regression passes: StockDetail € only, Marktkapitalisierung 4,50 Bio. €, EPS 7,83 €. InsufficientBuyingPowerAlert for AAPL 10x300 shows 3.000,00 € needed and 1.250,00 € available (blocked client-side, order count unchanged at 7). IPO-Positionen TESTIPO is 4 / 20 € / 80 € / 25 € / +20 € (+25,00 %) / 100 €. OrdersPage uses €. IPO dialog notes are present for Aspen and Bambusa (13,46–15,26 €, original 15–17 USD) and Siyata (6,28 €, original 7 USD). On mobile 390 there is no $ or USD on any depot page (only the intended FX-source notes) and no horizontal overflow. Remaining: minor leftover decimal-point % formatting in components that were not part of the fix.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "WatchlistWidget (Übersicht sidebar)", "issue": "Day % uses a decimal point ('-0.78%', '+2.88%'), and the price has no € sign ('308,61')", "selector": "components/dashboard/WatchlistWidget.jsx:64-71", "priority": "LOW"},
+      {"component": "UnifiedPositionsTable (/dashboard/vermoegen)", "issue": "G/V % uses toFixed: '+10.21%', '+12.66 %', '+25.00%'", "selector": "components/dashboard/portfolio/UnifiedPositionsTable.jsx:25,157", "priority": "LOW"},
+      {"component": "OrdersPage IPO-Zeichnungsanfragen", "issue": "Gewinn % shows '+25.00 %' (decimal point)", "selector": "pages/dashboard/OrdersPage.jsx:789", "priority": "LOW"},
+      {"component": "AlarmePage", "issue": "Target shows '≥ 400,00' without €, while Last shows '308,61 €'", "selector": "/dashboard/alarme alert row", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Handeln vs StockDetail day range", "issue": "Values are no longer inconsistent, but they come from different sources. AAPL Handeln shows 311,59/308,32 while detail shows 311,74/307,88. DBK Handeln shows '–' while detail shows a valid 30,97/29,96. This is acceptable per the fix, but not identical.", "affected_selectors": ["Handeln Tages-Hoch/Tages-Tief columns"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional polish: switch the remaining toFixed(2)% to de-DE in WatchlistWidget.jsx, UnifiedPositionsTable.jsx, OrdersPage.jsx:789, DepotPage.jsx, AnleihenPage.jsx, KPIStatCard.jsx and HeroBanner.jsx",
+    "Optional: show € on the alarm target and the WatchlistWidget price",
+    "Optional: use the same quote source for Handeln day high/low as StockDetail",
+    "Run `python tests/seed_eur_test.py clean` after review"
+  ],
+  "critical_code_review_comments": [
+    "DashboardDataContext priceMap only accepts quotes with currency === 'EUR'. That is correct for EUR-only display, but if the quotes call fails, positions fall back to p.price without change fields, so the day change silently shows '–'. That is acceptable.",
+    "Percent formatting helpers are duplicated (fmtDe, formatPct, IpoPositionsTable). Extract a shared formatPctDe util to avoid future regressions like those above."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "skipped", "frontend": "100% of requested fixes; 4 low-priority formatting leftovers"},
+  "seed_data_creation": "None. No orders created (the IBP check is blocked client-side and the order count stayed at 7).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login test_eur_qa@example.com / TestEur-Qa-2026! with add_init_script setting kapitalmitte_visitor_profile + kapitalmitte_cookie_consent. The StockDetail order form submit is form:has([data-testid=order-type-limit]) button[type=submit]. Inputs use the placeholders 'z.B. 10' and 'Zielkurs'. The AktienPage Watchlist tab is [role=tab] with text Watchlist."
+}

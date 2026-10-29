@@ -786,7 +786,7 @@ const OrdersPage = () => {
                             <br />
                             <span className="text-[10px]">
                               {up ? '+' : ''}
-                              {val.profitPct.toFixed(2)} %
+                              {val.profitPct.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %
                             </span>
                           </>
                         ) : (

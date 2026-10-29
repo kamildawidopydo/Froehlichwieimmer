@@ -1,3 +1,12 @@
+## Update 2026-10-29 – Euro-Umstellung Kundendepot abgeschlossen (NUR Vorschau, nicht veröffentlicht)
+- Zentrale Umrechnung: backend/services/fx_service.py (Yahoo EUR{ccy}=X, Spot + Vortagesschluss, 5-min-Cache). stock_price_service._quote_to_eur: Preis, Vortag (mit Vortages-FX), Veränderung & % in EUR; Originalwerte native_* bleiben erhalten. Unbekannte Währung → kein Preis (price_status currency_unknown), kein EUR-Default mehr.
+- Behoben: Market-Quotes lieferten EUR-Preis aber USD-Veränderung (gemischt) → jetzt native Werte aus original_price, Umrechnung nur einmal.
+- Fundamentals ?display=EUR (Marktkap. Mio./Mrd./Bio. €, EPS, 52W), Katalog with_quotes in EUR, IPO-Katalog *_eur + fx (Originale bleiben), Orders speichern original_currency, fx_rate, fx_pair, fx_source, fx_as_of, native_limit_price, reference_price_eur/native.
+- Frontend: StockDetail/Handeln nur €, Tagesveränderung aus denselben Quote-Feldern wie Marktübersicht; Dashboard-PriceMap aus /api/portfolio/quotes (Tag/Heute/Watchlist); IPO-Positionen & IPO-Aufträge in €, IPO-Ticker-Zuordnung; IPO-Detail mit Euro-Gegenwert + Originalangabe; Kaufkraft-Warnung nur €; deutsche %-Formatierung.
+- Tests iteration_95 (Backend 14/14) + iteration_96 (alle Fixes ok). Testdaten über backend/tests/seed_eur_test.py seed|clean, danach bereinigt.
+- Offen: Handeln Tages-Hoch/Tief aus 6-h-Kennzahlen-Cache (inkonsistente Werte ausgeblendet); Dividendenkarte nutzt alte Feldnamen (wird nicht angezeigt); öffentliche News-Seite hat eigenen EUR/USD-Umschalter (außerhalb Depot); zwei Kursalarm-Systeme (price_alerts sichtbar, stock_alerts nicht).
+
+
 ## Update 2026-10-26 – Admin-Konto petrowski616@outlook.com
 - Auf Kundenwunsch Admin mit eigenem Passwort (aus Secret LOVABLE_ADMIN_PASSWORD, kein Passwort im Code). Vorschau: Login, /admin und Depot geprüft.
 - Produktion: lovable_import_loader._set_admin_password setzt beim Start einmalig (Flag admin_password_from_env) das Passwort aus LOVABLE_ADMIN_EMAIL/LOVABLE_ADMIN_PASSWORD (live-Slots vorhanden). Greift erst nach dem nächsten Veröffentlichen.

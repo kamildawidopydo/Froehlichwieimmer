@@ -176,7 +176,7 @@ export default function AlarmePage() {
                       </Link>
                       <p className="text-[12px] text-bank-text-muted">
                         {a.direction === 'above' ? '≥' : '≤'}{' '}
-                        {Number(a.target_price).toLocaleString('de-DE', { minimumFractionDigits: 2 })}
+                        {Number(a.target_price).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                         {px?.price != null && (
                           <span className="ml-2">
                             · Last{' '}
@@ -216,7 +216,7 @@ export default function AlarmePage() {
                   <span className="font-semibold">{a.symbol}</span>
                   <span className="text-bank-text-muted">
                     {' '}
-                    — Ziel {Number(a.target_price).toLocaleString('de-DE')} ·{' '}
+                    — Ziel {Number(a.target_price).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} ·{' '}
                     {a.triggered_at
                       ? new Date(a.triggered_at).toLocaleString('de-DE')
                       : ''}

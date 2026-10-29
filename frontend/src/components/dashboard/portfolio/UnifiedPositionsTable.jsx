@@ -22,7 +22,7 @@ const PctBadge = ({ value }) => {
     >
       {up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
       {up ? '+' : ''}
-      {Number(value).toFixed(2)}%
+      {Number(value).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %
     </span>
   );
 };
@@ -154,7 +154,7 @@ const UnifiedPositionsTable = ({ sparklines = {} }) => {
                     {r.gvPct != null ? (
                       <span className={cn('text-[13px] font-medium tabular-nums', up ? 'text-emerald-600' : 'text-rose-600')}>
                         {up ? '+' : ''}
-                        {Number(r.gvPct).toFixed(2)}%
+                        {Number(r.gvPct).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %
                       </span>
                     ) : (
                       '–'

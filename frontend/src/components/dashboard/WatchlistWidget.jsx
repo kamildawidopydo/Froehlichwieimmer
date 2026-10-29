@@ -62,13 +62,13 @@ const WatchlistWidget = ({ sparklines = {} }) => {
               <div className="w-16 text-right">
                 <p className="text-[12px] font-semibold tabular-nums text-bank-text">
                   {p?.price != null
-                    ? Number(p.price).toLocaleString('de-DE', { maximumFractionDigits: 2 })
+                    ? Number(p.price).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
                     : '–'}
                 </p>
                 {chg != null && (
                   <p className={cn('text-[10px] font-medium tabular-nums', up ? 'text-emerald-600' : 'text-rose-600')}>
                     {up ? '+' : ''}
-                    {chg.toFixed(2)}%
+                    {chg.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %
                   </p>
                 )}
               </div>
