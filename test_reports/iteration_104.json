@@ -1,0 +1,47 @@
+{
+  "summary": "Read-only test of Phase 2 Steps 2+3: the admin customer overview and the tabbed customer detail page. No data was written. Backend: 12/12 pytest pass. GET /api/admin/customers/overview needs an admin: no auth returns 401/403 and the customer role returns 403. It returns 31 items. All customer numbers are unique; every one is KD-8 hex long because there are no collisions. All 31 accounts are Aktiv (0 inactive, 0 blocked, 0 login-locked). For test_eur_qa (KD-0A980904): total_assets 7304.01 = cash 2000 + stocks 2524.01 (AAPL/VOLV/DBK at the EUR quote, TESTIPO 4x25, PRVT3 10x50, PRVNV at cost 100) + bond 980 + contracts 1800. The inactive bond and the 9999 contract are excluded. Recomputing from /api/portfolio/quotes matched within 0.3%. positions=7, ipo_positions=2, contracts=3, open_requests=1 (ipo_requests:1, PRVPA), fallback_positions=2 (PRVNV, plus the bond because it has no aktueller_kurs). The ipo-requests endpoint lists TESTIPO/PRVT3/PRVNV/PRVPA correctly, and the change-log endpoint returns 8 entries plus not_logged. Bad ids return 400/404. The overview call takes about 5 s for 31 users. UI desktop 1920: all 10 columns render. Every filter chip works and its count equals the rows shown (all 26, active 26, inactive 0, blocked 0, depot 2, nodepot 24, open 2, idle 23, admins 5). Search works for 'test_eur', 'KD-0A980904', lowercase 'kd-0a98' and the name; a non-matching query shows the empty state. All sort options reorder correctly. 'Kunde öffnen' navigates to the detail page. The create form and the delete buttons are present (not submitted or clicked). Mobile 390: 26 cards, table hidden, no horizontal overflow (scrollWidth 390). Detail: the hero shows KD-0A980904 and STATUS · AKTIV. All 7 tabs render. The IPO tab rows are correct (TESTIPO 80/100/+20, PRVT3 400/500/+100, PRVNV 'keine Schätzung', PRVPA Genehmigt) and the link goes to /admin/ipo-requests. The change log shows 8 entries and the gaps box. The Depot tab shows the stock list and the 'Bestand eintragen' panel. The Zinsanlagen tab lists 4 contracts and 2 bonds. The regression pages /admin, /admin/ipo-requests, /admin/stock-orders, /admin/user-positions and /admin/cash-balances all load with no page errors. Issues: the Watchlist, Aufträge and Aktivitäten data is hard-coded to empty arrays in AdminUserDetail.js. The seeded user has 3 watchlist rows and 4 executed stock_orders, but the tabs show 'Keine Watchlist-Einträge' / 'Keine Orders' / 'Keine Aktivität'. The detail KPI Gesamtvermögen (6.990 €, positions at cost) does not match the overview total (7.303,92 €, market value).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/admin/customers/overview", "issue": "Takes about 5 s for 31 users. It calls get_cash_summary once per user (N+1) and fetches quotes from the provider live. This will not scale; aggregate the cash ledger in one pipeline."},
+      {"endpoint": "GET /api/admin/customers/overview", "issue": "The quote lookup uses quotes.get(s.get('symbol')), but get_quotes upper-cases its keys. A position stored with a lowercase or padded symbol would silently fall back to cost."},
+      {"endpoint": "GET /api/admin/customers/{id}/change-log", "issue": "Inactive contracts (is_active False, e.g. 9999 €) are listed as 'Vertrag angelegt' with no inactive marker. Arguably correct for a history, but the list can be confusing."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminUserDetail Übersicht/Aufträge/Aktivitäten", "issue": "watchlistRes, orderRes and activityRes are hard-coded to { data: [] } (left over from the Session 82.100 Supabase removal). Watchlist shows '0 Titel', Aufträge 'Keine Orders' and Aktivitäten 'Keine Aktivität', although test_eur_qa has 3 watchlist rows and 4 executed stock_orders. The review asks that the Aufträge tab lists stock orders, so these tabs render but their data is not wired.", "selector": "[data-testid=admin-user-tab-orders], [data-testid=admin-user-tab-activity]", "priority": "HIGH"},
+      {"component": "CustomerOverview", "issue": "The desktop table rows and the xl:hidden mobile cards are both rendered in the DOM. Every admin-users-open-btn-<id> and admin-users-delete-btn-<id> testid therefore appears twice, which causes a Playwright strict-mode violation. Render only one layout, or give the cards distinct testids.", "selector": "[data-testid^=admin-users-open-btn-]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Overview vs detail Gesamtvermögen", "issue": "The overview shows 7.303,92 € (market quotes and IPO estimates). The detail KPI shows 6.990,00 € with Aktien 2.210 € at cost (stockPriceMap is always {}) and 'Kein Snapshot vorhanden'. An admin sees two different totals for the same customer.", "affected_selectors": ["[data-testid=customer-total-<id>]", "detail KPI Gesamtvermögen"]}
+    ],
+    "design_issues": [
+      {"screen": "/admin/users desktop 1920", "issues": ["The table wrapper scrollWidth is 1233 px vs clientWidth 1214 px. The action column is slightly clipped ('Löschen' is cut at the right edge) and the page needs a horizontal scroll inside the card.", "Kundennr. wraps onto 2 lines ('KD-' / '62FF91C8'); add whitespace-nowrap.", "'Kunde öffnen' and 'Löschen' stack vertically, which makes each row about 86 px tall. Consider an icon-only delete or a nowrap actions column."]},
+      {"screen": "/admin/users name sort", "issue_note": "Accounts without a name are sorted by email but display '–' in the Kunde column, so the A–Z order looks random at the top.", "issues": ["When name is missing, show the email (or the local part of the email) in the Kunde column."]},
+      {"screen": "Detail IPO tab", "issues": ["PRVPA (approved, without a subscription price) shows Kaufpreis '–' even though amount_eur 400 is known."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_admin_customer_overview_iter104.py", "/app/test_reports/pytest/pytest_iter104.xml"],
+  "action_items": [
+    "Wire the detail Watchlist, Aufträge and Aktivitäten to real admin endpoints (e.g. the admin users stock-orders/watchlist API). AdminUserDetail.js lines 201-206 currently pass empty arrays.",
+    "Align the detail KPI Gesamtvermögen and Aktien values with the overview valuation (market quote / IPO estimate), or label the detail KPI explicitly as 'zum Einstand'.",
+    "Fix the desktop table width at 1920 (19 px overflow, clipped actions, Kundennr. wrapping).",
+    "Remove the duplicate DOM and testids (render either the table or the cards).",
+    "Optional: speed up the overview (batch the cash summary) and normalise symbol case when looking up quotes."
+  ],
+  "critical_code_review_comments": [
+    "AdminUserDetail.js is 971 lines. Split the tab contents into components (the IPO and change-log tabs are already split out).",
+    "admin_customer_overview.py makes per-user awaited get_cash_summary calls (N+1) and loads all collections with to_list(20000) and no projection.",
+    "_ipo_valuations sorts by valuation_set_at/created_at as strings. A mix of datetime and str values sorts incorrectly. It works in practice, but it is fragile.",
+    "The login-lock detection compares locked_until with a naive now. It works if the stored values are naive UTC; if aware datetimes are stored, Mongo still compares correctly. OK."
+  ],
+  "updated_files": ["/app/backend/tests/test_admin_customer_overview_iter104.py"],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "~85% (all tabs, filters, search, sort, mobile and navigation pass; the orders, watchlist and activity data is not wired; the totals are inconsistent)"},
+  "test_credentials": "qa.admin@kapital-direkt24.de / Qa-ra46CVrWIW3wg6l5EI6IKqbx (admin, bcrypt $2b$). test_eur_qa@example.com / TestEur-Qa-2026! (customer).",
+  "seed_data_creation": "None. The existing seed_eur_test.py fixture was used (user id 6ae46a0be3b6155b0a980904) and not cleaned.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All tests were read-only. The QA customer is KD-0A980904. Expected values: total about 7304 (it moves with quotes), positions 7, contracts 3, open 1, fallback 2 (PRVNV + bond). Filter counts at test time: all 26, active 26, depot 2, nodepot 24, open 2, idle 23, admins 5. Scope open-btn clicks within admin-users-row-<id> or admin-users-card-<id>, because the testids are duplicated. Auth spot check: CORS did not echo the evil origin, credentials true, the access_token and refresh_token cookies are set, and the hash starts with $2b$.",
+  "rca of the issue": "Empty watchlist/orders/activity: in loadUserData (AdminUserDetail.js ~L201-206) these are stubbed constants since the Supabase removal in Session 82.100, so no fetch is ever made. Total mismatch: the detail KPIs use stockPriceMap = {} (L210/220), so they fall back to avg_cost, while the overview uses the get_quotes EUR prices and IPO listing prices."
+}

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import asyncio
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -105,7 +106,7 @@ async def customers_overview(_admin: dict = Depends(require_admin)) -> Dict[str,
 
     stocks = await db.stock_positions.find({"is_active": {"$ne": False}}).to_list(20000)
     stocks = [s for s in stocks if _num(s.get("quantity")) > 0]
-    quotes = await get_stock_quotes(db, sorted({s["symbol"] for s in stocks if s.get("symbol")}))
+    quotes = await get_stock_quotes(db, sorted({str(s["symbol"]).strip().upper() for s in stocks if s.get("symbol")}))
     ipo_reqs = await db.ipo_requests.find({}).to_list(20000)
     ipo_vals = _ipo_valuations(ipo_reqs)
     bonds = await db.bond_positions.find({"is_active": {"$ne": False}}).to_list(20000)
@@ -120,7 +121,7 @@ async def customers_overview(_admin: dict = Depends(require_admin)) -> Dict[str,
         a = agg[_uid(s.get("user_id"))]
         qty, sym = _num(s.get("quantity")), str(s.get("symbol") or "").upper()
         est = ipo_vals.get((_uid(s.get("user_id")), sym))
-        price = est if est is not None else (quotes.get(s.get("symbol")) or {}).get("price")
+        price = est if est is not None else (quotes.get(sym) or {}).get("price")
         if price is None:
             a["fallback_positions"] += 1
             price = _num(s.get("avg_cost"))
@@ -153,11 +154,12 @@ async def customers_overview(_admin: dict = Depends(require_admin)) -> Dict[str,
     ]):
         _bump(agg[_uid(row["_id"])], row.get("t"))
 
+    cash_by_user = dict(zip(ids, await asyncio.gather(*(get_cash_summary(db, {"id": i}) for i in ids))))
     items = []
     for u in users:
         uid = str(u["_id"])
         a = agg[uid]
-        cash = await get_cash_summary(db, {"id": uid})
+        cash = cash_by_user[uid]
         cash_balance, cash_available = float(cash["balance"]), float(cash["available"])
         name = u.get("name") or " ".join(x for x in (u.get("first_name"), u.get("last_name")) if x) or None
         open_counts = dict(a["open"])
@@ -214,6 +216,49 @@ async def _require_customer(user_id: str) -> ObjectId:
 
 def _owner(oid: ObjectId) -> dict:
     return {"user_id": {"$in": [oid, str(oid)]}}
+
+
+@router.get("/{user_id}/details")
+async def customer_details(user_id: str, _admin: dict = Depends(require_admin)) -> Dict[str, Any]:
+    """Read-only data for the detail tabs: prices (EUR quote or IPO estimate), orders, watchlist, activity."""
+    oid = await _require_customer(user_id)
+    own = _owner(oid)
+    stocks = await db.stock_positions.find(own).to_list(1000)
+    syms = sorted({str(s["symbol"]).strip().upper() for s in stocks if s.get("symbol")})
+    quotes = await get_stock_quotes(db, syms) if syms else {}
+    vals = _ipo_valuations(await db.ipo_requests.find(own).to_list(1000))
+    price_map, price_source = {}, {}
+    for sym in syms:
+        est = vals.get((str(oid), sym))
+        q = (quotes.get(sym) or {}).get("price")
+        if est is not None:
+            price_map[sym], price_source[sym] = est, "ipo_estimate"
+        elif q is not None:
+            price_map[sym], price_source[sym] = float(q), "market"
+    orders = await db.stock_orders.find(own).sort("created_at", -1).to_list(200)
+    watch = await db.watchlists.find(own).sort("sort_order", 1).to_list(200)
+    snaps = await db.portfolio_snapshots.find(own).sort("snapshot_date", -1).to_list(1)
+    labels = {"stock_orders": "Aktienauftrag", "ipo_requests": "IPO-Anfrage", "bond_purchase_requests": "Anleihen-Anfrage",
+              "payout_requests": "Auszahlungsantrag", "support_tickets": "Support-Anfrage"}
+    events = []
+    for coll, label in labels.items():
+        async for d in db[coll].find(own).sort("created_at", -1).limit(50):
+            detail = d.get("symbol") or d.get("ticker") or d.get("isin") or d.get("subject") or ""
+            events.append({"id": f"{coll}-{d['_id']}", "event_type": f"{label} · {detail} · {d.get('status') or ''}".strip(" ·"),
+                           "created_at": _iso(d.get("created_at"))})
+    events.sort(key=lambda e: e["created_at"] or "", reverse=True)
+    return {
+        "price_map": price_map,
+        "price_source": price_source,
+        "orders": [{
+            "id": str(o["_id"]), "side": o.get("side"), "symbol": o.get("symbol"), "quantity": _num(o.get("quantity")),
+            "status": o.get("status"), "created_at": _iso(o.get("created_at")), "rejection_reason": o.get("rejection_reason"),
+        } for o in orders],
+        "watchlist": [{"symbol": w.get("symbol"), "added_at": _iso(w.get("created_at")),
+                       "stocks": {"name": w.get("display_name")}} for w in watch],
+        "activity": events[:100],
+        "snapshots": [{"total_value": _num(s.get("total_value")), "snapshot_date": s.get("snapshot_date")} for s in snaps],
+    }
 
 
 @router.get("/{user_id}/ipo-requests")

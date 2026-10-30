@@ -197,17 +197,22 @@ const AdminUserDetail = () => {
         assetData = data;
       } catch (e) { toast.error('Bestand konnte nicht geladen werden'); }
       setAssets(assetData);
+      let details = { price_map: {}, orders: [], watchlist: [], activity: [], snapshots: [] };
+      try {
+        const { data } = await _axios.get(`${_api}/api/admin/customers/${userId}/details`, { withCredentials: true });
+        details = data;
+      } catch (e) { toast.error('Aufträge/Aktivitäten konnten nicht geladen werden'); }
       const stockPosRes = { data: assetData.stock_positions, error: null };
-      const watchlistRes = { data: [], error: null };
-      const orderRes = { data: [], error: null };
+      const watchlistRes = { data: details.watchlist, error: null };
+      const orderRes = { data: details.orders, error: null };
       const bondRes = { data: assetData.bond_positions, error: null };
       const depotRes = { data: assetData.depot_contracts, error: null };
-      const snapshotsRes = { data: [], error: null };
-      const activityRes = { data: [], error: null };
+      const snapshotsRes = { data: details.snapshots, error: null };
+      const activityRes = { data: details.activity, error: null };
 
       if (profileRes.error) throw profileRes.error;
 
-      let map = {};
+      const map = details.price_map || {};
 
       setProfile(profileRes.data ? { ...profileRes.data, cash_balance: assetData.cash_balance } : null);
       setStockPositions(stockPosRes.data || []);
@@ -328,7 +333,7 @@ const AdminUserDetail = () => {
   const metrics = useMemo(() => {
     const stocksValue = stockPositions.reduce((sum, pos) => {
       const qty = Number(pos.quantity || 0);
-      const price = stockPriceMap[pos.symbol] || Number(pos.avg_cost || 0);
+      const price = stockPriceMap[String(pos.symbol || '').trim().toUpperCase()] ?? Number(pos.avg_cost || 0);
       return sum + qty * price;
     }, 0);
 
@@ -734,7 +739,7 @@ const AdminUserDetail = () => {
                       <ul className="divide-y divide-bank-border">
                         {stockPositions.map((pos) => {
                           const qty = Number(pos.quantity || 0);
-                          const unitPrice = stockPriceMap[pos.symbol] || Number(pos.avg_cost || 0);
+                          const unitPrice = stockPriceMap[String(pos.symbol || '').trim().toUpperCase()] ?? Number(pos.avg_cost || 0);
                           const total = qty * unitPrice;
                           return (
                             <li
