@@ -1,0 +1,45 @@
+{
+  "summary": "Tested ESSENCE INVEST Phase 1 'Mein Depot' Depotübersicht (DepotProSection) for backend and frontend with test_eur_qa and tester@mester.de. Backend: 10/10 pytest tests passed. Sparklines are batched, all EUR, and match /history?range=1mo exactly. TESTIPO returns null. Selling PRVT3 or TESTIPO returns 409 'nicht börsennotiert'. AAPL limit buy and sell still return 201, and the orders were cancelled afterwards. Frontend: section sits below the KPI rail. KPI values match the row sums: Wert 2.537,79 €, G/V +327,79 € incl. IPO-Schätzung, Tagesentwicklung +33,56 € from listed stocks only, Kapital 2.210 €, 6 positions. Weights add up to 100 %. Sparkline colours match the first/last closes (AAPL green; DBK and VOLV red). PRVT3/TESTIPO show the IPO badge, 'Keine Verlaufsdaten', '–' for the day and 'Kein Börsenhandel'. Sorting works on all 5 header buttons in both directions and in the mobile select incl. G/V %. Search, the 6 filters and no-match work. The Depotanalyse dialog opens and closes, and its numbers are correct. Kaufen/Verkaufen open ?side=buy|sell with the right side preselected. The 60 s stability check passed: no layout shift (CLS 0), scroll position, search text and filter were kept, there was exactly 1 sparklines request in total and none repeated. The empty depot shows depot-empty, 0 € / '–' KPIs and no crash. Mobile 390 px uses cards without overflow. /dashboard/vermoegen and /dashboard/aktien still work. One functional bug: PRVNV (an IPO without valuation) is treated as a normal stock.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/portfolio/orders", "issue": "The unlisted-IPO 409 check runs only after the quantity check. Selling more pieces than held (PRVT3 qty 500) returns 400 'Nicht genügend verfügbare Stücke' instead of 409. Move the IPO block before the qty/cash checks so the error is the same in every case."},
+      {"endpoint": "POST /api/portfolio/orders", "issue": "test_eur_qa still has an older pending TESTIPO sell order (6ae44ed3594f468099f7296e, limit 30 €), created before the block existed. Existing pending unlisted-IPO sell orders are not blocked or cleaned up. The main agent should cancel it during cleanup and decide how the admin execution path handles such orders."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "depotRows.js / DashboardDataContext stockMetrics", "issue": "PRVNV (an allocated IPO stake without a valuation) gets isIpoValuation=false, because buildIpoValuationMap only covers IPOs that have a valuation. It is therefore shown as a normal stock: no IPO badge, active Kaufen/Verkaufen links (but the server answers 409 for a sell), counted under the 'Aktien' filter and the 'Aktien' allocation in Depotanalyse (1.937,88 € incl. PRVNV), and its symbol is still sent in the sparklines request. No fake profit is shown (G/V '–'), which is correct.", "selector": "[data-testid='depot-row-PRVNV']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Mein Depot", "issues": [
+        "The existing KPI rail shows GESAMT G/V +207,79 € and HEUTE '—', while the new section directly below shows +327,79 € (incl. IPO-Schätzung) and +33,56 €. Two different numbers on one page may confuse users. Consider labelling the difference or aligning them.",
+        "Depotanalyse 'Schwächste Aktien' repeats the same 3 stocks as 'Beste Aktien' when there are 3 or fewer market stocks; here all 3 are gains. Show worst only for the remaining stocks, or only stocks with losses.",
+        "Depotanalyse, empty depot: the 'Größte Positionen' heading appears with no content (no 'Keine Daten'). 'Noch kein Vermögen vorhanden' is shown although the hero shows 300 € cash.",
+        "Tagesentwicklung % is calculated on the total value incl. IPO estimates (1,34 %), not on the listed stocks only (about 1,86 %), although the label says 'nur Börsenkurse'.",
+        "Mobile card: PRVNV G/V renders as '– · –'.",
+        "The Analyse weights list is not sorted (AAPL, VOLV, DBK, ...)."
+      ]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_depot_pro_phase1.py", "/app/test_reports/pytest/depot_pro_phase1.xml"],
+  "action_items": [
+    "Treat allocated IPO stakes without a valuation (PRVNV) as kind 'ipo' and ipoUnlisted when there is no market price: badge, 'Kein Börsenhandel' instead of Kaufen/Verkaufen, IPO filter and allocation, and leave them out of the sparklines request.",
+    "Move the unlisted-IPO 409 check in create_order before the qty/cash validation.",
+    "Optional: align the Mein Depot KPI rail with the new section's G/V and Heute values, de-duplicate best/worst in Depotanalyse, and calculate dayPct on the listed-stock base.",
+    "Cleanup: cancel the old pending TESTIPO sell order of test_eur_qa and the pending AAPL buy 6ae44f1008101154459bd16a (not created by me)."
+  ],
+  "critical_code_review_comments": [
+    "In depotRows.js, ipoUnlisted = isIpoValuation && !listed, so it depends on the IPO having a valuation. An allocated IPO without a listingPrice falls through to 'stock'. The flag should come from the ipo_requests allocation status, not from whether a valuation exists.",
+    "In StockDetail, side is initialised once from window.location.search. If the user is already on /dashboard/aktien/X and the query changes, the side is not updated. This is fine for the current entry points.",
+    "Every table row/card is rendered twice (table plus cards hidden with CSS), so testids are duplicated in the DOM. This works but doubles the DOM size.",
+    "useDepotSparklines keys on the sorted symbol list, so it refetches when positions change. It does not refetch on price ticks, which was verified."
+  ],
+  "updated_files": ["/app/backend/tests/test_depot_pro_phase1.py"],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "~93% (1 functional bug: PRVNV classification)"},
+  "seed_data_creation": "None. I created and then cancelled 2 AAPL limit orders (buy at 100, sell at 9999). The PRVT3/TESTIPO/PRVNV sell attempts were rejected, so no orders were created.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login via page.request.post('/api/auth/login') after add_init_script sets kapitalmitte_visitor_profile and kapitalmitte_cookie_consent (JSON). Desktop rows: 'table[data-testid=depot-pro-table] [data-testid^=depot-row-]'. Cards are lg:hidden duplicates, so scope selectors to the table on desktop. Values seen: AAPL 3 x 311,50, DBK 20 x 31,20, VOLV-B.ST 10 x 27,93, PRVT3 500, TESTIPO 100, PRVNV 100 (no valuation). Re-check PRVNV after the fix."
+}

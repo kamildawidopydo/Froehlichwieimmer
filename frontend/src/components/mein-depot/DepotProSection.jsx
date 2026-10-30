@@ -31,7 +31,9 @@ const DepotKpis = ({ rows, updatedAt }) => {
     const cost = rows.reduce((s, r) => s + r.cost, 0);
     const gv = rows.reduce((s, r) => s + (r.gv ?? 0), 0);
     const day = rows.reduce((s, r) => s + (r.dayAbs ?? 0), 0);
-    const dayBase = value - day;
+    // Daily % relative to listed positions with a market quote only (no IPO estimates).
+    const listedValue = rows.filter((r) => r.dayAbs != null).reduce((s, r) => s + r.value, 0);
+    const dayBase = listedValue - day;
     return { value, cost, gv, gvPct: cost > 0 ? (gv / cost) * 100 : null, day, dayPct: dayBase > 0 ? (day / dayBase) * 100 : null };
   }, [rows]);
   const hasIpo = rows.some((r) => r.kind === 'ipo');

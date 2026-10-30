@@ -2,13 +2,13 @@
 export const buildDepotRows = ({ stockMetrics = [], stockPriceMap = {}, bondPositions = [], computeBondMetrics }) => {
   const stocks = stockMetrics.map((m) => {
     const listed = m.marketPrice != null;
-    const ipoUnlisted = m.isIpoValuation && !listed;
+    const ipoUnlisted = (m.isIpoStake || m.isIpoValuation) && !listed;
     const px = stockPriceMap[m.symbol] || {};
     // Daily change only from real market quotes; never for unlisted IPO estimates.
     const dayAbs = !ipoUnlisted && px.change_abs != null ? m.qty * Number(px.change_abs) : null;
     return {
       key: `s-${m.id || m.symbol}`,
-      kind: m.isIpoValuation ? 'ipo' : 'stock',
+      kind: m.isIpoStake || m.isIpoValuation ? 'ipo' : 'stock',
       ipoUnlisted,
       symbol: m.symbol,
       name: m.stockName || m.symbol,

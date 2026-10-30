@@ -600,6 +600,11 @@ export const DashboardDataProvider = ({ children }) => {
     const bondsGV = bondsMarktwert - bondsEinstand;
 
     const ipoValuationMap = buildIpoValuationMap(state.ipoSubscriptionRequests);
+    const ipoAllocatedTickers = new Set(
+      (state.ipoSubscriptionRequests || [])
+        .filter((r) => r.status === 'allocated' && r.ticker)
+        .map((r) => String(r.ticker).trim().toUpperCase()),
+    );
 
     const stockMetrics = state.stockPositions.map((p) => {
       const marketPrice = state.stockPriceMap[p.symbol]?.price;
@@ -628,6 +633,7 @@ export const DashboardDataProvider = ({ children }) => {
         market: meta.market || null,
         isTradable: meta.is_active !== false,
         isIpoValuation: !!ipoVal,
+        isIpoStake: !!ipoVal || ipoAllocatedTickers.has(String(p.symbol).toUpperCase()),
         ipoEinstandPerLot: ipoVal?.subscriptionPrice != null ? Number(ipoVal.subscriptionPrice) : avg,
         ipoListingPerLot: ipoVal?.listingPrice != null ? Number(ipoVal.listingPrice) : null,
         price,

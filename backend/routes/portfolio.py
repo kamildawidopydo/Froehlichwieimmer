@@ -957,6 +957,13 @@ async def create_order(
 
     uid = ObjectId(user["id"])
 
+    # Unlisted IPO stake (allocated, no market quote): no regular exchange order — checked first.
+    if await db.ipo_requests.find_one(
+        {"$or": [{"user_id": uid}, {"user_id": str(uid)}], "ticker": sym, "status": "allocated"},
+        {"_id": 1},
+    ) and (await get_stock_quotes(db, [sym])).get(sym, {}).get("price") is None:
+        raise HTTPException(status_code=409, detail="Diese IPO-Beteiligung ist nicht börsennotiert – kein regulärer Börsenhandel möglich.")
+
     # Session 82.61a — Coupon-Sell-Guard bereits VOR dem Lock (billig, keine DB-Writes).
     if payload.coupon_code and side == "sell":
         raise HTTPException(
@@ -1037,12 +1044,6 @@ async def create_order(
             reserved = Decimal("0.00")  # Sell reserviert kein Cash
 
         fx_snapshot = await _order_fx_snapshot(sym, limit_price)
-        if fx_snapshot.get("fx_status") != "ok" and await db.ipo_requests.find_one(
-            {"$or": [{"user_id": uid}, {"user_id": str(uid)}], "ticker": sym, "status": "allocated"},
-            {"_id": 1},
-        ):
-            # Unlisted IPO stake: no regular exchange order possible.
-            raise HTTPException(status_code=409, detail="Diese IPO-Beteiligung ist nicht börsennotiert – kein regulärer Börsenhandel möglich.")
         now = datetime.now(timezone.utc)
         doc = {
             "user_id": uid,

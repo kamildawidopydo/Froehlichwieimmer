@@ -1,3 +1,10 @@
+## Update 2026-10-30 – Phase 1 Schritt 1–4: Professionelle Depotübersicht (NUR Vorschau)
+- Neu auf /dashboard/mein-depot (unter KPI-Rail, bestehende Sektionen unverändert): components/mein-depot/DepotProSection.jsx (6 KPIs, Filter Alle/Aktien/IPO/Anleihen/Gewinner/Verlierer, Suche, Sortierung, Desktop-Tabelle + Mobile-Karten), DepotPositionRow.jsx (Sparkline 30T, Kaufen/Verkaufen → /dashboard/aktien/SYM?side=buy|sell), DepotAnalyseDialog.jsx (Aufteilung, Top 5, Gewinner/Verlierer, IPO getrennt, Gewichtung), lib/depotRows.js, hooks/useDepotSparklines.js.
+- Backend: GET /api/stocks/sparklines (gebündelt, EUR, nutzt History-Cache); create_order blockt Verkauf/Kauf nicht börsennotierter IPO-Beteiligungen (409) vor allen anderen Prüfungen.
+- Context: isIpoStake (auch IPO ohne Bewertung). StockDetail: ?side=sell setzt Seite vor.
+- Tests iteration_101 (Backend 10/10, Frontend alles ok nach Fix PRVNV/Reihenfolge 409). Offen: alte KPI-Rail oben zeigt G/V ohne IPO-Schätzung & „Heute —“ (abweichend). Admin-Verbesserungen (Punkt 7) erst nach Freigabe.
+
+
 ## Update 2026-10-29 – ANT (Anthropic) Chart-Hinweis (NUR Vorschau)
 - Ursache: Anthropic ist nicht börsennotiert (Katalogstatus „filed“); „ANT“ hat bei Yahoo/Twelve Data keine Kurse → History unavailable, kein Kurs. Kein Zusammenhang mit StockDetail-Änderungen.
 - StockDetail.js: ipoPhase (IPO-Bewertung vorhanden, kein Marktkurs, keine Chartdaten) → Hinweis „Diese Aktie befindet sich noch in der IPO-Phase …“ + „IPO-Bewertung der Emissionsbank: x € je Aktie (kein Börsenkurs)“. Charts ALV/AAPL/MSFT/NVDA geprüft.

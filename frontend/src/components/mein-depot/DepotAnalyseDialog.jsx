@@ -43,8 +43,8 @@ const DepotAnalyseDialog = ({ open, onOpenChange, rows, totals }) => {
     return {
       alloc: alloc.filter(([, v]) => v > 0).map(([l, v]) => [l, v, all > 0 ? (v / all) * 100 : 0]),
       top: [...rows].sort((x, y) => y.value - x.value).slice(0, 5),
-      best: market.slice(0, 3),
-      worst: market.slice(-3).reverse(),
+      best: market.filter((r) => Math.round(r.pct * 100) > 0).slice(0, 3),
+      worst: market.filter((r) => Math.round(r.pct * 100) < 0).slice(-3).reverse(),
       ipo,
     };
   }, [rows, totals]);
@@ -58,11 +58,12 @@ const DepotAnalyseDialog = ({ open, onOpenChange, rows, totals }) => {
         </DialogHeader>
         <section className="space-y-2" data-testid="depot-analyse-allocation">
           <p className="text-[13px] font-semibold">Vermögensaufteilung</p>
-          {a.alloc.length === 0 ? <p className="text-[12px] text-bank-text-muted">Noch kein Vermögen vorhanden.</p>
+          {a.alloc.length === 0 ? <p className="text-[12px] text-bank-text-muted">Keine Anlagen in Wertpapieren oder Zinsprodukten vorhanden.</p>
             : a.alloc.map(([l, v, s]) => <Bar key={l} label={l} value={v} share={s} testid={`depot-alloc-${l}`} />)}
         </section>
         <section className="mt-4" data-testid="depot-analyse-top">
           <p className="mb-1 text-[13px] font-semibold">Größte Positionen</p>
+          {a.top.length === 0 && <p className="text-[12px] text-bank-text-muted">Keine Daten</p>}
           {a.top.map((r) => (
             <div key={r.key} className="flex justify-between text-[12px]">
               <span className="truncate">{r.name}</span>
@@ -72,7 +73,7 @@ const DepotAnalyseDialog = ({ open, onOpenChange, rows, totals }) => {
         </section>
         <section className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <PerfList title="Beste Aktien (Börsenkurs)" items={a.best} testid="depot-analyse-best" />
-          <PerfList title="Schwächste Aktien (Börsenkurs)" items={a.worst} testid="depot-analyse-worst" />
+          <PerfList title="Verlierer (Börsenkurs)" items={a.worst} testid="depot-analyse-worst" />
           <PerfList title="IPO-Beteiligungen (geschätzt)" items={a.ipo} testid="depot-analyse-ipo" />
         </section>
         <section className="mt-4" data-testid="depot-analyse-weights">
