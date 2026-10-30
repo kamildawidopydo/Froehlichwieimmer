@@ -5563,9 +5563,7 @@ app.include_router(_admin_ibp_routes.router)
 from routes import customer_confirmations as _ccf_routes  # noqa: E402
 app.include_router(_ccf_routes.router)
 
-# Temporary backup download (token-guarded — remove after use)
-from routes import backup_download as _backup_routes  # noqa: E402
-app.include_router(_backup_routes.router)
+# Backup download endpoint deactivated before go-live (security audit SEC-001); files untouched.
 
 # Session 82.102 — Public Applications Submit + Resend-Mail.
 from routes import applications as _applications_routes  # noqa: E402

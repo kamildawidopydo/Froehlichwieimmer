@@ -207,6 +207,33 @@ async def _fetch_provider_batch(symbols: list[str]) -> dict[str, dict]:
     return items
 
 
+_IPO_PROBE_SECONDS = 900
+_ipo_probe_at: dict[str, datetime] = {}
+
+
+async def _skip_unlisted_ipo(db, syms: list[str], cache_map: dict, result: dict, now: datetime) -> list[str]:
+    """IPO tickers that never had a quote skip the provider; re-probed at most every 15 min to detect a listing."""
+    cand = [s for s in syms if s not in cache_map]
+    if not cand:
+        return syms
+    ipo = set()
+    async for r in db.ipo_requests.find(
+        {"$or": [{"ticker": {"$in": cand}}, {"position_symbol": {"$in": cand}}]}, {"ticker": 1, "position_symbol": 1}
+    ):
+        ipo.update(str(r.get(k) or "").strip().upper() for k in ("ticker", "position_symbol"))
+    keep = []
+    for s in syms:
+        last = _ipo_probe_at.get(s)
+        if s in ipo and s in cand and last and (now - last).total_seconds() < _IPO_PROBE_SECONDS:
+            result[s] = {"symbol": s, "price": None, "currency": None, "change": None, "change_pct": None,
+                         "as_of": None, "source": None, "price_status": "unavailable"}
+            continue
+        if s in ipo and s in cand:
+            _ipo_probe_at[s] = now
+        keep.append(s)
+    return keep
+
+
 async def get_quotes(db, symbols: list[str]) -> dict[str, dict]:
     """
     Read-through: Cache-Hit wenn fresh; sonst Provider → Cache → return.
@@ -235,6 +262,8 @@ async def get_quotes(db, symbols: list[str]) -> dict[str, dict]:
                 continue
         stale_syms.append(sym)
 
+    if stale_syms:
+        stale_syms = await _skip_unlisted_ipo(db, stale_syms, cache_map, result, now)
     if stale_syms:
         provider = await _fetch_provider_batch(stale_syms)
         for sym in stale_syms:
