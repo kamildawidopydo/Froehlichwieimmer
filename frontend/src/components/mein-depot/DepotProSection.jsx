@@ -26,8 +26,8 @@ const DepotKpis = ({ rows, updatedAt }) => {
   const k = useMemo(() => computeDepotTotals(rows), [rows]);
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7" data-testid="depot-pro-kpis">
-      <Kpi label="Gesamtdepotwert" value={formatEUR(k.value)} sub="Wertpapiere inkl. IPO" testid="depot-kpi-value" />
-      <Kpi label="Investiertes Kapital" value={formatEUR(k.cost)} testid="depot-kpi-cost" />
+      <Kpi label="Gesamtdepotwert" value={k.count ? formatEUR(k.value) : '—'} sub={k.unvaluedCount ? `inkl. ${k.unvaluedCount} ohne Bewertung (zum Einstand)` : 'Wertpapiere inkl. IPO'} testid="depot-kpi-value" />
+      <Kpi label="Investiertes Kapital" value={k.cost > 0 ? formatEUR(k.cost) : '—'} testid="depot-kpi-cost" />
       <Kpi label="Gesamtgewinn inkl. IPO" value={k.hasValued ? formatEURSigned(k.gv) : '–'} sub={`${pctTxt(k.gvPct)}${k.hasIpo ? ' · inkl. IPO-Schätzung' : ''}`} tone={k.hasValued ? pnlTone(k.gv) : undefined} testid="depot-kpi-gv" />
       <Kpi label="Gewinn börsennotiert" value={k.hasListed ? formatEURSigned(k.listedGv) : '–'} sub={`${pctTxt(k.listedGvPct)} · zum Marktkurs`} tone={k.hasListed ? pnlTone(k.listedGv) : undefined} testid="depot-kpi-gv-listed" />
       <Kpi label="Tagesentwicklung" value={k.day == null ? '–' : formatEURSigned(k.day)} sub={`${pctTxt(k.dayPct)} · nur Börsenkurse`} tone={k.day == null ? undefined : pnlTone(k.day)} testid="depot-kpi-day" />
@@ -58,7 +58,7 @@ const DepotProSection = () => {
   const toggleSort = (key) => setSort((s) => ({ key, dir: s.key === key && s.dir === 'desc' ? 'asc' : 'desc' }));
 
   return (
-    <section className="mt-8" data-testid="depot-pro-section">
+    <section className="mb-12 mt-8" data-testid="depot-pro-section">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <h2 className="text-[1.05rem] font-semibold text-bank-text">Depotübersicht</h2>
         <button type="button" onClick={() => setAnalyseOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-md border border-bank-border bg-white px-3 text-[13px] font-medium hover:bg-bank-bg" data-testid="depot-analyse-btn">

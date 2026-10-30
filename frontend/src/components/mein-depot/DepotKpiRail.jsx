@@ -46,8 +46,8 @@ const KpiCell = ({ label, primary, secondary, tone = 'neutral', testId, footer }
     <p
       className={cn(
         'rate-figure mt-1 truncate text-[1.4rem] leading-[1.1] tabular-nums sm:text-[1.55rem]',
-        tone === 'pos' && 'text-emerald-700',
-        tone === 'neg' && 'text-rose-700',
+        tone === 'pos' && 'text-bank-success',
+        tone === 'neg' && 'text-bank-error',
         tone === 'neutral' && 'text-bank-text',
         tone === 'muted' && 'text-bank-text-muted',
       )}
@@ -313,6 +313,7 @@ const DepotKpiRail = () => {
     const unvaluedNote = t.unvaluedCount > 0 ? ` · ${t.unvaluedCount} ohne Bewertung` : '';
 
     return {
+      hasPositions: posTotal > 0,
       investiert: {
         primary: t.cost > 0 ? formatEUR(t.cost) : '—',
         secondary: t.cost > 0 ? 'Einstand Aktien, IPO und Anleihen' : 'Noch keine Wertpapiere im Depot',
@@ -388,7 +389,7 @@ const DepotKpiRail = () => {
         secondary={kpis.heute.secondary}
         tone={kpis.heute.tone}
         testId="kpi-heute"
-        footer={<HeuteSparklineFooter heroSnapshots={heroSnapshots} />}
+        footer={kpis.hasPositions ? <HeuteSparklineFooter heroSnapshots={heroSnapshots} /> : null}
       />
       <KpiCell label="Liquidität" primary={kpis.cash.primary} secondary={kpis.cash.secondary} tone={kpis.cash.tone} testId="kpi-liquidity" />
       <KpiCell label="Positionen" primary={kpis.positionen.primary} secondary={kpis.positionen.secondary} tone={kpis.positionen.tone} testId="kpi-positionen" />

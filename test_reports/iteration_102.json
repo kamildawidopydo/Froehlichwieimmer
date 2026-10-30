@@ -1,0 +1,44 @@
+{
+  "summary": "Phase 1 final retest of /mein-depot (test_eur_qa, tester@mester.de), desktop 1920 and mobile 390. Backend: 27/27 pytest passed (new test_depot_phase1_final_iter102.py + test_depot_pro_phase1.py). The IPO lock returns 409 with the exact message for TESTIPO, testipo, ' prvt3 ', PRVT3 and PRVNV, for both sell and buy, including over-quantity sells (500). AAPL buy and sell are still 201. Sparklines are batched, EUR and stable. Frontend: all 5 KPI pairs in the old rail and the new section are IDENTICAL (Investiert 3.190,00; Gesamtgewinn inkl. IPO +320,42; Gewinn börsennotiert +200,42; Heute +3,48; Positionen 7). Hand math checks out: listed = 94,91 + 74,00 + 31,51 + 0 (bond); + IPO 20 + 100; day = 12,76 - 9,10 - 0,18. PRVNV is unvalued (G/V '–', IPO badge, Kein Börsenhandel). Depotanalyse: Gesamtvermögen 7.313,56 € equals the hero value exactly. Festgeld 1.001,64, Tagesgeld 500,82, Flexgeld 300,49 (inactive 9999 excluded). PRVNV is listed as unvalued. Best list has stocks only, the IPO list is separate, weights add up to 100,00 %. Filters, search, all sort headers and the mobile select work. IPO rows have no sparkline and no buy/sell link. Exactly 1 sparklines request on load; over 62 s there was 0 CLS, scroll/search/filter were kept and no sparkline refetch happened. Mobile: cards, no horizontal overflow. Empty depot shows depot-empty. Two issues remain: TEST_BOND_INACTIVE is still shown in the MeinePositionen section, and the colours of the two KPI blocks differ.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/portfolio/orders", "issue": "The IPO guard only matches the CALLER's own allocated ipo_requests. A user without an allocation can still place a limit BUY for an unlisted IPO ticker (e.g. TESTIPO) if its symbol passes the regex. Could not verify with another user (forbidden to create data). Consider a global check for unlisted IPO tickers (ipo catalogue/valuation map) instead of per user."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "MeinePositionen.jsx (section 'Ihre Wertpapierpositionen im Überblick')", "issue": "The inactive bond TEST_BOND_INACTIVE is rendered (rows mdp-bond-b-6ae462221e1c3511363f2ee3 and mdp-bond-card-...). The component maps the raw `bondPositions` (line ~137) instead of `activeBonds` (is_active filter), which breaks the requirement that inactive bonds must not appear anywhere. Its weights/totalPortfolio may also be affected.", "selector": "[data-testid^='mdp-bond-']", "priority": "HIGH"},
+      {"component": "DepotAnalyseDialog allocation", "issue": "A 'Sonstige Verträge 0,00 € · 0,00 %' row is shown. contractValues.sonstige is a tiny float residual > 0 (contractsTotal - sums), so the `v > 0` filter passes. Round to cents before filtering (e.g. Math.round(v*100) > 0).", "selector": "[data-testid='depot-alloc-Sonstige Verträge']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Mein Depot KPI blocks", "issues": [
+        "Positive values have different colours. The old rail uses text-emerald-700, which the global theme remaps to petrol (computed rgb(0,55,129), navy-blue). The new section uses text-bank-success green (rgb(33,135,57)). The same value appears blue in one block and green in the other. The user asked for green positives, so use one tone class (e.g. add keep-raw or use bank-success in DepotKpiRail).",
+        "Empty depot: the rail shows Investiert '—', but depot-kpi-cost/depot-kpi-value show '0,00 €', so the two blocks are not identical. The kpi-heute footer also says 'Bewertung unvollständig' for a depot with no positions, which is misleading.",
+        "The Depotübersicht table card has no bottom margin before the 'VERMÖGENSENTWICKLUNG' heading (they nearly touch on desktop).",
+        "The order of the Depotanalyse 'Portfolio-Gewichtung' list is unsorted (does not follow weight). Minor."
+      ]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_depot_phase1_final_iter102.py", "/app/backend/tests/test_depot_pro_phase1.py", "/app/test_reports/pytest/iter102.xml"],
+  "action_items": [
+    "MeinePositionen.jsx: use activeBonds (is_active) instead of bondPositions so TEST_BOND_INACTIVE disappears everywhere",
+    "Align the KPI rail positive/negative colour with DepotProSection (petrol remap vs bank-success)",
+    "DepotAnalyseDialog: hide allocation rows that round to 0,00 €",
+    "Empty depot: make rail and section show the same placeholder ('–' vs '0,00 €'); drop the 'Bewertung unvollständig' text when there are 0 positions",
+    "Optional: make the IPO order guard global (not tied to the caller's own allocation)"
+  ],
+  "critical_code_review_comments": [
+    "computeDepotTotals is a single source for both KPI blocks; the numbers match.",
+    "Unvalued IPO (PRVNV) counts in depot value/weights at cost basis. This is labelled in the dialog but not in the 'Gesamtdepotwert' KPI sub-text.",
+    "The 'Gewinner' filter includes IPO estimate rows (PRVT3, TESTIPO). Acceptable, but it differs from Depotanalyse 'Beste Aktien' (stocks only).",
+    "DashboardDataContext.jsx is 838 lines (>700) and DepotKpiRail.jsx is 399 lines; consider splitting."
+  ],
+  "updated_files": ["/app/backend/tests/test_depot_phase1_final_iter102.py"],
+  "success_rate": {"backend": "100% (27/27)", "frontend": "~90% (inactive bond leak in MeinePositionen, colour inconsistency)"},
+  "seed_data_creation": "None. Test AAPL buy/sell orders created by pytest were cancelled (only the main agent's AAPL sell 6ae4624349198f7d4164d2ba is still pending). The seed was NOT cleaned.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login via fetch('/api/auth/login') in page context, then goto /mein-depot. A consent modal ('Willkommen bei Fröhlich') blocks clicks: select the last option in the 'Besucherrolle' select, then click 'Akzeptieren'. Expected values (they vary slightly with live quotes): cost 3.190,00; IPO G/V +120; hero == depot-alloc-total. Run the pytest files listed above."
+}

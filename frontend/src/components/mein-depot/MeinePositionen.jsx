@@ -88,7 +88,7 @@ const MeinePositionen = () => {
     loading,
     stockMetrics,
     stockPriceMap,
-    bondPositions,
+    activeBonds: bondPositions,
     computeBondMetrics,
     gesamtvermoegen,
     dashboardFetchHadFailure,

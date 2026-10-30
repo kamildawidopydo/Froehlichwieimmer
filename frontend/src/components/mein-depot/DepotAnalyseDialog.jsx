@@ -43,7 +43,7 @@ const DepotAnalyseDialog = ({ open, onOpenChange, rows, totals }) => {
     const market = byPct(rows.filter((r) => r.kind === 'stock'));
     const ipo = byPct(rows.filter((r) => r.kind === 'ipo'));
     return {
-      alloc: alloc.filter(([, v]) => v > 0).map(([l, v]) => [l, v, all > 0 ? (v / all) * 100 : 0]),
+      alloc: alloc.filter(([, v]) => Math.round(v * 100) > 0).map(([l, v]) => [l, v, all > 0 ? (v / all) * 100 : 0]),
       top: [...rows].sort((x, y) => y.value - x.value).slice(0, 5),
       best: market.filter((r) => Math.round(r.pct * 100) > 0).slice(0, 3),
       worst: market.filter((r) => Math.round(r.pct * 100) < 0).slice(-3).reverse(),
@@ -90,7 +90,7 @@ const DepotAnalyseDialog = ({ open, onOpenChange, rows, totals }) => {
         </section>
         <section className="mt-4" data-testid="depot-analyse-weights">
           <p className="mb-1 text-[13px] font-semibold">Portfolio-Gewichtung</p>
-          {rows.map((r) => (
+          {[...rows].sort((x, y) => y.weight - x.weight).map((r) => (
             <div key={r.key} className="flex justify-between text-[12px]">
               <span className="truncate">{r.name}</span>
               <span className="tabular-nums">{pctTxt(r.weight)} der Wertpapiere</span>
