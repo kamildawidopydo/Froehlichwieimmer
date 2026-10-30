@@ -28,9 +28,9 @@ const DepotKpis = ({ rows, updatedAt }) => {
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7" data-testid="depot-pro-kpis">
       <Kpi label="Gesamtdepotwert" value={k.count ? formatEUR(k.value) : '—'} sub={k.unvaluedCount ? `inkl. ${k.unvaluedCount} ohne Bewertung (zum Einstand)` : 'Wertpapiere inkl. IPO'} testid="depot-kpi-value" />
       <Kpi label="Investiertes Kapital" value={k.cost > 0 ? formatEUR(k.cost) : '—'} testid="depot-kpi-cost" />
-      <Kpi label="Gesamtgewinn inkl. IPO" value={k.hasValued ? formatEURSigned(k.gv) : '–'} sub={`${pctTxt(k.gvPct)}${k.hasIpo ? ' · inkl. IPO-Schätzung' : ''}`} tone={k.hasValued ? pnlTone(k.gv) : undefined} testid="depot-kpi-gv" />
-      <Kpi label="Gewinn börsennotiert" value={k.hasListed ? formatEURSigned(k.listedGv) : '–'} sub={`${pctTxt(k.listedGvPct)} · zum Marktkurs`} tone={k.hasListed ? pnlTone(k.listedGv) : undefined} testid="depot-kpi-gv-listed" />
-      <Kpi label="Tagesentwicklung" value={k.day == null ? '–' : formatEURSigned(k.day)} sub={`${pctTxt(k.dayPct)} · nur Börsenkurse`} tone={k.day == null ? undefined : pnlTone(k.day)} testid="depot-kpi-day" />
+      <Kpi label="Gesamtgewinn inkl. IPO" value={k.hasValued ? formatEURSigned(k.gv) : '—'} sub={k.hasValued ? `${pctTxt(k.gvPct)}${k.hasIpo ? ' · inkl. IPO-Schätzung' : ''}` : undefined} tone={k.hasValued ? pnlTone(k.gv) : undefined} testid="depot-kpi-gv" />
+      <Kpi label="Gewinn börsennotiert" value={k.hasListed ? formatEURSigned(k.listedGv) : '—'} sub={k.hasListed ? `${pctTxt(k.listedGvPct)} · zum Marktkurs` : undefined} tone={k.hasListed ? pnlTone(k.listedGv) : undefined} testid="depot-kpi-gv-listed" />
+      <Kpi label="Tagesentwicklung" value={k.day == null ? '—' : formatEURSigned(k.day)} sub={k.day == null ? undefined : `${pctTxt(k.dayPct)} · nur Börsenkurse`} tone={k.day == null ? undefined : pnlTone(k.day)} testid="depot-kpi-day" />
       <Kpi label="Positionen" value={String(k.count)} sub={k.unvaluedCount ? `${k.unvaluedCount} ohne Bewertung` : undefined} testid="depot-kpi-count" />
       <Kpi
         label="Letzte Kursaktualisierung"

@@ -1,0 +1,25 @@
+{
+  "summary": "Retest of the iteration_102 fixes on /mein-depot plus a short regression (frontend, desktop 1920 and mobile 390, users test_eur_qa and tester@mester.de). All 7 requested items PASS. (1) MeinePositionen renders only TEST_BOND_ACTIVE (mdp-bond-b-...ee2 and its card); TEST_BOND_INACTIVE is not in the DOM; bond weight 13,4 % = 980/7311 is sensible. (2) KPI rail and Depotübersicht use the same text-bank-success computed colour rgb(33,135,57) for kpi-gv/depot-kpi-gv, kpi-gv-listed/depot-kpi-gv-listed, kpi-heute/depot-kpi-day. (3) Depotanalyse has no 'Sonstige Verträge' row. Portfolio-Gewichtung is sorted desc (27,93 > 26,64 > 17,45 > 14,25 > 8,03 > 2,85 > 2,85). depot-alloc-total 7.311,59 € == mein-depot-hero-value 7.311,59 €. (4) Empty depot (tester@mester.de): the rail shows '—' for Investiert, G/V, Listed and Heute; depot-kpi-value and depot-kpi-cost show '—'; there is no 'Bewertung unvollständig' text; depot-empty is shown. (5) depot-kpi-value sub reads 'inkl. 1 ohne Bewertung (zum Einstand)'. (6) depot-pro-section has margin-bottom 48px before VERMÖGENSENTWICKLUNG. (7) Regression: the 5 KPI pairs are identical (3.190,00 / +318,54 / +198,54 / +1,60 / 7). The IPO lock returns 409 (15/15 pytest, buy+sell, case/whitespace variants, over-quantity, market order). Exactly 1 /api/stocks/sparklines request; the other sparkline calls are the market-ticker /api/news-markte/market/sparkline/* and are unrelated. Mobile 390: scrollWidth 390 == clientWidth, no overflow, bond card only for the active bond.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Mein Depot empty state (tester@mester.de)", "issues": [
+        "Cosmetic: the rail uses an em dash '—' for G/V, Listed and Heute, but the Depotübersicht section uses an en dash '–' for depot-kpi-gv, depot-kpi-gv-listed and depot-kpi-day. The sub lines also show bare placeholders ('–', '– · zum Marktkurs', '– · nur Börsenkurse'). Consider one dash and hiding the sub text when there are 0 positions."
+      ]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_depot_phase1_final_iter102.py", "/app/test_reports/pytest/iter103.xml"],
+  "action_items": ["Optional cosmetic: unify the empty-state dash ('—' vs '–') between the KPI rail and DepotProSection, and suppress the placeholder sub text when count=0"],
+  "critical_code_review_comments": [
+    "MeinePositionen now destructures activeBonds (is_active filter from DashboardDataContext line 591) aliased as bondPositions. This is correct, but the alias name is misleading; consider renaming.",
+    "The previous minor note still applies: the IPO order guard is per-user allocation based and not global (not retested)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (15/15 IPO-lock regression)", "frontend": "100% (7/7 requested checks)"},
+  "seed_data_creation": "None. AAPL buy/sell tests were deliberately skipped to avoid creating orders.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login via fetch('/api/auth/login') in page context, then goto /mein-depot. For the consent modal, pick the visible select containing the 'Besucherrolle' option (last option), then click the 'Akzeptieren' role button. Note: page.locator('select').first is the hidden depot-sort-select, so do not use it. Values today: cost 3.190,00, hero 7.311,5x, depot value 3.508,5x."
+}

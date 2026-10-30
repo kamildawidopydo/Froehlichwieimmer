@@ -391,3 +391,12 @@ Siehe `/app/memory/test_credentials.md`
 - Audit (iteration_69/70) behoben: Admin-Orderliste GET /api/admin/portfolio/orders, Anleihe-Felder (kaufkurs/kupon_rate/faelligkeitsdatum), Kontoauszug (Verträge, Vorzeichen, Saldo, deutsche Typen), Aktien-Livekurse im Kundendepot, Festgeld-Enddatum aus Laufzeit, Admin-Verlauf mit Historie.
 - Bekannt/offen: Gesamtvermögen-Definition (mit/ohne aufgelaufene Zinsen) unterscheidet sich leicht zwischen Kontoauszug und Übersicht; Prozentangaben teils mit Punkt statt Komma; Payout-Lock nur pro Prozess.
 
+
+## 2026-10-30 · Phase 1 Abschluss (nur Vorschau, NICHT veröffentlicht)
+- Einheitliche Kennzahlen: `computeDepotTotals` (lib/depotRows.js) ist einzige Quelle für alte KPI-Leiste (DepotKpiRail) und Depotübersicht: Gesamtgewinn inkl. IPO, Gewinn börsennotiert (Aktien+Anleihen, ohne IPO), Tagesentwicklung nur aus Börsenkursen. Server-Summary wird in der Leiste nicht mehr verwendet.
+- Depotanalyse: nur aktive Verträge/Anleihen, aktueller Wert je Vertragsart (`contractValues` im Context), Liquidität ergänzt; Summe = Gesamtvermögen (Hero). Unbewertete Positionen ausgewiesen.
+- MeinePositionen zeigt nur aktive Anleihen. IPO-Orderperre serverseitig, Ticker-Vergleich case-/whitespace-unabhängig.
+- Tests: iteration_102 (Backend 27/27) + iteration_103 (Frontend 7/7). Kundendaten-Hash vor/nach identisch. Testdaten gelöscht.
+- Veröffentlichungsstatus: Live = Deploy-Run e2e665d2 (2026-10-29 15:55 UTC). 5 Redeploys am 29.10. wurden vom Agenten ausgelöst (trigger=agentic), kein Auto-Deploy. Custom Domains: SSL/DNS-Verifizierung noch „initializing“.
+- Offen: Admin-Erweiterung (wartet auf Freigabe), Veröffentlichung nur nach ausdrücklicher Freigabe.
+
