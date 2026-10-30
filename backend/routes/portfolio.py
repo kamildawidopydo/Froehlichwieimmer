@@ -68,6 +68,7 @@ from services.portfolio_snapshot_service import (  # noqa: E402
 
 # Session 82.26 · Depot P0 — Order-Execution-Saga
 from services.order_execution_service import (  # noqa: E402
+    qty_int,
     execute_order,
     ExecutionError,
     ExecutionCrash,
@@ -333,7 +334,10 @@ async def get_portfolio_quotes(
     sym_list = [s.strip().upper() for s in (symbols or "").split(",") if s.strip()]
     if not sym_list:
         return {}
-    return await get_stock_quotes(db, sym_list)
+    sym_list = list(dict.fromkeys(s for s in sym_list if _SYMBOL_RE.match(s)))
+    if len(sym_list) > MAX_QUOTE_SYMBOLS:
+        raise HTTPException(status_code=422, detail=f"Maximal {MAX_QUOTE_SYMBOLS} Symbole pro Abfrage.")
+    return await get_stock_quotes(db, sym_list) if sym_list else {}
 
 
 @router.get("/stock-positions")
@@ -718,6 +722,9 @@ async def admin_cash_summary_for_user(
 # ═══════════════════════════════════════════════════════════════════════
 
 _SYMBOL_RE = re.compile(r"^[A-Z0-9.\-]{1,12}$")
+MAX_ORDER_QTY = 10_000_000
+MAX_LIMIT_PRICE = Decimal("1000000")
+MAX_QUOTE_SYMBOLS = 100
 
 # Per-User Order-Lock (Same-Instance-Serialization für parallele Buy-Orders).
 _order_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
@@ -906,7 +913,7 @@ def _serialize_stock_order(doc: dict) -> dict:
         "symbol": doc.get("symbol"),
         "side": doc.get("side"),
         "order_type": doc.get("order_type"),
-        "quantity": int(doc.get("quantity") or 0),
+        "quantity": qty_int(doc.get("quantity")),
         "limit_price": _amt(doc.get("limit_price")),
         "reserved_cash": _amt(doc.get("reserved_cash")),
         "currency": doc.get("currency") or "EUR",
@@ -944,6 +951,8 @@ async def create_order(
         raise HTTPException(status_code=422, detail="quantity muss eine positive Ganzzahl sein")
     if qty <= 0:
         raise HTTPException(status_code=422, detail="quantity muss > 0 sein")
+    if qty > MAX_ORDER_QTY:
+        raise HTTPException(status_code=422, detail="Stückzahl zu hoch (maximal 10.000.000).")
 
     if order_type == "market":
         # Keine verlässliche Preisquelle in Phase 3 — verhindere Fake-Preis-Reservierung.
@@ -955,6 +964,8 @@ async def create_order(
     limit_price = _to_decimal_strict(payload.limit_price, "limit_price")
     if limit_price <= Decimal("0.00"):
         raise HTTPException(status_code=422, detail="limit_price muss > 0 sein")
+    if limit_price > MAX_LIMIT_PRICE:
+        raise HTTPException(status_code=422, detail="Limitkurs zu hoch (maximal 1.000.000 EUR).")
 
     uid = ObjectId(user["id"])
 
@@ -1025,14 +1036,14 @@ async def create_order(
                 "$or": [{"user_id": uid}, {"user_id": str(uid)}],
                 "symbol": sym,
             })
-            total_qty = int(pos.get("quantity") or 0) if pos else 0
+            total_qty = qty_int(pos.get("quantity")) if pos else 0
             # Bereits reservierte Stücke aus offenen (pending) Sell-Orders zählen.
             open_reserved = 0
             async for o in db.stock_orders.find({
                 "user_id": uid, "symbol": sym,
                 "side": "sell", "order_type": "limit", "status": "pending",
             }):
-                open_reserved += int(o.get("quantity") or 0)
+                open_reserved += qty_int(o.get("quantity"))
             avail_qty = total_qty - open_reserved
             if avail_qty < qty:
                 raise HTTPException(
@@ -1198,10 +1209,14 @@ async def coupon_peek_endpoint(
         qty = int(payload.quantity)
     except (ValueError, TypeError):
         raise HTTPException(status_code=422, detail="quantity muss eine positive Ganzzahl sein")
+    if not 0 < qty <= MAX_ORDER_QTY:
+        raise HTTPException(status_code=422, detail="Stückzahl ungültig (1 bis 10.000.000).")
     try:
         lp = _to_decimal_strict(payload.limit_price, "limit_price")
     except HTTPException:
         raise
+    if lp > MAX_LIMIT_PRICE:
+        raise HTTPException(status_code=422, detail="Limitkurs zu hoch (maximal 1.000.000 EUR).")
     try:
         result = await coupon_peek(
             db,

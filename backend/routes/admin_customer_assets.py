@@ -226,9 +226,9 @@ async def delete_contract(contract_id: str, _admin: dict = Depends(require_admin
 
 # ─── Aktien ─────────────────────────────────────────────────────────────
 class StockIn(BaseModel):
-    symbol: str = Field(..., min_length=1, max_length=32)
+    symbol: str = Field(..., min_length=1, max_length=12, pattern=r"^\s*[A-Za-z0-9.\-]{1,12}\s*$")
     name: Optional[str] = Field(default=None, max_length=120)
-    quantity: float = Field(..., gt=0, le=10_000_000)
+    quantity: int = Field(..., gt=0, le=10_000_000)
     avg_cost: float = Field(..., gt=0, le=10_000_000)
     model_config = {"extra": "forbid"}
 
@@ -240,7 +240,7 @@ async def add_stock(user_id: str, body: StockIn, _admin: dict = Depends(require_
     now = datetime.now(timezone.utc)
     await db.stock_positions.update_one(
         {"user_id": oid, "symbol": symbol},
-        {"$set": {"quantity": Decimal128(str(body.quantity)), "avg_cost": Decimal128(str(body.avg_cost)),
+        {"$set": {"quantity": int(body.quantity), "avg_cost": Decimal128(str(body.avg_cost)),
                   "name": body.name, "currency": "EUR", "is_active": True, "updated_at": now},
          "$setOnInsert": {"user_id": oid, "symbol": symbol, "created_at": now}},
         upsert=True,

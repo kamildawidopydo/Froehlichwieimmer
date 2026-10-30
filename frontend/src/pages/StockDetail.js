@@ -896,14 +896,16 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   // Fundamentals are converted to EUR by the backend (?display=EUR).
   const fmtFundEur = (v) => (fundamentals?.currency === 'EUR' ? formatCurrency(v, 'EUR') : null);
   const up = (chg ?? 0) >= 0;
-  const refPx =
+  const refPxRaw =
     orderType === 'limit' && limitPrice
       ? Number(limitPrice)
       : price?.price != null
         ? Number(price.price)
         : 0;
+  // Same 2-decimal price the server receives, so the estimate equals the reservation.
+  const refPx = Math.round(refPxRaw * 100) / 100;
   const qtyNum = Number(quantity) || 0;
-  const estGross = refPx > 0 && qtyNum > 0 ? Math.round(qtyNum * refPx * 10000) / 10000 : 0;
+  const estGross = refPx > 0 && qtyNum > 0 ? Math.round(qtyNum * refPx * 100) / 100 : 0;
   const estDiscount =
     side === 'buy' && couponVerifiedPct != null && couponVerifiedPct > 0 && estGross > 0
       ? Math.round(estGross * (couponVerifiedPct / 100) * 100) / 100
@@ -948,7 +950,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
             </div>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={toggleWatchlist} className={`gap-2 flex-1 sm:flex-none ${watched ? 'text-bank-accent-strong dark:text-bank-accent' : ''}`}>
+            <Button variant="outline" size="sm" data-testid="stock-detail-watchlist-btn" onClick={toggleWatchlist} className={`gap-2 flex-1 sm:flex-none ${watched ? 'text-bank-accent-strong dark:text-bank-accent' : ''}`}>
               <Star size={15} fill={watched ? 'currentColor' : 'none'} />
               <span className="sm:hidden">{watched ? 'Beobachtet' : 'Beobachten'}</span>
               <span className="hidden sm:inline">{watched ? 'Beobachtet' : 'Beobachten'}</span>
@@ -1442,7 +1444,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                   type="button"
                   onClick={() => {
                     setOrderType('limit');
-                    if (!limitPrice && price?.price != null) setLimitPrice(String(price.price));
+                    if (!limitPrice && price?.price != null) setLimitPrice(Number(price.price).toFixed(2));
                   }}
                   className={`flex-1 h-9 rounded-md text-[12px] font-medium border ${orderType === 'limit' ? 'bg-bank-primary text-white border-bank-primary' : 'border-bank-border text-bank-text-muted'}`}
                   data-testid="order-type-limit"
@@ -1455,6 +1457,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                 <button
                   type="button"
                   onClick={() => setSide('buy')}
+                  data-testid="order-side-buy"
                   className={`flex-1 h-9 rounded-md text-[12px] font-medium border transition-colors ${side === 'buy'
                     ? 'bg-emerald-600 text-white border-emerald-600'
                     : 'border-bank-border text-bank-text-muted hover:bg-emerald-50'}`}
@@ -1468,6 +1471,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     setCouponCode('');
                     setCouponVerifiedPct(null);
                   }}
+                  data-testid="order-side-sell"
                   className={`flex-1 h-9 rounded-md text-[12px] font-medium border transition-colors ${side === 'sell'
                     ? 'bg-rose-600 text-white border-rose-600'
                     : 'border-bank-border text-bank-text-muted hover:bg-rose-50'}`}
@@ -1480,7 +1484,8 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                 <div>
                   <label className="block text-xs font-medium text-bank-text-muted mb-1">Stückzahl</label>
                   <Input
-                    type="number" step="0.0001" min="0"
+                    type="number" step="1" min="1"
+                    data-testid="order-quantity-input"
                     value={quantity} onChange={(e) => setQuantity(e.target.value)}
                     placeholder="z.B. 10"
                   />
@@ -1490,10 +1495,12 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                     <label className="block text-xs font-medium text-bank-text-muted mb-1">Limitkurs</label>
                     <Input
                       type="number"
-                      step="any"
+                      step="0.01"
                       min="0"
+                      data-testid="order-limit-price-input"
                       value={limitPrice}
                       onChange={(e) => setLimitPrice(e.target.value)}
+                      onBlur={() => { if (limitPrice && Number.isFinite(Number(limitPrice))) setLimitPrice(Number(limitPrice).toFixed(2)); }}
                       placeholder="Zielkurs"
                     />
                   </div>
@@ -1552,7 +1559,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
                 </div>
                 <div className="flex justify-between mb-1">
                   <span className="text-bank-text-muted">Brutto (geschätzt)</span>
-                  <span className="font-medium text-bank-text">{estGross > 0 ? formatCurrency(estGross, currency) : '–'}</span>
+                  <span className="font-medium text-bank-text" data-testid="order-est-gross">{estGross > 0 ? formatCurrency(estGross, currency) : '–'}</span>
                 </div>
                 {side === 'buy' && estDiscount > 0 && (
                   <div className="flex justify-between mb-1 text-emerald-700">
@@ -1612,6 +1619,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
 
               <Button
                 type="submit"
+                data-testid="order-submit-btn"
                 disabled={submitting || !quantity}
                 className={`w-full mt-4 h-11 text-white font-medium ${side === 'buy' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}
               >

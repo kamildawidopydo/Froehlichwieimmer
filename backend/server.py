@@ -32,6 +32,8 @@ import httpx
 from bson import ObjectId
 from fastapi import FastAPI, APIRouter, Request, Response, HTTPException, Depends
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field
@@ -2603,13 +2605,9 @@ async def seed_admin():
             })
             logger.info("Seeded extra admin: %s", e_email)
         else:
-            update = {}
             if existing.get("role") != "admin":
-                update["role"] = "admin"
-            if update:
-                update["updated_at"] = datetime.now(timezone.utc)
-                await db.users.update_one({"_id": existing["_id"]}, {"$set": update})
-                logger.info("Updated extra admin %s (%s)", e_email, ",".join(update.keys()))
+                # Never auto-promote an existing account (could be a self-registered impostor).
+                logger.warning("ADMIN_EXTRAS: %s exists as non-admin - not promoted; promote manually.", e_email)
 
 
 async def seed_content():
@@ -5794,6 +5792,27 @@ _cors_env = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if
 allowed = [o for o in _cors_env if o != "*"] or [FRONTEND_URL]
 
 _UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    resp = await call_next(request)
+    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    resp.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+    return resp
+
+
+@app.exception_handler(RequestValidationError)
+async def german_validation_error(request: Request, exc: RequestValidationError):
+    fields = sorted({str(e.get("loc", [""])[-1]) for e in exc.errors()})
+    return JSONResponse(
+        status_code=422,
+        content={"detail": f"Ungültige Eingabe: bitte {', '.join(fields)} prüfen.",
+                 "errors": [{k: e.get(k) for k in ("type", "loc", "msg")} for e in jsonable_encoder(exc.errors())]},
+    )
 
 
 @app.middleware("http")

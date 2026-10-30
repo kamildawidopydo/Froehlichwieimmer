@@ -38,6 +38,15 @@ from typing import Any, Optional
 
 from bson import ObjectId
 from bson.decimal128 import Decimal128
+
+
+def qty_int(v) -> int:
+    """Stored quantities may be int, float, str or Decimal128 (admin-created positions)."""
+    if v is None:
+        return 0
+    if isinstance(v, Decimal128):
+        v = v.to_decimal()
+    return int(Decimal(str(v)))
 from pymongo.errors import DuplicateKeyError
 
 from services.cash_service import (
@@ -124,7 +133,7 @@ def _serialize_execution(doc: dict) -> dict:
         "user_id": str(doc.get("user_id")) if doc.get("user_id") else None,
         "side": doc.get("side"),
         "symbol": doc.get("symbol"),
-        "quantity": int(doc.get("quantity") or 0),
+        "quantity": qty_int(doc.get("quantity")),
         "execution_price": _dec(doc.get("execution_price")),
         "gross_amount": _dec(doc.get("gross_amount")),
         "cost_basis_sold": _dec(doc.get("cost_basis_sold")),
@@ -311,7 +320,7 @@ async def _execute_order_locked(
         pos = await db.stock_positions.find_one(
             {"$or": [{"user_id": user_id}, {"user_id": str(user_id)}], "symbol": symbol}
         )
-        avail_qty = int((pos or {}).get("quantity") or 0)
+        avail_qty = qty_int((pos or {}).get("quantity"))
         if avail_qty < qty:
             raise ExecutionError(
                 "INSUFFICIENT_POSITION",
@@ -804,7 +813,7 @@ async def _apply_position(
                 return existing["_id"]
 
     # Update-Pfad — Weighted Average.
-    old_qty = int(existing.get("quantity") or 0)
+    old_qty = qty_int(existing.get("quantity"))
     old_avg = _decimal_from_bson(existing.get("avg_cost"))
     new_qty = old_qty + qty
     if new_qty <= 0:
@@ -866,7 +875,7 @@ async def _decrement_position(
     if not pos:
         raise ExecutionError("INSUFFICIENT_POSITION", f"Keine Position für {symbol}", 400)
 
-    old_qty = int(pos.get("quantity") or 0)
+    old_qty = qty_int(pos.get("quantity"))
     old_avg = _decimal_from_bson(pos.get("avg_cost"))
     cost_basis_sold = _q_money(Decimal(qty) * old_avg)
     proceeds = _q_money(Decimal(qty) * execution_price)
