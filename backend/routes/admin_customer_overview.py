@@ -5,6 +5,7 @@ from collections import defaultdict
 import asyncio
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 from bson import ObjectId
 from bson.decimal128 import Decimal128
@@ -78,17 +79,68 @@ def _status(doc: dict, login_locked: bool) -> Dict[str, Any]:
 
 
 def _ipo_valuations(reqs: List[dict]) -> Dict[tuple, float]:
+    """Mirror of frontend buildIpoValuationMap (latest valuation wins; keyed by position symbol and ticker)."""
     vals: Dict[tuple, float] = {}
-    for r in sorted(reqs, key=lambda x: str(x.get("valuation_set_at") or x.get("created_at") or "")):
+    for r in sorted(reqs, key=lambda x: str(x.get("valuation_set_at") or x.get("approved_at") or x.get("created_at") or "")):
         if r.get("status") not in ("approved", "allocated") or r.get("use_admin_valuation") is False:
             continue
         lp = _num(r.get("listing_price_per_share"))
         if lp <= 0:
             continue
-        for sym in (r.get("position_symbol"), r.get("ticker")):
-            if sym:
-                vals[(_uid(r.get("user_id")), str(sym).strip().upper())] = lp
+        for sym in _ipo_symbols(r):
+            vals[(_uid(r.get("user_id")), sym)] = lp
     return vals
+
+
+def _ipo_symbols(r: dict) -> List[str]:
+    ticker = str(r.get("ticker") or "").strip().upper()
+    pos = str(r.get("position_symbol") or "").strip().upper() or (
+        (ticker if ticker.startswith("IPO-") else f"IPO-{ticker}") if ticker else "")
+    return [s for s in {pos, ticker} if s]
+
+
+async def _quotes_for_holdings(holdings: List[tuple], ipo_reqs: List[dict], ipo_vals: Dict[tuple, float]) -> Dict[str, dict]:
+    """One batched quote call. Skips symbols every holder values via IPO estimate, and IPO tickers
+    that were never quoted (no exchange listing). Those fall back exactly like the customer view."""
+    need = {sym for uid, sym in holdings if (uid, sym) not in ipo_vals}
+    ipo_tickers = {s for r in ipo_reqs for s in _ipo_symbols(r)}
+    cand = need & ipo_tickers
+    known = {d["symbol"] async for d in db.stock_prices_cache.find({"symbol": {"$in": sorted(cand)}}, {"symbol": 1})} if cand else set()
+    syms = sorted(s for s in need if s not in ipo_tickers or s in known)
+    return await get_stock_quotes(db, syms) if syms else {}
+
+
+def _today_berlin():
+    return datetime.now(ZoneInfo("Europe/Berlin")).date()
+
+
+def _day(v):
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, str) and len(v) >= 10:
+        try:
+            return datetime.strptime(v[:10], "%Y-%m-%d").date()
+        except ValueError:
+            return None
+    return None
+
+
+def contract_current_value(c: dict, today) -> tuple:
+    """Same rule as frontend computeContractMetrics.currentValueGross (principal + gross accrued interest)."""
+    amount = max(0.0, _num(c.get("amount_eur")))
+    rate = _num(c.get("zinssatz"))
+    months = max(0.0, _num(c.get("laufzeit_monate")))
+    start, end = _day(c.get("active_from")), _day(c.get("active_until"))
+    if start and end:
+        total_days = max((end - start).days, 0)
+    elif months:
+        total_days = round(months * 30.4375)
+    else:
+        total_days = 0
+    raw = (today - start).days if start else 0
+    passed = max(0, min(raw, total_days or raw))
+    accrued = amount * (rate / 100) * (passed / 365.25)
+    return amount, accrued
 
 
 @router.get("/overview")
@@ -106,14 +158,15 @@ async def customers_overview(_admin: dict = Depends(require_admin)) -> Dict[str,
 
     stocks = await db.stock_positions.find({"is_active": {"$ne": False}}).to_list(20000)
     stocks = [s for s in stocks if _num(s.get("quantity")) > 0]
-    quotes = await get_stock_quotes(db, sorted({str(s["symbol"]).strip().upper() for s in stocks if s.get("symbol")}))
     ipo_reqs = await db.ipo_requests.find({}).to_list(20000)
     ipo_vals = _ipo_valuations(ipo_reqs)
+    quotes = await _quotes_for_holdings(
+        [(_uid(s.get("user_id")), str(s.get("symbol") or "").strip().upper()) for s in stocks], ipo_reqs, ipo_vals)
     bonds = await db.bond_positions.find({"is_active": {"$ne": False}}).to_list(20000)
     contracts = await db.depot_contracts.find({"is_active": True}).to_list(20000)
 
     agg: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
-        "stocks_value": 0.0, "bonds_value": 0.0, "contracts_value": 0.0,
+        "stocks_value": 0.0, "bonds_value": 0.0, "contracts_value": 0.0, "contracts_principal": 0.0, "contracts_accrued": 0.0,
         "positions": 0, "ipo_positions": 0, "contracts": 0, "fallback_positions": 0,
         "open": defaultdict(int), "last_activity": None,
     })
@@ -138,9 +191,13 @@ async def customers_overview(_admin: dict = Depends(require_admin)) -> Dict[str,
             kurs = b.get("average_purchase_price_pct")
         a["bonds_value"] += nominal * _num(kurs) / 100
         a["positions"] += 1
+    today = _today_berlin()
     for c in contracts:
         a = agg[_uid(c.get("user_id"))]
-        a["contracts_value"] += _num(c.get("amount_eur"))
+        principal, accrued = contract_current_value(c, today)
+        a["contracts_principal"] += principal
+        a["contracts_accrued"] += accrued
+        a["contracts_value"] += principal + accrued
         a["contracts"] += 1
 
     for coll, filt in OPEN_FILTERS.items():
@@ -176,7 +233,11 @@ async def customers_overview(_admin: dict = Depends(require_admin)) -> Dict[str,
             "cash_balance": round(cash_balance, 2),
             "cash_available": round(cash_available, 2),
             "securities_value": round(a["stocks_value"] + a["bonds_value"], 2),
+            "stocks_value": round(a["stocks_value"], 2),
+            "bonds_value": round(a["bonds_value"], 2),
             "contracts_value": round(a["contracts_value"], 2),
+            "contracts_principal": round(a["contracts_principal"], 2),
+            "contracts_accrued_interest": round(a["contracts_accrued"], 2),
             "positions": a["positions"],
             "ipo_positions": a["ipo_positions"],
             "contracts": a["contracts"],
@@ -190,7 +251,7 @@ async def customers_overview(_admin: dict = Depends(require_admin)) -> Dict[str,
         "items": items,
         "generated_at": now.isoformat(),
         "basis": {
-            "total_assets": "Liquidität + Aktien (Börsenkurs bzw. IPO-Schätzung, sonst Einstand) + Anleihen + Zinsanlagen zum Nennbetrag",
+            "total_assets": "Liquidität + Aktien (Börsenkurs in EUR bzw. IPO-Schätzung, sonst Einstand) + Anleihen + Zinsanlagen inkl. aufgelaufener Bruttozinsen – gleiche Regeln wie in der Kundenansicht",
             "last_activity": "Aufträge, Anfragen, Auszahlungen, Support, eigene Buchungen – Anmeldungen werden nicht protokolliert",
         },
     }
@@ -225,8 +286,9 @@ async def customer_details(user_id: str, _admin: dict = Depends(require_admin)) 
     own = _owner(oid)
     stocks = await db.stock_positions.find(own).to_list(1000)
     syms = sorted({str(s["symbol"]).strip().upper() for s in stocks if s.get("symbol")})
-    quotes = await get_stock_quotes(db, syms) if syms else {}
-    vals = _ipo_valuations(await db.ipo_requests.find(own).to_list(1000))
+    own_reqs = await db.ipo_requests.find(own).to_list(1000)
+    vals = _ipo_valuations(own_reqs)
+    quotes = await _quotes_for_holdings([(str(oid), s) for s in syms], own_reqs, vals)
     price_map, price_source = {}, {}
     for sym in syms:
         est = vals.get((str(oid), sym))

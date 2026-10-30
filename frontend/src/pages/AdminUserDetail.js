@@ -37,6 +37,7 @@ import {
 import { toast } from 'sonner';
 import { COUNTRIES } from '@/constants/countries';
 import AdminCustomerAssetsPanel from '@/components/admin/AdminCustomerAssetsPanel';
+import { computeContractMetrics } from '@/lib/dashboardMetrics';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import AdminCustomerIpoTab from '@/components/admin/customers/AdminCustomerIpoTab';
 import AdminCustomerChangeLog from '@/components/admin/customers/AdminCustomerChangeLog';
@@ -340,13 +341,14 @@ const AdminUserDetail = () => {
     const bondsValue = bondPositions
       .filter((bond) => bond.is_active)
       .reduce(
-        (sum, bond) => sum + (Number(bond.nominal_betrag || 0) * Number(bond.aktueller_kurs || 100)) / 100,
+        (sum, bond) => sum + (Number(bond.nominal_betrag || 0) * Number(bond.aktueller_kurs || 0)) / 100,
         0
       );
 
+    // Same rule as customer view: principal + gross accrued interest (computeContractMetrics).
     const contractsValue = depotContracts
       .filter((contract) => contract.is_active)
-      .reduce((sum, contract) => sum + Number(contract.amount_eur || 0), 0);
+      .reduce((sum, contract) => sum + computeContractMetrics(contract).currentValueGross, 0);
 
     const cashValue = Number(profile?.cash_balance || 0);
     const total = cashValue + stocksValue + bondsValue + contractsValue;
