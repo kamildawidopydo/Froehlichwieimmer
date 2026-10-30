@@ -407,3 +407,12 @@ Siehe `/app/memory/test_credentials.md`
 - Ersatzbewertung: Positionen ohne Marktwert (Aktie/IPO ohne Kurs bzw. Schätzung, Anleihe ohne aktueller_kurs → neues Feld `kurs_is_fallback`) zeigen „Ersatzbewertung auf Basis des Einstandswerts – kein aktueller Marktwert“, G/V „–“. Gilt für Depotübersicht, MeinePositionen, Analyse, KPIs.
 - Phase-2-Admin-Plan an Kunden geliefert; Umsetzung wartet auf Auswahl.
 
+
+
+## 2026-10-30 · Phase 2 Schritte 1–3 (nur Vorschau, NICHT veröffentlicht)
+- Neue read-only Routen `backend/routes/admin_customer_overview.py`: GET /api/admin/customers/overview, /{id}/details, /{id}/ipo-requests, /{id}/change-log. Keine Schreibzugriffe, keine Migration.
+- Kundennummer = „KD-“ + letzte 8 Hex-Zeichen der ID (bei Kollision 12/24), nicht gespeichert. Status: Inaktiv nur bei status inactive/deactivated/disabled, Gesperrt bei blocked/locked/suspended, Badge „Anmeldung gesperrt“ bei aktiver Login-Sperre. Filter „Keine Aktivität seit 90 Tagen“ (ohne Anmeldungen – werden nicht protokolliert).
+- /admin/users: neue Kundentabelle (CustomerOverview/CustomerRow, lib/adminCustomers.js) mit Suche/Filter/Sortierung, Karten mobil; Anlegen/Löschen unverändert.
+- /admin/users/:id: Tabs Übersicht/Depot/IPO/Zinsanlagen/Aufträge/Aktivitäten/Änderungsprotokoll; Watchlist/Orders/Aktivität/Kurse jetzt echt geladen (vorher leer).
+- Tests iteration_104/105 (Backend 21/21). Kundendaten-Hash unverändert.
+- Offen: vollständiges Admin-Protokoll (admin_audit_log, Freigabe nötig); Übersicht lädt 6–9 s wegen Kursabfragen für nicht notierte IPO-Symbole.

@@ -36,17 +36,17 @@ export const OpenCount = ({ c }) => (
 );
 
 export const PositionsCell = ({ c }) => (
-  <span className="whitespace-nowrap tabular-nums" title={`${c.positions} Wertpapiere (davon ${c.ipo_positions} IPO) · ${c.contracts} Zinsanlagen`}>
+  <span className="tabular-nums" title={`${c.positions} Wertpapiere (davon ${c.ipo_positions} IPO) · ${c.contracts} Zinsanlagen`}>
     {c.positions}
     {c.contracts > 0 && <span className="text-bank-text-muted"> + {c.contracts} Zins</span>}
-    {c.fallback_positions > 0 && <span className="ml-1 text-[10.5px] text-amber-800" title="Ersatzbewertung zum Einstand – kein aktueller Marktwert">({c.fallback_positions} Ersatzbew.)</span>}
+    {c.fallback_positions > 0 && <span className="block text-[10.5px] text-amber-800" title="Ersatzbewertung zum Einstand – kein aktueller Marktwert">{c.fallback_positions} Ersatzbew.</span>}
   </span>
 );
 
 export const CustomerActions = ({ c, onOpen, onDelete, suffix = '' }) => (
   <div className="flex flex-nowrap justify-end gap-1.5">
-    <Button size="sm" variant="outline-ink" className="whitespace-nowrap" onClick={() => onOpen(c)} data-testid={`admin-users-open-btn${suffix}-${c.id}`}>
-      <Eye size={12} strokeWidth={1.5} /> Kunde öffnen
+    <Button size="sm" variant="outline-ink" className="whitespace-nowrap" onClick={() => onOpen(c)} title="Kunde öffnen" aria-label="Kunde öffnen" data-testid={`admin-users-open-btn${suffix}-${c.id}`}>
+      <Eye size={12} strokeWidth={1.5} /> Öffnen
     </Button>
     {c.role !== 'admin' && (
       <Button size="sm" variant="outline" className="whitespace-nowrap border-red-300 text-red-700 hover:bg-red-50" onClick={() => onDelete(c)} data-testid={`admin-users-delete-btn${suffix}-${c.id}`} title="Kunde löschen">
@@ -58,9 +58,9 @@ export const CustomerActions = ({ c, onOpen, onDelete, suffix = '' }) => (
 
 export const CustomerRow = ({ c, onOpen, onDelete }) => (
   <tr className="border-b border-bank-border last:border-b-0 hover:bg-bank-bg/40" data-testid={`admin-users-row-${c.id}`}>
-    <td className="max-w-[170px] truncate px-2.5 py-3 text-[13.5px] font-medium text-bank-text" title={c.name || ''}>{c.name || '–'}</td>
+    <td className="max-w-[140px] truncate px-2.5 py-3 text-[13.5px] font-medium text-bank-text" title={c.name || ''}>{c.name || '–'}</td>
     <td className="whitespace-nowrap px-2.5 py-3 font-mono text-[12px] text-bank-text-muted" data-testid={`customer-number-${c.id}`}>{c.customer_number}</td>
-    <td className="max-w-[210px] truncate px-2.5 py-3 text-[13px] text-bank-text-muted" title={c.email || ''}>{c.email || '–'}</td>
+    <td className="max-w-[170px] truncate px-2.5 py-3 text-[13px] text-bank-text-muted" title={c.email || ''}>{c.email || '–'}</td>
     <td className="px-2.5 py-3"><StatusBadge c={c} /></td>
     <td className="whitespace-nowrap px-2.5 py-3 text-right font-semibold tabular-nums" data-testid={`customer-total-${c.id}`}>{formatEUR(c.total_assets)}</td>
     <td className="whitespace-nowrap px-2.5 py-3 text-right tabular-nums" data-testid={`customer-cash-${c.id}`}>{formatEUR(c.cash_available)}</td>

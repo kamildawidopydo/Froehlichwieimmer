@@ -241,10 +241,12 @@ async def customer_details(user_id: str, _admin: dict = Depends(require_admin)) 
     labels = {"stock_orders": "Aktienauftrag", "ipo_requests": "IPO-Anfrage", "bond_purchase_requests": "Anleihen-Anfrage",
               "payout_requests": "Auszahlungsantrag", "support_tickets": "Support-Anfrage"}
     events = []
+    st_de = {"pending": "offen", "approved": "genehmigt", "allocated": "zugeteilt", "executed": "ausgeführt",
+             "rejected": "abgelehnt", "cancelled": "storniert", "completed": "abgeschlossen", "open": "offen", "closed": "geschlossen"}
     for coll, label in labels.items():
         async for d in db[coll].find(own).sort("created_at", -1).limit(50):
             detail = d.get("symbol") or d.get("ticker") or d.get("isin") or d.get("subject") or ""
-            events.append({"id": f"{coll}-{d['_id']}", "event_type": f"{label} · {detail} · {d.get('status') or ''}".strip(" ·"),
+            events.append({"id": f"{coll}-{d['_id']}", "event_type": f"{label} · {detail} · {st_de.get(d.get('status'), d.get('status') or '')}".strip(" ·"),
                            "created_at": _iso(d.get("created_at"))})
     events.sort(key=lambda e: e["created_at"] or "", reverse=True)
     return {
@@ -255,7 +257,7 @@ async def customer_details(user_id: str, _admin: dict = Depends(require_admin)) 
             "status": o.get("status"), "created_at": _iso(o.get("created_at")), "rejection_reason": o.get("rejection_reason"),
         } for o in orders],
         "watchlist": [{"symbol": w.get("symbol"), "added_at": _iso(w.get("created_at")),
-                       "stocks": {"name": w.get("display_name")}} for w in watch],
+                       "stocks": {"name": w.get("display_name") if w.get("display_name") != w.get("symbol") else None}} for w in watch],
         "activity": events[:100],
         "snapshots": [{"total_value": _num(s.get("total_value")), "snapshot_date": s.get("snapshot_date")} for s in snaps],
     }

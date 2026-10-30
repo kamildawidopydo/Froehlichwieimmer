@@ -1,0 +1,39 @@
+{
+  "summary": "Read-only retest of the Phase 2 admin fixes (no writes). Backend: 21/21 pytest pass (9 new iter105 tests plus 12 from iter104). The new GET /api/admin/customers/{id}/details returns 401/403 without auth, 403 for the customer role, 400 for a bad id and 404 for an unknown id. For test_eur_qa it returns: price_map TESTIPO 25 and PRVT3 50 (ipo_estimate); AAPL, DBK and VOLV-B.ST as market quotes; PRVNV absent, so it falls back to cost. It also returns 4 orders, 3 watchlist items, 8 activity events sorted newest first, and snapshots []. Recomputing the total from details + assets matches the overview total_assets within 1%. UI detail page (1920): the Übersicht watchlist shows 3 TITEL (AAPL, VOLV-B.ST, DBK). The Aufträge tab lists the 4 orders (Kauf DBK 20, Verkauf VOLV 2, Kauf VOLV 12, Kauf AAPL 3, all Ausgeführt). The Aktivitäten tab lists 8 events. KPI Gesamtvermögen is 7.302,60 € vs overview 7.303,70 € (quote movement only); Aktien is 2.522,60 €, valued with market quotes and IPO estimates. All 7 tabs render. Overview 1920: the KD number is on one line, and the table testids are unique (open/delete count 1 each; the card variants -card- count 1 each). All 9 filter chip counts equal the rows shown (26/26/0/0/2/24/2/23/5). Search 'kd-0a98' returns 1 row. All 8 sort options reorder the list. Mobile 390: 26 cards, table hidden, scrollWidth 390, the card open button navigates, and the detail page has no overflow. /admin, /admin/ipo-requests and /admin/stock-orders load with no page errors. Remaining issue: the desktop table still overflows horizontally at 1920 (scrollWidth 1298 vs clientWidth 1214, 84 px, worse than the 19 px in iter104). The 'Kunde öffnen' button is visibly cut off ('Kunde öffne') and 'Löschen' sits outside the visible area (right edge 1751 vs wrapper 1677).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/admin/customers/{id}/details", "issue": "Activity event_type shows the raw English status ('allocated', 'executed', 'approved') in an otherwise German UI. Map it to Zugeteilt / Ausgeführt / Genehmigt."},
+      {"endpoint": "GET /api/admin/customers/{id}/details", "issue": "The watchlist stocks.name falls back to display_name, which is missing in the seed, so the UI shows the symbol twice (AAPL | AAPL). Look up the name from the stocks/quote cache instead."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CustomerOverview desktop table (1920)", "issue": "Horizontal overflow of 84 px. The table is 1298 px wide inside a 1214 px wrapper. The actions td is 197 px (Kunde öffnen + Löschen side by side, nowrap) and Positionen is 167 px ('7 + 3 Zins (2 Ersatzbew.)' on one line). 'Kunde öffnen' is cut to 'Kunde öffne' and the delete button is off-screen until you scroll horizontally. Fix: make delete icon-only, let the Positionen hint wrap to a second line, or use table-fixed with explicit column widths.", "selector": "[data-testid=admin-users-table-wrap]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Detail Übersicht Watchlist", "issues": ["The symbol is shown twice per row when no name is available; hide the right-hand label when it equals the symbol."]},
+      {"screen": "Detail Aktivitäten", "issues": ["Status words are untranslated English (allocated/executed/approved)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_admin_customer_details_iter105.py", "/app/backend/tests/test_admin_customer_overview_iter104.py", "/app/test_reports/pytest/pytest_iter105.xml"],
+  "action_items": [
+    "Fix the /admin/users desktop table overflow at 1920 (84 px; the action buttons are clipped). Use an icon-only delete button, let the Positionen hint wrap, or set fixed column widths.",
+    "Optional: translate activity statuses to German, and avoid duplicating the symbol in watchlist rows when no name is available."
+  ],
+  "critical_code_review_comments": [
+    "customer_details builds the activity feed with 5 sequential per-collection queries (limit 50 each). This is fine for now; there is no projection, but the documents are small.",
+    "The price_map keys are upper-cased and the frontend also upper-cases on lookup, so they are consistent (this fixes the iter104 case-mismatch concern for the detail page).",
+    "AdminUserDetail.js is still 977 lines; split the tab contents into components.",
+    "The details endpoint fails independently with a toast and empty arrays, which is good graceful degradation."
+  ],
+  "updated_files": ["/app/backend/tests/test_admin_customer_details_iter105.py"],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "~93% (everything passes except the desktop table overflow / clipped actions)"},
+  "test_credentials": "qa.admin@kapital-direkt24.de / Qa-ra46CVrWIW3wg6l5EI6IKqbx (admin). test_eur_qa@example.com / TestEur-Qa-2026! (customer).",
+  "seed_data_creation": "None. The existing fixture was used (user 6ae46a0be3b6155b0a980904, KD-0A980904) and not cleaned.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "UI login: a visitor-welcome-gate modal blocks the /login form. Log in with page.request.post('/api/auth/login') instead; it shares the cookies with the page. QA totals are about 7302-7304 € (they move with quotes). Filter counts: all 26, active 26, depot 2, nodepot 24, open 2, idle 23, admins 5. Table testids admin-users-open-btn-<id> and card testids admin-users-open-btn-card-<id> are now unique. To check the overflow, compare admin-users-table-wrap scrollWidth against clientWidth (expect them to be equal).",
+  "rca of the issue": "The table overflows because the actions column renders two nowrap buttons in a row (197 px) and the Positionen cell does not wrap the '(n Ersatzbew.)' hint. With table w-full, the sum of the columns (1298 px) exceeds the 1214 px content width, so overflow-x-auto scrolls and clips the actions."
+}
