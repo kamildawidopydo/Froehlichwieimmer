@@ -6,6 +6,7 @@ import StockLogo from '@/components/StockLogo';
 import BondLogo from '@/components/BondLogo';
 import { formatEUR, formatEURSigned, formatDate } from '@/lib/dashboardFormatters';
 import { cn } from '@/lib/utils';
+import { FallbackNote } from '@/components/mein-depot/DepotPositionRow';
 
 /**
  * MeinePositionen — Positionen-Tabelle für /mein-depot (Session 81.06 Schritt 3/7).
@@ -130,6 +131,7 @@ const MeinePositionen = () => {
         weight,
         dayPct,
         to: `${stockBase}/${encodeURIComponent(m.symbol)}`,
+        fallback: !m.hasValuation,
       };
     });
   }, [stockMetrics, stockPriceMap, totalPortfolio, stockBase]);
@@ -155,9 +157,10 @@ const MeinePositionen = () => {
         marktwert,
         kursgv: Number(m.kursgv || 0),
         gvPct: Number.isFinite(Number(m.rendite)) ? Number(m.rendite) : null,
-        currentYield: m.currentYield,
-        approxYtm: m.approxYtm,
+        currentYield: b.kurs_is_fallback ? null : m.currentYield,
+        approxYtm: b.kurs_is_fallback ? null : m.approxYtm,
         weight,
+        fallback: !!b.kurs_is_fallback,
       };
     });
   }, [bondPositions, computeBondMetrics, totalPortfolio]);
@@ -331,9 +334,9 @@ const MeinePositionen = () => {
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text-muted">{r.qty ? r.qty.toLocaleString('de-DE',{maximumFractionDigits:4}) : '—'}</td>
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text">{r.avg > 0 ? formatEUR(r.avg) : '—'}</td>
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text">{priceFmt(r.price, r.currency)}</td>
-                          <td className="px-3 py-3 text-right font-semibold tabular-nums text-bank-text">{priceFmt(r.marktwert, r.currency)}</td>
-                          <td className="px-3 py-3 text-right tabular-nums">{r.einstand > 0 ? <span className={cn(r.gv >= 0 ? 'text-emerald-700' : 'text-rose-700')}>{formatEURSigned(r.gv)}</span> : <span className="text-bank-text-muted">—</span>}</td>
-                          <td className="px-3 py-3 text-right"><SignedPct value={r.gvPct} /></td>
+                          <td className="px-3 py-3 text-right font-semibold tabular-nums text-bank-text">{priceFmt(r.marktwert, r.currency)}{r.fallback && <FallbackNote testid={`mdp-fallback-${r.symbol}`} />}</td>
+                          <td className="px-3 py-3 text-right tabular-nums">{r.einstand > 0 && !r.fallback ? <span className={cn(r.gv >= 0 ? 'text-emerald-700' : 'text-rose-700')}>{formatEURSigned(r.gv)}</span> : <span className="text-bank-text-muted">—</span>}</td>
+                          <td className="px-3 py-3 text-right"><SignedPct value={r.fallback ? null : r.gvPct} /></td>
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text">{r.weight != null ? `${r.weight.toFixed(1).replace('.',',')} %` : <span className="text-bank-text-muted" title="Bezugsgröße nicht eindeutig (Fremdwährungsposition)">—</span>}</td>
                           <td className="px-3 py-3 text-right"><SignedPct value={r.dayPct} small /></td>
                           <td className="px-3 py-3 text-right">
@@ -359,14 +362,14 @@ const MeinePositionen = () => {
                           <p className="mt-0.5 font-mono text-[11px] text-bank-text-muted">{r.symbol} · {r.currency}</p>
                         </div>
                       </div>
-                      <p className="text-right text-[14px] font-semibold tabular-nums text-bank-text">{priceFmt(r.marktwert, r.currency)}</p>
+                      <p className="text-right text-[14px] font-semibold tabular-nums text-bank-text">{priceFmt(r.marktwert, r.currency)}{r.fallback && <FallbackNote testid={`mdp-fallback-card-${r.symbol}`} />}</p>
                     </div>
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[12px]">
                       <div><dt className="text-bank-text-muted">Stück</dt><dd className="tabular-nums text-bank-text">{r.qty ? r.qty.toLocaleString('de-DE',{maximumFractionDigits:4}) : '—'}</dd></div>
                       <div><dt className="text-bank-text-muted">Einstand</dt><dd className="tabular-nums text-bank-text">{r.avg > 0 ? formatEUR(r.avg) : '—'}</dd></div>
                       <div><dt className="text-bank-text-muted">Kurs</dt><dd className="tabular-nums text-bank-text">{priceFmt(r.price, r.currency)}</dd></div>
-                      <div><dt className="text-bank-text-muted">G/V</dt><dd>{r.einstand > 0 ? <span className={cn('tabular-nums', r.gv >= 0 ? 'text-emerald-700' : 'text-rose-700')}>{formatEURSigned(r.gv)}</span> : <span className="text-bank-text-muted">—</span>}</dd></div>
-                      <div><dt className="text-bank-text-muted">G/V %</dt><dd><SignedPct value={r.gvPct} small /></dd></div>
+                      <div><dt className="text-bank-text-muted">G/V</dt><dd>{r.einstand > 0 && !r.fallback ? <span className={cn('tabular-nums', r.gv >= 0 ? 'text-emerald-700' : 'text-rose-700')}>{formatEURSigned(r.gv)}</span> : <span className="text-bank-text-muted">—</span>}</dd></div>
+                      <div><dt className="text-bank-text-muted">G/V %</dt><dd><SignedPct value={r.fallback ? null : r.gvPct} small /></dd></div>
                       <div><dt className="text-bank-text-muted">Heute</dt><dd><SignedPct value={r.dayPct} small /></dd></div>
                       <div><dt className="text-bank-text-muted">Gewichtung</dt><dd className="tabular-nums text-bank-text">{r.weight != null ? `${r.weight.toFixed(1).replace('.',',')} %` : '—'}</dd></div>
                     </dl>
@@ -410,11 +413,11 @@ const MeinePositionen = () => {
                           </td>
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text">{r.nominal > 0 ? formatEUR(r.nominal) : '—'}</td>
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text">{r.kaufkurs != null ? `${r.kaufkurs.toFixed(2).replace('.',',')} %` : '—'}</td>
-                          <td className="px-3 py-3 text-right tabular-nums text-bank-text">{r.aktKurs != null ? `${r.aktKurs.toFixed(2).replace('.',',')} %` : '—'}</td>
-                          <td className="px-3 py-3 text-right font-semibold tabular-nums text-bank-text">{formatEUR(r.marktwert)}</td>
+                          <td className="px-3 py-3 text-right tabular-nums text-bank-text">{r.aktKurs != null && !r.fallback ? `${r.aktKurs.toFixed(2).replace('.',',')} %` : '—'}</td>
+                          <td className="px-3 py-3 text-right font-semibold tabular-nums text-bank-text">{formatEUR(r.marktwert)}{r.fallback && <FallbackNote testid={`mdp-fallback-${r.symbol}`} />}</td>
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text">{r.kupon != null ? `${r.kupon.toString().replace('.',',')} %` : '—'}</td>
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text-muted">{r.faellig ? formatDate(r.faellig) : '—'}</td>
-                          <td className="px-3 py-3 text-right"><SignedPct value={r.gvPct} /></td>
+                          <td className="px-3 py-3 text-right"><SignedPct value={r.fallback ? null : r.gvPct} /></td>
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text">{r.currentYield != null ? `${r.currentYield.toFixed(2).replace('.',',')} %` : '—'}</td>
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text">{r.approxYtm != null ? `${r.approxYtm.toFixed(2).replace('.',',')} %` : '—'}</td>
                           <td className="px-3 py-3 text-right tabular-nums text-bank-text">{r.weight != null ? `${r.weight.toFixed(1).replace('.',',')} %` : '—'}</td>
@@ -435,15 +438,15 @@ const MeinePositionen = () => {
                           {r.symbol && <p className="mt-0.5 font-mono text-[11px] text-bank-text-muted">{r.symbol}</p>}
                         </div>
                       </div>
-                      <p className="text-right text-[14px] font-semibold tabular-nums text-bank-text">{formatEUR(r.marktwert)}</p>
+                      <p className="text-right text-[14px] font-semibold tabular-nums text-bank-text">{formatEUR(r.marktwert)}{r.fallback && <FallbackNote testid={`mdp-fallback-card-${r.symbol}`} />}</p>
                     </div>
                     <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[12px]">
                       <div><dt className="text-bank-text-muted">Nominal</dt><dd className="tabular-nums text-bank-text">{r.nominal > 0 ? formatEUR(r.nominal) : '—'}</dd></div>
                       <div><dt className="text-bank-text-muted">Kupon</dt><dd className="tabular-nums text-bank-text">{r.kupon != null ? `${r.kupon.toString().replace('.',',')} %` : '—'}</dd></div>
                       <div><dt className="text-bank-text-muted">Kaufkurs</dt><dd className="tabular-nums text-bank-text">{r.kaufkurs != null ? `${r.kaufkurs.toFixed(2).replace('.',',')} %` : '—'}</dd></div>
-                      <div><dt className="text-bank-text-muted">Kurs</dt><dd className="tabular-nums text-bank-text">{r.aktKurs != null ? `${r.aktKurs.toFixed(2).replace('.',',')} %` : '—'}</dd></div>
+                      <div><dt className="text-bank-text-muted">Kurs</dt><dd className="tabular-nums text-bank-text">{r.aktKurs != null && !r.fallback ? `${r.aktKurs.toFixed(2).replace('.',',')} %` : '—'}</dd></div>
                       <div><dt className="text-bank-text-muted">Fälligkeit</dt><dd className="tabular-nums text-bank-text-muted">{r.faellig ? formatDate(r.faellig) : '—'}</dd></div>
-                      <div><dt className="text-bank-text-muted">G/V %</dt><dd><SignedPct value={r.gvPct} small /></dd></div>
+                      <div><dt className="text-bank-text-muted">G/V %</dt><dd><SignedPct value={r.fallback ? null : r.gvPct} small /></dd></div>
                       <div><dt className="text-bank-text-muted">Current Yield</dt><dd className="tabular-nums text-bank-text">{r.currentYield != null ? `${r.currentYield.toFixed(2).replace('.',',')} %` : '—'}</dd></div>
                       <div><dt className="text-bank-text-muted">YTM</dt><dd className="tabular-nums text-bank-text">{r.approxYtm != null ? `${r.approxYtm.toFixed(2).replace('.',',')} %` : '—'}</dd></div>
                     </dl>

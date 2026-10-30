@@ -8,6 +8,21 @@ const pct = (v) =>
 const eur = (v) => (v == null ? '–' : formatEUR(v));
 const signed = (v) => (v == null ? '–' : formatEURSigned(v));
 
+export const FALLBACK_TEXT = 'Ersatzbewertung auf Basis des Einstandswerts – kein aktueller Marktwert';
+
+export const FallbackNote = ({ testid }) => (
+  <span className="mt-0.5 block text-[10.5px] font-normal leading-tight text-amber-800" title={FALLBACK_TEXT} data-testid={testid}>
+    {FALLBACK_TEXT}
+  </span>
+);
+
+const ValueCell = ({ row }) => (
+  <>
+    <span className={row.fallback ? 'text-bank-text-muted' : ''}>{row.fallback ? `${eur(row.value)}*` : eur(row.value)}</span>
+    {row.fallback && <FallbackNote testid={`depot-fallback-${row.symbol}`} />}
+  </>
+);
+
 const KindBadge = ({ row }) => {
   if (row.kind === 'bond') return <span className="rounded bg-bank-bg px-1.5 py-0.5 text-[10px] text-bank-text-muted">Anleihe</span>;
   if (row.ipoUnlisted) {
@@ -74,7 +89,7 @@ export const DepotRow = React.memo(({ row, spark }) => (
     <td className="px-3 py-2.5 text-right tabular-nums">{Number(row.qty).toLocaleString('de-DE', { maximumFractionDigits: 4 })}</td>
     <td className="px-3 py-2.5 text-right tabular-nums">{row.kind === 'bond' ? `${row.avg.toLocaleString('de-DE')} %` : eur(row.avg)}</td>
     <td className="px-3 py-2.5 text-right tabular-nums">{row.kind === 'bond' ? (row.price != null ? `${row.price.toLocaleString('de-DE')} %` : '–') : eur(row.price)}</td>
-    <td className="px-3 py-2.5 text-right font-semibold tabular-nums" data-testid={`depot-value-${row.symbol}`}>{eur(row.value)}</td>
+    <td className="px-3 py-2.5 text-right font-semibold tabular-nums" data-testid={`depot-value-${row.symbol}`}><ValueCell row={row} /></td>
     <td className={`px-3 py-2.5 text-right tabular-nums ${pnlTone(row.gv)}`} data-testid={`depot-gv-${row.symbol}`}>
       <div>{signed(row.gv)}</div>
       <div className="text-[11px]">{pct(row.pct)}</div>
@@ -96,7 +111,7 @@ export const DepotCard = React.memo(({ row, spark }) => (
       <DevelopmentCell row={row} spark={spark} />
     </div>
     <div className="mt-2 grid grid-cols-3 gap-2 text-[12px]">
-      <div><p className="text-bank-text-muted">Wert</p><p className="font-semibold tabular-nums">{eur(row.value)}</p></div>
+      <div><p className="text-bank-text-muted">Wert</p><p className="font-semibold tabular-nums"><ValueCell row={row} /></p></div>
       <div className={pnlTone(row.gv)}><p className="text-bank-text-muted">G/V</p><p className="tabular-nums">{signed(row.gv)} · {pct(row.pct)}</p></div>
       <div className={pnlTone(row.dayAbs)}><p className="text-bank-text-muted">Heute</p><p className="tabular-nums">{signed(row.dayAbs)}</p></div>
     </div>

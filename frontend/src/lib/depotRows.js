@@ -11,6 +11,7 @@ export const buildDepotRows = ({ stockMetrics = [], stockPriceMap = {}, bondPosi
       key: `s-${m.id || m.symbol}`,
       kind: m.isIpoStake || m.isIpoValuation ? 'ipo' : 'stock',
       ipoUnlisted,
+      fallback: !m.hasValuation,
       symbol: m.symbol,
       name: m.stockName || m.symbol,
       qty: m.qty,
@@ -28,19 +29,21 @@ export const buildDepotRows = ({ stockMetrics = [], stockPriceMap = {}, bondPosi
   });
   const bonds = bondPositions.map((b) => {
     const bm = computeBondMetrics(b);
+    const fallback = !!b.kurs_is_fallback;
     return {
       key: `b-${b.id || b.isin}`,
       kind: 'bond',
       ipoUnlisted: false,
+      fallback,
       symbol: b.isin || '–',
       name: b.bond_name || b.isin || 'Anleihe',
       qty: bm.nominal,
       avg: Number(b.kaufkurs || 0),
-      price: b.aktueller_kurs != null ? Number(b.aktueller_kurs) : null,
+      price: !fallback && b.aktueller_kurs != null ? Number(b.aktueller_kurs) : null,
       value: bm.marktwert,
       cost: bm.einstand,
-      gv: bm.kursgv,
-      pct: bm.rendite,
+      gv: fallback ? null : bm.kursgv,
+      pct: fallback ? null : bm.rendite,
       dayAbs: null,
       dayPct: null,
       priceIsMarket: false,

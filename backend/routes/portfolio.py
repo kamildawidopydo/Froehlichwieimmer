@@ -166,6 +166,7 @@ def _serialize_position(doc: dict, kind: str) -> dict:
         "nominal_betrag": _num(doc.get("nominal_betrag") if doc.get("nominal_betrag") is not None else doc.get("nominal_amount")) if kind == "bond" else None,
         "avg_cost": _num(doc.get("avg_cost")),
         "aktueller_kurs": _num(doc.get("aktueller_kurs") if doc.get("aktueller_kurs") is not None else doc.get("average_purchase_price_pct")) if kind == "bond" else None,
+        "kurs_is_fallback": (doc.get("aktueller_kurs") is None) if kind == "bond" else None,
         "coupon_rate": doc.get("coupon_rate") if kind == "bond" else None,
         "bond_name": (doc.get("bond_name") or doc.get("name")) if kind == "bond" else None,
         "issuer": doc.get("issuer") if kind == "bond" else None,

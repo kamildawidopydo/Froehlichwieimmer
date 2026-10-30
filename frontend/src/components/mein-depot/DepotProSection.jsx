@@ -26,7 +26,7 @@ const DepotKpis = ({ rows, updatedAt }) => {
   const k = useMemo(() => computeDepotTotals(rows), [rows]);
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7" data-testid="depot-pro-kpis">
-      <Kpi label="Gesamtdepotwert" value={k.count ? formatEUR(k.value) : '—'} sub={k.unvaluedCount ? `inkl. ${k.unvaluedCount} ohne Bewertung (zum Einstand)` : 'Wertpapiere inkl. IPO'} testid="depot-kpi-value" />
+      <Kpi label="Gesamtdepotwert" value={k.count ? formatEUR(k.value) : '—'} sub={k.unvaluedCount ? `inkl. ${k.unvaluedCount} Ersatzbewertung(en) zum Einstand – kein Marktwert` : 'Wertpapiere inkl. IPO'} testid="depot-kpi-value" />
       <Kpi label="Investiertes Kapital" value={k.cost > 0 ? formatEUR(k.cost) : '—'} testid="depot-kpi-cost" />
       <Kpi label="Gesamtgewinn inkl. IPO" value={k.hasValued ? formatEURSigned(k.gv) : '—'} sub={k.hasValued ? `${pctTxt(k.gvPct)}${k.hasIpo ? ' · inkl. IPO-Schätzung' : ''}` : undefined} tone={k.hasValued ? pnlTone(k.gv) : undefined} testid="depot-kpi-gv" />
       <Kpi label="Gewinn börsennotiert" value={k.hasListed ? formatEURSigned(k.listedGv) : '—'} sub={k.hasListed ? `${pctTxt(k.listedGvPct)} · zum Marktkurs` : undefined} tone={k.hasListed ? pnlTone(k.listedGv) : undefined} testid="depot-kpi-gv-listed" />

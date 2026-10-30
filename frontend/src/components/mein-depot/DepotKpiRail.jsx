@@ -201,8 +201,11 @@ const HeuteSparklineFooter = ({ heroSnapshots }) => {
 
   return (
     <div className="mt-2.5 flex flex-col gap-1" data-testid="heute-sparkline-block">
-      <p className="text-[10.5px] text-bank-text-muted" data-testid="heute-trend-caption">
-        Verlauf Gesamtvermögen (Tagesstände)
+      <p className="text-[11px] font-semibold text-bank-text" data-testid="heute-trend-caption">
+        Verlauf Depotwert inkl. Liquidität (Tagesstände)
+      </p>
+      <p className="text-[10.5px] leading-snug text-bank-text-muted" data-testid="heute-trend-basis">
+        Liquidität + Aktien zum Börsenkurs + Anleihen. Ohne IPO-Schätzungen und Zinsanlagen. Verändert sich auch durch Ein- und Auszahlungen – keine reine Kursentwicklung.
       </p>
       <div className="inline-flex gap-1" role="tablist" aria-label="Trend-Zeitraum">
         {['7d', '30d'].map((r) => (
@@ -310,7 +313,7 @@ const DepotKpiRail = () => {
     const stockCount = rows.filter((r) => r.kind !== 'bond').length;
     const bondCount = rows.length - stockCount;
     const posTotal = rows.length;
-    const unvaluedNote = t.unvaluedCount > 0 ? ` · ${t.unvaluedCount} ohne Bewertung` : '';
+    const unvaluedNote = t.unvaluedCount > 0 ? ` · ${t.unvaluedCount} mit Ersatzbewertung (Einstand)` : '';
 
     return {
       hasPositions: posTotal > 0,
@@ -389,10 +392,14 @@ const DepotKpiRail = () => {
         secondary={kpis.heute.secondary}
         tone={kpis.heute.tone}
         testId="kpi-heute"
-        footer={kpis.hasPositions ? <HeuteSparklineFooter heroSnapshots={heroSnapshots} /> : null}
       />
       <KpiCell label="Liquidität" primary={kpis.cash.primary} secondary={kpis.cash.secondary} tone={kpis.cash.tone} testId="kpi-liquidity" />
       <KpiCell label="Positionen" primary={kpis.positionen.primary} secondary={kpis.positionen.secondary} tone={kpis.positionen.tone} testId="kpi-positionen" />
+      {kpis.hasPositions && (
+        <div className="col-span-2 max-w-md lg:col-span-3 xl:col-span-2" data-testid="depot-snapshot-trend">
+          <HeuteSparklineFooter heroSnapshots={heroSnapshots} />
+        </div>
+      )}
     </section>
   );
 };

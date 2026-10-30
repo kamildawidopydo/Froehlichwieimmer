@@ -69,7 +69,7 @@ const DepotAnalyseDialog = ({ open, onOpenChange, rows, totals }) => {
           </p>
           {a.unvalued.length > 0 && (
             <p className="text-[11.5px] text-bank-text-muted" data-testid="depot-analyse-unvalued">
-              Ohne aktuelle Bewertung (zum Einstand angesetzt): {a.unvalued.map((r) => r.name).join(', ')}
+              Ersatzbewertung auf Basis des Einstandswerts – kein aktueller Marktwert: {a.unvalued.map((r) => r.name).join(', ')}
             </p>
           )}
         </section>

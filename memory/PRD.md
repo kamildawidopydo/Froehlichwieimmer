@@ -400,3 +400,10 @@ Siehe `/app/memory/test_credentials.md`
 - Veröffentlichungsstatus: Live = Deploy-Run e2e665d2 (2026-10-29 15:55 UTC). 5 Redeploys am 29.10. wurden vom Agenten ausgelöst (trigger=agentic), kein Auto-Deploy. Custom Domains: SSL/DNS-Verifizierung noch „initializing“.
 - Offen: Admin-Erweiterung (wartet auf Freigabe), Veröffentlichung nur nach ausdrücklicher Freigabe.
 
+
+## 2026-10-30 · Nachgang Phase 1 + Analyse Phase 2 (nur Vorschau)
+- Live-Stand ermittelt: Live-Bundle (finance-platform-v2.emergent.host, main.864a2194.js) enthält ANT-IPO-Hinweis (Commit fb068ab, 29.10. 15:41 UTC), aber keine Phase-1-Strings; /api/stocks/sparklines live = 404. Live ≈ fb068ab. Diff fb068ab..HEAD = nur Phase 1 (15 Dateien, additive Änderungen).
+- „Heute (Börsenkurse)“ ohne Diagramm; Snapshot-Verlauf als eigener Block „Verlauf Depotwert inkl. Liquidität (Tagesstände)“ mit Berechnungsgrundlage.
+- Ersatzbewertung: Positionen ohne Marktwert (Aktie/IPO ohne Kurs bzw. Schätzung, Anleihe ohne aktueller_kurs → neues Feld `kurs_is_fallback`) zeigen „Ersatzbewertung auf Basis des Einstandswerts – kein aktueller Marktwert“, G/V „–“. Gilt für Depotübersicht, MeinePositionen, Analyse, KPIs.
+- Phase-2-Admin-Plan an Kunden geliefert; Umsetzung wartet auf Auswahl.
+
