@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip } from 'recharts';
 import { useDashboardData } from '@/context/DashboardDataContext';
-import { formatEUR, formatEURSigned } from '@/lib/dashboardFormatters';
+import { formatEUR, formatEURSigned, pnlToneKey } from '@/lib/dashboardFormatters';
+import { buildDepotRows, computeDepotTotals, pctTxt } from '@/lib/depotRows';
 import { cn } from '@/lib/utils';
 
 /**
@@ -201,6 +201,9 @@ const HeuteSparklineFooter = ({ heroSnapshots }) => {
 
   return (
     <div className="mt-2.5 flex flex-col gap-1" data-testid="heute-sparkline-block">
+      <p className="text-[10.5px] text-bank-text-muted" data-testid="heute-trend-caption">
+        Verlauf Gesamtvermögen (Tagesstände)
+      </p>
       <div className="inline-flex gap-1" role="tablist" aria-label="Trend-Zeitraum">
         {['7d', '30d'].map((r) => (
           <button
@@ -284,24 +287,14 @@ const HeuteSparklineFooter = ({ heroSnapshots }) => {
 const DepotKpiRail = () => {
   const {
     loading,
-    depotEinstand,
-    depotGV,
-    bondsEinstand,
-    bondsGV,
     cashBalance,
     stockMetrics,
+    stockPriceMap,
     activeBonds,
+    computeBondMetrics,
     dashboardFetchHadFailure,
-    portfolioSummary,
-    refreshPortfolioSummary,
     heroSnapshots,
   } = useDashboardData();
-
-  // Session 82.24 · Depot Phase 4B-Final — serverseitige Summary beim Mount ziehen.
-  useEffect(() => {
-    refreshPortfolioSummary?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Wenn technischer Fetch-Fehler UND alle Bestandswerte 0 → Werte als „—"
   // anzeigen statt suggestive „0,00 €" — differenziert von echtem leeren Depot.
@@ -311,103 +304,38 @@ const DepotKpiRail = () => {
     (activeBonds || []).length === 0;
 
   const kpis = useMemo(() => {
-    // Session 82.24 · Server-Summary als Source of Truth (Fallback: Frontend-Aggregation).
-    const s = portfolioSummary;
-    const useServer = !!s;
-    const stocksMV = useServer ? Number(s.stocks?.market_value ?? 0) : Number(depotGV || 0) + Number(depotEinstand || 0);
-    const stocksCost = useServer ? Number(s.stocks?.cost_basis ?? 0) : Number(depotEinstand || 0);
-    const bondsCost = Number(bondsEinstand || 0);
-    const wpEinstand = useServer ? stocksCost + bondsCost : Number(depotEinstand || 0) + bondsCost;
-    const wpGV = useServer ? Number(s.profit_loss ?? 0) + Number(bondsGV || 0) : Number(depotGV || 0) + Number(bondsGV || 0);
-    const wpGVPct = wpEinstand > 0 ? (wpGV / wpEinstand) * 100 : null;
-    const gvUp = wpGV >= 0;
-
-    const stockCount = useServer ? Number(s.stocks?.positions ?? 0) : (stockMetrics || []).length;
-    const bondCount = useServer ? Number(s.bonds?.positions ?? 0) : (activeBonds || []).length;
-    const posTotal = stockCount + bondCount;
-
-    // Session 82.38 · „Heute" nur aus echten Portfolio-Snapshots (2+ Tage), keine Intraday-Simulation.
-    const snapDelta = computeSnapshotDayChange(heroSnapshots);
-    const stocksValIncomplete = useServer && s.stocks?.valuation_complete === false;
+    // Same rows + price snapshot as the Depotübersicht (no separate server summary).
+    const rows = buildDepotRows({ stockMetrics, stockPriceMap, bondPositions: activeBonds || [], computeBondMetrics });
+    const t = computeDepotTotals(rows);
+    const stockCount = rows.filter((r) => r.kind !== 'bond').length;
+    const bondCount = rows.length - stockCount;
+    const posTotal = rows.length;
+    const unvaluedNote = t.unvaluedCount > 0 ? ` · ${t.unvaluedCount} ohne Bewertung` : '';
 
     return {
-      // 1. Investiert
       investiert: {
-        primary: wpEinstand > 0 ? formatEUR(wpEinstand) : '—',
-        secondary:
-          wpEinstand > 0
-            ? 'Aktien- und Anleihen-Einstand'
-            : 'Noch keine Wertpapiere im Depot',
+        primary: t.cost > 0 ? formatEUR(t.cost) : '—',
+        secondary: t.cost > 0 ? 'Einstand Aktien, IPO und Anleihen' : 'Noch keine Wertpapiere im Depot',
       },
-      // 2. Gesamt G/V
       gv: {
-        primary: wpEinstand > 0 ? formatEURSigned(wpGV) : '—',
-        tone: wpEinstand > 0 ? (gvUp ? 'pos' : 'neg') : 'muted',
-        secondary:
-          wpGVPct == null ? (
-            stocksValIncomplete
-              ? 'Kurse teilweise nicht verfügbar'
-              : 'Kein Wertpapier-Einstand hinterlegt'
-          ) : (
-            <span className="inline-flex items-center gap-1 tabular-nums">
-              {gvUp ? (
-                <ArrowUpRight size={12} strokeWidth={1.6} aria-hidden />
-              ) : (
-                <ArrowDownRight size={12} strokeWidth={1.6} aria-hidden />
-              )}
-              <span aria-hidden>{gvUp ? '+' : ''}</span>
-              <span className="sr-only">
-                {gvUp ? 'positiv ' : 'negativ '}
-              </span>
-              {wpGVPct.toFixed(2).replace('.', ',')} % Wertpapiere
-            </span>
-          ),
+        primary: t.hasValued ? formatEURSigned(t.gv) : '—',
+        tone: t.hasValued ? pnlToneKey(t.gv) : 'muted',
+        secondary: t.hasValued
+          ? `${pctTxt(t.gvPct)}${t.hasIpo ? ' · inkl. IPO-Schätzung' : ''}${unvaluedNote}`
+          : 'Keine Bewertung verfügbar',
       },
-      // 3. Heute — Tages-Delta aus echten Portfolio-Snapshots (Session 82.38).
-      // 0 Snapshots → „—"; 1 Snapshot → „Noch kein Vergleichswert";
-      // 2+ mit valuation_complete=false → „—" + Hinweis („keine scheinpräzise Performance");
-      // 2+ vollständig → abs + optional % (null wenn previous.total_value ≤ 0).
-      heute: (() => {
-        if (snapDelta.count === 0) {
-          return { primary: '—', tone: 'muted', secondary: 'Noch kein Depot-Snapshot vorhanden' };
-        }
-        if (snapDelta.count === 1) {
-          return { primary: '—', tone: 'muted', secondary: 'Noch kein Vergleichswert vom Vortag' };
-        }
-        if (snapDelta.incomplete) {
-          return {
-            primary: '—',
-            tone: 'muted',
-            secondary: 'Bewertung unvollständig — Vergleich nicht verlässlich',
-          };
-        }
-        const dayUp = (snapDelta.absolute || 0) >= 0;
-        const absTxt = formatEURSigned(snapDelta.absolute);
-        return {
-          primary: absTxt,
-          tone: snapDelta.absolute === 0 ? 'neutral' : dayUp ? 'pos' : 'neg',
-          secondary: (
-            <span className="inline-flex items-center gap-1 tabular-nums">
-              {snapDelta.absolute === 0 ? null : dayUp ? (
-                <ArrowUpRight size={12} strokeWidth={1.6} aria-hidden />
-              ) : (
-                <ArrowDownRight size={12} strokeWidth={1.6} aria-hidden />
-              )}
-              {snapDelta.pct == null ? (
-                <span>Vs. Vortag · % nicht berechenbar</span>
-              ) : (
-                <>
-                  <span aria-hidden>{dayUp && snapDelta.absolute !== 0 ? '+' : ''}</span>
-                  <span className="sr-only">
-                    {dayUp ? 'positiv ' : 'negativ '}
-                  </span>
-                  <span>{snapDelta.pct.toFixed(2).replace('.', ',')} % vs. Vortag</span>
-                </>
-              )}
-            </span>
-          ),
-        };
-      })(),
+      listed: {
+        primary: t.hasListed ? formatEURSigned(t.listedGv) : '—',
+        tone: t.hasListed ? pnlToneKey(t.listedGv) : 'muted',
+        secondary: t.hasListed ? `${pctTxt(t.listedGvPct)} · Aktien & Anleihen zum Marktkurs` : 'Keine börsennotierten Positionen',
+      },
+      heute: t.day == null
+        ? { primary: '—', tone: 'muted', secondary: 'Keine aktuellen Börsenkurse' }
+        : {
+            primary: formatEURSigned(t.day),
+            tone: pnlToneKey(t.day),
+            secondary: `${pctTxt(t.dayPct)} · nur Börsenkurse, ohne IPO`,
+          },
       // 4. Liquidität
       cash: {
         primary: uncertain ? '—' : formatEUR(cashBalance || 0),
@@ -422,30 +350,19 @@ const DepotKpiRail = () => {
           ? 'Wert derzeit nicht verfügbar'
           : posTotal === 0
             ? 'Noch keine Wertpapiere im Depot'
-            : `${stockCount} Aktien · ${bondCount} Anleihen`,
+            : `${stockCount} Aktien/IPO · ${bondCount} Anleihen`,
       },
     };
-  }, [
-    depotEinstand,
-    depotGV,
-    bondsEinstand,
-    bondsGV,
-    stockMetrics,
-    activeBonds,
-    cashBalance,
-    heroSnapshots,
-    portfolioSummary,
-    uncertain,
-  ]);
+  }, [stockMetrics, stockPriceMap, activeBonds, computeBondMetrics, cashBalance, uncertain]);
 
   if (loading) {
     return (
       <section
         aria-label="Kennzahlen werden geladen"
         data-testid="mein-depot-kpi-rail-skeleton"
-        className="mb-12 grid grid-cols-2 gap-x-8 gap-y-8 lg:grid-cols-5"
+        className="mb-12 grid grid-cols-2 gap-x-8 gap-y-8 lg:grid-cols-3 xl:grid-cols-6"
       >
-        {[0, 1, 2, 3, 4].map((i) => (
+        {[0, 1, 2, 3, 4, 5].map((i) => (
           <div key={i} className={KPI_BASE}>
             <div className="h-3 w-16 animate-pulse rounded-sm bg-bank-border/40" />
             <div className="mt-2 h-6 w-24 animate-pulse rounded-sm bg-bank-border/50" />
@@ -460,12 +377,13 @@ const DepotKpiRail = () => {
     <section
       aria-label="Depot-Kennzahlen"
       data-testid="mein-depot-kpi-rail"
-      className="mb-12 grid grid-cols-2 gap-x-8 gap-y-8 lg:grid-cols-5"
+      className="mb-12 grid grid-cols-2 gap-x-8 gap-y-8 lg:grid-cols-3 xl:grid-cols-6"
     >
       <KpiCell label="Investiert" primary={kpis.investiert.primary} secondary={kpis.investiert.secondary} testId="kpi-investiert" />
-      <KpiCell label="Gesamt G/V" primary={kpis.gv.primary} secondary={kpis.gv.secondary} tone={kpis.gv.tone} testId="kpi-gv" />
+      <KpiCell label="Gesamtgewinn inkl. IPO" primary={kpis.gv.primary} secondary={kpis.gv.secondary} tone={kpis.gv.tone} testId="kpi-gv" />
+      <KpiCell label="Gewinn börsennotiert" primary={kpis.listed.primary} secondary={kpis.listed.secondary} tone={kpis.listed.tone} testId="kpi-gv-listed" />
       <KpiCell
-        label="Heute"
+        label="Heute (Börsenkurse)"
         primary={kpis.heute.primary}
         secondary={kpis.heute.secondary}
         tone={kpis.heute.tone}

@@ -959,7 +959,8 @@ async def create_order(
 
     # Unlisted IPO stake (allocated, no market quote): no regular exchange order — checked first.
     if await db.ipo_requests.find_one(
-        {"$or": [{"user_id": uid}, {"user_id": str(uid)}], "ticker": sym, "status": "allocated"},
+        {"$or": [{"user_id": uid}, {"user_id": str(uid)}],
+         "ticker": {"$regex": f"^\\s*{re.escape(sym)}\\s*$", "$options": "i"}, "status": "allocated"},
         {"_id": 1},
     ) and (await get_stock_quotes(db, [sym])).get(sym, {}).get("price") is None:
         raise HTTPException(status_code=409, detail="Diese IPO-Beteiligung ist nicht börsennotiert – kein regulärer Börsenhandel möglich.")

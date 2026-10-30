@@ -16,7 +16,7 @@ EMAIL = "test_eur_qa@example.com"
 PASSWORD = "TestEur-Qa-2026!"
 D = lambda v: Decimal128(Decimal(str(v)))  # noqa: E731
 COLLS = ["cash_ledger", "stock_positions", "stock_orders", "watchlists", "stock_alerts",
-         "ipo_requests", "portfolio_snapshots", "order_executions", "price_alerts", "ipo_allocations"]
+         "ipo_requests", "portfolio_snapshots", "order_executions", "price_alerts", "ipo_allocations", "depot_contracts", "bond_positions"]
 
 
 async def clean(db):
@@ -90,6 +90,23 @@ async def seed(db):
         {**base_req, "company_name": "TEST_EUR Teilzuteilung AG", "ticker": "PRVPA", "amount_eur": 400.0,
          "shares_requested": 10, "status": "approved", "handled_at": now},
     ])
+    bank = await db.banks.find_one({}) or {}
+    for ptype, amt, active in (("festgeld", 1000.0, True), ("tagesgeld", 500.0, True), ("flexgeld", 300.0, True),
+                               ("festgeld", 9999.0, False)):
+        await db.depot_contracts.insert_one({
+            "user_id": uid, "bank_id": str(bank.get("_id", "")), "bank_name": bank.get("name", "TEST Bank"),
+            "bank_slug": bank.get("slug"), "product_type": ptype, "amount_eur": amt, "zinssatz": 2.0,
+            "laufzeit_monate": 12 if ptype != "tagesgeld" else None,
+            "active_from": (now - timedelta(days=30)).strftime("%Y-%m-%d"), "active_until": None,
+            "note": "TEST_EUR", "is_active": active, "created_at": now, "updated_at": now,
+        })
+    for isin, active in (("TEST_BOND_ACTIVE", True), ("TEST_BOND_INACTIVE", False)):
+        await db.bond_positions.insert_one({
+            "user_id": uid, "bond_id": "test", "isin": isin, "bond_name": f"TEST_EUR {isin}", "issuer": "TEST AG",
+            "currency": "EUR", "nominal_amount": D("1000"), "average_purchase_price_pct": D("98.0000"),
+            "cost_basis": D("980.00"), "kupon_rate": 3.0, "coupon_rate": 3.0, "maturity_date": "2029-12-31",
+            "denomination": 100, "is_active": active, "created_at": now, "updated_at": now,
+        })
     print("seeded", uid)
 
 

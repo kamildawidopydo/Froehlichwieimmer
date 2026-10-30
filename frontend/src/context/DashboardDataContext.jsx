@@ -707,6 +707,16 @@ export const DashboardDataProvider = ({ children }) => {
     const tagesgeldTotal = tagesgeldAggregate.currentValueGrossTotal;
     const flexgeldTotal = flexgeldAggregate.currentValueGrossTotal;
     const festgeldTotal = festgeldAggregate.totalAmountEur;
+    // Current values of active contracts per type; sums exactly to contractsTotal.
+    const contractValues = {
+      festgeld: festgeldAggregate.currentValueGrossTotal,
+      tagesgeld: tagesgeldTotal,
+      flexgeld: flexgeldTotal,
+    };
+    contractValues.sonstige = Math.max(
+      0,
+      contractsTotal - contractValues.festgeld - contractValues.tagesgeld - contractValues.flexgeld,
+    );
 
     const cash = Number(state.cashBalance || 0);
     const gesamtvermoegen = cash + depotWert + festgeldAnleihenTotal;
@@ -736,6 +746,7 @@ export const DashboardDataProvider = ({ children }) => {
       tagesgeldTotal,
       flexgeldTotal,
       festgeldTotal,
+      contractValues,
       portfolioAggregate,
       festgeldAggregate,
       tagesgeldAggregate,

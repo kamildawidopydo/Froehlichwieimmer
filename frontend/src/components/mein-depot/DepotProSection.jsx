@@ -2,13 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { PieChart, Search } from 'lucide-react';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import { formatEUR, formatEURSigned, pnlTone } from '@/lib/dashboardFormatters';
-import { buildDepotRows, filterSortRows, DEPOT_FILTERS } from '@/lib/depotRows';
+import { buildDepotRows, filterSortRows, computeDepotTotals, pctTxt, DEPOT_FILTERS } from '@/lib/depotRows';
 import useDepotSparklines from '@/hooks/useDepotSparklines';
 import { DepotRow, DepotCard } from '@/components/mein-depot/DepotPositionRow';
 import DepotAnalyseDialog from '@/components/mein-depot/DepotAnalyseDialog';
-
-const pctTxt = (v) =>
-  v == null ? '–' : `${Math.round(v * 100) > 0 ? '+' : ''}${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
 
 const COLUMNS = [
   ['name', 'Wertpapier', 'text-left'], [null, 'Stück', 'text-right'], [null, 'Einstand (EUR)', 'text-right'],
@@ -26,24 +23,15 @@ const Kpi = ({ label, value, sub, tone, testid }) => (
 );
 
 const DepotKpis = ({ rows, updatedAt }) => {
-  const k = useMemo(() => {
-    const value = rows.reduce((s, r) => s + r.value, 0);
-    const cost = rows.reduce((s, r) => s + r.cost, 0);
-    const gv = rows.reduce((s, r) => s + (r.gv ?? 0), 0);
-    const day = rows.reduce((s, r) => s + (r.dayAbs ?? 0), 0);
-    // Daily % relative to listed positions with a market quote only (no IPO estimates).
-    const listedValue = rows.filter((r) => r.dayAbs != null).reduce((s, r) => s + r.value, 0);
-    const dayBase = listedValue - day;
-    return { value, cost, gv, gvPct: cost > 0 ? (gv / cost) * 100 : null, day, dayPct: dayBase > 0 ? (day / dayBase) * 100 : null };
-  }, [rows]);
-  const hasIpo = rows.some((r) => r.kind === 'ipo');
+  const k = useMemo(() => computeDepotTotals(rows), [rows]);
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-6" data-testid="depot-pro-kpis">
-      <Kpi label="Gesamtdepotwert" value={formatEUR(k.value)} testid="depot-kpi-value" />
-      <Kpi label="Gewinn / Verlust" value={formatEURSigned(k.gv)} sub={`${pctTxt(k.gvPct)}${hasIpo ? ' · inkl. IPO-Schätzung' : ''}`} tone={pnlTone(k.gv)} testid="depot-kpi-gv" />
-      <Kpi label="Tagesentwicklung" value={formatEURSigned(k.day)} sub={`${pctTxt(k.dayPct)} · nur Börsenkurse`} tone={pnlTone(k.day)} testid="depot-kpi-day" />
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7" data-testid="depot-pro-kpis">
+      <Kpi label="Gesamtdepotwert" value={formatEUR(k.value)} sub="Wertpapiere inkl. IPO" testid="depot-kpi-value" />
       <Kpi label="Investiertes Kapital" value={formatEUR(k.cost)} testid="depot-kpi-cost" />
-      <Kpi label="Positionen" value={String(rows.length)} testid="depot-kpi-count" />
+      <Kpi label="Gesamtgewinn inkl. IPO" value={k.hasValued ? formatEURSigned(k.gv) : '–'} sub={`${pctTxt(k.gvPct)}${k.hasIpo ? ' · inkl. IPO-Schätzung' : ''}`} tone={k.hasValued ? pnlTone(k.gv) : undefined} testid="depot-kpi-gv" />
+      <Kpi label="Gewinn börsennotiert" value={k.hasListed ? formatEURSigned(k.listedGv) : '–'} sub={`${pctTxt(k.listedGvPct)} · zum Marktkurs`} tone={k.hasListed ? pnlTone(k.listedGv) : undefined} testid="depot-kpi-gv-listed" />
+      <Kpi label="Tagesentwicklung" value={k.day == null ? '–' : formatEURSigned(k.day)} sub={`${pctTxt(k.dayPct)} · nur Börsenkurse`} tone={k.day == null ? undefined : pnlTone(k.day)} testid="depot-kpi-day" />
+      <Kpi label="Positionen" value={String(k.count)} sub={k.unvaluedCount ? `${k.unvaluedCount} ohne Bewertung` : undefined} testid="depot-kpi-count" />
       <Kpi
         label="Letzte Kursaktualisierung"
         value={updatedAt ? new Date(updatedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '–'}
@@ -55,15 +43,15 @@ const DepotKpis = ({ rows, updatedAt }) => {
 };
 
 const DepotProSection = () => {
-  const { stockMetrics, stockPriceMap, stockPricesUpdatedAt, bondPositions, computeBondMetrics, festgeldTotal, tagesgeldTotal, flexgeldTotal } = useDashboardData();
+  const { stockMetrics, stockPriceMap, stockPricesUpdatedAt, activeBonds, computeBondMetrics, contractValues, cashBalance, gesamtvermoegen } = useDashboardData();
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState({ key: 'value', dir: 'desc' });
   const [analyseOpen, setAnalyseOpen] = useState(false);
 
   const rows = useMemo(
-    () => buildDepotRows({ stockMetrics, stockPriceMap, bondPositions, computeBondMetrics }),
-    [stockMetrics, stockPriceMap, bondPositions, computeBondMetrics],
+    () => buildDepotRows({ stockMetrics, stockPriceMap, bondPositions: activeBonds || [], computeBondMetrics }),
+    [stockMetrics, stockPriceMap, activeBonds, computeBondMetrics],
   );
   const visible = useMemo(() => filterSortRows(rows, { filter, query, sortKey: sort.key, sortDir: sort.dir }), [rows, filter, query, sort]);
   const sparks = useDepotSparklines(rows.filter((r) => r.kind !== 'bond' && !r.ipoUnlisted).map((r) => r.symbol));
@@ -127,7 +115,7 @@ const DepotProSection = () => {
         )}
       </div>
       <DepotAnalyseDialog open={analyseOpen} onOpenChange={setAnalyseOpen} rows={rows}
-        totals={{ festgeld: festgeldTotal, tagesgeld: tagesgeldTotal, flexgeld: flexgeldTotal }} />
+        totals={{ ...contractValues, cash: Number(cashBalance) || 0, gesamt: gesamtvermoegen }} />
     </section>
   );
 };

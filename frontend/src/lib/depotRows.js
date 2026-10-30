@@ -4,8 +4,9 @@ export const buildDepotRows = ({ stockMetrics = [], stockPriceMap = {}, bondPosi
     const listed = m.marketPrice != null;
     const ipoUnlisted = (m.isIpoStake || m.isIpoValuation) && !listed;
     const px = stockPriceMap[m.symbol] || {};
-    // Daily change only from real market quotes; never for unlisted IPO estimates.
-    const dayAbs = !ipoUnlisted && px.change_abs != null ? m.qty * Number(px.change_abs) : null;
+    // Price comes from a real exchange quote (not from an IPO estimate).
+    const priceIsMarket = listed && m.ipoListingPerLot == null;
+    const dayAbs = priceIsMarket && px.change_abs != null ? m.qty * Number(px.change_abs) : null;
     return {
       key: `s-${m.id || m.symbol}`,
       kind: m.isIpoStake || m.isIpoValuation ? 'ipo' : 'stock',
@@ -20,7 +21,8 @@ export const buildDepotRows = ({ stockMetrics = [], stockPriceMap = {}, bondPosi
       gv: m.hasValuation ? m.gv : null,
       pct: m.hasValuation ? m.pct : null,
       dayAbs,
-      dayPct: !ipoUnlisted && px.change_pct != null ? Number(px.change_pct) : null,
+      dayPct: priceIsMarket && px.change_pct != null ? Number(px.change_pct) : null,
+      priceIsMarket,
       logoUrl: m.logoUrl,
     };
   });
@@ -41,11 +43,49 @@ export const buildDepotRows = ({ stockMetrics = [], stockPriceMap = {}, bondPosi
       pct: bm.rendite,
       dayAbs: null,
       dayPct: null,
+      priceIsMarket: false,
     };
   });
   const rows = [...stocks, ...bonds];
   const total = rows.reduce((s, r) => s + (Number(r.value) || 0), 0);
   return rows.map((r) => ({ ...r, weight: total > 0 ? (r.value / total) * 100 : 0 }));
+};
+
+export const pctTxt = (v) =>
+  v == null ? '–' : `${Math.round(v * 100) > 0 ? '+' : ''}${(Math.round(v * 100) === 0 ? 0 : Number(v)).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
+
+const sumBy = (list, k) => list.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+const pctOf = (gv, cost) => (cost > 0 ? (gv / cost) * 100 : null);
+
+// Single source for all depot KPIs (same rows, same price snapshot).
+export const computeDepotTotals = (rows) => {
+  const valued = rows.filter((r) => r.gv != null);
+  const listed = valued.filter((r) => r.kind !== 'ipo');
+  const ipo = valued.filter((r) => r.kind === 'ipo');
+  const dayRows = rows.filter((r) => r.dayAbs != null);
+  const day = sumBy(dayRows, 'dayAbs');
+  const dayBase = sumBy(dayRows, 'value') - day;
+  const gv = sumBy(valued, 'gv');
+  const listedGv = sumBy(listed, 'gv');
+  const ipoGv = sumBy(ipo, 'gv');
+  return {
+    value: sumBy(rows, 'value'),
+    cost: sumBy(rows, 'cost'),
+    gv,
+    gvPct: pctOf(gv, sumBy(valued, 'cost')),
+    listedGv,
+    listedGvPct: pctOf(listedGv, sumBy(listed, 'cost')),
+    ipoGv,
+    ipoGvPct: pctOf(ipoGv, sumBy(ipo, 'cost')),
+    hasValued: valued.length > 0,
+    hasListed: listed.length > 0,
+    hasIpo: ipo.length > 0,
+    unvaluedCount: rows.length - valued.length,
+    day: dayRows.length ? day : null,
+    dayPct: dayRows.length && dayBase > 0 ? (day / dayBase) * 100 : null,
+    dayCount: dayRows.length,
+    count: rows.length,
+  };
 };
 
 export const DEPOT_FILTERS = [
