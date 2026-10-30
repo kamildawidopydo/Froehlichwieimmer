@@ -423,3 +423,12 @@ Siehe `/app/memory/test_credentials.md`
 - Zinsanlagen-Tab zeigt „aktuell … inkl. Zinsen“ je Vertrag.
 - Offen: Admin-Änderungsprotokoll (Plan vorgelegt, Freigabe Datenbankerweiterung ausstehend); Kunden-Depot fragt Kurse für nicht notierte IPO-Symbole weiterhin ab.
 
+
+## 2026-10-30 · Live-Freigabeprüfung (nur Vorschau, NICHT veröffentlicht)
+- Kursdienst: Symbole ohne je vorhandenen Kurs (nicht notierte IPOs, unbekannte Ticker) fragen den Anbieter max. alle 15 min ab (`_skip_unlisted_ipo` in stock_price_service.py) – gilt für Kunde und Admin.
+- Backup-Download-Route (/api/backup/*) deaktiviert (Security-Audit SEC-001); Dateien in backend/exports unangetastet.
+- StockDetail: bei nicht notierter IPO statt Kauf/Verkauf-Formular Hinweis „kein regulärer Börsenhandel“.
+- Tests iteration_107: Backend 21/21, Frontend alle Flows; Abgleich Kunde=Admin 7.305,75 € auf den Cent.
+- Security-Audit: CONDITIONAL PASS; offen SEC-002 (Admin-Positionsänderungen ohne Protokoll, Hard-Delete), CSRF/SameSite=None, Login-Rate-Limit pro IP, CORS-Default '*'.
+- Domains: apex+www HTTPS 200, Zertifikat Google Trust Services gültig bis 24.01.2027 (eigene Prüfung); Deployer-Tool meldet noch „initializing“. Live = Run e2e665d2 (29.10. 15:55 UTC). DB-Backup nicht verifizierbar; Rollback nur Code; keine Veröffentlichungssperre verfügbar.
+

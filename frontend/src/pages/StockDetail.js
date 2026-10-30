@@ -1303,7 +1303,14 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
 
           {/* Right: trade actions + position + order */}
           <DashboardStagger className="space-y-4">
-            {user && (
+            {user && ipoPhase && (
+              <DashboardStaggerItem>
+                <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900" data-testid="stock-detail-ipo-no-trading">
+                  Diese IPO-Beteiligung ist nicht börsennotiert – kein regulärer Börsenhandel möglich.
+                </p>
+              </DashboardStaggerItem>
+            )}
+            {user && !ipoPhase && (
               <DashboardStaggerItem>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -1415,6 +1422,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
             })()}
 
             {/* Order form */}
+            {!ipoPhase && (
             <DashboardStaggerItem>
             <DashboardPanel className="p-5" index={1}>
             <form ref={formRef} onSubmit={submitOrder}>
@@ -1619,6 +1627,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
             </form>
             </DashboardPanel>
             </DashboardStaggerItem>
+            )}
 
             <DashboardStaggerItem>
             <div className="space-y-4">

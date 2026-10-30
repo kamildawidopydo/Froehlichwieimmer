@@ -1,0 +1,46 @@
+{
+  "summary": "Go-live readiness check, preview only, read-only. The only writes were 2 AAPL limit orders for test_eur_qa (qty 1, limit 1.00 EUR), both cancelled; there are 0 order_executions. BACKEND: 21/21 pytest pass (new test_golive_iter107.py 17 tests plus iter106 regression 4). Security: unauthenticated /api/portfolio/* -> 401. Customer -> /api/admin/* (overview, other user's details, own details, users) -> 401/403. Portfolio endpoints return only own data. /api/backup/manifest -> 404. Bcrypt $2b$. httpOnly+Secure cookies. CORS rejects a foreign origin. Login lockout gives 429 on attempt 6. Order validation: selling 999 AAPL -> 400 'Stücke'; selling TESTIPO/PRVT3/PRVNV -> 409 'nicht börsennotiert'; buying 1000x300 -> 400 'Liquidität'; idempotency_key <8 chars -> 422; market order -> 400; valid limit order -> 201 pending, still pending after 3 s, position unchanged (3 AAPL), cancel -> 200 cancelled, cash available unchanged. SPEED: quotes for IPO symbols only (TESTIPO,PRVT3,PRVNV) all 'unavailable' in 0.058/0.062/0.078 s. Full depot quotes 0.97 s cold, then 0.04 s. Load times: dashboard networkidle 2.5 s; /mein-depot hero 1.27 s, networkidle 1.87 s; /admin/users rows 1.84 s (overview API 0.12 s); admin detail 1.8 s. /mein-depot load makes 2 identical /api/portfolio/quotes calls (it was 3 before), then polls every 5 s by design (15 calls in ~80 s). RECONCILIATION at one moment (the same browser run captured the quotes the UI used): customer hero 7.305,75 € = admin overview total_assets 7305.75, exact to the cent. Components: cash 2000.00 + bonds 980.00 + contracts 1802.96 (1800 principal + 2.96 accrued) + stocks 2522.79 = 7305.75. Stocks: AAPL 3x311.6464=934.94 + VOLV 10x28.2051=282.05 + DBK 20x30.29=605.80 = 1822.79, plus IPO 700 (TESTIPO 4x25 + PRVT3 10x50 + PRVNV 5x20 at cost). UI quotes = admin price_map exactly. Later readings (7.305,66 and 7.305,19) are quote moves only; the 60 s stability sample showed the hero ticking once, from 7.305,75 to 7.305,66. EUR conversion: AAPL native 348.94 USD / fx_rate 1.11957 (EUR/USD) = 311.6732 EUR. VOLV-B.ST 309.60 SEK / 10.9732 = 28.2142 EUR. Both have currency EUR. NOTE: the API field names are native_price/native_currency, not original_price/original_currency. fx_rate is the EURxxx quote, so price = native_price / fx_rate (not * fx_rate). The math is correct; only the naming differs from the review request. FRONTEND 1920: KPI rail, Depotübersicht, filter counts all7/stock3/ipo3/bond1/win5/loss0 (shows no-match), search 'volv' -> 1 row, name/value sort toggle correct, sparklines for AAPL/DBK/VOLV and 'Keine Verlaufsdaten' for the IPOs, IPO badge on TESTIPO/PRVT3/PRVNV, Ersatzbewertung on PRVNV and TEST_BOND_ACTIVE, Depotanalyse dialog (sum 7.305,75; Ersatzbewertung list correct). Table scrollWidth = clientWidth (1342). No page overflow. 60 s sample: scrollY and scrollHeight constant, CLS 0. AAPL detail shows EUR with the FX note; TESTIPO detail shows the IPO-phase note and IPO valuation 25,00 €, with no chart. MOBILE 390: dashboard, mein-depot (7 cards, mobile sort select), AAPL and TESTIPO detail have no document overflow. 70 s stability constant. ADMIN: /admin/users all 9 filter chip counts equal the rows shown (26/26/0/0/2/24/2/23/5), search, 8 sort options, mobile 26 cards with no overflow. All 7 detail tabs render. /admin, /admin/ipo-requests, /admin/stock-orders, /admin/cash-balances and /admin/user-positions load with no page errors and no 4xx/5xx.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/portfolio/quotes (used by /admin/stock-orders)", "issue": "Unknown, non-IPO symbols from old test orders (BADSYM, STALEONLY, XYZQQ, MIX0) have no negative cache, so every call goes to the provider. Each call takes 2.5-4.6 s, the call runs twice on load, and /admin/stock-orders needs ~6-7 s to reach networkidle. _skip_unlisted_ipo only covers IPO tickers."},
+      {"endpoint": "POST /api/portfolio/orders (sell)", "issue": "The sell-quantity check uses stock_positions.find_one({user_id, symbol}) without is_active/quantity filters. It is fine today, but it is not consistent with the overview filter."},
+      {"endpoint": "server.py CORS", "issue": "CORS_ORIGINS falls back to '*' if the env var is missing (os.environ.get default). The env var is set in preview (a foreign origin is rejected), but the code should fail fast instead."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "StockDetail (TESTIPO / unlisted IPO)", "issue": "The Kaufen/Verkaufen buttons and the order form are still active for an unlisted IPO. The backend rejects both sides with 409 (the IPO guard runs before the side check), while the depot row correctly says 'Kein Börsenhandel'. Disable or hide the order form when ipoPhase is true, or show the note up front.", "selector": "[data-testid=stock-detail-buy-btn]", "priority": "MEDIUM"},
+      {"component": "StockDetail AAPL key figures", "issue": "Tages-Hoch 315,52 € is higher than 52-Wochen Hoch 313,96 €. The 52-week range probably uses daily closes or a different FX rate. The figures are inconsistent.", "selector": "StockDetail key figures", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "/mein-depot initial load", "issue": "2 identical /api/portfolio/quotes requests fire at mount (dedupe them). Polling every 5 s is by design.", "affected_selectors": []},
+      {"flow": "/admin/users", "issue": "/api/admin/customers/overview is fetched twice on load, and the admin's own /api/portfolio/orders and /api/portfolio/cash are also loaded (unneeded in the admin console).", "affected_selectors": []}
+    ],
+    "design_issues": [
+      {"screen": "StockDetail position card vs depot table", "issues": ["'Portfolio-Gewicht' on the AAPL detail is 12,79 % (share of Gesamtvermögen), while the depot table 'Anteil' is 26,69 % (share of securities). The different bases are not labeled."]},
+      {"screen": "StockDetail header", "issues": ["The title shows the ticker 'AAPL' instead of the company name."]},
+      {"screen": "Mobile depot card for the bond", "issues": ["G/V renders as '– · –'. A single '–' would read better."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_golive_iter107.py", "/app/backend/tests/test_admin_overview_reconcile_iter106.py", "/app/test_reports/pytest/pytest_iter107.xml"],
+  "action_items": [
+    "Add a short negative cache (for example 15 min, like _skip_unlisted_ipo) for symbols the provider returns no price for, so that /admin/stock-orders does not wait 2.5-4.6 s per quotes call. Dedupe the duplicate quotes call on that page.",
+    "StockDetail: when ipoPhase (unlisted IPO) is true, disable or hide the Kaufen/Verkaufen order form, matching the depot's 'Kein Börsenhandel' and the backend 409.",
+    "Dedupe the initial duplicate /api/portfolio/quotes on /mein-depot and the duplicate /api/admin/customers/overview on /admin/users.",
+    "Optional: label the basis of the stock-detail Portfolio-Gewicht. Fix the 52-week high/low so it includes the intraday high/low.",
+    "Optional: remove the CORS '*' default."
+  ],
+  "critical_code_review_comments": [
+    "_skip_unlisted_ipo: the first request after a backend restart still probes the provider once per IPO symbol, because the probe state is in process memory. That is acceptable. It returns 'unavailable' quickly afterwards (about 60 ms measured).",
+    "create_order: the IPO guard calls get_stock_quotes for allocated IPO tickers, which is now cheap thanks to the skip. The guard applies to buy as well as sell, so buying more of an unlisted IPO also gets 409 (intended?).",
+    "Order execution is admin-only (admin_execute_order). There is no background executor, so a pending order stays pending. Verified."
+  ],
+  "updated_files": ["/app/backend/tests/test_golive_iter107.py"],
+  "success_rate": {"backend": "100%", "frontend": "100% of the flows tested (2 minor UX bugs, 1 perf issue on /admin/stock-orders)"},
+  "test_credentials": "Customer test_eur_qa@example.com / TestEur-Qa-2026!; Admin qa.admin@kapital-direkt24.de / Qa-ra46CVrWIW3wg6l5EI6IKqbx (both work)",
+  "seed_data_creation": "None. 2 AAPL limit orders created and cancelled for test_eur_qa (client_reference TEST_iter107). 6 failed logins for the non-existent email TEST_nonexist_iter107@example.com (lockout test).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Bypass the visitor gate by setting localStorage kapitalmitte_visitor_profile and kapitalmitte_cookie_consent before reload. Log in via page.request.post /api/auth/login. pytest.ini uses xdist, so run with -n0 -s to see the prints. The QA user id changes on re-seed (resolve it by email via the overview). The quotes API exposes native_price/native_currency/fx_rate (price = native/fx_rate)."
+}
