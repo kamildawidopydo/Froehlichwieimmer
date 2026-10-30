@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 108, hardening checks (preview only, nothing deployed). BACKEND: 14/14 pytest pass (13 in test_hardening_iter108.py plus 1 IP lockout test). CSRF with a session cookie: Origin https://evil.example -> 403 'Anfrage von fremder Herkunft blockiert.'; Referer from the evil origin without an Origin -> 403; Origin 'null' -> 403; lookalike origin https://<preview-host>.evil.example -> 403; DELETE /api/watchlist with the evil origin -> 403. With Origin = preview URL, a market order gets the normal 400 'Market-Orders ...', and a limit order is placed (201) and cancelled (200). With no Origin/Referer the request is allowed (400 validation). Without a cookie and with the evil origin -> 401 'Not authenticated' (not blocked by CSRF). GET requests are not blocked. CORS: preflight from evil.example -> 400 with no Access-Control-Allow-Origin; preflight from the preview origin -> 200 with ACAO = the preview URL and Allow-Credentials true. Login limits: a non-existent email gives 5x401, then 429. 22 different non-existent emails from one public IP (34.7.135.173) give 20x401, then 429; the correct qa admin login also returns 429 while the IP is locked. After clearing the counters (21 docs deleted), admin login returns 200 again. Spoof check: X-Real-IP, CF-Connecting-IP and a prepended X-Forwarded-For had no effect in the preview. The preview ingress overwrites them, so all attempts counted on the real IP. FRONTEND: Customer UI login, then place an AAPL limit order (1 @ 1.00) on /dashboard/aktien/AAPL (201), then cancel it on /dashboard/auftraege after the window.confirm (200). Watchlist add MSFT (201) and remove MSFT (200). Logout (200), after which /auth/me returns 401. No 403 or 5xx during any normal use; every write passed the CSRF check, including the POST /api/alerts/check background calls. Admin UI: login, /admin/users (26 customers), search, then the test_eur_qa detail page with all 7 tabs. On /admin/ipo-requests the edit-valuation dialog, the allocate modal and the manual-assign dialog all open and close without saving. No writes besides login, no page errors. Quotes: first load of /dashboard makes 1 /api/portfolio/quotes call in 4 s, and first load of /mein-depot makes 1 call (it was 2 in iteration 107). Over 60 s on /mein-depot there were 12 calls about 5.4 s apart, with no duplicates within 3 s. Regression: /mein-depot hero 7.307,01 EUR and KPI rail render. Sparklines (svg) show for AAPL, DBK and VOLV-B.ST; TESTIPO, PRVT3 and PRVNV show 'Keine Verlaufsdaten'. The Depotanalyse dialog opens with the allocation. All Contact page fields and the submit button render (not submitted). The support page has no conversations, so no message could be marked read. Marking notifications read is client-side only (localStorage) and sends no API call.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "_client_ip (server.py ~99)", "issue": "Trusts the client headers CF-Connecting-IP / X-Real-IP / XFF[-3] first. In the preview the ingress overwrites them (spoofing verified ineffective). In production (essenceinvest.com behind Cloudflare / emergent.host) it must be confirmed that these headers cannot be set by the client; otherwise the per-IP limit can be bypassed with random X-Real-IP values."},
+      {"endpoint": "POST /api/auth/login", "issue": "A locked IP also blocks correct logins (by design). Customers behind a shared NAT or office IP could be locked out by 20 failed attempts from others. A successful login does not reset the IP counter. Acceptable, but worth documenting."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/dashboard/auftraege", "issues": ["Stornieren uses a native window.confirm instead of the shadcn AlertDialog. This is inconsistent with the app design and is auto-dismissed by automation."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_hardening_iter108.py", "/app/backend/tests/test_hardening_ip_lockout_iter108.py", "/app/backend/tests/iter108_ip_tool.py", "/app/test_reports/pytest/iter108.xml", "/app/test_reports/pytest/iter108_ip.xml"],
+  "action_items": [
+    "Before go-live, verify that the production proxy strips or overwrites client-supplied CF-Connecting-IP / X-Real-IP / X-Forwarded-For. If it does not, derive the client IP only from the trusted proxy hop.",
+    "Ensure the production FRONTEND_URL / CORS_ORIGINS list includes every real origin (e.g. essenceinvest.com and www.essenceinvest.com if both are used). The preview .env has CORS_ORIGINS='*', which now falls back to FRONTEND_URL only.",
+    "Optional: replace window.confirm in DashboardDataContext.cancelOrder with an AlertDialog."
+  ],
+  "critical_code_review_comments": [
+    "csrf_origin_check: the logic is correct: same host (x-forwarded-host/host) or exact match in the allowed list. 'null' and lookalike origins are rejected, and requests without Origin/Referer are allowed for non-browser clients. Referer parsing via split('/')[:3] is fine.",
+    "record_failed_login: the comment says motor returns the pre-update doc, but return_document=True already returns the AFTER document. The extra re-read is harmless but the comment is misleading.",
+    "IP lockout ordering: check_lockout(ip) runs before the email check, so the 21st attempt returns 429 before any DB user lookup. Good."
+  ],
+  "updated_files": ["/app/backend/tests/test_hardening_iter108.py", "/app/backend/tests/test_hardening_ip_lockout_iter108.py", "/app/backend/tests/iter108_ip_tool.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. Writes: 2 AAPL limit orders for test_eur_qa (1 via API, 1 via UI), both cancelled, 0 pending. MSFT added to and removed from the watchlist. login_attempts counters for nobody_* emails and ip:34.7.135.173 were cleared afterwards (21 docs), and admin login was verified at 200.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run the IP lockout test LAST. Then run 'python /app/backend/tests/iter108_ip_tool.py clear' (list|clear) to remove ip:/email:nobody/email:csrf counters. Order cancel in the UI uses window.confirm, so add page.on('dialog', accept). There are 2 Stornieren buttons (a hidden mobile card and the desktop table); use ':visible'. Bypass the visitor gate by setting localStorage kapitalmitte_visitor_profile and kapitalmitte_cookie_consent. Customer login redirects to /dashboard/uebersicht. Run pytest with -n0 -s."
+}

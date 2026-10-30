@@ -430,5 +430,14 @@ Siehe `/app/memory/test_credentials.md`
 - StockDetail: bei nicht notierter IPO statt Kauf/Verkauf-Formular Hinweis „kein regulärer Börsenhandel“.
 - Tests iteration_107: Backend 21/21, Frontend alle Flows; Abgleich Kunde=Admin 7.305,75 € auf den Cent.
 - Security-Audit: CONDITIONAL PASS; offen SEC-002 (Admin-Positionsänderungen ohne Protokoll, Hard-Delete), CSRF/SameSite=None, Login-Rate-Limit pro IP, CORS-Default '*'.
+
+## 2026-10-30 · Härtung vor Echtbetrieb (nur Vorschau)
+- Kursabfragen: `fetchQuotesShared` (DashboardDataContext) bündelt gleichzeitige/3-s-nahe Abrufe → 1 Abruf beim Laden.
+- CSRF: Middleware `csrf_origin_check` (server.py) blockiert POST/PUT/PATCH/DELETE /api/* mit Session-Cookie von fremder Origin/Referer (403); gleiche Host-Origin oder CORS_ORIGINS/FRONTEND_URL erlaubt.
+- Login: zusätzlich 20 Fehlversuche / 15 min pro öffentlicher IP (login_attempts „ip:…“); interne IPs ausgenommen; Zähler verfallen 15 min nach letztem Fehlversuch.
+- CORS: nie Wildcard mit Credentials; Fallback FRONTEND_URL. Contact.js nutzt apiUrl.
+- Tests iteration_108: Backend 14/14, Frontend 100 %. Kundendaten-Hash unverändert.
+- Vor Live prüfen: Prod-Proxy überschreibt X-Real-IP/CF-Connecting-IP/XFF; CORS_ORIGINS/FRONTEND_URL in Produktion korrekt.
+
 - Domains: apex+www HTTPS 200, Zertifikat Google Trust Services gültig bis 24.01.2027 (eigene Prüfung); Deployer-Tool meldet noch „initializing“. Live = Run e2e665d2 (29.10. 15:55 UTC). DB-Backup nicht verifizierbar; Rollback nur Code; keine Veröffentlichungssperre verfügbar.
 
