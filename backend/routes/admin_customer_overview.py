@@ -284,7 +284,7 @@ async def customer_details(user_id: str, _admin: dict = Depends(require_admin)) 
     """Read-only data for the detail tabs: prices (EUR quote or IPO estimate), orders, watchlist, activity."""
     oid = await _require_customer(user_id)
     own = _owner(oid)
-    stocks = await db.stock_positions.find(own).to_list(1000)
+    stocks = [s for s in await db.stock_positions.find({**own, "is_active": {"$ne": False}}).to_list(1000) if _num(s.get("quantity")) > 0]
     syms = sorted({str(s["symbol"]).strip().upper() for s in stocks if s.get("symbol")})
     own_reqs = await db.ipo_requests.find(own).to_list(1000)
     vals = _ipo_valuations(own_reqs)

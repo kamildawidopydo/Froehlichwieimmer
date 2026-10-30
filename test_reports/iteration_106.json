@@ -1,0 +1,34 @@
+{
+  "summary": "READ-ONLY test of the admin customer overview optimisation and the exact admin-vs-customer reconciliation (no writes, no deploy). Backend: 4/4 new pytest tests pass (test_admin_overview_reconcile_iter106.py). GET /api/admin/customers/overview timed 5 times: 0.134 / 0.093 / 0.104 / 0.086 / 0.088 s. /admin/users UI: 1.19 s from navigation until the QA row is visible. Reconciliation for test_eur_qa, captured in one browser run that recorded the quotes response the /mein-depot UI actually used: customer hero Gesamtvermögen 7.305,07 € = overview total_assets 7305.07 = admin detail KPI 7.305,07 €, matching to the cent. Components: Liquidität 2000.00 = cash_balance 2000.0. Anleihen 980.00 = bonds_value 980.0. Contracts principal 1800.00 = 1800.0. Accrued interest 1800*0.02*30/365.25 = 2.95688 → 2.96 = contracts_accrued_interest. contracts_value 1802.96; the UI rows Festgeld 1.001,64, Tagesgeld 500,82 and Flexgeld 300,49 add up to 1802.95 only because each row is rounded separately (exact 1801.6427+...=1802.9569). Aktien 1822.11 + IPO 700.00 = 2522.11 = stocks_value. Per symbol (UI quote = admin price_map, diff 0.0000 each): AAPL 3×311.4289 = 934.2867; VOLV-B.ST 10×28.1526 = 281.5260; DBK 20×30.315 = 606.30; TESTIPO 4×25 (ipo_estimate) = 100; PRVT3 10×50 (ipo_estimate) = 500; PRVNV 5×20 (cost) = 100. One earlier run differed by 0.09 € (hero 7.305,16 vs a later admin 7.305,07) because the DBK quote moved from 30.32 to 30.315 between reads (20×0.005 = 0.10 €). The remaining −0.0096 € in that run could not be attributed to a symbol, because that run did not capture the quotes the UI used. Price sources: TESTIPO and PRVT3 are ipo_estimate; PRVNV is absent (valued at cost); AAPL, DBK and VOLV-B.ST are market. fallback_positions = 2: PRVNV plus the active bond, whose DB doc has aktueller_kurs null and uses average_purchase_price_pct 98. ipo_positions = 2. Regression at 1920: all 9 filter chip counts equal the rows shown (26/26/0/0/2/24/2/23/5). Search returns 1 row. Sort orders work. The table no longer overflows (scrollWidth 1214 = clientWidth 1214). All 7 detail tabs render. Mobile 390: 26 cards, no horizontal overflow. /mein-depot loads. No page errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/admin/customers/{id}/details", "issue": "stock_positions.find(own) does not filter is_active!=False / quantity>0 the way the overview does. An inactive or zero-quantity position would still trigger a quote lookup, and its price would appear in price_map (no value impact today)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/admin/users/<id> Zinsanlagen tab", "issues": ["Contract rows show the principal only (1.000,00 / 500,00 / 300,00), while the KPI 'Anleihen · Festgeld' (2.782,96) and the customer view include accrued interest. Consider showing the current value or accrued interest per row so the numbers can be traced."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_admin_overview_reconcile_iter106.py", "/app/test_reports/pytest/pytest_iter106.xml"],
+  "action_items": [
+    "AdminUserDetail.js metrics calls computeContractMetrics(contract) without opts.now, so it uses the browser's local date. The customer view uses the Berlin metricDateKey and the backend uses Europe/Berlin. Around midnight, an admin outside the Berlin timezone sees accrued interest one day apart. Pass the same Berlin date to remove this edge case.",
+    "Optional: in customer_details, filter stock positions like the overview does (is_active != False, quantity > 0).",
+    "Optional, outside this task: the customer /mein-depot makes 3 /api/portfolio/quotes calls on load, and they include unlisted IPO symbols (PRVNV, PRVT3, TESTIPO). The admin side now skips those symbols, but the customer side does not."
+  ],
+  "critical_code_review_comments": [
+    "_quotes_for_holdings correctly makes one batched call. It skips holdings that are fully valued by an IPO estimate, and IPO tickers that have no stock_prices_cache entry.",
+    "contract_current_value mirrors computeContractMetrics exactly (totalDays, the cap, 365.25, the calendar-date diff). Verified numerically.",
+    "Existing iter105 test file hardcodes QA_ID 6ae46a0be3b6155b0a980904, but the fixture was re-seeded and the user id is now 6ae46f3f35b4a6c6b18d23c2. As a result, the iter105 tests that rely on the id now fail with 404 at setup. The new iter106 file resolves the id by email."
+  ],
+  "updated_files": ["/app/backend/tests/test_admin_overview_reconcile_iter106.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "none (read-only)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The QA customer id changes on re-seed, so resolve it via the overview by email. The visitor-welcome-gate covers /mein-depot: click depot-analyse-btn via page.evaluate(el.click()), and log in with page.request.post. pytest.ini uses xdist; run with '-n 0 -s' to see the prints. Expected QA total is ~7305 € (moves with the AAPL/DBK/VOLV quotes). Accrued interest on the 1800 € principal is 2.96 € at 30 days.",
+  "rca of the issue": "The admin vs customer difference before the fix came from contracts counted at principal only. That is now resolved. The only remaining differences come from quote movement between the two reads (shown for DBK: 0.005 € × 20 = 0.10 €)."
+}

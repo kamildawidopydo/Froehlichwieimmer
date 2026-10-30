@@ -416,3 +416,10 @@ Siehe `/app/memory/test_credentials.md`
 - /admin/users/:id: Tabs Übersicht/Depot/IPO/Zinsanlagen/Aufträge/Aktivitäten/Änderungsprotokoll; Watchlist/Orders/Aktivität/Kurse jetzt echt geladen (vorher leer).
 - Tests iteration_104/105 (Backend 21/21). Kundendaten-Hash unverändert.
 - Offen: vollständiges Admin-Protokoll (admin_audit_log, Freigabe nötig); Übersicht lädt 6–9 s wegen Kursabfragen für nicht notierte IPO-Symbole.
+
+## 2026-10-30 · Phase 2 Optimierung (nur Vorschau)
+- Übersicht: keine Kursabfragen mehr für Symbole, die per IPO-Schätzung bewertet werden, und für IPO-Kürzel ohne jemals vorhandenen Kurs (kein Eintrag in stock_prices_cache). Ein gebündelter Kursaufruf. Ladezeit vorher 3,5–4,7 s (mit Testdaten; zuvor 6–9 s), nachher 0,09–0,29 s warm, UI 1,2 s.
+- Zinsanlagen in Admin-Übersicht/Detail jetzt wie Kundenansicht: Nennbetrag + aufgelaufene Bruttozinsen (computeContractMetrics-Regel, Berliner Datum). Abgleich iteration_106: Kunde 7.305,07 € = Admin 7.305,07 € auf den Cent.
+- Zinsanlagen-Tab zeigt „aktuell … inkl. Zinsen“ je Vertrag.
+- Offen: Admin-Änderungsprotokoll (Plan vorgelegt, Freigabe Datenbankerweiterung ausstehend); Kunden-Depot fragt Kurse für nicht notierte IPO-Symbole weiterhin ab.
+

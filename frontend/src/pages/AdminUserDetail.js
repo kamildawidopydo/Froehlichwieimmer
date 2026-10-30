@@ -42,6 +42,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import AdminCustomerIpoTab from '@/components/admin/customers/AdminCustomerIpoTab';
 import AdminCustomerChangeLog from '@/components/admin/customers/AdminCustomerChangeLog';
 
+const berlinToday = () =>
+  new Date(`${new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date())}T12:00:00`);
+
 const DETAIL_TABS = [
   ['overview', 'Übersicht'], ['depot', 'Depot'], ['ipo', 'IPO-Beteiligungen'], ['zins', 'Zinsanlagen'],
   ['orders', 'Aufträge'], ['activity', 'Aktivitäten'], ['log', 'Änderungsprotokoll'],
@@ -346,9 +349,10 @@ const AdminUserDetail = () => {
       );
 
     // Same rule as customer view: principal + gross accrued interest (computeContractMetrics).
+    const berlinNow = berlinToday();
     const contractsValue = depotContracts
       .filter((contract) => contract.is_active)
-      .reduce((sum, contract) => sum + computeContractMetrics(contract).currentValueGross, 0);
+      .reduce((sum, contract) => sum + computeContractMetrics(contract, { now: berlinNow }).currentValueGross, 0);
 
     const cashValue = Number(profile?.cash_balance || 0);
     const total = cashValue + stocksValue + bondsValue + contractsValue;
@@ -821,8 +825,13 @@ const AdminUserDetail = () => {
                                 )}
                               </div>
                               </div>
-                              <span className="shrink-0 rate-figure text-[13.5px] tabular-nums text-bank-text">
+                              <span className="shrink-0 text-right rate-figure text-[13.5px] tabular-nums text-bank-text">
                                 {fmtMoney(contract.amount_eur)}
+                                {contract.is_active && (
+                                  <span className="block text-[10.5px] text-bank-text-muted" data-testid={`admin-contract-current-${contract.id}`}>
+                                    aktuell {fmtMoney(computeContractMetrics(contract, { now: berlinToday() }).currentValueGross)} inkl. Zinsen
+                                  </span>
+                                )}
                               </span>
                             </div>
                           </li>
