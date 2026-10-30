@@ -8,6 +8,7 @@ import PageMeta from '@/components/PageMeta';
 import Eyebrow from '@/components/editorial/Eyebrow';
 import siteContact from '../data/siteContact';
 import { LUCIDE_STROKE } from '@/lib/lucideStroke';
+import { apiUrl } from '@/lib/apiBase';
 
 const Contact = () => {
   const reduce = useReducedMotion();
@@ -24,7 +25,7 @@ const Contact = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/contact-message`, {
+      const res = await fetch(apiUrl('/api/contact-message'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

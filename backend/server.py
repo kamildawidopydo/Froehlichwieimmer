@@ -31,6 +31,7 @@ import hashlib
 import httpx
 from bson import ObjectId
 from fastapi import FastAPI, APIRouter, Request, Response, HTTPException, Depends
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr, Field
@@ -242,9 +243,12 @@ def _as_aware(dt: Optional[datetime]) -> Optional[datetime]:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
-async def check_lockout(identifier: str) -> None:
+async def check_lockout(identifier: str, max_attempts: int = MAX_ATTEMPTS) -> None:
     rec = await db.login_attempts.find_one({"identifier": identifier})
-    if not rec or rec.get("count", 0) < MAX_ATTEMPTS:
+    if not rec or rec.get("count", 0) < max_attempts:
+        last = _as_aware(rec.get("last_attempt")) if rec else None
+        if last and last < datetime.now(timezone.utc) - timedelta(minutes=LOCKOUT_MINUTES):
+            await db.login_attempts.delete_one({"identifier": identifier, "locked_until": None})
         return
     locked_until = _as_aware(rec.get("locked_until"))
     if locked_until and locked_until > datetime.now(timezone.utc):
@@ -256,7 +260,7 @@ async def check_lockout(identifier: str) -> None:
     await db.login_attempts.delete_one({"identifier": identifier})
 
 
-async def record_failed_login(identifier: str) -> None:
+async def record_failed_login(identifier: str, max_attempts: int = MAX_ATTEMPTS) -> None:
     """Atomic $inc so concurrent failures cannot lose increments."""
     now = datetime.now(timezone.utc)
     updated = await db.login_attempts.find_one_and_update(
@@ -266,9 +270,9 @@ async def record_failed_login(identifier: str) -> None:
         return_document=True,  # After update, works with motor: use projection alt
     )
     # motor's find_one_and_update returns the pre-update doc by default; re-read for the new count.
-    if not updated or updated.get("count", 0) + 1 >= MAX_ATTEMPTS:
+    if not updated or updated.get("count", 0) + 1 >= max_attempts:
         current = await db.login_attempts.find_one({"identifier": identifier})
-        if current and current.get("count", 0) >= MAX_ATTEMPTS:
+        if current and current.get("count", 0) >= max_attempts:
             await db.login_attempts.update_one(
                 {"identifier": identifier},
                 {"$set": {"locked_until": now + timedelta(minutes=LOCKOUT_MINUTES)}},
@@ -5785,10 +5789,30 @@ async def _social_content_startup() -> None:
 
 app.include_router(api)
 
-allowed = [o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()]
-if allowed == ["*"]:
-    # SameSite=None cookies require an explicit origin; mirror the frontend URL if user left it as "*"
-    allowed = [FRONTEND_URL]
+_cors_env = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
+# Credentialed CORS never accepts a wildcard; fall back to the explicit frontend URL only.
+allowed = [o for o in _cors_env if o != "*"] or [FRONTEND_URL]
+
+_UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+@app.middleware("http")
+async def csrf_origin_check(request: Request, call_next):
+    """CSRF guard for SameSite=None cookies: browser writes must come from our own or an allowed origin."""
+    if request.method in _UNSAFE_METHODS and request.url.path.startswith("/api"):
+        origin = request.headers.get("origin") or ""
+        if not origin:
+            referer = request.headers.get("referer") or ""
+            parts = referer.split("/")
+            origin = "/".join(parts[:3]) if referer.startswith("http") and len(parts) >= 3 else ""
+        has_session = "access_token" in request.cookies or "refresh_token" in request.cookies
+        if origin and has_session:
+            host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").split(",")[0].strip()
+            origin_host = origin.split("://", 1)[-1].rstrip("/")
+            if origin_host != host and origin.rstrip("/") not in allowed:
+                logger.warning("csrf: blocked %s %s from origin %s", request.method, request.url.path, origin)
+                return JSONResponse(status_code=403, content={"detail": "Anfrage von fremder Herkunft blockiert."})
+    return await call_next(request)
 
 app.add_middleware(
     CORSMiddleware,

@@ -12,6 +12,8 @@ Response-Shapes. Reiner Struktur-Refactor.
 """
 from __future__ import annotations
 
+import ipaddress
+
 import asyncio
 import hashlib
 import logging
@@ -56,7 +58,18 @@ from server import (
     UpdateMeInput,
     ForgotInput,
     ResetInput,
+    _client_ip,
 )
+
+IP_MAX_ATTEMPTS = 20
+
+
+def _is_internal_ip(ip: str) -> bool:
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return True
+    return addr.is_private or addr.is_loopback or addr.is_link_local
 
 logger = logging.getLogger(__name__)
 
@@ -148,13 +161,19 @@ async def register(request: Request, payload: RegisterInput, response: Response)
 @router.post("/auth/login")
 async def login(payload: LoginInput, request: Request, response: Response):
     email = payload.email.lower().strip()
-    # Lock by email only. Internal ingress proxies rotate client IPs across
-    # requests, which would split brute-force counters and disable protection.
+    # Per-email lockout (5) plus a looser per-IP limit (20) against credential stuffing.
     identifier = f"email:{email}"
+    ip = _client_ip(request)
+    # Internal/proxy addresses are shared by many users; only public client IPs get a counter.
+    ip_identifier = None if _is_internal_ip(ip) else f"ip:{ip}"
+    if ip_identifier:
+        await check_lockout(ip_identifier, IP_MAX_ATTEMPTS)
     await check_lockout(identifier)
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(payload.password, user["password_hash"]):
         await record_failed_login(identifier)
+        if ip_identifier:
+            await record_failed_login(ip_identifier, IP_MAX_ATTEMPTS)
         raise HTTPException(status_code=401, detail="Ungültige Anmeldedaten.")
     await clear_login_attempts(identifier)
     access = create_access_token(str(user["_id"]), email)

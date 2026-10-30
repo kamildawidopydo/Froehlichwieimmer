@@ -65,6 +65,20 @@ const initialState = {
   inflationSource: null,
 };
 
+// One in-flight request per symbol set; results reused for 3 s so overlapping refreshes don't duplicate calls.
+const quoteShare = { key: null, promise: null, at: 0 };
+const fetchQuotesShared = (syms) => {
+  const key = syms.join(',');
+  if (quoteShare.key === key && quoteShare.promise && Date.now() - quoteShare.at < 3000) return quoteShare.promise;
+  quoteShare.key = key;
+  quoteShare.at = Date.now();
+  quoteShare.promise = fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(key)}`).catch((err) => {
+    quoteShare.promise = null;
+    throw err;
+  });
+  return quoteShare.promise;
+};
+
 const todayKey = () => {
   const now = new Date();
   const y = now.getFullYear();
@@ -202,7 +216,7 @@ export const DashboardDataProvider = ({ children }) => {
       const syms = [...new Set([...posList, ...wlList].map((x) => String(x.symbol || '').toUpperCase()).filter(Boolean))];
       stockSymbolsRef.current = syms;
       const quotes = syms.length
-        ? await fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(syms.join(','))}`).catch(() => ({}))
+        ? await fetchQuotesShared(syms).catch(() => ({}))
         : {};
       const priceMap = buildPriceMap(quotes, posList);
       updateIfChanged({
@@ -227,7 +241,7 @@ export const DashboardDataProvider = ({ children }) => {
     const syms = stockSymbolsRef.current;
     if (!user?.id || !syms.length) return;
     try {
-      const quotes = await fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(syms.join(','))}`);
+      const quotes = await fetchQuotesShared(syms);
       setState((prev) => {
         const priceMap = { ...prev.stockPriceMap, ...buildPriceMap(quotes, []) };
         if (JSON.stringify(priceMap) === JSON.stringify(prev.stockPriceMap)) return prev;
