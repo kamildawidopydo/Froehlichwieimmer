@@ -6,29 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import {
-  Search,
   RefreshCw,
   User,
-  Mail,
   Plus,
   KeyRound,
   Copy,
   Eye,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { sanitizeFormField } from '@/lib/formInputSanitize';
 import { validatePersonName } from '@/lib/personName';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
-  AdminSurfaceCard,
-  AdminToolbarCard,
-  adminTheadClass,
-  adminRowHover,
 } from '@/components/admin/AdminSubpageChrome';
+import CustomerOverview from '@/components/admin/customers/CustomerOverview';
 
 // Session 82.81 — Mongo-native. Kein Supabase-Import, kein `profiles`-Read.
 // Nur die 3 real existierenden Admin-Endpoints:
@@ -39,7 +30,6 @@ import {
 // Datenmodell nicht (Session-82.81-Audit) und wird gemäß Mandat nicht erfunden.
 
 const API_BASE = getApiBase();
-const PAGE_SIZE = 50;
 
 async function apiJson(path, opts = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -61,39 +51,26 @@ async function apiJson(path, opts = {}) {
 
 const AdminUsers = () => {
   const navigate = useNavigate();
-  const [users, setUsers] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
+  const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [creatingUser, setCreatingUser] = useState(false);
   const [tempCredentials, setTempCredentials] = useState(null);
 
+  // Read-only overview (all accounts); search/filter/sort happen client-side.
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = new URLSearchParams();
-      if (searchTerm.trim()) qs.set('q', searchTerm.trim());
-      qs.set('limit', String(PAGE_SIZE));
-      qs.set('offset', String(offset));
-      const data = await apiJson(`/api/admin/users?${qs.toString()}`);
-      setUsers(Array.isArray(data?.items) ? data.items : []);
-      setTotal(Number(data?.total) || 0);
+      setOverview(await apiJson('/api/admin/customers/overview'));
     } catch (err) {
       toast.error('Fehler beim Laden: ' + (err?.message || ''));
-      setUsers([]);
-      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, offset]);
+  }, []);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
-
-  // Reset offset when search term changes
-  useEffect(() => { setOffset(0); }, [searchTerm]);
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -145,18 +122,13 @@ const AdminUsers = () => {
     } catch { toast.error('Konnte nicht kopiert werden.'); }
   };
 
-  const pageStart = total === 0 ? 0 : offset + 1;
-  const pageEnd = Math.min(offset + PAGE_SIZE, total);
-  const canPrev = offset > 0;
-  const canNext = offset + PAGE_SIZE < total;
-
   return (
     <AdminSubpageLayout>
       <AdminSubpageHeader
         eyebrow="Admin · Kunden"
-        title="Benutzerverwaltung"
+        title="Kundenverwaltung"
         titleIcon={User}
-        description="Kunden anlegen und Detailprofile mit Portfolio-Übersicht öffnen."
+        description="Alle Kunden mit Vermögen, offenen Vorgängen und letzter Aktivität. Kunden anlegen und Detailprofile öffnen."
       />
 
       <div
@@ -244,118 +216,13 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      <AdminToolbarCard>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="text-[12.5px] text-bank-text-muted">
-            <span className="font-mono uppercase tracking-[0.16em]">Gesamt · </span>
-            <span className="font-mono tabular-nums text-bank-text">{total}</span>
-            {total > 0 && (
-              <span className="ml-2 text-bank-text-muted/85">
-                (Zeige <span className="font-mono tabular-nums">{pageStart}</span>–<span className="font-mono tabular-nums">{pageEnd}</span>)
-              </span>
-            )}
-          </div>
-          <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:max-w-md">
-            <div className="relative flex-1">
-              <Search size={14} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-bank-text-muted" />
-              <Input
-                data-testid="admin-users-search-input"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Name oder E-Mail…"
-                className="pl-9"
-              />
-            </div>
-            <Button variant="outline-ink" size="default" onClick={fetchUsers} data-testid="admin-users-refresh-btn">
-              <RefreshCw size={13} strokeWidth={1.5} /> Aktualisieren
-            </Button>
-          </div>
-        </div>
-      </AdminToolbarCard>
-
-      <AdminSurfaceCard>
-        {loading ? (
-          <div className="py-20 text-center" data-testid="admin-users-loading">
-            <RefreshCw size={20} strokeWidth={1.5} className="mx-auto mb-3 animate-spin text-bank-gold/65" />
-            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-bank-text-muted">Wird geladen…</p>
-          </div>
-        ) : users.length === 0 ? (
-          <div className="py-20 text-center" data-testid="admin-users-empty">
-            <User size={28} strokeWidth={1.4} className="mx-auto mb-3 text-bank-gold/55" />
-            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-bank-text-muted">
-              {searchTerm ? 'Keine Ergebnisse für Ihre Suche' : 'Keine Benutzer gefunden'}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto" data-testid="admin-users-table-wrap">
-            <table className="w-full">
-              <thead className={adminTheadClass}>
-                <tr>
-                  <th className="px-4 py-3 text-left">Benutzer</th>
-                  <th className="px-4 py-3 text-left">E-Mail</th>
-                  <th className="px-4 py-3 text-left">Rolle</th>
-                  <th className="px-4 py-3 text-left">Registriert</th>
-                  <th className="px-4 py-3 text-left">Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} data-testid={`admin-users-row-${u.id}`} className={cn('border-b border-bank-border last:border-b-0', adminRowHover)}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-bank-border bg-bank-bg/60">
-                          <User size={14} strokeWidth={1.5} className="text-bank-text-muted" />
-                        </div>
-                        <span className="text-[13.5px] font-medium text-bank-text">{u.name || '–'}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 text-[13px] text-bank-text-muted">
-                        <Mail size={12} strokeWidth={1.5} className="shrink-0 text-bank-gold" />
-                        {u.email || '–'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={cn(
-                        'inline-flex items-center border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em]',
-                        u.role === 'admin'
-                          ? 'border-bank-gold/55 bg-bank-gold/10 text-bank-gold'
-                          : 'border-bank-border bg-bank-bg/40 text-bank-text-muted',
-                      )}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-[12px] tabular-nums text-bank-text-muted">
-                      {u.created_at ? new Date(u.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '–'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Button size="sm" variant="outline-ink" onClick={() => navigate(`/admin/users/${u.id}`)} data-testid={`admin-users-open-btn-${u.id}`}>
-                        <Eye size={12} strokeWidth={1.5} /> Öffnen
-                      </Button>
-                      {u.role !== 'admin' && (
-                        <Button size="sm" variant="outline" className="ml-2 border-red-300 text-red-700 hover:bg-red-50" onClick={() => handleDeleteUser(u)} data-testid={`admin-users-delete-btn-${u.id}`}>
-                          <Trash2 size={12} strokeWidth={1.5} /> Löschen
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </AdminSurfaceCard>
-
-      {total > PAGE_SIZE && (
-        <div className="mt-4 flex items-center justify-end gap-2" data-testid="admin-users-pagination">
-          <Button variant="outline-ink" size="sm" onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))} disabled={!canPrev || loading}>
-            <ChevronLeft size={12} strokeWidth={1.5} /> Zurück
-          </Button>
-          <Button variant="outline-ink" size="sm" onClick={() => setOffset(offset + PAGE_SIZE)} disabled={!canNext || loading}>
-            Weiter <ChevronRight size={12} strokeWidth={1.5} />
-          </Button>
-        </div>
-      )}
+      <CustomerOverview
+        data={overview}
+        loading={loading}
+        onRefresh={fetchUsers}
+        onOpen={(c) => navigate(`/admin/users/${c.id}`)}
+        onDelete={handleDeleteUser}
+      />
     </AdminSubpageLayout>
   );
 };

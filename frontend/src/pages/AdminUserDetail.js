@@ -37,6 +37,14 @@ import {
 import { toast } from 'sonner';
 import { COUNTRIES } from '@/constants/countries';
 import AdminCustomerAssetsPanel from '@/components/admin/AdminCustomerAssetsPanel';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import AdminCustomerIpoTab from '@/components/admin/customers/AdminCustomerIpoTab';
+import AdminCustomerChangeLog from '@/components/admin/customers/AdminCustomerChangeLog';
+
+const DETAIL_TABS = [
+  ['overview', 'Übersicht'], ['depot', 'Depot'], ['ipo', 'IPO-Beteiligungen'], ['zins', 'Zinsanlagen'],
+  ['orders', 'Aufträge'], ['activity', 'Aktivitäten'], ['log', 'Änderungsprotokoll'],
+];
 
 const fmtMoney = (value) => Number(value || 0).toLocaleString('de-DE', {
   style: 'currency',
@@ -358,9 +366,11 @@ const AdminUserDetail = () => {
   }, [fullName]);
 
   const statusLabel =
-    { approved: 'Freigeschaltet', pending: 'Ausstehend', rejected: 'Abgelehnt' }[profile?.status] ||
+    { approved: 'Freigeschaltet', pending: 'Ausstehend', rejected: 'Abgelehnt', active: 'Aktiv', inactive: 'Inaktiv',
+      deactivated: 'Inaktiv', disabled: 'Inaktiv', blocked: 'Gesperrt', locked: 'Gesperrt', suspended: 'Gesperrt' }[profile?.status] ||
     profile?.status ||
-    '–';
+    'Aktiv';
+  const customerNumber = profile?.id ? `KD-${String(profile.id).slice(-8).toUpperCase()}` : '–';
 
   if (loading) {
     return (
@@ -464,7 +474,7 @@ const AdminUserDetail = () => {
                   </span>
                   <span className="inline-flex items-center gap-1.5 border border-white/20 bg-white/5 px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/85">
                     <Hash size={11} strokeWidth={1.5} className="text-bank-gold" />
-                    {String(profile.id).slice(0, 8)}…
+                    {customerNumber}
                   </span>
                 </div>
               </div>
@@ -486,6 +496,18 @@ const AdminUserDetail = () => {
           </div>
         </div>
 
+        <Tabs defaultValue="overview" className="space-y-6">
+        <div className="-mx-1 overflow-x-auto px-1">
+          <TabsList className="h-auto w-max gap-1 rounded-none border border-bank-border bg-white p-1" data-testid="admin-user-tabs">
+            {DETAIL_TABS.map(([v, l]) => (
+              <TabsTrigger key={v} value={v} data-testid={`admin-user-tab-${v}`} className="rounded-none px-3 py-2 text-[12.5px] data-[state=active]:bg-bank-ink data-[state=active]:text-white">
+                {l}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+
+        <TabsContent value="overview" className="mt-0 space-y-6">
         {/* KPIs */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile
@@ -518,9 +540,7 @@ const AdminUserDetail = () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-          {/* Profile column */}
-          <div className="space-y-6 xl:col-span-4">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <SectionShell
               title="Profil & Sicherheit"
               description="Stammdaten und Konto-Flags"
@@ -690,16 +710,16 @@ const AdminUserDetail = () => {
                 </ul>
               )}
             </SectionShell>
-          </div>
+        </div>
+        </TabsContent>
 
-          {/* Portfolio column */}
-          <div className="space-y-6 xl:col-span-8">
+        <TabsContent value="depot" className="mt-0 space-y-6">
             <SectionShell
-              title="Portfolio"
-              description="Aktienpositionen und Festgeld-/Anleihenbestand"
+              title="Depot"
+              description="Aktien- und IPO-Positionen"
               icon={Briefcase}
             >
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div>
                 <div>
                   <h3 className="mb-3 inline-flex items-center gap-2 font-mono text-[10.5px] font-medium uppercase tracking-[0.22em] text-bank-text-muted">
                     <span aria-hidden className="h-[5px] w-[5px] rounded-full bg-bank-gold" />
@@ -739,10 +759,29 @@ const AdminUserDetail = () => {
                     )}
                   </div>
                 </div>
+              </div>
+            </SectionShell>
+
+            <SectionShell
+              title="Bestand eintragen"
+              description="Festgeld, Tagesgeld, Aktien, Anleihen, Guthaben und Dokumente für diesen Kunden"
+              icon={Wallet}
+            >
+              <AdminCustomerAssetsPanel userId={userId} assets={assets} onChanged={loadUserData} />
+            </SectionShell>
+        </TabsContent>
+
+        <TabsContent value="zins" className="mt-0 space-y-6">
+            <SectionShell
+              title="Zinsanlagen"
+              description="Festgeld, Tagesgeld, Flexgeld und Anleihen"
+              icon={PieChart}
+            >
+              <div>
                 <div>
                   <h3 className="mb-3 inline-flex items-center gap-2 font-mono text-[10.5px] font-medium uppercase tracking-[0.22em] text-bank-text-muted">
                     <span aria-hidden className="h-[5px] w-[5px] rounded-full bg-bank-gold" />
-                    Festgeld · Anleihen
+                    Festgeld · Tagesgeld · Flexgeld · Anleihen
                   </h3>
                   <div className="max-h-72 overflow-auto border border-bank-border bg-bank-bg/30">
                     {depotContracts.length === 0 && bondPositions.length === 0 ? (
@@ -801,21 +840,15 @@ const AdminUserDetail = () => {
                 </div>
               </div>
             </SectionShell>
+        </TabsContent>
 
+        <TabsContent value="activity" className="mt-0 space-y-6">
             <SectionShell
-              title="Bestand eintragen"
-              description="Festgeld, Tagesgeld, Aktien, Anleihen, Guthaben und Dokumente für diesen Kunden"
-              icon={Wallet}
-            >
-              <AdminCustomerAssetsPanel userId={userId} assets={assets} onChanged={loadUserData} />
-            </SectionShell>
-
-            <SectionShell
-              title="Aktivität & Orders"
-              description="Letzte Ereignisse und Aufträge"
+              title="Aktivitäten"
+              description="Letzte Ereignisse"
               icon={Activity}
             >
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div>
                 <div>
                   <h3 className="mb-3 inline-flex items-center gap-2 font-mono text-[10.5px] font-medium uppercase tracking-[0.22em] text-bank-text-muted">
                     <span aria-hidden className="h-[5px] w-[5px] rounded-full bg-bank-gold" />
@@ -850,6 +883,17 @@ const AdminUserDetail = () => {
                     )}
                   </div>
                 </div>
+              </div>
+            </SectionShell>
+        </TabsContent>
+
+        <TabsContent value="orders" className="mt-0 space-y-6">
+            <SectionShell
+              title="Aufträge"
+              description="Aktien-Orders dieses Kunden"
+              icon={ListOrdered}
+            >
+              <div>
                 <div>
                   <h3 className="mb-3 inline-flex items-center gap-2 font-mono text-[10.5px] font-medium uppercase tracking-[0.22em] text-bank-text-muted">
                     <span aria-hidden className="h-[5px] w-[5px] rounded-full bg-bank-gold" />
@@ -910,8 +954,15 @@ const AdminUserDetail = () => {
                 </div>
               </div>
             </SectionShell>
-          </div>
-        </div>
+        </TabsContent>
+
+        <TabsContent value="ipo" className="mt-0">
+          <AdminCustomerIpoTab userId={userId} />
+        </TabsContent>
+        <TabsContent value="log" className="mt-0">
+          <AdminCustomerChangeLog userId={userId} />
+        </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
