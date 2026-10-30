@@ -5807,10 +5807,12 @@ async def security_headers(request: Request, call_next):
 
 @app.exception_handler(RequestValidationError)
 async def german_validation_error(request: Request, exc: RequestValidationError):
-    fields = sorted({str(e.get("loc", [""])[-1]) for e in exc.errors()})
+    fields = sorted({str(e.get("loc", [""])[-1]) for e in exc.errors() if e.get("type") != "extra_forbidden"})
+    custom = "; ".join(str(e.get("msg", "")).replace("Value error, ", "", 1) for e in exc.errors() if e.get("type") == "value_error")
+    generic = f"Ungültige Eingabe: bitte {', '.join(fields)} prüfen." if fields else "Ungültige Eingabe: unbekannte Felder."
     return JSONResponse(
         status_code=422,
-        content={"detail": f"Ungültige Eingabe: bitte {', '.join(fields)} prüfen.",
+        content={"detail": custom or generic,
                  "errors": [{k: e.get(k) for k in ("type", "loc", "msg")} for e in jsonable_encoder(exc.errors())]},
     )
 

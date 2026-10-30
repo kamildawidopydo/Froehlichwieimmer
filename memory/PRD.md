@@ -439,5 +439,15 @@ Siehe `/app/memory/test_credentials.md`
 - Tests iteration_108: Backend 14/14, Frontend 100 %. Kundendaten-Hash unverändert.
 - Vor Live prüfen: Prod-Proxy überschreibt X-Real-IP/CF-Connecting-IP/XFF; CORS_ORIGINS/FRONTEND_URL in Produktion korrekt.
 
+## 2026-10-30 · Fehlerprüfung Depot + Admin (nur Vorschau)
+- qty_int (order_execution_service.py) liest int/float/str/Decimal128 – behebt 500 beim Verkauf admin-angelegter Positionen. Admin „Bestand eintragen“ Aktien: nur ganze Stückzahlen, Symbol-Regex, Speicherung als int.
+- create_order/peek: Stückzahl max. 10.000.000, Limit max. 1.000.000 €. /api/portfolio/quotes max. 100 Symbole + Symbolprüfung.
+- Sicherheitsheader (HSTS, nosniff, X-Frame-Options DENY, CSP frame-ancestors, Referrer-Policy) auf API.
+- Deutsche 422-Meldungen (eigene Validator-Texte bleiben erhalten, keine Eingabe-Echos).
+- ADMIN_EXTRAS befördert bestehende Konten nicht mehr automatisch zum Admin.
+- StockDetail: Limit 2 Nachkommastellen, Stückzahl step=1, Schätzung = Reservierung auf den Cent.
+- Tests iteration_109/110. Offen: 1 Altposition mit Decimal128-Menge (lesbar, Migration nur nach Freigabe); SPA-Header im Hosting; doppelte cash/orders-Abrufe; Admin-Shell lädt Kunden-Endpunkte.
+
+
 - Domains: apex+www HTTPS 200, Zertifikat Google Trust Services gültig bis 24.01.2027 (eigene Prüfung); Deployer-Tool meldet noch „initializing“. Live = Run e2e665d2 (29.10. 15:55 UTC). DB-Backup nicht verifizierbar; Rollback nur Code; keine Veröffentlichungssperre verfügbar.
 

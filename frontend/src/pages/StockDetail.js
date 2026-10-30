@@ -904,7 +904,7 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
         : 0;
   // Same 2-decimal price the server receives, so the estimate equals the reservation.
   const refPx = Math.round(refPxRaw * 100) / 100;
-  const qtyNum = Number(quantity) || 0;
+  const qtyNum = Number.isInteger(Number(quantity)) ? Number(quantity) : 0;
   const estGross = refPx > 0 && qtyNum > 0 ? Math.round(qtyNum * refPx * 100) / 100 : 0;
   const estDiscount =
     side === 'buy' && couponVerifiedPct != null && couponVerifiedPct > 0 && estGross > 0

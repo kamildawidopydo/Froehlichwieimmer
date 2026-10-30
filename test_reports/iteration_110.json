@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 110: retest of the iteration 109 fixes (preview only, nothing deployed). Writes were made only on test_eur_qa@example.com and were all cleaned up. BACKEND: new file test_iter110_fix_retest.py, 21 tests: 20 pass, 1 fails. FIXED AND VERIFIED: (1) Admin POST stock-positions MSFT qty 2 now stores an int, and the customer sell of 1 MSFT limit 9999 gives 201 pending (was 500). Cancel gives 200 and the position was deleted. (2) An admin quantity of 0.5 gives 422 and symbol 'AB$C' gives 422. (3) A Decimal128 quantity (3.0) inserted directly for the test customer: GET /api/portfolio/stock-positions gives 200, a sell of 2 gives 201, an over-sell of 2 more is rejected, then cancelled and deleted. (4) A quantity of '9'*30 gives 422 'Stückzahl zu hoch' for buy and sell, and limit 2000000 gives 422 'Limitkurs zu hoch'. Coupon peek gives 422 for both caps and 422 for limit -1. (5) Quotes: 101 symbols give 422, invalid symbols are filtered out (only AAPL is returned), and a list of only invalid symbols returns {}. (6) HSTS, nosniff, X-Frame-Options DENY, CSP frame-ancestors 'none' and Referrer-Policy are present on 200, 401 and 404 API responses. (7) A missing-field 422 now returns the German detail 'Ungültige Eingabe: bitte ... prüfen.' with no 'input' echo. (8) Code review: the seed_admin ADMIN_EXTRAS block no longer promotes existing non-admins (it logs a warning only). REGRESSION OK: CSRF with a foreign Origin gives 403, watchlist add, GET and delete work, a customer gets 403 on admin routes, and the admin orders list gives 200. FRONTEND: customer login works (through the visitor gate). On /dashboard/aktien/AAPL the limit price is prefilled with 2 decimals (310.03) and the quantity input has step=1. Limit 1.237 is rounded to 1.24 on blur. The 3-share estimate is 3,72 € and the server reserved_cash is 3.72, an exact match. The 310.03 x 3 estimate is 930,09 €, which is correct. Cancel on /dashboard/auftraege sent the POST and the order is cancelled; cash went back to 2001.00. /mein-depot and /dashboard (uebersicht) load with no 5xx. Admin /admin/users, /admin/stock-orders and /admin/user-positions load with no 5xx and show the TEST_EUR data. Register with a 3-character password is blocked by the browser's own check (no request sent). FAILURE: the specific German messages from custom validators no longer reach the 'detail' field.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "server.py german_validation_error (all endpoints with field_validator/model_validator raising ValueError)", "issue": "MEDIUM. Custom German validator messages are no longer shown. Example: admin POST /api/admin/bonds/catalog {isin:'X!'} -> detail 'Ungültige Eingabe: bitte isin prüfen.' The specific message 'ISIN ungültig (10-12 alphanumerische Zeichen)' appears only in errors[].msg (with the 'Value error, ' prefix). The frontend formatApiErrorDetail/extractErrorMessage only reads 'detail', so the UI shows the generic text. Model-level validators (e.g. ipo_catalog 'price_range_low darf nicht größer…') have loc ['body'], which makes the message 'bitte body prüfen.' Fix: for errors with type=='value_error', put msg with the 'Value error, ' prefix stripped into detail (or join them); keep the generic text only for built-in pydantic errors."},
+      {"endpoint": "german_validation_error", "issue": "LOW. Field names are raw English keys inside a German sentence ('bitte password prüfen', 'bitte idempotency_key, order_type, quantity, … prüfen'). Unknown extra keys are also echoed into the message (e.g. 'secret_value_xyz'). Consider a German label map and leaving extra_forbidden keys out."},
+      {"endpoint": "stock_positions data", "issue": "LOW. One existing position still stores quantity as Decimal128 (most likely the demo.kunde SAP position). It is readable through qty_int but was not migrated. qty_int also silently truncates fractional Decimal128 values (2.5 -> 2), and Decimal('NaN') would raise ValueError. Consider a one-off migration to int."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "StockDetail order form", "issue": "With quantity '1.5', order-est-gross shows 465,04 € (1.5 x price) even though submitting is blocked by the integer check. Minor: show '–' or a hint for non-integer quantities.", "selector": "[data-testid='order-est-gross']", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Register", "issue": "The frontend password minLength (10) differs from the backend RegisterInput min_length (8). The browser's own validation message is in English ('Please lengthen this text…') on an otherwise German page.", "affected_selectors": ["[data-testid='register-password']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter110_fix_retest.py", "/app/test_reports/pytest/pytest_iter110.xml"],
+  "action_items": [
+    "Surface custom value_error messages in the 422 'detail' (strip the 'Value error, ' prefix) so validator messages such as 'ISIN ungültig…' reach the UI",
+    "Optional: map field names to German labels in german_validation_error and drop extra_forbidden key echoes",
+    "Optional: migrate the remaining Decimal128 quantity in stock_positions to int",
+    "Optional: align the register password min length (frontend 10 vs backend 8) and use German custom validation messages",
+    "Optional: add data-testid to the OrdersPage 'Stornieren' buttons (cancel-order-{id})"
+  ],
+  "critical_code_review_comments": [
+    "DashboardDataContext.cancelOrder/removeFromWatchlist call the relative '/api/...' path instead of REACT_APP_BACKEND_URL. This works same-origin but goes against the env-URL rule.",
+    "cancelOrder uses window.confirm (a native dialog) instead of the shadcn AlertDialog, which is inconsistent with the rest of the UI.",
+    "order_execution_service.py lines 273/380 still use int(order['quantity']). This is fine because orders are stored as int, but qty_int would be safer."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter110_fix_retest.py"],
+  "success_rate": {"backend": "95% (20/21)", "frontend": "100% of the requested flows"},
+  "test_credentials": "Customer test_eur_qa@example.com / TestEur-Qa-2026!; Admin qa.admin@kapital-direkt24.de / Qa-ra46CVrWIW3wg6l5EI6IKqbx (from the review request; also in /app/memory/test_credentials.md)",
+  "seed_data_creation": "None kept. Temporary items for the test customer (MSFT via admin API, NVDA Decimal128 via pymongo, IBM watchlist, AAPL 3-share order) were all removed or cancelled. Cash is back to 2001.00.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The visitor-welcome-gate modal blocks the first page load: select the 2nd <select> = 'privatperson', then click 'Akzeptieren'. The order form is at /dashboard/aktien/{SYM} (not /aktien/{SYM}). Orders cancel uses window.confirm, so in Playwright register the dialog handler with a plain sync accept (the asyncio.ensure_future handler hung the script). The pytest.ini adds xdist (-n); use -n0 for serial runs or -s output. Customer positions endpoint: /api/portfolio/stock-positions."
+}
