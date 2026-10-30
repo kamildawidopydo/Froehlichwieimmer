@@ -333,7 +333,8 @@ const StockDetail = ({ embedded = false, portfolioTotal = null, positionMetric =
   // `market` ist backendseitig noch nicht verfügbar → Default = `limit`.
   const [orderType, setOrderType] = useState('limit'); // limit (market disabled)
   const [limitPrice, setLimitPrice] = useState('');
-  const [side, setSide] = useState('buy');
+  const [side, setSide] = useState(() =>
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('side') === 'sell' ? 'sell' : 'buy'));
   const [quantity, setQuantity] = useState('');
   const [note, setNote] = useState('');
   const [couponCode, setCouponCode] = useState('');

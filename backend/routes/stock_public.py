@@ -319,6 +319,25 @@ def _compute_history_stats(points: List[dict], interval: str = "1d") -> Dict[str
     }
 
 
+@router.get("/stocks/sparklines")
+async def stock_sparklines(symbols: str = Query(..., max_length=600), range: str = Query(default="1m")) -> Dict[str, Any]:
+    """Batched EUR close series for depot mini-charts (reuses the cached history endpoint)."""
+    syms = list(dict.fromkeys(s.strip().upper() for s in symbols.split(",") if s.strip()))[:40]
+
+    async def _one(s: str):
+        try:
+            h = await stock_history(s, range)
+        except HTTPException:
+            return s, None
+        if h.get("currency") != "EUR" or not h.get("points"):
+            return s, None
+        closes = [p.get("close") for p in h["points"] if isinstance(p.get("close"), (int, float))]
+        return s, {"closes": closes, "as_of": h.get("data_as_of")} if len(closes) >= 2 else None
+
+    pairs = await asyncio.gather(*(_one(s) for s in syms))
+    return {"range": range, "currency": "EUR", "items": dict(pairs)}
+
+
 @router.get("/stocks/{symbol}/history")
 async def stock_history(symbol: str, range: str = Query(default="3m")) -> Dict[str, Any]:
     sym = _check(symbol)

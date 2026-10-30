@@ -1037,6 +1037,12 @@ async def create_order(
             reserved = Decimal("0.00")  # Sell reserviert kein Cash
 
         fx_snapshot = await _order_fx_snapshot(sym, limit_price)
+        if fx_snapshot.get("fx_status") != "ok" and await db.ipo_requests.find_one(
+            {"$or": [{"user_id": uid}, {"user_id": str(uid)}], "ticker": sym, "status": "allocated"},
+            {"_id": 1},
+        ):
+            # Unlisted IPO stake: no regular exchange order possible.
+            raise HTTPException(status_code=409, detail="Diese IPO-Beteiligung ist nicht börsennotiert – kein regulärer Börsenhandel möglich.")
         now = datetime.now(timezone.utc)
         doc = {
             "user_id": uid,

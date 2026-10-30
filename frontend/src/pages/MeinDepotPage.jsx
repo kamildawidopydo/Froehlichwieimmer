@@ -10,6 +10,7 @@ import DepotKpiRail from '@/components/mein-depot/DepotKpiRail';
 import DepotPerformance from '@/components/mein-depot/DepotPerformance';
 import DepotStructure from '@/components/mein-depot/DepotStructure';
 import MeinePositionen from '@/components/mein-depot/MeinePositionen';
+import DepotProSection from '@/components/mein-depot/DepotProSection';
 import AnlageklassenDetail from '@/components/mein-depot/AnlageklassenDetail';
 import Zinsanlagen from '@/components/mein-depot/Zinsanlagen';
 import Faelligkeiten from '@/components/mein-depot/Faelligkeiten';
@@ -54,6 +55,7 @@ export const MeinDepotContent = ({ backTo = '/' }) => (
           (siehe Phase-12-Report Punkt 11) — kein realer Backend-Fehler. */}
       <DepotHero />
       <DepotKpiRail />
+      <DepotProSection />
       <DepotPerformance />
       <DepotStructure />
       <MeinePositionen />
