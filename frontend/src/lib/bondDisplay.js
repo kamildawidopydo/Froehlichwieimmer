@@ -75,6 +75,12 @@ export const dateTimeDe = (v) =>
 export const parseDeNumber = (v) => {
   const s = String(v ?? '').trim();
   if (!s) return null;
-  const n = Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s);
+  const n = Number(
+    s.includes(',')
+      ? s.replace(/\./g, '').replace(',', '.')
+      : /^\d{1,3}(\.\d{3})+$/.test(s)
+        ? s.replace(/\./g, '')
+        : s,
+  );
   return Number.isFinite(n) ? n : null;
 };

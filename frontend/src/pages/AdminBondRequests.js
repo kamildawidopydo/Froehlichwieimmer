@@ -467,7 +467,7 @@ const AdminBondRequests = () => {
                             <button onClick={() => setDialog({ action: 'note', row })} className="rounded p-1.5 text-bank-text-muted hover:bg-bank-border/15" title="Interne Notiz" data-testid={`bond-request-note-${row.id}`}>
                               <StickyNote size={15} />
                             </button>
-                            {(isPending || isApproved) && (
+                            {(isPending || isApproved) && !['accepted', 'declined'].includes(row.offer?.status) && (
                               <>
                                 <button onClick={() => setDialog({ action: 'offer', row })} className="rounded p-1.5 text-sky-700 hover:bg-sky-50" title="Individuelles Angebot" data-testid={`bond-request-offer-${row.id}`}>
                                   <FileSignature size={15} />

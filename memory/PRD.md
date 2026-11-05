@@ -461,3 +461,12 @@ Siehe `/app/memory/test_credentials.md`
 - Getestet: iteration_111 (Backend 11/12 → Fix für doppelte ISIN, Frontend alle Abläufe bestanden).
 - Offen/Backlog: Kundenansicht für individuelle Angebote; deutsche Zahlenformate in Admin-Tabellen; Kalender-Auswahl statt nativer Datumsfelder.
 
+
+## 2026-11-05 · Angebote im Kundenbereich, Kursverlauf, Formate, Live-Seed (nur Vorschau)
+- Individuelle Angebote: Admin erstellt Angebot (Kurs, Nominal, Stückzinsen, Gebühren, Gesamtkosten, gültig bis); Kunde sieht es unter Aufträge → Anleihen-Kaufanfragen → „Individuelle Angebote“ mit „Angebot annehmen/ablehnen“. Annahme = keine Buchung. Admin-Info: Benachrichtigung `bond_offer_responses`, Badge, Banner, „· NEU“; Details markieren als gelesen. Entschiedene Angebote können nicht überschrieben werden (409); Gültigkeitsdatum ≥ heute.
+- Kursverlauf: öffentlicher Endpunkt `/api/bonds/catalog/{id}/prices` (nur gespeicherte Kurse), Diagramm „Historischer Kursverlauf – Referenzkurse“; bei < 2 Punkten Hinweis statt Diagramm. Test-Kurszeilen entfernt.
+- Deutsche Formate in Anleihen-Admin und Kundenkarten (pctDe/eurDe/dateDe/dateTimeDe/parseDeNumber).
+- Live-Seed: `services/bond_seed.py` beim Backend-Start ($setOnInsert per ISIN, eindeutiger Index, nie überschreibend, Kaufanfragen gesperrt). Vorschau-Datensatz bleibt freigegeben.
+- Prüfung Herausgeber (rabobank.com, Prospekt 25.06.2025): seit 26.06.2025 direkt Coöperatieve Rabobank U.A. (verified). Ausschüttungshöhe/-termine nach Ermessen laut Ausschüttungspolitik 26.06.2025 → terms_status „Verifizierung ausstehend“.
+- Tests: iteration_112 (21/21 Backend), iteration_113 (24/24 Backend, 1 Skip bewusst). Danach selbst geprüft: Zahlen-Parser „1.000“, Badge-Zählung, Angebots-Button ausgeblendet.
+

@@ -121,7 +121,7 @@ const AdminDashboardLayout = () => {
         { to: '/admin/depot-statement-analysis', label: t('shell.admin.depotStatementAnalysis', { defaultValue: 'Depotauszug-Analyse' }), icon: FileText },
         { to: '/admin/bond-positions', label: t('shell.admin.bondPositions', { defaultValue: 'Kunden-Anleihen' }), icon: PRODUCT_ICONS.anleihen },
         { to: '/admin/bond-catalog', label: t('shell.admin.bondCatalog', { defaultValue: 'Anleihen-Katalog' }), icon: PRODUCT_ICONS.anleihen },
-        { to: '/admin/bond-requests', label: t('shell.admin.bondRequests', { defaultValue: 'Anleihen-Anfragen' }), icon: Send, badge: (b('pending_bond_requests') || 0) + (b('bond_offer_responses') || 0) || undefined },
+        { to: '/admin/bond-requests', label: t('shell.admin.bondRequests', { defaultValue: 'Anleihen-Anfragen' }), icon: Send, badge: (b('pending_bond_requests') || 0) + (b('bond_offer_responses_badge') || 0) || undefined },
         { to: '/admin/support', label: t('shell.admin.supportInbox', { defaultValue: 'Support-Postfach' }), icon: MessageCircle, badge: b('pending_support') },
         { to: '/admin/user-positions', label: t('shell.admin.userPositions', { defaultValue: 'Kunden-Positionen' }), icon: Briefcase },
         { to: '/admin/stocks', label: t('shell.admin.stocks', { defaultValue: 'Aktien & Kurse' }), icon: PRODUCT_ICONS.aktien },

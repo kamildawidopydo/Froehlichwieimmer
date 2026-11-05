@@ -109,7 +109,8 @@ class TestOfferAccept:
         assert r2.status_code == 409
         r3 = cust.post(f"{BASE_URL}/api/bonds/requests/{rid}/offer/decline", json={}, timeout=30)
         assert r3.status_code == 409
-        assert _counts(admin) == (before_cnt or 0) + 1
+        # iter113: pending requests are no longer counted in bond_offer_responses (no double count)
+        assert _counts(admin) == before_cnt
         row = next(x for x in admin.get(f"{BASE_URL}/api/admin/bonds/requests", timeout=60).json() if x["id"] == rid)
         assert row["offer"]["admin_seen"] is False and row["offer"]["created_by"] == ADMIN[0]
         a = admin.get(f"{BASE_URL}/api/admin/bonds/requests/{rid}/audit", timeout=30).json()

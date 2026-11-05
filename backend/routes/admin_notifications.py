@@ -71,6 +71,10 @@ async def admin_notification_counts(
     )
     counts["bond_offer_responses"] = await _count_or_none(
         "bond_purchase_requests",
+        {"offer.status": {"$in": ["accepted", "declined"]}, "offer.admin_seen": False},
+    )
+    counts["bond_offer_responses_badge"] = await _count_or_none(
+        "bond_purchase_requests",
         {"offer.status": {"$in": ["accepted", "declined"]}, "offer.admin_seen": False,
          "status": {"$ne": "pending"}},
     )

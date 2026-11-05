@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { formatEUR } from '@/lib/dashboardFormatters';
 import { AuditList } from '@/components/admin/bonds/BondHistoryDialog';
-import { pctDe, eurDe, dateDe, parseDeNumber } from '@/lib/bondDisplay';
+import { pctDe, eurDe, dateDe, dateTimeDe, parseDeNumber } from '@/lib/bondDisplay';
 
 export const OFFER_STATUS_DE = {
   offered: 'Angebot versendet', accepted: 'Vom Kunden angenommen', declined: 'Vom Kunden abgelehnt', expired: 'Abgelaufen',
@@ -19,7 +19,7 @@ const TITLES = {
   cancel: 'Anfrage stornieren',
 };
 
-const fmtDate = (v) => (v ? new Date(v).toLocaleString('de-DE') : '–');
+const fmtDate = (v) => dateTimeDe(v);
 const STATUS_DE = {
   pending: 'Offen', approved: 'Genehmigt', rejected: 'Abgelehnt', cancelled: 'Storniert', executed: 'Ausgeführt',
 };
@@ -162,7 +162,7 @@ export const BondRequestActionDialog = ({ action, row, onClose, onDone, fetchJso
                     Kurs {pctDe(row.offer.price_pct, 2, 4)} · Nominal {eurDe(row.offer.nominal)} · Anlagebetrag {eurDe(row.offer.amount_eur)}
                     {' · '}Stückzinsen {eurDe(row.offer.accrued_interest)} · Gebühren {eurDe(row.offer.fees)} · Gesamt {eurDe(row.offer.total_cost ?? row.offer.amount_eur)}
                     {row.offer.valid_until && ` · gültig bis ${dateDe(row.offer.valid_until)}`}
-                    {row.offer.responded_at && ` · Kundenentscheidung am ${new Date(row.offer.responded_at).toLocaleString('de-DE')}`}
+                    {row.offer.responded_at && ` · Kundenentscheidung am ${dateTimeDe(row.offer.responded_at)}`}
                   </div>
                 )}
                 <section>

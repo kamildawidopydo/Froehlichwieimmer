@@ -1,0 +1,49 @@
+{
+  "summary": "Iteration 113 retest of the iteration_112 fixes (Rabobank bond offers, notifications, German formats). Backend: the new suite test_bond_offers_iter113.py passed 4/4 (409 on re-offer after accept or decline with the decision kept, re-offer of an 'offered' offer allowed, past valid_until returns 422 'Gültigkeitsdatum darf nicht in der Vergangenheit liegen', bond_offer_responses has no double count). Regression suites iter112 + iter111 pass with 20 passed and 1 skipped. I updated one iter112 assertion to match the intended new count semantics; the skip is the expired-offer test, which can no longer be set up because past dates are now rejected. Frontend: all fixes verified in Playwright except one. The offer dialog still parses '1.000' as 1: the preview shows '1,09 €' and saving fails with the denomination error.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/admin/notifications/counts (bond_offer_responses)", "issue": "The no-double-count fix excludes status 'pending'. Customers almost always decide while the request is pending, because accepting keeps it pending. So bond_offer_responses is 0 in the normal case and AdminGlobalNotifications ('Kunde hat auf ein Anleihe-Angebot reagiert') never fires for these decisions. Confirmed: an accepted and a declined offer, both unseen on pending requests, gave counts pending=2, responses=0. The in-page banner and '· NEU' still work. Consider counting responses separately for the toast and de-duplicating only in the nav badge."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "parseDeNumber (lib/bondDisplay.js) used in BondRequestActionDialog and BondFormModal", "issue": "Input without a comma is passed to Number(), so '1.000' → 1, '10.000' → 10 and '2.500' → 2.5. In the offer dialog, Nominal '1.000' shows the preview '1,09 € · 1,09 €' and Speichern fails with 'Nominal muss ein Vielfaches der Stückelung (25 EUR) sein.' '1.000,50' → 1000.5 works. Fix: treat a dot followed by exactly 3 digits (/^\\d{1,3}(\\.\\d{3})+$/) as a thousands separator, or always strip dots when using German parsing.", "selector": "[data-testid=bond-offer-nominal]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin bond requests", "issues": ["The 'Angebot' (offer) action icon still shows for rows whose offer is already accepted or declined. Clicking Save then shows the 409 error in the dialog (handled correctly), but the button could be hidden or disabled.", "Details dialog / request summary dates are still not zero-padded ('5.11.2026, 10:13:29')"]},
+      {"screen": "Customer orders bond table", "issues": ["Datum column is not zero-padded ('5.11.2026 · 10:16'). This is outside the requested scope."]}
+    ]
+  },
+  "verified_passing": [
+    "POST offer: 409 with German detail when the offer is accepted or declined, and the stored offer is unchanged. Admin UI dialog shows the 409 message.",
+    "Replacing an 'offered' offer returns 200 with the new price",
+    "valid_until in the past returns 422 with the German message, today is allowed, and a malformed date returns 422",
+    "Nav badge 'Anleihen-Anfragen 2' for 2 pending requests with unseen decisions (no double count)",
+    "Restlaufzeit shows '0,1 J.' (comma); Fälligkeit '06.12.2026'; Rabobank 'Unbefristet'",
+    "Gültig bis '03.06.2027'; card meta 'erfasst 05.11.2026, 10:13'; chart 'Letzte Kursaktualisierung: 05.11.2026, 10:13'; insufficient-data message shown",
+    "Admin edit modal prefills Kupon '6,5', Kurs '108,75' and Veränderung '0,37/0,34'. Saving unchanged returned 200, the DB numbers were unchanged (6.5, 108.75, 25, 1000, 0.37, 0.34) and no price_history row was added.",
+    "Orders 'Hinweis' column shows 'Angebot abgelehnt' / 'Individuelles Angebot liegt vor'",
+    "Mobile 390px: 'Angebot annehmen' is not covered by the assistant-launcher FAB (elementFromPoint hits the button at left, center and right) and clicking it works (status 'ANGENOMMEN – IN PRÜFUNG')",
+    "Regression: create offer (API and UI), customer decline (status ABGELEHNT, buttons removed), customer accept, admin banner '2 neue …' with '· NEU' badges, Details calls /offer/seen (200) and the banner drops to 1 after reload, German audit labels"
+  ],
+  "test_report_links": ["/app/backend/tests/test_bond_offers_iter113.py", "/app/backend/tests/test_bond_offers_iter112.py", "/app/backend/tests/test_rabobank_bond_iter111.py", "/app/test_reports/pytest/iter113.xml"],
+  "action_items": [
+    "Fix parseDeNumber so that German thousands without a comma ('1.000', '10.000') parse to 1000 / 10000 (affects the offer dialog and BondFormModal)",
+    "Decide notification semantics: the bond_offer_responses toast no longer fires for decisions on pending requests (the normal case). De-duplicate only in the nav badge, or use a separate count.",
+    "Optional: hide or disable the offer action when offer.status is accepted or declined; zero-pad dates in the admin details and the orders table"
+  ],
+  "critical_code_review_comments": [
+    "AdminOfferBody._iso uses date.today() (server local) rather than Europe/Berlin, so a midnight edge case is possible. A malformed date gives a Python ValueError message (still 422).",
+    "The overwrite guard is a read-then-write, not atomic: a customer accept that lands between _load_request and find_one_and_update would still be overwritten. Add 'offer.status': {'$nin': ['accepted','declined']} to the update filter and return 409 when there is no match.",
+    "AdminDashboardLayout badge sums pending_bond_requests and bond_offer_responses. Correct now, but it is coupled to the backend filter."
+  ],
+  "updated_files": ["/app/backend/tests/test_bond_offers_iter113.py (new)", "/app/backend/tests/test_bond_offers_iter112.py (count assertion updated to the new semantics: pending requests not counted)"],
+  "success_rate": {"backend": "100% (24/24 executed, 1 skip by design)", "frontend": "~90% (1 medium parse bug)"},
+  "seed_data_creation": "None persisted. Two UI test requests (Rabobank 6aec5702eb0d759b21a28bb4 and FERR.METALS 6aec576ceb0d759b21a28bb6) were deleted by id, together with 4 audit rows. Pytest requests were deleted by fixture. bond_price_history for the Rabobank bond holds only the system-seed row. Rabobank restored: is_available/requests_enabled true, aktueller_kurs 108.75, kaufkurs/verkaufskurs null, price_updated_at reset to 2026-11-05T09:30:53.770Z. Edit modal saved once with unchanged values, which may have left an audit_log entry for entity_type 'bond'. Execute was never called.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && python -m pytest tests/test_bond_offers_iter113.py tests/test_bond_offers_iter112.py tests/test_rabobank_bond_iter111.py -n 0. Pytest runs must be sequential because of the pending guard. In Playwright, log in with page.request.post('/api/auth/login', headers Origin) to avoid the visitor gate on /login. The gate also appears on /dashboard pages: wait for [data-testid=visitor-welcome-gate], select index 1 in the 2nd <select>, then click 'Akzeptieren'. Use ui_setup_iter112.py rabo|second|counts for test data.",
+  "test_credentials": "qa.admin@kapital-direkt24.de / Qa-ra46CVrWIW3wg6l5EI6IKqbx (admin); tester@mester.de / HHHKKK222 (customer)"
+}
