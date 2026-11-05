@@ -68,6 +68,10 @@ DOC = {
     ),
     "risk_note": "Nachrangig, unbefristet, Zinszahlung nicht garantiert.",
     "risk_details": RISK_DETAILS,
+    "accrued_note": (
+        "Keine Stückzinsen wie bei festverzinslichen Anleihen: Ausschüttungen liegen im Ermessen der Rabobank. "
+        "Maßgeblich ist die Abrechnung der Partnerbank."
+    ),
     "is_available": True,
     "requests_enabled": False,
     "source": "manual",

@@ -16,8 +16,12 @@ import { AlertTriangle, Search, Mail, Phone, RefreshCw, Filter, Trash2, External
 
 const STATUS_OPTIONS = [
   { value: 'new', label: 'Neu' },
+  { value: 'in_progress', label: 'In Bearbeitung' },
   { value: 'handled', label: 'Erledigt' },
 ];
+
+const eur = (v) =>
+  v == null ? '–' : Number(v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 
 const AdminInsufficientBuyingPower = () => {
   const [events, setEvents] = useState([]);
@@ -25,6 +29,7 @@ const AdminInsufficientBuyingPower = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('new');
   const [updatingId, setUpdatingId] = useState(null);
+  const [assetFilter, setAssetFilter] = useState('all');
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -52,15 +57,16 @@ const AdminInsufficientBuyingPower = () => {
 
   const filteredEvents = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return events;
-    return events.filter((item) => {
+    const base = assetFilter === 'all' ? events : events.filter((e) => (e.asset_type || 'stock') === assetFilter);
+    if (!q) return base;
+    return base.filter((item) => {
       const profile = item.profiles || {};
       const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
-      return [name, profile.email, profile.phone, item.symbol, item.stock_name]
+      return [name, profile.email, profile.phone, item.symbol, item.stock_name, item.isin, item.customer_display_id]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q));
     });
-  }, [events, searchTerm]);
+  }, [events, searchTerm, assetFilter]);
 
   const updateStatus = async (eventId, status) => {
     setUpdatingId(eventId);
@@ -131,7 +137,7 @@ const AdminInsufficientBuyingPower = () => {
         eyebrow="Admin · Depot"
         title="Kaufkraft-Warnungen"
         titleIcon={AlertTriangle}
-        description="Kunden, die einen Kaufauftrag ohne ausreichende Kaufkraft eingereicht haben — für den Kundenservice."
+        description="Kunden, die einen Kaufauftrag (Aktien oder Anleihen) ohne ausreichendes Guthaben auslösen wollten — Beratungsanfragen für den Kundenservice."
         actions={
           <Button variant="outline" onClick={fetchEvents} disabled={loading} className="rounded-xl" data-testid="admin-ibp-refresh-btn">
             <RefreshCw size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -152,7 +158,20 @@ const AdminInsufficientBuyingPower = () => {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-md border border-bank-border bg-white p-0.5" data-testid="admin-ibp-asset-tabs">
+            {[['all', 'Alle'], ['bond', 'Kaufanfragen – Guthaben nicht ausreichend (Anleihen)'], ['stock', 'Aktien']].map(([v, l]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setAssetFilter(v)}
+                className={`rounded px-3 py-1.5 text-xs font-medium ${assetFilter === v ? 'bg-bank-ink text-white' : 'text-bank-text-muted hover:text-bank-text'}`}
+                data-testid={`admin-ibp-asset-${v}`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
           <Filter size={15} className="text-bank-text-muted/70" />
           <select
             value={statusFilter}
@@ -177,7 +196,7 @@ const AdminInsufficientBuyingPower = () => {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-bank-text-muted uppercase tracking-wider">Datum</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-bank-text-muted uppercase tracking-wider">Kunde</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-bank-text-muted uppercase tracking-wider">Aktie / Auftrag</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-bank-text-muted uppercase tracking-wider">Wertpapier / Auftrag</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-bank-text-muted uppercase tracking-wider">Kaufkraft</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-bank-text-muted uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-bank-text-muted uppercase tracking-wider">Aktionen</th>
@@ -203,7 +222,10 @@ const AdminInsufficientBuyingPower = () => {
                     <tr key={event.id} className={adminRowHover}>
                       <td className="px-4 py-4 text-sm text-bank-text-muted">{formatDate(event.created_at)}</td>
                       <td className="px-4 py-4">
-                        <p className="font-medium text-bank-text">{customerName(profile)}</p>
+                        <p className="font-medium text-bank-text">{event.customer_name || customerName(profile)}</p>
+                        {event.customer_display_id && (
+                          <p className="font-mono text-[10.5px] text-bank-text-muted">{event.customer_display_id}</p>
+                        )}
                         {profile.email && (
                           <a
                             href={`mailto:${profile.email}`}
@@ -228,12 +250,24 @@ const AdminInsufficientBuyingPower = () => {
                         </Link>
                       </td>
                       <td className="px-4 py-4 text-sm text-bank-text-muted">
-                        <p className="font-medium text-bank-text">{event.symbol}</p>
-                        {event.stock_name && <p className="mt-0.5 text-xs">{event.stock_name}</p>}
-                        <p className="mt-1 text-xs">
-                          {event.quantity != null ? `${Number(event.quantity)} Stk.` : '—'}
-                          {event.order_type ? ` · ${event.order_type}` : ''}
-                        </p>
+                        {event.asset_type === 'bond' ? (
+                          <>
+                            <p className="font-medium text-bank-text">{event.stock_name}</p>
+                            <p className="mt-0.5 font-mono text-xs">ISIN {event.isin || event.symbol}</p>
+                            <p className="mt-1 text-xs" data-testid={`admin-ibp-requested-${event.id}`}>
+                              Gewünschtes Kaufvolumen: {eur(event.requested_amount)}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-medium text-bank-text">{event.symbol}</p>
+                            {event.stock_name && <p className="mt-0.5 text-xs">{event.stock_name}</p>}
+                            <p className="mt-1 text-xs">
+                              {event.quantity != null ? `${Number(event.quantity)} Stk.` : '—'}
+                              {event.order_type ? ` · ${event.order_type}` : ''}
+                            </p>
+                          </>
+                        )}
                       </td>
                       <td className="px-4 py-4 text-sm">
                         <p className="text-red-700 dark:text-red-300">
@@ -242,6 +276,11 @@ const AdminInsufficientBuyingPower = () => {
                         <p className="mt-0.5 text-bank-text-muted">
                           Verfügbar: {formatCurrency(event.available_amount, event.currency)}
                         </p>
+                        {event.missing_amount != null && (
+                          <p className="mt-0.5 font-semibold text-red-700" data-testid={`admin-ibp-missing-${event.id}`}>
+                            Fehlend: {formatCurrency(event.missing_amount, event.currency)}
+                          </p>
+                        )}
                       </td>
                       <td className="px-4 py-4">
                         <select

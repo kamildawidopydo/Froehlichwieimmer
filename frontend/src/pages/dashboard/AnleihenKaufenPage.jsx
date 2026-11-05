@@ -18,6 +18,7 @@ import { CardListSkeleton } from '@/components/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { useDashboardData } from '@/context/DashboardDataContext';
 import BondOfferCard from '@/components/dashboard/bonds/BondOfferCard';
+import BondBuyDialog, { fetchBuyQuote } from '@/components/dashboard/bonds/BondBuyDialog';
 import { matchesBondSearch, yearsRemaining } from '@/lib/bondDisplay';
 
 const SORT_OPTIONS = [
@@ -44,6 +45,7 @@ const AnleihenKaufenPage = () => {
   const [sort, setSort] = useState('rest_asc');
   const [showFilters, setShowFilters] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [buyState, setBuyState] = useState(null);
   const retry = () => setReloadKey((k) => k + 1);
 
   useEffect(() => {
@@ -124,6 +126,20 @@ const AnleihenKaufenPage = () => {
     });
     return list;
   }, [bonds, search, filters, sort]);
+
+  const startBuy = async (bond, idx) => {
+    const amount = Number(amountByBond[bondKey(bond, idx)] || bond.min_order_eur || 1000);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Bitte geben Sie einen gültigen Anlagebetrag an.');
+      return;
+    }
+    try {
+      const quote = await fetchBuyQuote(bond.id, amount);
+      setBuyState({ bond, amount, quote });
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
 
   const requestPurchase = async (bond, idx) => {
     if (!user?.id) {
@@ -384,6 +400,7 @@ const AnleihenKaufenPage = () => {
                     amount={amountByBond[key] ?? (b.min_order_eur || 1000)}
                     onAmountChange={(v) => setAmountByBond((prev) => ({ ...prev, [key]: v }))}
                     onRequest={() => requestPurchase(b, idx)}
+                    onBuy={() => startBuy(b, idx)}
                   />
                 );
               })}
@@ -391,6 +408,15 @@ const AnleihenKaufenPage = () => {
           )}
         </div>
       </div>
+      <BondBuyDialog
+        key={buyState ? `${buyState.bond.id}-${buyState.amount}-${buyState.quote.total}` : 'none'}
+        state={buyState}
+        onClose={() => setBuyState(null)}
+        onOrdered={async () => {
+          setBuyState(null);
+          if (typeof refreshBondRequests === 'function') await refreshBondRequests();
+        }}
+      />
     </PageContainer>
   );
 };

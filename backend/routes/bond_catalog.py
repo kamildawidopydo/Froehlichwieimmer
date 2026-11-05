@@ -32,6 +32,21 @@ from services.bond_sync import (  # noqa: E402
 from services.bond_audit import (  # noqa: E402
     write_audit, list_audit, price_changed, record_price, list_prices,
 )
+from services.bond_order_service import executable_buy_price  # noqa: E402
+
+
+def _validate_binding_price(doc: dict) -> None:
+    if doc.get("kaufkurs_art") != "verbindlich":
+        return
+    missing = [label for key, label in (
+        ("kaufkurs", "Kaufkurs"), ("kaufkurs_quelle", "Kursquelle"),
+        ("kaufkurs_quoted_at", "Zeitpunkt der Kursstellung"), ("kaufkurs_valid_until", "Gültig bis"),
+    ) if not doc.get(key)]
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail="Ein verbindlicher Kaufkurs der Partnerbank benötigt: " + ", ".join(missing) + ".",
+        )
 
 
 public_router = APIRouter(prefix="/api/bonds", tags=["bond-catalog"])
@@ -63,6 +78,15 @@ class BondExtraFields(BaseModel):
     legal_issuer_status: Optional[Literal["verified", "pending"]] = None
     terms_status: Optional[Literal["verified", "pending"]] = None
     verification_note: Optional[str] = Field(default=None, max_length=3000)
+    kaufkurs_art: Optional[Literal["indikativ", "verbindlich"]] = None
+    kaufkurs_quelle: Optional[str] = Field(default=None, max_length=200)
+    kaufkurs_quoted_at: Optional[str] = Field(default=None, max_length=40)
+    kaufkurs_valid_until: Optional[str] = Field(default=None, max_length=40)
+    buy_fee_pct: Optional[float] = Field(default=None, ge=0, le=20)
+    buy_fee_min_eur: Optional[float] = Field(default=None, ge=0)
+    buy_fee_fixed_eur: Optional[float] = Field(default=None, ge=0)
+    accrued_interest_pct: Optional[float] = Field(default=None, ge=0, le=100)
+    accrued_note: Optional[str] = Field(default=None, max_length=500)
 
     @field_validator("verkaufskurs", "kursveraenderung_abs", "kursveraenderung_pct", "rendite_manuell")
     @classmethod
@@ -209,6 +233,7 @@ def _serialize(doc: dict) -> dict:
         **{k: doc.get(k) for k in BondExtraFields.model_fields},
         "is_perpetual": bool(doc.get("is_perpetual", False)),
         "requests_enabled": doc.get("requests_enabled") is not False,
+        "buy_executable": executable_buy_price(doc) is not None,
         "price_updated_at": doc["price_updated_at"].isoformat() if isinstance(doc.get("price_updated_at"), datetime) else doc.get("price_updated_at"),
         "created_at": ca.isoformat() if isinstance(ca, datetime) else ca,
         "updated_at": ua.isoformat() if isinstance(ua, datetime) else ua,
@@ -285,6 +310,7 @@ async def admin_create_bond(
     if doc.get("isin") and await db.bond_catalog.find_one({"isin": doc["isin"]}):
         raise HTTPException(status_code=409, detail="Eine Anleihe mit dieser ISIN existiert bereits.")
     doc.setdefault("source", None)
+    _validate_binding_price(doc)
     doc["source"] = doc["source"] or "manual"
     doc["is_manual_override"] = True
     if doc.get("requests_enabled") is None:
@@ -316,6 +342,7 @@ async def admin_update_bond(
         return _serialize(existing)
     if changes.get("isin") and await db.bond_catalog.find_one({"isin": changes["isin"], "_id": {"$ne": oid}}, {"_id": 1}):
         raise HTTPException(status_code=409, detail="Eine Anleihe mit dieser ISIN existiert bereits.")
+    _validate_binding_price({**existing, **changes})
     now = datetime.now(timezone.utc)
     changes["updated_at"] = now
     # Admin-gepflegte Datensätze nie vom Börsen-Sync überschreiben lassen

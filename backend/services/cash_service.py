@@ -254,6 +254,14 @@ async def _aggregate_balances(db, user: dict) -> tuple[Decimal, Decimal, Decimal
     ]
     async for row in db.stock_orders.aggregate(res_pipe):
         open_buy = _decimal_from_bson(row.get("total"))
+    # Reservierungen offener Anleihe-Direktorders (warten auf Bankbestätigung)
+    bond_pipe = [
+        {"$match": {**ownership, "order_type": "direct",
+                    "status": {"$in": ["awaiting_bank", "bank_submitted"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$reserved_cash"}}},
+    ]
+    async for row in db.bond_purchase_requests.aggregate(bond_pipe):
+        open_buy += _decimal_from_bson(row.get("total"))
     return settled_credit, settled_debit, pending_debit, open_buy
 
 

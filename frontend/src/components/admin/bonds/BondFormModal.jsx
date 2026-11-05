@@ -34,8 +34,12 @@ const SECTIONS = [
     title: 'Kursverwaltung',
     fields: [
       { k: 'aktueller_kurs', l: 'Angezeigter Kurs (%)', t: 'number' },
-      { k: 'kurs_typ', l: 'Kursart', t: 'select', opts: [['', '–'], ['market', 'Marktkurs'], ['reference', 'Referenzkurs (historisch)']] },
+      { k: 'kurs_typ', l: 'Kursart (Anzeige)', t: 'select', opts: [['', '–'], ['market', 'Marktkurs'], ['reference', 'Referenzkurs (historisch)']] },
       { k: 'kaufkurs', l: 'Kaufkurs (%)', t: 'number' },
+      { k: 'kaufkurs_art', l: 'Kaufkurs-Art', t: 'select', opts: [['', '–'], ['indikativ', 'Indikativ (nicht ausführbar)'], ['verbindlich', 'Verbindliche Kursstellung der Partnerbank']] },
+      { k: 'kaufkurs_quelle', l: 'Quelle der Kursstellung' },
+      { k: 'kaufkurs_quoted_at', l: 'Zeitpunkt der Kursstellung', t: 'datetime' },
+      { k: 'kaufkurs_valid_until', l: 'Kaufkurs gültig bis', t: 'datetime' },
       { k: 'verkaufskurs', l: 'Verkaufskurs (%)', t: 'number' },
       { k: 'kursveraenderung_abs', l: 'Kursveränderung (Punkte)', t: 'number' },
       { k: 'kursveraenderung_pct', l: 'Kursveränderung (%)', t: 'number' },
@@ -43,6 +47,16 @@ const SECTIONS = [
       { k: 'kurs_quelle', l: 'Kursquelle' },
       { k: 'kurs_hinweis', l: 'Kurshinweis (Kundenanzeige)', span: 2 },
       { k: 'rendite_manuell', l: 'Rendite (manuell, %)', t: 'number' },
+    ],
+  },
+  {
+    title: 'Kosten & Abrechnung',
+    fields: [
+      { k: 'buy_fee_pct', l: 'Kaufgebühr (% vom Kaufpreis)', t: 'number' },
+      { k: 'buy_fee_min_eur', l: 'Mindestgebühr (€)', t: 'number' },
+      { k: 'buy_fee_fixed_eur', l: 'Feste Gebühr je Order (€)', t: 'number' },
+      { k: 'accrued_interest_pct', l: 'Stückzinsen (% vom Nennwert, leer = keine)', t: 'number' },
+      { k: 'accrued_note', l: 'Hinweis zu Stückzinsen / Abrechnung (Kundenanzeige)', t: 'text', span: 2 },
     ],
   },
   {
@@ -68,6 +82,10 @@ const toForm = (row) =>
   Object.fromEntries(
     ALL.map(({ k, t }) => {
       const v = row?.[k] ?? DEFAULTS[k];
+      if (t === 'datetime' && v) {
+        const d = new Date(v);
+        return [k, new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)];
+      }
       return [k, t === 'bool' ? !!v : v == null ? '' : t === 'number' ? String(v).replace('.', ',') : String(v)];
     }),
   );
@@ -79,6 +97,7 @@ const toPayload = (form) =>
       if (t === 'bool') return [k, !!v];
       if (v === '' || v == null) return [k, null];
       if (t === 'number') return [k, parseDeNumber(v)];
+      if (t === 'datetime') return [k, new Date(v).toISOString()];
       return [k, String(v).trim()];
     }),
   );
@@ -94,6 +113,9 @@ const FieldInput = ({ f, value, onChange }) => {
     );
   }
   const label = <label className="mb-1 block text-sm font-medium text-bank-text-muted">{f.l}</label>;
+  if (f.t === 'datetime') {
+    return <div>{label}<Input type="datetime-local" value={value ? String(value).slice(0, 16) : ''} onChange={(e) => onChange(e.target.value)} data-testid={tid} /></div>;
+  }
   if (f.t === 'text') {
     return <div>{label}<Textarea rows={4} value={value} onChange={(e) => onChange(e.target.value)} data-testid={tid} /></div>;
   }

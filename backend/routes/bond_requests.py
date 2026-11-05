@@ -19,15 +19,20 @@ blockiert durch die Portfolio-Migration (fehlender Service-Role).
 from __future__ import annotations
 
 from datetime import datetime, timezone, date as _date
+import asyncio
+from decimal import Decimal
 from typing import Optional, Literal
 
-from bson import ObjectId
+from bson import ObjectId, Decimal128
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from pymongo.errors import DuplicateKeyError
 
 from server import get_current_user, db, require_admin  # type: ignore[attr-defined]
 from services.bond_audit import write_audit, list_audit  # noqa: E402
+from services.bond_order_service import (  # noqa: E402
+    executable_buy_price, compute_quote, available_cash, quote_to_json, record_advisory_request,
+)
 
 
 router = APIRouter(prefix="/api/bonds", tags=["bond-requests"])
@@ -154,6 +159,14 @@ def _serialize(doc: dict) -> dict:
         "executed_at": ex_at.isoformat() if isinstance(ex_at, datetime) else ex_at,
         "execution_id": str(doc.get("execution_id")) if doc.get("execution_id") else None,
         "position_id": str(doc.get("position_id")) if doc.get("position_id") else None,
+        "order_type": doc.get("order_type") or "request",
+        "transaction_no": doc.get("transaction_no"),
+        "order_quote": doc.get("order_quote"),
+        "reserved_cash": _dec(doc.get("reserved_cash")),
+        "total_amount": _dec(doc.get("total_amount")),
+        "bank_reference": doc.get("bank_reference"),
+        "bank_confirmed_at": doc.get("bank_confirmed_at"),
+        "bank_submitted_at": _iso_dt(doc.get("bank_submitted_at")),
     }
 
 
@@ -298,6 +311,99 @@ async def decline_bond_offer(request_id: str, body: CustomerOfferDecision = Cust
     return await _decide_offer(request_id, user, "declined", body)
 
 
+# ─── Direktkauf aus dem Guthaben (Ausführung erst nach Bankbestätigung) ───
+class DirectOrderBody(BaseModel):
+    bond_id: str
+    amount_eur: float = Field(..., gt=0, le=10_000_000)
+    expected_total: Optional[float] = None
+    model_config = {"extra": "forbid"}
+
+
+_order_locks: "dict[str, asyncio.Lock]" = {}
+
+
+async def _direct_quote(body: DirectOrderBody, user: dict):
+    bond = await _fetch_investable_bond(body.bond_id)
+    price = executable_buy_price(bond)
+    if price is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Für diese Anleihe liegt derzeit kein ausführbarer Kaufkurs vor. Bitte fordern Sie ein Kaufangebot an.",
+        )
+    amount = Decimal(str(body.amount_eur))
+    min_order = bond.get("min_order_eur") or 1000
+    if amount < Decimal(str(min_order)):
+        raise HTTPException(status_code=400, detail=f"Mindestanlage nicht erreicht ({float(min_order):,.0f} €)".replace(",", "."))
+    q = compute_quote(bond, amount, price)
+    if q["pieces"] < 1:
+        raise HTTPException(status_code=400, detail="Der Betrag reicht nicht für ein Stück dieser Anleihe.")
+    available = await available_cash(db, user["id"])
+    return bond, amount, q, available
+
+
+@router.post("/orders/check")
+async def check_direct_order(body: DirectOrderBody, user: dict = Depends(get_current_user)):
+    """Kostenübersicht + Guthabenprüfung. Bei fehlendem Guthaben: Beratungsanfrage."""
+    bond, amount, q, available = await _direct_quote(body, user)
+    out = quote_to_json(q, available)
+    if not out["sufficient"]:
+        await record_advisory_request(db, user, bond, amount, q["total"], available)
+    return out
+
+
+@router.post("/orders", status_code=201)
+async def create_direct_order(body: DirectOrderBody, user: dict = Depends(get_current_user)):
+    """Verbindlicher Kaufauftrag: reserviert die Gesamtkosten, Status 'Wartet auf Bankbestätigung'.
+    Keine Abbuchung, keine Depotbuchung bis zur bestätigten Bankausführung."""
+    lock = _order_locks.setdefault(user["id"], asyncio.Lock())
+    async with lock:
+        bond, amount, q, available = await _direct_quote(body, user)
+        out = quote_to_json(q, available)
+        if body.expected_total is not None and abs(float(q["total"]) - body.expected_total) > 0.005:
+            raise HTTPException(status_code=409, detail="Kurs oder Kosten haben sich geändert. Bitte prüfen Sie die neue Kostenübersicht.")
+        if not out["sufficient"]:
+            await record_advisory_request(db, user, bond, amount, q["total"], available)
+            raise HTTPException(status_code=402, detail={
+                "code": "INSUFFICIENT_FUNDS",
+                "message": "Ihr verfügbares Guthaben reicht für diesen Kauf derzeit nicht aus. Ein persönlicher Berater wird sich mit Ihnen in Verbindung setzen.",
+                "available": out["available"], "required": out["total"], "missing": out["missing"],
+            })
+        now = datetime.now(timezone.utc)
+        user_oid = ObjectId(user["id"])
+        oid = ObjectId()
+        name = " ".join(x for x in (user.get("first_name"), user.get("last_name")) if x).strip() or user.get("email")
+        doc = {
+            "_id": oid,
+            "order_type": "direct",
+            "transaction_no": f"AO-{now:%Y%m%d}-{str(oid)[-8:].upper()}",
+            "user_id": user_oid,
+            "customer_display_id": f"KD-{str(user_oid)[-8:].upper()}",
+            "customer_name_snapshot": name,
+            "bond_id": body.bond_id,
+            "bond_name": bond.get("bond_name"),
+            "issuer": bond.get("issuer"),
+            "isin": bond.get("isin"),
+            "kupon_rate": bond.get("kupon_rate"),
+            "amount_eur": float(amount),
+            "requested_nominal": float(q["nominal"]),
+            "order_quote": {k: v for k, v in out.items() if k not in ("sufficient", "missing")},
+            "reserved_cash": Decimal128(q["total"]),
+            "reference_price_pct": float(q["price_pct"]),
+            "reference_price_type": "binding",
+            "reference_price_date": bond.get("kaufkurs_quoted_at"),
+            "requested_at": now,
+            "status": "awaiting_bank",
+            "source": "customer",
+            "created_at": now,
+            "updated_at": now,
+        }
+        await db.bond_purchase_requests.insert_one(doc)
+    await write_audit(db, "bond_request", oid, "order_created", None,
+                      {"status": "awaiting_bank", "transaction_no": doc["transaction_no"],
+                       "reserved": float(q["total"])}, user)
+    return _serialize(doc)
+
+
 # ─── Admin Endpoints ─────────────────────────────────────────────────────
 async def _serialize_admin(doc: dict) -> dict:
     base = _serialize(doc)
@@ -369,7 +475,8 @@ async def _transition_status(
     if body.decision_note is not None:
         update_doc["$set"]["decision_note"] = body.decision_note.strip() or None
     result = await db.bond_purchase_requests.find_one_and_update(
-        {"_id": ObjectId(request_id), "status": "pending"},
+        {"_id": ObjectId(request_id),
+         "status": {"$in": ["pending"] + (["awaiting_bank", "bank_submitted"] if to_status == "rejected" else [])}},
         update_doc,
         return_document=True,
     )
@@ -403,7 +510,7 @@ async def admin_cancel_bond(
 ):
     """pending/approved → cancelled. Keine Buchung, keine Position."""
     existing = await _load_request(request_id)
-    if existing.get("status") not in ("pending", "approved"):
+    if existing.get("status") not in ("pending", "approved", "awaiting_bank", "bank_submitted"):
         raise HTTPException(
             status_code=409,
             detail=f"Stornierung nur für offene oder genehmigte Anfragen — aktuell '{existing.get('status')}'",
@@ -540,7 +647,7 @@ async def admin_reject_bond(
 # ═══════════════════════════════════════════════════════════════════════
 # Session 82.30 · Bond Execution
 # ═══════════════════════════════════════════════════════════════════════
-from decimal import Decimal, InvalidOperation  # noqa: E402
+from decimal import InvalidOperation  # noqa: E402
 from services.bond_execution_service import (  # noqa: E402
     execute_bond_request, BondExecError, BondExecCrash,
     ensure_indexes as ensure_bond_exec_indexes,
@@ -550,10 +657,40 @@ from services.bond_execution_service import (  # noqa: E402
 class AdminExecuteBondBody(BaseModel):
     nominal_amount: str = Field(..., description="Nominal als Dezimal-String")
     execution_price_pct: str = Field(..., description="Ausführungskurs in %, Dezimal-String")
+    accrued_interest: Optional[str] = None
+    fees: Optional[str] = None
+    bank_reference: Optional[str] = Field(default=None, max_length=120)
+    bank_confirmed_at: Optional[str] = Field(default=None, max_length=40)
     decision_note: Optional[str] = Field(default=None, max_length=500)
     fail_after: Optional[str] = Field(default=None)
 
     model_config = {"extra": "forbid"}
+
+
+class AdminBankSubmitBody(BaseModel):
+    note: Optional[str] = Field(default=None, max_length=500)
+    model_config = {"extra": "forbid"}
+
+
+@admin_router.post("/requests/{request_id}/bank-submit")
+async def admin_bank_submit(request_id: str, body: AdminBankSubmitBody = AdminBankSubmitBody(),
+                            admin_user: dict = Depends(require_admin)):
+    """Direktorder an Partnerbank übermittelt (Reservierung bleibt bestehen)."""
+    existing = await _load_request(request_id)
+    if existing.get("order_type") != "direct" or existing.get("status") != "awaiting_bank":
+        raise HTTPException(status_code=409, detail="Nur Kaufaufträge mit Status „Wartet auf Bankbestätigung“.")
+    now = datetime.now(timezone.utc)
+    result = await db.bond_purchase_requests.find_one_and_update(
+        {"_id": existing["_id"], "status": "awaiting_bank"},
+        {"$set": {"status": "bank_submitted", "bank_submitted_at": now, "updated_at": now,
+                  "bank_submit_note": (body.note or "").strip() or None}},
+        return_document=True,
+    )
+    if not result:
+        raise HTTPException(status_code=409, detail="Auftrag wurde parallel geändert")
+    await write_audit(db, "bond_request", request_id, "bank_submitted", {"status": "awaiting_bank"},
+                      {"status": "bank_submitted", "note": body.note}, admin_user)
+    return await _serialize_admin(result)
 
 
 def _parse_dec(v: str, field: str) -> Decimal:
@@ -575,6 +712,8 @@ async def admin_execute_bond(
         raise HTTPException(status_code=400, detail="Invalid request id")
     nom = _parse_dec(body.nominal_amount, "nominal_amount")
     px = _parse_dec(body.execution_price_pct, "execution_price_pct")
+    acc = _parse_dec(body.accrued_interest or "0", "accrued_interest")
+    fee = _parse_dec(body.fees or "0", "fees")
     try:
         res = await execute_bond_request(
             db, ObjectId(request_id),
@@ -582,13 +721,17 @@ async def admin_execute_bond(
             decision_note=body.decision_note,
             admin_id=str(admin_user.get("id")),
             fail_after=body.fail_after,
+            accrued_interest=acc, fees=fee,
+            bank_reference=body.bank_reference, bank_confirmed_at=body.bank_confirmed_at,
         )
     except BondExecCrash as exc:
         raise HTTPException(status_code=555, detail=f"[injected-crash] {exc}")
     except BondExecError as exc:
         raise HTTPException(status_code=exc.http_status, detail=f"{exc.code}: {exc.detail}")
     await write_audit(db, "bond_request", request_id, "executed", {"status": "approved"},
-                      {"status": "executed", "nominal": str(nom), "price_pct": str(px)}, admin_user)
+                      {"status": "executed", "nominal": str(nom), "price_pct": str(px),
+                       "accrued_interest": str(acc), "fees": str(fee),
+                       "bank_reference": body.bank_reference, "bank_confirmed_at": body.bank_confirmed_at}, admin_user)
     return res
 
 

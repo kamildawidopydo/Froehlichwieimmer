@@ -110,6 +110,10 @@ async def execute_bond_request(
     decision_note: Optional[str] = None,
     admin_id: Optional[str] = None,
     fail_after: Optional[str] = None,
+    accrued_interest: Decimal = Decimal("0"),
+    fees: Decimal = Decimal("0"),
+    bank_reference: Optional[str] = None,
+    bank_confirmed_at: Optional[str] = None,
 ) -> dict:
     if fail_after and fail_after not in ("cash", "position", "settle"):
         raise BondExecError("BAD_FAIL_AFTER", "fail_after muss cash|position|settle sein", 422)
@@ -118,10 +122,16 @@ async def execute_bond_request(
             db, request_id,
             nominal_amount=nominal_amount, execution_price_pct=execution_price_pct,
             decision_note=decision_note, admin_id=admin_id, fail_after=fail_after,
+            accrued_interest=accrued_interest, fees=fees,
+            bank_reference=bank_reference, bank_confirmed_at=bank_confirmed_at,
         )
 
 
-async def _run(db, request_id, *, nominal_amount, execution_price_pct, decision_note, admin_id, fail_after):
+EXECUTABLE_STATUSES = ("approved", "bank_submitted")
+
+
+async def _run(db, request_id, *, nominal_amount, execution_price_pct, decision_note, admin_id, fail_after,
+               accrued_interest=Decimal("0"), fees=Decimal("0"), bank_reference=None, bank_confirmed_at=None):
     # 1. Request laden
     req = await db.bond_purchase_requests.find_one({"_id": request_id})
     if not req:
@@ -133,8 +143,14 @@ async def _run(db, request_id, *, nominal_amount, execution_price_pct, decision_
         if exec_prev and exec_prev.get("status") == "completed":
             return {"execution": _serialize(exec_prev), "resumed": True,
                     "request": {"id": str(request_id), "status": "executed"}}
-    elif st != "approved":
-        raise BondExecError("REQUEST_BAD_STATUS", f"Nur approved zulässig (aktuell '{st}')", 409)
+    elif st not in EXECUTABLE_STATUSES:
+        raise BondExecError("REQUEST_BAD_STATUS", f"Nur genehmigte bzw. an die Bank übermittelte Aufträge zulässig (aktuell '{st}')", 409)
+    is_direct = req.get("order_type") == "direct"
+    if is_direct and st != "executed" and (not (bank_reference or "").strip() or not bank_confirmed_at):
+        raise BondExecError("BANK_CONFIRMATION_REQUIRED",
+            "Ausführung nur mit Referenz und Datum der Ausführungsbestätigung der Partnerbank.", 422)
+    if accrued_interest < 0 or fees < 0:
+        raise BondExecError("BAD_AMOUNT", "Stückzinsen und Gebühren dürfen nicht negativ sein", 422)
 
     user_id = req.get("user_id")
     if not isinstance(user_id, ObjectId):
@@ -183,6 +199,7 @@ async def _run(db, request_id, *, nominal_amount, execution_price_pct, decision_
 
     price_pct = _q_price(execution_price_pct)
     gross = _q_money(nominal_amount * price_pct / Decimal(100))
+    total = _q_money(gross + accrued_interest + fees)
 
     # 4. Execution-Doc anlegen/laden
     exec_doc = await db.bond_executions.find_one({"bond_request_id": request_id})
@@ -197,6 +214,11 @@ async def _run(db, request_id, *, nominal_amount, execution_price_pct, decision_
             "nominal_amount": Decimal128(nominal_amount),
             "execution_price_pct": Decimal128(price_pct),
             "gross_amount": Decimal128(gross),
+            "accrued_interest": Decimal128(_q_money(accrued_interest)),
+            "fees": Decimal128(_q_money(fees)),
+            "total_amount": Decimal128(total),
+            "bank_reference": (bank_reference or "").strip()[:120] or None,
+            "bank_confirmed_at": bank_confirmed_at,
             "currency": bond.get("currency") or "EUR",
             "status": "created",
             "cash_event_id": None, "position_id": None,
@@ -221,27 +243,29 @@ async def _run(db, request_id, *, nominal_amount, execution_price_pct, decision_
     persisted_nominal = _decimal_from_bson(exec_doc["nominal_amount"])
     persisted_price = _decimal_from_bson(exec_doc["execution_price_pct"])
     persisted_gross = _decimal_from_bson(exec_doc["gross_amount"])
+    persisted_total = _decimal_from_bson(exec_doc.get("total_amount") or exec_doc["gross_amount"])
     persisted_isin = exec_doc["isin"]
 
     # 5. CASH-DEBIT
     if exec_doc["status"] == "created":
         cs = await get_cash_summary(db, {"id": str(user_id)})
-        if Decimal(cs["balance"]) < persisted_gross:
+        if Decimal(cs["balance"]) < persisted_total:
             await db.bond_executions.update_one(
                 {"_id": exec_doc["_id"]},
                 {"$set": {"status": "failed",
-                          "last_error": f"INSUFFICIENT_CASH balance={cs['balance']} gross={persisted_gross}",
+                          "last_error": f"INSUFFICIENT_CASH balance={cs['balance']} total={persisted_total}",
                           "updated_at": _now()}},
             )
             raise BondExecError("INSUFFICIENT_CASH",
-                f"Nicht genügend verfügbare Liquidität für die Anleiheausführung (Balance {cs['balance']} EUR, benötigt {persisted_gross} EUR).",
+                f"Nicht genügend verfügbare Liquidität für die Anleiheausführung (Balance {cs['balance']} EUR, benötigt {persisted_total} EUR).",
                 400)
         cash_res = await create_cash_event(
             db, user_id=str(user_id),
             event_type="bond_purchase", direction="debit",
-            amount=str(persisted_gross), currency=exec_doc["currency"], status="settled",
+            amount=str(persisted_total), currency=exec_doc["currency"], status="settled",
             idempotency_key=_key_cash(request_id),
-            description=f"Anleihekauf {persisted_isin} · Nominal {persisted_nominal} @ {persisted_price}%",
+            description=(f"Anleihekauf {persisted_isin} · Nominal {persisted_nominal} @ {persisted_price}%"
+                         + (f" · Bankref. {exec_doc.get('bank_reference')}" if exec_doc.get("bank_reference") else "")),
             source="bond_execution", source_reference_id=str(request_id),
             created_by=admin_id,
         )
@@ -274,12 +298,15 @@ async def _run(db, request_id, *, nominal_amount, execution_price_pct, decision_
     if exec_doc["status"] == "position_applied":
         now_s = _now()
         upd = await db.bond_purchase_requests.update_one(
-            {"_id": request_id, "status": "approved"},
+            {"_id": request_id, "status": {"$in": list(EXECUTABLE_STATUSES)}},
             {"$set": {
                 "status": "executed",
                 "executed_nominal": Decimal128(persisted_nominal),
                 "execution_price_pct": Decimal128(persisted_price),
                 "gross_amount": Decimal128(persisted_gross),
+                "total_amount": Decimal128(persisted_total),
+                "bank_reference": exec_doc.get("bank_reference"),
+                "bank_confirmed_at": exec_doc.get("bank_confirmed_at"),
                 "executed_at": now_s,
                 "execution_id": exec_doc["_id"],
                 "position_id": exec_doc.get("position_id"),
@@ -333,7 +360,10 @@ async def _run(db, request_id, *, nominal_amount, execution_price_pct, decision_
                 price_pct = float(price_pct_raw.to_decimal()) if price_pct_raw is not None and hasattr(price_pct_raw, "to_decimal") else (float(price_pct_raw) if price_pct_raw is not None else None)
             except Exception:  # noqa: BLE001
                 price_pct = None
-            if price_pct is not None:
+            if fresh_req.get("order_type") == "direct":
+                msg = (f"Ihr Kaufauftrag für die {fresh_req.get('bond_name') or isin} wurde erfolgreich ausgeführt. "
+                       "Die Anleihe wurde Ihrem Depot gutgeschrieben.")
+            elif price_pct is not None:
                 msg = f"Ihre Anleihe {isin} wurde zu {format_pct_de(price_pct)} ausgeführt."
             else:
                 msg = f"Ihre Anleihe {isin} wurde ausgeführt."

@@ -8,6 +8,7 @@ from typing import Optional
 PRICE_FIELDS = (
     "kaufkurs", "verkaufskurs", "aktueller_kurs", "kurs_datum", "kurs_quelle",
     "kurs_typ", "kursveraenderung_abs", "kursveraenderung_pct", "rendite_manuell",
+    "kaufkurs_art", "kaufkurs_quelle", "kaufkurs_quoted_at", "kaufkurs_valid_until",
 )
 
 

@@ -126,8 +126,9 @@ const ProductDetails = ({ b, testKey }) => {
   );
 };
 
-export const BondOfferCard = ({ bond: b, testKey, eager, amount, onAmountChange, onRequest }) => {
+export const BondOfferCard = ({ bond: b, testKey, eager, amount, onAmountChange, onRequest, onBuy }) => {
   const requestsOpen = b.requests_enabled !== false;
+  const buyable = b.buy_executable === true;
   return (
     <div
       className="relative border border-bank-border bg-white p-5 transition-shadow duration-300 hover:shadow-editorial-sm"
@@ -186,16 +187,28 @@ export const BondOfferCard = ({ bond: b, testKey, eager, amount, onAmountChange,
           data-testid={`bond-amount-input-${testKey}`}
         />
       </div>
+      {buyable && b.kaufkurs != null && (
+        <p className="mb-3 text-[11.5px] text-emerald-800" data-testid={`bond-buy-price-${testKey}`}>
+          Verbindlicher Kaufkurs {Number(b.kaufkurs).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} %
+          {b.kaufkurs_valid_until && ` · gültig bis ${new Date(b.kaufkurs_valid_until).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
+        </p>
+      )}
       <Button
         variant="primary"
         size="lg"
         className="w-full"
-        onClick={onRequest}
-        disabled={!requestsOpen}
-        data-testid={`bond-request-purchase-${testKey}`}
+        onClick={buyable ? onBuy : onRequest}
+        disabled={!buyable && !requestsOpen}
+        data-testid={buyable ? `bond-buy-now-${testKey}` : `bond-request-purchase-${testKey}`}
       >
         <ShoppingCart size={14} strokeWidth={1.5} />
-        {requestsOpen ? 'Kaufanfrage senden' : 'Derzeit keine Kaufanfragen möglich'}
+        {buyable
+          ? 'Jetzt kaufen'
+          : !requestsOpen
+            ? 'Derzeit keine Kaufanfragen möglich'
+            : b.is_perpetual || b.kurs_typ === 'reference'
+              ? 'Kaufangebot anfordern'
+              : 'Kaufanfrage senden'}
       </Button>
     </div>
   );

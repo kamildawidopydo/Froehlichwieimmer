@@ -33,7 +33,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin-insufficient-buying-power"]
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────
-_ALLOWED_STATUSES = {"new", "handled"}
+_ALLOWED_STATUSES = {"new", "in_progress", "handled"}
 
 
 def _iso(v: Any) -> Optional[str]:
@@ -112,6 +112,13 @@ async def list_insufficient_buying_power_events(
             "quantity": d.get("quantity"),
             "order_type": d.get("order_type"),
             "currency": d.get("currency"),
+            "asset_type": d.get("asset_type") or "stock",
+            "isin": d.get("isin"),
+            "customer_name": d.get("customer_name"),
+            "customer_display_id": d.get("customer_display_id"),
+            "requested_amount": d.get("requested_amount"),
+            "missing_amount": d.get("missing_amount"),
+            "last_attempt_at": _iso(d.get("last_attempt_at")),
             "status": d.get("status", "new"),
             "created_at": _iso(d.get("created_at")),
             "handled_at": _iso(d.get("handled_at")),

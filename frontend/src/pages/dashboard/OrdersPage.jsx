@@ -35,6 +35,7 @@ import { CardListSkeleton } from '@/components/Skeleton';
 import { cn } from '@/lib/utils';
 import useAutoAnimateRef from '@/hooks/useAutoAnimateRef';
 import BondOffersPanel from '@/components/dashboard/bonds/BondOffersPanel';
+import BondOrdersPanel from '@/components/dashboard/bonds/BondOrdersPanel';
 
 const SUB_LABELS = {
   pending: 'Ausstehend', executed: 'Ausgeführt', rejected: 'Abgelehnt', cancelled: 'Storniert',
@@ -68,6 +69,16 @@ const STATUS_META = {
 };
 
 const BOND_STATUS_META = {
+  awaiting_bank: {
+    cls: 'border-amber-300/55 bg-amber-50 text-amber-700',
+    icon: Clock,
+    label: 'Order in Bearbeitung',
+  },
+  bank_submitted: {
+    cls: 'border-amber-300/55 bg-amber-50 text-amber-700',
+    icon: Clock,
+    label: 'Order in Bearbeitung',
+  },
   pending: {
     cls: 'border-amber-300/55 bg-amber-50 text-amber-700',
     icon: Clock,
@@ -727,6 +738,7 @@ const OrdersPage = () => {
                   );
                 })}
               </EditorialTable>
+              <BondOrdersPanel requests={bondPurchaseRequests} />
               <BondOffersPanel requests={bondPurchaseRequests} onDecided={refreshBondRequests} />
             </section>
           )}

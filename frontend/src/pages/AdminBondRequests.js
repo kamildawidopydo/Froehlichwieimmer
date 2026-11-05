@@ -22,7 +22,7 @@ import {
 } from '@/components/admin/AdminSubpageChrome';
 import { formatEUR } from '@/lib/dashboardFormatters';
 import BondRequestActionDialog, { OFFER_STATUS_DE } from '@/components/admin/bonds/BondRequestActionDialog';
-import { pctDe } from '@/lib/bondDisplay';
+import { pctDe, parseDeNumber } from '@/lib/bondDisplay';
 
 /**
  * Admin Bond-Anfragen (Session 82.04 → Session 82.37) — Merge Mongo + Legacy.
@@ -91,14 +91,22 @@ const humanExecError = (code, detail) => {
 };
 
 const parseDecStr = (v) => {
-  if (v == null || String(v).trim() === '') return null;
-  const n = Number(String(v).replace(',', '.'));
-  return Number.isFinite(n) && n > 0 ? n : null;
+  const n = parseDeNumber(v);
+  return n != null && n > 0 ? n : null;
+};
+
+const parseNonNeg = (v) => {
+  const n = parseDeNumber(v);
+  return n != null && n >= 0 ? n : 0;
 };
 
 const EMPTY_EXEC_FORM = {
   nominalAmount: '',
   executionPricePct: '',
+  accruedInterest: '',
+  fees: '',
+  bankReference: '',
+  bankConfirmedAt: '',
   decisionNote: '',
 };
 
@@ -162,6 +170,23 @@ const AdminBondRequests = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const bankSubmit = async (row) => {
+    const note = window.prompt('Notiz zur Übermittlung an die Partnerbank (optional):', '') || null;
+    setProcessingId(row.id);
+    try {
+      await fetchJson(`/api/admin/bonds/requests/${encodeURIComponent(row.id)}/bank-submit`, {
+        method: 'POST',
+        body: JSON.stringify({ note }),
+      });
+      toast.success('Auftrag als an die Partnerbank übermittelt markiert.');
+      await load();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const approveMongo = async (row) => {
     const note = window.prompt('Optionaler Admin-Kommentar für die Freigabe:', '') || null;
     setProcessingId(row.id);
@@ -202,10 +227,14 @@ const AdminBondRequests = () => {
     const catalog = bondById[row.bond_id] || {};
     // Prefill: Nominal ← requested_nominal falls vorhanden, sonst amount_eur (Nominal ≈ 100% Buchwert).
     const nomDefault = row.requested_nominal ?? row.amount_eur ?? '';
+    const de = (v) => (v == null || v === '' ? '' : String(v).replace('.', ','));
+    const q = row.order_quote || {};
     setExecuteForm({
       ...EMPTY_EXEC_FORM,
-      nominalAmount: nomDefault !== '' ? String(nomDefault) : '',
-      executionPricePct: '100',
+      nominalAmount: de(nomDefault),
+      executionPricePct: row.order_type === 'direct' ? de(row.reference_price_pct) : '100',
+      accruedInterest: de(q.accrued_interest),
+      fees: de(q.fees),
     });
     setExecuteRow({ ...row, _catalog: catalog });
   };
@@ -237,12 +266,21 @@ const AdminBondRequests = () => {
       );
       return;
     }
+    const isDirect = executeRow.order_type === 'direct';
+    if (isDirect && (!executeForm.bankReference.trim() || !executeForm.bankConfirmedAt)) {
+      setExecuteError('Bitte Referenz und Datum der Ausführungsbestätigung der Partnerbank angeben.');
+      return;
+    }
     setSubmitting(true);
     try {
       const payload = {
         nominal_amount: String(nominal),
         execution_price_pct: String(price),
+        accrued_interest: String(parseNonNeg(executeForm.accruedInterest)),
+        fees: String(parseNonNeg(executeForm.fees)),
       };
+      if (executeForm.bankReference.trim()) payload.bank_reference = executeForm.bankReference.trim();
+      if (executeForm.bankConfirmedAt) payload.bank_confirmed_at = executeForm.bankConfirmedAt;
       const note = executeForm.decisionNote.trim();
       if (note) payload.decision_note = note;
       await fetchJson(
@@ -357,16 +395,22 @@ const AdminBondRequests = () => {
                   const isExecuted = row.status === 'executed';
                   const isRejected = row.status === 'rejected';
                   const isCancelled = row.status === 'cancelled';
+                  const isAwaitingBank = row.status === 'awaiting_bank';
+                  const isBankSubmitted = row.status === 'bank_submitted';
                   const statusCls = isExecuted
                     ? 'border-sky-300/55 bg-sky-50 text-sky-700'
-                    : isApproved
+                    : isApproved || isBankSubmitted
                       ? 'border-emerald-300/55 bg-emerald-50 text-emerald-700'
                       : isRejected || isCancelled
                         ? 'border-rose-300/55 bg-rose-50 text-rose-700'
                         : 'border-amber-300/55 bg-amber-50 text-amber-700';
                   const statusLabel = isExecuted
                     ? 'Ausgeführt'
-                    : isApproved
+                    : isAwaitingBank
+                      ? 'Wartet auf Bankbestätigung'
+                      : isBankSubmitted
+                        ? 'An Partnerbank übermittelt'
+                        : isApproved
                       ? 'Genehmigt'
                       : isCancelled
                         ? 'Storniert'
@@ -401,6 +445,11 @@ const AdminBondRequests = () => {
                         {row.isin && row.bond_name && (
                           <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted">
                             ISIN · {row.isin}
+                          </p>
+                        )}
+                        {row.transaction_no && (
+                          <p className="mt-0.5 font-mono text-[10.5px] text-bank-text-muted" data-testid={`bond-order-txn-${row.id}`}>
+                            Kaufauftrag {row.transaction_no}{row.bank_reference ? ` · Bankref. ${row.bank_reference}` : ''}
                           </p>
                         )}
                         {row.reference_price_pct != null && (
@@ -512,6 +561,42 @@ const AdminBondRequests = () => {
                                 <Trash2 size={12} strokeWidth={1.5} /> Löschen
                               </Button>
                             )}
+                          </div>
+                        ) : (isAwaitingBank || isBankSubmitted) && isMongo ? (
+                          <div className="inline-flex flex-wrap justify-end gap-1.5">
+                            {isAwaitingBank ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => bankSubmit(row)}
+                                disabled={processingId === row.id}
+                                className="border-emerald-300/55 text-emerald-700 hover:bg-emerald-50"
+                                data-testid={`bond-order-bank-submit-${row.id}`}
+                              >
+                                <Send size={12} strokeWidth={1.5} /> An Bank übermittelt
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openExecute(row)}
+                                disabled={processingId === row.id}
+                                className="gap-1 border-sky-300/55 text-sky-700 hover:bg-sky-50"
+                                data-testid={`bond-order-confirm-execution-${row.id}`}
+                              >
+                                <Package size={12} strokeWidth={1.5} /> Ausführung bestätigen
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => rejectMongo(row)}
+                              disabled={processingId === row.id}
+                              className="border-rose-300/55 text-rose-600 hover:bg-rose-50"
+                              data-testid={`bond-order-reject-${row.id}`}
+                            >
+                              <X size={12} strokeWidth={1.5} /> Ablehnen
+                            </Button>
                           </div>
                         ) : isApproved && isMongo ? (
                           <div className="inline-flex gap-1.5">
@@ -659,18 +744,44 @@ const AdminBondRequests = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Stückzinsen / Abrechnungsbestandteile (€)</Label>
+                  <Input inputMode="decimal" value={executeForm.accruedInterest} onChange={(e) => setExecuteForm((f) => ({ ...f, accruedInterest: e.target.value }))} data-testid="bond-execute-accrued" />
+                </div>
+                <div>
+                  <Label>Gebühren (€)</Label>
+                  <Input inputMode="decimal" value={executeForm.fees} onChange={(e) => setExecuteForm((f) => ({ ...f, fees: e.target.value }))} data-testid="bond-execute-fees" />
+                </div>
+                <div>
+                  <Label>Referenz der Bankbestätigung{executeRow.order_type === 'direct' ? ' *' : ''}</Label>
+                  <Input value={executeForm.bankReference} onChange={(e) => setExecuteForm((f) => ({ ...f, bankReference: e.target.value }))} data-testid="bond-execute-bank-ref" />
+                </div>
+                <div>
+                  <Label>Datum der Bankbestätigung{executeRow.order_type === 'direct' ? ' *' : ''}</Label>
+                  <Input type="date" value={executeForm.bankConfirmedAt} onChange={(e) => setExecuteForm((f) => ({ ...f, bankConfirmedAt: e.target.value }))} data-testid="bond-execute-bank-date" />
+                </div>
+              </div>
+              {executeRow.order_type === 'direct' && (
+                <p className="text-[11px] text-amber-800">
+                  Nur nach tatsächlicher Ausführungsbestätigung der Partnerbank buchen. Die Werte müssen der Abrechnung der Bank entsprechen.
+                </p>
+              )}
+
               <div className="rounded-md border border-bank-border bg-bank-bg/30 p-3 text-[12.5px]">
                 <div className="flex items-center justify-between">
-                  <span className="text-bank-text-muted">Gesamtbetrag (Vorschau)</span>
+                  <span className="text-bank-text-muted">Kaufpreis · Gesamtbetrag (Vorschau)</span>
                   <span
                     className="font-semibold tabular-nums"
                     data-testid="bond-execute-gross-preview"
                   >
-                    {execGross != null ? formatEUR(execGross) : '–'}
+                    {execGross != null
+                      ? `${formatEUR(execGross)} · ${formatEUR(execGross + parseNonNeg(executeForm.accruedInterest) + parseNonNeg(executeForm.fees))}`
+                      : '–'}
                   </span>
                 </div>
                 <p className="mt-1 text-[11px] text-bank-text-muted">
-                  = Nominal × Kurs ÷ 100 · Cash-Buchung erfolgt über die Backend-Saga (Source of Truth).
+                  = Nominal × Kurs ÷ 100 + Stückzinsen + Gebühren · Cash-Buchung erfolgt über die Backend-Saga (Source of Truth).
                 </p>
               </div>
 
