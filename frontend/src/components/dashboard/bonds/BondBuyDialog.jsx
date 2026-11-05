@@ -57,6 +57,18 @@ const Breakdown = ({ q }) => (
   </div>
 );
 
+const RiskNotice = ({ bond, ack, onAck }) => (
+  <div className="mt-3 border-l-2 border-amber-400 bg-amber-50/60 p-3" data-testid="bond-buy-risk-notice">
+    <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-amber-800">Wesentliche Risiken</p>
+    {bond.risk_note && <p className="text-[12.5px] font-semibold text-amber-900">{bond.risk_note}</p>}
+    {bond.risk_details && <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-line text-[12px] leading-snug text-bank-text">{bond.risk_details}</p>}
+    <label className="mt-2 flex items-start gap-2 text-[12.5px] text-amber-900">
+      <input type="checkbox" checked={ack} onChange={(e) => onAck(e.target.checked)} data-testid="bond-buy-risk-ack" className="mt-0.5" />
+      Ich habe die Risikohinweise gelesen und zur Kenntnis genommen.
+    </label>
+  </div>
+);
+
 const OpenOrders = ({ q, identical, ack, onAck }) => (
   <div className="mt-3 border-l-2 border-amber-400 bg-amber-50 p-3 text-[12.5px] leading-snug text-amber-900" data-testid="bond-buy-open-orders">
     <p className="font-semibold">Für diese Anleihe wartet bereits ein Kaufauftrag auf Bankbestätigung:</p>
@@ -83,11 +95,13 @@ export const BondBuyDialog = ({ state, onClose, onOrdered, onStale }) => {
   const [quote, setQuote] = useState(state?.quote || null);
   const [ack, setAck] = useState(false);
   const [advised, setAdvised] = useState(false);
+  const [riskAck, setRiskAck] = useState(false);
   const bond = state?.bond;
   const q = quote || state?.quote;
   const opens = q?.open_orders || [];
   const identical = opens.some((o) => Math.abs(o.nominal - q.nominal) < 0.005);
-  const blocked = identical || (opens.length > 0 && !ack);
+  const hasRisk = !!(bond?.risk_note || bond?.risk_details);
+  const blocked = identical || (opens.length > 0 && !ack) || (hasRisk && !riskAck);
 
   const submit = async () => {
     setBusy(true);
@@ -130,6 +144,7 @@ export const BondBuyDialog = ({ state, onClose, onOrdered, onStale }) => {
           </div>
         )}
         {q && <Breakdown q={q} />}
+        {q && hasRisk && !advised && <RiskNotice bond={bond} ack={riskAck} onAck={setRiskAck} />}
         {q && opens.length > 0 && <OpenOrders q={q} identical={identical} ack={ack} onAck={setAck} />}
         <div className="mt-3 flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={busy} data-testid="bond-buy-cancel">

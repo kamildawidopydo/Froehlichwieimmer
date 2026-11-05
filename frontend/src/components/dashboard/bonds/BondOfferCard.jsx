@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import BondLogo from '@/components/BondLogo';
@@ -160,11 +160,6 @@ export const BondOfferCard = ({ bond: b, testKey, eager, amount, onAmountChange,
           <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">Kupon p.a.</p>
         </div>
       </div>
-      {b.risk_note && (
-        <p className="mb-3 inline-flex items-center gap-1.5 border border-amber-300/70 bg-amber-50 px-2 py-1 text-[11.5px] text-amber-800" data-testid={`bond-risk-note-${testKey}`}>
-          <AlertTriangle size={12} strokeWidth={1.75} /> {b.risk_note}
-        </p>
-      )}
       <dl className="mb-5 grid grid-cols-2 gap-3 border-t border-bank-border pt-4">
         {buildRows(b).map((kv) => (
           <div key={kv.label}>

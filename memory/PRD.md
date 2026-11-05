@@ -500,3 +500,8 @@ Siehe `/app/memory/test_credentials.md`
 - Kaufkurs-Änderungen setzen `price_updated_at` (Referenzkurs-Stempel) nicht mehr neu.
 - Getestet: iteration_118 (Backend 12/12, UI 100 %, inkl. Bankbestätigung + Depotbuchung). Nicht veröffentlicht.
 
+
+## 2026-11-05 · Anleihekarte ohne gelben Risiko-Badge
+- `risk_note`-Badge auf der Kundenkarte entfernt (nur Rabobank hatte ihn). Risiken weiter unter „Produktdetails & Risiken“.
+- Kaufdialog (BondBuyDialog) zeigt vor der verbindlichen Bestätigung Kurzhinweis + ausführliche Risiken; Bestätigung erst nach Häkchen `bond-buy-risk-ack`. Nicht veröffentlicht.
+
