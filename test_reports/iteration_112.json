@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 112 – Rabobank bond (XS1002121454) follow-up: individual offers (create/accept/decline/expired), admin notifications (bond_offer_responses, nav badge, banner, '· NEU', offer/seen), price chart endpoint + UI, German formats, verification badge/fields, seed idempotency. Backend: new suite test_bond_offers_iter112.py 9/9 passed; regression test_rabobank_bond_iter111.py 12/12 passed after I updated one outdated assertion (legal_issuer is now 'Coöperatieve Rabobank U.A. (...)'). Frontend: everything requested was checked end to end in Playwright (admin offer dialog with comma inputs and preview 1.085,00 € · 1.102,50 €; customer offers panel accept/decline with toast/status/buttons disappearing; expired shows 'Abgelaufen'; admin banner + badges + NEU, Details calls /offer/seen, banner count drops after reload; audit labels in German with no [object Object]; Rabobank product details show chart heading, last update, insufficient-data message, terms hint, legal issuer; with 3 stored points the chart draws an SVG line; admin catalog '6,5 %', '108,75 %', amber 'Verifizierung ausstehend', edit modal fields legal_issuer_status/terms_status/verification_note). Accepting books nothing: cash, positions, executions and executed counts are unchanged. Found 1 medium logic issue and several minor ones (below).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/admin/bonds/requests/{id}/offer", "issue": "Admin can overwrite an offer that the customer already accepted or declined. Re-offering on an accepted request returned 200 and set offer.status back to 'offered', so the customer's acceptance is silently lost: no 409, no confirmation, and the audit only shows offer_created. Confirmed via API and in the customer UI (the accept/decline buttons reappeared)."},
+      {"endpoint": "POST /api/admin/bonds/requests/{id}/offer", "issue": "valid_until in the past is accepted, so an offer can be created already expired. The customer sees 'Abgelaufen' immediately. Consider a 400 for valid_until < today."},
+      {"endpoint": "GET /api/admin/notifications/counts", "issue": "The nav badge for Anleihen-Anfragen adds pending_bond_requests and bond_offer_responses. A pending request with an unseen response is counted twice (2 requests showed badge 4)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BondOfferCard restValue", "issue": "Restlaufzeit uses y.toFixed(1), which shows '0.1 J.' with a dot instead of German '0,1 J.' (seen on the ENGIE 23/26 card). This breaks the German-format requirement for non-perpetual bonds.", "selector": "[data-testid='bond-rest-<key>']", "priority": "MEDIUM"},
+      {"component": "OrdersPage mobile (390px)", "issue": "The floating support chat button overlaps the 'Angebot annehmen' button in the Individuelle Angebote card.", "selector": "[data-testid='bond-offer-accept-<id>']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin bond requests", "issues": ["bond-offer-responses-banner uses emerald classes but renders light blue/lavender in the admin theme, so it is not visibly 'green'", "Audit line shows the raw key 'offer_status: offered → accepted' (the action label itself is German)"]},
+      {"screen": "Admin offer dialog / BondFormModal", "issues": ["Native <input type=date> (browser picker, shows mm/dd/yyyy in en locale) instead of the shadcn Calendar", "Edit modal prefills numbers with a dot (Kupon '6.5', Kurs '108.75'), not German comma (comma input is accepted)", "German thousands input like '1.000,50' becomes NaN: n() only replaces the comma"]},
+      {"screen": "Customer offers / chart", "issues": ["Gültig bis is not zero-padded ('30.6.2027', '1.11.2026'); DD.MM.YYYY is preferred", "Chart 'Letzte Kursaktualisierung: 05.11.26, 09:30' uses a 2-digit year, while the card meta uses '5.11.2026, 09:30:53' (inconsistent)", "Chart Y-axis ticks like '109,005 / 108,745' come from domain auto-padding; consider rounded ticks", "Request table status stays 'AUSSTEHEND' after the customer declines the offer (no hint in the table row)"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_bond_offers_iter112.py", "/app/backend/tests/test_rabobank_bond_iter111.py", "/app/backend/tests/ui_setup_iter112.py", "/app/test_reports/pytest/iter112.xml"],
+  "action_items": [
+    "Block or confirm overwriting an offer whose status is accepted/declined in admin_create_bond_offer (e.g. 409 unless an explicit 'replace' flag, plus audit before/after offer_status)",
+    "Validate valid_until >= today in AdminOfferBody",
+    "Fix restValue in BondOfferCard.jsx to German decimal format (toLocaleString('de-DE', {maximumFractionDigits:1}))",
+    "Avoid double-counting in the Anleihen-Anfragen nav badge",
+    "Optional: make the banner green under the admin theme, zero-pad dates, use the shadcn date picker, show German decimals in admin edit inputs, fix the mobile chat FAB overlap"
+  ],
+  "critical_code_review_comments": [
+    "BondOffersPanel/BondPriceChart call relative '/api/...' URLs instead of process.env.REACT_APP_BACKEND_URL. This works same-origin but differs from the project convention.",
+    "_offer_expired uses date.today() (server local date) and not timezone-aware Europe/Berlin; edge case around midnight",
+    "admin_create_bond_offer: when bond_id is invalid or the bond is missing, denomination validation is skipped silently",
+    "bond_requests.py is 655 lines, close to the 700-line limit"
+  ],
+  "updated_files": ["/app/backend/tests/test_bond_offers_iter112.py (new)", "/app/backend/tests/ui_setup_iter112.py (new helper)", "/app/backend/tests/test_rabobank_bond_iter111.py (legal_issuer assertion updated to the verified issuer; cleanup now deletes non-seed bond_price_history rows)"],
+  "success_rate": {"backend": "100% (21/21 incl. regression)", "frontend": "~92% (all requested flows pass; minor format/overlay issues)"},
+  "seed_data_creation": "None persisted. Temporary requests were created by id and deleted along with their audit_log rows: 3 by pytest, 2 by UI (the Rabobank one and one on FERR.METALS 24/26). bond_price_history for 6aec4ccd70262b166764f09d now holds only the system-seed row. Rabobank restored: is_available/requests_enabled true, aktueller_kurs 108.75, kaufkurs/verkaufskurs null, price_updated_at reset to the seed time 2026-11-05T09:30:53.770. The temporary seed DB was dropped. Execute endpoint was never called. audit_log entries with entity_type='bond' from the test price PATCHes remain (audit history, not prices).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run backend with: cd /app/backend && python -m pytest tests/test_bond_offers_iter112.py tests/test_rabobank_bond_iter111.py -n 0 (sequential is required because of the pending-per-user+bond unique guard). Visitor welcome gate on public pages: select index 1 in the 2nd <select> inside [data-testid=visitor-welcome-gate], then click 'Akzeptieren'. Customer offers are on /dashboard/auftraege, the bond catalog cards on /dashboard/anleihen/kaufen (search via bonds-search-input), admin pages on /admin/bond-requests and /admin/bond-catalog. Notification counts are nested under response['counts']. One login during the run skipped all tests once (transient, probably rate limiting); a rerun passed.",
+  "test_credentials": "qa.admin@kapital-direkt24.de / Qa-ra46CVrWIW3wg6l5EI6IKqbx (admin, preview); tester@mester.de / HHHKKK222 (customer). bcrypt $2b$ confirmed; access_token cookie is HttpOnly; Secure; SameSite=None; CORS has explicit origin + credentials."
+}

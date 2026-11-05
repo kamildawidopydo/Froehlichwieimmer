@@ -89,7 +89,7 @@ export const BondOffersPanel = ({ requests, onDecided }) => {
   const withOffer = (requests || []).filter((r) => r.offer);
   if (withOffer.length === 0) return null;
   return (
-    <div className="mt-5 space-y-3" data-testid="bond-offers-panel">
+    <div className="mb-20 mt-5 space-y-3 md:mb-0" data-testid="bond-offers-panel">
       <p className="inline-flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-text-muted">
         <FileSignature size={13} className="text-bank-gold" /> Individuelle Angebote
       </p>

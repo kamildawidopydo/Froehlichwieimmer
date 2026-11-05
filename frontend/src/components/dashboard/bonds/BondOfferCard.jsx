@@ -12,6 +12,8 @@ import {
   formatSigned,
   currentYield,
   isReferencePrice,
+  dateTimeDe,
+  dateDe,
 } from '@/lib/bondDisplay';
 
 const Label = ({ children }) => (
@@ -26,14 +28,14 @@ const priceValue = (b) => {
 
 const maturityValue = (b) => {
   if (b.is_perpetual) return 'Unbefristet';
-  return b.faelligkeitsdatum ? new Date(b.faelligkeitsdatum).toLocaleDateString('de-DE') : 'Nach Verifizierung';
+  return b.faelligkeitsdatum ? dateDe(b.faelligkeitsdatum) : 'Nach Verifizierung';
 };
 
 const restValue = (b) => {
   const y = yearsRemaining(b);
   if (y === Infinity) return 'Unbefristet';
   if (y == null) return '–';
-  return y > 0 ? `${y.toFixed(1)} J.` : 'fällig';
+  return y > 0 ? `${y.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} J.` : 'fällig';
 };
 
 const buildRows = (b) => {
@@ -62,7 +64,7 @@ const buildRows = (b) => {
 const PriceMeta = ({ b }) => {
   const change = formatSigned(b.kursveraenderung_abs);
   const changePct = formatSigned(b.kursveraenderung_pct, 2, ' %');
-  const stamp = b.kurs_datum || (b.price_updated_at && new Date(b.price_updated_at).toLocaleString('de-DE'));
+  const stamp = b.kurs_datum || (b.price_updated_at && dateTimeDe(b.price_updated_at));
   if (!isReferencePrice(b) && !change && !stamp) return null;
   return (
     <p className="mb-4 -mt-2 text-[11px] leading-snug text-bank-text-muted" data-testid="bond-card-price-meta">
@@ -102,7 +104,7 @@ const ProductDetails = ({ b, testKey }) => {
           <DetailLine label="Rechtlicher Herausgeber" value={b.legal_issuer} />
           <DetailLine label="WKN" value={b.wkn} />
           <DetailLine label="Währung" value={b.currency} />
-          <DetailLine label="Emissionsdatum" value={b.issue_date && new Date(b.issue_date).toLocaleDateString('de-DE')} />
+          <DetailLine label="Emissionsdatum" value={b.issue_date && dateDe(b.issue_date)} />
           <DetailLine label="Stückelung" value={b.denomination && formatEUR(b.denomination)} />
           <DetailLine label="Zinszahlung" value={[b.zinsfrequenz, b.zinstermine].filter(Boolean).join(' · ')} />
           {b.description && <p className="pt-1 text-[12px] leading-snug text-bank-text">{b.description}</p>}

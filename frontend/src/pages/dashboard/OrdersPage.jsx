@@ -715,7 +715,9 @@ const OrdersPage = () => {
                       </td>
                       <td className="px-4 py-3"><StatusPill meta={meta} /></td>
                       <td className="max-w-[220px] px-4 py-3 text-[12px] leading-snug text-bank-text-muted">
-                        {b.decision_note
+                        {b.offer && !b.decision_note
+                          ? ({ offered: 'Individuelles Angebot liegt vor', accepted: 'Angebot angenommen – in Prüfung', declined: 'Angebot abgelehnt', expired: 'Angebot abgelaufen' }[b.offer.status] || '–')
+                          : b.decision_note
                           ? b.decision_note.length > 80
                             ? b.decision_note.slice(0, 80) + '…'
                             : b.decision_note

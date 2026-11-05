@@ -77,7 +77,8 @@ class AdminOfferBody(BaseModel):
     def _iso(cls, v):
         if not v:
             return None
-        _date.fromisoformat(v)
+        if _date.fromisoformat(v) < _date.today():
+            raise ValueError("Gültigkeitsdatum darf nicht in der Vergangenheit liegen")
         return v
 
 
@@ -455,6 +456,11 @@ async def admin_create_bond_offer(
 ):
     """Individuelles Kaufangebot hinterlegen — unverbindlich, keine Buchung."""
     existing = await _load_request(request_id)
+    if (existing.get("offer") or {}).get("status") in ("accepted", "declined"):
+        raise HTTPException(
+            status_code=409,
+            detail="Der Kunde hat über das bestehende Angebot bereits entschieden — es kann nicht überschrieben werden.",
+        )
     if existing.get("status") not in ("pending", "approved"):
         raise HTTPException(
             status_code=409,

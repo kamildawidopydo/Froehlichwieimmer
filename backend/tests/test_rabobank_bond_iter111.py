@@ -52,6 +52,7 @@ def cleanup(mdb):
     for rid in CREATED_REQ_IDS:
         mdb.bond_purchase_requests.delete_one({"_id": ObjectId(rid)})
     mdb.bond_catalog.delete_many({"isin": "TEST00000001", "bond_name": {"$regex": "^TEST_"}})
+    mdb.bond_price_history.delete_many({"bond_id": RABO, "recorded_by": {"$ne": "system-seed"}})
 
 
 # --- Customer catalog
@@ -65,7 +66,7 @@ class TestCustomerCatalog:
         assert b["kupon_rate"] == 6.5 and b["aktueller_kurs"] == 108.75
         assert b["is_perpetual"] is True and b["faelligkeitsdatum"] is None
         assert b["kurs_typ"] == "reference" and b["denomination"] == 25.0 and b["min_order_eur"] == 1000.0
-        assert b["legal_issuer"] == "Stichting AK Rabobank Certificaten"
+        assert b["legal_issuer"].startswith("Coöperatieve Rabobank U.A.")  # updated iter112: issuer verified
         assert b["requests_enabled"] is True and b["price_updated_at"]
 
     def test_customer_forbidden_admin(self, cust):

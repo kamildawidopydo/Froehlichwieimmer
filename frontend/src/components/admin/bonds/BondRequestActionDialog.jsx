@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { formatEUR } from '@/lib/dashboardFormatters';
 import { AuditList } from '@/components/admin/bonds/BondHistoryDialog';
-import { pctDe, eurDe, dateDe } from '@/lib/bondDisplay';
+import { pctDe, eurDe, dateDe, parseDeNumber } from '@/lib/bondDisplay';
 
 export const OFFER_STATUS_DE = {
   offered: 'Angebot versendet', accepted: 'Vom Kunden angenommen', declined: 'Vom Kunden abgelehnt', expired: 'Abgelaufen',
@@ -52,7 +52,7 @@ const RequestSummary = ({ r }) => (
 );
 
 const OfferForm = ({ form, setForm }) => {
-  const n = (v) => Number(String(v ?? '').replace(',', '.')) || 0;
+  const n = (v) => parseDeNumber(v) || 0;
   const nominal = n(form.nominal);
   const price = n(form.price_pct);
   const amount = nominal > 0 && price > 0 ? (nominal * price) / 100 : null;
@@ -122,7 +122,7 @@ export const BondRequestActionDialog = ({ action, row, onClose, onDone, fetchJso
     setBusy(true);
     setError(null);
     try {
-      const num = (v) => Number(String(v).replace(',', '.'));
+      const num = (v) => parseDeNumber(v);
       const map = {
         note: ['notes', { text }],
         cancel: ['cancel', { decision_note: text || null }],

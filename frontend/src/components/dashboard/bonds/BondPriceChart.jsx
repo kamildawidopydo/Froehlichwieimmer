@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { pctDe } from '@/lib/bondDisplay';
+import { pctDe, dateTimeDe } from '@/lib/bondDisplay';
 
-const fmtDateTime = (v) => (v ? new Date(v).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '–');
+const fmtDateTime = dateTimeDe;
 
 export const BondPriceChart = ({ bondId }) => {
   const [data, setData] = useState(null);
@@ -42,7 +42,7 @@ export const BondPriceChart = ({ bondId }) => {
             <LineChart data={points} margin={{ top: 5, right: 8, bottom: 0, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={(t) => new Date(t).toLocaleDateString('de-DE')} tick={{ fontSize: 10 }} />
-              <YAxis domain={['auto', 'auto']} tickFormatter={(v) => v.toLocaleString('de-DE')} tick={{ fontSize: 10 }} />
+              <YAxis domain={['dataMin - 0.5', 'dataMax + 0.5']} allowDecimals tickCount={5} tickFormatter={(v) => v.toLocaleString('de-DE', { maximumFractionDigits: 1 })} tick={{ fontSize: 10 }} />
               <Tooltip labelFormatter={(t) => fmtDateTime(t)} formatter={(v) => [pctDe(v, 2, 2), 'Referenzkurs']} />
               <Line type="linear" dataKey="kurs" stroke="#1e3a8a" strokeWidth={1.75} dot={{ r: 2.5 }} isAnimationActive={false} />
             </LineChart>

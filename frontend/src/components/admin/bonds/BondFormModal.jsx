@@ -3,6 +3,7 @@ import { X, Save, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { parseDeNumber } from '@/lib/bondDisplay';
 
 const SECTIONS = [
   {
@@ -67,7 +68,7 @@ const toForm = (row) =>
   Object.fromEntries(
     ALL.map(({ k, t }) => {
       const v = row?.[k] ?? DEFAULTS[k];
-      return [k, t === 'bool' ? !!v : v == null ? '' : String(v)];
+      return [k, t === 'bool' ? !!v : v == null ? '' : t === 'number' ? String(v).replace('.', ',') : String(v)];
     }),
   );
 
@@ -77,10 +78,7 @@ const toPayload = (form) =>
       const v = form[k];
       if (t === 'bool') return [k, !!v];
       if (v === '' || v == null) return [k, null];
-      if (t === 'number') {
-        const n = Number(String(v).replace(',', '.'));
-        return [k, Number.isFinite(n) ? n : null];
-      }
+      if (t === 'number') return [k, parseDeNumber(v)];
       return [k, String(v).trim()];
     }),
   );
