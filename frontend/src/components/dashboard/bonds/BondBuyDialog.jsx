@@ -78,7 +78,7 @@ const OpenOrders = ({ q, identical, ack, onAck }) => (
   </div>
 );
 
-export const BondBuyDialog = ({ state, onClose, onOrdered }) => {
+export const BondBuyDialog = ({ state, onClose, onOrdered, onStale }) => {
   const [busy, setBusy] = useState(false);
   const [quote, setQuote] = useState(state?.quote || null);
   const [ack, setAck] = useState(false);
@@ -101,11 +101,12 @@ export const BondBuyDialog = ({ state, onClose, onOrdered }) => {
         setAdvised(true);
         toast.success(ADVISORY_MSG);
       } else if (err.status === 409) {
-        toast.error(err.message);
         try {
           setQuote(await fetchBuyQuote(bond.id, state.amount));
+          toast.error(err.message);
         } catch (e2) {
           toast.error(e2.message);
+          onStale?.();
           onClose();
         }
       } else {

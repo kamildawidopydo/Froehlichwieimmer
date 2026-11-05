@@ -491,3 +491,12 @@ Siehe `/app/memory/test_credentials.md`
 - Fix: getrennter Schalter `orders_enabled` (Kaufaufträge) neben `requests_enabled` (Angebotsanfragen); `executable_buy_price` nutzt `orders_enabled`; einmalige Migration `requests_release_migrated` gibt Angebotsanfragen für Rabobank frei (spätere Admin-Sperren bleiben); verständliche Meldungen; Katalog lädt nach 400/409 und Tab-Wechsel neu; Admin-Katalog zeigt Badges + Toggle für Kaufaufträge und „Ausführbarer Kurs vorhanden/nicht vorhanden“; Admin-Zähler zählen awaiting_bank-Aufträge und Kaufkraft-Warnungen.
 - Getestet: iteration_117 (Backend 10/10, UI 100 %), Testdaten entfernt. Nicht veröffentlicht.
 
+
+## 2026-11-05 · Rabobank-Kauf: Folgeverbesserungen
+- Kaufkraft-Warnung nur bei ausdrücklicher Bestätigung (POST /api/bonds/orders); /orders/check erzeugt keine mehr.
+- Doppelte Aufträge: identischer offener Auftrag (gleicher Nennwert, awaiting_bank/bank_submitted) → 409 DUPLICATE_ORDER; anderer Nennwert nur mit `confirm_additional` (Checkbox). Nach Ausführung/Stornierung wieder frei. Sperre per In-Process-Lock (1 Worker).
+- Kursüberwachung: GET /api/admin/bonds/price-alerts (abgelaufen / läuft in 24 Std. ab), Banner im Anleihen-Katalog, Badge + Toast `bond_price_alerts`. Abgelaufene Kurse nie ausführbar.
+- Mindestanlage je Anleihe mit `min_order_basis` (purchase|nominal), automatische Mindeststückzahl (109,10 % · 25 € · 1.000 € → 37 Stk / 925 € / 1.009,18 €). Dialog zeigt Stückzahl, Nennwert, Kurs, Kaufbetrag, Gebühren, Gesamt, Mindestanlage.
+- Kaufkurs-Änderungen setzen `price_updated_at` (Referenzkurs-Stempel) nicht mehr neu.
+- Getestet: iteration_118 (Backend 12/12, UI 100 %, inkl. Bankbestätigung + Depotbuchung). Nicht veröffentlicht.
+

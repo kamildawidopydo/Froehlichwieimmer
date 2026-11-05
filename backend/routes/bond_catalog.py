@@ -30,7 +30,7 @@ from services.bond_sync import (  # noqa: E402
     ensure_history_index,
 )
 from services.bond_audit import (  # noqa: E402
-    write_audit, list_audit, price_changed, record_price, list_prices,
+    write_audit, list_audit, price_changed, record_price, list_prices, PRICE_FIELDS,
 )
 from services.bond_order_service import executable_buy_price, price_expiry_status, PRICE_EXPIRY_WARN_HOURS  # noqa: E402
 
@@ -298,7 +298,7 @@ async def admin_price_alerts(_admin: dict = Depends(require_admin)):
     """Verbindliche Kaufkurse, die abgelaufen sind oder bald ablaufen."""
     now = datetime.now(timezone.utc)
     out = []
-    async for b in db.bond_catalog.find({"kaufkurs_art": "verbindlich", "kaufkurs": {"$ne": None}}):
+    async for b in db.bond_catalog.find({"kaufkurs_art": "verbindlich", "kaufkurs": {"$ne": None}, "is_available": True}):
         status = price_expiry_status(b, now)
         if status:
             out.append({"id": str(b["_id"]), "bond_name": b.get("bond_name"), "isin": b.get("isin"),
@@ -365,7 +365,8 @@ async def admin_update_bond(
     # Admin-gepflegte Datensätze nie vom Börsen-Sync überschreiben lassen
     changes["is_manual_override"] = True
     prices = price_changed(existing, changes)
-    if prices:
+    display_fields = [k for k in PRICE_FIELDS if not k.startswith("kaufkurs")]
+    if any(k in changes and changes[k] != existing.get(k) for k in display_fields):
         changes["price_updated_at"] = now
     result = await db.bond_catalog.find_one_and_update(
         {"_id": oid},

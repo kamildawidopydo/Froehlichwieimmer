@@ -423,6 +423,7 @@ const AnleihenKaufenPage = () => {
         key={buyState ? `${buyState.bond.id}-${buyState.amount}-${buyState.quote.total}` : 'none'}
         state={buyState}
         onClose={() => setBuyState(null)}
+        onStale={retry}
         onOrdered={async () => {
           setBuyState(null);
           if (typeof refreshBondRequests === 'function') await refreshBondRequests();
