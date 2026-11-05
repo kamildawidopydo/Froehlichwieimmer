@@ -1,0 +1,87 @@
+{
+ "quelle": "https://essenceinvest.com/api/news-markte/anlagetrends",
+ "abgerufen_am": "2026-11-05",
+ "daten": [
+  {
+   "id": "6a8ebabd34a5521ace84e308",
+   "slug": "ki-halbleiter",
+   "title": "Künstliche Intelligenz & Halbleiter",
+   "summary": "KI, Rechenzentren, Chips und digitale Infrastruktur.",
+   "detail": "Investitionen in Rechenzentren, Trainings-Infrastruktur und Halbleiterfertigung bleiben strukturell hoch.",
+   "tag": "Langfristiger Trend",
+   "icon": "cpu"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e309",
+   "slug": "infrastruktur",
+   "title": "Infrastruktur",
+   "summary": "Energieversorgung, Stromnetze, Verkehr und Digitalisierung.",
+   "detail": "Milliardenschwere Modernisierungsprogramme in Europa und den USA sichern langfristige Auftragsvolumen.",
+   "tag": "Langfristiger Trend",
+   "icon": "network"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e30a",
+   "slug": "verteidigung-sicherheit",
+   "title": "Verteidigung & Sicherheit",
+   "summary": "Unternehmen und Entwicklungen rund um Sicherheit und Verteidigung.",
+   "detail": "Erhöhte Verteidigungsbudgets in der NATO sorgen für strukturell steigende Auftragslage.",
+   "tag": "Erhöhte Marktaktivität",
+   "icon": "shield"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e30b",
+   "slug": "energie-energiewende",
+   "title": "Energie & Energiewende",
+   "summary": "Erneuerbare Energien, Stromnetze, Speicher und klassische Energieversorgung.",
+   "detail": "Netzausbau, Speicher und Wasserstoff-Infrastruktur bleiben im Fokus institutioneller Investoren.",
+   "tag": "Langfristiger Trend",
+   "icon": "zap"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e30c",
+   "slug": "rohstoffe",
+   "title": "Rohstoffe",
+   "summary": "Gold, Silber, Kupfer und andere Industriemetalle.",
+   "detail": "Elektrifizierung und Sicherheitsbedürfnis stützen die Nachfrage nach strategischen Metallen.",
+   "tag": "Unter Beobachtung",
+   "icon": "gem"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e30d",
+   "slug": "seltene-erden",
+   "title": "Seltene Erden",
+   "summary": "Strategische Rohstoffe für Hochtechnologie und Industrie.",
+   "detail": "Diversifizierung der Lieferketten außerhalb Chinas eröffnet neue Investitionsfelder.",
+   "tag": "Neue Entwicklung",
+   "icon": "layers"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e30e",
+   "slug": "gesundheit-demografie",
+   "title": "Gesundheit & Demografie",
+   "summary": "Pharma, Medizintechnik, Pflege und langfristige demografische Veränderungen.",
+   "detail": "Alternde Gesellschaften und medizinische Innovation prägen das Wachstum der kommenden Dekade.",
+   "tag": "Defensives Thema",
+   "icon": "heart-pulse"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e30f",
+   "slug": "wasser",
+   "title": "Wasser",
+   "summary": "Wasserversorgung, Infrastruktur und Aufbereitung.",
+   "detail": "Wasser bleibt eine der zentralen langfristigen Ressourcen — Infrastruktur- und Technologieanbieter im Fokus.",
+   "tag": "Defensives Thema",
+   "icon": "droplets"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e310",
+   "slug": "digitalisierung",
+   "title": "Digitalisierung",
+   "summary": "Cloud, Cybersecurity, Software und digitale Infrastruktur.",
+   "detail": "Digitalisierung öffentlicher Verwaltungen und Unternehmen sorgt für stabile Auftragslage bei Software-Anbietern.",
+   "tag": "Langfristiger Trend",
+   "icon": "cloud"
+  }
+ ]
+}

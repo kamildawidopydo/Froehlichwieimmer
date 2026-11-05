@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>{{ topic_title }} kompakt — Fröhlich Vermögensberatung</title>
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 20mm 24mm 20mm;
+    @top-left {
+      content: "Fröhlich Vermögensberatung — Strategie-Merkblatt";
+      font-family: "Helvetica", Arial, sans-serif;
+      font-size: 8.5pt;
+      color: #6b6f76;
+    }
+    @bottom-right {
+      content: "Seite " counter(page) " / " counter(pages);
+      font-family: "Helvetica", Arial, sans-serif;
+      font-size: 8.5pt;
+      color: #6b6f76;
+    }
+    @bottom-left {
+      content: "Stand {{ today }}";
+      font-family: "Helvetica", Arial, sans-serif;
+      font-size: 8.5pt;
+      color: #6b6f76;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    font-family: "Helvetica", Arial, sans-serif;
+    color: #1c2024;
+    font-size: 10.5pt;
+    line-height: 1.5;
+  }
+  h1 {
+    font-family: "Georgia", "Times New Roman", serif;
+    font-size: 22pt;
+    line-height: 1.15;
+    margin: 0 0 6pt 0;
+    color: #0f172a;
+  }
+  h2 {
+    font-family: "Georgia", "Times New Roman", serif;
+    font-size: 14pt;
+    color: #0d5b6a;
+    margin: 22pt 0 8pt 0;
+    line-height: 1.2;
+  }
+  h4 {
+    font-family: "Georgia", "Times New Roman", serif;
+    font-size: 11pt;
+    color: #1c2024;
+    margin: 0 0 3pt 0;
+  }
+  p { margin: 4pt 0 8pt 0; }
+  .eyebrow {
+    color: #0d5b6a;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-size: 8.5pt;
+    margin: 0 0 4pt 0;
+  }
+  .lead {
+    color: #4b5057;
+    font-size: 11pt;
+    margin-top: 6pt;
+  }
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6pt 20pt;
+    background: #f4faf9;
+    border: 1px solid #cfe4e1;
+    padding: 10pt 14pt;
+    border-radius: 6pt;
+    margin: 10pt 0 14pt 0;
+  }
+  .facts dt {
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #6b6f76;
+    grid-column: 1;
+  }
+  .facts dd {
+    margin: 0 0 4pt 0;
+    grid-column: 2;
+    text-align: right;
+    color: #0f172a;
+  }
+  ul.list, ol.list {
+    padding-left: 18pt;
+    margin: 6pt 0 12pt 0;
+  }
+  ul.list li, ol.list li { margin-bottom: 4pt; }
+  ol.list { list-style: decimal; }
+  ul.list li::marker { color: #0d5b6a; }
+  .aspects-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8pt 14pt;
+    margin: 8pt 0 14pt 0;
+  }
+  .aspect {
+    border: 1px solid #e2e4e8;
+    border-radius: 6pt;
+    padding: 8pt 10pt;
+    background: #ffffff;
+  }
+  .aspect p { margin: 3pt 0 0 0; font-size: 9.5pt; color: #4b5057; }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12pt;
+  }
+  .card {
+    border: 1px solid #e2e4e8;
+    border-radius: 6pt;
+    padding: 10pt 12pt;
+    background: #ffffff;
+  }
+  .card h4 { margin-top: 0; }
+  .related {
+    margin: 6pt 0 12pt 0;
+    padding-left: 18pt;
+  }
+  .disclaimer {
+    margin-top: 22pt;
+    padding-top: 10pt;
+    border-top: 1px solid #e2e4e8;
+    font-size: 8.5pt;
+    color: #6b6f76;
+    line-height: 1.4;
+    font-style: italic;
+  }
+  .footer-url {
+    margin-top: 4pt;
+    font-size: 8.5pt;
+    color: #0d5b6a;
+    word-break: break-all;
+  }
+  .header-strip {
+    border-bottom: 1px solid #cfe4e1;
+    padding-bottom: 8pt;
+    margin-bottom: 10pt;
+  }
+</style>
+</head>
+<body>
+  <div class="header-strip">
+    <p class="eyebrow">Fröhlich Vermögensberatung · Strategie · {{ category_title }}</p>
+    <h1>{{ topic_title }} kompakt</h1>
+    <p class="lead">Grundlagen, wichtige Aspekte, Risiken und Fragen für das persönliche Gespräch.</p>
+  </div>
+
+  <p>{{ intro }}</p>
+  <p>{{ summary }}</p>
+
+  {{ quick_facts_html }}
+
+  <h2>Das Wichtigste auf einen Blick</h2>
+  {{ key_takeaways_html }}
+
+  <h2>Wie funktioniert das?</h2>
+  {{ how_it_works_html }}
+
+  <h2>Wichtige Aspekte</h2>
+  {{ aspects_html }}
+
+  <h2>Mögliche Vorteile & was zu beachten ist</h2>
+  <div class="two-col">
+    <div class="card">
+      <h4>Mögliche Vorteile</h4>
+      {{ advantages_html }}
+    </div>
+    <div class="card">
+      <h4>Zu beachten</h4>
+      {{ considerations_html }}
+    </div>
+  </div>
+
+  <h2>Self-Check</h2>
+  <p>Welche Punkte sind für Sie persönlich wichtig?</p>
+  {{ self_check_html }}
+
+  <h2>Fragen für das persönliche Gespräch</h2>
+  {{ conv_questions_html }}
+
+  <h2>Verwandte Themen</h2>
+  {{ related_html }}
+
+  <div class="disclaimer">
+    <p>Die Inhalte dieses Merkblatts dienen der allgemeinen Information und ersetzen keine individuelle Anlage-, Steuer- oder Rechtsberatung. Es handelt sich nicht um eine Empfehlung zum Kauf oder Verkauf einzelner Wertpapiere oder Anlageprodukte. Prognosen sind keine verlässlichen Indikatoren für zukünftige Wertentwicklungen.</p>
+    <p class="footer-url">Aktuelle Fassung online: {{ strategy_url }}</p>
+  </div>
+</body>
+</html>

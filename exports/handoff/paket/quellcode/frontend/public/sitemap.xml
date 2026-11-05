@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Session 82.48 — Foreign-domain purge.
+  Fremde www.kapitalmitte.com-Einträge (18 URLs) entfernt.
+  Es verbleiben ausschließlich kontrollierte essenceinvest.com-URLs
+  zu real existierenden /strategie/*-Routen (siehe App.js).
+  Keine Ersatz-URLs erfunden, keine noindex-Seiten aufgenommen,
+  News-Detail-Artikel bewusst NICHT aufgenommen (Session 82.47: /news/* setzt noIndex).
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://essenceinvest.com/strategie</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/legal/impressum</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/anlagestile</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/anlagestile/value-investing</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/anlagestile/dividendenstrategien</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/nachhaltigkeit</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/nachhaltigkeit/nachhaltige-investments-esg</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/nachhaltigkeit/impact-investing</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/schutz-steuerung</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/schutz-steuerung/vermoegensschutz</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/schutz-steuerung/inflationsschutz</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/schutz-steuerung/vermoegensaufbau</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/altersvorsorge</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/altersvorsorge/altersvorsorge</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/altersvorsorge/private-rentenvorsorge</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/altersvorsorge/betriebliche-altersvorsorge</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/generationen</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/generationen/vermoegensaufbau-fuer-kinder</loc>
+  </url>
+  <url>
+    <loc>https://essenceinvest.com/strategie/generationen/vermoegensuebertragung</loc>
+  </url>
+</urlset>

@@ -1,0 +1,60 @@
+{
+ "quelle": "https://essenceinvest.com/api/news-markte/investment-radar",
+ "abgerufen_am": "2026-11-05",
+ "daten": [
+  {
+   "id": "6a8ebabd34a5521ace84e311",
+   "theme": "Halbleiter-Wertschöpfungskette",
+   "category": "Aktien / Technologie",
+   "why": "Strukturelle Nachfrage durch KI-Investitionen und Onshoring-Programme.",
+   "horizon": "Langfristig (5+ Jahre)",
+   "tag": "Langfristiger Trend",
+   "related_slug": "nvidia-deal-der-bundesregierung-chip-unternehmer-warnt-vor-wachsender-us-abhaeng"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e312",
+   "theme": "Europäische Verteidigungswerte",
+   "category": "Aktien / Industrie",
+   "why": "Erhöhte NATO-Budgets und langfristige Rüstungsprogramme.",
+   "horizon": "Mittelfristig (2–5 Jahre)",
+   "tag": "Erhöhte Marktaktivität",
+   "related_slug": "rheinmetall-waechst-stark-daempft-aber-die-erwartungen-fuer-das-gesamtjahr"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e313",
+   "theme": "Netzinfrastruktur & Grids",
+   "category": "Aktien / Versorger",
+   "why": "Milliardenschwere Netzmodernisierungen in Europa und den USA.",
+   "horizon": "Langfristig (5+ Jahre)",
+   "tag": "Langfristiger Trend",
+   "related_slug": "digitalgipfel-rechenzentren-treiben-strombedarf-durch-ki-boom-in-die-hoehe"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e314",
+   "theme": "Goldbestände als Absicherung",
+   "category": "Rohstoffe",
+   "why": "Zentralbank-Käufe und geopolitische Unsicherheit stützen den Preis.",
+   "horizon": "Strategisch",
+   "tag": "Defensives Thema",
+   "related_slug": "us-zwischenwahlen-gold-und-oel-legen-zu-sorge-um-rechenzentren-an-der-wall-stree"
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e315",
+   "theme": "Strategische Metalle",
+   "category": "Rohstoffe / Seltene Erden",
+   "why": "Diversifizierung der Lieferketten außerhalb Chinas gewinnt an Bedeutung.",
+   "horizon": "Langfristig (5+ Jahre)",
+   "tag": "Neue Entwicklung",
+   "related_slug": null
+  },
+  {
+   "id": "6a8ebabd34a5521ace84e316",
+   "theme": "Hochwertige Unternehmensanleihen",
+   "category": "Anleihen / IG",
+   "why": "Attraktive Realrenditen bei solider Bilanzqualität.",
+   "horizon": "Mittelfristig (2–5 Jahre)",
+   "tag": "Unter Beobachtung",
+   "related_slug": "us-midterms-demokraten-erfolg-setzt-tech-werte-unter-druck-anleihen-profitieren"
+  }
+ ]
+}

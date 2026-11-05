@@ -1,0 +1,52 @@
+{
+ "quelle": "https://essenceinvest.com/api/stocks/AAPL/analyst",
+ "abgerufen_am": "2026-11-05",
+ "daten": {
+  "symbol": "AAPL",
+  "data_source": "yfinance",
+  "data_updated_at": "2026-11-05T12:22:50.388000+00:00",
+  "cached_until": "2026-11-05T18:22:50.388000+00:00",
+  "currency": null,
+  "recommendations": {
+   "strong_buy": null,
+   "buy": null,
+   "hold": null,
+   "sell": null,
+   "strong_sell": null,
+   "total": null,
+   "mean": null,
+   "key": null,
+   "period": null
+  },
+  "price_target": {
+   "mean": null,
+   "median": null,
+   "high": null,
+   "low": null,
+   "current": null,
+   "upside_pct": null
+  },
+  "valuation": {
+   "trailing_pe": null,
+   "forward_pe": null,
+   "price_to_sales": null,
+   "price_to_book": null,
+   "ev_to_ebitda": null,
+   "peg_ratio": null,
+   "market_cap": null,
+   "enterprise_value": null,
+   "dividend_yield": null
+  },
+  "profitability": {
+   "revenue_growth": null,
+   "earnings_growth": null,
+   "operating_margin": null,
+   "profit_margin": null,
+   "return_on_equity": null,
+   "free_cashflow": null,
+   "debt_to_equity": null
+  },
+  "has_consensus": false,
+  "has_target": false
+ }
+}

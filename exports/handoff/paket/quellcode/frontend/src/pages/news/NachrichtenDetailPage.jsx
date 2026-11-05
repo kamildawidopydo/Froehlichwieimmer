@@ -1,0 +1,356 @@
+import { getApiBase } from '@/lib/apiBase';
+import React, { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, ArrowUpRight, PlayCircle, Archive } from 'lucide-react';
+import axios from 'axios';
+import PageMeta from '@/components/PageMeta';
+import Eyebrow from '@/components/editorial/Eyebrow';
+import NachrichtenRelated from '@/components/news/NachrichtenRelated';
+import SafeNewsImage from '@/components/news/SafeNewsImage';
+import TopicCrossLinkBox from '@/components/investment/TopicCrossLinkBox';
+import KnowledgeCrossLinkBox from '@/components/knowledge/KnowledgeCrossLinkBox';
+import NewsStrategyCrosslink from '@/components/news/NewsStrategyCrosslink';
+import EinordnungInlineBox from '@/components/news/EinordnungInlineBox';
+import WasBedeutetDasBlock from '@/components/news/WasBedeutetDasBlock';
+import PassendZumThema from '@/components/news/PassendZumThema';
+import { buildKeyTakeaways } from '@/lib/news/keyTakeaways';
+import { relativeTimeLabel, updatedLabel } from '@/lib/news/relativeTime';
+import { resolveKnowledgeLinks } from '@/lib/news/crosslinkResolver';
+
+const BASE = getApiBase();
+const api = axios.create({ baseURL: `${BASE}/api`, withCredentials: false });
+
+const CAT_LABEL = {
+  politik: 'Politik', wirtschaft: 'Wirtschaft', europa: 'Europa', welt: 'Welt',
+  wissen: 'Wissen', umwelt: 'Umwelt', kultur: 'Kultur', sport: 'Sport', videos: 'Videos',
+};
+
+const renderBody = (body) => {
+  if (!body) return null;
+  const blocks = body.split(/\n{2,}/);
+  const out = [];
+  blocks.forEach((block, idx) => {
+    const t = block.trim();
+    if (!t) return;
+    if (t.startsWith('## ')) {
+      out.push(<h2 key={idx} className="mt-10 font-serif text-[26px] leading-tight text-bank-text">{t.replace(/^##\s+/, '')}</h2>);
+      return;
+    }
+    if (t.startsWith('### ')) {
+      out.push(<h3 key={idx} className="mt-8 font-serif text-xl text-bank-text">{t.replace(/^###\s+/, '')}</h3>);
+      return;
+    }
+    // Bullet-Block: aufeinanderfolgende Zeilen, die mit `- ` beginnen
+    const lines = t.split('\n').map((l) => l.trim());
+    if (lines.every((l) => l.startsWith('- '))) {
+      out.push(
+        <ul key={idx} className="mt-4 space-y-2 pl-5">
+          {lines.map((l, i) => (
+            <li key={i} className="list-disc text-[15.5px] leading-relaxed text-bank-text marker:text-bank-primary/70">
+              {l.replace(/^-\s+/, '')}
+            </li>
+          ))}
+        </ul>,
+      );
+      return;
+    }
+    out.push(<p key={idx} className="mt-4 text-[15.5px] leading-relaxed text-bank-text">{t}</p>);
+  });
+  return out;
+};
+
+/**
+ * Interne Detailseite für jede Nachricht.
+ *
+ * Rendert entweder den lizenzierten Volltext (license_allows_fulltext=true)
+ * oder eine eigene redaktionelle Zusammenfassung (article_content) — niemals
+ * einen nicht lizenzierten Fremdtext. Die externe Quelle erscheint nur dezent
+ * am Ende, nie als primäres Klickziel.
+ */
+const NachrichtenDetailPage = () => {
+  const { slug } = useParams();
+  const [item, setItem] = useState(null);
+  const [state, setState] = useState('loading');
+
+  useEffect(() => {
+    let alive = true;
+    setState('loading');
+    api.get(`/news/nachrichten/${encodeURIComponent(slug)}`)
+      .then(({ data }) => { if (alive) { setItem(data); setState('ready'); } })
+      .catch((err) => { if (alive) setState(err?.response?.status === 404 ? 'notfound' : 'error'); });
+    return () => { alive = false; };
+  }, [slug]);
+
+  const publishedFmt = item?.published_at
+    ? new Date(item.published_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  const hasLicensedFulltext = !!item?.license_allows_fulltext && !!item?.full_text;
+  const heroImage = item?.hero_image_url || item?.image_url;
+  // Wenn ein Bild final scheitert (alle 3 Fallback-Stufen), lassen wir den
+  // ganzen Bild-Container komplett entfallen — der Artikeltext rückt automatisch nach.
+  const [heroHidden, setHeroHidden] = useState(false);
+  useEffect(() => { setHeroHidden(false); }, [item?.slug]);
+
+  return (
+    <div className="bg-white" data-testid="news-detail-page">
+      <PageMeta
+        title={item?.title || 'Nachricht'}
+        description={item?.summary || item?.subtitle || ''}
+        path={`/news/euronews/${slug}`}
+        noIndex={!!item?.is_demo}
+      />
+
+      <section className="border-b border-bank-border">
+        <div className="mx-auto max-w-4xl px-6 pb-10 pt-14 sm:px-10 sm:pt-16">
+          <Link
+            to="/news/nachrichten"
+            data-testid="news-detail-back"
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.22em] text-bank-text-muted hover:text-bank-primary"
+          >
+            <ArrowLeft size={12} strokeWidth={1.7} /> Zurück zu Nachrichten
+          </Link>
+
+          {state === 'loading' && <div className="mt-8 h-8 w-2/3 animate-pulse bg-neutral-100" />}
+          {state === 'notfound' && (
+            <div className="mt-10 border-t border-bank-border pt-10" data-testid="news-detail-not-found">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">Nicht verfügbar</p>
+              <h1 className="mt-4 font-serif text-2xl leading-tight text-bank-text sm:text-[32px]">Diese Meldung ist derzeit nicht verfügbar.</h1>
+              <p className="mt-4 max-w-2xl text-[14.5px] leading-[1.8] text-bank-text-muted">Die gesuchte Nachricht konnte weder im aktuellen Feed noch im internen Archiv gefunden werden. Bitte kehren Sie zur Nachrichten-Übersicht zurück oder wählen Sie eine aktuelle Meldung aus.</p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link to="/news/nachrichten" data-testid="news-detail-empty-back" className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-bank-primary px-5 py-2 text-[13px] font-semibold text-white hover:bg-bank-primary/90">Zurück zu Nachrichten</Link>
+                <Link to="/news" data-testid="news-detail-empty-current" className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-bank-border bg-white px-5 py-2 text-[13px] font-medium text-bank-text hover:border-bank-primary/50">Aktuelle Nachrichten</Link>
+              </div>
+              <p className="mt-8 border-l-2 border-bank-gold pl-4 text-[12.5px] leading-relaxed text-bank-text-muted"><strong className="mr-2 font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-gold">Hinweis</strong>Diese Meldung dient der allgemeinen Information. Eine individuelle Einordnung Ihrer Anlagesituation erhalten Sie im Rahmen unserer persönlichen Anlageberatung.</p>
+            </div>
+          )}
+          {state === 'error' && (
+            <p className="mt-8 text-[14px] text-rose-700">Meldung konnte nicht geladen werden.</p>
+          )}
+
+          {item && (
+            <>
+              <div className="mt-6 flex items-center gap-2">
+                <Eyebrow>{CAT_LABEL[item.category] || item.category}</Eyebrow>
+              </div>
+              <h1 className="mt-3 font-serif text-3xl leading-tight text-bank-text sm:text-[42px]">{item.title}</h1>
+              {item.subtitle && (
+                <p className="mt-4 font-serif text-[19px] italic leading-snug text-bank-text-muted">{item.subtitle}</p>
+              )}
+              <p className="mt-5 text-[15.5px] leading-relaxed text-bank-text-muted">{item.summary}</p>
+              <p className="mt-6 text-[11px] uppercase tracking-[0.18em] text-bank-text-muted">
+                {relativeTimeLabel(item.published_at) || publishedFmt}
+                {updatedLabel(item.updated_at, item.published_at) && (
+                  <>
+                    <span aria-hidden className="mx-2 text-bank-gold">·</span>
+                    <span data-testid="news-detail-updated-label">{updatedLabel(item.updated_at, item.published_at)}</span>
+                  </>
+                )}
+                <span> · Redaktion: <span className="text-bank-text">Fröhlich Vermögensberatung</span></span>
+              </p>
+
+              {/* Session 79.5 — dezenter „Aus dem Archiv"-Hinweis für Artikel,
+                  die über den Live→Archiv-Fallback ausgeliefert wurden. */}
+              {item.is_archived && (
+                <div
+                  role="note"
+                  aria-label="Dieser Artikel wurde archiviert"
+                  data-testid="news-detail-archived-badge"
+                  className="mt-5 inline-flex items-start gap-2 rounded border border-bank-border bg-bank-panel px-3 py-2 text-[12px] text-bank-text-muted"
+                >
+                  <Archive size={13} strokeWidth={1.7} className="mt-[1px] shrink-0" aria-hidden="true" />
+                  <span>
+                    <span className="font-medium text-bank-text">Aus dem Archiv.</span>{' '}
+                    Dieser Beitrag ist älter als 90 Tage — der Link bleibt bewusst gültig.
+                    {item.archived_at && (
+                      <span className="ml-1 block text-[11px] tracking-[0.02em] text-bank-text-muted sm:inline sm:ml-2">
+                        Archiviert am {new Date(item.archived_at).toLocaleDateString('de-DE', {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                        })}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </section>
+
+      {item && (
+        <article className="mx-auto max-w-4xl px-6 pb-20 pt-10 sm:px-10">
+          {heroImage && !heroHidden && (
+            <>
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100" data-testid="news-detail-hero-image">
+                <SafeNewsImage
+                  src={heroImage}
+                  category={item.category}
+                  alt={item.title || ''}
+                  loading="eager"
+                  className="h-full w-full object-cover"
+                  onFinalError={() => setHeroHidden(true)}
+                  testId="news-detail-hero-img"
+                />
+                {item.content_type === 'video' && !item.video_embed_url && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/25 text-center text-white">
+                    <div>
+                      <PlayCircle className="mx-auto h-16 w-16" strokeWidth={1.2} />
+                      <p className="mt-2 font-mono text-[10.5px] uppercase tracking-[0.22em]">Video-Embed nach Lizenzfreigabe</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {(item.image_attribution || item.image_author) && (
+                <p className="mt-2 text-[10.5px] uppercase tracking-[0.16em] text-bank-text-muted" data-testid="news-detail-image-attribution">
+                  {item.image_author_url ? (
+                    <>Foto: <a href={item.image_author_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-bank-primary">{item.image_author || 'Unsplash Fotograf'}</a></>
+                  ) : (
+                    <>{item.image_attribution || `Foto: ${item.image_author || 'Unsplash'}`}</>
+                  )}
+                  {item.image_source_url ? (
+                    <> · auf <a href={item.image_source_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-bank-primary">{item.image_source || 'Unsplash'}</a></>
+                  ) : (
+                    <> · {item.image_source || 'Unsplash'}</>
+                  )}
+                </p>
+              )}
+            </>
+          )}
+
+          {item.video_embed_url && (
+            <div className="mt-6 aspect-video w-full overflow-hidden border border-bank-border bg-black" data-testid="news-detail-video">
+              <iframe title={item.title} src={item.video_embed_url} allow="fullscreen; picture-in-picture" allowFullScreen className="h-full w-full" />
+            </div>
+          )}
+
+          {/* Session 80.30 — „Das Wichtigste in Kürze" mit strukturierter
+              Diversity (WAS/WARUM/WER/FOLGE). Erzeugt keine neuen Fakten —
+              zieht Sätze aus vorhandenem summary+excerpt. Fallback: null. */}
+          {(() => {
+            const bullets = buildKeyTakeaways(item);
+            if (!bullets) return null;
+            return (
+              <aside
+                data-testid="news-detail-key-takeaways"
+                className="card-accent-top card-accent-top-rose mt-8 border border-bank-border bg-white p-6"
+                aria-labelledby="news-detail-key-takeaways-title"
+              >
+                <p
+                  id="news-detail-key-takeaways-title"
+                  className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-bank-rose-strong"
+                >
+                  Das Wichtigste in Kürze
+                </p>
+                <ul className="mt-4 space-y-2.5">
+                  {bullets.map((b, i) => (
+                    <li key={i} className="flex gap-3 text-[14px] leading-relaxed text-bank-text">
+                      <span
+                        aria-hidden
+                        className="mt-2 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-bank-rose"
+                      />
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+            );
+          })()}
+
+          {/* Session 80.29 Phase 2 — Inline Fröhlich Einordnung (nur wenn Match). */}
+          <EinordnungInlineBox article={item} />
+
+          {/* Session 80.30 — „Was bedeutet das für mein Geld?" (kontextuell,
+              nur bei klarem Themen-Match; max. 1 Next-Step-CTA). */}
+          <WasBedeutetDasBlock article={item} />
+
+          {/* Bevorzugt: lizenzierter Volltext. Fallback: eigene redaktionelle Zusammenfassung. */}
+          {hasLicensedFulltext ? (
+            <div className="mt-6" data-testid="news-detail-fulltext">
+              {renderBody(item.full_text)}
+            </div>
+          ) : (
+            <div className="mt-6" data-testid="news-detail-summary">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">Eigene Zusammenfassung</p>
+              <p className="mt-3 text-[15.5px] leading-relaxed text-bank-text">
+                {item.article_content ||
+                  'Der Volltext dieser Meldung ist nicht Teil unserer Lizenz. Wir zeigen daher keinen fremden Text an. Sobald eine redaktionelle Einordnung veröffentlicht wird, erscheint sie an dieser Stelle.'}
+              </p>
+              <p className="mt-3 text-[12.5px] leading-relaxed text-bank-text-muted">
+                Titel, Untertitel und Kurzfassung stammen vom externen Anbieter. Der vollständige Originaltext liegt ausschließlich beim jeweiligen Nachrichtenanbieter.
+              </p>
+            </div>
+          )}
+
+          {/* Session 80.28b — Artikel-Ende + Quellen + Related sind der "Content-Abschluss"
+              des News-Detail. Sticky-CTA hier lokal ausblenden, damit er nicht das
+              Ende des Fließtexts, den Quellen-Nachweis oder Cross-Links verdeckt. */}
+          <div data-hide-sticky-cta>
+          {/* Verwendete Faktenquellen — dezent am Ende, klickbar */}
+          {(item.sources && item.sources.length > 0) && (
+            <div className="mt-12 border-t border-bank-border pt-6" data-testid="news-detail-sources">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-primary">Quellen</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-bank-text-muted">
+                Dieser Artikel wurde von der Redaktion der Fröhlich Vermögensberatung eigenständig
+                verfasst. Grundlage sind die folgenden offiziellen Faktenquellen:
+              </p>
+              <ul className="mt-3 space-y-1.5">
+                {item.sources.map((s, idx) => (
+                  <li key={idx} className="text-[13px] text-bank-text">
+                    <span className="font-medium">{s.name || 'Quelle'}</span>
+                    {s.url && (
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        data-testid={`news-detail-source-link-${idx}`}
+                        className="ml-2 inline-flex items-center gap-1 text-[12px] uppercase tracking-[0.14em] text-bank-primary hover:underline"
+                      >
+                        Original ansehen <ArrowUpRight size={11} strokeWidth={1.8} />
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-10 border-t border-bank-border pt-6 text-[13px] leading-relaxed text-bank-text-muted" data-testid="news-detail-disclaimer">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-bank-gold">Hinweis</p>
+            <p className="mt-2 border-l-2 border-bank-gold pl-4">
+              Diese Meldung dient der allgemeinen Information. Eine individuelle Einordnung Ihrer
+              Anlagesituation erhalten Sie im Rahmen unserer persönlichen Anlageberatung.
+            </p>
+          </div>
+
+          {item.investment_topic_slug && <TopicCrossLinkBox topicSlug={item.investment_topic_slug} />}
+          {/* Session 80.31 Phase C — „Passend zum Thema" (Sparangebote-CTA),
+              nur bei eindeutigen Zins-/Spar-News und mit Duplikat-Schutz
+              gegen den Money-Impact-CTA. */}
+          <PassendZumThema article={item} />
+          {/* Session 80.33 — Knowledge-Crosslinks topic-first via zentralem
+              Resolver. Zeigt max. 2 kanonische Wissensziele. Fallback auf
+              Kategorie NUR für Artikel ohne gültigen Topic-Slug. */}
+          {resolveKnowledgeLinks(item).map((k) => (
+            <KnowledgeCrossLinkBox
+              key={k.slug}
+              testId={`${k.slug}-crosslink`}
+              eyebrow={item.investment_topic_slug ? 'Wissen kompakt' : 'Grundlagen'}
+              title={k.title}
+              description={k.description}
+              href={k.href}
+              cta={k.cta}
+            />
+          ))}
+
+          {/* Session 80.29 Phase 2 — News → Strategie Crosslink (max. 1, category-basiert). */}
+          <NewsStrategyCrosslink article={item} />
+
+          <NachrichtenRelated slug={slug} />
+          </div>
+        </article>
+      )}
+    </div>
+  );
+};
+
+export default NachrichtenDetailPage;

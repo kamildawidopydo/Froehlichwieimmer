@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Sparmöglichkeiten in Europa">
+  <rect width="1080" height="1080" fill="#FFFFFF"/>
+  <rect x="60" y="140" width="960" height="720" rx="28" fill="#ECF3FA"/>
+  <path d="M320 300 Q 380 240 460 260 Q 520 220 600 250 Q 680 240 740 290 Q 800 310 820 380 Q 860 420 810 480 Q 850 540 780 580 Q 800 660 720 690 Q 660 740 560 720 Q 460 750 400 700 Q 320 720 300 640 Q 240 620 260 540 Q 210 480 280 420 Q 240 340 320 300 Z" fill="#4C7CBA" opacity="0.95"/>
+  <g fill="#FFFFFF" stroke="#3A6499" stroke-width="3">
+    <path d="M440 380 a 16 16 0 1 1 0 -0.1 Z M440 380 L440 420 L432 410 L440 420 L448 410 Z"/>
+    <circle cx="440" cy="380" r="12"/>
+    <circle cx="540" cy="440" r="12"/>
+    <circle cx="620" cy="360" r="12"/>
+    <circle cx="500" cy="540" r="12"/>
+    <circle cx="700" cy="510" r="12"/>
+    <circle cx="380" cy="500" r="12"/>
+    <circle cx="660" cy="620" r="12"/>
+  </g>
+  <g fill="#3A6499">
+    <text x="440" y="386" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="700" font-size="14">€</text>
+    <text x="540" y="446" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="700" font-size="14">€</text>
+    <text x="620" y="366" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="700" font-size="14">€</text>
+    <text x="500" y="546" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="700" font-size="14">€</text>
+    <text x="700" y="516" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="700" font-size="14">€</text>
+    <text x="380" y="506" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="700" font-size="14">€</text>
+    <text x="660" y="626" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="700" font-size="14">€</text>
+  </g>
+  <g fill="#FFFFFF" opacity="0.75">
+    <circle cx="820" cy="220" r="4"/><circle cx="850" cy="240" r="4"/><circle cx="880" cy="250" r="4"/><circle cx="900" cy="230" r="4"/><circle cx="920" cy="200" r="4"/>
+  </g>
+  <text x="540" y="920" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-weight="600" font-size="50" fill="#1F2937">Sparen in Europa</text>
+  <text x="540" y="972" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-size="26" fill="#3A6499">Konditionen grenzüberschreitend</text>
+</svg>

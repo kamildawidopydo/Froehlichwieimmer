@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 56" fill="none" role="img" aria-label="UniCredit">
+  <rect width="200" height="56" rx="3" fill="#fafafa"/>
+  <rect x="0.5" y="0.5" width="199" height="55" rx="2.5" stroke="#e8e4dc"/>
+  <circle cx="76" cy="28" r="15" fill="#E2001A"/>
+  <circle cx="96" cy="28" r="15" fill="#001489"/>
+</svg>

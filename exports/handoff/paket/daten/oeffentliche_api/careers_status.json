@@ -1,0 +1,9 @@
+{
+ "quelle": "https://essenceinvest.com/api/careers/status",
+ "abgerufen_am": "2026-11-05",
+ "daten": {
+  "site_public": true,
+  "applications_enabled": true,
+  "is_staff": false
+ }
+}

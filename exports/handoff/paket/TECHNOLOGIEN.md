@@ -1,0 +1,262 @@
+# Technologien und Abhängigkeiten
+
+## Architektur
+- Frontend: React 19 (Create React App mit CRACO), Tailwind CSS, shadcn/ui (Radix UI), lucide-react, Recharts
+- Backend: Python 3.11, FastAPI, Motor/PyMongo (MongoDB), Pydantic
+- Datenbank: MongoDB
+- Hosting bisher: Emergent-Plattform (Kubernetes), Routing `/api` → Backend Port 8001, Rest → Frontend
+
+## Schriftarten
+- IBM Plex Sans, IBM Plex Mono, Newsreader (Google Fonts, eingebunden in `public/index.html` bzw. CSS) – Lizenz: SIL Open Font License
+
+## Externe Dienste (für einen voll funktionsfähigen Nachbau)
+| Dienst | Zweck | Variable(n) |
+|---|---|---|
+| Resend | E-Mail-Versand (Kontakt, Benachrichtigungen, Passwort-Reset) | RESEND_API_KEY, SENDER_EMAIL, EMAIL_FROM_NAME, EMAIL_REPLY_TO |
+| Kursdaten (Yahoo Finance, Finnhub, Twelve Data, Alpha Vantage) | Aktienkurse, Charts | TWELVE_DATA_KEY, TWELVEDATA_API_KEY, ALPHA_VANTAGE_KEY |
+| EZB / Wechselkurse | Währungsumrechnung | – |
+| Marketaux / RSS-Feeds | News-Rohdaten | MARKETAUX_KEY |
+| KI-Anbieter (Claude/OpenAI/Gemini über emergentintegrations) | News-Synthese, Assistent | EMERGENT_LLM_KEY (nur Emergent) – eigener Anbieter-Schlüssel nötig |
+| Unsplash | Bildsuche für News | UNSPLASH_ACCESS_KEY |
+| Sentry | Fehlerüberwachung (optional) | SENTRY_DSN |
+| Cron-Dienst | geplante Aufgaben (`konfiguration/crons.yml`) | WEBHOOK_CRON_SECRET |
+
+## Frontend-Abhängigkeiten (package.json)
+- @dnd-kit/core ^6.3.1
+- @dnd-kit/sortable ^10.0.0
+- @dnd-kit/utilities ^3.2.2
+- @formkit/auto-animate ^0.9.0
+- @hookform/resolvers ^3.9.1
+- @mediapipe/tasks-vision ^0.10.35
+- @pdf-lib/fontkit ^1.1.1
+- @radix-ui/react-accordion ^1.2.8
+- @radix-ui/react-alert-dialog ^1.1.11
+- @radix-ui/react-aspect-ratio ^1.1.4
+- @radix-ui/react-avatar ^1.1.7
+- @radix-ui/react-checkbox ^1.2.3
+- @radix-ui/react-collapsible ^1.1.8
+- @radix-ui/react-context-menu ^2.2.12
+- @radix-ui/react-dialog ^1.1.11
+- @radix-ui/react-dropdown-menu ^2.1.12
+- @radix-ui/react-hover-card ^1.1.11
+- @radix-ui/react-label ^2.1.4
+- @radix-ui/react-menubar ^1.1.12
+- @radix-ui/react-navigation-menu ^1.2.10
+- @radix-ui/react-popover ^1.1.11
+- @radix-ui/react-progress ^1.1.4
+- @radix-ui/react-radio-group ^1.3.4
+- @radix-ui/react-scroll-area ^1.2.6
+- @radix-ui/react-select ^2.2.2
+- @radix-ui/react-separator ^1.1.4
+- @radix-ui/react-slider ^1.3.2
+- @radix-ui/react-slot ^1.2.0
+- @radix-ui/react-switch ^1.2.2
+- @radix-ui/react-tabs ^1.1.9
+- @radix-ui/react-toast ^1.2.11
+- @radix-ui/react-toggle ^1.1.6
+- @radix-ui/react-toggle-group ^1.1.7
+- @radix-ui/react-tooltip ^1.2.4
+- @sentry/react ^10.49.0
+- @visx/axis ^4.0.0
+- @visx/curve ^4.0.0
+- @visx/event ^4.0.0
+- @visx/grid ^4.0.0
+- @visx/group ^4.0.0
+- @visx/responsive ^4.0.0
+- @visx/scale ^4.0.0
+- @visx/shape ^4.0.0
+- axios ^1.8.4
+- bwip-js ^4.11.1
+- class-variance-authority ^0.7.1
+- cloudinary ^2.9.0
+- clsx ^2.1.1
+- cmdk ^1.1.1
+- date-fns ^3.6.0
+- embla-carousel-react ^8.6.0
+- formidable ^2.1.2
+- framer-motion ^12.38.0
+- i18next ^23.16.8
+- input-otp ^1.4.2
+- lightweight-charts ^5.2.0
+- lottie-react ^2.4.1
+- lucide-react ^0.507.0
+- next-themes ^0.4.6
+- pdf-lib ^1.17.1
+- puppeteer ^24.40.0
+- react ^18.3.1
+- react-day-picker 8.10.1
+- react-dom ^18.3.1
+- react-helmet-async ^3.0.0
+- react-hook-form ^7.56.2
+- react-i18next ^14.1.3
+- react-resizable-panels ^3.0.1
+- react-router-dom ^7.5.1
+- recharts ^2.15.2
+- resend ^6.9.3
+- sonner ^2.0.3
+- tailwind-merge ^3.2.0
+- tailwindcss-animate ^1.0.7
+- uuid ^13.0.0
+- vaul ^1.1.2
+- zod ^3.24.4
+
+## Backend-Abhängigkeiten (requirements.txt)
+- aiohappyeyeballs==2.7.1
+- aiohttp==3.14.3
+- aiosignal==1.4.0
+- annotated-doc==0.0.5
+- annotated-types==0.8.0
+- anyio==4.14.2
+- ast_serialize==0.8.0
+- attrs==26.1.0
+- bcrypt==4.1.3
+- beautifulsoup4==4.15.0
+- black==26.5.1
+- boto3==1.43.72
+- botocore==1.43.72
+- brotli==1.2.0
+- certifi==2026.7.22
+- cffi==2.1.1
+- charset-normalizer==3.5.1
+- click==8.4.2
+- cryptography==50.0.0
+- cssselect2==0.9.0
+- curl_cffi==0.16.1
+- Deprecated==1.3.1
+- distro==1.9.0
+- dnspython==2.8.0
+- ecdsa==0.19.2
+- email-validator==2.3.0
+- emergentintegrations==0.2.0
+- execnet==2.1.2
+- fastapi==0.110.1
+- fastuuid==0.14.0
+- feedparser==6.0.14
+- feedparser-sgmllib==2.1.0
+- filelock==3.32.3
+- flake8==7.3.0
+- fonttools==4.63.0
+- frozenlist==1.8.0
+- fsspec==2026.7.0
+- google-ai-generativelanguage==0.6.15
+- google-api-core==2.33.0
+- google-api-python-client==2.198.0
+- google-auth==2.56.3
+- google-auth-httplib2==0.4.1
+- google-genai==2.18.1
+- google-generativeai==0.8.6
+- googleapis-common-protos==1.75.0
+- grpcio==1.83.0
+- grpcio-status==1.71.2
+- h11==0.16.0
+- hf-xet==1.6.0
+- httpcore==1.0.9
+- httplib2==0.32.0
+- httpx==0.28.1
+- huggingface_hub==1.27.0
+- idna==3.18
+- importlib_metadata==9.0.0
+- iniconfig==2.3.0
+- isort==8.0.1
+- Jinja2==3.1.6
+- jiter==0.16.0
+- jmespath==1.1.0
+- jq==1.12.0
+- jsonschema==4.26.0
+- jsonschema-specifications==2025.9.1
+- librt==0.15.0
+- limits==5.8.0
+- litellm
+- @
+- https://customer-assets.emergentagent.com/internal-asset/library/litellm-1.80.0-py3-none-any.whl#sha256=adf398c513273de9341f61822296c6b2145f7f2dc4a69daf3ac04829f5bde3f8
+- lxml==6.1.2
+- markdown-it-py==4.2.0
+- MarkupSafe==3.0.3
+- mccabe==0.7.0
+- mdurl==0.1.2
+- motor==3.3.1
+- multidict==6.7.1
+- multitasking==0.0.13
+- mypy==2.3.1
+- mypy_extensions==1.1.0
+- numpy==2.4.6
+- oauthlib==3.3.1
+- openai==1.99.9
+- packaging==26.3
+- pandas==3.0.5
+- passlib==1.7.4
+- pathspec==1.1.1
+- pdfminer.six==20260107
+- pdfplumber==0.11.10
+- peewee==4.4.0
+- pillow==12.3.0
+- platformdirs==4.11.3
+- pluggy==1.6.0
+- propcache==0.5.2
+- proto-plus==1.28.2
+- protobuf==5.29.6
+- pyasn1==0.6.4
+- pyasn1_modules==0.4.2
+- pycodestyle==2.14.0
+- pycparser==3.0
+- pydantic==2.13.4
+- pydantic_core==2.46.4
+- pydyf==0.12.1
+- pyflakes==3.4.0
+- Pygments==2.20.0
+- PyJWT==2.13.0
+- pymongo==4.6.3
+- pymupdf==1.28.2
+- pyparsing==3.3.2
+- pypdf==6.16.1
+- pypdfium2==5.13.0
+- pyphen==0.18.1
+- pytest==9.1.1
+- pytest-asyncio==1.4.0
+- pytest-xdist==3.8.0
+- python-dateutil==2.9.0.post0
+- python-dotenv==1.2.2
+- python-jose==3.5.0
+- python-multipart==0.0.32
+- pytokens==0.4.1
+- pytz==2026.3.post1
+- PyYAML==6.0.3
+- referencing==0.37.0
+- regex==2026.7.19
+- requests==2.34.2
+- requests-oauthlib==2.0.0
+- rich==15.0.0
+- rpds-py==2026.6.3
+- rsa==4.9.1
+- s3transfer==0.19.2
+- s5cmd==0.2.0
+- sentry-sdk==2.19.2
+- shellingham==1.5.4
+- six==1.17.0
+- slowapi==0.1.9
+- sniffio==1.3.1
+- soupsieve==2.9.2
+- starlette==0.37.2
+- stripe==14.4.1
+- tenacity==9.1.4
+- tiktoken==0.13.0
+- tinycss2==1.5.1
+- tinyhtml5==2.1.0
+- tokenizers==0.23.1
+- tqdm==4.70.0
+- typer==0.27.1
+- typing-inspection==0.4.4
+- typing_extensions==4.16.0
+- tzdata==2026.3
+- uritemplate==4.2.0
+- urllib3==2.7.0
+- uvicorn==0.25.0
+- watchfiles==1.2.0
+- weasyprint==69.0
+- webencodings==0.6.1
+- websockets==16.1.1
+- wrapt==2.4.0
+- yarl==1.24.5
+- yfinance==1.6.0
+- zipp==4.1.0
+- zopfli==0.4.3

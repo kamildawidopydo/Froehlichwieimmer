@@ -1,0 +1,70 @@
+{
+ "quelle": "https://essenceinvest.com/api/news-markte/markets",
+ "abgerufen_am": "2026-11-05",
+ "daten": [
+  {
+   "symbol": "DAX",
+   "name": "DAX",
+   "value": 26614.0898,
+   "change_pct": 0.667,
+   "unit": "Punkte",
+   "updated_at": "2026-11-05T12:29:27.435751+00:00"
+  },
+  {
+   "symbol": "SPX",
+   "name": "S&P 500",
+   "value": 7688.73,
+   "change_pct": 1.583,
+   "unit": "Punkte",
+   "updated_at": "2026-11-05T12:29:27.878460+00:00"
+  },
+  {
+   "symbol": "NDX",
+   "name": "Nasdaq-100",
+   "value": 28437.7207,
+   "change_pct": 0.914,
+   "unit": "Punkte",
+   "updated_at": "2026-11-05T12:29:28.257986+00:00"
+  },
+  {
+   "symbol": "DJI",
+   "name": "Dow Jones",
+   "value": 53357.0312,
+   "change_pct": 3.032,
+   "unit": "Punkte",
+   "updated_at": "2026-11-05T12:29:28.646446+00:00"
+  },
+  {
+   "symbol": "GOLD",
+   "name": "Gold-Future",
+   "value": 3685.76,
+   "change_pct": 1.596,
+   "unit": "EUR/Feinunze",
+   "updated_at": "2026-11-05T12:29:29.155925+00:00"
+  },
+  {
+   "symbol": "SILVER",
+   "name": "Silber-Future",
+   "value": 46.93,
+   "change_pct": 1.094,
+   "unit": "EUR/Feinunze",
+   "updated_at": "2026-11-05T12:29:29.658520+00:00"
+  },
+  {
+   "symbol": "OIL",
+   "name": "Brent Öl",
+   "value": 86.17,
+   "change_pct": 2.241,
+   "unit": "EUR/Barrel",
+   "updated_at": "2026-11-05T12:29:30.107164+00:00"
+  },
+  {
+   "symbol": "EURUSD",
+   "name": "EUR/USD",
+   "value": 1.1227,
+   "change_pct": 0.177,
+   "unit": "",
+   "updated_at": "2026-11-05T12:23:19.311862+00:00"
+  }
+ ]
+}

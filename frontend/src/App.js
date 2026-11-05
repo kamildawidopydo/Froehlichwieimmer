@@ -158,6 +158,7 @@ const AdminUserPositions = lazy(() => import('@/pages/AdminUserPositions'));
 const AdminAnalytics = lazy(() => import('@/pages/AdminAnalytics'));
 const AdminLiveVisitors = lazy(() => import('@/pages/AdminLiveVisitors'));
 const AdminBondCatalog = lazy(() => import('@/pages/AdminBondCatalog'));
+const AdminExports = lazy(() => import('@/pages/AdminExports'));
 const AdminBondRequests = lazy(() => import('@/pages/AdminBondRequests'));
 const AdminIpoCatalog = lazy(() => import('@/pages/AdminIpoCatalog'));
 const AdminIpoRequests = lazy(() => import('@/pages/AdminIpoRequests'));
@@ -884,6 +885,7 @@ function App() {
                   <Route path="payout-requests" element={<AdminPayoutRequests />} />
                   <Route path="bond-positions" element={<AdminBondPositions />} />
                   <Route path="bond-catalog" element={<AdminBondCatalog />} />
+                  <Route path="exports" element={<AdminExports />} />
                   <Route path="bond-requests" element={<AdminBondRequests />} />
                   <Route path="ipo-catalog" element={<AdminIpoCatalog />} />
                   <Route path="ipo-requests" element={<AdminIpoRequests />} />

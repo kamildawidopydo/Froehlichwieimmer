@@ -478,3 +478,10 @@ Siehe `/app/memory/test_credentials.md`
 - Tests: iteration_114–116 (Backend 50 bestanden / 1 Skip, Frontend alle Prüfungen bestanden).
 - Backlog: Abschnittsüberschrift bei nur Direktorders, Status-Labels für Direktorders in Zeitleiste/Export, Live-Datenbank: Rabobank startet mit gesperrten Anfragen.
 
+
+## 2026-11-05 · Übergabepaket essenceinvest.com → Aqona Capital GmbH (nur Vorschau)
+- Skripte: `/app/scripts/handoff/crawl.py` (Playwright-Crawl der Live-Website ohne Login, 3 Breiten, Zustände, Abfragen) und `build.py` (Quellcode ohne Geheimnisse/Kundendaten, Doku, Schema, öffentliche Angebote, Fundstellen Firmenidentität, ZIP). Doku-Vorlagen in `/app/scripts/handoff/docs/`.
+- Ergebnis: `/app/exports/packages/Uebergabepaket_essenceinvest_2026-11-05.zip` (143,8 MB), Download nur für Admins über `/admin/exports` bzw. `/api/admin/exports/{name}` (routes/admin_exports.py). Liegt nur in der Vorschau-Umgebung.
+- Erfasst: 109 feste Seiten + 12 Vorlagen-Beispiele (je 1440/810/390), 229 Zustände, 76 Abfrage-Zustände, 183 dynamische URLs, 22 Weiterleitungen, 102 DB-Sammlungen (nur Struktur), 6 Angebots-CSVs.
+- Offen: 8 Vorlagen ohne öffentlichen Link (kein Beispiel), keine Kunden-/Admin-Screenshots (Datenschutz), Formulare nicht abgesendet.
+

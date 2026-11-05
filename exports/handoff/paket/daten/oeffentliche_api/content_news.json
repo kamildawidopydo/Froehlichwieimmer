@@ -1,0 +1,186 @@
+{
+ "quelle": "https://essenceinvest.com/api/content/news",
+ "abgerufen_am": "2026-11-05",
+ "daten": [
+  {
+   "id": "6aec3b0f8ce5cb014da09958",
+   "slug": "bosch-streicht-weitere-750-stellen-am-standort-abstatt",
+   "title": "Bosch streicht weitere 750 Stellen am Standort Abstatt",
+   "excerpt": "Der Technologiekonzern Bosch baut am Standort Abstatt weitere 750 Arbeitsplätze ab. Hintergrund sind anhaltende Sparmaßnahmen in der Autoindustrie sowie zunehmender Wettbewerbsdruck durch asiatische Hersteller. Der Abbau betrifft die Mobilitätssparte des Unternehmens.",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "industrie",
+   "image_url": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=1600&q=75"
+  },
+  {
+   "id": "6aec733b8ce5cb014da09b7b",
+   "slug": "eu-kommission-gibt-arbeitsprogramm-des-europaeischen-innovationsrats-fuer-2027-m",
+   "title": "EU-Kommission gibt Arbeitsprogramm des Europäischen Innovationsrats für 2027 mit 1,8 Milliarden Euro frei",
+   "excerpt": "Die Europäische Kommission hat das Arbeitsprogramm 2027 des Europäischen Innovationsrats (EIC) angenommen und dafür ein Budget von 1,8 Milliarden Euro vorgesehen. Details zur konkreten Mittelverwendung wurden bislang nicht veröffentlicht.",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "europa",
+   "image_url": "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=1600&q=75"
+  },
+  {
+   "id": "6aec73588ce5cb014da09b7c",
+   "slug": "eu-kommission-legt-neues-bildungspaket-vor-fokus-auf-grundkompetenzen-digitalisi",
+   "title": "EU-Kommission legt neues Bildungspaket vor: Fokus auf Grundkompetenzen, Digitalisierung und Lehrkräftemangel",
+   "excerpt": "Die Europäische Kommission hat am 5. November 2026 in Brüssel ein Paket zu Bildung und Kompetenzen vorgestellt. Ziel ist es, dem Rückgang grundlegender schulischer Fähigkeiten entgegenzuwirken, Schulen beim Einsatz von KI und digitalen Technologien zu unterstützen und dem Lehrerm",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "technologie",
+   "image_url": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=1600&q=75"
+  },
+  {
+   "id": "6aec73738ce5cb014da09b7d",
+   "slug": "eu-kommission-veroeffentlicht-factsheet-zu-bildungs--und-kompetenzpaket",
+   "title": "EU-Kommission veröffentlicht Factsheet zu Bildungs- und Kompetenzpaket",
+   "excerpt": "Die Europäische Kommission hat am 5. November 2026 in Brüssel ein Factsheet zu einem „Education and Skills package“ veröffentlicht. Konkrete inhaltliche Details zu Maßnahmen, Budget oder Zeitplan sind den vorliegenden Informationen bislang nicht zu entnehmen. Weitere offizielle D",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "wirtschaft",
+   "image_url": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=1600&q=75"
+  },
+  {
+   "id": "6aec738c8ce5cb014da09b7e",
+   "slug": "dax-erklimmt-neues-rekordhoch-nach-us-wahlen",
+   "title": "Dax erklimmt neues Rekordhoch nach US-Wahlen",
+   "excerpt": "Der Dax hat seinen bisherigen Höchststand überschritten und damit ein neues Rekordhoch erreicht. Auslöser für die positive Marktstimmung ist das Ergebnis der US-Wahlen, das an den internationalen Börsen für Zuversicht sorgt. Die Rally an den Aktienmärkten setzt sich damit fort.",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "maerkte",
+   "image_url": "https://images.unsplash.com/photo-1494412651409-8963ce7935a7?w=1600&q=75"
+  },
+  {
+   "id": "6aec73a68ce5cb014da09b83",
+   "slug": "nahost-spannungen-politische-unsicherheit-in-israel-und-zwischenfall-mit-oeltank",
+   "title": "Nahost-Spannungen: Politische Unsicherheit in Israel und Zwischenfall mit Öltanker belasten Risikostimmung",
+   "excerpt": "Die ultraorthodoxe Partei Vereinigtes Tora-Judentum verweigert Ministerpräsident Netanjahu ihre Unterstützung bei der Kandidatenempfehlung, während ein Öltanker im Nahen Osten auf eine Mine gefahren ist. US-Präsident Trump erklärte zugleich, derzeit keine unmittelbaren Angriffspl",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "welt",
+   "image_url": "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1600&q=75"
+  },
+  {
+   "id": "6aec73bf8ce5cb014da09b84",
+   "slug": "bombendrohungen-gegen-flugzeuge-mehrere-notlandungen-in-europa",
+   "title": "Bombendrohungen gegen Flugzeuge: Mehrere Notlandungen in Europa",
+   "excerpt": "In den vergangenen Tagen kam es in mehreren europäischen Ländern zu Bombendrohungen gegen Flugzeuge, die daraufhin notlanden mussten. Sprengstoff wurde bislang nicht entdeckt, die Suche nach den Verantwortlichen läuft weiter.",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "wirtschaft",
+   "image_url": "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=1600&q=75"
+  },
+  {
+   "id": "6aec73d58ce5cb014da09b85",
+   "slug": "spd-lehnt-senkung-der-stromsteuer-ab-und-bringt-alternative-ins-spiel",
+   "title": "SPD lehnt Senkung der Stromsteuer ab und bringt Alternative ins Spiel",
+   "excerpt": "Bundeskanzler Friedrich Merz will die Stromsteuer senken, doch die SPD sieht dafür keinen finanziellen Spielraum. Stattdessen bringen die Sozialdemokraten einen alternativen Ansatz zur Entlastung bei den Energiekosten ins Gespräch. Die genaue Ausgestaltung des Vorschlags ist bisl",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "politik",
+   "image_url": "https://images.unsplash.com/photo-1560969184-10fe8719e047?w=1600&q=75"
+  },
+  {
+   "id": "6aec73e88ce5cb014da09b86",
+   "slug": "gaspreise-seit-beginn-des-iran-kriegs-deutlich-gestiegen--wechsel-des-anbieters-",
+   "title": "Gaspreise seit Beginn des Iran-Kriegs deutlich gestiegen – Wechsel des Anbieters will gut überlegt sein",
+   "excerpt": "Seit Ausbruch des Iran-Konflikts sind die Gaspreise für private Haushalte im Durchschnitt um mehr als 50 Prozent gestiegen. Warentester warnen jedoch davor, vorschnell den Gasanbieter zu wechseln, und empfehlen eine sorgfältige Prüfung der Vertragsbedingungen.",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "energie",
+   "image_url": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=1600&q=75"
+  },
+  {
+   "id": "6aec73fe8ce5cb014da09b87",
+   "slug": "lazard-verstaerkt-deutschland-geschaeft-lukas-poensgen-wechselt-von-bank-of-amer",
+   "title": "Lazard verstärkt Deutschland-Geschäft: Lukas Poensgen wechselt von Bank of America",
+   "excerpt": "Lazard hat Lukas Poensgen, bislang bei der Bank of America tätig, als neuen Co-Leiter für das Beratungsgeschäft in Deutschland gewonnen. Mit der Personalie will die US-Investmentbank ihr Wachstum im deutschen Markt vorantreiben.",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "wirtschaft",
+   "image_url": "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=1600&q=75"
+  },
+  {
+   "id": "6aec741b8ce5cb014da09b88",
+   "slug": "debatte-um-nachfolge-im-schloss-bellevue-unterstuetzung-fuer-ilse-aigner-waechst",
+   "title": "Debatte um Nachfolge im Schloss Bellevue: Unterstützung für Ilse Aigner wächst",
+   "excerpt": "In der politischen Debatte um die Nachfolge im Amt des Bundespräsidenten hat sich Unterstützung für Ilse Aigner formiert. Neben einem CDU-Präsidiumsmitglied sprach sich auch ein weiterer Politiker für ihre Kandidatur aus, während Bundeskanzler Merz die Koalitionszusammenarbeit mi",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "politik",
+   "image_url": "https://images.unsplash.com/photo-1585129777188-9989f61c5f9c?w=1600&q=75"
+  },
+  {
+   "id": "6aec746d8ce5cb014da09b9d",
+   "slug": "verkehrsminister-steffen-bilger-erwartungen-von-kanzler-merz-nach-100-tagen-im-a",
+   "title": "Verkehrsminister Steffen Bilger: Erwartungen von Kanzler Merz nach 100 Tagen im Amt",
+   "excerpt": "Bundeskanzler Friedrich Merz erwartet von seinem Verkehrsminister Steffen Bilger rasche und sichtbare Ergebnisse in der Verkehrspolitik. Nach den ersten rund 100 Tagen im Amt stellt sich die Frage, inwieweit Bilger die angekündigte politische Neuausrichtung bereits umsetzen konnt",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "mobilitaet",
+   "image_url": "https://images.unsplash.com/photo-1533310266094-8898a03807dd?w=1600&q=75"
+  },
+  {
+   "id": "6aec74828ce5cb014da09b9e",
+   "slug": "industrieauftraege-in-deutschland-legen-im-september-deutlich-zu",
+   "title": "Industrieaufträge in Deutschland legen im September deutlich zu",
+   "excerpt": "Der Auftragseingang der deutschen Industrie ist im September um 4,4 Prozent gestiegen. Damit macht die Industriekonjunktur einen Teil der zuvor verzeichneten Verluste wett, nachdem sich die Entwicklung in den vorangegangenen Monaten als sehr schwankungsanfällig erwiesen hatte.",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "industrie",
+   "image_url": "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=1600&q=75"
+  },
+  {
+   "id": "6aec74998ce5cb014da09b9f",
+   "slug": "kuer-der-bundespraesidentschaftskandidatur-sorgt-fuer-unmut-bei-den-gruenen",
+   "title": "Kür der Bundespräsidentschaftskandidatur sorgt für Unmut bei den Grünen",
+   "excerpt": "Im Vorfeld der Bundespräsidentenwahl zeichnet sich ab, dass Ilse Aigner für die Union antritt, eine öffentliche Unterstützung durch den Bundeskanzler steht jedoch noch aus. Grünen-Fraktionschefin Britta Haßelmann kritisiert das bisherige Vorgehen der Union scharf als „unwürdig“.",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "politik",
+   "image_url": "https://images.unsplash.com/photo-1560969184-10fe8719e047?w=1600&q=75"
+  },
+  {
+   "id": "6aec74b68ce5cb014da09ba0",
+   "slug": "knds-deutschland-boersenplaene-bleiben-trotz-spekulationen-bestehen",
+   "title": "KNDS Deutschland: Börsenpläne bleiben trotz Spekulationen bestehen",
+   "excerpt": "KNDS-Deutschland-Chef Florian Hohenwarter hat in einem Interview mit der WirtschaftsWoche Spekulationen über ein Scheitern der Börsenpläne des Rüstungskonzerns zurückgewiesen. Er sprach zudem über den laufenden Hochlauf der Panzerproduktion und die Rolle des deutschen Mittelstand",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "maerkte",
+   "image_url": "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=1600&q=75"
+  },
+  {
+   "id": "6aec74d48ce5cb014da09ba1",
+   "slug": "tod-des-bayerischen-wirtschaftsministers-aiwanger-soeder-reagiert-bestuerzt-nach",
+   "title": "Tod des bayerischen Wirtschaftsministers Aiwanger: Söder reagiert bestürzt, Nachfolgefrage rückt in den Fokus",
+   "excerpt": "Der Tod des bayerischen Wirtschaftsministers Hubert Aiwanger hat in der bayerischen Politik Bestürzung ausgelöst. CSU-Chef Markus Söder sprach von einer tiefen Lücke, während Landtagspräsidentin Ilse Aigner versucht, auch die Grünen für die anstehende Bundesversammlung einzubinde",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "wirtschaft",
+   "image_url": "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=1600&q=75"
+  },
+  {
+   "id": "6aec74ed8ce5cb014da09ba2",
+   "slug": "bundestag-diskutiert-kamerapflicht-in-schlachthoefen",
+   "title": "Bundestag diskutiert Kamerapflicht in Schlachthöfen",
+   "excerpt": "Der Bundestag berät über eine Gesetzesinitiative, die eine verpflichtende Videoüberwachung in großen Schlachthöfen vorsieht, um den Tierschutz zu verbessern. Umstritten sind dabei Ausnahmeregelungen für kleinere Betriebe sowie offene Fragen zur praktischen Umsetzung der Kontrolle",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "politik",
+   "image_url": "https://images.unsplash.com/photo-1585129777188-9989f61c5f9c?w=1600&q=75"
+  },
+  {
+   "id": "6aec75028ce5cb014da09ba3",
+   "slug": "microsoft-testet-neue-funktionen-fuer-xbox-cloud-gaming",
+   "title": "Microsoft testet neue Funktionen für Xbox Cloud Gaming",
+   "excerpt": "Microsoft erprobt laut Berichten zwei neue Funktionen für seinen Streaming-Dienst Xbox Cloud Gaming. Eine davon soll es ermöglichen, ein Smartphone direkt als Controller zu nutzen, wodurch ein separates Eingabegerät nicht mehr zwingend erforderlich wäre. Details zum Zeitpunkt ein",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "technologie",
+   "image_url": "https://images.unsplash.com/photo-1494412651409-8963ce7935a7?w=1600&q=75"
+  },
+  {
+   "id": "6aec75198ce5cb014da09ba4",
+   "slug": "keine-wirtschafts--oder-marktrelevante-meldung-werbeanzeige-fuer-kofferraum-orga",
+   "title": "Keine wirtschafts- oder marktrelevante Meldung: Werbeanzeige für Kofferraum-Organizer",
+   "excerpt": "Bei der vorliegenden Meldung handelt es sich um eine kommerzielle Produktanzeige für einen Kofferraum-Organizer bei Amazon. Es liegen keine wirtschafts-, finanz- oder marktrelevanten Fakten vor, die eine Einordnung für Anlegerinnen und Anleger ermöglichen würden.",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "wirtschaft",
+   "image_url": "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=1600&q=75"
+  },
+  {
+   "id": "6aec75328ce5cb014da09ba9",
+   "slug": "bericht-zur-atomindustrie-weltweiter-anteil-der-kernkraft-sinkt-weiter",
+   "title": "Bericht zur Atomindustrie: Weltweiter Anteil der Kernkraft sinkt weiter",
+   "excerpt": "Ein aktueller Bericht zur weltweiten Atomindustrie zeigt, dass die Bedeutung der Kernkraft im globalen Energiemix kontinuierlich zurückgeht – selbst in China, das als einziger Markt noch spürbares Wachstum verzeichnet. Zusätzlich werden zwei Entwicklungen innerhalb der Branche kr",
+   "published_at": "2026-11-05T12:14:24.820000+00:00",
+   "category": "energie",
+   "image_url": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=1600&q=75"
+  }
+ ]
+}

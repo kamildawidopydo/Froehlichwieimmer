@@ -1,0 +1,27 @@
+{
+ "quelle": "https://essenceinvest.com/api/stocks/AAPL/fundamentals",
+ "abgerufen_am": "2026-11-05",
+ "daten": {
+  "symbol": "AAPL",
+  "data_source": "yfinance",
+  "data_updated_at": "2026-11-05T09:51:37.511000+00:00",
+  "cached_until": "2026-11-05T15:51:37.511000+00:00",
+  "company_name": "Apple Inc.",
+  "sector": null,
+  "industry": null,
+  "exchange": null,
+  "currency": "USD",
+  "market_cap": 5079143072735.84,
+  "trailing_pe": null,
+  "forward_pe": null,
+  "eps": null,
+  "dividend_yield": null,
+  "day_high": 354.5,
+  "day_low": 340.989990234375,
+  "fifty_two_week_high": 354.5,
+  "fifty_two_week_low": 243.4199981689453,
+  "previous_close": 350.7809,
+  "volume": 89523300.0,
+  "average_volume": null
+ }
+}

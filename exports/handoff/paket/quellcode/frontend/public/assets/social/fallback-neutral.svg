@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Bild nicht verfügbar">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F5F8FC"/>
+      <stop offset="1" stop-color="#E4ECF6"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg)"/>
+  <g stroke="#B5CBE2" stroke-width="2" fill="none">
+    <rect x="70" y="90" width="260" height="180" rx="12"/>
+    <circle cx="140" cy="150" r="18"/>
+    <path d="M 90 240 L 160 190 L 220 220 L 330 160"/>
+  </g>
+  <text x="200" y="320" text-anchor="middle" font-family="'IBM Plex Sans','Helvetica Neue',sans-serif" font-size="18" fill="#6B7280">Bild folgt</text>
+</svg>

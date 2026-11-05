@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 56" fill="none" role="img" aria-label="Rabobank">
+  <rect width="200" height="56" rx="3" fill="#FF6600"/>
+  <path d="M48 38L64 18L80 38" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M88 38L104 18L120 38" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="152" cy="28" r="10" fill="#fff" fill-opacity="0.2"/>
+  <circle cx="168" cy="28" r="6" fill="#fff" fill-opacity="0.35"/>
+</svg>

@@ -1,0 +1,37 @@
+{
+ "quelle": "https://essenceinvest.com/api/stocks/AAPL/news",
+ "abgerufen_am": "2026-11-05",
+ "daten": {
+  "symbol": "AAPL",
+  "company_label": "Apple Inc.",
+  "articles": [
+   {
+    "slug": "bericht-apple-plant-mobilen-hausroboter-fuer-rund-1000-dollar",
+    "title": "Bericht: Apple plant mobilen Hausroboter für rund 1.000 Dollar",
+    "subtitle": "Laut einem Bericht arbeitet der Technologiekonzern an einem rollenden Assistenten für das Wohnzimmer, der Videoanrufe entgegennehmen und einfache Haussteuerungsaufgaben übernehmen soll",
+    "summary": "Apple soll laut einem Bericht an einem mobilen Hausroboter arbeiten, der für rund 1.000 US-Dollar angeboten werden könnte. Das Gerät soll sich selbstständig durch Wohnräume bewegen, Videotelefonate per Facetime ermöglichen und Funktionen wie das Einschalten von Licht übernehmen. Offizielle Angaben von Apple zu dem Projekt liegen bislang nicht vor.",
+    "category": "wirtschaft",
+    "published_at": "2026-11-04T07:14:24.983000+00:00",
+    "source_name": "Golem",
+    "source_url": "https://www.golem.de/news/facetime-auf-raedern-apple-will-wohl-1-000-dollar-roboter-bauen-2611-214822.html",
+    "hero_image_url": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=1600&q=75",
+    "match_score": 10
+   },
+   {
+    "slug": "apple-meldet-rekordquartal-doch-ausblick-daempft-stimmung--evonik-verteidigt-eig",
+    "title": "Apple meldet Rekordquartal, doch Ausblick dämpft Stimmung – Evonik verteidigt Eigenständigkeit gegen BASF",
+    "subtitle": "Zwei Konzerne, zwei Themen: Während Apple trotz starker Geschäftszahlen mit einem vorsichtigen Ausblick für Zurückhaltung sorgt, präsentiert Evonik solide Quartalszahlen im Zuge möglicher Übernahmepläne von BASF.",
+    "summary": "Apple hat laut Handelsblatt ein Rekordquartal vorgelegt, enttäuschte Anleger jedoch mit dem Ausblick auf die kommenden Monate. Der deutsche Spezialchemiekonzern Evonik wiederum konnte mit guten Quartalszahlen aufwarten und versucht damit, Argumente gegen eine mögliche Übernahme durch den Wettbewerber BASF zu liefern.",
+    "category": "unternehmen",
+    "published_at": "2026-11-03T17:14:25.008000+00:00",
+    "source_name": "Handelsblatt",
+    "source_url": "https://www.handelsblatt.com/audio/today/today-apple-verbucht-rekordquartal-doch-der-ausblick-enttaeuscht-anleger/100267070.html",
+    "hero_image_url": "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=1600&q=75",
+    "match_score": 10
+   }
+  ],
+  "total": 2,
+  "data_source": "news_articles",
+  "cached_until": "2026-11-05T12:52:49.720000+00:00"
+ }
+}

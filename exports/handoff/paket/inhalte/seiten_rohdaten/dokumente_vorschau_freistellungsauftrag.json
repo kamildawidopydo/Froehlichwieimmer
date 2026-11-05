@@ -1,0 +1,65 @@
+{
+ "url": "https://essenceinvest.com/dokumente/vorschau/freistellungsauftrag",
+ "title": "Fröhlich Vermögensberatung | Freistellungsauftrag — Vorschau",
+ "canonical": "https://essenceinvest.com/dokumente/vorschau/freistellungsauftrag",
+ "meta": {
+  "viewport": "width=device-width,initial-scale=1",
+  "theme-color": "#4C7CBA",
+  "description": "Formular zur steuerlichen Freistellung von Kapitalerträgen — ausfüllbar und einreichbar.",
+  "og:type": "website",
+  "og:site_name": "Fröhlich Vermögensberatung",
+  "og:image": "https://essenceinvest.com/assets/logo/frohlich-logo.png?v=4",
+  "twitter:card": "summary_large_image",
+  "twitter:image": "https://essenceinvest.com/assets/logo/frohlich-logo.png?v=4",
+  "og:title": "Fröhlich Vermögensberatung | Freistellungsauftrag — Vorschau",
+  "og:description": "Formular zur steuerlichen Freistellung von Kapitalerträgen — ausfüllbar und einreichbar.",
+  "og:url": "https://essenceinvest.com/dokumente/vorschau/freistellungsauftrag",
+  "twitter:title": "Fröhlich Vermögensberatung | Freistellungsauftrag — Vorschau",
+  "twitter:description": "Formular zur steuerlichen Freistellung von Kapitalerträgen — ausfüllbar und einreichbar."
+ },
+ "blocks": [
+  {
+   "index": 0,
+   "tag": "header",
+   "id": null,
+   "testid": null,
+   "heading": null,
+   "text": "Zurück zu Dokumente\n\nFreistellungsauftrag"
+  },
+  {
+   "index": 1,
+   "tag": "iframe",
+   "id": null,
+   "testid": null,
+   "heading": null,
+   "text": ""
+  },
+  {
+   "index": 2,
+   "tag": "section",
+   "id": null,
+   "testid": null,
+   "heading": null,
+   "text": ""
+  }
+ ],
+ "header_links": [
+  {
+   "text": "Zurück zu Dokumente",
+   "href": "https://essenceinvest.com/dokumente",
+   "target": null
+  }
+ ],
+ "footer_links": [],
+ "all_links": [
+  {
+   "text": "Zurück zu Dokumente",
+   "href": "https://essenceinvest.com/dokumente",
+   "target": null
+  }
+ ],
+ "images": [],
+ "forms": [],
+ "inputs": [],
+ "buttons": []
+}

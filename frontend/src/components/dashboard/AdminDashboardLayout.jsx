@@ -123,6 +123,7 @@ const AdminDashboardLayout = () => {
         { to: '/admin/bond-catalog', label: t('shell.admin.bondCatalog', { defaultValue: 'Anleihen-Katalog' }), icon: PRODUCT_ICONS.anleihen },
         { to: '/admin/bond-requests', label: t('shell.admin.bondRequests', { defaultValue: 'Anleihen-Anfragen' }), icon: Send, badge: (b('pending_bond_requests') || 0) + (b('bond_offer_responses_badge') || 0) || undefined },
         { to: '/admin/support', label: t('shell.admin.supportInbox', { defaultValue: 'Support-Postfach' }), icon: MessageCircle, badge: b('pending_support') },
+        { to: '/admin/exports', label: 'Export-Pakete', icon: FileText },
         { to: '/admin/user-positions', label: t('shell.admin.userPositions', { defaultValue: 'Kunden-Positionen' }), icon: Briefcase },
         { to: '/admin/stocks', label: t('shell.admin.stocks', { defaultValue: 'Aktien & Kurse' }), icon: PRODUCT_ICONS.aktien },
         { to: '/admin/ipo-catalog', label: t('shell.admin.ipoCatalog', { defaultValue: 'IPO-Katalog' }), icon: PRODUCT_ICONS.ipo },

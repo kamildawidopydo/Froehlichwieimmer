@@ -1,0 +1,26 @@
+{
+ "quelle": "https://essenceinvest.com/api/news/publishers",
+ "abgerufen_am": "2026-11-05",
+ "daten": {
+  "publishers": [
+   "Deutsche Bundesbank",
+   "Deutsche Welle",
+   "EU-Kommission",
+   "EZB",
+   "FAZ Politik",
+   "FAZ Wirtschaft",
+   "Golem",
+   "Handelsblatt",
+   "SPIEGEL Politik",
+   "SPIEGEL Wirtschaft",
+   "Süddeutsche Wirtschaft",
+   "Tagesschau Ausland",
+   "Tagesschau Inland",
+   "Tagesschau Wirtschaft",
+   "WirtschaftsWoche",
+   "ZEIT Politik",
+   "ZEIT Wirtschaft"
+  ],
+  "count": 17
+ }
+}

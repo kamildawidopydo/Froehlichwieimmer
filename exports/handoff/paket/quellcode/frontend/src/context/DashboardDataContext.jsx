@@ -1,0 +1,852 @@
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { useAuth } from '@/context/AuthContext';
+import * as Sentry from '@sentry/react';
+import { toast } from 'sonner';
+import { checkPriceAlerts } from '@/services/priceAlertService';
+import { fetchPortfolioJson } from '@/services/portfolioApi';
+import {
+  computeBondMetrics,
+  computeContractMetrics,
+  aggregatePortfolio,
+  computeBankInsuranceExposure,
+  buildTaxPrefs,
+} from '@/lib/dashboardMetrics';
+import { buildIpoValuationMap } from '@/lib/ipoValuation';
+
+export const DashboardDataContext = createContext(null);
+
+const initialState = {
+  loading: true,
+  dashboardFetchHadFailure: false,
+  cashBalance: 0,
+  cashAvailable: 0,
+  cashUnsettled: 0,
+  buyingPower: 0,
+  cashSettlements: [],
+  cashHistory: [],
+  cashHistoryLoading: false,
+  depotContracts: [],
+  depotLoading: true,
+  bondPositions: [],
+  bondsLoading: true,
+  stockPositions: [],
+  stockCatalog: [],
+  stockOrders: [],
+  watchlistItems: [],
+  stockPriceMap: {},
+  stocksLoading: true,
+  stocksRefreshing: false,
+  stockPricesUpdatedAt: null,
+  favorites: [],
+  comparisonHistory: [],
+  historyOffers: {},
+  heroSnapshots: [],
+  supportUnread: 0,
+  bondPurchaseRequests: [],
+  bondRequestsLoading: true,
+  ipoSubscriptionRequests: [],
+  ipoRequestsLoading: true,
+  taxPrefs: {
+    allowanceEur: 0,
+    allowanceUsedEur: 0,
+    churchTaxEnabled: false,
+    churchTaxRate: 9,
+  },
+  inflationRatePct: null,
+  inflationFetchedAt: null,
+  inflationSource: null,
+};
+
+// One in-flight request per symbol set; results reused for 3 s so overlapping refreshes don't duplicate calls.
+const quoteShare = { key: null, promise: null, at: 0 };
+const fetchQuotesShared = (syms) => {
+  const key = syms.join(',');
+  if (quoteShare.key === key && quoteShare.promise && Date.now() - quoteShare.at < 3000) return quoteShare.promise;
+  quoteShare.key = key;
+  quoteShare.at = Date.now();
+  quoteShare.promise = fetchPortfolioJson(`/api/portfolio/quotes?symbols=${encodeURIComponent(key)}`).catch((err) => {
+    quoteShare.promise = null;
+    throw err;
+  });
+  return quoteShare.promise;
+};
+
+const todayKey = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+export const DashboardDataProvider = ({ children }) => {
+  const { user } = useAuth();
+  const [state, setState] = useState(initialState);
+  const [metricDateKey, setMetricDateKey] = useState(todayKey);
+
+  const update = useCallback((patch) => {
+    setState((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  // Background refresh: only touch keys whose content actually changed (no re-render otherwise).
+  const updateIfChanged = useCallback((patch) => {
+    setState((prev) => {
+      const changed = Object.keys(patch).filter((k) => JSON.stringify(prev[k]) !== JSON.stringify(patch[k]));
+      if (!changed.length) return prev;
+      const next = { ...prev };
+      changed.forEach((k) => { next[k] = patch[k]; });
+      return next;
+    });
+  }, []);
+  const stockSymbolsRef = useRef([]);
+
+  // Session 82.17 · Depot Phase 1 — alle Portfolio-Reads Mongo-native via
+  // /api/portfolio/*. Session 82.25 — Helper in `services/portfolioApi.js` extrahiert.
+  // (fetchPortfolioJson wird direkt aus dem Service-Import verwendet.)
+
+  const fetchCashBalance = useCallback(async () => {
+    if (!user?.id) return true;
+    try {
+      const cash = await fetchPortfolioJson('/api/portfolio/cash');
+      update({
+        cashBalance: Number(cash?.cash_balance || 0),
+        cashAvailable: Number(cash?.cash_available ?? cash?.cash_balance ?? 0),
+        cashUnsettled: Number(cash?.cash_unsettled || 0),
+        buyingPower: Number(cash?.buying_power || 0),
+        cashSettlements: cash?.settlements || [],
+        taxPrefs: buildTaxPrefs(user || {}),
+      });
+      return true;
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error('cash balance fetch failed', err);
+      return false;
+    }
+  }, [user?.id, update]);
+
+  const fetchCashHistory = useCallback(async () => {
+    if (!user?.id) return;
+    update({ cashHistoryLoading: true });
+    try {
+      const cash = await fetchPortfolioJson('/api/portfolio/cash?history_limit=100');
+      update({
+        cashHistory: (cash?.history || [])
+          .filter((t) => t.status !== 'cancelled')
+          .map((t) => ({ ...t, amount: (t.direction === 'debit' ? -1 : 1) * Math.abs(Number(t.amount || 0)) })),
+      });
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error('cash history fetch failed', err);
+    } finally {
+      update({ cashHistoryLoading: false });
+    }
+  }, [user?.id, update]);
+
+  const fetchDepotContracts = useCallback(async () => {
+    if (!user?.id) return true;
+    update({ depotLoading: true });
+    try {
+      const data = await fetchPortfolioJson('/api/portfolio/depot-contracts');
+      update({ depotContracts: Array.isArray(data) ? data : [] });
+      return true;
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error('depot contracts fetch failed', err);
+      return false;
+    } finally {
+      update({ depotLoading: false });
+    }
+  }, [user?.id, update]);
+
+  const fetchBondPositions = useCallback(async () => {
+    if (!user?.id) return true;
+    update({ bondsLoading: true });
+    try {
+      const data = await fetchPortfolioJson('/api/portfolio/bond-positions');
+      update({ bondPositions: Array.isArray(data) ? data : [] });
+      return true;
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error('bond positions fetch failed', err);
+      return false;
+    } finally {
+      update({ bondsLoading: false });
+    }
+  }, [user?.id, update]);
+
+  const buildPriceMap = (quotes, posList) => {
+    const priceMap = {};
+    // EUR quote fields from the backend (same source as stock detail / market overview).
+    Object.entries(quotes || {}).forEach(([sym, q]) => {
+      if (q && q.price != null && q.currency === 'EUR') {
+        priceMap[sym] = {
+          price: Number(q.price),
+          currency: 'EUR',
+          change_abs: q.change_abs != null ? Number(q.change_abs) : null,
+          change_pct: q.change_pct != null ? Number(q.change_pct) : null,
+          prev_close: q.prev_close != null ? Number(q.prev_close) : null,
+        };
+      }
+    });
+    posList.forEach((p) => {
+      if (p.symbol && p.price != null && !priceMap[p.symbol]) priceMap[p.symbol] = { price: Number(p.price), currency: 'EUR' };
+    });
+    return priceMap;
+  };
+
+  const fetchStockData = useCallback(async ({ silent = false } = {}) => {
+    if (!user?.id) return true;
+    if (!silent) update({ stocksLoading: true });
+    try {
+      const [positions, watchlist, orders] = await Promise.all([
+        fetchPortfolioJson('/api/portfolio/stock-positions'),
+        fetchPortfolioJson('/api/portfolio/watchlist'),
+        fetchPortfolioJson('/api/portfolio/orders?limit=50'),
+      ]);
+      const posList = Array.isArray(positions) ? positions : [];
+      const wlList = Array.isArray(watchlist) ? watchlist : [];
+      const syms = [...new Set([...posList, ...wlList].map((x) => String(x.symbol || '').toUpperCase()).filter(Boolean))];
+      stockSymbolsRef.current = syms;
+      const quotes = syms.length
+        ? await fetchQuotesShared(syms).catch(() => ({}))
+        : {};
+      const priceMap = buildPriceMap(quotes, posList);
+      updateIfChanged({
+        stockPositions: posList,
+        watchlistItems: wlList,
+        stockOrders: Array.isArray(orders) ? orders : [],
+        stockPriceMap: priceMap,
+      });
+      if (Object.keys(priceMap).length) update({ stockPricesUpdatedAt: new Date().toISOString() });
+      return true;
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error('stock data fetch failed', err);
+      return false;
+    } finally {
+      if (!silent) update({ stocksLoading: false });
+    }
+  }, [user?.id, update, updateIfChanged]);
+
+  // Lightweight background tick: quotes only, merged without loading state.
+  const refreshQuotesSilently = useCallback(async () => {
+    const syms = stockSymbolsRef.current;
+    if (!user?.id || !syms.length) return;
+    try {
+      const quotes = await fetchQuotesShared(syms);
+      setState((prev) => {
+        const priceMap = { ...prev.stockPriceMap, ...buildPriceMap(quotes, []) };
+        if (JSON.stringify(priceMap) === JSON.stringify(prev.stockPriceMap)) return prev;
+        return { ...prev, stockPriceMap: priceMap, stockPricesUpdatedAt: new Date().toISOString() };
+      });
+    } catch { /* keep last values */ }
+  }, [user?.id]);
+
+  const fetchStockCatalog = useCallback(async () => {
+    // Session 82.64 — Aktien-Vitrine dekorativ. Legacy Supabase `stocks`-Tabelle
+    // hat kein Mongo-Equivalent (kein curated universe im Mongo). Widget bleibt
+    // leer, bis ein Mongo-Endpoint existiert. Non-critical, kein Banner.
+    update({ stockCatalog: [] });
+    return true;
+  }, [update]);
+
+  const refreshStockPrices = useCallback(async () => {
+    if (!user?.id) return null;
+    update({ stocksRefreshing: true });
+    try {
+      // Session 82.64 — `/api/portfolio/stock-positions` enrichted mit
+      // Read-Through-Cache (Session 82.22). Ein Read triggert Refresh der
+      // stale Quotes automatisch. Kein separater `stock-prices`-Invoke nötig.
+      const ok = await fetchStockData({ silent: true });
+      if (ok) {
+        toast.success('Marktdaten aktualisiert.');
+      } else {
+        toast.error('Marktdaten konnten nicht aktualisiert werden.');
+      }
+      return { ok };
+    } catch (err) {
+      Sentry.captureException(err);
+      toast.error('Aktualisierung fehlgeschlagen.');
+      return null;
+    } finally {
+      update({ stocksRefreshing: false });
+    }
+  }, [user?.id, fetchStockData, update]);
+
+  const fetchFavorites = useCallback(async () => {
+    // Session 82.64 — Sparangebots-Favoriten (Legacy `profiles.favorites` + Join
+    // `savings_offers/banks`) haben aktuell kein Mongo-Equivalent. Non-critical
+    // dekoratives Widget; bleibt leer bis Mongo-Endpoint existiert.
+    update({ favorites: [] });
+    return true;
+  }, [update]);
+
+  const fetchComparisonHistory = useCallback(async () => {
+    // Session 82.64 — Sparangebots-Vergleichshistorie (Legacy `comparison_history`)
+    // hat kein Mongo-Equivalent. Non-critical.
+    update({ comparisonHistory: [], historyOffers: {} });
+    return true;
+  }, [update]);
+
+  const fetchBondPurchaseRequests = useCallback(async () => {
+    if (!user?.id) return true;
+    update({ bondRequestsLoading: true });
+    try {
+      // Session 82.04 — FastAPI/Mongo-native. Der Supabase-Read wurde ersetzt,
+      // damit neue Mongo-Requests direkt sichtbar sind. Nur diese eine
+      // Fetch-Funktion wurde geändert — Portfolio/Cash/Depot bleiben Supabase.
+      const resp = await fetch('/api/bonds/requests/me', {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      update({ bondPurchaseRequests: Array.isArray(data) ? data : [] });
+      return true;
+    } catch (err) {
+      Sentry.captureException(err);
+      update({ bondPurchaseRequests: [] });
+      return false;
+    } finally {
+      update({ bondRequestsLoading: false });
+    }
+  }, [user?.id, update]);
+
+  const fetchIpoSubscriptionRequests = useCallback(async () => {
+    if (!user?.id) return true;
+    update({ ipoRequestsLoading: true });
+    try {
+      // Session 82.35 · IPO Requests Cutover — Mongo-native via FastAPI.
+      // Der bisherige Supabase-Read scheiterte an RLS/UUID-Cast und triggerte
+      // fälschlich den globalen Dashboard-Error-Banner. Jetzt lesen wir aus
+      // /api/ipo/requests/me und normalisieren auf das von den Widgets
+      // erwartete Legacy-Shape (approved_at/valuation_set_at/ipo_catalog).
+      const resp = await fetch('/api/ipo/requests/me', {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      const normalized = (Array.isArray(data) ? data : []).map((r) => ({
+        ...r,
+        // Legacy-Kompat-Felder (Mongo kennt kein separates approved_at —
+        // Bewertung wird bei Allocation gesetzt, daher fallen approved_at /
+        // valuation_set_at auf allocation_date zurück).
+        approved_at: r.allocation_date || null,
+        valuation_set_at: r.valuation_set_at || r.allocation_date || null,
+        position_symbol: null,
+        use_admin_valuation: r.use_admin_valuation !== false,
+        profit_margin_pct: null,
+        decision_note: null,
+        rejected_at: null,
+        ipo_catalog: { price_currency: 'EUR' },
+      }));
+      update({ ipoSubscriptionRequests: normalized });
+      return true;
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error('ipo subscription requests fetch failed', err);
+      update({ ipoSubscriptionRequests: [] });
+      return false;
+    } finally {
+      update({ ipoRequestsLoading: false });
+    }
+  }, [user?.id, update]);
+
+  const fetchSupportUnread = useCallback(async () => {
+    // Session 82.64 — Legacy `support_tickets`-Tabelle hat kein Mongo-Equivalent.
+    // Non-critical Badge. Bleibt 0 bis Mongo-Support-System existiert.
+    update({ supportUnread: 0 });
+    return true;
+  }, [update]);
+
+  const fetchInflationRate = useCallback(async () => {
+    // Session 82.64 — Legacy `macro_rates`-Tabelle + `macro-rates`-Function
+    // haben kein Mongo-Equivalent. Non-critical dekorativer KPI. Bleibt `null`
+    // bis Mongo-Endpoint existiert.
+    update({ inflationRatePct: null, inflationFetchedAt: null, inflationSource: null });
+    return true;
+  }, [update]);
+
+  const fetchHeroSnapshots = useCallback(async () => {
+    if (!user?.id) return true;
+    try {
+      const data = await fetchPortfolioJson('/api/portfolio/snapshots?days=400');
+      update({ heroSnapshots: Array.isArray(data) ? data : [] });
+      return true;
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error('hero snapshots fetch failed', err);
+      return false;
+    }
+  }, [user?.id, update]);
+
+  // Session 82.23 · Depot Phase 4B — serverseitige Portfolio-Summary als Source of Truth.
+  const fetchPortfolioSummary = useCallback(async () => {
+    if (!user?.id) return true;
+    try {
+      const data = await fetchPortfolioJson('/api/portfolio/summary');
+      update({ portfolioSummary: data });
+      return true;
+    } catch (err) {
+      Sentry.captureException(err);
+      console.error('portfolio summary fetch failed', err);
+      return false;
+    }
+  }, [user?.id, update]);
+
+  const refreshAll = useCallback(async () => {
+    if (!user?.id) return;
+    update({ loading: true, dashboardFetchHadFailure: false });
+    // Session 82.35 · Banner-Semantik gesplittet.
+    // CRITICAL = Finanzkern des Depots (Cash, Positions, Orders, Bond-Requests,
+    // Snapshots). Nur deren Fehler dürfen den globalen roten Dashboard-Banner
+    // auslösen. NON_CRITICAL sind Marketing-/Legacy-Supabase-Reads
+    // (Stock-Catalog, Favoriten, Vergleichsverlauf, Support-Unread, Inflation)
+    // sowie IPO-Requests (fachlich nicht finanziell kritisch für den Depot-
+    // Core). Diese laufen parallel, ihre Fehler werden geloggt, aber kein
+    // Banner.
+    const [criticalResults] = await Promise.all([
+      Promise.all([
+        fetchCashBalance(),
+        fetchDepotContracts(),
+        fetchBondPositions(),
+        fetchBondPurchaseRequests(),
+        fetchStockData(),
+        fetchHeroSnapshots(),
+      ]),
+      Promise.all([
+        fetchIpoSubscriptionRequests(),
+        fetchStockCatalog(),
+        fetchFavorites(),
+        fetchComparisonHistory(),
+        fetchSupportUnread(),
+        fetchInflationRate(),
+      ]).catch((err) => {
+        // Ein einzelner non-critical Fetch darf niemals den Depot-Health-State
+        // beeinflussen — Fehler werden in den Sub-Funktionen bereits geloggt.
+        console.warn('non-critical dashboard fetch failed', err);
+        return [];
+      }),
+    ]);
+    const failed = criticalResults.some((r) => r === false);
+    update({ loading: false, dashboardFetchHadFailure: failed });
+    checkPriceAlerts()
+      .then((res) => {
+        if (res?.triggered?.length) {
+          toast.info(`${res.triggered.length} Kursalarm(e) ausgelöst`, {
+            action: { label: 'Anzeigen', onClick: () => { window.location.href = '/dashboard/alarme'; } },
+          });
+        }
+      })
+      .catch(() => {});
+  }, [
+    user?.id,
+    fetchCashBalance,
+    fetchDepotContracts,
+    fetchBondPositions,
+    fetchBondPurchaseRequests,
+    fetchIpoSubscriptionRequests,
+    fetchStockData,
+    fetchStockCatalog,
+    fetchFavorites,
+    fetchComparisonHistory,
+    fetchHeroSnapshots,
+    fetchSupportUnread,
+    fetchInflationRate,
+    update,
+  ]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setState(initialState);
+      return undefined;
+    }
+    refreshAll();
+
+    // Session 82.64 — Supabase Realtime-Channel entfernt. Ersatz-Pattern:
+    //   • Order-Executed / Bond-Executed / IPO-Allocated Toasts: gehandhabt vom
+    //     Notification-Bell (Session 82.52 · `stock_alert_notifications`).
+    //   • Support-Unread: On-Demand-Refresh via `refreshAll()` + Focus-Refresh.
+    //   • Bond-Request / IPO-Subscription-Status: `refreshAll()` +
+    //     Focus-Refresh (unten definiert) picken State-Änderungen auf.
+    // Keine neue WebSocket-Infrastruktur; kein aggressives Polling; kein
+    // Financial-State abhängig von Realtime.
+
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setMetricDateKey((prev) => {
+        const next = todayKey();
+        return prev === next ? prev : next;
+      });
+    }, 60_000);
+
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Background refresh: quotes every 5 s (30 s when idle), positions/orders every ~30 s.
+  // Silent — no loading flags, state only changes when data changed.
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    const ACTIVE_MS = 5 * 1000;
+    const IDLE_MS = 30 * 1000;
+    const IDLE_AFTER_MS = 2 * 60 * 1000;
+    const FULL_EVERY_MS = 30 * 1000;
+    let lastActive = Date.now();
+    let lastFull = Date.now();
+    let timerId = null;
+
+    const markActive = () => { lastActive = Date.now(); };
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(
+      (evt) => window.addEventListener(evt, markActive, { passive: true }),
+    );
+
+    const schedule = () => {
+      const idle = Date.now() - lastActive > IDLE_AFTER_MS;
+      timerId = window.setTimeout(async () => {
+        if (typeof document === 'undefined' || !document.hidden) {
+          try {
+            if (Date.now() - lastFull >= FULL_EVERY_MS) {
+              lastFull = Date.now();
+              await fetchStockData({ silent: true });
+            } else {
+              await refreshQuotesSilently();
+            }
+          } catch { /* noop */ }
+        }
+        schedule();
+      }, idle ? IDLE_MS : ACTIVE_MS);
+    };
+    schedule();
+
+    const onVisibility = () => {
+      if (!document.hidden) fetchStockData({ silent: true });
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      if (timerId) window.clearTimeout(timerId);
+      ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(
+        (evt) => window.removeEventListener(evt, markActive),
+      );
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [user?.id, fetchStockData, refreshQuotesSilently]);
+
+  const cancelOrder = useCallback(
+    async (orderId) => {
+      if (!window.confirm('Auftrag wirklich stornieren?')) return;
+      try {
+        // Session 82.21 · Depot Phase 3C — Mongo-native via FastAPI.
+        const resp = await fetch(`/api/portfolio/orders/${encodeURIComponent(orderId)}/cancel`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        toast.success('Auftrag storniert');
+        fetchStockData();
+        fetchCashBalance();
+      } catch (err) {
+        toast.error('Auftrag konnte nicht storniert werden.');
+      }
+    },
+    [fetchStockData, fetchCashBalance],
+  );
+
+  const removeFromWatchlist = useCallback(
+    async (symbol) => {
+      if (!user?.id) return;
+      try {
+        // Session 82.20 · Depot Phase 3B — Mongo-native via FastAPI.
+        const sym = String(symbol || '').toUpperCase();
+        const resp = await fetch(`/api/watchlist/${encodeURIComponent(sym)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        toast.success('Aus Watchlist entfernt');
+        fetchStockData();
+      } catch (err) {
+        toast.error('Symbol konnte nicht aus der Watchlist entfernt werden.');
+      }
+    },
+    [user?.id, fetchStockData],
+  );
+
+  const removeFavorite = useCallback(
+    async (_offerId) => {
+      // Session 82.64 — Sparangebots-Favoriten haben aktuell kein Mongo-Backend.
+      // Consumer sollten den Aufruf vermeiden; falls dennoch getriggert: still
+      // Erfolgs-Toast + State-Filter für UX-Konsistenz.
+      if (!user?.id) return;
+      update({ favorites: state.favorites.filter((o) => o.id !== _offerId) });
+      toast.success('Aus Favoriten entfernt');
+    },
+    [user?.id, update, state.favorites],
+  );
+
+  const metrics = useMemo(() => {
+    const metricNow = new Date(`${metricDateKey}T12:00:00`);
+    const activeContracts = state.depotContracts.filter((c) => c.is_active);
+    const activeBonds = state.bondPositions.filter((b) => b.is_active);
+    const bondsMarktwert = activeBonds.reduce(
+      (s, b) => s + (Number(b.nominal_betrag || 0) * Number(b.aktueller_kurs || 0)) / 100,
+      0,
+    );
+    const bondsEinstand = activeBonds.reduce(
+      (s, b) => s + (Number(b.nominal_betrag || 0) * Number(b.kaufkurs || 0)) / 100,
+      0,
+    );
+    const bondsGV = bondsMarktwert - bondsEinstand;
+
+    const ipoValuationMap = buildIpoValuationMap(state.ipoSubscriptionRequests);
+    const ipoAllocatedTickers = new Set(
+      (state.ipoSubscriptionRequests || [])
+        .filter((r) => r.status === 'allocated' && r.ticker)
+        .map((r) => String(r.ticker).trim().toUpperCase()),
+    );
+
+    const stockMetrics = state.stockPositions.map((p) => {
+      const marketPrice = state.stockPriceMap[p.symbol]?.price;
+      const ipoVal = ipoValuationMap[p.symbol];
+      const price =
+        ipoVal?.listingPrice != null
+          ? Number(ipoVal.listingPrice)
+          : marketPrice != null
+            ? Number(marketPrice)
+            : null;
+      const qty = Number(p.quantity || 0);
+      const avg = Number(p.avg_cost || 0);
+      const marktwert = price != null ? qty * Number(price) : qty * avg;
+      const einstand = qty * avg;
+      const gv = marktwert - einstand;
+      const pct = einstand > 0 ? (gv / einstand) * 100 : 0;
+      const meta = p.stocks || {};
+      return {
+        ...p,
+        stockName: meta.name || ipoVal?.companyName || p.symbol,
+        purchase_date: p.purchase_date || ipoVal?.allocationDate || null,
+        // No live price and no estimate: G/V is unknown (not 0).
+        hasValuation: price != null,
+        logoUrl: meta.logo_url || null,
+        exchange: meta.exchange || null,
+        market: meta.market || null,
+        isTradable: meta.is_active !== false,
+        isIpoValuation: !!ipoVal,
+        isIpoStake: !!ipoVal || ipoAllocatedTickers.has(String(p.symbol).toUpperCase()),
+        ipoEinstandPerLot: ipoVal?.subscriptionPrice != null ? Number(ipoVal.subscriptionPrice) : avg,
+        ipoListingPerLot: ipoVal?.listingPrice != null ? Number(ipoVal.listingPrice) : null,
+        price,
+        marketPrice: marketPrice != null ? Number(marketPrice) : null,
+        qty,
+        avg,
+        marktwert,
+        einstand,
+        gv,
+        pct,
+      };
+    });
+    const depotWert = stockMetrics.reduce((s, m) => s + m.marktwert, 0);
+    const depotEinstand = stockMetrics.reduce((s, m) => s + m.einstand, 0);
+    const depotGV = depotWert - depotEinstand;
+
+    const dailyPortfolioPnl = stockMetrics.reduce((sum, m) => {
+      const px = state.stockPriceMap[m.symbol];
+      const qty = Number(m.qty || 0);
+      if (qty <= 0) return sum;
+      if (px?.change_abs != null && Number.isFinite(Number(px.change_abs))) {
+        return sum + qty * Number(px.change_abs);
+      }
+      if (px?.change_pct != null && px?.price != null) {
+        const pct = Number(px.change_pct);
+        const price = Number(px.price);
+        if (Number.isFinite(pct) && Number.isFinite(price)) {
+          return sum + qty * price * (pct / 100);
+        }
+      }
+      return sum;
+    }, 0);
+
+    const pendingOrders = state.stockOrders.filter((o) => o.status === 'pending');
+    const realizedPnlTotal = state.stockOrders
+      .filter((o) => o.status === 'executed' && o.realized_pnl != null)
+      .reduce((sum, o) => sum + Number(o.realized_pnl || 0), 0);
+
+    const contractsByType = {
+      festgeld: state.depotContracts.filter((c) => c.product_type === 'festgeld'),
+      tagesgeld: state.depotContracts.filter((c) => c.product_type === 'tagesgeld'),
+      flexgeld: state.depotContracts.filter((c) => c.product_type === 'flexgeld'),
+    };
+
+    const aggregateOpts = {
+      taxPrefs: state.taxPrefs,
+      inflationRatePct: state.inflationRatePct,
+      now: metricNow,
+    };
+
+    const portfolioAggregate = aggregatePortfolio(
+      activeContracts,
+      aggregateOpts,
+    );
+    const festgeldAggregate = aggregatePortfolio(
+      contractsByType.festgeld,
+      aggregateOpts,
+    );
+    const tagesgeldAggregate = aggregatePortfolio(
+      contractsByType.tagesgeld,
+      aggregateOpts,
+    );
+    const flexgeldAggregate = aggregatePortfolio(
+      contractsByType.flexgeld,
+      aggregateOpts,
+    );
+
+    const contractsTotal = portfolioAggregate.currentValueGrossTotal;
+    const festgeldAnleihenTotal = contractsTotal + bondsMarktwert;
+
+    const tagesgeldTotal = tagesgeldAggregate.currentValueGrossTotal;
+    const flexgeldTotal = flexgeldAggregate.currentValueGrossTotal;
+    const festgeldTotal = festgeldAggregate.totalAmountEur;
+    // Current values of active contracts per type; sums exactly to contractsTotal.
+    const contractValues = {
+      festgeld: festgeldAggregate.currentValueGrossTotal,
+      tagesgeld: tagesgeldTotal,
+      flexgeld: flexgeldTotal,
+    };
+    contractValues.sonstige = Math.max(
+      0,
+      contractsTotal - contractValues.festgeld - contractValues.tagesgeld - contractValues.flexgeld,
+    );
+
+    const cash = Number(state.cashBalance || 0);
+    const gesamtvermoegen = cash + depotWert + festgeldAnleihenTotal;
+
+    const bankInsuranceExposure = computeBankInsuranceExposure(
+      state.depotContracts,
+    );
+
+    return {
+      activeContracts,
+      activeBonds,
+      contractsTotal,
+      bondsMarktwert,
+      bondsEinstand,
+      bondsGV,
+      festgeldAnleihenTotal,
+      stockMetrics,
+      ipoValuationMap,
+      depotWert,
+      depotEinstand,
+      depotGV,
+      dailyPortfolioPnl,
+      gesamtvermoegen,
+      pendingOrders,
+      realizedPnlTotal,
+      contractsByType,
+      tagesgeldTotal,
+      flexgeldTotal,
+      festgeldTotal,
+      contractValues,
+      portfolioAggregate,
+      festgeldAggregate,
+      tagesgeldAggregate,
+      flexgeldAggregate,
+      bankInsuranceExposure,
+    };
+  }, [
+    state.depotContracts,
+    state.bondPositions,
+    state.stockPositions,
+    state.stockPriceMap,
+    state.ipoSubscriptionRequests,
+    state.cashBalance,
+    state.stockOrders,
+    state.taxPrefs,
+    state.inflationRatePct,
+    metricDateKey,
+  ]);
+
+  // Wrap so callers automatically pick up the user's tax prefs + inflation rate.
+  const computeContractMetricsBound = useCallback(
+    (contract, extraOpts = {}) =>
+      computeContractMetrics(contract, {
+        taxPrefs: state.taxPrefs,
+        inflationRatePct: state.inflationRatePct,
+        now: new Date(`${metricDateKey}T12:00:00`),
+        ...extraOpts,
+      }),
+    [state.taxPrefs, state.inflationRatePct, metricDateKey],
+  );
+
+  const value = useMemo(
+    () => ({
+      ...state,
+      ...metrics,
+      computeContractMetrics: computeContractMetricsBound,
+      computeBondMetrics,
+      cancelOrder,
+      removeFromWatchlist,
+      removeFavorite,
+      refreshAll,
+      refreshStocks: fetchStockData,
+      refreshStockPrices,
+      refreshCashBalance: fetchCashBalance,
+      refreshCashHistory: fetchCashHistory,
+      refreshDepot: fetchDepotContracts,
+      refreshBonds: fetchBondPositions,
+      refreshFavorites: fetchFavorites,
+      refreshHistory: fetchComparisonHistory,
+      refreshSupportUnread: fetchSupportUnread,
+      refreshBondRequests: fetchBondPurchaseRequests,
+      refreshIpoRequests: fetchIpoSubscriptionRequests,
+      refreshInflationRate: fetchInflationRate,
+      refreshPortfolioSummary: fetchPortfolioSummary,
+    }),
+    [
+      state,
+      metrics,
+      computeContractMetricsBound,
+      cancelOrder,
+      removeFromWatchlist,
+      removeFavorite,
+      refreshAll,
+      fetchStockData,
+      refreshStockPrices,
+      fetchCashBalance,
+      fetchCashHistory,
+      fetchDepotContracts,
+      fetchBondPositions,
+      fetchBondPurchaseRequests,
+      fetchIpoSubscriptionRequests,
+      fetchFavorites,
+      fetchComparisonHistory,
+      fetchSupportUnread,
+      fetchInflationRate,
+      fetchPortfolioSummary,
+    ],
+  );
+
+  return <DashboardDataContext.Provider value={value}>{children}</DashboardDataContext.Provider>;
+};
+
+export const useDashboardData = () => {
+  const ctx = useContext(DashboardDataContext);
+  if (!ctx) {
+    throw new Error('useDashboardData must be used inside DashboardDataProvider');
+  }
+  return ctx;
+};

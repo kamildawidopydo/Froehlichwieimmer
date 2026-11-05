@@ -1,0 +1,890 @@
+{
+ "url": "https://essenceinvest.com/banks/bunq/festgeld/produktinfo",
+ "title": "Fröhlich Vermögensberatung | Ihre Investments. Alle Banken. Eine Plattform.",
+ "canonical": null,
+ "meta": {
+  "viewport": "width=device-width,initial-scale=1",
+  "theme-color": "#4C7CBA",
+  "description": "Tagesgeld, Festgeld & mehr bei über 100 europäischen Banken – auf einer Plattform vergleichen und verwalten. Sicher, übersichtlich und unverbindlich mit Fröhlich Vermögensberatung.",
+  "og:type": "website",
+  "og:site_name": "Fröhlich Vermögensberatung",
+  "og:image": "https://essenceinvest.com/assets/logo/frohlich-logo.png?v=4",
+  "twitter:card": "summary_large_image",
+  "twitter:image": "https://essenceinvest.com/assets/logo/frohlich-logo.png?v=4"
+ },
+ "blocks": [
+  {
+   "index": 0,
+   "tag": "header",
+   "id": null,
+   "testid": null,
+   "heading": null,
+   "text": "PERSÖNLICHE BERATUNG\n06966 7785 941\nMo–Fr · 09:00 – 18:00\nkundenservice@essenceinvest.com\nSuchen\n⌘\nK"
+  },
+  {
+   "index": 2,
+   "tag": "div",
+   "id": null,
+   "testid": null,
+   "heading": "Sicherer Zugang.",
+   "text": "FRÖHLICH VERMÖGENSBERATUNG · SICHERER ZUGANG\nBAD KREUZNACH\n256-BIT · VERSCHLÜSSELT\n\nZUGANG · TRESOR\n\nSicherer Zugang.\n\nBitte geben Sie Ihren Zugangscode ein.\n\nIHR NAME\nZUGANGSCODE\nWEITER\n256-BIT · VERSCHLÜSSELT"
+  },
+  {
+   "index": 3,
+   "tag": "footer",
+   "id": "footer",
+   "testid": null,
+   "heading": "Individuelle Betreuung",
+   "text": "Individuelle Betreuung\n\nPersönliche Unterstützung durch erfahrene Ansprechpartner — von der ersten Anfrage bis zur Kontoeröffnung.\n\nUnverbindlicher Vergleich\n\nUnser Anlagenvergleich ist für Sie kostenfrei, transparent und ohne versteckte Verpflichtungen.\n\nTÜV-geprüfte Sicherheit\n\nZertifizierter Datenschutz und geprüfte Systeme — für ein beruhigendes Gefühl bei jeder Anfrage.\n\nDigitale Abwicklung\n\nSchnelle Bearbeitung und unkomplizierte Kontoeröffnung bei vielen Partnerbanken — in der Regel innerhalb weniger Tage.\n\nNähe und Internationalität — für Ihre finanzielle Freiheit.\n\nGemeinsam verbinden wir Nähe und Internationalität – für Ihre finanzielle Freiheit und eine sichere Zukunft. Lokale Betreuung in Deutschland, europäische Partnerstärke.\n\nBANKENTAUGLICHE SICHERHEIT · TLS 1.3\n\nPRODUKTE\n\nSparvergleich\nPartnerbanken\nKredit\nHandeln\nSpezial-AIF\n\nSPAREN\n\nFestgeld\nFlexgeld\nTagesgeld\n\nUNTERNEHMEN\n\nDokumente\nPDFs zum Download\nNews\nÜber uns\nPhilosophie\nLeistungen\nWissen\nSo funktioniert's\nZinsrechner\nSicherheit\nCompliance\nSparen erklärt\nFAQ\nKontakt\n\nRECHTLICHES\n\nImpressum\nDatenschutz\nAGB\nHaftungsausschluss\nWiderruf\nCookie-Einstellungen\nREGULIERT & GESCHÜTZT\nSicherheit & Regulierung\n\nEssenceInvest ist ein Angebot der Fröhlich Vermögensberatung GmbH · Bösgrunder Weg 62, 55543 Bad Kreuznach · Amtsgericht Bad Kreuznach HRB 23436.\n\n© 2026 Fröhlich Vermögensberatung GmbH · Alle Rechte vorbehalten.\n\nGewisse Dienstleistungen und Produkte der Fröhlich Vermögensberatung GmbH sind Personen mit Wohnsitz in oder Staatsangehörigen von bestimmten Ländern nicht zugänglich. Der Website-Benutzer wird deshalb ersucht, die für diese Website geltenden Nutzungsbedingungen zu konsultieren und für Informationen über Produkte und Dienstleistungen in seinem Land Kontakt mit uns (Kontakt) aufzunehmen oder den wöchentlichen Finanznachrichten-Digest zu abonnieren. Überdies werden die Nutzer gebeten, sich bei Fragen zur Interpretation der Nutzungsbedingungen an ihren Rechts-/Steuerberater zu wenden."
+  },
+  {
+   "index": 5,
+   "tag": "section",
+   "id": null,
+   "testid": null,
+   "heading": null,
+   "text": ""
+  }
+ ],
+ "header_links": [
+  {
+   "text": "PERSÖNLICHE BERATUNG\n06966 7785 941\nMo–Fr · 09:00 – 18:00",
+   "href": "tel:+4969667785941",
+   "target": null
+  },
+  {
+   "text": "kundenservice@essenceinvest.com",
+   "href": "mailto:kundenservice@essenceinvest.com",
+   "target": null
+  },
+  {
+   "text": "",
+   "href": "https://essenceinvest.com/",
+   "target": null
+  },
+  {
+   "text": "SparvergleichFestgeld, Tagesgeld und Flexgeld im Überblick",
+   "href": "https://essenceinvest.com/comparison",
+   "target": null
+  },
+  {
+   "text": "KreditKreditangebote strukturiert vergleichen",
+   "href": "https://essenceinvest.com/kredit",
+   "target": null
+  },
+  {
+   "text": "Spezial-AIFFondsprofil und Anlagestrategie",
+   "href": "https://essenceinvest.com/spezial-aif",
+   "target": null
+  },
+  {
+   "text": "FestgeldFester Zinssatz über einen definierten Zeitraum — planbar und übersichtlich.",
+   "href": "https://essenceinvest.com/produkte/festgeld",
+   "target": null
+  },
+  {
+   "text": "FlexgeldFlexibel bleiben und von attraktiven Konditionen profitieren — ohne feste Bindung.",
+   "href": "https://essenceinvest.com/produkte/flexgeld",
+   "target": null
+  },
+  {
+   "text": "TagesgeldTäglich verfügbar und verzinst — ideal für liquide Reserven.",
+   "href": "https://essenceinvest.com/produkte/tagesgeld",
+   "target": null
+  },
+  {
+   "text": "Strategie-HubAnlagestile, Nachhaltigkeit, Vorsorge und Generationen",
+   "href": "https://essenceinvest.com/strategie",
+   "target": null
+  },
+  {
+   "text": "AnlagestileValue Investing und Dividendenstrategien",
+   "href": "https://essenceinvest.com/strategie/anlagestile",
+   "target": null
+  },
+  {
+   "text": "NachhaltigkeitESG-Investments und Impact Investing",
+   "href": "https://essenceinvest.com/strategie/nachhaltigkeit",
+   "target": null
+  },
+  {
+   "text": "Schutz & SteuerungVermögensschutz, Inflationsschutz, Aufbau",
+   "href": "https://essenceinvest.com/strategie/schutz-steuerung",
+   "target": null
+  },
+  {
+   "text": "AltersvorsorgeGesetzlich, privat und betrieblich verzahnen",
+   "href": "https://essenceinvest.com/strategie/altersvorsorge",
+   "target": null
+  },
+  {
+   "text": "GenerationenFür Kinder aufbauen, Vermögen übertragen",
+   "href": "https://essenceinvest.com/strategie/generationen",
+   "target": null
+  },
+  {
+   "text": "Wissen & PerspektivenRatgeber zu Sparen, Anlageklassen und Planung",
+   "href": "https://essenceinvest.com/wissen",
+   "target": null
+  },
+  {
+   "text": "Investment & BörseGrundlagen, Orderarten und Börsen-ABC im Wissenshub",
+   "href": "https://essenceinvest.com/handeln",
+   "target": null
+  },
+  {
+   "text": "InvestmentthemenAktien, Anleihen und Dividenden im Fokus",
+   "href": "https://essenceinvest.com/themen",
+   "target": null
+  },
+  {
+   "text": "Fonds-GrundlagenWie ein Fonds funktioniert — verständlich erklärt",
+   "href": "https://essenceinvest.com/fonds-grundlagen",
+   "target": null
+  },
+  {
+   "text": "So funktioniert esDer Ablauf in vier übersichtlichen Schritten",
+   "href": "https://essenceinvest.com/how-it-works",
+   "target": null
+  },
+  {
+   "text": "RechnerZinserträge und Laufzeiten berechnen",
+   "href": "https://essenceinvest.com/calculator",
+   "target": null
+  },
+  {
+   "text": "SicherheitEU-Einlagensicherung und Schutzmechanismen",
+   "href": "https://essenceinvest.com/security",
+   "target": null
+  },
+  {
+   "text": "ComplianceAufsicht, Regulierung und Transparenz",
+   "href": "https://essenceinvest.com/compliance",
+   "target": null
+  },
+  {
+   "text": "SteuernSparen und Besteuerung verständlich erklärt",
+   "href": "https://essenceinvest.com/savings-education",
+   "target": null
+  },
+  {
+   "text": "FAQAntworten auf häufig gestellte Fragen",
+   "href": "https://essenceinvest.com/faq",
+   "target": null
+  },
+  {
+   "text": "DokumentePDFs und Unterlagen zum Download",
+   "href": "https://essenceinvest.com/dokumente",
+   "target": null
+  },
+  {
+   "text": "Über unsWer wir sind und wofür wir stehen",
+   "href": "https://essenceinvest.com/about",
+   "target": null
+  },
+  {
+   "text": "PhilosophieUnsere Grundsätze und unser Anlageansatz",
+   "href": "https://essenceinvest.com/philosophie",
+   "target": null
+  },
+  {
+   "text": "LeistungenSparen, Vermögensaufbau und Beratung",
+   "href": "https://essenceinvest.com/leistungen",
+   "target": null
+  },
+  {
+   "text": "KontaktBeratung, Support und Erreichbarkeit",
+   "href": "https://essenceinvest.com/contact",
+   "target": null
+  },
+  {
+   "text": "Startseite",
+   "href": "https://essenceinvest.com/",
+   "target": null
+  },
+  {
+   "text": "News & Märkte",
+   "href": "https://essenceinvest.com/news",
+   "target": null
+  },
+  {
+   "text": "Karriere",
+   "href": "https://essenceinvest.com/karriere",
+   "target": null
+  },
+  {
+   "text": "Formular",
+   "href": "https://essenceinvest.com/formular",
+   "target": null
+  },
+  {
+   "text": "UploadDokument hochladen",
+   "href": "https://essenceinvest.com/dokument-upload",
+   "target": null
+  },
+  {
+   "text": "Anmelden",
+   "href": "https://essenceinvest.com/login",
+   "target": null
+  },
+  {
+   "text": "KontoKonto eröffnen",
+   "href": "https://essenceinvest.com/register",
+   "target": null
+  }
+ ],
+ "footer_links": [
+  {
+   "text": "",
+   "href": "https://essenceinvest.com/",
+   "target": null
+  },
+  {
+   "text": "Fröhlich Vermögensberatung GmbH auf Xing — Profil öffnen",
+   "href": "https://www.xing.com/pages/froehlich-vermoegensberatung-gmbh",
+   "target": "_blank"
+  },
+  {
+   "text": "Sparvergleich",
+   "href": "https://essenceinvest.com/comparison",
+   "target": null
+  },
+  {
+   "text": "Partnerbanken",
+   "href": "https://essenceinvest.com/partner-banks",
+   "target": null
+  },
+  {
+   "text": "Kredit",
+   "href": "https://essenceinvest.com/kredit",
+   "target": null
+  },
+  {
+   "text": "Handeln",
+   "href": "https://essenceinvest.com/handeln",
+   "target": null
+  },
+  {
+   "text": "Spezial-AIF",
+   "href": "https://essenceinvest.com/spezial-aif",
+   "target": null
+  },
+  {
+   "text": "Festgeld",
+   "href": "https://essenceinvest.com/produkte/festgeld",
+   "target": null
+  },
+  {
+   "text": "Flexgeld",
+   "href": "https://essenceinvest.com/produkte/flexgeld",
+   "target": null
+  },
+  {
+   "text": "Tagesgeld",
+   "href": "https://essenceinvest.com/produkte/tagesgeld",
+   "target": null
+  },
+  {
+   "text": "Dokumente\nPDFs zum Download",
+   "href": "https://essenceinvest.com/dokumente",
+   "target": null
+  },
+  {
+   "text": "News",
+   "href": "https://essenceinvest.com/news",
+   "target": null
+  },
+  {
+   "text": "Über uns",
+   "href": "https://essenceinvest.com/about",
+   "target": null
+  },
+  {
+   "text": "Philosophie",
+   "href": "https://essenceinvest.com/philosophie",
+   "target": null
+  },
+  {
+   "text": "Leistungen",
+   "href": "https://essenceinvest.com/leistungen",
+   "target": null
+  },
+  {
+   "text": "Wissen",
+   "href": "https://essenceinvest.com/wissen",
+   "target": null
+  },
+  {
+   "text": "So funktioniert's",
+   "href": "https://essenceinvest.com/how-it-works",
+   "target": null
+  },
+  {
+   "text": "Zinsrechner",
+   "href": "https://essenceinvest.com/calculator",
+   "target": null
+  },
+  {
+   "text": "Sicherheit",
+   "href": "https://essenceinvest.com/security",
+   "target": null
+  },
+  {
+   "text": "Compliance",
+   "href": "https://essenceinvest.com/compliance",
+   "target": null
+  },
+  {
+   "text": "Sparen erklärt",
+   "href": "https://essenceinvest.com/savings-education",
+   "target": null
+  },
+  {
+   "text": "FAQ",
+   "href": "https://essenceinvest.com/faq",
+   "target": null
+  },
+  {
+   "text": "Kontakt",
+   "href": "https://essenceinvest.com/contact",
+   "target": null
+  },
+  {
+   "text": "Impressum",
+   "href": "https://essenceinvest.com/legal/impressum",
+   "target": null
+  },
+  {
+   "text": "Datenschutz",
+   "href": "https://essenceinvest.com/legal/privacy",
+   "target": null
+  },
+  {
+   "text": "AGB",
+   "href": "https://essenceinvest.com/legal/terms",
+   "target": null
+  },
+  {
+   "text": "Haftungsausschluss",
+   "href": "https://essenceinvest.com/legal/disclaimer",
+   "target": null
+  },
+  {
+   "text": "Widerruf",
+   "href": "https://essenceinvest.com/legal/revocation",
+   "target": null
+  },
+  {
+   "text": "Sicherheit & Regulierung",
+   "href": "https://essenceinvest.com/sicherheit-regulierung",
+   "target": null
+  },
+  {
+   "text": "Fröhlich Vermögensberatung GmbH",
+   "href": "https://essenceinvest.com/legal/impressum",
+   "target": null
+  },
+  {
+   "text": "Nutzungsbedingungen",
+   "href": "https://essenceinvest.com/legal/terms",
+   "target": null
+  },
+  {
+   "text": "Kontakt",
+   "href": "https://essenceinvest.com/contact",
+   "target": null
+  },
+  {
+   "text": "wöchentlichen Finanznachrichten-Digest",
+   "href": "https://essenceinvest.com/newsletter",
+   "target": null
+  }
+ ],
+ "all_links": [
+  {
+   "text": "PERSÖNLICHE BERATUNG\n06966 7785 941\nMo–Fr · 09:00 – 18:00",
+   "href": "tel:+4969667785941",
+   "target": null
+  },
+  {
+   "text": "kundenservice@essenceinvest.com",
+   "href": "mailto:kundenservice@essenceinvest.com",
+   "target": null
+  },
+  {
+   "text": "",
+   "href": "https://essenceinvest.com/",
+   "target": null
+  },
+  {
+   "text": "SparvergleichFestgeld, Tagesgeld und Flexgeld im Überblick",
+   "href": "https://essenceinvest.com/comparison",
+   "target": null
+  },
+  {
+   "text": "KreditKreditangebote strukturiert vergleichen",
+   "href": "https://essenceinvest.com/kredit",
+   "target": null
+  },
+  {
+   "text": "Spezial-AIFFondsprofil und Anlagestrategie",
+   "href": "https://essenceinvest.com/spezial-aif",
+   "target": null
+  },
+  {
+   "text": "FestgeldFester Zinssatz über einen definierten Zeitraum — planbar und übersichtlich.",
+   "href": "https://essenceinvest.com/produkte/festgeld",
+   "target": null
+  },
+  {
+   "text": "FlexgeldFlexibel bleiben und von attraktiven Konditionen profitieren — ohne feste Bindung.",
+   "href": "https://essenceinvest.com/produkte/flexgeld",
+   "target": null
+  },
+  {
+   "text": "TagesgeldTäglich verfügbar und verzinst — ideal für liquide Reserven.",
+   "href": "https://essenceinvest.com/produkte/tagesgeld",
+   "target": null
+  },
+  {
+   "text": "Strategie-HubAnlagestile, Nachhaltigkeit, Vorsorge und Generationen",
+   "href": "https://essenceinvest.com/strategie",
+   "target": null
+  },
+  {
+   "text": "AnlagestileValue Investing und Dividendenstrategien",
+   "href": "https://essenceinvest.com/strategie/anlagestile",
+   "target": null
+  },
+  {
+   "text": "NachhaltigkeitESG-Investments und Impact Investing",
+   "href": "https://essenceinvest.com/strategie/nachhaltigkeit",
+   "target": null
+  },
+  {
+   "text": "Schutz & SteuerungVermögensschutz, Inflationsschutz, Aufbau",
+   "href": "https://essenceinvest.com/strategie/schutz-steuerung",
+   "target": null
+  },
+  {
+   "text": "AltersvorsorgeGesetzlich, privat und betrieblich verzahnen",
+   "href": "https://essenceinvest.com/strategie/altersvorsorge",
+   "target": null
+  },
+  {
+   "text": "GenerationenFür Kinder aufbauen, Vermögen übertragen",
+   "href": "https://essenceinvest.com/strategie/generationen",
+   "target": null
+  },
+  {
+   "text": "Wissen & PerspektivenRatgeber zu Sparen, Anlageklassen und Planung",
+   "href": "https://essenceinvest.com/wissen",
+   "target": null
+  },
+  {
+   "text": "Investment & BörseGrundlagen, Orderarten und Börsen-ABC im Wissenshub",
+   "href": "https://essenceinvest.com/handeln",
+   "target": null
+  },
+  {
+   "text": "InvestmentthemenAktien, Anleihen und Dividenden im Fokus",
+   "href": "https://essenceinvest.com/themen",
+   "target": null
+  },
+  {
+   "text": "Fonds-GrundlagenWie ein Fonds funktioniert — verständlich erklärt",
+   "href": "https://essenceinvest.com/fonds-grundlagen",
+   "target": null
+  },
+  {
+   "text": "So funktioniert esDer Ablauf in vier übersichtlichen Schritten",
+   "href": "https://essenceinvest.com/how-it-works",
+   "target": null
+  },
+  {
+   "text": "RechnerZinserträge und Laufzeiten berechnen",
+   "href": "https://essenceinvest.com/calculator",
+   "target": null
+  },
+  {
+   "text": "SicherheitEU-Einlagensicherung und Schutzmechanismen",
+   "href": "https://essenceinvest.com/security",
+   "target": null
+  },
+  {
+   "text": "ComplianceAufsicht, Regulierung und Transparenz",
+   "href": "https://essenceinvest.com/compliance",
+   "target": null
+  },
+  {
+   "text": "SteuernSparen und Besteuerung verständlich erklärt",
+   "href": "https://essenceinvest.com/savings-education",
+   "target": null
+  },
+  {
+   "text": "FAQAntworten auf häufig gestellte Fragen",
+   "href": "https://essenceinvest.com/faq",
+   "target": null
+  },
+  {
+   "text": "DokumentePDFs und Unterlagen zum Download",
+   "href": "https://essenceinvest.com/dokumente",
+   "target": null
+  },
+  {
+   "text": "Über unsWer wir sind und wofür wir stehen",
+   "href": "https://essenceinvest.com/about",
+   "target": null
+  },
+  {
+   "text": "PhilosophieUnsere Grundsätze und unser Anlageansatz",
+   "href": "https://essenceinvest.com/philosophie",
+   "target": null
+  },
+  {
+   "text": "LeistungenSparen, Vermögensaufbau und Beratung",
+   "href": "https://essenceinvest.com/leistungen",
+   "target": null
+  },
+  {
+   "text": "KontaktBeratung, Support und Erreichbarkeit",
+   "href": "https://essenceinvest.com/contact",
+   "target": null
+  },
+  {
+   "text": "Startseite",
+   "href": "https://essenceinvest.com/",
+   "target": null
+  },
+  {
+   "text": "News & Märkte",
+   "href": "https://essenceinvest.com/news",
+   "target": null
+  },
+  {
+   "text": "Karriere",
+   "href": "https://essenceinvest.com/karriere",
+   "target": null
+  },
+  {
+   "text": "Formular",
+   "href": "https://essenceinvest.com/formular",
+   "target": null
+  },
+  {
+   "text": "UploadDokument hochladen",
+   "href": "https://essenceinvest.com/dokument-upload",
+   "target": null
+  },
+  {
+   "text": "Anmelden",
+   "href": "https://essenceinvest.com/login",
+   "target": null
+  },
+  {
+   "text": "KontoKonto eröffnen",
+   "href": "https://essenceinvest.com/register",
+   "target": null
+  },
+  {
+   "text": "",
+   "href": "https://essenceinvest.com/",
+   "target": null
+  },
+  {
+   "text": "Fröhlich Vermögensberatung GmbH auf Xing — Profil öffnen",
+   "href": "https://www.xing.com/pages/froehlich-vermoegensberatung-gmbh",
+   "target": "_blank"
+  },
+  {
+   "text": "Sparvergleich",
+   "href": "https://essenceinvest.com/comparison",
+   "target": null
+  },
+  {
+   "text": "Partnerbanken",
+   "href": "https://essenceinvest.com/partner-banks",
+   "target": null
+  },
+  {
+   "text": "Kredit",
+   "href": "https://essenceinvest.com/kredit",
+   "target": null
+  },
+  {
+   "text": "Handeln",
+   "href": "https://essenceinvest.com/handeln",
+   "target": null
+  },
+  {
+   "text": "Spezial-AIF",
+   "href": "https://essenceinvest.com/spezial-aif",
+   "target": null
+  },
+  {
+   "text": "Festgeld",
+   "href": "https://essenceinvest.com/produkte/festgeld",
+   "target": null
+  },
+  {
+   "text": "Flexgeld",
+   "href": "https://essenceinvest.com/produkte/flexgeld",
+   "target": null
+  },
+  {
+   "text": "Tagesgeld",
+   "href": "https://essenceinvest.com/produkte/tagesgeld",
+   "target": null
+  },
+  {
+   "text": "Dokumente\nPDFs zum Download",
+   "href": "https://essenceinvest.com/dokumente",
+   "target": null
+  },
+  {
+   "text": "News",
+   "href": "https://essenceinvest.com/news",
+   "target": null
+  },
+  {
+   "text": "Über uns",
+   "href": "https://essenceinvest.com/about",
+   "target": null
+  },
+  {
+   "text": "Philosophie",
+   "href": "https://essenceinvest.com/philosophie",
+   "target": null
+  },
+  {
+   "text": "Leistungen",
+   "href": "https://essenceinvest.com/leistungen",
+   "target": null
+  },
+  {
+   "text": "Wissen",
+   "href": "https://essenceinvest.com/wissen",
+   "target": null
+  },
+  {
+   "text": "So funktioniert's",
+   "href": "https://essenceinvest.com/how-it-works",
+   "target": null
+  },
+  {
+   "text": "Zinsrechner",
+   "href": "https://essenceinvest.com/calculator",
+   "target": null
+  },
+  {
+   "text": "Sicherheit",
+   "href": "https://essenceinvest.com/security",
+   "target": null
+  },
+  {
+   "text": "Compliance",
+   "href": "https://essenceinvest.com/compliance",
+   "target": null
+  },
+  {
+   "text": "Sparen erklärt",
+   "href": "https://essenceinvest.com/savings-education",
+   "target": null
+  },
+  {
+   "text": "FAQ",
+   "href": "https://essenceinvest.com/faq",
+   "target": null
+  },
+  {
+   "text": "Kontakt",
+   "href": "https://essenceinvest.com/contact",
+   "target": null
+  },
+  {
+   "text": "Impressum",
+   "href": "https://essenceinvest.com/legal/impressum",
+   "target": null
+  },
+  {
+   "text": "Datenschutz",
+   "href": "https://essenceinvest.com/legal/privacy",
+   "target": null
+  },
+  {
+   "text": "AGB",
+   "href": "https://essenceinvest.com/legal/terms",
+   "target": null
+  },
+  {
+   "text": "Haftungsausschluss",
+   "href": "https://essenceinvest.com/legal/disclaimer",
+   "target": null
+  },
+  {
+   "text": "Widerruf",
+   "href": "https://essenceinvest.com/legal/revocation",
+   "target": null
+  },
+  {
+   "text": "Sicherheit & Regulierung",
+   "href": "https://essenceinvest.com/sicherheit-regulierung",
+   "target": null
+  },
+  {
+   "text": "Fröhlich Vermögensberatung GmbH",
+   "href": "https://essenceinvest.com/legal/impressum",
+   "target": null
+  },
+  {
+   "text": "Nutzungsbedingungen",
+   "href": "https://essenceinvest.com/legal/terms",
+   "target": null
+  },
+  {
+   "text": "Kontakt",
+   "href": "https://essenceinvest.com/contact",
+   "target": null
+  },
+  {
+   "text": "wöchentlichen Finanznachrichten-Digest",
+   "href": "https://essenceinvest.com/newsletter",
+   "target": null
+  }
+ ],
+ "images": [
+  {
+   "src": "https://essenceinvest.com/assets/logo/frohlich-logo-clear.png?v=1",
+   "alt": "Fröhlich Vermögensberatung",
+   "title": null,
+   "width": 800,
+   "height": 376
+  },
+  {
+   "src": "https://essenceinvest.com/assets/logo/frohlich-logo.png?v=4",
+   "alt": "Fröhlich Vermögensberatung",
+   "title": null,
+   "width": 800,
+   "height": 376
+  },
+  {
+   "src": "https://essenceinvest.com/assets/footer/benefits/persoenliche-beratung.png",
+   "alt": null,
+   "title": null,
+   "width": 512,
+   "height": 512
+  },
+  {
+   "src": "https://essenceinvest.com/assets/footer/benefits/kostenloser-vergleich.png",
+   "alt": null,
+   "title": null,
+   "width": 512,
+   "height": 512
+  },
+  {
+   "src": "https://essenceinvest.com/assets/footer/benefits/tuv-sicherheit.png",
+   "alt": null,
+   "title": null,
+   "width": 512,
+   "height": 512
+  },
+  {
+   "src": "https://essenceinvest.com/assets/footer/benefits/schnelle-abwicklung.png",
+   "alt": null,
+   "title": null,
+   "width": 512,
+   "height": 512
+  },
+  {
+   "src": "https://essenceinvest.com/assets/logo/frohlich-logo-clear.png?v=1",
+   "alt": "Fröhlich Vermögensberatung",
+   "title": null,
+   "width": 800,
+   "height": 376
+  },
+  {
+   "src": "https://essenceinvest.com/assets/social/icons/facebook.svg",
+   "alt": null,
+   "title": null,
+   "width": 150,
+   "height": 150
+  },
+  {
+   "src": "https://essenceinvest.com/assets/social/icons/linkedin.svg",
+   "alt": null,
+   "title": null,
+   "width": 150,
+   "height": 150
+  },
+  {
+   "src": "https://essenceinvest.com/assets/social/icons/instagram.svg",
+   "alt": null,
+   "title": null,
+   "width": 1000,
+   "height": 1000
+  },
+  {
+   "src": "https://essenceinvest.com/assets/social/icons/xing.svg",
+   "alt": null,
+   "title": null,
+   "width": 150,
+   "height": 150
+  },
+  {
+   "src": "https://essenceinvest.com/assets/footer/trust/schufa-neutral.png",
+   "alt": "100 % SCHUFA-neutral",
+   "title": null,
+   "width": 188,
+   "height": 188
+  },
+  {
+   "src": "https://essenceinvest.com/assets/footer/trust/ekomi-kundenauszeichnung.png",
+   "alt": "eKomi Kundenauszeichnung",
+   "title": null,
+   "width": 390,
+   "height": 390
+  },
+  {
+   "src": "https://essenceinvest.com/assets/footer/trust/tuv-saarland-datenschutz.png",
+   "alt": "TÜV Saarland — Geprüfter Datenschutz, Systemprüfung",
+   "title": null,
+   "width": 942,
+   "height": 381
+  }
+ ],
+ "forms": [
+  {
+   "testid": "formular-verify-form",
+   "id": null,
+   "fields": [
+    {
+     "tag": "input",
+     "type": "text",
+     "name": null,
+     "id": null,
+     "placeholder": "Vor- und Nachname",
+     "required": false,
+     "label": "IHR NAME",
+     "options": null
+    },
+    {
+     "tag": "input",
+     "type": "password",
+     "name": null,
+     "id": null,
+     "placeholder": "ABCD1234",
+     "required": false,
+     "label": "ZUGANGSCODE",
+     "options": null
+    }
+   ],
+   "buttons": [
+    "WEITER"
+   ]
+  }
+ ],
+ "inputs": [],
+ "buttons": [
+  "WEITER"
+ ]
+}

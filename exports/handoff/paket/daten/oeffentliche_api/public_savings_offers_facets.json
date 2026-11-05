@@ -1,0 +1,238 @@
+{
+ "quelle": "https://essenceinvest.com/api/public/savings-offers/facets",
+ "abgerufen_am": "2026-11-05",
+ "daten": {
+  "countries": [
+   {
+    "code": "DE",
+    "name": "DE",
+    "name_de": "DE",
+    "count": 49
+   },
+   {
+    "code": "ES",
+    "name": "ES",
+    "name_de": "ES",
+    "count": 40
+   },
+   {
+    "code": "FR",
+    "name": "FR",
+    "name_de": "FR",
+    "count": 40
+   },
+   {
+    "code": "NL",
+    "name": "NL",
+    "name_de": "NL",
+    "count": 32
+   },
+   {
+    "code": "AT",
+    "name": "AT",
+    "name_de": "AT",
+    "count": 32
+   },
+   {
+    "code": "IT",
+    "name": "IT",
+    "name_de": "IT",
+    "count": 16
+   },
+   {
+    "code": "SE",
+    "name": "SE",
+    "name_de": "SE",
+    "count": 12
+   },
+   {
+    "code": "BE",
+    "name": "BE",
+    "name_de": "BE",
+    "count": 12
+   },
+   {
+    "code": "PT",
+    "name": "PT",
+    "name_de": "PT",
+    "count": 12
+   },
+   {
+    "code": "IE",
+    "name": "IE",
+    "name_de": "IE",
+    "count": 12
+   },
+   {
+    "code": "LU",
+    "name": "LU",
+    "name_de": "LU",
+    "count": 8
+   },
+   {
+    "code": "EE",
+    "name": "EE",
+    "name_de": "EE",
+    "count": 8
+   },
+   {
+    "code": "LV",
+    "name": "LV",
+    "name_de": "LV",
+    "count": 8
+   },
+   {
+    "code": "LT",
+    "name": "LT",
+    "name_de": "LT",
+    "count": 8
+   },
+   {
+    "code": "FI",
+    "name": "FI",
+    "name_de": "FI",
+    "count": 8
+   }
+  ],
+  "dgs_countries": [
+   {
+    "code": "DE",
+    "name_de": "DE",
+    "count": 49
+   },
+   {
+    "code": "ES",
+    "name_de": "ES",
+    "count": 40
+   },
+   {
+    "code": "FR",
+    "name_de": "FR",
+    "count": 40
+   },
+   {
+    "code": "NL",
+    "name_de": "NL",
+    "count": 32
+   },
+   {
+    "code": "AT",
+    "name_de": "AT",
+    "count": 32
+   },
+   {
+    "code": "IT",
+    "name_de": "IT",
+    "count": 16
+   },
+   {
+    "code": "SE",
+    "name_de": "SE",
+    "count": 12
+   },
+   {
+    "code": "BE",
+    "name_de": "BE",
+    "count": 12
+   },
+   {
+    "code": "PT",
+    "name_de": "PT",
+    "count": 12
+   },
+   {
+    "code": "IE",
+    "name_de": "IE",
+    "count": 12
+   },
+   {
+    "code": "LU",
+    "name_de": "LU",
+    "count": 8
+   },
+   {
+    "code": "EE",
+    "name_de": "EE",
+    "count": 8
+   },
+   {
+    "code": "LV",
+    "name_de": "LV",
+    "count": 8
+   },
+   {
+    "code": "LT",
+    "name_de": "LT",
+    "count": 8
+   },
+   {
+    "code": "FI",
+    "name_de": "FI",
+    "count": 8
+   }
+  ],
+  "product_types": [
+   {
+    "code": "festgeld",
+    "count": 228
+   },
+   {
+    "code": "tagesgeld",
+    "count": 76
+   },
+   {
+    "code": "flexgeld",
+    "count": 2
+   }
+  ],
+  "terms_available": [
+   {
+    "term_months": 6,
+    "count": 2
+   },
+   {
+    "term_months": 12,
+    "count": 77
+   },
+   {
+    "term_months": 24,
+    "count": 75
+   },
+   {
+    "term_months": 36,
+    "count": 74
+   },
+   {
+    "term_months": null,
+    "count": 78
+   }
+  ],
+  "interest_frequencies": [
+   {
+    "code": "quarterly",
+    "count": 106
+   },
+   {
+    "code": "yearly",
+    "count": 81
+   },
+   {
+    "code": "at_maturity",
+    "count": 74
+   },
+   {
+    "code": "monthly",
+    "count": 27
+   }
+  ],
+  "rate_range": {
+   "min": 1.0,
+   "max": 4.0
+  },
+  "amount_range": {
+   "min": 1,
+   "max": 1000000
+  },
+  "total": 306
+ }
+}

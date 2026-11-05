@@ -1,0 +1,103 @@
+{
+ "quelle": "https://essenceinvest.com/api/stocks/AAPL/dividends",
+ "abgerufen_am": "2026-11-05",
+ "daten": {
+  "symbol": "AAPL",
+  "data_source": "yfinance",
+  "data_updated_at": "2026-11-05T03:41:40.631000+00:00",
+  "cached_until": "2026-11-05T15:41:40.631000+00:00",
+  "currency": null,
+  "has_dividends": true,
+  "summary": {
+   "dividend_rate_annual": null,
+   "dividend_yield_pct": null,
+   "payout_ratio_pct": null,
+   "trailing_annual_rate": null,
+   "five_year_avg_yield_pct": null,
+   "last_dividend_value": null,
+   "last_dividend_date": null,
+   "next_ex_dividend_date": null
+  },
+  "history": [
+   {
+    "year": 2015,
+    "total": 0.5075,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2016,
+    "total": 0.5575,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2017,
+    "total": 0.615,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2018,
+    "total": 0.705,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2019,
+    "total": 0.76,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2020,
+    "total": 0.8075,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2021,
+    "total": 0.865,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2022,
+    "total": 0.91,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2023,
+    "total": 0.95,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2024,
+    "total": 0.99,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2025,
+    "total": 1.03,
+    "count": 4,
+    "complete": true
+   },
+   {
+    "year": 2026,
+    "total": 0.8,
+    "count": 3,
+    "complete": false
+   }
+  ],
+  "growth": {
+   "one_year_pct": 4.04,
+   "cagr_3y_pct": 4.22,
+   "cagr_5y_pct": 4.99,
+   "base_end_year": 2025
+  },
+  "latest_pay_date": "2026-08-10"
+ }
+}

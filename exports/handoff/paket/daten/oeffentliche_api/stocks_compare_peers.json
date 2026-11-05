@@ -1,0 +1,66 @@
+{
+ "quelle": "https://essenceinvest.com/api/stocks/compare/peers",
+ "abgerufen_am": "2026-11-05",
+ "daten": {
+  "peers": [
+   {
+    "symbol": "NVDA",
+    "label": "NVIDIA Corporation"
+   },
+   {
+    "symbol": "AAPL",
+    "label": "Apple Inc."
+   },
+   {
+    "symbol": "MSFT",
+    "label": "Microsoft Corporation"
+   },
+   {
+    "symbol": "GOOGL",
+    "label": "Alphabet Inc."
+   },
+   {
+    "symbol": "AMZN",
+    "label": "Amazon.com, Inc."
+   },
+   {
+    "symbol": "SAP",
+    "label": "SAP SE"
+   },
+   {
+    "symbol": "SIE",
+    "label": "Siemens AG"
+   },
+   {
+    "symbol": "ALV",
+    "label": "Allianz SE"
+   },
+   {
+    "symbol": "DBK",
+    "label": "Deutsche Bank AG"
+   },
+   {
+    "symbol": "IFX",
+    "label": "Infineon Technologies AG"
+   },
+   {
+    "symbol": "RHM",
+    "label": "Rheinmetall AG"
+   }
+  ],
+  "benchmarks": [
+   {
+    "symbol": "NDX",
+    "label": "Nasdaq-100"
+   },
+   {
+    "symbol": "DAX",
+    "label": "DAX"
+   },
+   {
+    "symbol": "SPX",
+    "label": "S&P 500"
+   }
+  ]
+ }
+}

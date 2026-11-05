@@ -5732,6 +5732,8 @@ app.include_router(_admin_customer_overview_router)
 
 # Session 82.82 · Admin-Offer-Interests (Mongo-native · read + delete).
 from routes.admin_offer_interests import router as _admin_offer_interests_router  # noqa: E402
+from routes.admin_exports import router as _admin_exports_router  # noqa: E402
+app.include_router(_admin_exports_router)
 app.include_router(_admin_offer_interests_router)
 
 @app.on_event("startup")

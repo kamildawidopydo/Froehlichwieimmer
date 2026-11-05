@@ -1,0 +1,958 @@
+[
+ {
+  "viewport": "desktop-1440",
+  "state": "Besucher-/Wohnsitzabfrage",
+  "file": "screenshots/abfragen/desktop-1440_1_besucherabfrage.jpg",
+  "dialogs": [
+   "Willkommen bei Fröhlich Vermögensberatung\n\nUm Ihnen passende Informationen bereitzustellen, machen Sie bitte folgende Angaben:\n\nWohnort\nDeutschland\nÖsterreich\nSchweiz\nLiechtenstein\nLuxemburg\nNiederlande\nBelgien\nFrankreich\nItalien\nSpanien\nPortugal\nIrland\nVereinigtes Königreich\nDänemark\nSchweden\nNorwegen\nFinnland\nPolen\nTschechien\nSlowakei\nUngarn\nRumänien\nBulgarien\nKroatien\nSlowenien\nGriechenland\nZypern\nMalta\nEstland\nLettland\nLitauen\nVereinigte Staaten\nKanada\nAnderes Land\nWas ist Ihre Rolle?\nBitte wählen Sie Ihre Besucherrolle\nPrivatperson / Privatanleger\nSparer / Tages- und Festgeldkunde\nSelbstständige / Freiberufler\nUnternehmer (Privatvermögen)\nAngestellte / Erwerbstätige\nRuhestand / Pensionär\nErbe / Vermögensnachfolge\nAuswanderer / Expats\nGrenzgänger\nVermögende Privatperson (HNWI)\nUltra High Net Worth (UHNWI)\nPrivate-Banking-Kunde\nWealth-Management-Kunde\nDepotinhaber / Wertpapierkunde\nPrivater Immobilieninvestor\nKrypto- / Digital-Asset-Interessent\nNachhaltiger / ESG-Anleger\nJugendliche / Minderjährige (mit Erziehungsberechtigten)\nStudierende / Ausbildung\nAuszubildende / Berufseinsteiger\nInteressent ohne bestehendes Mandat\nSingle Family Office\nMulti Family Office\nFamily Office (allgemein)\nFamilienstiftung / Privatstiftung\nTreuhandgesellschaft / Trustee\nInstitutioneller Anleger\nPensionskasse / Vorsorgeeinrichtung\nVersorgungswerk / berufsständige Versorgung\nVersicherung / Versicherer\nRückversicherung\nKrankenversicherung / Krankenkasse\nKirche / kirchliche Einrichtung\nStiftung / gemeinnützige Organisation\nNGO / Non-Profit\nEndowment / Universitätsstiftung\nStaatsfonds / Sovereign Wealth Fund\nZentralbank / Währungsbehörde\nÖffentliche Kasse / Finanzverwaltung\nKommune / kommunale Einrichtung\nGenossenschaft / genossenschaftliche Einrichtung\nBank / Kreditinstitut\nPrivatbank / Private Bank\nSparkasse\nVolks- und Raiffeisenbank\nLandesbank / Förderbank\nInvestmentbank\nAuslandsbank / Zweigniederlassung\nZahlungsinstitut / E-Geld-Institut\nBausparkasse\nLeasinggesellschaft\nFactoringgesellschaft\nVermögensverwalter / Asset Manager\nKapitalverwaltungsgesellschaft (KVG)\nFondsgesellschaft / Fondsinitiator\nAIF-Manager / Spezialfonds\nETF- / Indexfondsanbieter\nHedgefonds\nPrivate Equity / Venture Capital\nImmobilienfonds / REOC\nInfrastrukturfonds\nFondsvertrieb / Fund Distributor\nFondsanalyse / Research\nVerwahrstelle / Depotbank\nBroker / Wertpapierdienstleister\nBörse / Handelsplatz\nClearing / Settlement\nCustody / Wertpapierverwahrung\nFinanzberater / Anlageberater\nHonorarberater\nFinanzanlagenvermittler (§ 34f GewO)\nVersicherungsmakler / -berater\nImmobilienmakler / -berater\nKreditvermittler\nUnabhängiger Finanzplaner (IFP)\nWealth Planner / Nachfolgeplaner\nVersicherungsvertreter\nStrukturvertrieb / Netzwerkvertrieb\nUnternehmen / Corporate Treasury\nCFO / Finanzvorstand\nTreasury / Cash Management\nControlling / Finanzcontrolling\nMittelstand / KMU\nKonzern / Großunternehmen\nStart-up / Scale-up\nHoldinggesellschaft\nFamilienunternehmen\nImmobilienunternehmen / Projektentwickler\nIndustrie / Produktion\nHandel / Retail\nDienstleistungsunternehmen\nFintech / Plattform\nNeobank / Challenger Bank\nRobo-Advisor / digitale Vermögensverwaltung\nPayment / Zahlungsdienstleister\nRegTech / Compliance-Technologie\nInsurTech\nPropTech / Immobilienplattform\nSoftwareanbieter Finanzwesen\nDaten- / Marktdatenanbieter\nRatingagentur\nRechtsanwalt\nNotar\nSteuerberater\nWirtschaftsprüfer\nTreuhänder / Fiduciary\nCompliance Officer\nRisk Manager\nInternes Audit / Revision\nRechtsabteilung / Legal Counsel\nInsolvenzverwalter\nÖffentliche Hand / Behörde\nAufsichtsbehörde (BaFin, EZB u. a.)\nPolitik / Parlament\nBranchenverband / Interessenvertretung\nKammer / berufsständische Organisation\nBotschaft / Konsulat\nInternationale Organisation\nJournalist / Redaktion\nMedienunternehmen / Publisher\nBlogger / Content Creator (Finanzen)\nFinanz-Influencer / Podcaster\nWissenschaft / Forschung\nHochschule / Universität\nSchule / Bildungseinrichtung\nDozent / Trainer Finanzwissen\nFinanzanalyst / Equity Research\nÖkonom / Makroanalyst\nPersonalvermittler / Headhunter (Finance)\nUnternehmensberatung / Strategy\nIT-Dienstleister / Systemintegrator\nPR- / Kommunikationsagentur\nEvent- / Konferenzveranstalter\nLieferant / Dienstleister (sonstig)\nBewerber / Karriereinteressent\nKooperations- / Partnerinteressent\nSonstige / keine der genannten\nIch bin US-Bürger oder Einwohner der USA\nNutzungsbedingungen\nBitte wählen Sie Ihre Einstellungen zum Schutz Ihrer Privatsphäre\n\nWir und unsere Partner verwenden Cookies und Tracking-Technologien, um Ihnen personalisierte Inhalte und Werbung anzuzeigen sowie die Nutzung unserer Website zu analysieren. Mit dem Klick auf «Akzeptieren» willigen Sie in die Verwendung dieser Technologien ein. Weitere Informationen finden Sie in unserer Cookie-Richtlinie.\n\nSie können Ihre Einwilligung jederzeit widerrufen oder Ihre Präferenzen anpassen, indem Sie Ihre Cookie- und Tracking-Einstellungen konfigurieren.\n\nAkzeptieren"
+  ],
+  "selects": [
+   {
+    "label": "Wohnort",
+    "options": [
+     "Deutschland",
+     "Österreich",
+     "Schweiz",
+     "Liechtenstein",
+     "Luxemburg",
+     "Niederlande",
+     "Belgien",
+     "Frankreich",
+     "Italien",
+     "Spanien",
+     "Portugal",
+     "Irland",
+     "Vereinigtes Königreich",
+     "Dänemark",
+     "Schweden",
+     "Norwegen",
+     "Finnland",
+     "Polen",
+     "Tschechien",
+     "Slowakei",
+     "Ungarn",
+     "Rumänien",
+     "Bulgarien",
+     "Kroatien",
+     "Slowenien",
+     "Griechenland",
+     "Zypern",
+     "Malta",
+     "Estland",
+     "Lettland",
+     "Litauen",
+     "Vereinigte Staaten",
+     "Kanada",
+     "Anderes Land"
+    ]
+   },
+   {
+    "label": "Was ist Ihre Rolle?",
+    "options": [
+     "Bitte wählen Sie Ihre Besucherrolle",
+     "Privatperson / Privatanleger",
+     "Sparer / Tages- und Festgeldkunde",
+     "Selbstständige / Freiberufler",
+     "Unternehmer (Privatvermögen)",
+     "Angestellte / Erwerbstätige",
+     "Ruhestand / Pensionär",
+     "Erbe / Vermögensnachfolge",
+     "Auswanderer / Expats",
+     "Grenzgänger",
+     "Vermögende Privatperson (HNWI)",
+     "Ultra High Net Worth (UHNWI)",
+     "Private-Banking-Kunde",
+     "Wealth-Management-Kunde",
+     "Depotinhaber / Wertpapierkunde",
+     "Privater Immobilieninvestor",
+     "Krypto- / Digital-Asset-Interessent",
+     "Nachhaltiger / ESG-Anleger",
+     "Jugendliche / Minderjährige (mit Erziehungsberechtigten)",
+     "Studierende / Ausbildung",
+     "Auszubildende / Berufseinsteiger",
+     "Interessent ohne bestehendes Mandat",
+     "Single Family Office",
+     "Multi Family Office",
+     "Family Office (allgemein)",
+     "Familienstiftung / Privatstiftung",
+     "Treuhandgesellschaft / Trustee",
+     "Institutioneller Anleger",
+     "Pensionskasse / Vorsorgeeinrichtung",
+     "Versorgungswerk / berufsständige Versorgung",
+     "Versicherung / Versicherer",
+     "Rückversicherung",
+     "Krankenversicherung / Krankenkasse",
+     "Kirche / kirchliche Einrichtung",
+     "Stiftung / gemeinnützige Organisation",
+     "NGO / Non-Profit",
+     "Endowment / Universitätsstiftung",
+     "Staatsfonds / Sovereign Wealth Fund",
+     "Zentralbank / Währungsbehörde",
+     "Öffentliche Kasse / Finanzverwaltung",
+     "Kommune / kommunale Einrichtung",
+     "Genossenschaft / genossenschaftliche Einrichtung",
+     "Bank / Kreditinstitut",
+     "Privatbank / Private Bank",
+     "Sparkasse",
+     "Volks- und Raiffeisenbank",
+     "Landesbank / Förderbank",
+     "Investmentbank",
+     "Auslandsbank / Zweigniederlassung",
+     "Zahlungsinstitut / E-Geld-Institut",
+     "Bausparkasse",
+     "Leasinggesellschaft",
+     "Factoringgesellschaft",
+     "Vermögensverwalter / Asset Manager",
+     "Kapitalverwaltungsgesellschaft (KVG)",
+     "Fondsgesellschaft / Fondsinitiator",
+     "AIF-Manager / Spezialfonds",
+     "ETF- / Indexfondsanbieter",
+     "Hedgefonds",
+     "Private Equity / Venture Capital",
+     "Immobilienfonds / REOC",
+     "Infrastrukturfonds",
+     "Fondsvertrieb / Fund Distributor",
+     "Fondsanalyse / Research",
+     "Verwahrstelle / Depotbank",
+     "Broker / Wertpapierdienstleister",
+     "Börse / Handelsplatz",
+     "Clearing / Settlement",
+     "Custody / Wertpapierverwahrung",
+     "Finanzberater / Anlageberater",
+     "Honorarberater",
+     "Finanzanlagenvermittler (§ 34f GewO)",
+     "Versicherungsmakler / -berater",
+     "Immobilienmakler / -berater",
+     "Kreditvermittler",
+     "Unabhängiger Finanzplaner (IFP)",
+     "Wealth Planner / Nachfolgeplaner",
+     "Versicherungsvertreter",
+     "Strukturvertrieb / Netzwerkvertrieb",
+     "Unternehmen / Corporate Treasury",
+     "CFO / Finanzvorstand",
+     "Treasury / Cash Management",
+     "Controlling / Finanzcontrolling",
+     "Mittelstand / KMU",
+     "Konzern / Großunternehmen",
+     "Start-up / Scale-up",
+     "Holdinggesellschaft",
+     "Familienunternehmen",
+     "Immobilienunternehmen / Projektentwickler",
+     "Industrie / Produktion",
+     "Handel / Retail",
+     "Dienstleistungsunternehmen",
+     "Fintech / Plattform",
+     "Neobank / Challenger Bank",
+     "Robo-Advisor / digitale Vermögensverwaltung",
+     "Payment / Zahlungsdienstleister",
+     "RegTech / Compliance-Technologie",
+     "InsurTech",
+     "PropTech / Immobilienplattform",
+     "Softwareanbieter Finanzwesen",
+     "Daten- / Marktdatenanbieter",
+     "Ratingagentur",
+     "Rechtsanwalt",
+     "Notar",
+     "Steuerberater",
+     "Wirtschaftsprüfer",
+     "Treuhänder / Fiduciary",
+     "Compliance Officer",
+     "Risk Manager",
+     "Internes Audit / Revision",
+     "Rechtsabteilung / Legal Counsel",
+     "Insolvenzverwalter",
+     "Öffentliche Hand / Behörde",
+     "Aufsichtsbehörde (BaFin, EZB u. a.)",
+     "Politik / Parlament",
+     "Branchenverband / Interessenvertretung",
+     "Kammer / berufsständische Organisation",
+     "Botschaft / Konsulat",
+     "Internationale Organisation",
+     "Journalist / Redaktion",
+     "Medienunternehmen / Publisher",
+     "Blogger / Content Creator (Finanzen)",
+     "Finanz-Influencer / Podcaster",
+     "Wissenschaft / Forschung",
+     "Hochschule / Universität",
+     "Schule / Bildungseinrichtung",
+     "Dozent / Trainer Finanzwissen",
+     "Finanzanalyst / Equity Research",
+     "Ökonom / Makroanalyst",
+     "Personalvermittler / Headhunter (Finance)",
+     "Unternehmensberatung / Strategy",
+     "IT-Dienstleister / Systemintegrator",
+     "PR- / Kommunikationsagentur",
+     "Event- / Konferenzveranstalter",
+     "Lieferant / Dienstleister (sonstig)",
+     "Bewerber / Karriereinteressent",
+     "Kooperations- / Partnerinteressent",
+     "Sonstige / keine der genannten"
+    ]
+   }
+  ],
+  "radios": [],
+  "buttons": [
+   "Cookie- und Tracking-Einstellungen",
+   "Akzeptieren"
+  ]
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Deutschland",
+  "file": "screenshots/abfragen/auswahl_1_1.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Österreich",
+  "file": "screenshots/abfragen/auswahl_1_2.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Schweiz",
+  "file": "screenshots/abfragen/auswahl_1_3.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Liechtenstein",
+  "file": "screenshots/abfragen/auswahl_1_4.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Luxemburg",
+  "file": "screenshots/abfragen/auswahl_1_5.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Niederlande",
+  "file": "screenshots/abfragen/auswahl_1_6.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Belgien",
+  "file": "screenshots/abfragen/auswahl_1_7.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Frankreich",
+  "file": "screenshots/abfragen/auswahl_1_8.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Italien",
+  "file": "screenshots/abfragen/auswahl_1_9.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Spanien",
+  "file": "screenshots/abfragen/auswahl_1_10.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Portugal",
+  "file": "screenshots/abfragen/auswahl_1_11.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Irland",
+  "file": "screenshots/abfragen/auswahl_1_12.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Vereinigtes Königreich",
+  "file": "screenshots/abfragen/auswahl_1_13.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Dänemark",
+  "file": "screenshots/abfragen/auswahl_1_14.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Schweden",
+  "file": "screenshots/abfragen/auswahl_1_15.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Norwegen",
+  "file": "screenshots/abfragen/auswahl_1_16.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Finnland",
+  "file": "screenshots/abfragen/auswahl_1_17.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Polen",
+  "file": "screenshots/abfragen/auswahl_1_18.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Tschechien",
+  "file": "screenshots/abfragen/auswahl_1_19.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Slowakei",
+  "file": "screenshots/abfragen/auswahl_1_20.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Ungarn",
+  "file": "screenshots/abfragen/auswahl_1_21.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Rumänien",
+  "file": "screenshots/abfragen/auswahl_1_22.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Bulgarien",
+  "file": "screenshots/abfragen/auswahl_1_23.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Kroatien",
+  "file": "screenshots/abfragen/auswahl_1_24.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Slowenien",
+  "file": "screenshots/abfragen/auswahl_1_25.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Griechenland",
+  "file": "screenshots/abfragen/auswahl_1_26.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Zypern",
+  "file": "screenshots/abfragen/auswahl_1_27.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Malta",
+  "file": "screenshots/abfragen/auswahl_1_28.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Estland",
+  "file": "screenshots/abfragen/auswahl_1_29.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Lettland",
+  "file": "screenshots/abfragen/auswahl_1_30.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Litauen",
+  "file": "screenshots/abfragen/auswahl_1_31.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Vereinigte Staaten",
+  "file": "screenshots/abfragen/auswahl_1_32.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Kanada",
+  "file": "screenshots/abfragen/auswahl_1_33.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 1: Anderes Land",
+  "file": "screenshots/abfragen/auswahl_1_34.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Privatperson / Privatanleger",
+  "file": "screenshots/abfragen/auswahl_2_2.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Sparer / Tages- und Festgeldkunde",
+  "file": "screenshots/abfragen/auswahl_2_3.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Selbstständige / Freiberufler",
+  "file": "screenshots/abfragen/auswahl_2_4.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Unternehmer (Privatvermögen)",
+  "file": "screenshots/abfragen/auswahl_2_5.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Angestellte / Erwerbstätige",
+  "file": "screenshots/abfragen/auswahl_2_6.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Ruhestand / Pensionär",
+  "file": "screenshots/abfragen/auswahl_2_7.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Erbe / Vermögensnachfolge",
+  "file": "screenshots/abfragen/auswahl_2_8.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Auswanderer / Expats",
+  "file": "screenshots/abfragen/auswahl_2_9.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Grenzgänger",
+  "file": "screenshots/abfragen/auswahl_2_10.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Vermögende Privatperson (HNWI)",
+  "file": "screenshots/abfragen/auswahl_2_11.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Ultra High Net Worth (UHNWI)",
+  "file": "screenshots/abfragen/auswahl_2_12.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Private-Banking-Kunde",
+  "file": "screenshots/abfragen/auswahl_2_13.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Wealth-Management-Kunde",
+  "file": "screenshots/abfragen/auswahl_2_14.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Depotinhaber / Wertpapierkunde",
+  "file": "screenshots/abfragen/auswahl_2_15.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Privater Immobilieninvestor",
+  "file": "screenshots/abfragen/auswahl_2_16.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Krypto- / Digital-Asset-Interessent",
+  "file": "screenshots/abfragen/auswahl_2_17.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Nachhaltiger / ESG-Anleger",
+  "file": "screenshots/abfragen/auswahl_2_18.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Jugendliche / Minderjährige (mit Erziehungsberechtigten)",
+  "file": "screenshots/abfragen/auswahl_2_19.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Studierende / Ausbildung",
+  "file": "screenshots/abfragen/auswahl_2_20.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Auszubildende / Berufseinsteiger",
+  "file": "screenshots/abfragen/auswahl_2_21.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Interessent ohne bestehendes Mandat",
+  "file": "screenshots/abfragen/auswahl_2_22.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Single Family Office",
+  "file": "screenshots/abfragen/auswahl_2_23.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Multi Family Office",
+  "file": "screenshots/abfragen/auswahl_2_24.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Family Office (allgemein)",
+  "file": "screenshots/abfragen/auswahl_2_25.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Familienstiftung / Privatstiftung",
+  "file": "screenshots/abfragen/auswahl_2_26.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Treuhandgesellschaft / Trustee",
+  "file": "screenshots/abfragen/auswahl_2_27.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Institutioneller Anleger",
+  "file": "screenshots/abfragen/auswahl_2_28.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Pensionskasse / Vorsorgeeinrichtung",
+  "file": "screenshots/abfragen/auswahl_2_29.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Versorgungswerk / berufsständige Versorgung",
+  "file": "screenshots/abfragen/auswahl_2_30.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Versicherung / Versicherer",
+  "file": "screenshots/abfragen/auswahl_2_31.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Rückversicherung",
+  "file": "screenshots/abfragen/auswahl_2_32.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Krankenversicherung / Krankenkasse",
+  "file": "screenshots/abfragen/auswahl_2_33.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Kirche / kirchliche Einrichtung",
+  "file": "screenshots/abfragen/auswahl_2_34.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Stiftung / gemeinnützige Organisation",
+  "file": "screenshots/abfragen/auswahl_2_35.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: NGO / Non-Profit",
+  "file": "screenshots/abfragen/auswahl_2_36.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Endowment / Universitätsstiftung",
+  "file": "screenshots/abfragen/auswahl_2_37.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Staatsfonds / Sovereign Wealth Fund",
+  "file": "screenshots/abfragen/auswahl_2_38.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Zentralbank / Währungsbehörde",
+  "file": "screenshots/abfragen/auswahl_2_39.jpg"
+ },
+ {
+  "viewport": "desktop-1440",
+  "state": "Auswahlfeld 2: Öffentliche Kasse / Finanzverwaltung",
+  "file": "screenshots/abfragen/auswahl_2_40.jpg"
+ },
+ {
+  "viewport": "tablet-810",
+  "state": "Besucher-/Wohnsitzabfrage",
+  "file": "screenshots/abfragen/tablet-810_1_besucherabfrage.jpg",
+  "dialogs": [
+   "Willkommen bei Fröhlich Vermögensberatung\n\nUm Ihnen passende Informationen bereitzustellen, machen Sie bitte folgende Angaben:\n\nWohnort\nDeutschland\nÖsterreich\nSchweiz\nLiechtenstein\nLuxemburg\nNiederlande\nBelgien\nFrankreich\nItalien\nSpanien\nPortugal\nIrland\nVereinigtes Königreich\nDänemark\nSchweden\nNorwegen\nFinnland\nPolen\nTschechien\nSlowakei\nUngarn\nRumänien\nBulgarien\nKroatien\nSlowenien\nGriechenland\nZypern\nMalta\nEstland\nLettland\nLitauen\nVereinigte Staaten\nKanada\nAnderes Land\nWas ist Ihre Rolle?\nBitte wählen Sie Ihre Besucherrolle\nPrivatperson / Privatanleger\nSparer / Tages- und Festgeldkunde\nSelbstständige / Freiberufler\nUnternehmer (Privatvermögen)\nAngestellte / Erwerbstätige\nRuhestand / Pensionär\nErbe / Vermögensnachfolge\nAuswanderer / Expats\nGrenzgänger\nVermögende Privatperson (HNWI)\nUltra High Net Worth (UHNWI)\nPrivate-Banking-Kunde\nWealth-Management-Kunde\nDepotinhaber / Wertpapierkunde\nPrivater Immobilieninvestor\nKrypto- / Digital-Asset-Interessent\nNachhaltiger / ESG-Anleger\nJugendliche / Minderjährige (mit Erziehungsberechtigten)\nStudierende / Ausbildung\nAuszubildende / Berufseinsteiger\nInteressent ohne bestehendes Mandat\nSingle Family Office\nMulti Family Office\nFamily Office (allgemein)\nFamilienstiftung / Privatstiftung\nTreuhandgesellschaft / Trustee\nInstitutioneller Anleger\nPensionskasse / Vorsorgeeinrichtung\nVersorgungswerk / berufsständige Versorgung\nVersicherung / Versicherer\nRückversicherung\nKrankenversicherung / Krankenkasse\nKirche / kirchliche Einrichtung\nStiftung / gemeinnützige Organisation\nNGO / Non-Profit\nEndowment / Universitätsstiftung\nStaatsfonds / Sovereign Wealth Fund\nZentralbank / Währungsbehörde\nÖffentliche Kasse / Finanzverwaltung\nKommune / kommunale Einrichtung\nGenossenschaft / genossenschaftliche Einrichtung\nBank / Kreditinstitut\nPrivatbank / Private Bank\nSparkasse\nVolks- und Raiffeisenbank\nLandesbank / Förderbank\nInvestmentbank\nAuslandsbank / Zweigniederlassung\nZahlungsinstitut / E-Geld-Institut\nBausparkasse\nLeasinggesellschaft\nFactoringgesellschaft\nVermögensverwalter / Asset Manager\nKapitalverwaltungsgesellschaft (KVG)\nFondsgesellschaft / Fondsinitiator\nAIF-Manager / Spezialfonds\nETF- / Indexfondsanbieter\nHedgefonds\nPrivate Equity / Venture Capital\nImmobilienfonds / REOC\nInfrastrukturfonds\nFondsvertrieb / Fund Distributor\nFondsanalyse / Research\nVerwahrstelle / Depotbank\nBroker / Wertpapierdienstleister\nBörse / Handelsplatz\nClearing / Settlement\nCustody / Wertpapierverwahrung\nFinanzberater / Anlageberater\nHonorarberater\nFinanzanlagenvermittler (§ 34f GewO)\nVersicherungsmakler / -berater\nImmobilienmakler / -berater\nKreditvermittler\nUnabhängiger Finanzplaner (IFP)\nWealth Planner / Nachfolgeplaner\nVersicherungsvertreter\nStrukturvertrieb / Netzwerkvertrieb\nUnternehmen / Corporate Treasury\nCFO / Finanzvorstand\nTreasury / Cash Management\nControlling / Finanzcontrolling\nMittelstand / KMU\nKonzern / Großunternehmen\nStart-up / Scale-up\nHoldinggesellschaft\nFamilienunternehmen\nImmobilienunternehmen / Projektentwickler\nIndustrie / Produktion\nHandel / Retail\nDienstleistungsunternehmen\nFintech / Plattform\nNeobank / Challenger Bank\nRobo-Advisor / digitale Vermögensverwaltung\nPayment / Zahlungsdienstleister\nRegTech / Compliance-Technologie\nInsurTech\nPropTech / Immobilienplattform\nSoftwareanbieter Finanzwesen\nDaten- / Marktdatenanbieter\nRatingagentur\nRechtsanwalt\nNotar\nSteuerberater\nWirtschaftsprüfer\nTreuhänder / Fiduciary\nCompliance Officer\nRisk Manager\nInternes Audit / Revision\nRechtsabteilung / Legal Counsel\nInsolvenzverwalter\nÖffentliche Hand / Behörde\nAufsichtsbehörde (BaFin, EZB u. a.)\nPolitik / Parlament\nBranchenverband / Interessenvertretung\nKammer / berufsständische Organisation\nBotschaft / Konsulat\nInternationale Organisation\nJournalist / Redaktion\nMedienunternehmen / Publisher\nBlogger / Content Creator (Finanzen)\nFinanz-Influencer / Podcaster\nWissenschaft / Forschung\nHochschule / Universität\nSchule / Bildungseinrichtung\nDozent / Trainer Finanzwissen\nFinanzanalyst / Equity Research\nÖkonom / Makroanalyst\nPersonalvermittler / Headhunter (Finance)\nUnternehmensberatung / Strategy\nIT-Dienstleister / Systemintegrator\nPR- / Kommunikationsagentur\nEvent- / Konferenzveranstalter\nLieferant / Dienstleister (sonstig)\nBewerber / Karriereinteressent\nKooperations- / Partnerinteressent\nSonstige / keine der genannten\nIch bin US-Bürger oder Einwohner der USA\nNutzungsbedingungen\nBitte wählen Sie Ihre Einstellungen zum Schutz Ihrer Privatsphäre\n\nWir und unsere Partner verwenden Cookies und Tracking-Technologien, um Ihnen personalisierte Inhalte und Werbung anzuzeigen sowie die Nutzung unserer Website zu analysieren. Mit dem Klick auf «Akzeptieren» willigen Sie in die Verwendung dieser Technologien ein. Weitere Informationen finden Sie in unserer Cookie-Richtlinie.\n\nSie können Ihre Einwilligung jederzeit widerrufen oder Ihre Präferenzen anpassen, indem Sie Ihre Cookie- und Tracking-Einstellungen konfigurieren.\n\nAkzeptieren"
+  ],
+  "selects": [
+   {
+    "label": "Wohnort",
+    "options": [
+     "Deutschland",
+     "Österreich",
+     "Schweiz",
+     "Liechtenstein",
+     "Luxemburg",
+     "Niederlande",
+     "Belgien",
+     "Frankreich",
+     "Italien",
+     "Spanien",
+     "Portugal",
+     "Irland",
+     "Vereinigtes Königreich",
+     "Dänemark",
+     "Schweden",
+     "Norwegen",
+     "Finnland",
+     "Polen",
+     "Tschechien",
+     "Slowakei",
+     "Ungarn",
+     "Rumänien",
+     "Bulgarien",
+     "Kroatien",
+     "Slowenien",
+     "Griechenland",
+     "Zypern",
+     "Malta",
+     "Estland",
+     "Lettland",
+     "Litauen",
+     "Vereinigte Staaten",
+     "Kanada",
+     "Anderes Land"
+    ]
+   },
+   {
+    "label": "Was ist Ihre Rolle?",
+    "options": [
+     "Bitte wählen Sie Ihre Besucherrolle",
+     "Privatperson / Privatanleger",
+     "Sparer / Tages- und Festgeldkunde",
+     "Selbstständige / Freiberufler",
+     "Unternehmer (Privatvermögen)",
+     "Angestellte / Erwerbstätige",
+     "Ruhestand / Pensionär",
+     "Erbe / Vermögensnachfolge",
+     "Auswanderer / Expats",
+     "Grenzgänger",
+     "Vermögende Privatperson (HNWI)",
+     "Ultra High Net Worth (UHNWI)",
+     "Private-Banking-Kunde",
+     "Wealth-Management-Kunde",
+     "Depotinhaber / Wertpapierkunde",
+     "Privater Immobilieninvestor",
+     "Krypto- / Digital-Asset-Interessent",
+     "Nachhaltiger / ESG-Anleger",
+     "Jugendliche / Minderjährige (mit Erziehungsberechtigten)",
+     "Studierende / Ausbildung",
+     "Auszubildende / Berufseinsteiger",
+     "Interessent ohne bestehendes Mandat",
+     "Single Family Office",
+     "Multi Family Office",
+     "Family Office (allgemein)",
+     "Familienstiftung / Privatstiftung",
+     "Treuhandgesellschaft / Trustee",
+     "Institutioneller Anleger",
+     "Pensionskasse / Vorsorgeeinrichtung",
+     "Versorgungswerk / berufsständige Versorgung",
+     "Versicherung / Versicherer",
+     "Rückversicherung",
+     "Krankenversicherung / Krankenkasse",
+     "Kirche / kirchliche Einrichtung",
+     "Stiftung / gemeinnützige Organisation",
+     "NGO / Non-Profit",
+     "Endowment / Universitätsstiftung",
+     "Staatsfonds / Sovereign Wealth Fund",
+     "Zentralbank / Währungsbehörde",
+     "Öffentliche Kasse / Finanzverwaltung",
+     "Kommune / kommunale Einrichtung",
+     "Genossenschaft / genossenschaftliche Einrichtung",
+     "Bank / Kreditinstitut",
+     "Privatbank / Private Bank",
+     "Sparkasse",
+     "Volks- und Raiffeisenbank",
+     "Landesbank / Förderbank",
+     "Investmentbank",
+     "Auslandsbank / Zweigniederlassung",
+     "Zahlungsinstitut / E-Geld-Institut",
+     "Bausparkasse",
+     "Leasinggesellschaft",
+     "Factoringgesellschaft",
+     "Vermögensverwalter / Asset Manager",
+     "Kapitalverwaltungsgesellschaft (KVG)",
+     "Fondsgesellschaft / Fondsinitiator",
+     "AIF-Manager / Spezialfonds",
+     "ETF- / Indexfondsanbieter",
+     "Hedgefonds",
+     "Private Equity / Venture Capital",
+     "Immobilienfonds / REOC",
+     "Infrastrukturfonds",
+     "Fondsvertrieb / Fund Distributor",
+     "Fondsanalyse / Research",
+     "Verwahrstelle / Depotbank",
+     "Broker / Wertpapierdienstleister",
+     "Börse / Handelsplatz",
+     "Clearing / Settlement",
+     "Custody / Wertpapierverwahrung",
+     "Finanzberater / Anlageberater",
+     "Honorarberater",
+     "Finanzanlagenvermittler (§ 34f GewO)",
+     "Versicherungsmakler / -berater",
+     "Immobilienmakler / -berater",
+     "Kreditvermittler",
+     "Unabhängiger Finanzplaner (IFP)",
+     "Wealth Planner / Nachfolgeplaner",
+     "Versicherungsvertreter",
+     "Strukturvertrieb / Netzwerkvertrieb",
+     "Unternehmen / Corporate Treasury",
+     "CFO / Finanzvorstand",
+     "Treasury / Cash Management",
+     "Controlling / Finanzcontrolling",
+     "Mittelstand / KMU",
+     "Konzern / Großunternehmen",
+     "Start-up / Scale-up",
+     "Holdinggesellschaft",
+     "Familienunternehmen",
+     "Immobilienunternehmen / Projektentwickler",
+     "Industrie / Produktion",
+     "Handel / Retail",
+     "Dienstleistungsunternehmen",
+     "Fintech / Plattform",
+     "Neobank / Challenger Bank",
+     "Robo-Advisor / digitale Vermögensverwaltung",
+     "Payment / Zahlungsdienstleister",
+     "RegTech / Compliance-Technologie",
+     "InsurTech",
+     "PropTech / Immobilienplattform",
+     "Softwareanbieter Finanzwesen",
+     "Daten- / Marktdatenanbieter",
+     "Ratingagentur",
+     "Rechtsanwalt",
+     "Notar",
+     "Steuerberater",
+     "Wirtschaftsprüfer",
+     "Treuhänder / Fiduciary",
+     "Compliance Officer",
+     "Risk Manager",
+     "Internes Audit / Revision",
+     "Rechtsabteilung / Legal Counsel",
+     "Insolvenzverwalter",
+     "Öffentliche Hand / Behörde",
+     "Aufsichtsbehörde (BaFin, EZB u. a.)",
+     "Politik / Parlament",
+     "Branchenverband / Interessenvertretung",
+     "Kammer / berufsständische Organisation",
+     "Botschaft / Konsulat",
+     "Internationale Organisation",
+     "Journalist / Redaktion",
+     "Medienunternehmen / Publisher",
+     "Blogger / Content Creator (Finanzen)",
+     "Finanz-Influencer / Podcaster",
+     "Wissenschaft / Forschung",
+     "Hochschule / Universität",
+     "Schule / Bildungseinrichtung",
+     "Dozent / Trainer Finanzwissen",
+     "Finanzanalyst / Equity Research",
+     "Ökonom / Makroanalyst",
+     "Personalvermittler / Headhunter (Finance)",
+     "Unternehmensberatung / Strategy",
+     "IT-Dienstleister / Systemintegrator",
+     "PR- / Kommunikationsagentur",
+     "Event- / Konferenzveranstalter",
+     "Lieferant / Dienstleister (sonstig)",
+     "Bewerber / Karriereinteressent",
+     "Kooperations- / Partnerinteressent",
+     "Sonstige / keine der genannten"
+    ]
+   }
+  ],
+  "radios": [],
+  "buttons": [
+   "Cookie- und Tracking-Einstellungen",
+   "Akzeptieren"
+  ]
+ },
+ {
+  "viewport": "mobile-390",
+  "state": "Besucher-/Wohnsitzabfrage",
+  "file": "screenshots/abfragen/mobile-390_1_besucherabfrage.jpg",
+  "dialogs": [
+   "Willkommen bei Fröhlich Vermögensberatung\n\nUm Ihnen passende Informationen bereitzustellen, machen Sie bitte folgende Angaben:\n\nWohnort\nDeutschland\nÖsterreich\nSchweiz\nLiechtenstein\nLuxemburg\nNiederlande\nBelgien\nFrankreich\nItalien\nSpanien\nPortugal\nIrland\nVereinigtes Königreich\nDänemark\nSchweden\nNorwegen\nFinnland\nPolen\nTschechien\nSlowakei\nUngarn\nRumänien\nBulgarien\nKroatien\nSlowenien\nGriechenland\nZypern\nMalta\nEstland\nLettland\nLitauen\nVereinigte Staaten\nKanada\nAnderes Land\nWas ist Ihre Rolle?\nBitte wählen Sie Ihre Besucherrolle\nPrivatperson / Privatanleger\nSparer / Tages- und Festgeldkunde\nSelbstständige / Freiberufler\nUnternehmer (Privatvermögen)\nAngestellte / Erwerbstätige\nRuhestand / Pensionär\nErbe / Vermögensnachfolge\nAuswanderer / Expats\nGrenzgänger\nVermögende Privatperson (HNWI)\nUltra High Net Worth (UHNWI)\nPrivate-Banking-Kunde\nWealth-Management-Kunde\nDepotinhaber / Wertpapierkunde\nPrivater Immobilieninvestor\nKrypto- / Digital-Asset-Interessent\nNachhaltiger / ESG-Anleger\nJugendliche / Minderjährige (mit Erziehungsberechtigten)\nStudierende / Ausbildung\nAuszubildende / Berufseinsteiger\nInteressent ohne bestehendes Mandat\nSingle Family Office\nMulti Family Office\nFamily Office (allgemein)\nFamilienstiftung / Privatstiftung\nTreuhandgesellschaft / Trustee\nInstitutioneller Anleger\nPensionskasse / Vorsorgeeinrichtung\nVersorgungswerk / berufsständige Versorgung\nVersicherung / Versicherer\nRückversicherung\nKrankenversicherung / Krankenkasse\nKirche / kirchliche Einrichtung\nStiftung / gemeinnützige Organisation\nNGO / Non-Profit\nEndowment / Universitätsstiftung\nStaatsfonds / Sovereign Wealth Fund\nZentralbank / Währungsbehörde\nÖffentliche Kasse / Finanzverwaltung\nKommune / kommunale Einrichtung\nGenossenschaft / genossenschaftliche Einrichtung\nBank / Kreditinstitut\nPrivatbank / Private Bank\nSparkasse\nVolks- und Raiffeisenbank\nLandesbank / Förderbank\nInvestmentbank\nAuslandsbank / Zweigniederlassung\nZahlungsinstitut / E-Geld-Institut\nBausparkasse\nLeasinggesellschaft\nFactoringgesellschaft\nVermögensverwalter / Asset Manager\nKapitalverwaltungsgesellschaft (KVG)\nFondsgesellschaft / Fondsinitiator\nAIF-Manager / Spezialfonds\nETF- / Indexfondsanbieter\nHedgefonds\nPrivate Equity / Venture Capital\nImmobilienfonds / REOC\nInfrastrukturfonds\nFondsvertrieb / Fund Distributor\nFondsanalyse / Research\nVerwahrstelle / Depotbank\nBroker / Wertpapierdienstleister\nBörse / Handelsplatz\nClearing / Settlement\nCustody / Wertpapierverwahrung\nFinanzberater / Anlageberater\nHonorarberater\nFinanzanlagenvermittler (§ 34f GewO)\nVersicherungsmakler / -berater\nImmobilienmakler / -berater\nKreditvermittler\nUnabhängiger Finanzplaner (IFP)\nWealth Planner / Nachfolgeplaner\nVersicherungsvertreter\nStrukturvertrieb / Netzwerkvertrieb\nUnternehmen / Corporate Treasury\nCFO / Finanzvorstand\nTreasury / Cash Management\nControlling / Finanzcontrolling\nMittelstand / KMU\nKonzern / Großunternehmen\nStart-up / Scale-up\nHoldinggesellschaft\nFamilienunternehmen\nImmobilienunternehmen / Projektentwickler\nIndustrie / Produktion\nHandel / Retail\nDienstleistungsunternehmen\nFintech / Plattform\nNeobank / Challenger Bank\nRobo-Advisor / digitale Vermögensverwaltung\nPayment / Zahlungsdienstleister\nRegTech / Compliance-Technologie\nInsurTech\nPropTech / Immobilienplattform\nSoftwareanbieter Finanzwesen\nDaten- / Marktdatenanbieter\nRatingagentur\nRechtsanwalt\nNotar\nSteuerberater\nWirtschaftsprüfer\nTreuhänder / Fiduciary\nCompliance Officer\nRisk Manager\nInternes Audit / Revision\nRechtsabteilung / Legal Counsel\nInsolvenzverwalter\nÖffentliche Hand / Behörde\nAufsichtsbehörde (BaFin, EZB u. a.)\nPolitik / Parlament\nBranchenverband / Interessenvertretung\nKammer / berufsständische Organisation\nBotschaft / Konsulat\nInternationale Organisation\nJournalist / Redaktion\nMedienunternehmen / Publisher\nBlogger / Content Creator (Finanzen)\nFinanz-Influencer / Podcaster\nWissenschaft / Forschung\nHochschule / Universität\nSchule / Bildungseinrichtung\nDozent / Trainer Finanzwissen\nFinanzanalyst / Equity Research\nÖkonom / Makroanalyst\nPersonalvermittler / Headhunter (Finance)\nUnternehmensberatung / Strategy\nIT-Dienstleister / Systemintegrator\nPR- / Kommunikationsagentur\nEvent- / Konferenzveranstalter\nLieferant / Dienstleister (sonstig)\nBewerber / Karriereinteressent\nKooperations- / Partnerinteressent\nSonstige / keine der genannten\nIch bin US-Bürger oder Einwohner der USA\nNutzungsbedingungen\nBitte wählen Sie Ihre Einstellungen zum Schutz Ihrer Privatsphäre\n\nWir und unsere Partner verwenden Cookies und Tracking-Technologien, um Ihnen personalisierte Inhalte und Werbung anzuzeigen sowie die Nutzung unserer Website zu analysieren. Mit dem Klick auf «Akzeptieren» willigen Sie in die Verwendung dieser Technologien ein. Weitere Informationen finden Sie in unserer Cookie-Richtlinie.\n\nSie können Ihre Einwilligung jederzeit widerrufen oder Ihre Präferenzen anpassen, indem Sie Ihre Cookie- und Tracking-Einstellungen konfigurieren.\n\nAkzeptieren"
+  ],
+  "selects": [
+   {
+    "label": "Wohnort",
+    "options": [
+     "Deutschland",
+     "Österreich",
+     "Schweiz",
+     "Liechtenstein",
+     "Luxemburg",
+     "Niederlande",
+     "Belgien",
+     "Frankreich",
+     "Italien",
+     "Spanien",
+     "Portugal",
+     "Irland",
+     "Vereinigtes Königreich",
+     "Dänemark",
+     "Schweden",
+     "Norwegen",
+     "Finnland",
+     "Polen",
+     "Tschechien",
+     "Slowakei",
+     "Ungarn",
+     "Rumänien",
+     "Bulgarien",
+     "Kroatien",
+     "Slowenien",
+     "Griechenland",
+     "Zypern",
+     "Malta",
+     "Estland",
+     "Lettland",
+     "Litauen",
+     "Vereinigte Staaten",
+     "Kanada",
+     "Anderes Land"
+    ]
+   },
+   {
+    "label": "Was ist Ihre Rolle?",
+    "options": [
+     "Bitte wählen Sie Ihre Besucherrolle",
+     "Privatperson / Privatanleger",
+     "Sparer / Tages- und Festgeldkunde",
+     "Selbstständige / Freiberufler",
+     "Unternehmer (Privatvermögen)",
+     "Angestellte / Erwerbstätige",
+     "Ruhestand / Pensionär",
+     "Erbe / Vermögensnachfolge",
+     "Auswanderer / Expats",
+     "Grenzgänger",
+     "Vermögende Privatperson (HNWI)",
+     "Ultra High Net Worth (UHNWI)",
+     "Private-Banking-Kunde",
+     "Wealth-Management-Kunde",
+     "Depotinhaber / Wertpapierkunde",
+     "Privater Immobilieninvestor",
+     "Krypto- / Digital-Asset-Interessent",
+     "Nachhaltiger / ESG-Anleger",
+     "Jugendliche / Minderjährige (mit Erziehungsberechtigten)",
+     "Studierende / Ausbildung",
+     "Auszubildende / Berufseinsteiger",
+     "Interessent ohne bestehendes Mandat",
+     "Single Family Office",
+     "Multi Family Office",
+     "Family Office (allgemein)",
+     "Familienstiftung / Privatstiftung",
+     "Treuhandgesellschaft / Trustee",
+     "Institutioneller Anleger",
+     "Pensionskasse / Vorsorgeeinrichtung",
+     "Versorgungswerk / berufsständige Versorgung",
+     "Versicherung / Versicherer",
+     "Rückversicherung",
+     "Krankenversicherung / Krankenkasse",
+     "Kirche / kirchliche Einrichtung",
+     "Stiftung / gemeinnützige Organisation",
+     "NGO / Non-Profit",
+     "Endowment / Universitätsstiftung",
+     "Staatsfonds / Sovereign Wealth Fund",
+     "Zentralbank / Währungsbehörde",
+     "Öffentliche Kasse / Finanzverwaltung",
+     "Kommune / kommunale Einrichtung",
+     "Genossenschaft / genossenschaftliche Einrichtung",
+     "Bank / Kreditinstitut",
+     "Privatbank / Private Bank",
+     "Sparkasse",
+     "Volks- und Raiffeisenbank",
+     "Landesbank / Förderbank",
+     "Investmentbank",
+     "Auslandsbank / Zweigniederlassung",
+     "Zahlungsinstitut / E-Geld-Institut",
+     "Bausparkasse",
+     "Leasinggesellschaft",
+     "Factoringgesellschaft",
+     "Vermögensverwalter / Asset Manager",
+     "Kapitalverwaltungsgesellschaft (KVG)",
+     "Fondsgesellschaft / Fondsinitiator",
+     "AIF-Manager / Spezialfonds",
+     "ETF- / Indexfondsanbieter",
+     "Hedgefonds",
+     "Private Equity / Venture Capital",
+     "Immobilienfonds / REOC",
+     "Infrastrukturfonds",
+     "Fondsvertrieb / Fund Distributor",
+     "Fondsanalyse / Research",
+     "Verwahrstelle / Depotbank",
+     "Broker / Wertpapierdienstleister",
+     "Börse / Handelsplatz",
+     "Clearing / Settlement",
+     "Custody / Wertpapierverwahrung",
+     "Finanzberater / Anlageberater",
+     "Honorarberater",
+     "Finanzanlagenvermittler (§ 34f GewO)",
+     "Versicherungsmakler / -berater",
+     "Immobilienmakler / -berater",
+     "Kreditvermittler",
+     "Unabhängiger Finanzplaner (IFP)",
+     "Wealth Planner / Nachfolgeplaner",
+     "Versicherungsvertreter",
+     "Strukturvertrieb / Netzwerkvertrieb",
+     "Unternehmen / Corporate Treasury",
+     "CFO / Finanzvorstand",
+     "Treasury / Cash Management",
+     "Controlling / Finanzcontrolling",
+     "Mittelstand / KMU",
+     "Konzern / Großunternehmen",
+     "Start-up / Scale-up",
+     "Holdinggesellschaft",
+     "Familienunternehmen",
+     "Immobilienunternehmen / Projektentwickler",
+     "Industrie / Produktion",
+     "Handel / Retail",
+     "Dienstleistungsunternehmen",
+     "Fintech / Plattform",
+     "Neobank / Challenger Bank",
+     "Robo-Advisor / digitale Vermögensverwaltung",
+     "Payment / Zahlungsdienstleister",
+     "RegTech / Compliance-Technologie",
+     "InsurTech",
+     "PropTech / Immobilienplattform",
+     "Softwareanbieter Finanzwesen",
+     "Daten- / Marktdatenanbieter",
+     "Ratingagentur",
+     "Rechtsanwalt",
+     "Notar",
+     "Steuerberater",
+     "Wirtschaftsprüfer",
+     "Treuhänder / Fiduciary",
+     "Compliance Officer",
+     "Risk Manager",
+     "Internes Audit / Revision",
+     "Rechtsabteilung / Legal Counsel",
+     "Insolvenzverwalter",
+     "Öffentliche Hand / Behörde",
+     "Aufsichtsbehörde (BaFin, EZB u. a.)",
+     "Politik / Parlament",
+     "Branchenverband / Interessenvertretung",
+     "Kammer / berufsständische Organisation",
+     "Botschaft / Konsulat",
+     "Internationale Organisation",
+     "Journalist / Redaktion",
+     "Medienunternehmen / Publisher",
+     "Blogger / Content Creator (Finanzen)",
+     "Finanz-Influencer / Podcaster",
+     "Wissenschaft / Forschung",
+     "Hochschule / Universität",
+     "Schule / Bildungseinrichtung",
+     "Dozent / Trainer Finanzwissen",
+     "Finanzanalyst / Equity Research",
+     "Ökonom / Makroanalyst",
+     "Personalvermittler / Headhunter (Finance)",
+     "Unternehmensberatung / Strategy",
+     "IT-Dienstleister / Systemintegrator",
+     "PR- / Kommunikationsagentur",
+     "Event- / Konferenzveranstalter",
+     "Lieferant / Dienstleister (sonstig)",
+     "Bewerber / Karriereinteressent",
+     "Kooperations- / Partnerinteressent",
+     "Sonstige / keine der genannten"
+    ]
+   }
+  ],
+  "radios": [],
+  "buttons": [
+   "Cookie- und Tracking-Einstellungen",
+   "Akzeptieren"
+  ]
+ }
+]

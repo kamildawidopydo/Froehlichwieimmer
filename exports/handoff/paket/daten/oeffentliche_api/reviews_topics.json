@@ -1,0 +1,49 @@
+{
+ "quelle": "https://essenceinvest.com/api/reviews/topics",
+ "abgerufen_am": "2026-11-05",
+ "daten": {
+  "topics": [
+   {
+    "slug": "persoenliche-betreuung",
+    "label": "Persönliche Betreuung",
+    "count": 19
+   },
+   {
+    "slug": "vertrauen",
+    "label": "Vertrauen",
+    "count": 26
+   },
+   {
+    "slug": "beratung",
+    "label": "Beratung",
+    "count": 38
+   },
+   {
+    "slug": "erreichbarkeit",
+    "label": "Erreichbarkeit",
+    "count": 18
+   },
+   {
+    "slug": "langfristigkeit",
+    "label": "Langfristige Zusammenarbeit",
+    "count": 16
+   },
+   {
+    "slug": "transparenz",
+    "label": "Transparenz",
+    "count": 20
+   },
+   {
+    "slug": "service",
+    "label": "Service",
+    "count": 22
+   },
+   {
+    "slug": "investmentuebersicht",
+    "label": "Investment-Übersicht",
+    "count": 13
+   }
+  ],
+  "total_approved": 137
+ }
+}

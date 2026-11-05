@@ -1,0 +1,81 @@
+{
+ "quelle": "https://essenceinvest.com/api/stocks/AAPL/earnings",
+ "abgerufen_am": "2026-11-05",
+ "daten": {
+  "symbol": "AAPL",
+  "data_source": "yfinance",
+  "data_updated_at": "2026-11-05T12:22:53.639000+00:00",
+  "cached_until": "2026-11-05T15:22:53.639000+00:00",
+  "currency": null,
+  "history": [
+   {
+    "date": "2026-11-02",
+    "eps_estimate": 1.99,
+    "eps_actual": 2.1,
+    "surprise_pct": 5.75
+   },
+   {
+    "date": "2026-07-30",
+    "eps_estimate": 1.89,
+    "eps_actual": 2.02,
+    "surprise_pct": 6.74
+   },
+   {
+    "date": "2026-04-30",
+    "eps_estimate": 1.94,
+    "eps_actual": 2.01,
+    "surprise_pct": 3.46
+   },
+   {
+    "date": "2026-01-29",
+    "eps_estimate": 2.67,
+    "eps_actual": 2.84,
+    "surprise_pct": 6.25
+   },
+   {
+    "date": "2025-10-30",
+    "eps_estimate": 1.77,
+    "eps_actual": 1.85,
+    "surprise_pct": 4.52
+   },
+   {
+    "date": "2025-07-31",
+    "eps_estimate": 1.43,
+    "eps_actual": 1.57,
+    "surprise_pct": 9.48
+   },
+   {
+    "date": "2025-05-01",
+    "eps_estimate": 1.62,
+    "eps_actual": 1.65,
+    "surprise_pct": 1.69
+   },
+   {
+    "date": "2025-01-30",
+    "eps_estimate": 2.35,
+    "eps_actual": 2.4,
+    "surprise_pct": 2.26
+   }
+  ],
+  "next": {
+   "date": "2027-01-28",
+   "date_end": "2027-01-28",
+   "is_range": false,
+   "eps_estimate": 2.9,
+   "estimate_avg": null,
+   "estimate_high": null,
+   "estimate_low": null,
+   "revenue_estimate_avg": null,
+   "revenue_estimate_high": null,
+   "revenue_estimate_low": null
+  },
+  "important_dates": {
+   "next_earnings_date": null,
+   "next_earnings_date_end": null,
+   "next_earnings_is_range": false,
+   "dividend_payment_date": null,
+   "ex_dividend_date": null
+  },
+  "revenue_reported_available": false
+ }
+}
