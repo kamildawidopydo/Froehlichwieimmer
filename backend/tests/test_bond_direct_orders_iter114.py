@@ -123,9 +123,10 @@ class TestDirectOrders:
         r = env["cust"].post(f"{BASE_URL}/api/bonds/orders/check", json={"bond_id": env["bid"], "amount_eur": 1000})
         assert r.status_code == 200, r.text
         q = r.json()
-        assert q["pieces"] == 39 and q["nominal"] == 975
-        assert q["purchase_amount"] == 989.63 and q["accrued_interest"] == 7.8
-        assert q["fees"] == 12.5 and q["total"] == 1009.93
+        # iter115: total capped at amount_eur → 38 pieces (39 would cost 1009.92)
+        assert q["pieces"] == 38 and q["nominal"] == 950
+        assert q["purchase_amount"] == 964.25 and q["accrued_interest"] == 7.6
+        assert q["fees"] == 12.5 and q["total"] == 984.35
         assert q["available"] == 1500 and q["sufficient"] is True and q["missing"] == 0
         r = env["cust"].post(f"{BASE_URL}/api/bonds/orders/check", json={"bond_id": env["bid"], "amount_eur": 999})
         assert r.status_code == 400
@@ -136,7 +137,7 @@ class TestDirectOrders:
 
     def test_parallel_orders_no_double_spend_then_reject(self, env):
         with cf.ThreadPoolExecutor(2) as ex:
-            res = list(ex.map(lambda _: _order(env, expected_total=1009.93), range(2)))
+            res = list(ex.map(lambda _: _order(env, expected_total=984.35), range(2)))
         codes = sorted(r.status_code for r in res)
         for r in res:
             if r.status_code == 201:
@@ -145,10 +146,10 @@ class TestDirectOrders:
         o = next(r.json() for r in res if r.status_code == 201)
         assert o["status"] == "awaiting_bank" and o["order_type"] == "direct"
         assert re.fullmatch(r"AO-\d{8}-[0-9A-F]{8}", o["transaction_no"]), o["transaction_no"]
-        assert float(o["reserved_cash"]) == 1009.93
+        assert float(o["reserved_cash"]) == 984.35
         c = _cash(env)
-        assert float(c["balance"]) == 1500 and float(c["available"]) == 490.07
-        assert float(c["open_buy_reservations"]) == 1009.93
+        assert float(c["balance"]) == 1500 and float(c["available"]) == 515.65
+        assert float(c["open_buy_reservations"]) == 984.35
         assert mdb.bond_positions.count_documents({"user_id": {"$in": [ObjectId(env["uid"]), env["uid"]]}}) == 0
         # reject releases reservation
         r = env["admin"].post(f"{BASE_URL}/api/admin/bonds/requests/{o['id']}/reject", json={"decision_note": "TEST"})
@@ -157,7 +158,7 @@ class TestDirectOrders:
 
     def test_bank_submit_execute_idempotent(self, env):
         a = env["admin"]
-        r = _order(env, expected_total=1009.93)
+        r = _order(env, expected_total=984.35)
         assert r.status_code == 201, r.text
         oid = r.json()["id"]
         STATE["order_ids"].append(oid)
@@ -165,14 +166,14 @@ class TestDirectOrders:
         row = next(x for x in lst if x["id"] == oid)
         assert row["customer_display_id"].startswith("KD-") and row["transaction_no"].startswith("AO-")
         # execute before bank-submit without ref
-        body = {"nominal_amount": "975", "execution_price_pct": "101.5", "accrued_interest": "7.80", "fees": "12.50"}
+        body = {"nominal_amount": "950", "execution_price_pct": "101.5", "accrued_interest": "7.60", "fees": "12.50"}
         r = a.post(f"{BASE_URL}/api/admin/bonds/requests/{oid}/execute", json=body)
         assert r.status_code == 409 and "REQUEST_BAD_STATUS" in r.json()["detail"]
         r = a.post(f"{BASE_URL}/api/admin/bonds/requests/{oid}/bank-submit", json={"note": "TEST"})
         assert r.status_code == 200 and r.json()["status"] == "bank_submitted"
         r = a.post(f"{BASE_URL}/api/admin/bonds/requests/{oid}/bank-submit", json={})
         assert r.status_code == 409
-        assert float(_cash(env)["available"]) == 490.07
+        assert float(_cash(env)["available"]) == 515.65
         r = a.post(f"{BASE_URL}/api/admin/bonds/requests/{oid}/execute", json=body)
         assert r.status_code == 422 and "BANK_CONFIRMATION_REQUIRED" in r.json()["detail"]
         r = a.post(f"{BASE_URL}/api/admin/bonds/requests/{oid}/execute",
@@ -203,11 +204,11 @@ class TestDirectOrders:
     def test_insufficient_creates_single_ibp_and_402(self, env):
         r = env["cust"].post(f"{BASE_URL}/api/bonds/orders/check", json={"bond_id": env["bid"], "amount_eur": 1000})
         q = r.json()
-        assert q["sufficient"] is False and q["missing"] == round(1009.93 - STATE["bal"], 2)
-        r = _order(env, expected_total=1009.93)
+        assert q["sufficient"] is False and q["missing"] == round(984.35 - STATE["bal"], 2)
+        r = _order(env, expected_total=984.35)
         assert r.status_code == 402
         d = r.json()["detail"]
-        assert d["message"].startswith("Ihr verfügbares Guthaben reicht") and d["missing"] == round(1009.93 - STATE["bal"], 2)
+        assert d["message"].startswith("Ihr verfügbares Guthaben reicht") and d["missing"] == round(984.35 - STATE["bal"], 2)
         evs = list(mdb.insufficient_buying_power_events.find({"user_id": ObjectId(env["uid"]), "bond_id": env["bid"]}))
         assert len(evs) == 1
         STATE["ibp_ids"].add(str(evs[0]["_id"]))
@@ -215,7 +216,7 @@ class TestDirectOrders:
         items = a.get(f"{BASE_URL}/api/admin/insufficient-buying-power-events").json()["items"]
         it = next(i for i in items if i["id"] == str(evs[0]["_id"]))
         assert it["asset_type"] == "bond" and it["isin"] == TEST_ISIN and it["customer_display_id"].startswith("KD-")
-        assert it["requested_amount"] == 1000 and it["missing_amount"] == round(1009.93 - STATE["bal"], 2)
+        assert it["requested_amount"] == 1000 and it["missing_amount"] == round(984.35 - STATE["bal"], 2)
         r = a.patch(f"{BASE_URL}/api/admin/insufficient-buying-power-events/{it['id']}", json={"status": "in_progress"})
         assert r.status_code == 200
         env["cust"].post(f"{BASE_URL}/api/bonds/orders/check", json={"bond_id": env["bid"], "amount_eur": 1000})
@@ -231,7 +232,7 @@ class TestDirectOrders:
         assert r.status_code == 201, r.text
         oid = r.json()["id"]
         STATE["order_ids"].append(oid)
-        assert float(_cash(env)["available"]) == round(STATE["bal"] + 600 - 1009.93, 2)
+        assert float(_cash(env)["available"]) == round(STATE["bal"] + 600 - 984.35, 2)
         a.post(f"{BASE_URL}/api/admin/bonds/requests/{oid}/bank-submit", json={})
         r = a.post(f"{BASE_URL}/api/admin/bonds/requests/{oid}/cancel", json={"decision_note": "TEST"})
         assert r.status_code == 200 and r.json()["status"] == "cancelled"
@@ -261,4 +262,4 @@ class TestDirectOrders:
 
     # BUG check: executed debit must equal the reserved/confirmed total shown to the customer (same admin inputs)
     def test_execution_total_equals_reserved_total(self, env):
-        assert STATE.get("exec_total") == 1009.93, f"executed {STATE.get('exec_total')} != reserved 1009.93 (HALF_EVEN vs HALF_UP)"
+        assert STATE.get("exec_total") == 984.35, f"executed {STATE.get('exec_total')} != reserved 984.35 (HALF_EVEN vs HALF_UP)"

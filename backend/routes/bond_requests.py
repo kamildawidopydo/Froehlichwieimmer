@@ -32,6 +32,7 @@ from server import get_current_user, db, require_admin  # type: ignore[attr-defi
 from services.bond_audit import write_audit, list_audit  # noqa: E402
 from services.bond_order_service import (  # noqa: E402
     executable_buy_price, compute_quote, available_cash, quote_to_json, record_advisory_request,
+    customer_name,
 )
 
 
@@ -371,7 +372,7 @@ async def create_direct_order(body: DirectOrderBody, user: dict = Depends(get_cu
         now = datetime.now(timezone.utc)
         user_oid = ObjectId(user["id"])
         oid = ObjectId()
-        name = " ".join(x for x in (user.get("first_name"), user.get("last_name")) if x).strip() or user.get("email")
+        name = await customer_name(db, user)
         doc = {
             "_id": oid,
             "order_type": "direct",
@@ -715,6 +716,7 @@ async def admin_execute_bond(
     px = _parse_dec(body.execution_price_pct, "execution_price_pct")
     acc = _parse_dec(body.accrued_interest or "0", "accrued_interest")
     fee = _parse_dec(body.fees or "0", "fees")
+    prior = await db.bond_purchase_requests.find_one({"_id": ObjectId(request_id)}, {"status": 1})
     try:
         res = await execute_bond_request(
             db, ObjectId(request_id),
@@ -729,7 +731,8 @@ async def admin_execute_bond(
         raise HTTPException(status_code=555, detail=f"[injected-crash] {exc}")
     except BondExecError as exc:
         raise HTTPException(status_code=exc.http_status, detail=f"{exc.code}: {exc.detail}")
-    await write_audit(db, "bond_request", request_id, "executed", {"status": "approved"},
+    if not res.get("resumed"):
+        await write_audit(db, "bond_request", request_id, "executed", {"status": (prior or {}).get("status")},
                       {"status": "executed", "nominal": str(nom), "price_pct": str(px),
                        "accrued_interest": str(acc), "fees": str(fee),
                        "bank_reference": body.bank_reference, "bank_confirmed_at": body.bank_confirmed_at}, admin_user)

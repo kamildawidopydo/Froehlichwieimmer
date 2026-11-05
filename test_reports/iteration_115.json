@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 115: retest of the iteration_114 fixes for direct bond purchase. Backend: new suite test_bond_direct_orders_iter115.py, 9/9 passed. Regression: iter111-113 (24 passed, 1 skipped) and iter114 (11/11 passed). The iter114 hard-coded expectations were updated to the new capped quote, which is now 38 pieces and 984.35. Frontend (Playwright, TEST customer + QA admin) passed: 409 re-quote, price meta, orders panel, admin bank-submit and execute, and the customer executed view. Verified fixed: (1) The rounding now matches. The quote, reservation, admin preview, ledger debit and execution total_amount are identical: 999.62 in the spec case, and 989.10 in the UI case after a 102 % price change. (2) Total cap: 39 pieces / 999.62 for fee 1 %, min 10. With a 2.5 fixed fee and 0.8 % accrued, 1000 → 38 pieces / 984.35, 1009.92 → 39 pieces, 1009.91 → 38 pieces. (3) The reject audit 'before' is awaiting_bank or bank_submitted as appropriate. (4) The execute response includes total_amount, gross_amount, accrued_interest, fees and bank_reference. (5) The price meta has no leading '·'. (6) BondBuyDialog on 409 shows the toast, stays open, re-fetches and shows the new summary (102,00 %, 969,00 €, 989,10 €). Re-confirming succeeds. (7) Direct orders are no longer rows in the Anleihen-Kaufanfragen table on desktop or mobile. Regression OK: parallel 201/402, insufficient 402 + IBP, cancel/reject releasing the reservation, idempotent execute (resumed, one debit), BANK_CONFIRMATION_REQUIRED, Rabobank still request-only. Not fully fixed: the IBP customer_name first/last-name branch never fires (see backend_issues).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/bonds/orders/check | /orders (record_advisory_request + customer_name_snapshot)", "issue": "The first/last-name preference never takes effect. get_current_user returns public_user(), which only has id, email, name, role, avatar_url and created_at, so user.get('first_name') is always None. Repro: a user with first_name 'TEST_UI', last_name 'Kunde' and name 'TEST_altname' gets IBP customer_name 'TEST_altname'. Only the users.name → email fallback works. Also, create_direct_order's customer_name_snapshot (bond_requests.py:374) still falls back straight to the email and skips users.name; the UI order snapshot was the email. Fix: load the users doc (db.users.find_one) in both places, or build one shared helper."},
+      {"endpoint": "POST /api/admin/bonds/requests/{id}/execute", "issue": "The audit entry 'executed' still hard-codes before={'status':'approved'} (bond_requests.py:732), but direct orders are executed from bank_submitted. On a resumed (idempotent) execute, a duplicate 'executed' audit row is also written."},
+      {"endpoint": "_transition_status (reject)", "issue": "The prior status is read in a separate find_one before the atomic update. In a rare race the audit 'before' could be stale. Acceptable, but returning the pre-image (ReturnDocument.BEFORE) would make it exact."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "OrdersPage Anleihen-Kaufanfragen section", "issue": "When a customer has only direct orders, hasBondRequests (bondPurchaseRequests.length) is still true. An empty table with only headers (DATUM/ANLEIHE/ISIN/VOLUMEN/STATUS/HINWEIS) and no rows or empty state renders above the 'Kaufaufträge aus dem Guthaben' panel. The KPI 'Anleihen-Anfragen' also counts direct orders. Fix: compute hasBondRequests from the filtered (non-direct) list and render the panel independently.", "selector": "OrdersPage.jsx:277,357", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Bond catalog card after 409", "issue": "After the 409 re-quote, the card behind the dialog still shows the old 'Verbindlicher Kaufkurs 101,50 %' until the page reloads. Consider refreshing the catalog on 409 or after ordering.", "affected_selectors": ["[data-testid^=bond-buy-price-]"]}
+    ],
+    "design_issues": [
+      {"screen": "Admin Anleihen-Anfragen row", "issues": ["The direct order row volume column shows the requested amount_eur (1.000 €), not the reserved total (989,10 €) or nominal (950). This can confuse admins."]},
+      {"screen": "Customer Anleihen kaufen", "issues": ["The non-TEST seeded bond 'CRASH TEST PT_BOND_C3' (ISIN PT_BOND_C3) is visible to customers in the catalog. It is pre-existing data and was not created by this run. Consider hiding or removing it."]},
+      {"screen": "Admin execute modal", "issues": ["Bank confirmation date still uses a native <input type=date> (unchanged from iter114)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_bond_direct_orders_iter115.py", "/app/backend/tests/test_bond_direct_orders_iter114.py", "/app/test_reports/pytest/pytest_iter115.xml"],
+  "action_items": [
+    "Fix the customer_name resolution: fetch the users doc (first_name + last_name → name → email) in record_advisory_request and in create_direct_order's customer_name_snapshot. The current user dict has no first/last name.",
+    "Execute audit: write before={'status': <actual prior status>} and skip the audit write when resumed=true.",
+    "OrdersPage: hide the empty 'Anleihen-Kaufanfragen' table when only direct orders exist, and exclude direct orders from the 'Anleihen-Anfragen' KPI (or count them separately).",
+    "Optional: refresh the catalog card after a 409 re-quote. Optional: show reserved/settled total in the admin row volume for direct orders."
+  ],
+  "critical_code_review_comments": [
+    "The bond_order_service._money and bond_execution_service._q_money duplicates now both use ROUND_HALF_EVEN. Better to import one helper so they cannot drift again.",
+    "The compute_quote cap loop is linear in pieces. Fine for the current amounts (the cap removes only a few pieces), but a large fixed fee with a tiny denomination could loop many times. Could compute it directly.",
+    "Saving any file under /app/backend (including tests/) triggers a uvicorn hot reload and briefly causes 502s. Tests that start right after an edit can fail at setup."
+  ],
+  "updated_files": ["/app/backend/tests/test_bond_direct_orders_iter115.py (new)", "/app/backend/tests/test_bond_direct_orders_iter114.py (expectations updated to capped quote: 38 pcs / 984.35 / available 515.65)"],
+  "success_rate": {"backend": "100% of tests (9/9 iter115, 11/11 iter114, 24/24 iter111-113). One requested fix (customer_name first/last) is only partially effective.", "frontend": "95%"},
+  "seed_data_creation": "None persisted. All of it was cleaned up by id: pytest TEST customers (test_bo115_*, test_bondorder_*) and the UI customer 6aec6d150ade60c6e450db29, with their cash_ledger, bond_positions, notifications and stock_alert_notifications; TEST bonds TEST00000097/99 (ids 6aec6c95…, 6aec6ca1…, 6aec6ca2…, 6aec6ca9…, 6aec6cd6…, 6aec6cee…, 6aec6d15…) with their price history and bond audit rows; orders, executions and order audit rows; IBP events, including tester's. Rabobank 6aec4ccd70262b166764f09d is unchanged: kaufkurs* fields are null, requests_enabled is true, aktueller_kurs is 108.75, and there is one price-history row. Tester has 0 bond IBP events and funds untouched. Bond-catalog audit rows that existed before this run (e.g. 6aec4e96…, 6aec53ed…, 6aec56c9…, 6aec69…) were left in place.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run sequentially from /app/backend: python -m pytest tests/test_bond_direct_orders_iter115.py tests/test_bond_direct_orders_iter114.py -n 0. Both are self-contained with cleanup. Don't edit backend files right before running (hot-reload 502). UI data: python tests/ui_setup_iter114.py setup / cleanup <uid> <bid>. With its fees, a 1000 € order is now 38 Stk / 984,35 €. Visitor gate: select_option('[data-testid=visitor-role]', index=1) then click [data-testid=visitor-accept-btn]. Customer pages: /dashboard/anleihen/kaufen and /dashboard/auftraege. Admin: /admin/bond-requests. A mid-dialog price change was simulated with browser.new_context().request PATCH /api/admin/bonds/catalog/{bid}. To recheck the IBP name fix, give the TEST user a users.name that differs from first/last.",
+  "rca of the issue": "IBP customer_name: routes use Depends(get_current_user), which returns public_user(doc) without first_name/last_name. record_advisory_request therefore always skips the first/last branch. Mitigation: query db.users by user['id'] inside the helper."
+}

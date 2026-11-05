@@ -274,9 +274,11 @@ const OrdersPage = () => {
   }, [activity, activityFilter]);
 
   const hasStockOrders = stockOrders.length > 0;
-  const hasBondRequests = bondPurchaseRequests.length > 0;
+  const bondRequestRows = bondPurchaseRequests.filter((x) => x.order_type !== 'direct');
+  const hasBondRequests = bondRequestRows.length > 0;
+  const hasBondSection = bondPurchaseRequests.length > 0;
   const hasIpoRequests = (ipoSubscriptionRequests || []).length > 0;
-  const hasAnyOrder = hasStockOrders || hasBondRequests || hasIpoRequests;
+  const hasAnyOrder = hasStockOrders || hasBondSection || hasIpoRequests;
   const listLoading = stocksLoading || bondRequestsLoading || ipoRequestsLoading;
   const showFullPageSkeleton = listLoading && !hasAnyOrder;
 
@@ -354,7 +356,7 @@ const OrdersPage = () => {
   const exportKpis = useMemo(
     () => [
       { label: 'Aktien-Aufträge', value: String(stockOrders.length) },
-      { label: 'Anleihen-Anfragen', value: String(bondPurchaseRequests.length) },
+      { label: 'Anleihen-Anfragen', value: String(bondPurchaseRequests.filter((x) => x.order_type !== 'direct').length) },
       { label: 'IPO-Anfragen', value: String((ipoSubscriptionRequests || []).length) },
       {
         label: 'Ausstehend',
@@ -483,7 +485,7 @@ const OrdersPage = () => {
       ) : (
         <>
           {hasStockOrders && (
-            <section className={hasBondRequests ? 'mb-8' : undefined}>
+            <section className={hasBondSection ? 'mb-8' : undefined}>
               <SectionHead icon={LineChart} kicker="Wertpapiere">
                 Aktien-Aufträge
               </SectionHead>
@@ -639,14 +641,15 @@ const OrdersPage = () => {
             </section>
           )}
 
-          {hasBondRequests && (
+          {hasBondSection && (
             <section>
               <SectionHead icon={AnleihenIcon} kicker="Festverzinslich">
                 Anleihen-Kaufanfragen
               </SectionHead>
 
+              {hasBondRequests && (<>
               <div ref={bondOrdersListRef} className="space-y-3 md:hidden">
-                {bondPurchaseRequests.filter((x) => x.order_type !== 'direct').map((b) => {
+                {bondRequestRows.map((b) => {
                   const meta = BOND_STATUS_META[b.status] || BOND_STATUS_META.pending;
                   return (
                     <div
@@ -738,6 +741,7 @@ const OrdersPage = () => {
                   );
                 })}
               </EditorialTable>
+              </>)}
               <BondOrdersPanel requests={bondPurchaseRequests} />
               <BondOffersPanel requests={bondPurchaseRequests} onDecided={refreshBondRequests} />
             </section>

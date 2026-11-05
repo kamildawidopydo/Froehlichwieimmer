@@ -105,13 +105,18 @@ def quote_to_json(q: dict, available: Decimal) -> dict:
     return out
 
 
+async def customer_name(db, user: dict) -> str:
+    u = await db.users.find_one({"_id": ObjectId(user["id"])}, {"first_name": 1, "last_name": 1, "name": 1, "email": 1}) or {}
+    return (" ".join(x for x in (u.get("first_name"), u.get("last_name")) if x).strip()
+            or u.get("name") or user.get("name") or u.get("email") or user.get("email"))
+
+
 async def record_advisory_request(db, user: dict, bond: dict, amount_eur: Decimal, required: Decimal,
                                   available: Decimal) -> None:
     """Beratungsanfrage (insufficient_buying_power_events), eine offene je Kunde + Anleihe."""
     now = datetime.now(timezone.utc)
     uid = ObjectId(user["id"])
-    name = (" ".join(x for x in (user.get("first_name"), user.get("last_name")) if x).strip()
-            or user.get("name") or user.get("email"))
+    name = await customer_name(db, user)
     await db.insufficient_buying_power_events.update_one(
         {"user_id": uid, "asset_type": "bond", "bond_id": str(bond["_id"]),
          "status": {"$in": ["new", "in_progress"]}, "deleted_at": {"$in": [None, False]}},
