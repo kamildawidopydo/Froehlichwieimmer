@@ -192,7 +192,9 @@ export const BondOfferCard = ({ bond: b, testKey, eager, amount, onAmountChange,
       </div>
       {!buyable && requestsOpen && (
         <p className="mb-3 text-[11.5px] text-bank-text-muted" data-testid={`bond-no-binding-price-${testKey}`}>
-          Für diese Anleihe liegt derzeit kein verbindlicher Kaufkurs vor. Sie können ein individuelles Angebot anfordern.
+          {b.orders_enabled === false
+            ? 'Diese Anleihe ist derzeit nicht für neue Kaufaufträge freigegeben. Sie können ein individuelles Angebot anfordern.'
+            : 'Für diese Anleihe liegt derzeit kein verbindlicher Kaufkurs vor. Sie können ein individuelles Angebot anfordern.'}
         </p>
       )}
       {!buyable && !requestsOpen && (

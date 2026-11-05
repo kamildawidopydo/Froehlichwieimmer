@@ -1,0 +1,39 @@
+{
+  "summary": "Rabobank XS1002121454 purchase fix verified end-to-end (backend pytest 10/10 + Playwright UI). C) No binding price: card shows 'Kaufangebot anfordern' + bond-no-binding-price hint, POST /api/bonds/requests 201, green success toast, visible in /api/bonds/requests/me and /admin/bond-requests (OFFEN, 'Kurs bei Anfrage 108,75 % (Referenz)'), 2nd click -> 409 toast 'bereits eine offene Kaufanfrage'; /orders/check -> 409 (reference price 108.75 never used). Admin /admin/bond-catalog: badges Sichtbar / Angebotsanfragen offen / Kaufaufträge freigegeben / Kein ausführbarer Kurs; requests+orders toggles persist (API false/false); edit modal has both checkboxes reflecting state; customer card after reload: disabled 'Derzeit nicht freigegeben' + bond-locked-hint; POST request with requests_enabled=false -> 400 exact message. A) Binding test price 109.10 (TEST Vorschau, +2h): card 'Jetzt kaufen' + price line, dialog shows 36 Stk/900 nominal, 981,90 € total, available; confirm -> toast 'wartet auf Bankbestätigung', order status awaiting_bank (order_type direct) in admin, 981.90 reserved (available 2300 -> 1318.10), no cash_ledger debit, no bond_positions. orders_enabled=false -> card back to 'Kaufangebot anfordern', /orders/check 409 exact message. B) 10.000.000 € -> bond-buy-insufficient with exact message + available/required/missing, no confirm button; /orders -> 402 INSUFFICIENT_FUNDS; one insufficient_buying_power_events entry (status new) visible in /admin/insufficient-buying-power; counts: pending_insufficient_buying_power int (1), pending_bond_requests counts pending+awaiting_bank (2). Auth checks: bcrypt $2b$, httpOnly access/refresh cookies, CORS explicit origin + credentials. CLEANUP done and verified: Rabobank kaufkurs* fields null, requests_enabled=true, orders_enabled=true; all created bond_purchase_requests, their audit rows, IBP events and both TEST deposits deleted; tester@mester.de back to 300.00 € cash, 45 ledger rows, 0 requests, 0 IBP, 0 positions.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/bonds/orders/check", "issue": "The check endpoint (just a preview) creates/updates an insufficient_buying_power_events advisory entry whenever the amount is too high, even if the customer only opened the cost overview and never confirmed. Customers who type a large amount and look at it will produce advisory leads. Probably intended by spec B, but it's worth a product decision."},
+      {"endpoint": "POST /api/bonds/requests", "issue": "Duplicate guard only checks status 'pending'. A customer with an 'approved' request that has an open offer can send a second request for the same bond."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BondFormModal datetime fields (kaufkurs_quoted_at / kaufkurs_valid_until)", "issue": "The value is shown as String(iso).slice(0,16), which is the UTC wall time, inside a local datetime-local input. Saving converts it with new Date(v).toISOString() as local time. For admins in CET/CEST, opening and saving a bond moves the validity by 1-2h, which can shorten or expire a binding price.", "selector": "[data-testid='bond-admin-field-kaufkurs_valid_until']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Offer request 409", "issue": "On 409 the frontend shows a hard-coded duplicate message and does not refetch the catalog. Only 400 triggers retry(). The review note says it refetches on 400/409, so this is a small mismatch.", "affected_selectors": ["bond-request-purchase-<id>"]}
+    ],
+    "design_issues": [
+      {"screen": "Neue Anleihe kaufen card", "issues": ["When a binding price exists but orders_enabled=false, the card still says 'Für diese Anleihe liegt derzeit kein verbindlicher Kaufkurs vor', which isn't accurate. A neutral 'Kaufaufträge derzeit nicht freigegeben – Sie können ein Angebot anfordern' would fit better."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_rabobank_purchase_iter117.py", "/app/test_reports/pytest/pytest_iter117.xml"],
+  "action_items": [
+    "Fix the timezone handling of datetime-local in BondFormModal: convert ISO to a local 'YYYY-MM-DDTHH:mm' for display",
+    "Optional: show the orders-disabled hint text when buy is blocked by orders_enabled=false instead of the 'kein verbindlicher Kaufkurs' text",
+    "Optional: refetch the catalog on 409 in requestPurchase. Decide whether /orders/check should create advisory leads"
+  ],
+  "critical_code_review_comments": [
+    "AnleihenKaufenPage uses relative fetch('/api/bonds/requests') rather than REACT_APP_BACKEND_URL. It works through the ingress but doesn't follow the convention.",
+    "routes/bond_requests.py is 810 lines; split the admin endpoints into their own module",
+    "Admin PATCH writes to audit_log/bond_price_history for the Rabobank bond. These audit rows from the test price changes were left in place on purpose (audit trail)."
+  ],
+  "updated_files": ["/app/backend/tests/test_rabobank_purchase_iter117.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "tester@mester.de / HHHKKK222 (customer), qa.admin@kapital-direkt24.de / Qa-ra46CVrWIW3wg6l5EI6IKqbx (admin) - both work",
+  "seed_data_creation": "Temporary only: two TEST deposits of 2000 € on tester@mester.de (pytest + UI), one binding test price on Rabobank, one offer request, one direct order, one IBP event. All removed. Bond flags restored.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "UI tests must pre-set localStorage kapitalmitte_visitor_profile and kapitalmitte_cookie_consent (add_init_script), otherwise visitor-welcome-gate blocks clicks. Login via page.request.post /api/auth/login with an Origin header. The regression file test_rabobank_purchase_iter117.py cleans up after itself (run with -n 0). It deposits 2000 € only if tester cash < quote and deletes the new ledger rows afterwards. Admin bond requests list = GET /api/admin/bonds/requests. IBP list = GET /api/admin/insufficient-buying-power-events."
+}

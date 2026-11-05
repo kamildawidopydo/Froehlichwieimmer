@@ -485,3 +485,9 @@ Siehe `/app/memory/test_credentials.md`
 - Erfasst: 109 feste Seiten + 12 Vorlagen-Beispiele (je 1440/810/390), 229 Zustände, 76 Abfrage-Zustände, 183 dynamische URLs, 22 Weiterleitungen, 102 DB-Sammlungen (nur Struktur), 6 Angebots-CSVs.
 - Offen: 8 Vorlagen ohne öffentlichen Link (kein Beispiel), keine Kunden-/Admin-Screenshots (Datenschutz), Formulare nicht abgesendet.
 
+
+## 2026-11-05 · Fix Rabobank-Kaufanfrage (XS1002121454)
+- Ursache: Seed legte Datensatz mit `requests_enabled=False` an (Live-DB); die ältere Live-Oberfläche zeigte trotzdem einen aktiven Button „Kaufanfrage senden“, das Backend blockierte mit „keine Kaufanfragen möglich“.
+- Fix: getrennter Schalter `orders_enabled` (Kaufaufträge) neben `requests_enabled` (Angebotsanfragen); `executable_buy_price` nutzt `orders_enabled`; einmalige Migration `requests_release_migrated` gibt Angebotsanfragen für Rabobank frei (spätere Admin-Sperren bleiben); verständliche Meldungen; Katalog lädt nach 400/409 und Tab-Wechsel neu; Admin-Katalog zeigt Badges + Toggle für Kaufaufträge und „Ausführbarer Kurs vorhanden/nicht vorhanden“; Admin-Zähler zählen awaiting_bank-Aufträge und Kaufkraft-Warnungen.
+- Getestet: iteration_117 (Backend 10/10, UI 100 %), Testdaten entfernt. Nicht veröffentlicht.
+

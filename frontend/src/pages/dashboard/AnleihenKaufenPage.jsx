@@ -184,6 +184,7 @@ const AnleihenKaufenPage = () => {
         } catch { /* ignore */ }
         if (resp.status === 409) {
           toast.error('Für diese Anleihe besteht bereits eine offene Kaufanfrage.');
+          retry();
         } else if (resp.status === 401) {
           toast.error('Sitzung abgelaufen. Bitte neu anmelden.');
         } else {
