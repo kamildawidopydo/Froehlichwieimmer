@@ -470,3 +470,11 @@ Siehe `/app/memory/test_credentials.md`
 - Prüfung Herausgeber (rabobank.com, Prospekt 25.06.2025): seit 26.06.2025 direkt Coöperatieve Rabobank U.A. (verified). Ausschüttungshöhe/-termine nach Ermessen laut Ausschüttungspolitik 26.06.2025 → terms_status „Verifizierung ausstehend“.
 - Tests: iteration_112 (21/21 Backend), iteration_113 (24/24 Backend, 1 Skip bewusst). Danach selbst geprüft: Zahlen-Parser „1.000“, Badge-Zählung, Angebots-Button ausgeblendet.
 
+
+## 2026-11-05 · Direktkauf von Anleihen aus dem Guthaben (nur Vorschau)
+- Entscheidungen: Ausführung nur durch Team nach Bankbestätigung (Referenz + Datum Pflicht); „Jetzt kaufen“ nur bei verbindlichem Kaufkurs (kaufkurs_art=verbindlich, Quelle, Zeitpunkt, gültig bis in Zukunft), sonst „Kaufangebot anfordern“; Stückzinsen/Gebühren je Anleihe im Admin (buy_fee_pct/min/fixed, accrued_interest_pct, accrued_note). Referenzkurs nie ausführbar.
+- Backend: services/bond_order_service.py (Kurs-Prüfung, Kosten, Deckel Gesamtkosten ≤ Betrag, gleiche Rundung wie Saga, Beratungsanfrage in insufficient_buying_power_events asset_type=bond, Name aus users). Endpunkte POST /api/bonds/orders/check, POST /api/bonds/orders (Lock je Kunde, Reservierung reserved_cash, Transaktionsnr. AO-…, Status awaiting_bank). Admin: /bank-submit, /execute mit Stückzinsen/Gebühren/Bankreferenz (Saga bucht Gesamtbetrag einmal), Ablehnen/Stornieren hebt Reservierung auf. cash_service zieht offene Anleihe-Reservierungen vom verfügbaren Guthaben ab.
+- Frontend: BondBuyDialog (Kostenübersicht / Fehlbetrag), BondOrdersPanel (Status, Erfolgsmeldung nur bei executed), Admin-Anfragen mit Order-Aktionen, Kaufkraft-Warnungen mit Tab „Kaufanfragen – Guthaben nicht ausreichend (Anleihen)“ und Status „In Bearbeitung“, BondFormModal mit Kursstellung und Kosten.
+- Tests: iteration_114–116 (Backend 50 bestanden / 1 Skip, Frontend alle Prüfungen bestanden).
+- Backlog: Abschnittsüberschrift bei nur Direktorders, Status-Labels für Direktorders in Zeitleiste/Export, Live-Datenbank: Rabobank startet mit gesperrten Anfragen.
+

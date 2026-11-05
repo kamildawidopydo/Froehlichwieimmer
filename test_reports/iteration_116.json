@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 116: final retest of the iteration_115 open items for direct bond purchase (preview only). All three fixes are verified. (1) customer_name resolution (bond_order_service.customer_name) now loads the users doc, in this order: first_name + last_name → users.name → email. IBP event customer_name: 'TEST_Vor Nach' when first/last are set, 'TEST_altname' once first/last are removed, and the email once name is removed. The direct order customer_name_snapshot gives 'TEST_Vor Nach' (first/last) and then 'TEST_altname' (name fallback, no longer straight to email). The admin row customer_name shows 'TEST_Vor Nach'. (2) Execute audit: the 'executed' row has before={'status':'bank_submitted'} for direct orders. A resumed execute returns resumed=true, writes no second 'executed' audit row (count stays 1) and makes no second debit (one debit of 999.62). (3) OrdersPage, Playwright desktop 1920 and mobile 390: a customer with only a direct order sees no <th>/table and no mobile cards, only the bond-orders-panel ('Kaufaufträge aus dem Guthaben'). After adding a non-direct request, the table shows exactly one row (the request) and the panel still lists the direct order. The 'Anleihen-Anfragen' export KPI now filters out order_type 'direct' (code-verified). Regression: iter111, 112, 113, 114, 115 and 116 together gave 50 passed, 1 skipped, 0 failed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "bond_order_service.customer_name", "issue": "ObjectId(user['id']) raises if a user id is ever a non-ObjectId string. Not reachable with current auth, but a guard (ObjectId.is_valid) would be safer."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Customer Aufträge (direct-orders only)", "issues": ["The section heading 'Anleihen-Kaufanfragen' still shows above the 'Kaufaufträge aus dem Guthaben' panel even when there are no requests. Consider naming the section 'Anleihen' or showing that heading only when hasBondRequests is true.", "In the timeline 'Letzte Aktivität', the direct order (status awaiting_bank) is labelled 'Sonstiges'. Map awaiting_bank/bank_submitted/executed to German labels.", "CSV/PDF export rows still include direct orders, typed 'Anleihe' with the raw status 'awaiting_bank', while the KPI excludes them. Minor inconsistency."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_bond_direct_orders_iter116.py", "/app/backend/tests/ui_setup_iter116.py", "/app/test_reports/pytest/pytest_iter116.xml"],
+  "action_items": [
+    "Optional: hide or rename the 'Anleihen-Kaufanfragen' heading when only direct orders exist.",
+    "Optional: map direct order statuses (awaiting_bank, bank_submitted, executed) in the OrdersPage timeline and in export rows."
+  ],
+  "critical_code_review_comments": [
+    "admin_execute_bond reads 'prior' in a separate find_one before execute_bond_request. In a concurrent double-execute both calls could see bank_submitted, but the resumed flag already stops the duplicate audit row, so this is acceptable.",
+    "OrdersPage.jsx: the desktop table re-filters bondPurchaseRequests inline (line 712) instead of reusing bondRequestRows. Small DRY nit.",
+    "The regression suites iter111/112 PATCH Rabobank (toggle requests_enabled/is_available, then restore). Each run bumps updated_at and writes about 8 bond audit rows on 6aec4ccd…. I restored them this run; consider making those suites clean up after themselves."
+  ],
+  "updated_files": ["/app/backend/tests/test_bond_direct_orders_iter116.py (new)", "/app/backend/tests/ui_setup_iter116.py (new UI helper)"],
+  "success_rate": {"backend": "100% (6/6 iter116, 50 passed / 1 skipped across iter111-116)", "frontend": "100% of requested checks"},
+  "seed_data_creation": "None persisted. Cleaned up by id: pytest TEST user test_bo116_* with its 2 orders, execution, IBP event, position, 3 ledger rows, notification and TEST bond 6aec6f16…c9f5 (TEST00000096). UI TEST user 6aec6f5ec6d904c160caf3ef with its direct order 6aec6f65…f3f4, request 6aec6f94…f3f6, ledger row and TEST bond 6aec6f5f…f3f1 (TEST00000099), plus their audit and price history. Also removed 15 audit rows for TEST entities the regression suites had created and already deleted. Removed the 8 Rabobank audit rows that the iter111/112 regression suites wrote during this run, and restored Rabobank updated_at to 2026-11-05 11:46:44.902. Rabobank 6aec4ccd70262b166764f09d: kaufkurs and kaufkurs_art are null, requests_enabled is true, aktueller_kurs is 108.75, and there is one price-history row. tester@mester.de is unchanged: 45 ledger rows, 0 bond requests, 0 bond IBP events.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run from /app/backend: python -m pytest tests/test_bond_direct_orders_iter116.py tests/test_bond_direct_orders_iter115.py tests/test_bond_direct_orders_iter114.py tests/test_rabobank_bond_iter111.py tests/test_bond_offers_iter112.py tests/test_bond_offers_iter113.py -n 0. Afterwards, remove the Rabobank audit rows written during the run and restore updated_at (the iter111/112 suites touch it). UI: python tests/ui_setup_iter114.py setup; python tests/ui_setup_iter116.py order|addreq <email> <pw> <bid>; python tests/ui_setup_iter114.py cleanup <uid> <bid>. Log in with page.request.post('/api/auth/login') and an Origin header, then go to /dashboard/auftraege."
+}
