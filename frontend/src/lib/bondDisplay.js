@@ -53,3 +53,15 @@ export const currentYield = (b) => {
 };
 
 export const isReferencePrice = (b) => b?.kurs_typ === 'reference';
+
+export const pctDe = (v, min = 0, max = 3) =>
+  v == null || !Number.isFinite(Number(v))
+    ? '–'
+    : `${Number(v).toLocaleString('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max })} %`;
+
+export const eurDe = (v) =>
+  v == null || !Number.isFinite(Number(v))
+    ? '–'
+    : Number(v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+
+export const dateDe = (v) => (v ? new Date(v).toLocaleDateString('de-DE') : '–');

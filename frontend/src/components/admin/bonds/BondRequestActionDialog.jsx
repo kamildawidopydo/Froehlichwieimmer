@@ -6,6 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { formatEUR } from '@/lib/dashboardFormatters';
 import { AuditList } from '@/components/admin/bonds/BondHistoryDialog';
+import { pctDe, eurDe, dateDe } from '@/lib/bondDisplay';
+
+export const OFFER_STATUS_DE = {
+  offered: 'Angebot versendet', accepted: 'Vom Kunden angenommen', declined: 'Vom Kunden abgelehnt', expired: 'Abgelaufen',
+};
 
 const TITLES = {
   details: 'Anfrage-Details & Protokoll',
@@ -32,12 +37,12 @@ const RequestSummary = ({ r }) => (
     <Row l="Kunde" v={r.customer_name || r.customer_email} />
     <Row l="Anleihe" v={r.bond_name} />
     <Row l="ISIN" v={r.isin} />
-    <Row l="Kupon" v={r.kupon_rate != null ? `${r.kupon_rate} %` : null} />
+    <Row l="Kupon" v={r.kupon_rate != null ? pctDe(r.kupon_rate) : null} />
     <Row l="Ordervolumen" v={r.amount_eur != null ? formatEUR(r.amount_eur) : null} />
     <Row
       l="Angezeigter Kurs bei Anfrage"
       v={r.reference_price_pct != null
-        ? `${r.reference_price_pct} %${r.reference_price_type === 'reference' ? ' (Referenzkurs)' : ''}`
+        ? `${pctDe(r.reference_price_pct, 2, 4)}${r.reference_price_type === 'reference' ? ' (Referenzkurs)' : ''}`
         : null}
     />
     <Row l="Kurs-Zeitstempel" v={r.reference_price_date || fmtDate(r.reference_price_updated_at)} />
@@ -47,27 +52,33 @@ const RequestSummary = ({ r }) => (
 );
 
 const OfferForm = ({ form, setForm }) => {
-  const nominal = Number(String(form.nominal).replace(',', '.'));
-  const price = Number(String(form.price_pct).replace(',', '.'));
-  const total = nominal > 0 && price > 0 ? (nominal * price) / 100 : null;
+  const n = (v) => Number(String(v ?? '').replace(',', '.')) || 0;
+  const nominal = n(form.nominal);
+  const price = n(form.price_pct);
+  const amount = nominal > 0 && price > 0 ? (nominal * price) / 100 : null;
+  const total = amount != null ? amount + n(form.accrued_interest) + n(form.fees) : null;
+  const field = (k, l, extra = {}) => (
+    <div>
+      <Label>{l}</Label>
+      <Input inputMode="decimal" value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} data-testid={`bond-offer-${k.replace('_', '-')}`} {...extra} />
+    </div>
+  );
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Kurs in % *</Label>
-          <Input value={form.price_pct} onChange={(e) => setForm({ ...form, price_pct: e.target.value })} data-testid="bond-offer-price" />
-        </div>
-        <div>
-          <Label>Nominal (€) *</Label>
-          <Input value={form.nominal} onChange={(e) => setForm({ ...form, nominal: e.target.value })} data-testid="bond-offer-nominal" />
-        </div>
+        {field('price_pct', 'Kurs in % *')}
+        {field('nominal', 'Nominal (€) *')}
+        {field('accrued_interest', 'Stückzinsen (€)')}
+        {field('fees', 'Gebühren (€)')}
         <div>
           <Label>Gültig bis</Label>
           <Input type="date" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} data-testid="bond-offer-valid-until" />
         </div>
         <div>
-          <Label>Angebotsbetrag (Vorschau)</Label>
-          <p className="mt-2 font-semibold tabular-nums" data-testid="bond-offer-total">{total != null ? formatEUR(total) : '–'}</p>
+          <Label>Anlagebetrag · Gesamtkosten</Label>
+          <p className="mt-2 font-semibold tabular-nums" data-testid="bond-offer-total">
+            {amount != null ? `${formatEUR(amount)} · ${formatEUR(total)}` : '–'}
+          </p>
         </div>
       </div>
       <div>
@@ -81,7 +92,7 @@ const OfferForm = ({ form, setForm }) => {
 
 export const BondRequestActionDialog = ({ action, row, onClose, onDone, fetchJson }) => {
   const [text, setText] = useState('');
-  const [offer, setOffer] = useState({ price_pct: '', nominal: '', valid_until: '', message: '' });
+  const [offer, setOffer] = useState({ price_pct: '', nominal: '', accrued_interest: '', fees: '', valid_until: '', message: '' });
   const [audit, setAudit] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -90,14 +101,20 @@ export const BondRequestActionDialog = ({ action, row, onClose, onDone, fetchJso
     if (!row) return;
     setText('');
     setError(null);
+    const de = (v) => (v == null || v === '' ? '' : String(v).replace('.', ','));
     setOffer({
-      price_pct: row.offer?.price_pct ?? row.reference_price_pct ?? '',
-      nominal: row.offer?.nominal ?? row.amount_eur ?? '',
+      price_pct: de(row.offer?.price_pct ?? row.reference_price_pct),
+      nominal: de(row.offer?.nominal ?? row.amount_eur),
+      accrued_interest: de(row.offer?.accrued_interest),
+      fees: de(row.offer?.fees),
       valid_until: row.offer?.valid_until ?? '',
       message: row.offer?.message ?? '',
     });
     if (action === 'details') {
       fetchJson(`/api/admin/bonds/requests/${row.id}/audit`).then(setAudit).catch(() => setAudit([]));
+      if (row.offer && row.offer.admin_seen === false) {
+        fetchJson(`/api/admin/bonds/requests/${row.id}/offer/seen`, { method: 'POST', body: '{}' }).catch(() => {});
+      }
     }
   }, [row, action, fetchJson]);
 
@@ -112,6 +129,8 @@ export const BondRequestActionDialog = ({ action, row, onClose, onDone, fetchJso
         offer: ['offer', {
           price_pct: num(offer.price_pct),
           nominal: num(offer.nominal),
+          accrued_interest: offer.accrued_interest === '' ? null : num(offer.accrued_interest),
+          fees: offer.fees === '' ? null : num(offer.fees),
           valid_until: offer.valid_until || null,
           message: offer.message || null,
         }],
@@ -139,8 +158,11 @@ export const BondRequestActionDialog = ({ action, row, onClose, onDone, fetchJso
               <>
                 {row.offer && (
                   <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-[12.5px]" data-testid="bond-request-offer-info">
-                    Angebot: {row.offer.price_pct} % · Nominal {formatEUR(row.offer.nominal)} · {formatEUR(row.offer.amount_eur)}
-                    {row.offer.valid_until && ` · gültig bis ${new Date(row.offer.valid_until).toLocaleDateString('de-DE')}`}
+                    <p className="font-medium">{OFFER_STATUS_DE[row.offer.status] || row.offer.status}</p>
+                    Kurs {pctDe(row.offer.price_pct, 2, 4)} · Nominal {eurDe(row.offer.nominal)} · Anlagebetrag {eurDe(row.offer.amount_eur)}
+                    {' · '}Stückzinsen {eurDe(row.offer.accrued_interest)} · Gebühren {eurDe(row.offer.fees)} · Gesamt {eurDe(row.offer.total_cost ?? row.offer.amount_eur)}
+                    {row.offer.valid_until && ` · gültig bis ${dateDe(row.offer.valid_until)}`}
+                    {row.offer.responded_at && ` · Kundenentscheidung am ${new Date(row.offer.responded_at).toLocaleString('de-DE')}`}
                   </div>
                 )}
                 <section>

@@ -34,6 +34,7 @@ import ExportActions from '@/components/dashboard/ExportActions';
 import { CardListSkeleton } from '@/components/Skeleton';
 import { cn } from '@/lib/utils';
 import useAutoAnimateRef from '@/hooks/useAutoAnimateRef';
+import BondOffersPanel from '@/components/dashboard/bonds/BondOffersPanel';
 
 const SUB_LABELS = {
   pending: 'Ausstehend', executed: 'Ausgeführt', rejected: 'Abgelehnt', cancelled: 'Storniert',
@@ -87,6 +88,11 @@ const BOND_STATUS_META = {
     cls: 'border-sky-300/55 bg-sky-50 text-sky-700',
     icon: CheckCircle,
     label: 'Ausgeführt',
+  },
+  cancelled: {
+    cls: 'border-rose-300/55 bg-rose-50 text-rose-700',
+    icon: XCircle,
+    label: 'Storniert',
   },
 };
 
@@ -178,6 +184,7 @@ const OrdersPage = () => {
     stocksLoading,
     bondPurchaseRequests,
     bondRequestsLoading,
+    refreshBondRequests,
     ipoSubscriptionRequests,
     ipoRequestsLoading,
     cancelOrder,
@@ -714,10 +721,11 @@ const OrdersPage = () => {
                             : b.decision_note
                           : '–'}
                       </td>
-                    </tr>
+                  </tr>
                   );
                 })}
               </EditorialTable>
+              <BondOffersPanel requests={bondPurchaseRequests} onDecided={refreshBondRequests} />
             </section>
           )}
 

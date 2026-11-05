@@ -37,6 +37,11 @@ const NOTIFICATION_MAP = [
     path: '/admin/bond-requests',
   },
   {
+    key: 'bond_offer_responses',
+    title: 'Kunde hat auf ein Anleihe-Angebot reagiert',
+    path: '/admin/bond-requests',
+  },
+  {
     key: 'pending_ipo_requests',
     title: 'Neue IPO-Investitionsanfrage',
     path: '/admin/ipo-requests',

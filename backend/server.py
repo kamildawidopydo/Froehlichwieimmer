@@ -5751,6 +5751,13 @@ async def _init_ipo_indexes():
         import logging
         logging.getLogger(__name__).warning("bond_catalog indexes: %s", exc)
     try:
+        from services.bond_seed import ensure_rabobank_bond
+        await ensure_rabobank_bond(db)
+    except Exception as exc:  # pragma: no cover
+        import logging
+        logging.getLogger(__name__).warning("bond seed rabobank: %s", exc)
+
+    try:
         await _ensure_ipo_catalog_indexes()
     except Exception as exc:  # pragma: no cover
         import logging

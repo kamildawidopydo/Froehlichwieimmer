@@ -60,6 +60,9 @@ class BondExtraFields(BaseModel):
     risk_note: Optional[str] = Field(default=None, max_length=300)
     risk_details: Optional[str] = Field(default=None, max_length=6000)
     requests_enabled: Optional[bool] = None
+    legal_issuer_status: Optional[Literal["verified", "pending"]] = None
+    terms_status: Optional[Literal["verified", "pending"]] = None
+    verification_note: Optional[str] = Field(default=None, max_length=3000)
 
     @field_validator("verkaufskurs", "kursveraenderung_abs", "kursveraenderung_pct", "rendite_manuell")
     @classmethod
@@ -239,6 +242,27 @@ async def list_available_bonds(user: dict = Depends(get_current_user)):
         [("kupon_rate", -1), ("bond_name", 1)]
     )
     return [_serialize(doc) async for doc in cursor]
+
+
+@public_router.get("/catalog/{bond_id}/prices")
+async def list_bond_prices(bond_id: str, user: dict = Depends(get_current_user)):
+    """Gespeicherte Kurse (nur echte Einträge, keine Interpolation) für sichtbare Anleihen."""
+    oid = _oid_or_404(bond_id)
+    bond = await db.bond_catalog.find_one({"_id": oid, "is_available": True}, {"price_updated_at": 1, "kurs_typ": 1})
+    if not bond:
+        raise HTTPException(status_code=404, detail="Bond nicht gefunden")
+    points = [
+        {"recorded_at": p["recorded_at"], "kurs": p["aktueller_kurs"],
+         "kurs_typ": p.get("kurs_typ"), "kurs_datum": p.get("kurs_datum")}
+        for p in reversed(await list_prices(db, str(oid), limit=500))
+        if p.get("aktueller_kurs") is not None
+    ]
+    pu = bond.get("price_updated_at")
+    return {
+        "points": points,
+        "price_updated_at": pu.isoformat() if isinstance(pu, datetime) else pu,
+        "kurs_typ": bond.get("kurs_typ"),
+    }
 
 
 # ─── Admin CRUD ─────────────────────────────────────────────────────────

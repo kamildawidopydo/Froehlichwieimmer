@@ -21,7 +21,8 @@ import {
   adminRowHover,
 } from '@/components/admin/AdminSubpageChrome';
 import { formatEUR } from '@/lib/dashboardFormatters';
-import BondRequestActionDialog from '@/components/admin/bonds/BondRequestActionDialog';
+import BondRequestActionDialog, { OFFER_STATUS_DE } from '@/components/admin/bonds/BondRequestActionDialog';
+import { pctDe } from '@/lib/bondDisplay';
 
 /**
  * Admin Bond-Anfragen (Session 82.04 → Session 82.37) — Merge Mongo + Legacy.
@@ -314,6 +315,11 @@ const AdminBondRequests = () => {
       />
 
       <AdminSurfaceCard>
+        {items.some((r) => r.offer && r.offer.admin_seen === false) && (
+          <div className="border-b border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[12.5px] text-emerald-800" data-testid="bond-offer-responses-banner">
+            {items.filter((r) => r.offer && r.offer.admin_seen === false).length} neue Kundenentscheidung(en) zu Angeboten — über „Details“ als gelesen markieren. Eine Annahme löst keine Buchung aus; Ausführung nur nach Prüfung und Freigabe.
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full" data-testid="bond-requests-table">
             <thead className={adminTheadClass}>
@@ -399,18 +405,22 @@ const AdminBondRequests = () => {
                         )}
                         {row.reference_price_pct != null && (
                           <p className="mt-0.5 text-[10.5px] text-bank-text-muted">
-                            Kurs bei Anfrage {row.reference_price_pct}%{row.reference_price_type === 'reference' ? ' (Referenz)' : ''}
+                            Kurs bei Anfrage {pctDe(row.reference_price_pct, 2, 4)}{row.reference_price_type === 'reference' ? ' (Referenz)' : ''}
                           </p>
                         )}
                         {row.offer && (
-                          <p className="mt-0.5 text-[10.5px] text-sky-700" data-testid={`bond-request-offer-badge-${row.id}`}>
-                            Angebot · {row.offer.price_pct}% · {formatEUR(row.offer.amount_eur)}
+                          <p
+                            className={`mt-0.5 text-[10.5px] ${row.offer.status === 'accepted' ? 'font-semibold text-emerald-700' : row.offer.status === 'declined' ? 'font-semibold text-rose-700' : 'text-sky-700'}`}
+                            data-testid={`bond-request-offer-badge-${row.id}`}
+                          >
+                            {OFFER_STATUS_DE[row.offer.status] || 'Angebot'} · {pctDe(row.offer.price_pct, 2, 4)} · {formatEUR(row.offer.total_cost ?? row.offer.amount_eur)}
+                            {row.offer.admin_seen === false && ' · NEU'}
                           </p>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className="rate-figure text-[13px] tabular-nums text-bank-gold">
-                          {row.kupon_rate != null ? `${row.kupon_rate}%` : '–'}
+                          {pctDe(row.kupon_rate)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-[12.5px] tabular-nums text-bank-text-muted">

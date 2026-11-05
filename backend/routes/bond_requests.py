@@ -66,6 +66,8 @@ class AdminNoteBody(BaseModel):
 class AdminOfferBody(BaseModel):
     price_pct: float = Field(..., gt=0, le=1000)
     nominal: float = Field(..., gt=0)
+    accrued_interest: Optional[float] = Field(default=None, ge=0)
+    fees: Optional[float] = Field(default=None, ge=0)
     valid_until: Optional[str] = Field(default=None, description="ISO YYYY-MM-DD")
     message: Optional[str] = Field(default=None, max_length=2000)
     model_config = {"extra": "forbid"}
@@ -86,7 +88,25 @@ def _iso_dt(v):
 def _serialize_offer(o: Optional[dict]) -> Optional[dict]:
     if not o:
         return None
-    return {k: v for k, v in {**o, "created_at": _iso_dt(o.get("created_at"))}.items() if k != "created_by"}
+    out = {k: v for k, v in o.items() if k not in ("created_by", "admin_seen")}
+    out["created_at"] = _iso_dt(o.get("created_at"))
+    out["responded_at"] = _iso_dt(o.get("responded_at"))
+    if out.get("status") == "offered" and _offer_expired(o):
+        out["status"] = "expired"
+    return out
+
+
+def _offer_expired(o: dict) -> bool:
+    vu = o.get("valid_until")
+    try:
+        return bool(vu) and _date.fromisoformat(vu) < _date.today()
+    except ValueError:
+        return False
+
+
+class CustomerOfferDecision(BaseModel):
+    comment: Optional[str] = Field(default=None, max_length=1000)
+    model_config = {"extra": "forbid"}
 
 
 def _serialize(doc: dict) -> dict:
@@ -232,6 +252,51 @@ async def list_my_bond_requests(user: dict = Depends(get_current_user)):
     return [_serialize(doc) async for doc in cursor]
 
 
+async def _decide_offer(request_id: str, user: dict, decision: str, body: CustomerOfferDecision) -> dict:
+    if not ObjectId.is_valid(request_id):
+        raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+    doc = await db.bond_purchase_requests.find_one(
+        {"_id": ObjectId(request_id), "user_id": ObjectId(user["id"])}
+    )
+    if not doc or not doc.get("offer"):
+        raise HTTPException(status_code=404, detail="Kein Angebot vorhanden")
+    offer = doc["offer"]
+    if offer.get("status") != "offered":
+        raise HTTPException(status_code=409, detail="Über dieses Angebot wurde bereits entschieden.")
+    if _offer_expired(offer):
+        raise HTTPException(status_code=409, detail="Das Angebot ist abgelaufen.")
+    if doc.get("status") not in ("pending", "approved"):
+        raise HTTPException(status_code=409, detail="Die Anfrage ist nicht mehr offen.")
+    now = datetime.now(timezone.utc)
+    comment = (body.comment or "").strip() or None
+    result = await db.bond_purchase_requests.find_one_and_update(
+        {"_id": doc["_id"], "offer.status": "offered"},
+        {"$set": {
+            "offer.status": decision, "offer.responded_at": now,
+            "offer.customer_comment": comment, "offer.admin_seen": False, "updated_at": now,
+        }},
+        return_document=True,
+    )
+    if not result:
+        raise HTTPException(status_code=409, detail="Über dieses Angebot wurde bereits entschieden.")
+    await write_audit(db, "bond_request", request_id, f"offer_{decision}",
+                      {"offer_status": "offered"}, {"offer_status": decision, "note": comment}, user)
+    return _serialize(result)
+
+
+@router.post("/requests/{request_id}/offer/accept")
+async def accept_bond_offer(request_id: str, body: CustomerOfferDecision = CustomerOfferDecision(),
+                            user: dict = Depends(get_current_user)):
+    """Annahme ist eine Willenserklärung — keine Buchung, Ausführung erst nach Admin-Freigabe."""
+    return await _decide_offer(request_id, user, "accepted", body)
+
+
+@router.post("/requests/{request_id}/offer/decline")
+async def decline_bond_offer(request_id: str, body: CustomerOfferDecision = CustomerOfferDecision(),
+                             user: dict = Depends(get_current_user)):
+    return await _decide_offer(request_id, user, "declined", body)
+
+
 # ─── Admin Endpoints ─────────────────────────────────────────────────────
 async def _serialize_admin(doc: dict) -> dict:
     base = _serialize(doc)
@@ -260,6 +325,7 @@ async def _serialize_admin(doc: dict) -> dict:
             pass
     if doc.get("offer"):
         base["offer"]["created_by"] = doc["offer"].get("created_by")
+        base["offer"]["admin_seen"] = doc["offer"].get("admin_seen", True)
     base.update({
         **customer,
         "customer_name": customer["customer_name"] or doc.get("customer_name_snapshot"),
@@ -399,13 +465,20 @@ async def admin_create_bond_offer(
     if denom > 0 and abs(body.nominal / denom - round(body.nominal / denom)) > 1e-9:
         raise HTTPException(status_code=400, detail=f"Nominal muss ein Vielfaches der Stückelung ({denom:g} EUR) sein.")
     now = datetime.now(timezone.utc)
+    amount = round(body.nominal * body.price_pct / 100, 2)
+    accrued = round(body.accrued_interest or 0, 2)
+    fees = round(body.fees or 0, 2)
     offer = {
         "price_pct": float(body.price_pct),
         "nominal": float(body.nominal),
-        "amount_eur": round(body.nominal * body.price_pct / 100, 2),
+        "amount_eur": amount,
+        "accrued_interest": accrued if body.accrued_interest is not None else None,
+        "fees": fees if body.fees is not None else None,
+        "total_cost": round(amount + accrued + fees, 2),
         "valid_until": body.valid_until,
         "message": (body.message or "").strip() or None,
         "status": "offered",
+        "admin_seen": True,
         "created_at": now,
         "created_by": admin_user.get("email"),
     }
@@ -417,6 +490,14 @@ async def admin_create_bond_offer(
     await write_audit(db, "bond_request", request_id, "offer_created",
                       {"offer": existing.get("offer")}, {"offer": offer}, admin_user)
     return await _serialize_admin(result)
+
+
+@admin_router.post("/requests/{request_id}/offer/seen")
+async def admin_mark_offer_seen(request_id: str, _admin: dict = Depends(require_admin)):
+    doc = await _load_request(request_id)
+    if doc.get("offer"):
+        await db.bond_purchase_requests.update_one({"_id": doc["_id"]}, {"$set": {"offer.admin_seen": True}})
+    return {"ok": True}
 
 
 @admin_router.get("/requests/{request_id}/audit")

@@ -12,6 +12,8 @@ const ACTION_LABELS = {
   executed: 'Ausgeführt',
   note_added: 'Notiz hinzugefügt',
   offer_created: 'Angebot erstellt',
+  offer_accepted: 'Angebot vom Kunden angenommen',
+  offer_declined: 'Angebot vom Kunden abgelehnt',
   archived: 'Archiviert',
 };
 
@@ -19,7 +21,10 @@ const fmtDate = (v) => (v ? new Date(v).toLocaleString('de-DE') : '–');
 const fmtVal = (v) => {
   if (v == null || v === '') return '–';
   if (typeof v !== 'object') return String(v);
-  if ('price_pct' in v) return `${v.price_pct} % · Nominal ${v.nominal} · ${v.amount_eur} €`;
+  if ('price_pct' in v) {
+    const eur = (x) => (x == null ? '–' : Number(x).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }));
+    return `${Number(v.price_pct).toLocaleString('de-DE', { maximumFractionDigits: 4 })} % · Nominal ${eur(v.nominal)} · Gesamt ${eur(v.total_cost ?? v.amount_eur)}`;
+  }
   return Object.entries(v).map(([k, x]) => `${k}: ${x ?? '–'}`).join(', ');
 };
 const fmtNum = (v) => (v == null ? '–' : Number(v).toLocaleString('de-DE', { maximumFractionDigits: 4 }));

@@ -3,6 +3,7 @@ import { ShoppingCart, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import BondLogo from '@/components/BondLogo';
+import BondPriceChart from '@/components/dashboard/bonds/BondPriceChart';
 import { formatEUR } from '@/lib/dashboardFormatters';
 import { computeBondMetrics } from '@/lib/dashboardMetrics';
 import {
@@ -51,10 +52,10 @@ const buildRows = (b) => {
     });
     rows.push({ label: 'Rendite bis Fälligkeit', val: 'entfällt (unbefristet)', testid: 'ytm' });
   } else {
-    rows.push({ label: 'Aktuelle Rendite', val: formatDePct(metrics.currentYield).replace(' %', '%'), testid: 'current-yield' });
-    rows.push({ label: 'Approx. YTM', val: formatDePct(metrics.approxYtm).replace(' %', '%'), testid: 'ytm' });
+    rows.push({ label: 'Aktuelle Rendite', val: formatDePct(metrics.currentYield), testid: 'current-yield' });
+    rows.push({ label: 'Approx. YTM', val: formatDePct(metrics.approxYtm), testid: 'ytm' });
   }
-  rows.push({ label: 'Min. Volumen', val: b.min_order_eur ? formatEUR(b.min_order_eur) : '1.000 €', testid: 'min' });
+  rows.push({ label: 'Min. Volumen', val: formatEUR(b.min_order_eur || 1000), testid: 'min' });
   return rows;
 };
 
@@ -83,7 +84,7 @@ const DetailLine = ({ label, value }) =>
 
 const ProductDetails = ({ b, testKey }) => {
   const [open, setOpen] = useState(false);
-  const hasDetails = b.description || b.risk_details || b.legal_issuer || b.denomination || b.zinstermine;
+  const hasDetails = b.id || b.description || b.risk_details || b.legal_issuer || b.denomination || b.zinstermine;
   if (!hasDetails) return null;
   return (
     <div className="mb-4">
@@ -105,6 +106,12 @@ const ProductDetails = ({ b, testKey }) => {
           <DetailLine label="Stückelung" value={b.denomination && formatEUR(b.denomination)} />
           <DetailLine label="Zinszahlung" value={[b.zinsfrequenz, b.zinstermine].filter(Boolean).join(' · ')} />
           {b.description && <p className="pt-1 text-[12px] leading-snug text-bank-text">{b.description}</p>}
+          {b.terms_status === 'pending' && (
+            <p className="text-[11.5px] leading-snug text-amber-800" data-testid={`bond-terms-pending-${testKey}`}>
+              Hinweis: Ausschüttungen liegen im Ermessen des Emittenten. Die Angaben zu Höhe und Terminen werden derzeit noch überprüft.
+            </p>
+          )}
+          {b.id && <BondPriceChart bondId={b.id} />}
           {b.risk_details && (
             <div className="mt-2 border-l-2 border-amber-400 bg-amber-50/60 p-2.5">
               <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-amber-800">Wesentliche Risiken</p>
@@ -141,7 +148,7 @@ export const BondOfferCard = ({ bond: b, testKey, eager, amount, onAmountChange,
         </div>
         <div className="shrink-0 text-right">
           <p className="text-[1.65rem] font-semibold leading-none tabular-nums text-bank-primary">
-            {b.kupon_rate != null ? `${Number(b.kupon_rate).toLocaleString('de-DE', { minimumFractionDigits: b.is_perpetual ? 3 : 0 })}%` : '–'}
+            {b.kupon_rate != null ? `${Number(b.kupon_rate).toLocaleString('de-DE', { minimumFractionDigits: b.is_perpetual ? 3 : 0, maximumFractionDigits: 3 })} %` : '–'}
           </p>
           <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">Kupon p.a.</p>
         </div>

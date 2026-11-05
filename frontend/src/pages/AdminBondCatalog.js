@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import BondFormModal from '@/components/admin/bonds/BondFormModal';
 import BondHistoryDialog from '@/components/admin/bonds/BondHistoryDialog';
-import { matchesBondSearch } from '@/lib/bondDisplay';
+import { matchesBondSearch, pctDe } from '@/lib/bondDisplay';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -313,10 +313,10 @@ const AdminBondCatalog = () => {
                       </td>
                       <td className="py-3 px-4 text-bank-text-muted">{row.issuer || '–'}</td>
                       <td className="py-3 px-4 text-right tabular-nums">
-                        {row.kupon_rate != null ? `${row.kupon_rate}%` : '–'}
+                        {pctDe(row.kupon_rate)}
                       </td>
                       <td className="py-3 px-4 text-right tabular-nums">
-                        {row.aktueller_kurs != null ? `${row.aktueller_kurs}%` : '–'}
+                        {pctDe(row.aktueller_kurs, 2, 4)}
                         {row.kurs_typ === 'reference' && (
                           <p className="text-[10px] text-amber-700">Referenzkurs</p>
                         )}
@@ -342,6 +342,15 @@ const AdminBondCatalog = () => {
                         >
                           {row.requests_enabled ? 'Anfragen offen' : 'Anfragen gesperrt'}
                         </span>
+                        {(row.legal_issuer_status === 'pending' || row.terms_status === 'pending') && (
+                          <span
+                            className="ml-1 mt-1 inline-flex rounded-full border border-amber-300/60 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800"
+                            title={row.verification_note || ''}
+                            data-testid={`bond-admin-verification-${row.id}`}
+                          >
+                            Verifizierung ausstehend
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="inline-flex gap-1">
