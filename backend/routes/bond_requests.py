@@ -86,7 +86,7 @@ def _iso_dt(v):
 def _serialize_offer(o: Optional[dict]) -> Optional[dict]:
     if not o:
         return None
-    return {**o, "created_at": _iso_dt(o.get("created_at"))}
+    return {k: v for k, v in {**o, "created_at": _iso_dt(o.get("created_at"))}.items() if k != "created_by"}
 
 
 def _serialize(doc: dict) -> dict:
@@ -173,7 +173,7 @@ async def create_bond_request(
     if min_order and payload.amount_eur < float(min_order):
         raise HTTPException(
             status_code=400,
-            detail=f"Mindestinvestition nicht erreicht ({min_order} EUR)",
+            detail=f"Mindestinvestition nicht erreicht ({float(min_order):,.0f} €)".replace(",", "."),
         )
 
     # Duplicate-Guard: max. 1 pending pro user+bond
@@ -258,6 +258,8 @@ async def _serialize_admin(doc: dict) -> dict:
                 )
         except Exception:
             pass
+    if doc.get("offer"):
+        base["offer"]["created_by"] = doc["offer"].get("created_by")
     base.update({
         **customer,
         "customer_name": customer["customer_name"] or doc.get("customer_name_snapshot"),

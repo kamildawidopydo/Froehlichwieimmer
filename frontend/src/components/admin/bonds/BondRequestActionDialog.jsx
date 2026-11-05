@@ -15,6 +15,9 @@ const TITLES = {
 };
 
 const fmtDate = (v) => (v ? new Date(v).toLocaleString('de-DE') : '–');
+const STATUS_DE = {
+  pending: 'Offen', approved: 'Genehmigt', rejected: 'Abgelehnt', cancelled: 'Storniert', executed: 'Ausgeführt',
+};
 
 const Row = ({ l, v }) => (
   <div>
@@ -39,7 +42,7 @@ const RequestSummary = ({ r }) => (
     />
     <Row l="Kurs-Zeitstempel" v={r.reference_price_date || fmtDate(r.reference_price_updated_at)} />
     <Row l="Anfrage am" v={fmtDate(r.requested_at || r.created_at)} />
-    <Row l="Status" v={r.status} />
+    <Row l="Status" v={STATUS_DE[r.status] || r.status} />
   </div>
 );
 

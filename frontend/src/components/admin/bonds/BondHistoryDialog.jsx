@@ -16,6 +16,12 @@ const ACTION_LABELS = {
 };
 
 const fmtDate = (v) => (v ? new Date(v).toLocaleString('de-DE') : '–');
+const fmtVal = (v) => {
+  if (v == null || v === '') return '–';
+  if (typeof v !== 'object') return String(v);
+  if ('price_pct' in v) return `${v.price_pct} % · Nominal ${v.nominal} · ${v.amount_eur} €`;
+  return Object.entries(v).map(([k, x]) => `${k}: ${x ?? '–'}`).join(', ');
+};
 const fmtNum = (v) => (v == null ? '–' : Number(v).toLocaleString('de-DE', { maximumFractionDigits: 4 }));
 
 export const AuditList = ({ entries }) =>
@@ -30,10 +36,13 @@ export const AuditList = ({ entries }) =>
           <span className="ml-2 text-bank-text-muted">{a.changed_by || '–'}</span>
           {a.changed_fields?.length > 0 && (
             <p className="mt-0.5 text-[11px] text-bank-text-muted">
-              {a.changed_fields.map((f) => `${f}: ${a.before?.[f] ?? '–'} → ${a.after?.[f] ?? '–'}`).join(' · ')}
+              {a.changed_fields.map((f) => `${f}: ${fmtVal(a.before?.[f])} → ${fmtVal(a.after?.[f])}`).join(' · ')}
             </p>
           )}
           {a.after?.note && <p className="mt-0.5 text-[11px] text-bank-text-muted">{a.after.note}</p>}
+          {!a.changed_fields?.length && a.after?.offer && (
+            <p className="mt-0.5 text-[11px] text-bank-text-muted">Angebot: {fmtVal(a.after.offer)}</p>
+          )}
         </li>
       ))}
     </ul>

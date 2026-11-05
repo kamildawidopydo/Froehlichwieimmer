@@ -1,0 +1,43 @@
+{
+  "summary": "Tested the Rabobank bond (XS1002121454) integration end to end: customer page /dashboard/anleihen/kaufen, admin catalog /admin/bond-catalog and admin requests /admin/bond-requests. Backend: wrote 12 pytest tests, 11 pass. The one failure is minor: PATCH that changes an ISIN to one already in use returns 500. Frontend: every requested flow passed. All 6 search terms find the card. The card shows every required value (6,500%, 108,75 % historischer Referenzwert, Unbefristet twice, Laufende Verzinsung 5,98 %, Rendite bis Fälligkeit entfällt, 1.000,00 €, risk note, reference meta line, product details with legal issuer, Stückelung 25 € and Zinstermine). Issuer filter, min/max Restlaufzeit filters, the success toast with the exact text, the below-minimum error and the duplicate 409 all work. Admin side: search, badges, visibility toggle (card disappears for the customer), requests toggle (customer button is disabled and the backend returns 400), edit modal that saves prices and records a price-history row with timestamp and an audit entry, create and delete of a TEST_ bond, duplicate ISIN 409 toast, plus note, offer (non-multiple of 25 rejected), details, cancel, approve and reject on requests. Customers get 403 on admin endpoints and /requests/me has no internal_notes. A request books nothing: no positions and no cash change. The 390px mobile view has no horizontal overflow.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PATCH /api/admin/bonds/catalog/{id}", "issue": "Changing isin to an ISIN already used by another bond returns 500, from an unhandled DuplicateKeyError on the isin_unique_sparse index. It should return 409 'Eine Anleihe mit dieser ISIN existiert bereits.' like POST does. Fix: pre-check with find_one({isin, _id: {$ne: oid}}) and/or catch DuplicateKeyError."},
+      {"endpoint": "POST /api/bonds/requests", "issue": "The minimum-investment error reads 'Mindestinvestition nicht erreicht (1000.0 EUR)'. It shows a raw float instead of German formatting (1.000 €)."},
+      {"endpoint": "GET /api/bonds/requests/me", "issue": "The offer object is returned to the customer including created_by (the admin's email address). Consider removing created_by from the customer serializer."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BondRequestActionDialog / AuditList (details dialog)", "issue": "The audit entry for offer_created shows 'offer: – → [object Object]'. Object values need formatting, e.g. price % · nominal · amount.", "selector": "[data-testid=bond-request-dialog-details]", "priority": "LOW"},
+      {"component": "BondRequestActionDialog RequestSummary", "issue": "Status shows the raw value 'pending' instead of the German label (Offen) used in the table.", "selector": "[data-testid=bond-request-summary]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "BondFormModal (admin)", "issues": ["Number inputs (type=number) do not accept a German decimal comma: '107,9' cannot be typed, even though toPayload handles commas. Use type=text with inputMode=decimal.", "Emissionsdatum and Fälligkeitsdatum use the browser's native date picker (mm/dd/yyyy in an en-US browser) instead of the shadcn Calendar."]},
+      {"screen": "AdminBondCatalog / AdminBondRequests table", "issues": ["Kupon and Kurs use a dot as decimal separator (6.5%, 108.75%, 'Kurs bei Anfrage 108.75%'), while the customer page uses German formatting (6,500 %, 108,75 %)."]},
+      {"screen": "Customer bond card", "issues": ["Min. Volumen shows '1.000,00 €' for Rabobank but '1.000 €' (fallback string) for bonds without min_order_eur, which is slightly inconsistent.", "Existing synced bonds (DEKA, DZ BANK, BUND) show Aktueller Kurs / Aktuelle Rendite / Approx. YTM as '–' because those bonds have no price data. Layout and labels are unchanged from before."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_rabobank_bond_iter111.py", "/app/test_reports/pytest/pytest_iter111.xml"],
+  "action_items": [
+    "Return 409 instead of 500 when PATCH /api/admin/bonds/catalog/{id} sets a duplicate ISIN",
+    "Format the offer object in the audit list (details dialog) instead of showing [object Object]",
+    "Optional: German formatting in the min-investment error and in the admin tables; allow a decimal comma in the admin number fields; use shadcn Calendar for the date fields; hide created_by in the offer returned to customers"
+  ],
+  "critical_code_review_comments": [
+    "bond_catalog.admin_update_bond: no duplicate-ISIN guard, so the unique index raises DuplicateKeyError and the endpoint returns 500.",
+    "BondFormModal.toPayload sends every field on PATCH, so an admin edit always sets is_manual_override=True. This is intended, but it means any edit of a synced bond permanently stops the exchange sync from updating it.",
+    "AnleihenKaufenPage renders all ~1288 cards at once with no pagination or virtualisation. This works, but initial render is heavy.",
+    "Customer _serialize exposes the offer with the admin's email in created_by."
+  ],
+  "updated_files": ["/app/backend/tests/test_rabobank_bond_iter111.py"],
+  "success_rate": {"backend": "92% (11/12)", "frontend": "100% of requested flows"},
+  "seed_data_creation": "Created and then deleted, by id: bond_purchase_requests 6aec4f44336e8be41e2a0115 (UI), 6aec5038336e8be41e2a0121 and 6aec5038336e8be41e2a0122 (LB.HESS.THR / R-LOGIT bonds, used for UI approve/reject), plus the pytest-created requests, which the fixture deleted by id. TEST_ bonds with ISIN TEST00000001 were created and deleted; 0 remain. Rabobank bond restored: is_available=true, requests_enabled=true, aktueller_kurs=108.75, kaufkurs=null, verkaufskurs=null, price_updated_at reset to the seed time 2026-11-05T09:30:53.770Z. Audit and price-history entries from testing remain, as allowed. The execute endpoint was never used.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "qa.admin@kapital-direkt24.de / Qa-ra46CVrWIW3wg6l5EI6IKqbx (admin) and tester@mester.de / HHHKKK222 (customer) both work. Login via the UI at /login requires pre-setting localStorage keys kapitalmitte_visitor_profile and kapitalmitte_cookie_consent (add_init_script), otherwise the visitor-welcome-gate overlay blocks clicks.",
+  "context_for_next_testing_agent": "Run the backend suite with: pytest tests/test_rabobank_bond_iter111.py -n 0 (it shares state across tests and must run serially). Its fixture restores the Rabobank fields and deletes created requests by id. Rabobank bond id 6aec4ccd70262b166764f09d. Customer card selector: [data-testid^=bond-card-]:has-text('XS1002121454'). Admin row: bond-admin-row-<id>. Request row: bond-request-row-mongo-<id>. Approve and reject use window.prompt, so accept the dialog. Auth checks: bcrypt $2b$ hash, HttpOnly+Secure cookies, CORS with an explicit origin and credentials=true.",
+  "rca of the issue": "PATCH duplicate ISIN returns 500: admin_update_bond calls find_one_and_update with the new isin and does no pre-check. The isin_unique_sparse index raises pymongo DuplicateKeyError, which is not caught. Reproduce: PATCH /api/admin/bonds/catalog/<bondA> with {isin: <bondB isin>}. Mitigation: check that the ISIN is not used by another bond (_id != oid) before updating and raise 409, and also catch DuplicateKeyError and return 409."
+}

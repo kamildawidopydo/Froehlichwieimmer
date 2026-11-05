@@ -109,7 +109,7 @@ const FieldInput = ({ f, value, onChange }) => {
   return (
     <div>
       {label}
-      <Input type={f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text'} step="any" value={value} onChange={(e) => onChange(e.target.value)} data-testid={tid} />
+      <Input type={f.t === 'date' ? 'date' : 'text'} inputMode={f.t === 'number' ? 'decimal' : undefined} value={value} onChange={(e) => onChange(e.target.value)} data-testid={tid} />
     </div>
   );
 };

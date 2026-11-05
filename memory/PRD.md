@@ -451,3 +451,13 @@ Siehe `/app/memory/test_credentials.md`
 
 - Domains: apex+www HTTPS 200, Zertifikat Google Trust Services gültig bis 24.01.2027 (eigene Prüfung); Deployer-Tool meldet noch „initializing“. Live = Run e2e665d2 (29.10. 15:55 UTC). DB-Backup nicht verifizierbar; Rollback nur Code; keine Veröffentlichungssperre verfügbar.
 
+
+## 2026-11-05 · Rabobank-Anleihe + erweiterte Anleihenverwaltung (nur Vorschau)
+- Kundenwunsch: Rabobank-Anleihe 6,500 % (XS1002121454, WKN A1ZCS8) in „Neue Anleihe kaufen“ und vollständige Pflege im bestehenden Admin. Entscheidungen: Unbefristet + „Laufende Verzinsung“ (Kupon / (Kurs/100)), Emittent Kunde „Coöperatieve Rabobank U.A.“, rechtl. Herausgeber „Stichting AK Rabobank Certificaten“, Risikohinweis auf Karte, Stückelung 25 €, Mindestanlage 1.000 €.
+- Prospekt-Prüfung (27.01.2014): Rabobank Certificates, 25 € Nennwert, 6,5 % quartalsweise 29.03/06/09/12, unbefristet, tief nachrangig, Ausschüttung nach Ermessen, Verlustbeteiligung, Euronext Amsterdam. Referenzkurs 108,75 % = Kunden-Screenshot, als Referenzkurs gekennzeichnet.
+- Backend: `bond_catalog` erweitert (WKN, legal_issuer, Verkaufskurs, Kursdatum/-quelle/-art/-hinweis, Kursveränderung, Rendite manuell, is_perpetual, Zinstermine, Beschreibung, Risiken, requests_enabled, price_updated_at). Kurshistorie `bond_price_history`, Audit in `audit_log` (services/bond_audit.py). Admin-Änderungen setzen is_manual_override (Börsen-Sync überschreibt nicht). Kaufanfrage speichert Kunden-ID, Namen, Referenzkurs + Zeitstempel; neue Admin-Endpunkte cancel/notes/offer/audit. Keine automatische Buchung.
+- Seed: `backend/scripts/seed_rabobank_bond.py` (idempotent) – in Vorschau ausgeführt; muss nach Veröffentlichung einmalig in Produktion laufen oder die Anleihe per Admin angelegt werden.
+- Frontend: BondOfferCard, bondDisplay (Suche inkl. WKN/Kupon), BondFormModal, BondHistoryDialog, BondRequestActionDialog.
+- Getestet: iteration_111 (Backend 11/12 → Fix für doppelte ISIN, Frontend alle Abläufe bestanden).
+- Offen/Backlog: Kundenansicht für individuelle Angebote; deutsche Zahlenformate in Admin-Tabellen; Kalender-Auswahl statt nativer Datumsfelder.
+

@@ -290,6 +290,8 @@ async def admin_update_bond(
                if existing.get(k) != v}
     if not changes:
         return _serialize(existing)
+    if changes.get("isin") and await db.bond_catalog.find_one({"isin": changes["isin"], "_id": {"$ne": oid}}, {"_id": 1}):
+        raise HTTPException(status_code=409, detail="Eine Anleihe mit dieser ISIN existiert bereits.")
     now = datetime.now(timezone.utc)
     changes["updated_at"] = now
     # Admin-gepflegte Datensätze nie vom Börsen-Sync überschreiben lassen
