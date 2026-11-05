@@ -32,7 +32,7 @@ from server import get_current_user, db, require_admin  # type: ignore[attr-defi
 from services.bond_audit import write_audit, list_audit  # noqa: E402
 from services.bond_order_service import (  # noqa: E402
     executable_buy_price, compute_quote, available_cash, quote_to_json, record_advisory_request,
-    customer_name,
+    customer_name, open_orders_for,
 )
 
 
@@ -317,6 +317,7 @@ class DirectOrderBody(BaseModel):
     bond_id: str
     amount_eur: float = Field(..., gt=0, le=10_000_000)
     expected_total: Optional[float] = None
+    confirm_additional: bool = False
     model_config = {"extra": "forbid"}
 
 
@@ -346,11 +347,10 @@ async def _direct_quote(body: DirectOrderBody, user: dict):
 
 @router.post("/orders/check")
 async def check_direct_order(body: DirectOrderBody, user: dict = Depends(get_current_user)):
-    """Kostenübersicht + Guthabenprüfung. Bei fehlendem Guthaben: Beratungsanfrage."""
+    """Kostenübersicht + Guthabenprüfung (nur Anzeige, erzeugt keine Beratungsanfrage)."""
     bond, amount, q, available = await _direct_quote(body, user)
     out = quote_to_json(q, available)
-    if not out["sufficient"]:
-        await record_advisory_request(db, user, bond, amount, q["total"], available)
+    out["open_orders"] = await open_orders_for(db, user["id"], body.bond_id)
     return out
 
 
@@ -364,6 +364,20 @@ async def create_direct_order(body: DirectOrderBody, user: dict = Depends(get_cu
         out = quote_to_json(q, available)
         if body.expected_total is not None and abs(float(q["total"]) - body.expected_total) > 0.005:
             raise HTTPException(status_code=409, detail="Kurs oder Kosten haben sich geändert. Bitte prüfen Sie die neue Kostenübersicht.")
+        opens = await open_orders_for(db, user["id"], body.bond_id)
+        same = next((o for o in opens if abs(o["nominal"] - float(q["nominal"])) < 0.005), None)
+        if same:
+            raise HTTPException(status_code=409, detail={
+                "code": "DUPLICATE_ORDER",
+                "message": f"Für diese Anleihe wartet bereits ein identischer Kaufauftrag ({same['transaction_no']}) auf Bankbestätigung. "
+                           "Ein weiterer identischer Auftrag ist erst nach dessen Abschluss oder Stornierung möglich.",
+            })
+        if opens and not body.confirm_additional:
+            raise HTTPException(status_code=409, detail={
+                "code": "OPEN_ORDER_EXISTS",
+                "message": "Für diese Anleihe wartet bereits ein Kaufauftrag auf Bankbestätigung. "
+                           "Bitte bestätigen Sie ausdrücklich, dass Sie einen weiteren Kaufauftrag erteilen möchten.",
+            })
         if not out["sufficient"]:
             await record_advisory_request(db, user, bond, amount, q["total"], available)
             raise HTTPException(status_code=402, detail={

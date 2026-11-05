@@ -32,7 +32,7 @@ from services.bond_sync import (  # noqa: E402
 from services.bond_audit import (  # noqa: E402
     write_audit, list_audit, price_changed, record_price, list_prices,
 )
-from services.bond_order_service import executable_buy_price  # noqa: E402
+from services.bond_order_service import executable_buy_price, price_expiry_status, PRICE_EXPIRY_WARN_HOURS  # noqa: E402
 
 
 def _validate_binding_price(doc: dict) -> None:
@@ -76,6 +76,7 @@ class BondExtraFields(BaseModel):
     risk_details: Optional[str] = Field(default=None, max_length=6000)
     requests_enabled: Optional[bool] = None
     orders_enabled: Optional[bool] = None
+    min_order_basis: Optional[Literal["purchase", "nominal"]] = None
     legal_issuer_status: Optional[Literal["verified", "pending"]] = None
     terms_status: Optional[Literal["verified", "pending"]] = None
     verification_note: Optional[str] = Field(default=None, max_length=3000)
@@ -290,6 +291,20 @@ async def list_bond_prices(bond_id: str, user: dict = Depends(get_current_user))
         "price_updated_at": pu.isoformat() if isinstance(pu, datetime) else pu,
         "kurs_typ": bond.get("kurs_typ"),
     }
+
+
+@admin_router.get("/price-alerts")
+async def admin_price_alerts(_admin: dict = Depends(require_admin)):
+    """Verbindliche Kaufkurse, die abgelaufen sind oder bald ablaufen."""
+    now = datetime.now(timezone.utc)
+    out = []
+    async for b in db.bond_catalog.find({"kaufkurs_art": "verbindlich", "kaufkurs": {"$ne": None}}):
+        status = price_expiry_status(b, now)
+        if status:
+            out.append({"id": str(b["_id"]), "bond_name": b.get("bond_name"), "isin": b.get("isin"),
+                        "kaufkurs": b.get("kaufkurs"), "valid_until": b.get("kaufkurs_valid_until"),
+                        "is_available": bool(b.get("is_available")), "status": status})
+    return {"alerts": out, "warn_hours": PRICE_EXPIRY_WARN_HOURS}
 
 
 # ─── Admin CRUD ─────────────────────────────────────────────────────────

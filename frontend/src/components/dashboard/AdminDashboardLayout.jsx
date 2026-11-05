@@ -120,7 +120,7 @@ const AdminDashboardLayout = () => {
         { to: '/admin/depot-contracts', label: t('shell.admin.depotContracts', { defaultValue: 'Depotverträge' }), icon: Wallet },
         { to: '/admin/depot-statement-analysis', label: t('shell.admin.depotStatementAnalysis', { defaultValue: 'Depotauszug-Analyse' }), icon: FileText },
         { to: '/admin/bond-positions', label: t('shell.admin.bondPositions', { defaultValue: 'Kunden-Anleihen' }), icon: PRODUCT_ICONS.anleihen },
-        { to: '/admin/bond-catalog', label: t('shell.admin.bondCatalog', { defaultValue: 'Anleihen-Katalog' }), icon: PRODUCT_ICONS.anleihen },
+        { to: '/admin/bond-catalog', label: t('shell.admin.bondCatalog', { defaultValue: 'Anleihen-Katalog' }), icon: PRODUCT_ICONS.anleihen, badge: b('bond_price_alerts') },
         { to: '/admin/bond-requests', label: t('shell.admin.bondRequests', { defaultValue: 'Anleihen-Anfragen' }), icon: Send, badge: (b('pending_bond_requests') || 0) + (b('bond_offer_responses_badge') || 0) || undefined },
         { to: '/admin/support', label: t('shell.admin.supportInbox', { defaultValue: 'Support-Postfach' }), icon: MessageCircle, badge: b('pending_support') },
         { to: '/admin/exports', label: 'Export-Pakete', icon: FileText },

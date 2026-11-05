@@ -4,8 +4,8 @@ Keine Ausführung: Orders werden reserviert und warten auf die Bestätigung der 
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from decimal import Decimal, ROUND_DOWN, ROUND_HALF_EVEN
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal, ROUND_CEILING, ROUND_DOWN, ROUND_HALF_EVEN
 from typing import Optional
 
 from bson import ObjectId
@@ -13,6 +13,7 @@ from bson import ObjectId
 from services.cash_service import get_cash_summary
 
 OPEN_ORDER_STATUSES = ("awaiting_bank", "bank_submitted")
+PRICE_EXPIRY_WARN_HOURS = 24
 _C = Decimal("0.01")
 
 
@@ -49,6 +50,32 @@ def executable_buy_price(bond: dict) -> Optional[Decimal]:
     return Decimal(str(kp))
 
 
+def price_expiry_status(bond: dict, now: Optional[datetime] = None) -> Optional[str]:
+    """'expired' / 'expiring' für verbindliche Kaufkurse, sonst None."""
+    if bond.get("kaufkurs_art") != "verbindlich" or not bond.get("kaufkurs"):
+        return None
+    vu = _parse_dt(bond.get("kaufkurs_valid_until"))
+    now = now or datetime.now(timezone.utc)
+    if not vu or vu <= now:
+        return "expired"
+    if vu <= now + timedelta(hours=PRICE_EXPIRY_WARN_HOURS):
+        return "expiring"
+    return None
+
+
+def min_pieces(bond: dict, denom: Decimal, price: Decimal) -> int:
+    """Kleinste Stückzahl, die die Mindestanlage (Kaufbetrag oder Nennwert) erreicht."""
+    mn = Decimal(str(bond.get("min_order_eur") or 0))
+    if mn <= 0:
+        return 1
+    if bond.get("min_order_basis") == "nominal":
+        return max(1, int((mn / denom).to_integral_value(rounding=ROUND_CEILING)))
+    p = max(1, int((mn / (denom * price / Decimal(100))).to_integral_value(rounding=ROUND_CEILING)))
+    while _money(denom * p * price / Decimal(100)) < mn:
+        p += 1
+    return p
+
+
 def compute_quote(bond: dict, amount_eur: Decimal, price: Decimal) -> dict:
     denom = Decimal(str(bond.get("denomination") or 0)) or Decimal("1")
     unit_cost = denom * price / Decimal(100)
@@ -57,6 +84,16 @@ def compute_quote(bond: dict, amount_eur: Decimal, price: Decimal) -> dict:
     # Gesamtkosten (inkl. Gebühren/Stückzinsen) dürfen den gewünschten Anlagebetrag nicht übersteigen
     while q["pieces"] > 0 and q["total"] > amount_eur:
         q = _quote_for(bond, denom, q["pieces"] - 1, price)
+    mp = min_pieces(bond, denom, price)
+    adjusted = q["pieces"] < mp
+    if adjusted:
+        q = _quote_for(bond, denom, mp, price)
+    q.update({
+        "min_order_eur": bond.get("min_order_eur"),
+        "min_order_basis": bond.get("min_order_basis") or "purchase",
+        "min_pieces": mp,
+        "adjusted_to_minimum": adjusted,
+    })
     return q
 
 
@@ -87,6 +124,27 @@ def _quote_for(bond: dict, denom: Decimal, pieces: int, price: Decimal) -> dict:
         "price_quoted_at": bond.get("kaufkurs_quoted_at"),
         "price_valid_until": bond.get("kaufkurs_valid_until"),
     }
+
+
+async def open_orders_for(db, user_id: str, bond_id: str) -> list:
+    """Angenommene, noch nicht von der Bank bestätigte Kaufaufträge des Kunden für diese Anleihe."""
+    cur = db.bond_purchase_requests.find(
+        {"user_id": ObjectId(user_id), "bond_id": bond_id, "order_type": "direct",
+         "status": {"$in": list(OPEN_ORDER_STATUSES)}},
+        {"transaction_no": 1, "requested_nominal": 1, "reserved_cash": 1, "status": 1, "created_at": 1},
+    ).sort("created_at", -1)
+    out = []
+    async for d in cur:
+        rc = d.get("reserved_cash")
+        ca = d.get("created_at")
+        out.append({
+            "transaction_no": d.get("transaction_no"),
+            "nominal": float(d.get("requested_nominal") or 0),
+            "total": float(rc.to_decimal()) if hasattr(rc, "to_decimal") else rc,
+            "status": d.get("status"),
+            "created_at": ca.isoformat() if isinstance(ca, datetime) else ca,
+        })
+    return out
 
 
 async def available_cash(db, user_id: str) -> Decimal:

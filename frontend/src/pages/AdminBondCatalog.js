@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import BondFormModal from '@/components/admin/bonds/BondFormModal';
 import BondHistoryDialog from '@/components/admin/bonds/BondHistoryDialog';
+import BondPriceAlerts from '@/components/admin/bonds/BondPriceAlerts';
 import { matchesBondSearch, pctDe } from '@/lib/bondDisplay';
 import {
   AdminSubpageLayout,
@@ -221,6 +222,7 @@ const AdminBondCatalog = () => {
           </div>
         }
       />
+      <BondPriceAlerts reloadKey={items} />
       {lastSync && lastSync.status === 'success' && (
         <div
           className="mt-2 rounded-lg border border-bank-border/60 bg-bank-bg/40 px-4 py-3 text-sm text-bank-text-muted"

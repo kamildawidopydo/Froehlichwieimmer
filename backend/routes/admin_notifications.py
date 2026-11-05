@@ -99,6 +99,12 @@ async def admin_notification_counts(
     counts["pending_applications"] = None                # `applications.status=Neu`
     counts["pending_offer_reviews"] = None               # `offer_reviews.status=pending`
     counts["failed_application_email"] = None            # `application_email_outbox.status=failed`
+    from services.bond_order_service import price_expiry_status
+    alerts = 0
+    async for b in _db.bond_catalog.find({"kaufkurs_art": "verbindlich", "kaufkurs": {"$ne": None}, "is_available": True}):
+        if price_expiry_status(b):
+            alerts += 1
+    counts["bond_price_alerts"] = alerts
     counts["pending_insufficient_buying_power"] = await _count_or_none(
         "insufficient_buying_power_events", {"status": "new", "deleted_at": {"$in": [None, False]}}
     )

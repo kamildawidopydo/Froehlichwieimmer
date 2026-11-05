@@ -131,7 +131,8 @@ const ProductDetails = ({ b, testKey }) => {
 
 export const BondOfferCard = ({ bond: b, testKey, eager, amount, onAmountChange, onRequest, onBuy }) => {
   const requestsOpen = b.requests_enabled !== false;
-  const buyable = b.buy_executable === true;
+  const buyable = b.buy_executable === true
+    && (!b.kaufkurs_valid_until || new Date(b.kaufkurs_valid_until).getTime() > Date.now());
   return (
     <div
       className="relative border border-bank-border bg-white p-5 transition-shadow duration-300 hover:shadow-editorial-sm"

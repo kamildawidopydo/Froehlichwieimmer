@@ -27,6 +27,7 @@ const SECTIONS = [
       { k: 'zinstermine', l: 'Zinszahlungstermine', span: 2 },
       { k: 'denomination', l: 'Stückelung (€)', t: 'number' },
       { k: 'min_order_eur', l: 'Mindestanlage (€)', t: 'number' },
+      { k: 'min_order_basis', l: 'Mindestanlage bezogen auf', t: 'select', opts: [['purchase', 'Kaufbetrag (Kurswert)'], ['nominal', 'Nennwert']] },
       { k: 'description', l: 'Beschreibung', t: 'text', span: 2 },
     ],
   },
@@ -77,7 +78,7 @@ const SECTIONS = [
 ];
 
 const ALL = SECTIONS.flatMap((s) => s.fields);
-const DEFAULTS = { is_available: true, requests_enabled: true, orders_enabled: true, is_perpetual: false, currency: 'EUR' };
+const DEFAULTS = { is_available: true, requests_enabled: true, orders_enabled: true, min_order_basis: 'purchase', is_perpetual: false, currency: 'EUR' };
 
 const toForm = (row) =>
   Object.fromEntries(

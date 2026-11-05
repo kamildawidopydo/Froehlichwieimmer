@@ -37,6 +37,11 @@ const NOTIFICATION_MAP = [
     path: '/admin/bond-requests',
   },
   {
+    key: 'bond_price_alerts',
+    title: 'Verbindlicher Anleihe-Kaufkurs läuft bald ab oder ist abgelaufen',
+    path: '/admin/bond-catalog',
+  },
+  {
     key: 'bond_offer_responses',
     title: 'Kunde hat auf ein Anleihe-Angebot reagiert',
     path: '/admin/bond-requests',
