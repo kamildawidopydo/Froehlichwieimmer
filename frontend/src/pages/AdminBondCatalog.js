@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileBarChart2, Plus, Edit, Trash2, RefreshCw, DownloadCloud, History, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
+import { FileBarChart2, Plus, Edit, Trash2, RefreshCw, DownloadCloud, History, Eye, EyeOff, Lock, Unlock, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -170,7 +170,7 @@ const AdminBondCatalog = () => {
   const visible = useMemo(() => {
     let list = items.filter((b) => matchesBondSearch(b, query));
     if (scope === 'manual') list = list.filter((b) => b.source !== 'deutsche_boerse_xfra_bf');
-    if (scope === 'inactive') list = list.filter((b) => !b.is_available || !b.requests_enabled);
+    if (scope === 'inactive') list = list.filter((b) => !b.is_available || !b.requests_enabled || !b.orders_enabled);
     return list;
   }, [items, query, scope]);
 
@@ -340,7 +340,19 @@ const AdminBondCatalog = () => {
                         <span
                           className={`ml-1 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold border ${row.requests_enabled ? 'border-sky-300/50 bg-sky-50 text-sky-700' : 'border-rose-300/50 bg-rose-50 text-rose-700'}`}
                         >
-                          {row.requests_enabled ? 'Anfragen offen' : 'Anfragen gesperrt'}
+                          {row.requests_enabled ? 'Angebotsanfragen offen' : 'Angebotsanfragen gesperrt'}
+                        </span>
+                        <span
+                          className={`ml-1 mt-1 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold border ${row.orders_enabled ? 'border-sky-300/50 bg-sky-50 text-sky-700' : 'border-rose-300/50 bg-rose-50 text-rose-700'}`}
+                          data-testid={`bond-admin-orders-status-${row.id}`}
+                        >
+                          {row.orders_enabled ? 'Kaufaufträge freigegeben' : 'Kaufaufträge gesperrt'}
+                        </span>
+                        <span
+                          className={`ml-1 mt-1 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold border ${row.buy_executable ? 'border-emerald-300/60 bg-emerald-50 text-emerald-800' : 'border-bank-border/40 bg-bank-border/10 text-bank-text-muted'}`}
+                          data-testid={`bond-admin-executable-${row.id}`}
+                        >
+                          {row.buy_executable ? 'Ausführbarer Kurs vorhanden' : 'Kein ausführbarer Kurs'}
                         </span>
                         {(row.legal_issuer_status === 'pending' || row.terms_status === 'pending') && (
                           <span
@@ -369,6 +381,14 @@ const AdminBondCatalog = () => {
                             data-testid={`bond-admin-toggle-requests-${row.id}`}
                           >
                             {row.requests_enabled ? <Lock size={16} /> : <Unlock size={16} />}
+                          </button>
+                          <button
+                            onClick={() => toggle(row, 'orders_enabled')}
+                            className={`p-1.5 rounded hover:bg-bank-border/15 ${row.orders_enabled ? 'text-bank-text-muted' : 'text-rose-600'}`}
+                            title={row.orders_enabled ? 'Kaufaufträge sperren' : 'Kaufaufträge freigeben'}
+                            data-testid={`bond-admin-toggle-orders-${row.id}`}
+                          >
+                            <ShoppingCart size={16} />
                           </button>
                           <button
                             onClick={() => setHistoryBond(row)}

@@ -49,6 +49,14 @@ const AnleihenKaufenPage = () => {
   const retry = () => setReloadKey((k) => k + 1);
 
   useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') retry();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  useEffect(() => {
     let active = true;
     setLoading(true);
     setLoadError('');
@@ -138,6 +146,7 @@ const AnleihenKaufenPage = () => {
       setBuyState({ bond, amount, quote });
     } catch (err) {
       toast.error(err.message);
+      if (err.status === 409) retry();
     }
   };
 
@@ -179,6 +188,7 @@ const AnleihenKaufenPage = () => {
           toast.error('Sitzung abgelaufen. Bitte neu anmelden.');
         } else {
           toast.error(detail);
+          if (resp.status === 400) retry();
         }
         return;
       }
@@ -190,7 +200,7 @@ const AnleihenKaufenPage = () => {
       await refreshBondRequests();
     }
     toast.success(
-      `Ihre Kaufanfrage für die ${bond.bond_name || bond.isin} wurde erfolgreich übermittelt. Unser Team wird Ihre Anfrage prüfen und sich innerhalb von 24 Stunden bei Ihnen melden.`,
+      `Ihre Anfrage wurde erfolgreich übermittelt. Wir erstellen Ihnen ein individuelles Angebot für die ${bond.bond_name || bond.isin} und melden uns innerhalb von 24 Stunden.`,
     );
   };
 

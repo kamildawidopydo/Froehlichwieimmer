@@ -200,7 +200,7 @@ async def create_bond_request(
     if bond.get("requests_enabled") is False:
         raise HTTPException(
             status_code=400,
-            detail="Für diese Anleihe sind derzeit keine Kaufanfragen möglich.",
+            detail="Diese Anleihe ist derzeit nicht für neue Angebotsanfragen freigegeben.",
         )
 
     # Minimum-Investment prüfen (aus Katalog, nicht aus Client-Payload)
@@ -325,11 +325,13 @@ _order_locks: "dict[str, asyncio.Lock]" = {}
 
 async def _direct_quote(body: DirectOrderBody, user: dict):
     bond = await _fetch_investable_bond(body.bond_id)
+    if bond.get("orders_enabled") is False:
+        raise HTTPException(status_code=409, detail="Diese Anleihe ist derzeit nicht für neue Kaufaufträge freigegeben.")
     price = executable_buy_price(bond)
     if price is None:
         raise HTTPException(
             status_code=409,
-            detail="Für diese Anleihe liegt derzeit kein ausführbarer Kaufkurs vor. Bitte fordern Sie ein Kaufangebot an.",
+            detail="Für diese Anleihe liegt derzeit kein verbindlicher Kaufkurs vor. Sie können ein individuelles Angebot anfordern.",
         )
     amount = Decimal(str(body.amount_eur))
     min_order = bond.get("min_order_eur") or 1000

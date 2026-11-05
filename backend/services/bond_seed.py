@@ -2,7 +2,8 @@
 
 Läuft beim Backend-Start: legt den Datensatz nur an, wenn die ISIN fehlt
 ($setOnInsert + unique ISIN-Index). Bestehende Daten werden nie überschrieben.
-Neu angelegt mit gesperrter Kaufanfrage-Funktion (requests_enabled=False).
+Neu angelegt mit freigegebenen Angebotsanfragen; Kaufaufträge nur mit verbindlichem Partnerbank-Kurs.
+Einmalige Migration: früher gesperrt geseedete Datensätze werden für Angebotsanfragen freigegeben.
 """
 from datetime import datetime, timezone
 
@@ -73,7 +74,9 @@ DOC = {
         "Maßgeblich ist die Abrechnung der Partnerbank."
     ),
     "is_available": True,
-    "requests_enabled": False,
+    "requests_enabled": True,
+    "orders_enabled": True,
+    "requests_release_migrated": True,
     "source": "manual",
     "is_manual_override": True,
 }
@@ -87,7 +90,19 @@ async def ensure_rabobank_bond(db) -> bool:
     doc = {**DOC, "created_at": now, "updated_at": now, "price_updated_at": now}
     res = await db.bond_catalog.update_one({"isin": ISIN}, {"$setOnInsert": doc}, upsert=True)
     if not res.upserted_id:
+        await _release_requests_once(db, now)
         return False
     await write_audit(db, "bond", res.upserted_id, "create", None, doc, SEED_USER)
     await record_price(db, res.upserted_id, doc, SEED_USER)
     return True
+
+
+async def _release_requests_once(db, now) -> None:
+    """Einmalig: Angebotsanfragen freigeben; spätere Admin-Sperren bleiben erhalten."""
+    before = await db.bond_catalog.find_one_and_update(
+        {"isin": ISIN, "requests_release_migrated": {"$ne": True}},
+        {"$set": {"requests_enabled": True, "requests_release_migrated": True, "updated_at": now}},
+    )
+    if before and before.get("requests_enabled") is False:
+        await write_audit(db, "bond", before["_id"], "update", {"requests_enabled": False},
+                          {"requests_enabled": True, "note": "Migration: Angebotsanfragen freigegeben"}, SEED_USER)

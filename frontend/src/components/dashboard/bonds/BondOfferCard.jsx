@@ -190,6 +190,16 @@ export const BondOfferCard = ({ bond: b, testKey, eager, amount, onAmountChange,
           data-testid={`bond-amount-input-${testKey}`}
         />
       </div>
+      {!buyable && requestsOpen && (
+        <p className="mb-3 text-[11.5px] text-bank-text-muted" data-testid={`bond-no-binding-price-${testKey}`}>
+          Für diese Anleihe liegt derzeit kein verbindlicher Kaufkurs vor. Sie können ein individuelles Angebot anfordern.
+        </p>
+      )}
+      {!buyable && !requestsOpen && (
+        <p className="mb-3 border-l-2 border-amber-400 bg-amber-50 p-2 text-[11.5px] text-amber-900" data-testid={`bond-locked-hint-${testKey}`}>
+          Diese Anleihe ist derzeit nicht für neue Kaufaufträge oder Angebotsanfragen freigegeben.
+        </p>
+      )}
       {buyable && b.kaufkurs != null && (
         <p className="mb-3 text-[11.5px] text-emerald-800" data-testid={`bond-buy-price-${testKey}`}>
           Verbindlicher Kaufkurs {Number(b.kaufkurs).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} %
@@ -208,10 +218,8 @@ export const BondOfferCard = ({ bond: b, testKey, eager, amount, onAmountChange,
         {buyable
           ? 'Jetzt kaufen'
           : !requestsOpen
-            ? 'Derzeit keine Kaufanfragen möglich'
-            : b.is_perpetual || b.kurs_typ === 'reference'
-              ? 'Kaufangebot anfordern'
-              : 'Kaufanfrage senden'}
+            ? 'Derzeit nicht freigegeben'
+            : 'Kaufangebot anfordern'}
       </Button>
     </div>
   );

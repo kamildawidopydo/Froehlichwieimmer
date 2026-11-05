@@ -70,13 +70,14 @@ const SECTIONS = [
     title: 'Sichtbarkeit',
     fields: [
       { k: 'is_available', l: 'Im Kundenbereich sichtbar', t: 'bool' },
-      { k: 'requests_enabled', l: 'Für neue Kaufanfragen freigegeben', t: 'bool' },
+      { k: 'requests_enabled', l: 'Kaufangebote anfordern erlaubt', t: 'bool' },
+      { k: 'orders_enabled', l: 'Kaufaufträge freigegeben (nur mit verbindlichem Kaufkurs)', t: 'bool' },
     ],
   },
 ];
 
 const ALL = SECTIONS.flatMap((s) => s.fields);
-const DEFAULTS = { is_available: true, requests_enabled: true, is_perpetual: false, currency: 'EUR' };
+const DEFAULTS = { is_available: true, requests_enabled: true, orders_enabled: true, is_perpetual: false, currency: 'EUR' };
 
 const toForm = (row) =>
   Object.fromEntries(

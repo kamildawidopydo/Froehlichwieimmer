@@ -67,7 +67,7 @@ async def admin_notification_counts(
     # Real vorhandene Collections
     counts["pending_orders"] = await _count_or_none("stock_orders", {"status": "pending"})
     counts["pending_bond_requests"] = await _count_or_none(
-        "bond_purchase_requests", {"status": "pending"}
+        "bond_purchase_requests", {"status": {"$in": ["pending", "awaiting_bank"]}}
     )
     counts["bond_offer_responses"] = await _count_or_none(
         "bond_purchase_requests",
@@ -99,7 +99,9 @@ async def admin_notification_counts(
     counts["pending_applications"] = None                # `applications.status=Neu`
     counts["pending_offer_reviews"] = None               # `offer_reviews.status=pending`
     counts["failed_application_email"] = None            # `application_email_outbox.status=failed`
-    counts["pending_insufficient_buying_power"] = None   # `insufficient_buying_power_events.status=new`
+    counts["pending_insufficient_buying_power"] = await _count_or_none(
+        "insufficient_buying_power_events", {"status": "new", "deleted_at": {"$in": [None, False]}}
+    )
 
     return {
         "counts": counts,

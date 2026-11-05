@@ -75,6 +75,7 @@ class BondExtraFields(BaseModel):
     risk_note: Optional[str] = Field(default=None, max_length=300)
     risk_details: Optional[str] = Field(default=None, max_length=6000)
     requests_enabled: Optional[bool] = None
+    orders_enabled: Optional[bool] = None
     legal_issuer_status: Optional[Literal["verified", "pending"]] = None
     terms_status: Optional[Literal["verified", "pending"]] = None
     verification_note: Optional[str] = Field(default=None, max_length=3000)
@@ -233,6 +234,7 @@ def _serialize(doc: dict) -> dict:
         **{k: doc.get(k) for k in BondExtraFields.model_fields},
         "is_perpetual": bool(doc.get("is_perpetual", False)),
         "requests_enabled": doc.get("requests_enabled") is not False,
+        "orders_enabled": doc.get("orders_enabled") is not False,
         "buy_executable": executable_buy_price(doc) is not None,
         "price_updated_at": doc["price_updated_at"].isoformat() if isinstance(doc.get("price_updated_at"), datetime) else doc.get("price_updated_at"),
         "created_at": ca.isoformat() if isinstance(ca, datetime) else ca,

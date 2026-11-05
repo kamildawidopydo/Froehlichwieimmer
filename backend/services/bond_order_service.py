@@ -36,7 +36,7 @@ def _parse_dt(v) -> Optional[datetime]:
 def executable_buy_price(bond: dict) -> Optional[Decimal]:
     """Nur eine verbindliche, gültige Kursstellung der Partnerbank ist ausführbar.
     Der angezeigte (Referenz-)Kurs `aktueller_kurs` wird nie verwendet."""
-    if not bond.get("is_available") or bond.get("requests_enabled") is False:
+    if not bond.get("is_available") or bond.get("orders_enabled") is False:
         return None
     kp = bond.get("kaufkurs")
     if not kp or float(kp) <= 0 or bond.get("kaufkurs_art") != "verbindlich":
