@@ -1,0 +1,63 @@
+{
+  "summary": "Iteration 114: end-to-end test of buying a bond directly from the customer's cash balance. Backend: new suite test_bond_direct_orders_iter114.py, 10 of 11 passed. Covered: binding-price validation (422), the buy_executable flag, the quote math, 409 for non-executable bonds and for expected_total mismatch, parallel orders (exactly one 201 and one 402, so no double spending), reservation reflected in the cash summary and buying_power, reject and cancel releasing the reservation, bank-submit, execution guards, an idempotent execute (one debit, one position, resumed=true), the insufficient case (402 plus one deduplicated IBP event, also deduplicated while in_progress), tester's insufficient dedupe, and expired/indicative prices not executable. The one failure is a real bug: the executed debit is 1 cent lower than the reserved and confirmed total because the two services round differently. Regression suites iter111-113: 24 passed, 1 skipped. Frontend (Playwright, TEST customer): all requested flows work, with minor UI issues listed below.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/admin/bonds/requests/{id}/execute vs POST /api/bonds/orders", "issue": "Rounding mismatch. compute_quote (bond_order_service._money) uses ROUND_HALF_UP; bond_execution_service._q_money uses ROUND_HALF_EVEN. Repro: kaufkurs 101.5, nominal 975 gives gross 989.625. The quote and reservation show 989.63 (total 1.009,93 €), and the admin execute modal preview also shows 989,63 € · 1.009,93 €. The saga books 989.62 (total 1.009,92 €) and the customer sees 'Abgerechnet 1.009,92 €'. Fix: use one rounding mode for both, ideally a shared helper."},
+      {"endpoint": "POST /api/bonds/orders/check", "issue": "The Mindestanlage check uses amount_eur, not the actual purchase amount. With amount 1000 on a denomination-25 bond at 101.5 %, the purchase is 989,63 € (below min_order_eur 1000) and the total is 1.009,93 € (above the amount the customer asked for). Decide whether the minimum applies to the purchase amount or nominal, and whether pieces should be capped so that total ≤ amount."},
+      {"endpoint": "services/bond_order_service.record_advisory_request", "issue": "customer_name falls back to the email, not users.name. The IBP admin row shows the email as the customer name, while the bond requests page shows 'TEST_UI Kunde'."},
+      {"endpoint": "_transition_status (reject)", "issue": "The audit 'before' is hard-coded to {'status':'pending'}, even when rejecting awaiting_bank or bank_submitted orders."},
+      {"endpoint": "bond_execution_service._serialize", "issue": "The execute response leaves out total_amount, accrued_interest, fees and bank_reference, although they are persisted."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BondOfferCard price meta", "issue": "The meta line for a bond with no kurs_quelle starts with a separator: '· Stand 05.11.2026, 11:41'.", "selector": "[data-testid=bond-card-price-meta]", "priority": "LOW"},
+      {"component": "BondBuyDialog", "issue": "On 409 'Kurs oder Kosten haben sich geändert' only a toast appears. The dialog keeps the stale quote and the customer has to close and reopen it. Re-fetch /orders/check on 409.", "selector": "[data-testid=bond-buy-confirm]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Customer Aufträge", "issues": ["A direct order appears twice: in the 'Anleihen-Kaufanfragen' table (Volumen 1.000,00 € = requested amount, date '5.11.2026 · 11:39' not zero-padded) and in the 'Kaufaufträge aus dem Guthaben' panel. Consider excluding order_type 'direct' from the request table, or labelling it."]},
+      {"screen": "Admin execute modal / BondFormModal", "issues": ["Bank confirmation date uses a native <input type=date>, and Kursstellung / Gültig bis use native datetime-local instead of the shadcn calendar"]}
+    ]
+  },
+  "verified_passing": [
+    "Saving 'verbindlich' without Quelle gives 422 'Ein verbindlicher Kaufkurs der Partnerbank benötigt: Kursquelle.' in the API and as an admin UI toast. Saving with all fields gives buy_executable true. An expired valid_until or 'indikativ' gives false, and /orders/check returns 409.",
+    "Rabobank card shows 'Kaufangebot anfordern' (bond-request-purchase-*). The TEST bond shows 'Verbindlicher Kaufkurs 101,50 % · gültig bis …' and 'Jetzt kaufen' (bond-buy-now-*). Rabobank /orders/check returns 409.",
+    "Quote: 39 Stk., 975 nominal, purchase 989,63, accrued 7,80, fees 12,50 (0.25 % with a 10 € minimum, plus 2,50 € fixed), total 1.009,93 €. The dialog shows German formatting, the accrued_note and the Kursstellung line.",
+    "Confirm returns 201: status awaiting_bank, transaction_no AO-YYYYMMDD-XXXXXXXX, reserved_cash = total. Balance stays 1500 and available becomes 490,07. No bond_position is created. Toast reads 'Order in Bearbeitung'.",
+    "Two parallel orders: one 201 and one 402. A sequential second order: 402, with the UI shortfall dialog showing the exact message, Verfügbar 490,07 €, Benötigt 1.009,93 € and Fehlend 519,86 €, and no confirm button.",
+    "Admin: 'An Bank übermittelt' → 'An Partnerbank übermittelt'. Execute while still awaiting_bank: 409. Execute without bank ref/date: UI error, API 422 BANK_CONFIRMATION_REQUIRED. Negative fees: 422. With ref + date: executed, exactly one ledger debit and one position. Re-execute returns resumed=true with no second debit.",
+    "Customer bond-orders-panel shows 'AUSGEFÜHRT' and 'Ihr Kaufauftrag für die TEST_Direktkauf Anleihe wurde erfolgreich ausgeführt. Die Anleihe wurde Ihrem Depot gutgeschrieben.' Open orders show 'Order in Bearbeitung – wartet auf Bankbestätigung'.",
+    "Reject (awaiting_bank) and cancel (bank_submitted) both release the reservation: available goes back to the previous value.",
+    "IBP: one event per customer+bond (deduplicated across repeated checks and orders, also while in_progress). The admin tab admin-ibp-asset-bond lists KD-ID, ISIN, Gewünschtes Kaufvolumen, Benötigt, Verfügbar and Fehlend. Changing the status to 'In Bearbeitung' from the UI persists.",
+    "Mobile 390px: the shortfall dialog renders correctly.",
+    "Regression: iter111/112/113 suites pass (24 passed, 1 skipped). /api/portfolio/cash buying_power equals the summary available, which includes bond reservations. The stock order buy check (portfolio.py:1028) uses summary['available']."
+  ],
+  "test_report_links": ["/app/backend/tests/test_bond_direct_orders_iter114.py", "/app/backend/tests/ui_setup_iter114.py", "/app/test_reports/pytest/iter114.xml"],
+  "action_items": [
+    "Unify money rounding between bond_order_service (HALF_UP) and bond_execution_service (HALF_EVEN) so that the executed debit equals the reserved and confirmed total (currently 1.009,92 vs 1.009,93 €)",
+    "Decide the Mindestanlage semantics: the check is on the requested amount, while the purchase can fall below the minimum and the total can exceed the requested amount",
+    "IBP customer_name: fall back to users.name before the email",
+    "Optional: re-quote in BondBuyDialog on 409; fix the leading '· Stand' in the card meta; avoid listing direct orders twice on the Orders page; fix the audit 'before' status on reject of direct orders"
+  ],
+  "critical_code_review_comments": [
+    "Double-spend protection relies on a per-process asyncio.Lock (_order_locks), which is safe only with uvicorn --workers 1. With several workers or pods, two concurrent orders can both pass the available check. Use an atomic Mongo guard instead: a per-user lock doc via find_one_and_update, or a reservation ledger with a conditional insert.",
+    "_order_locks grows without bound, one Lock per user and never evicted (minor).",
+    "Execution checks only balance ≥ total. If the admin enters higher fees or accrued interest than were reserved, the extra amount can consume other open reservations of the same customer. Consider checking balance − other reservations ≥ total.",
+    "The execute endpoint still accepts 'fail_after' (crash injection) in production code. It is admin-only but should be gated behind an env flag.",
+    "admin_delete_user does not delete bond_purchase_requests, bond_executions or insufficient_buying_power_events, so orphans remain after customer deletion. Test cleanup handled them manually.",
+    "BondBuyDialog uses relative fetch('/api/...') rather than REACT_APP_BACKEND_URL. This works with the same-origin ingress but is inconsistent with the env guideline."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_bond_direct_orders_iter114.py (new)",
+    "/app/backend/tests/ui_setup_iter114.py (new)",
+    "/app/backend/tests/test_bond_offers_iter112.py and test_bond_offers_iter113.py (_counts now reads bond_offer_responses_badge, matching the new toast/badge split in admin_notifications)"
+  ],
+  "success_rate": {"backend": "91% (10/11 new; 24/24 regression, 1 skip)", "frontend": "~95% (all flows work; minor UI issues)"},
+  "seed_data_creation": "Everything was cleaned up by id. TEST customers (pytest runs and UI 6aec6a539af2ddf16fa28a63) were deleted via the admin API, together with their cash_ledger, bond_positions and notifications. TEST bonds with ISIN TEST00000099 (pytest bond ids incl. 6aec699a62134660f54cc38f; UI bond 6aec6a549af2ddf16fa28a65) were deleted, along with their price history. Direct orders were deleted (UI order 6aec6ad99af2ddf16fa28a68 and pytest orders), plus their bond_executions and audit rows. 25 audit_log rows for the TEST bond were deleted. IBP events (UI 6aec6adc82c2f698dc047685; pytest events incl. tester's) were hard-deleted. Rabobank 6aec4ccd70262b166764f09d was never modified: kaufkurs/kaufkurs_art/quelle/zeitpunkt/gültig are null, requests_enabled is true, aktueller_kurs is 108.75, and price history holds only the system-seed row. Tester's funds were not touched: balance 300, 0 bond IBP events left.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && python -m pytest tests/test_bond_direct_orders_iter114.py -n 0 -s (self-contained: creates and cleans up a TEST customer with a 1500 € deposit and a TEST bond TEST00000099). The last test, test_execution_total_equals_reserved_total, fails until the rounding is unified. Then run iter113/112/111 with -n 0. UI data: python tests/ui_setup_iter114.py setup → prints uid/email/pw/bid; afterwards run cleanup <uid> <bid>. Visitor gate: use get_by_role('button', name='Akzeptieren', exact=True) inside [data-testid=visitor-welcome-gate]. Admin row text is CSS-uppercased in inner_text.",
+  "test_credentials": "qa.admin@kapital-direkt24.de / Qa-ra46CVrWIW3wg6l5EI6IKqbx (admin); tester@mester.de / HHHKKK222 (customer, 300 € balance)"
+}

@@ -61,7 +61,7 @@ def _offer(admin, rid, price=108.5, valid=FUTURE):
 
 def _counts(admin):
     c = admin.get(f"{BASE_URL}/api/admin/notifications/counts", timeout=30).json()["counts"]
-    return c.get("pending_bond_requests") or 0, c.get("bond_offer_responses") or 0
+    return c.get("pending_bond_requests") or 0, c.get("bond_offer_responses_badge") or 0
 
 
 def _cancel(admin, rid):

@@ -474,6 +474,7 @@ async def _transition_status(
     }
     if body.decision_note is not None:
         update_doc["$set"]["decision_note"] = body.decision_note.strip() or None
+    prior = await db.bond_purchase_requests.find_one({"_id": ObjectId(request_id)}, {"status": 1})
     result = await db.bond_purchase_requests.find_one_and_update(
         {"_id": ObjectId(request_id),
          "status": {"$in": ["pending"] + (["awaiting_bank", "bank_submitted"] if to_status == "rejected" else [])}},
@@ -488,7 +489,7 @@ async def _transition_status(
             status_code=409,
             detail=f"Anfrage bereits '{existing.get('status')}' — kein weiterer Übergang möglich",
         )
-    await write_audit(db, "bond_request", request_id, to_status, {"status": "pending"},
+    await write_audit(db, "bond_request", request_id, to_status, {"status": (prior or {}).get("status", "pending")},
                       {"status": to_status, "decision_note": result.get("decision_note")}, admin_user)
     return await _serialize_admin(result)
 

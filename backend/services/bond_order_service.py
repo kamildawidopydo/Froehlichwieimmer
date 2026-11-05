@@ -5,7 +5,7 @@ Keine Ausführung: Orders werden reserviert und warten auf die Bestätigung der 
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
+from decimal import Decimal, ROUND_DOWN, ROUND_HALF_EVEN
 from typing import Optional
 
 from bson import ObjectId
@@ -17,7 +17,8 @@ _C = Decimal("0.01")
 
 
 def _money(d: Decimal) -> Decimal:
-    return d.quantize(_C, rounding=ROUND_HALF_UP)
+    # gleiche Rundung wie die Ausführungs-Saga (Source of Truth)
+    return d.quantize(_C, rounding=ROUND_HALF_EVEN)
 
 
 def _parse_dt(v) -> Optional[datetime]:
@@ -52,6 +53,14 @@ def compute_quote(bond: dict, amount_eur: Decimal, price: Decimal) -> dict:
     denom = Decimal(str(bond.get("denomination") or 0)) or Decimal("1")
     unit_cost = denom * price / Decimal(100)
     pieces = int((amount_eur / unit_cost).to_integral_value(rounding=ROUND_DOWN)) if unit_cost > 0 else 0
+    q = _quote_for(bond, denom, pieces, price)
+    # Gesamtkosten (inkl. Gebühren/Stückzinsen) dürfen den gewünschten Anlagebetrag nicht übersteigen
+    while q["pieces"] > 0 and q["total"] > amount_eur:
+        q = _quote_for(bond, denom, q["pieces"] - 1, price)
+    return q
+
+
+def _quote_for(bond: dict, denom: Decimal, pieces: int, price: Decimal) -> dict:
     nominal = denom * pieces
     purchase = _money(nominal * price / Decimal(100))
     acc_pct = bond.get("accrued_interest_pct")
@@ -101,7 +110,8 @@ async def record_advisory_request(db, user: dict, bond: dict, amount_eur: Decima
     """Beratungsanfrage (insufficient_buying_power_events), eine offene je Kunde + Anleihe."""
     now = datetime.now(timezone.utc)
     uid = ObjectId(user["id"])
-    name = " ".join(x for x in (user.get("first_name"), user.get("last_name")) if x).strip() or user.get("email")
+    name = (" ".join(x for x in (user.get("first_name"), user.get("last_name")) if x).strip()
+            or user.get("name") or user.get("email"))
     await db.insufficient_buying_power_events.update_one(
         {"user_id": uid, "asset_type": "bond", "bond_id": str(bond["_id"]),
          "status": {"$in": ["new", "in_progress"]}, "deleted_at": {"$in": [None, False]}},

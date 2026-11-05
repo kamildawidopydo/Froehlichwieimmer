@@ -66,12 +66,15 @@ const PriceMeta = ({ b }) => {
   const changePct = formatSigned(b.kursveraenderung_pct, 2, ' %');
   const stamp = b.kurs_datum || (b.price_updated_at && dateTimeDe(b.price_updated_at));
   if (!isReferencePrice(b) && !change && !stamp) return null;
+  const parts = [
+    isReferencePrice(b) && <span key="r" className="font-medium">{b.kurs_hinweis || 'Referenzkurs'}</span>,
+    change && <span key="c">Veränderung {change} / {changePct}</span>,
+    stamp && <span key="s">{isReferencePrice(b) ? 'erfasst' : 'Stand'} {stamp}</span>,
+    isReferencePrice(b) && <span key="n">kein aktueller Marktpreis</span>,
+  ].filter(Boolean);
   return (
     <p className="mb-4 -mt-2 text-[11px] leading-snug text-bank-text-muted" data-testid="bond-card-price-meta">
-      {isReferencePrice(b) && <span className="font-medium">{b.kurs_hinweis || 'Referenzkurs'}</span>}
-      {change && <span> · Veränderung {change} / {changePct}</span>}
-      {stamp && <span> · {isReferencePrice(b) ? 'erfasst' : 'Stand'} {stamp}</span>}
-      {isReferencePrice(b) && <span> · kein aktueller Marktpreis</span>}
+      {parts.map((p, i) => <React.Fragment key={i}>{i > 0 && ' · '}{p}</React.Fragment>)}
     </p>
   );
 };

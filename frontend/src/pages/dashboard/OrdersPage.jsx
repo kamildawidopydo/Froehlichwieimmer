@@ -646,7 +646,7 @@ const OrdersPage = () => {
               </SectionHead>
 
               <div ref={bondOrdersListRef} className="space-y-3 md:hidden">
-                {bondPurchaseRequests.map((b) => {
+                {bondPurchaseRequests.filter((x) => x.order_type !== 'direct').map((b) => {
                   const meta = BOND_STATUS_META[b.status] || BOND_STATUS_META.pending;
                   return (
                     <div
@@ -706,7 +706,7 @@ const OrdersPage = () => {
                   { label: 'Hinweis', align: 'left' },
                 ]}
               >
-                {bondPurchaseRequests.map((b) => {
+                {bondPurchaseRequests.filter((x) => x.order_type !== 'direct').map((b) => {
                   const meta = BOND_STATUS_META[b.status] || BOND_STATUS_META.pending;
                   return (
                     <tr key={b.id} className="border-b border-bank-border last:border-b-0 transition-colors hover:bg-bank-bg/45">

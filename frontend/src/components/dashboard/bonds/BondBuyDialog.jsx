@@ -72,6 +72,14 @@ export const BondBuyDialog = ({ state, onClose, onOrdered }) => {
     } catch (err) {
       if (err.status === 402 && err.detail) {
         setQuote({ ...q, sufficient: false, available: err.detail.available, total: err.detail.required, missing: err.detail.missing });
+      } else if (err.status === 409) {
+        toast.error(err.message);
+        try {
+          setQuote(await fetchBuyQuote(bond.id, state.amount));
+        } catch (e2) {
+          toast.error(e2.message);
+          onClose();
+        }
       } else {
         toast.error(err.message);
       }

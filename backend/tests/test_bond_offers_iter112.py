@@ -69,7 +69,7 @@ def _new_request(cust, mdb, amount=1000):
 def _counts(admin):
     r = admin.get(f"{BASE_URL}/api/admin/notifications/counts", timeout=30)
     assert r.status_code == 200, r.text
-    return r.json()["counts"].get("bond_offer_responses")
+    return r.json()["counts"].get("bond_offer_responses_badge")
 
 
 def _snap(mdb):
