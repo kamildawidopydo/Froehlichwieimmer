@@ -5,7 +5,6 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
-  ShoppingCart,
   Info,
 } from 'lucide-react';
 import { PRODUCT_ICONS } from '@/lib/productIcons';
@@ -16,11 +15,10 @@ import { PageContainer, PageHeader, SurfaceCard } from '@/components/dashboard/P
 import VermoegenBreadcrumb from '@/components/dashboard/VermoegenBreadcrumb';
 import VermoegenSubNav from '@/components/dashboard/VermoegenSubNav';
 import { CardListSkeleton } from '@/components/Skeleton';
-import { formatEUR } from '@/lib/dashboardFormatters';
-import { computeBondMetrics } from '@/lib/dashboardMetrics';
 import { useAuth } from '@/context/AuthContext';
 import { useDashboardData } from '@/context/DashboardDataContext';
-import BondLogo from '@/components/BondLogo';
+import BondOfferCard from '@/components/dashboard/bonds/BondOfferCard';
+import { matchesBondSearch, yearsRemaining } from '@/lib/bondDisplay';
 
 const SORT_OPTIONS = [
   { id: 'rest_asc', label: 'Kürzeste Laufzeit', field: 'faelligkeitsdatum', dir: 'asc' },
@@ -28,14 +26,6 @@ const SORT_OPTIONS = [
   { id: 'kupon_desc', label: 'Höchster Kupon', field: 'kupon_rate', dir: 'desc' },
   { id: 'kupon_asc', label: 'Niedrigster Kupon', field: 'kupon_rate', dir: 'asc' },
 ];
-
-const formatPct = (value, digits = 2) => {
-  if (value == null || !Number.isFinite(value)) return '–';
-  return `${value.toLocaleString('de-DE', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })}%`;
-};
 
 const AnleihenKaufenPage = () => {
   const navigate = useNavigate();
@@ -99,36 +89,23 @@ const AnleihenKaufenPage = () => {
   const filtered = useMemo(() => {
     let list = bonds.slice();
     if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (b) =>
-          (b.bond_name || '').toLowerCase().includes(q) ||
-          (b.isin || '').toLowerCase().includes(q) ||
-          (b.issuer || '').toLowerCase().includes(q),
-      );
+      list = list.filter((b) => matchesBondSearch(b, search));
     }
     if (filters.issuer !== 'all') {
       list = list.filter((b) => b.issuer === filters.issuer);
     }
-    const today = new Date();
     if (filters.minLaufzeitJahre) {
       const min = Number(filters.minLaufzeitJahre);
       list = list.filter((b) => {
-        if (!b.faelligkeitsdatum) return false;
-        const years =
-          (new Date(b.faelligkeitsdatum).getTime() - today.getTime()) /
-          (365.25 * 24 * 3600 * 1000);
-        return years >= min;
+        const years = yearsRemaining(b);
+        return years != null && years >= min;
       });
     }
     if (filters.maxLaufzeitJahre) {
       const max = Number(filters.maxLaufzeitJahre);
       list = list.filter((b) => {
-        if (!b.faelligkeitsdatum) return false;
-        const years =
-          (new Date(b.faelligkeitsdatum).getTime() - today.getTime()) /
-          (365.25 * 24 * 3600 * 1000);
-        return years <= max;
+        const years = yearsRemaining(b);
+        return years != null && years <= max;
       });
     }
 
@@ -137,8 +114,8 @@ const AnleihenKaufenPage = () => {
       const av = a[sortDef.field];
       const bv = b[sortDef.field];
       if (sortDef.field === 'faelligkeitsdatum') {
-        const at = av ? new Date(av).getTime() : 0;
-        const bt = bv ? new Date(bv).getTime() : 0;
+        const at = a.is_perpetual ? Number.MAX_SAFE_INTEGER : av ? new Date(av).getTime() : 0;
+        const bt = b.is_perpetual ? Number.MAX_SAFE_INTEGER : bv ? new Date(bv).getTime() : 0;
         return sortDef.dir === 'asc' ? at - bt : bt - at;
       }
       return sortDef.dir === 'asc'
@@ -197,7 +174,7 @@ const AnleihenKaufenPage = () => {
       await refreshBondRequests();
     }
     toast.success(
-      `Ihre Anleihe-Kaufanfrage für "${bond.bond_name || bond.isin}" wurde erfolgreich übermittelt.`,
+      `Ihre Kaufanfrage für die ${bond.bond_name || bond.isin} wurde erfolgreich übermittelt. Unser Team wird Ihre Anfrage prüfen und sich innerhalb von 24 Stunden bei Ihnen melden.`,
     );
   };
 
@@ -249,7 +226,7 @@ const AnleihenKaufenPage = () => {
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Name, ISIN, Emittent…"
+                    placeholder="Name, ISIN, WKN, Emittent, Kupon…"
                     className="h-9 pl-8 text-sm"
                     data-testid="bonds-search-input"
                   />
@@ -303,7 +280,7 @@ const AnleihenKaufenPage = () => {
                   />
                 </div>
                 <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-bank-text-muted">
-                  Wirkt nur bei Anleihen mit Fälligkeit
+                  Bei unbefristeten Anleihen gilt die Laufzeit als unbegrenzt
                 </p>
               </div>
 
@@ -398,119 +375,16 @@ const AnleihenKaufenPage = () => {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {filtered.map((b, idx) => {
                 const key = bondKey(b, idx);
-                const metrics = computeBondMetrics(b);
-                const yearsRemaining = b.faelligkeitsdatum
-                  ? (new Date(b.faelligkeitsdatum).getTime() - Date.now()) /
-                    (365.25 * 24 * 3600 * 1000)
-                  : null;
                 return (
-                  <div
+                  <BondOfferCard
                     key={key}
-                    className="relative border border-bank-border bg-white p-5 transition-shadow duration-300 hover:shadow-editorial-sm"
-                    data-testid={`bond-card-${key}`}
-                  >
-                    <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-bank-gold/55 via-bank-gold/35 to-transparent" />
-                    <div className="mb-4 flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <BondLogo bond={b} size="md" eager={idx < 4} />
-                        <div className="min-w-0">
-                          <p
-                            className="dashboard-page-title truncate text-[1.1rem] font-semibold leading-tight text-bank-text"
-                          >
-                            {b.bond_name || b.isin}
-                          </p>
-                          <p className="mt-1 font-mono text-[10.5px] uppercase tracking-[0.16em] text-bank-text-muted">
-                            {b.issuer || ''}
-                            {b.isin ? ` · ISIN ${b.isin}` : ''}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-[1.65rem] font-semibold leading-none tabular-nums text-bank-primary">
-                          {b.kupon_rate != null
-                            ? `${Number(b.kupon_rate).toLocaleString('de-DE')}%`
-                            : '–'}
-                        </p>
-                        <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">
-                          Kupon p.a.
-                        </p>
-                      </div>
-                    </div>
-                    <dl className="mb-5 grid grid-cols-2 gap-3 border-t border-bank-border pt-4">
-                      {[
-                        {
-                          label: 'Aktueller Kurs',
-                          val:
-                            b.aktueller_kurs != null
-                              ? `${Number(b.aktueller_kurs).toLocaleString('de-DE')}%`
-                              : '–',
-                        },
-                        {
-                          label: 'Fälligkeit',
-                          val: b.faelligkeitsdatum
-                            ? new Date(b.faelligkeitsdatum).toLocaleDateString('de-DE')
-                            : '–',
-                        },
-                        {
-                          label: 'Restlaufzeit',
-                          val:
-                            yearsRemaining != null && yearsRemaining > 0
-                              ? `${yearsRemaining.toFixed(1)} J.`
-                              : yearsRemaining != null
-                                ? 'fällig'
-                                : '–',
-                        },
-                        {
-                          label: 'Aktuelle Rendite',
-                          val: formatPct(metrics.currentYield),
-                        },
-                        {
-                          label: 'Approx. YTM',
-                          val: formatPct(metrics.approxYtm),
-                        },
-                        {
-                          label: 'Min. Volumen',
-                          val: b.min_order_eur ? formatEUR(b.min_order_eur) : '1.000 €',
-                        },
-                      ].map((kv) => (
-                        <div key={kv.label}>
-                          <dt className="font-mono text-[10px] uppercase tracking-[0.22em] text-bank-text-muted">
-                            {kv.label}
-                          </dt>
-                          <dd className="rate-figure mt-1 text-[13px] tabular-nums text-bank-text">
-                            {kv.val}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                    <div className="mb-4">
-                      <label className="mb-1.5 block font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-bank-text-muted">
-                        Ordervolumen (EUR)
-                      </label>
-                      <Input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={amountByBond[key] ?? (b.min_order_eur || 1000)}
-                        onChange={(e) =>
-                          setAmountByBond((prev) => ({
-                            ...prev,
-                            [key]: e.target.value,
-                          }))
-                        }
-                        className="h-9 text-sm"
-                      />
-                    </div>
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      className="w-full"
-                      onClick={() => requestPurchase(b, idx)}
-                      data-testid={`bond-request-purchase-${key}`}
-                    >
-                      <ShoppingCart size={14} strokeWidth={1.5} /> Kaufanfrage senden
-                    </Button>
-                  </div>
+                    bond={b}
+                    testKey={key}
+                    eager={idx < 4}
+                    amount={amountByBond[key] ?? (b.min_order_eur || 1000)}
+                    onAmountChange={(v) => setAmountByBond((prev) => ({ ...prev, [key]: v }))}
+                    onRequest={() => requestPurchase(b, idx)}
+                  />
                 );
               })}
             </div>

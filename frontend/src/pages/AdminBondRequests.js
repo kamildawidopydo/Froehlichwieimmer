@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Send, Check, RefreshCw, Trash2, X, Package } from 'lucide-react';
+import { Send, Check, RefreshCw, Trash2, X, Package, StickyNote, FileSignature, Ban, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ import {
   adminRowHover,
 } from '@/components/admin/AdminSubpageChrome';
 import { formatEUR } from '@/lib/dashboardFormatters';
+import BondRequestActionDialog from '@/components/admin/bonds/BondRequestActionDialog';
 
 /**
  * Admin Bond-Anfragen (Session 82.04 → Session 82.37) — Merge Mongo + Legacy.
@@ -110,6 +111,14 @@ const AdminBondRequests = () => {
   const [executeForm, setExecuteForm] = useState(EMPTY_EXEC_FORM);
   const [executeError, setExecuteError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [dialog, setDialog] = useState({ action: 'details', row: null });
+
+  const onDialogDone = async (action) => {
+    const msg = { note: 'Notiz gespeichert', offer: 'Angebot gespeichert', cancel: 'Anfrage storniert' };
+    toast.success(msg[action] || 'Gespeichert');
+    setDialog({ action: 'details', row: null });
+    await load();
+  };
 
   const bondById = useMemo(() => {
     const m = {};
@@ -340,21 +349,24 @@ const AdminBondRequests = () => {
                   const isPending = row.status === 'pending';
                   const isApproved = row.status === 'approved';
                   const isExecuted = row.status === 'executed';
-                  const isRejected = row.status === 'rejected' || row.status === 'cancelled';
+                  const isRejected = row.status === 'rejected';
+                  const isCancelled = row.status === 'cancelled';
                   const statusCls = isExecuted
                     ? 'border-sky-300/55 bg-sky-50 text-sky-700'
                     : isApproved
                       ? 'border-emerald-300/55 bg-emerald-50 text-emerald-700'
-                      : isRejected
+                      : isRejected || isCancelled
                         ? 'border-rose-300/55 bg-rose-50 text-rose-700'
                         : 'border-amber-300/55 bg-amber-50 text-amber-700';
                   const statusLabel = isExecuted
                     ? 'Ausgeführt'
                     : isApproved
                       ? 'Genehmigt'
-                      : isRejected
-                        ? 'Abgelehnt'
-                        : 'Offen';
+                      : isCancelled
+                        ? 'Storniert'
+                        : isRejected
+                          ? 'Abgelehnt'
+                          : 'Offen';
                   const isMongo = row.backend === 'mongo';
                   return (
                     <tr
@@ -372,6 +384,9 @@ const AdminBondRequests = () => {
                       </td>
                       <td className="px-4 py-3 text-[13px] text-bank-text">
                         {row.customer_name || row.customer_email || '–'}
+                        {row.customer_display_id && (
+                          <p className="font-mono text-[10.5px] text-bank-text-muted">{row.customer_display_id}</p>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-[13px] font-medium text-bank-text">
@@ -380,6 +395,16 @@ const AdminBondRequests = () => {
                         {row.isin && row.bond_name && (
                           <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-bank-text-muted">
                             ISIN · {row.isin}
+                          </p>
+                        )}
+                        {row.reference_price_pct != null && (
+                          <p className="mt-0.5 text-[10.5px] text-bank-text-muted">
+                            Kurs bei Anfrage {row.reference_price_pct}%{row.reference_price_type === 'reference' ? ' (Referenz)' : ''}
+                          </p>
+                        )}
+                        {row.offer && (
+                          <p className="mt-0.5 text-[10.5px] text-sky-700" data-testid={`bond-request-offer-badge-${row.id}`}>
+                            Angebot · {row.offer.price_pct}% · {formatEUR(row.offer.amount_eur)}
                           </p>
                         )}
                       </td>
@@ -424,6 +449,27 @@ const AdminBondRequests = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
+                        {isMongo && (
+                          <div className="mb-1.5 inline-flex gap-1">
+                            <button onClick={() => setDialog({ action: 'details', row })} className="rounded p-1.5 text-bank-text-muted hover:bg-bank-border/15" title="Details & Protokoll" data-testid={`bond-request-details-${row.id}`}>
+                              <Eye size={15} />
+                            </button>
+                            <button onClick={() => setDialog({ action: 'note', row })} className="rounded p-1.5 text-bank-text-muted hover:bg-bank-border/15" title="Interne Notiz" data-testid={`bond-request-note-${row.id}`}>
+                              <StickyNote size={15} />
+                            </button>
+                            {(isPending || isApproved) && (
+                              <>
+                                <button onClick={() => setDialog({ action: 'offer', row })} className="rounded p-1.5 text-sky-700 hover:bg-sky-50" title="Individuelles Angebot" data-testid={`bond-request-offer-${row.id}`}>
+                                  <FileSignature size={15} />
+                                </button>
+                                <button onClick={() => setDialog({ action: 'cancel', row })} className="rounded p-1.5 text-rose-600 hover:bg-rose-50" title="Stornieren" data-testid={`bond-request-cancel-${row.id}`}>
+                                  <Ban size={15} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        <div>
                         {isPending ? (
                           <div className="inline-flex gap-1.5">
                             <Button
@@ -480,7 +526,9 @@ const AdminBondRequests = () => {
                                   ? `Freigegeben · ${new Date(row.approved_at).toLocaleDateString('de-DE')}`
                                   : isRejected && row.rejected_at
                                     ? `Abgelehnt · ${new Date(row.rejected_at).toLocaleDateString('de-DE')}`
-                                    : 'Abgeschlossen'}
+                                    : isCancelled && row.cancelled_at
+                                      ? `Storniert · ${new Date(row.cancelled_at).toLocaleDateString('de-DE')}`
+                                      : 'Abgeschlossen'}
                             </span>
                             {!isMongo && (
                               <Button
@@ -494,6 +542,7 @@ const AdminBondRequests = () => {
                             )}
                           </div>
                         )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -660,6 +709,14 @@ const AdminBondRequests = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <BondRequestActionDialog
+        action={dialog.action}
+        row={dialog.row}
+        onClose={() => setDialog({ action: 'details', row: null })}
+        onDone={onDialogDone}
+        fetchJson={fetchJson}
+      />
 
       <p className="mt-3 text-[11px] text-bank-text-muted">
         Hinweis: „Genehmigen" ist die fachliche Freigabe — erst „Ausführung erfassen" belastet Cash und legt die Position an.

@@ -90,6 +90,8 @@ const ISSUER_DOMAIN_OVERRIDES = {
   'deutsche bank': 'db.com',
   'bnp paribas': 'bnpparibas.com',
   'ing groep': 'ing.com',
+  'cooperatieve rabobank': 'rabobank.com',
+  rabobank: 'rabobank.com',
   unicredit: 'unicreditgroup.eu',
   santander: 'santander.com',
   'vodafone group': 'vodafone.com',

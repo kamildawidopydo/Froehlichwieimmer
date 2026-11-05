@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field, field_validator
 from pymongo.errors import DuplicateKeyError
 
 from server import get_current_user, db, require_admin  # type: ignore[attr-defined]
+from services.bond_audit import write_audit, list_audit  # noqa: E402
 
 
 router = APIRouter(prefix="/api/bonds", tags=["bond-requests"])
@@ -57,6 +58,37 @@ class AdminDecisionBody(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+class AdminNoteBody(BaseModel):
+    text: str = Field(..., min_length=1, max_length=2000)
+    model_config = {"extra": "forbid"}
+
+
+class AdminOfferBody(BaseModel):
+    price_pct: float = Field(..., gt=0, le=1000)
+    nominal: float = Field(..., gt=0)
+    valid_until: Optional[str] = Field(default=None, description="ISO YYYY-MM-DD")
+    message: Optional[str] = Field(default=None, max_length=2000)
+    model_config = {"extra": "forbid"}
+
+    @field_validator("valid_until")
+    @classmethod
+    def _iso(cls, v):
+        if not v:
+            return None
+        _date.fromisoformat(v)
+        return v
+
+
+def _iso_dt(v):
+    return v.isoformat() if isinstance(v, datetime) else v
+
+
+def _serialize_offer(o: Optional[dict]) -> Optional[dict]:
+    if not o:
+        return None
+    return {**o, "created_at": _iso_dt(o.get("created_at"))}
+
+
 def _serialize(doc: dict) -> dict:
     ca = doc.get("created_at")
     ua = doc.get("updated_at")
@@ -73,8 +105,17 @@ def _serialize(doc: dict) -> dict:
         "user_id": str(doc.get("user_id", "")),
         "bond_id": doc.get("bond_id"),
         "bond_name": doc.get("bond_name"),
+        "issuer": doc.get("issuer"),
         "isin": doc.get("isin"),
         "kupon_rate": doc.get("kupon_rate"),
+        "customer_display_id": doc.get("customer_display_id"),
+        "reference_price_pct": doc.get("reference_price_pct"),
+        "reference_price_type": doc.get("reference_price_type"),
+        "reference_price_date": doc.get("reference_price_date"),
+        "reference_price_updated_at": _iso_dt(doc.get("reference_price_updated_at")),
+        "requested_at": _iso_dt(doc.get("requested_at") or doc.get("created_at")),
+        "offer": _serialize_offer(doc.get("offer")),
+        "cancelled_at": _iso_dt(doc.get("cancelled_at")),
         "amount_eur": doc.get("amount_eur"),
         "requested_nominal": doc.get("requested_nominal"),
         "notes": doc.get("notes"),
@@ -121,6 +162,11 @@ async def create_bond_request(
     user: dict = Depends(get_current_user),
 ):
     bond = await _fetch_investable_bond(payload.bond_id)
+    if bond.get("requests_enabled") is False:
+        raise HTTPException(
+            status_code=400,
+            detail="Für diese Anleihe sind derzeit keine Kaufanfragen möglich.",
+        )
 
     # Minimum-Investment prüfen (aus Katalog, nicht aus Client-Payload)
     min_order = bond.get("min_order_eur")
@@ -142,13 +188,24 @@ async def create_bond_request(
         )
 
     now = datetime.now(timezone.utc)
+    customer_name = " ".join(
+        x for x in (user.get("first_name"), user.get("last_name")) if x
+    ).strip() or user.get("name") or user.get("email")
     doc = {
         "user_id": user_oid,
+        "customer_display_id": f"KD-{str(user_oid)[-8:].upper()}",
+        "customer_name_snapshot": customer_name,
         "bond_id": payload.bond_id,
         # Stammdaten aus dem VALIDIERTEN Katalog, nicht aus Client
         "bond_name": bond.get("bond_name"),
+        "issuer": bond.get("issuer"),
         "isin": bond.get("isin"),
         "kupon_rate": bond.get("kupon_rate"),
+        "reference_price_pct": bond.get("aktueller_kurs"),
+        "reference_price_type": bond.get("kurs_typ"),
+        "reference_price_date": bond.get("kurs_datum"),
+        "reference_price_updated_at": bond.get("price_updated_at"),
+        "requested_at": now,
         "amount_eur": float(payload.amount_eur),
         "requested_nominal": payload.requested_nominal,
         "notes": (payload.notes or "").strip() or None,
@@ -201,7 +258,17 @@ async def _serialize_admin(doc: dict) -> dict:
                 )
         except Exception:
             pass
-    base.update({**customer, "handled_by_name": handled_by_name, "backend": "mongo"})
+    base.update({
+        **customer,
+        "customer_name": customer["customer_name"] or doc.get("customer_name_snapshot"),
+        "customer_display_id": doc.get("customer_display_id") or f"KD-{str(doc.get('user_id', ''))[-8:].upper()}",
+        "internal_notes": [
+            {**n, "created_at": _iso_dt(n.get("created_at"))}
+            for n in (doc.get("internal_notes") or [])
+        ],
+        "handled_by_name": handled_by_name,
+        "backend": "mongo",
+    })
     return base
 
 
@@ -245,7 +312,115 @@ async def _transition_status(
             status_code=409,
             detail=f"Anfrage bereits '{existing.get('status')}' — kein weiterer Übergang möglich",
         )
+    await write_audit(db, "bond_request", request_id, to_status, {"status": "pending"},
+                      {"status": to_status, "decision_note": result.get("decision_note")}, admin_user)
     return await _serialize_admin(result)
+
+
+async def _load_request(request_id: str) -> dict:
+    if not ObjectId.is_valid(request_id):
+        raise HTTPException(status_code=400, detail="Invalid request id")
+    doc = await db.bond_purchase_requests.find_one({"_id": ObjectId(request_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Anfrage nicht gefunden")
+    return doc
+
+
+@admin_router.post("/requests/{request_id}/cancel")
+async def admin_cancel_bond(
+    request_id: str,
+    body: AdminDecisionBody = AdminDecisionBody(),
+    admin_user: dict = Depends(require_admin),
+):
+    """pending/approved → cancelled. Keine Buchung, keine Position."""
+    existing = await _load_request(request_id)
+    if existing.get("status") not in ("pending", "approved"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Stornierung nur für offene oder genehmigte Anfragen — aktuell '{existing.get('status')}'",
+        )
+    now = datetime.now(timezone.utc)
+    note = (body.decision_note or "").strip() or None
+    result = await db.bond_purchase_requests.find_one_and_update(
+        {"_id": existing["_id"], "status": existing["status"]},
+        {"$set": {
+            "status": "cancelled", "cancelled_at": now, "handled_at": now,
+            "handled_by": ObjectId(admin_user["id"]), "updated_at": now,
+            **({"decision_note": note} if note else {}),
+        }},
+        return_document=True,
+    )
+    if not result:
+        raise HTTPException(status_code=409, detail="Anfrage wurde parallel geändert")
+    await write_audit(db, "bond_request", request_id, "cancelled",
+                      {"status": existing["status"]}, {"status": "cancelled", "decision_note": note}, admin_user)
+    return await _serialize_admin(result)
+
+
+@admin_router.post("/requests/{request_id}/notes")
+async def admin_add_bond_request_note(
+    request_id: str,
+    body: AdminNoteBody,
+    admin_user: dict = Depends(require_admin),
+):
+    """Interne Notiz (nur für Admins sichtbar)."""
+    existing = await _load_request(request_id)
+    note = {
+        "text": body.text.strip(),
+        "created_at": datetime.now(timezone.utc),
+        "created_by": admin_user.get("email"),
+    }
+    result = await db.bond_purchase_requests.find_one_and_update(
+        {"_id": existing["_id"]},
+        {"$push": {"internal_notes": note}, "$set": {"updated_at": note["created_at"]}},
+        return_document=True,
+    )
+    await write_audit(db, "bond_request", request_id, "note_added", None, {"note": note["text"]}, admin_user)
+    return await _serialize_admin(result)
+
+
+@admin_router.post("/requests/{request_id}/offer")
+async def admin_create_bond_offer(
+    request_id: str,
+    body: AdminOfferBody,
+    admin_user: dict = Depends(require_admin),
+):
+    """Individuelles Kaufangebot hinterlegen — unverbindlich, keine Buchung."""
+    existing = await _load_request(request_id)
+    if existing.get("status") not in ("pending", "approved"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Angebot nur für offene oder genehmigte Anfragen — aktuell '{existing.get('status')}'",
+        )
+    bond = await db.bond_catalog.find_one({"_id": ObjectId(existing["bond_id"])}) if ObjectId.is_valid(existing.get("bond_id") or "") else None
+    denom = float((bond or {}).get("denomination") or 0)
+    if denom > 0 and abs(body.nominal / denom - round(body.nominal / denom)) > 1e-9:
+        raise HTTPException(status_code=400, detail=f"Nominal muss ein Vielfaches der Stückelung ({denom:g} EUR) sein.")
+    now = datetime.now(timezone.utc)
+    offer = {
+        "price_pct": float(body.price_pct),
+        "nominal": float(body.nominal),
+        "amount_eur": round(body.nominal * body.price_pct / 100, 2),
+        "valid_until": body.valid_until,
+        "message": (body.message or "").strip() or None,
+        "status": "offered",
+        "created_at": now,
+        "created_by": admin_user.get("email"),
+    }
+    result = await db.bond_purchase_requests.find_one_and_update(
+        {"_id": existing["_id"]},
+        {"$set": {"offer": offer, "updated_at": now}},
+        return_document=True,
+    )
+    await write_audit(db, "bond_request", request_id, "offer_created",
+                      {"offer": existing.get("offer")}, {"offer": offer}, admin_user)
+    return await _serialize_admin(result)
+
+
+@admin_router.get("/requests/{request_id}/audit")
+async def admin_bond_request_audit(request_id: str, _admin: dict = Depends(require_admin)):
+    await _load_request(request_id)
+    return await list_audit(db, "bond_request", request_id)
 
 
 @admin_router.post("/requests/{request_id}/approve")
@@ -312,7 +487,7 @@ async def admin_execute_bond(
     nom = _parse_dec(body.nominal_amount, "nominal_amount")
     px = _parse_dec(body.execution_price_pct, "execution_price_pct")
     try:
-        return await execute_bond_request(
+        res = await execute_bond_request(
             db, ObjectId(request_id),
             nominal_amount=nom, execution_price_pct=px,
             decision_note=body.decision_note,
@@ -323,6 +498,9 @@ async def admin_execute_bond(
         raise HTTPException(status_code=555, detail=f"[injected-crash] {exc}")
     except BondExecError as exc:
         raise HTTPException(status_code=exc.http_status, detail=f"{exc.code}: {exc.detail}")
+    await write_audit(db, "bond_request", request_id, "executed", {"status": "approved"},
+                      {"status": "executed", "nominal": str(nom), "price_pct": str(px)}, admin_user)
+    return res
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -369,6 +547,8 @@ async def admin_archive_bond_request(
         }},
         return_document=True,
     )
+    await write_audit(db, "bond_request", request_id, "archived", None,
+                      {"archive_note": (body.archive_note or "").strip()[:500] or None}, admin_user)
     return await _serialize_admin(result or existing)
 
 

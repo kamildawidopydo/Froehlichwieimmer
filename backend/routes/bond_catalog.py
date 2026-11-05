@@ -15,7 +15,7 @@ Portfolio-Migration bleibt unberührt — dies sind reine Referenzdaten
 from __future__ import annotations
 
 from datetime import datetime, timezone, date as _date
-from typing import Optional
+from typing import Optional, Literal
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException
@@ -29,6 +29,9 @@ from services.bond_sync import (  # noqa: E402
     get_recent_sync_runs,
     ensure_history_index,
 )
+from services.bond_audit import (  # noqa: E402
+    write_audit, list_audit, price_changed, record_price, list_prices,
+)
 
 
 public_router = APIRouter(prefix="/api/bonds", tags=["bond-catalog"])
@@ -36,7 +39,39 @@ admin_router = APIRouter(prefix="/api/admin/bonds", tags=["admin-bond-catalog"])
 
 
 # ─── Pydantic-Models ────────────────────────────────────────────────────
-class BondCatalogBase(BaseModel):
+class BondExtraFields(BaseModel):
+    """Erweiterte Stammdaten, Kurs-Metadaten und Sichtbarkeit (alle optional)."""
+
+    wkn: Optional[str] = Field(default=None, max_length=12)
+    legal_issuer: Optional[str] = Field(default=None, max_length=200)
+    verkaufskurs: Optional[float] = None
+    kurs_datum: Optional[str] = Field(default=None, max_length=40)
+    kurs_quelle: Optional[str] = Field(default=None, max_length=200)
+    kurs_typ: Optional[Literal["market", "reference"]] = None
+    kurs_hinweis: Optional[str] = Field(default=None, max_length=200)
+    kursveraenderung_abs: Optional[float] = None
+    kursveraenderung_pct: Optional[float] = None
+    rendite_manuell: Optional[float] = None
+    is_perpetual: Optional[bool] = None
+    zinstermine: Optional[str] = Field(default=None, max_length=300)
+    zinsfrequenz: Optional[str] = Field(default=None, max_length=50)
+    description: Optional[str] = Field(default=None, max_length=4000)
+    security_type: Optional[str] = Field(default=None, max_length=200)
+    risk_note: Optional[str] = Field(default=None, max_length=300)
+    risk_details: Optional[str] = Field(default=None, max_length=6000)
+    requests_enabled: Optional[bool] = None
+
+    @field_validator("verkaufskurs", "kursveraenderung_abs", "kursveraenderung_pct", "rendite_manuell")
+    @classmethod
+    def _finite_extra(cls, v):
+        if v is None:
+            return None
+        if not isinstance(v, (int, float)) or v != v:
+            raise ValueError("Wert muss numerisch sein")
+        return float(v)
+
+
+class BondCatalogBase(BondExtraFields):
     isin: Optional[str] = Field(default=None, max_length=20)
     bond_name: Optional[str] = Field(default=None, max_length=200)
     issuer: Optional[str] = Field(default=None, max_length=200)
@@ -92,7 +127,7 @@ class BondCatalogCreate(BondCatalogBase):
     pass
 
 
-class BondCatalogUpdate(BaseModel):
+class BondCatalogUpdate(BondExtraFields):
     """Alle Felder optional (PATCH-Semantik)."""
 
     isin: Optional[str] = Field(default=None, max_length=20)
@@ -168,6 +203,10 @@ def _serialize(doc: dict) -> dict:
         "external_key": doc.get("external_key"),
         "is_manual_override": bool(doc.get("is_manual_override", False)),
         "issue_date": doc.get("issue_date"),
+        **{k: doc.get(k) for k in BondExtraFields.model_fields},
+        "is_perpetual": bool(doc.get("is_perpetual", False)),
+        "requests_enabled": doc.get("requests_enabled") is not False,
+        "price_updated_at": doc["price_updated_at"].isoformat() if isinstance(doc.get("price_updated_at"), datetime) else doc.get("price_updated_at"),
         "created_at": ca.isoformat() if isinstance(ca, datetime) else ca,
         "updated_at": ua.isoformat() if isinstance(ua, datetime) else ua,
     }
@@ -219,9 +258,21 @@ async def admin_create_bond(
 ):
     now = datetime.now(timezone.utc)
     doc = payload.model_dump()
+    if doc.get("isin") and await db.bond_catalog.find_one({"isin": doc["isin"]}):
+        raise HTTPException(status_code=409, detail="Eine Anleihe mit dieser ISIN existiert bereits.")
+    doc.setdefault("source", None)
+    doc["source"] = doc["source"] or "manual"
+    doc["is_manual_override"] = True
+    if doc.get("requests_enabled") is None:
+        doc["requests_enabled"] = True
     doc.update({"created_at": now, "updated_at": now})
+    if any(doc.get(k) is not None for k in ("kaufkurs", "verkaufskurs", "aktueller_kurs")):
+        doc["price_updated_at"] = now
     result = await db.bond_catalog.insert_one(doc)
     doc["_id"] = result.inserted_id
+    await write_audit(db, "bond", result.inserted_id, "create", None, doc, _admin)
+    if doc.get("price_updated_at"):
+        await record_price(db, result.inserted_id, doc, _admin)
     return _serialize(doc)
 
 
@@ -232,13 +283,20 @@ async def admin_update_bond(
     _admin: dict = Depends(require_admin),
 ):
     oid = _oid_or_404(bond_id)
-    changes = {k: v for k, v in payload.model_dump(exclude_unset=True).items()}
+    existing = await db.bond_catalog.find_one({"_id": oid})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Bond nicht gefunden")
+    changes = {k: v for k, v in payload.model_dump(exclude_unset=True).items()
+               if existing.get(k) != v}
     if not changes:
-        existing = await db.bond_catalog.find_one({"_id": oid})
-        if not existing:
-            raise HTTPException(status_code=404, detail="Bond nicht gefunden")
         return _serialize(existing)
-    changes["updated_at"] = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    changes["updated_at"] = now
+    # Admin-gepflegte Datensätze nie vom Börsen-Sync überschreiben lassen
+    changes["is_manual_override"] = True
+    prices = price_changed(existing, changes)
+    if prices:
+        changes["price_updated_at"] = now
     result = await db.bond_catalog.find_one_and_update(
         {"_id": oid},
         {"$set": changes},
@@ -246,6 +304,9 @@ async def admin_update_bond(
     )
     if not result:
         raise HTTPException(status_code=404, detail="Bond nicht gefunden")
+    await write_audit(db, "bond", oid, "update", existing, result, _admin)
+    if prices:
+        await record_price(db, oid, result, _admin)
     return _serialize(result)
 
 
@@ -255,9 +316,11 @@ async def admin_delete_bond(
     _admin: dict = Depends(require_admin),
 ):
     oid = _oid_or_404(bond_id)
-    result = await db.bond_catalog.delete_one({"_id": oid})
-    if result.deleted_count == 0:
+    existing = await db.bond_catalog.find_one({"_id": oid})
+    if not existing:
         raise HTTPException(status_code=404, detail="Bond nicht gefunden")
+    await db.bond_catalog.delete_one({"_id": oid})
+    await write_audit(db, "bond", oid, "delete", existing, None, _admin)
     return None
 
 
@@ -360,6 +423,18 @@ async def admin_bond_sync_history_csv(
     )
 
 
+@admin_router.get("/catalog/{bond_id}/history")
+async def admin_bond_history(bond_id: str, _admin: dict = Depends(require_admin)):
+    """Kurshistorie + Änderungsprotokoll einer Anleihe."""
+    oid = _oid_or_404(bond_id)
+    if not await db.bond_catalog.find_one({"_id": oid}, {"_id": 1}):
+        raise HTTPException(status_code=404, detail="Bond nicht gefunden")
+    return {
+        "prices": await list_prices(db, str(oid)),
+        "audit": await list_audit(db, "bond", str(oid)),
+    }
+
+
 async def ensure_indexes():
     """
     Idempotente Indizes.
@@ -377,3 +452,5 @@ async def ensure_indexes():
         sparse=True,
         name="external_key_unique_sparse",
     )
+    await db.bond_price_history.create_index([("bond_id", 1), ("recorded_at", -1)])
+    await db.audit_log.create_index([("entity_type", 1), ("entity_id", 1), ("changed_at", -1)])

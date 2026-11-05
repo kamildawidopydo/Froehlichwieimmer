@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { FileBarChart2, Plus, Edit, Trash2, X, Save, RefreshCw, DownloadCloud } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FileBarChart2, Plus, Edit, Trash2, RefreshCw, DownloadCloud, History, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import BondFormModal from '@/components/admin/bonds/BondFormModal';
+import BondHistoryDialog from '@/components/admin/bonds/BondHistoryDialog';
+import { matchesBondSearch } from '@/lib/bondDisplay';
 import {
   AdminSubpageLayout,
   AdminSubpageHeader,
@@ -17,24 +20,7 @@ import {
  * wird serverseitig geprüft.
  */
 
-const EMPTY = {
-  isin: '',
-  bond_name: '',
-  issuer: '',
-  kupon_rate: '',
-  kaufkurs: '',
-  aktueller_kurs: '',
-  faelligkeitsdatum: '',
-  min_order_eur: '',
-  denomination: '',
-  is_available: true,
-};
-
-const parseNum = (v) => {
-  if (v === '' || v == null) return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
+const PAGE_SIZE = 100;
 
 const fetchJson = async (path, options = {}) => {
   const resp = await fetch(path, {
@@ -57,9 +43,11 @@ const AdminBondCatalog = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(EMPTY);
-  const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [historyBond, setHistoryBond] = useState(null);
+  const [query, setQuery] = useState('');
+  const [scope, setScope] = useState('all');
+  const [limit, setLimit] = useState(PAGE_SIZE);
   const [loadError, setLoadError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(null);
@@ -132,48 +120,20 @@ const AdminBondCatalog = () => {
 
   const openAdd = () => {
     setEditing(null);
-    setForm(EMPTY);
     setShowModal(true);
   };
 
   const openEdit = (row) => {
     setEditing(row);
-    setForm({
-      isin: row.isin || '',
-      bond_name: row.bond_name || '',
-      issuer: row.issuer || '',
-      kupon_rate: row.kupon_rate != null ? String(row.kupon_rate) : '',
-      kaufkurs: row.kaufkurs != null ? String(row.kaufkurs) : '',
-      aktueller_kurs: row.aktueller_kurs != null ? String(row.aktueller_kurs) : '',
-      faelligkeitsdatum: row.faelligkeitsdatum || '',
-      min_order_eur: row.min_order_eur != null ? String(row.min_order_eur) : '',
-      denomination: row.denomination != null ? String(row.denomination) : '',
-      is_available: row.is_available ?? true,
-    });
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditing(null);
-    setForm(EMPTY);
   };
 
-  const submit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    const payload = {
-      isin: form.isin ? form.isin.trim() : null,
-      bond_name: form.bond_name ? form.bond_name.trim() : null,
-      issuer: form.issuer ? form.issuer.trim() : null,
-      kupon_rate: parseNum(form.kupon_rate),
-      kaufkurs: parseNum(form.kaufkurs),
-      aktueller_kurs: parseNum(form.aktueller_kurs),
-      faelligkeitsdatum: form.faelligkeitsdatum || null,
-      min_order_eur: parseNum(form.min_order_eur),
-      denomination: parseNum(form.denomination),
-      is_available: !!form.is_available,
-    };
+  const submit = async (payload) => {
     try {
       if (editing) {
         await fetchJson(`/api/admin/bonds/catalog/${editing.id}`, {
@@ -192,10 +152,27 @@ const AdminBondCatalog = () => {
       closeModal();
     } catch (err) {
       toast.error('Fehler: ' + err.message);
-    } finally {
-      setSaving(false);
     }
   };
+
+  const toggle = async (row, field) => {
+    try {
+      await fetchJson(`/api/admin/bonds/catalog/${row.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ [field]: !row[field] }),
+      });
+      await load();
+    } catch (err) {
+      toast.error('Fehler: ' + err.message);
+    }
+  };
+
+  const visible = useMemo(() => {
+    let list = items.filter((b) => matchesBondSearch(b, query));
+    if (scope === 'manual') list = list.filter((b) => b.source !== 'deutsche_boerse_xfra_bf');
+    if (scope === 'inactive') list = list.filter((b) => !b.is_available || !b.requests_enabled);
+    return list;
+  }, [items, query, scope]);
 
   const remove = async (row) => {
     if (!window.confirm('Anleihe wirklich entfernen?')) return;
@@ -274,6 +251,26 @@ const AdminBondCatalog = () => {
         </AdminSurfaceCard>
       ) : (
         <AdminSurfaceCard>
+          <div className="flex flex-wrap items-center gap-3 border-b border-bank-border/70 p-4">
+            <Input
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setLimit(PAGE_SIZE); }}
+              placeholder="Suche: Name, ISIN, WKN, Emittent, Kupon…"
+              className="h-9 max-w-sm text-sm"
+              data-testid="bond-admin-search"
+            />
+            <select
+              value={scope}
+              onChange={(e) => { setScope(e.target.value); setLimit(PAGE_SIZE); }}
+              className="h-9 border border-bank-border bg-white px-2 text-sm"
+              data-testid="bond-admin-scope"
+            >
+              <option value="all">Alle Anleihen</option>
+              <option value="manual">Manuell gepflegt</option>
+              <option value="inactive">Ausgeblendet / gesperrt</option>
+            </select>
+            <span className="text-xs text-bank-text-muted" data-testid="bond-admin-count">{visible.length} Treffer</span>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="bond-admin-table">
               <thead className={adminTheadClass}>
@@ -282,6 +279,7 @@ const AdminBondCatalog = () => {
                   <th className="text-left py-3 px-4 font-semibold text-bank-text-muted">Emittent</th>
                   <th className="text-right py-3 px-4 font-semibold text-bank-text-muted">Kupon</th>
                   <th className="text-right py-3 px-4 font-semibold text-bank-text-muted">Akt. Kurs</th>
+                  <th className="text-left py-3 px-4 font-semibold text-bank-text-muted">Kurs-Stand</th>
                   <th className="text-left py-3 px-4 font-semibold text-bank-text-muted">Fälligkeit</th>
                   <th className="text-left py-3 px-4 font-semibold text-bank-text-muted">Status</th>
                   <th className="text-right py-3 px-4 font-semibold text-bank-text-muted">Aktionen</th>
@@ -290,18 +288,18 @@ const AdminBondCatalog = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-bank-text-muted">
+                    <td colSpan={8} className="py-10 text-center text-bank-text-muted">
                       <RefreshCw size={16} className="inline animate-spin mr-2" /> Lädt…
                     </td>
                   </tr>
-                ) : items.length === 0 ? (
+                ) : visible.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-bank-text-muted/70" data-testid="bond-admin-empty">
-                      Noch keine Anleihen im Katalog.
+                    <td colSpan={8} className="py-10 text-center text-bank-text-muted/70" data-testid="bond-admin-empty">
+                      Keine Anleihen gefunden.
                     </td>
                   </tr>
                 ) : (
-                  items.map((row) => (
+                  visible.slice(0, limit).map((row) => (
                     <tr
                       key={row.id}
                       className={`border-b border-bank-border/70 ${adminRowHover}`}
@@ -310,7 +308,7 @@ const AdminBondCatalog = () => {
                       <td className="py-3 px-4 font-medium text-bank-text">
                         {row.bond_name || '–'}
                         {row.isin && (
-                          <p className="text-[11px] text-bank-text-muted">ISIN {row.isin}</p>
+                          <p className="text-[11px] text-bank-text-muted">ISIN {row.isin}{row.wkn ? ` · WKN ${row.wkn}` : ''}</p>
                         )}
                       </td>
                       <td className="py-3 px-4 text-bank-text-muted">{row.issuer || '–'}</td>
@@ -319,21 +317,58 @@ const AdminBondCatalog = () => {
                       </td>
                       <td className="py-3 px-4 text-right tabular-nums">
                         {row.aktueller_kurs != null ? `${row.aktueller_kurs}%` : '–'}
+                        {row.kurs_typ === 'reference' && (
+                          <p className="text-[10px] text-amber-700">Referenzkurs</p>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-[11px] text-bank-text-muted" data-testid={`bond-admin-price-updated-${row.id}`}>
+                        {row.price_updated_at ? new Date(row.price_updated_at).toLocaleString('de-DE') : '–'}
                       </td>
                       <td className="py-3 px-4 text-bank-text-muted">
-                        {row.faelligkeitsdatum
-                          ? new Date(row.faelligkeitsdatum).toLocaleDateString('de-DE')
-                          : '–'}
+                        {row.is_perpetual
+                          ? 'Unbefristet'
+                          : row.faelligkeitsdatum
+                            ? new Date(row.faelligkeitsdatum).toLocaleDateString('de-DE')
+                            : '–'}
                       </td>
                       <td className="py-3 px-4">
                         <span
                           className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${row.is_available ? 'bg-bank-success/10 text-bank-success border border-bank-success/25' : 'bg-bank-border/15 text-bank-text-muted border border-bank-border/40'}`}
                         >
-                          {row.is_available ? 'Verfügbar' : 'Inaktiv'}
+                          {row.is_available ? 'Sichtbar' : 'Ausgeblendet'}
+                        </span>
+                        <span
+                          className={`ml-1 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold border ${row.requests_enabled ? 'border-sky-300/50 bg-sky-50 text-sky-700' : 'border-rose-300/50 bg-rose-50 text-rose-700'}`}
+                        >
+                          {row.requests_enabled ? 'Anfragen offen' : 'Anfragen gesperrt'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="inline-flex gap-1">
+                          <button
+                            onClick={() => toggle(row, 'is_available')}
+                            className="p-1.5 text-bank-text-muted hover:bg-bank-border/15 rounded"
+                            title={row.is_available ? 'Im Kundenbereich ausblenden' : 'Im Kundenbereich einblenden'}
+                            data-testid={`bond-admin-toggle-visible-${row.id}`}
+                          >
+                            {row.is_available ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                          <button
+                            onClick={() => toggle(row, 'requests_enabled')}
+                            className="p-1.5 text-bank-text-muted hover:bg-bank-border/15 rounded"
+                            title={row.requests_enabled ? 'Kaufanfragen sperren' : 'Kaufanfragen freigeben'}
+                            data-testid={`bond-admin-toggle-requests-${row.id}`}
+                          >
+                            {row.requests_enabled ? <Lock size={16} /> : <Unlock size={16} />}
+                          </button>
+                          <button
+                            onClick={() => setHistoryBond(row)}
+                            className="p-1.5 text-bank-text-muted hover:bg-bank-border/15 rounded"
+                            title="Kurshistorie & Protokoll"
+                            data-testid={`bond-admin-history-${row.id}`}
+                          >
+                            <History size={16} />
+                          </button>
                           <button
                             onClick={() => openEdit(row)}
                             className="p-1.5 text-bank-accent hover:bg-bank-accent/10 rounded transition-colors"
@@ -358,6 +393,13 @@ const AdminBondCatalog = () => {
               </tbody>
             </table>
           </div>
+          {visible.length > limit && (
+            <div className="p-4 text-center">
+              <Button variant="outline" size="sm" onClick={() => setLimit((l) => l + PAGE_SIZE)} data-testid="bond-admin-more">
+                Weitere {Math.min(PAGE_SIZE, visible.length - limit)} anzeigen
+              </Button>
+            </div>
+          )}
         </AdminSurfaceCard>
       )}
 
@@ -450,182 +492,8 @@ const AdminBondCatalog = () => {
         )}
       </AdminSurfaceCard>
 
-      {showModal && (
-        <div
-          className="fixed inset-0 z-modal flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          data-testid="bond-admin-modal"
-        >
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-bank-border shrink-0">
-              <h2 className="text-lg font-semibold text-bank-text">
-                {editing ? 'Anleihe bearbeiten' : 'Neue Anleihe'}
-              </h2>
-              <button onClick={closeModal} className="p-1.5 hover:bg-bank-border/15 rounded-lg">
-                <X size={20} className="text-bank-text-muted" />
-              </button>
-            </div>
-
-            <form
-              id="bond-form"
-              onSubmit={submit}
-              className="overflow-y-auto px-6 py-5 space-y-4 flex-1"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-bank-text-muted mb-1 block">
-                    Bond-Name
-                  </label>
-                  <Input
-                    value={form.bond_name}
-                    onChange={(e) => setForm((p) => ({ ...p, bond_name: e.target.value }))}
-                    placeholder="z. B. Bundesanleihe 0.50% 2030"
-                    data-testid="bond-admin-name-input"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-bank-text-muted mb-1 block">ISIN</label>
-                  <Input
-                    value={form.isin}
-                    onChange={(e) => setForm((p) => ({ ...p, isin: e.target.value }))}
-                    placeholder="DE0001102457"
-                    data-testid="bond-admin-isin-input"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-bank-text-muted mb-1 block">
-                  Emittent
-                </label>
-                <Input
-                  value={form.issuer}
-                  onChange={(e) => setForm((p) => ({ ...p, issuer: e.target.value }))}
-                  data-testid="bond-admin-issuer-input"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-bank-text-muted mb-1 block">
-                    Kupon (% p.a.)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.kupon_rate}
-                    onChange={(e) => setForm((p) => ({ ...p, kupon_rate: e.target.value }))}
-                    data-testid="bond-admin-kupon-input"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-bank-text-muted mb-1 block">
-                    Kaufkurs (%)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.kaufkurs}
-                    onChange={(e) => setForm((p) => ({ ...p, kaufkurs: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-bank-text-muted mb-1 block">
-                    Akt. Kurs (%)
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.aktueller_kurs}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, aktueller_kurs: e.target.value }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-bank-text-muted mb-1 block">
-                    Fälligkeit
-                  </label>
-                  <Input
-                    type="date"
-                    value={form.faelligkeitsdatum}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, faelligkeitsdatum: e.target.value }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-bank-text-muted mb-1 block">
-                    Min. Order (€)
-                  </label>
-                  <Input
-                    type="number"
-                    value={form.min_order_eur}
-                    onChange={(e) => setForm((p) => ({ ...p, min_order_eur: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-bank-text-muted mb-1 block">
-                    Stückelung (€)
-                  </label>
-                  <Input
-                    type="number"
-                    value={form.denomination}
-                    onChange={(e) => setForm((p) => ({ ...p, denomination: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-bank-bg rounded-lg border border-bank-border">
-                <div>
-                  <p className="text-sm font-medium text-bank-text-muted">Verfügbar</p>
-                  <p className="text-xs text-bank-text-muted mt-0.5">
-                    Anleihe ist im Kunden-Katalog sichtbar.
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.is_available}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, is_available: e.target.checked }))
-                    }
-                    className="sr-only peer"
-                    data-testid="bond-admin-visible-toggle"
-                  />
-                  <div className="w-11 h-6 bg-bank-border/25 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-bank-ink" />
-                </label>
-              </div>
-            </form>
-
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-bank-border shrink-0">
-              <Button type="button" variant="outline" onClick={closeModal}>
-                Abbrechen
-              </Button>
-              <Button
-                type="submit"
-                form="bond-form"
-                disabled={saving}
-                className="bg-bank-ink hover:bg-bank-ink-elev text-white"
-                data-testid="bond-admin-save-btn"
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw size={16} className="mr-2 animate-spin" /> Speichert…
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} className="mr-2" />{' '}
-                    {editing ? 'Änderungen speichern' : 'Anleihe anlegen'}
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <BondFormModal open={showModal} editing={editing} onClose={closeModal} onSubmit={submit} />
+      <BondHistoryDialog bond={historyBond} onClose={() => setHistoryBond(null)} fetchJson={fetchJson} />
     </AdminSubpageLayout>
   );
 };
