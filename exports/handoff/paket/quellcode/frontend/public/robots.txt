@@ -1,5 +1,0 @@
-User-agent: *
-Disallow: /admin
-Disallow: /register
-
-Sitemap: https://essenceinvest.com/sitemap.xml

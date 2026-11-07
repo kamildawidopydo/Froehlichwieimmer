@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Team-Avatar">
-  <rect width="240" height="240" rx="120" fill="#ECF3FA"/>
-  <g transform="translate(120 130)">
-    <circle cx="-30" cy="-30" r="26" fill="#4C7CBA"/>
-    <circle cx="30" cy="-30" r="26" fill="#3A6499"/>
-    <path d="M -78 60 Q -78 6 -30 -4 Q -6 -8 0 6 Q 6 -8 30 -4 Q 78 6 78 60 Z" fill="#4C7CBA"/>
-    <path d="M 0 6 Q 6 -8 30 -4 Q 78 6 78 60 L 0 60 Z" fill="#3A6499"/>
-  </g>
-</svg>
